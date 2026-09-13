@@ -215,10 +215,10 @@ export class CodeIndexOrchestrator {
       }
 
       const hasExistingData = this.overlay ? false : await this.vectorStore.hasIndexedData()
-      const hasPoints =
-        !this.overlay && !hasExistingData && typeof this.vectorStore.hasPoints === "function"
-          ? await this.vectorStore.hasPoints()
-          : false
+      let hasPoints = false
+      if (!this.overlay && !hasExistingData && typeof this.vectorStore.hasPoints === "function") {
+        hasPoints = await this.vectorStore.hasPoints()
+      }
       const canResume = !this.overlay && !hasExistingData && hasPoints && !collectionCreated
 
       if (!this.overlay && !hasExistingData && !canResume) {

@@ -716,10 +716,38 @@ export class QdrantVectorStore implements IVectorStore {
 
   async hasPoints(): Promise<boolean> {
     try {
+      const exists = await this.collectionExists()
+      if (!exists) {
+        return false
+      }
+
+      if (typeof this.client.count === "function") {
+        const result = await this.client.count(this.collectionName, {
+          filter: {
+            must_not: [
+              {
+                key: "type",
+                match: {
+                  value: "metadata",
+                },
+              },
+            ],
+          },
+          exact: true,
+        })
+        return (result.count ?? 0) > 0
+      }
+
       const collectionInfo = await this.client.getCollection(this.collectionName)
-      return (collectionInfo.points_count ?? 0) > 0
-    } catch {
-      return false
+      const pointsCount = collectionInfo.points_count ?? 0
+      if (pointsCount === 0) {
+        return false
+      }
+      const metadata = await this.getMetadataPayload()
+      return metadata ? pointsCount > 1 : pointsCount > 0
+    } catch (error) {
+      log.error("Failed to check if collection has points", { error })
+      throw error
     }
   }
 

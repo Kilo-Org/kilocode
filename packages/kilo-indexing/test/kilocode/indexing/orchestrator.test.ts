@@ -386,6 +386,35 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(orchestrator.state).toBe("Error")
   })
 
+  test("does not clear data when point count cannot be read", async () => {
+    const cache = {
+      clears: 0,
+      async clearCacheFile() {
+        this.clears += 1
+      },
+    }
+    const store = new Store(false, false)
+    store.hasIndexedData = async () => false
+    ;(store as any).hasPoints = async () => {
+      throw new Error("point count read failure")
+    }
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      cache as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+
+    expect(store.clearCount).toBe(0)
+    expect(cache.clears).toBe(0)
+    expect(orchestrator.state).toBe("Error")
+  })
+
   test("preserves cache and collection data on retryable start failures", async () => {
     const events: IndexingTelemetryEvent[] = []
     const cache = {

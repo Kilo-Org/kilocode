@@ -205,6 +205,9 @@ export class DirectoryScanner implements IDirectoryScanner {
     const fileBlocksRemaining = new Map<string, number>()
     const fileHashes = new Map<string, string>()
 
+    let lastCheckpointFlush = 0
+    const CHECKPOINT_FLUSH_INTERVAL_MS = 5000
+
     const onBatchCompleted = async (blocks: CodeBlock[]) => {
       let updatedAny = false
       const release = await mutex.acquire()
@@ -224,7 +227,15 @@ export class DirectoryScanner implements IDirectoryScanner {
         release()
       }
       if (updatedAny) {
-        await this.cacheManager.flush()
+        const now = Date.now()
+        if (now - lastCheckpointFlush >= CHECKPOINT_FLUSH_INTERVAL_MS) {
+          lastCheckpointFlush = now
+          try {
+            await this.cacheManager.flush()
+          } catch (err) {
+            log.warn("failed to flush checkpoint cache", { err })
+          }
+        }
       }
     }
 
@@ -680,10 +691,16 @@ export class DirectoryScanner implements IDirectoryScanner {
         log.debug("Completed Qdrant upsert")
         onFilesIndexed?.(batchFileInfos.length)
 
-        await onBatchCompleted?.(batchBlocks)
-
         success = true
         log.debug(`Successfully processed batch of ${batchBlocks.length} blocks after ${attempts} attempt(s)`)
+
+        if (onBatchCompleted) {
+          try {
+            await onBatchCompleted(batchBlocks)
+          } catch (checkpointError) {
+            log.warn("Failed to checkpoint batch completion", { checkpointError })
+          }
+        }
       } catch (error) {
         lastError = error as Error
         log.error(`Error processing batch (attempt ${attempts}) in workspace ${scanWorkspace}`, {
