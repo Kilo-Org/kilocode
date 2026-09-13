@@ -9,7 +9,7 @@ import { Config } from "@/config/config"
 import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
 import { ConfigErrorV1, FrontmatterError } from "@opencode-ai/core/v1/config/error"
-import { Instance } from "@/kilocode/instance"
+import { Instance, capture } from "@/kilocode/instance"
 import { Filesystem } from "@/util/filesystem"
 
 export namespace ConfigValidation {
@@ -74,8 +74,8 @@ export namespace ConfigValidation {
     let md: Awaited<ReturnType<typeof ConfigMarkdown.parse>>
     try {
       const trusted = path.isAbsolute(filepath) && ConfigProtection.isAbsolute(filepath)
-      const ctx = Instance.current
-      const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
+      const ctx = capture()
+      const root = ctx ? (ctx.worktree === "/" ? ctx.directory : ctx.worktree) : process.cwd()
       md = await ConfigMarkdown.parse(filepath, {
         trusted,
         fileScope: trusted ? undefined : { root, source: filepath },
@@ -128,8 +128,11 @@ export namespace ConfigValidation {
     if (ConfigProtection.isAbsolute(filepath)) return true
     // Project-local config (e.g. /project/.kilo/command/foo.md)
     try {
-      const rel = path.relative(Instance.worktree, filepath)
-      if (!rel.startsWith("..")) return ConfigProtection.isRelative(rel)
+      const ctx = capture()
+      if (ctx) {
+        const rel = path.relative(ctx.worktree, filepath)
+        if (!rel.startsWith("..")) return ConfigProtection.isRelative(rel)
+      }
     } catch {
       // Not in an Instance context — skip project-relative check
     }
