@@ -4188,6 +4188,97 @@ function case20_upsertRefreshesSkippedMarker() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 21 — a fixture that spans two product surfaces plus one unmapped file
+// ---------------------------------------------------------------------------
+// The owner request's acceptance case: two product surfaces plus one unmapped
+// file must produce exactly three PRs with the right assignees and reviewers,
+// and no changed file may appear in two PRs. This case also prints the proof a
+// PR body quotes: the computed surface map, the two assignees chosen per
+// surface, the reviewers requested, and the title of each PR the run opens.
+function case21_twoSurfacesOneUnmapped() {
+  console.log("case 21 — two product surfaces plus one unmapped file")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    commits: {
+      "packages/opencode/": [stubCommit("alice", 1), stubCommit("bob", 5)],
+      "packages/kilo-vscode/": [stubCommit("erin", 1), stubCommit("frank", 3)],
+    },
+    permissions: { alice: "write", bob: "write", erin: "write", frank: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // Narrow the fixture to the two product surfaces (cli, vscode) plus the
+    // unmapped community page: drop the third product surface's file.
+    fs.rmSync(path.join(repoDir, SURFACE_PAGE_FILES.gateway))
+
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const entries = readStubLog(stub.logFile)
+    const creates = entries.filter((e) => e.kind === "create")
+    assert.equal(
+      creates.length,
+      3,
+      `exactly three PRs must be created; got ${JSON.stringify(creates)}\n${result.output}`,
+    )
+    const byHead = new Map(creates.map((c) => [c.head, c]))
+    assert.deepEqual([...byHead.keys()].sort(), [
+      `${SURFACE_PREFIX}cli`,
+      `${SURFACE_PREFIX}other`,
+      `${SURFACE_PREFIX}vscode`,
+    ])
+
+    const assignees = entries.filter((e) => e.method === "POST" && e.url.endsWith("/assignees"))
+    const reviews = entries.filter((e) => e.method === "POST" && e.url.endsWith("/requested_reviewers"))
+    const pairFor = (name) => {
+      const create = byHead.get(`${SURFACE_PREFIX}${name}`)
+      const a = assignees.find((e) => e.url.includes(`/issues/${create.number}/`))
+      const r = reviews.find((e) => e.url.includes(`/pulls/${create.number}/`))
+      assert.ok(a, `assignee POST for ${name}`)
+      assert.ok(r, `reviewer POST for ${name}`)
+      return { assignees: a.body.assignees, reviewers: r.body.reviewers }
+    }
+    assert.deepEqual(pairFor("cli"), { assignees: ["alice", "bob"], reviewers: ["alice", "bob"] })
+    assert.deepEqual(pairFor("vscode"), { assignees: ["erin", "frank"], reviewers: ["erin", "frank"] })
+    assert.deepEqual(pairFor("other"), {
+      assignees: ["lambertjosh", "intentionally-left-nil"],
+      reviewers: ["lambertjosh", "intentionally-left-nil"],
+    })
+    assert.match(byHead.get(`${SURFACE_PREFIX}other`).body.body, /fixed reviewers/i)
+
+    // Each surface branch carries exactly its own changed file; no file twice.
+    const branchFiles = new Map()
+    for (const name of ["cli", "vscode", "other"]) {
+      const head = `${SURFACE_PREFIX}${name}`
+      const diff = gitIn(repoDir, ["diff", "--name-only", "origin/main", `origin/${head}`])
+      branchFiles.set(name, diff.split("\n").filter(Boolean))
+    }
+    assert.deepEqual(branchFiles.get("cli"), [SURFACE_PAGE_FILES.cli])
+    assert.deepEqual(branchFiles.get("vscode"), [SURFACE_PAGE_FILES.vscode])
+    assert.deepEqual(branchFiles.get("other"), [SURFACE_PAGE_FILES.other])
+    const flat = [...branchFiles.values()].flat()
+    assert.equal(flat.length, 3, "three changed files total")
+    assert.equal(new Set(flat).size, 3, "no changed file may appear in two PRs")
+
+    // The proof a PR body quotes, from this run.
+    console.log("  computed surface map (changed file -> surface):")
+    for (const [name, files] of branchFiles) {
+      for (const file of files) console.log(`    ${file} -> ${name}`)
+    }
+    for (const name of ["cli", "vscode", "other"]) {
+      const create = byHead.get(`${SURFACE_PREFIX}${name}`)
+      const pair = pairFor(name)
+      console.log(`  pull request: ${create.head}`)
+      console.log(`    title: ${create.body.title}`)
+      console.log(`    assignees: ${pair.assignees.join(", ")}`)
+      console.log(`    requested reviewers: ${pair.reviewers.join(", ")}`)
+    }
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -4220,6 +4311,7 @@ function main() {
     case18_legacyRefDeletedWithoutPr,
     case19_watermarkAndMarkerHelpers,
     case20_upsertRefreshesSkippedMarker,
+    case21_twoSurfacesOneUnmapped,
   ]
   let failed = 0
   for (const fn of cases) {
