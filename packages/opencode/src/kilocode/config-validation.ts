@@ -129,10 +129,9 @@ export namespace ConfigValidation {
     // Project-local config (e.g. /project/.kilo/command/foo.md)
     try {
       const ctx = capture()
-      if (ctx) {
-        const rel = path.relative(ctx.worktree, filepath)
-        if (!rel.startsWith("..")) return ConfigProtection.isRelative(rel)
-      }
+      const worktree = ctx ? ctx.worktree : process.cwd()
+      const rel = path.relative(worktree, filepath)
+      if (!rel.startsWith("..")) return ConfigProtection.isRelative(rel)
     } catch {
       // Not in an Instance context — skip project-relative check
     }
