@@ -33,6 +33,7 @@ import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
+import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
@@ -541,6 +542,7 @@ export const node = LayerNode.suspend(() =>
       Notebook.node,
       RepositoryCache.node,
       KiloSessions.node,
+      Wakeup.node, // kilocode_change - provides Wakeup.Service to the schedule_wakeup/cancel_wakeup tools
     ],
   }),
 )
