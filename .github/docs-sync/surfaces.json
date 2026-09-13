@@ -1,0 +1,52 @@
+{
+  "derivation": "Derived from the repository layout. A product surface is a package under packages/ that ships a distinct client, plugin, backend, or hosted service: cli = packages/opencode/ + packages/tui/ + packages/server/ + packages/sdk/ + packages/plugin/; vscode = packages/kilo-vscode/ + packages/kilo-web-ui/ + packages/kilo-ui/; jetbrains = packages/kilo-jetbrains/; gateway = packages/kilo-gateway/; web = packages/kilo-console/ + packages/kilo-indexing/ + packages/kilo-memory/ + packages/kilo-sandbox/. Docs route from the IA tree packages/kilo-docs/pages/ plus docs/jetbrains-vscode-settings-parity.md: each surface lists the pages sections that document it, and the per-platform pages under packages/kilo-docs/pages/code-with-ai/platforms/ map to the matching extension surface (the vscode/ directory to vscode, jetbrains.md to jetbrains). A doc path belongs to the surface with the longest matching prefix; a path that matches none of those prefixes falls to `other` (the explicit other prefixes are listed under other.docs).",
+  "other": {
+    "name": "other",
+    "reviewers": ["lambertjosh", "intentionally-left-nil"],
+    "docs": [
+      "packages/kilo-docs/pages/community/",
+      "packages/kilo-docs/pages/kiloclaw/",
+      "packages/kilo-docs/pages/contributing/",
+      "packages/kilo-docs/LEARNINGS.md",
+      "docs/"
+    ]
+  },
+  "surfaces": [
+    {
+      "name": "cli",
+      "sources": ["packages/opencode/", "packages/tui/", "packages/server/", "packages/sdk/", "packages/plugin/"],
+      "docs": [
+        "packages/kilo-docs/pages/getting-started/",
+        "packages/kilo-docs/pages/code-with-ai/",
+        "packages/kilo-docs/pages/customize/",
+        "packages/kilo-docs/pages/automate/",
+        "packages/kilo-docs/pages/collaborate/"
+      ]
+    },
+    {
+      "name": "vscode",
+      "sources": ["packages/kilo-vscode/", "packages/kilo-web-ui/", "packages/kilo-ui/"],
+      "docs": ["packages/kilo-docs/pages/code-with-ai/platforms/vscode/"]
+    },
+    {
+      "name": "jetbrains",
+      "sources": ["packages/kilo-jetbrains/"],
+      "docs": ["packages/kilo-docs/pages/code-with-ai/platforms/jetbrains.md"]
+    },
+    {
+      "name": "gateway",
+      "sources": ["packages/kilo-gateway/"],
+      "docs": ["packages/kilo-docs/pages/gateway/", "packages/kilo-docs/pages/ai-providers/"]
+    },
+    {
+      "name": "web",
+      "sources": [
+        "packages/kilo-console/",
+        "packages/kilo-indexing/",
+        "packages/kilo-memory/",
+        "packages/kilo-sandbox/"
+      ],
+      "docs": ["packages/kilo-docs/pages/api/", "packages/kilo-docs/pages/deploy-secure/"]
+    }
+  ]
+}
