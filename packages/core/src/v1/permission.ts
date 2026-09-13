@@ -22,6 +22,7 @@ export class DeniedError extends Schema.TaggedErrorClass<DeniedError>()("Permiss
   ruleset: Schema.Any,
 }) {
   override get message() {
+    // kilocode_change start
     const rules = Array.isArray(this.ruleset) ? this.ruleset : [this.ruleset]
     const source = rules.find((r) => r && typeof r === "object" && "source" in r)?.source
     if (source === "agent") {
@@ -30,6 +31,7 @@ export class DeniedError extends Schema.TaggedErrorClass<DeniedError>()("Permiss
     if (source === "global") {
       return `A global policy prevents you from using this specific tool call. Here are some of the relevant rules ${JSON.stringify(this.ruleset)}`
     }
+    // kilocode_change end
     return `The user has specified a rule which prevents you from using this specific tool call. Here are some of the relevant rules ${JSON.stringify(this.ruleset)}`
   }
 }

@@ -133,18 +133,18 @@ function parts(node: Node) {
 
 // kilocode_change start
 function isSafeDescriptorRedirect(text: string): boolean {
-  return /^\d*\s*(?:>\s*&|<\s*&)\s*(?:\d+|-)$/.test(text.trim()) || /^&>\s*(?:\d+|-)$/.test(text.trim())
+  return /^\d*\s*(?:>\s*&|<\s*&)\s*(?:\d+|-)$/.test(text.trim())
 }
 
 function onlySafeRedirects(parent: Node): boolean {
   if (parent.type !== "redirected_statement") return false
   const redirects = parent.children.filter(
-    (child) => child.type.includes("redirect") || child.type === "redirection",
+    (child): child is Node => Boolean(child && (child.type.includes("redirect") || child.type === "redirection")),
   )
   if (redirects.length === 0) return false
   return redirects.every(
     (child) =>
-      (child.type === "file_redirect" || child.type === "redirection") && isSafeDescriptorRedirect(child.text),
+      Boolean(child && (child.type === "file_redirect" || child.type === "redirection") && isSafeDescriptorRedirect(child.text)),
   )
 }
 
@@ -400,9 +400,11 @@ export const ShellPermission = Effect.gen(function* () {
     const kind = ShellID.toKind(Shell.name(shell))
 
     const nodes = commands(root)
-    if (root.descendantsOfType("file_redirect").some((node) => !isSafeDescriptorRedirect(node.text))) {
+    // kilocode_change start
+    if (root.descendantsOfType("file_redirect").some((node) => Boolean(node && !isSafeDescriptorRedirect(node.text)))) {
       scan.access = "unknown"
     }
+    // kilocode_change end
     if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
       scan.access = "unknown"
     }
