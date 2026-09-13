@@ -84,6 +84,13 @@ const schedule = (wake: Wakeup.Interface, dir: string, delay = "1m") =>
   wake.schedule({ sessionID: ctx.sessionID, directory: dir, prompt: "check the build", delay }).pipe(Effect.orDie)
 
 describe("cancel_wakeup tool", () => {
+  test("describes the list as showing the reason, not the raw prompt", () =>
+    run((tool) =>
+      Effect.gen(function* () {
+        expect(tool.description).toContain("reason")
+      }),
+    ))
+
   test("lists no wakeups on an empty store", () =>
     run((tool) =>
       Effect.gen(function* () {

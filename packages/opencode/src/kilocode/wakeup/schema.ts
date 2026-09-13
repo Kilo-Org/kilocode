@@ -5,7 +5,7 @@ import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 import { Context, Effect, Schema, Types } from "effect"
 import z from "zod"
 
-/** A scheduled wakeup never fires sooner than this after it is scheduled. */
+/** A `delay` under this is raised to it; an absolute `when` is honored as given. */
 export const MIN_DELAY_MS = 10_000
 /** A scheduled wakeup never fires further out than seven days. */
 export const MAX_HORIZON_MS = 7 * 24 * 60 * 60 * 1000
@@ -69,9 +69,10 @@ export class TooMany extends Schema.TaggedErrorClass<TooMany>()("Wakeup.TooMany"
 }) {}
 
 /** The resume boundary: the service fires through this so tests can stub it. */
-export class Fire extends Context.Service<Fire, { readonly run: (info: Info) => Effect.Effect<void> }>()(
-  "@kilocode/WakeupFire",
-) {}
+export class Fire extends Context.Service<
+  Fire,
+  { readonly run: (info: Info, options?: { inPlace?: boolean }) => Effect.Effect<void> }
+>()("@kilocode/WakeupFire") {}
 
 // ISO-8601 date-time. The offset is optional; when present it is absolute, and
 // when omitted `Date.parse` interprets the wall clock in the host timezone.

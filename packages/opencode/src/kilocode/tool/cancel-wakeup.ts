@@ -76,7 +76,7 @@ export const CancelWakeupTool = Tool.define<typeof Params, Meta, Wakeup.Service,
 
           // Cancel is idempotent: an already-fired, already-cancelled, or
           // unknown id is reported, never thrown.
-          const removed = yield* wake.cancel(id as Wakeup.ID)
+          const removed = yield* wake.cancel(id as Wakeup.ID, ctx.sessionID)
           if (!removed) {
             return {
               title: "No pending wakeup",

@@ -1,7 +1,7 @@
 Review and cancel the wakeups scheduled for this session.
 
 Use this tool to:
-- List the wakeups you scheduled, with their id, due time, and prompt
+- List the wakeups you scheduled, with their id, due time, and reason (or the scheduled prompt when you gave no reason)
 - Cancel a wakeup you no longer need, by its id
 
 Call it with action "list" first to find the id, then action "cancel" with that id.

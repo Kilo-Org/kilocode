@@ -2,7 +2,7 @@ import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { Context, Effect, Fiber, Layer } from "effect"
+import { Context, Effect, Fiber, Layer, Semaphore } from "effect"
 import { fireLayer, text as wakeupText } from "./resume"
 import * as schema from "./schema"
 
@@ -31,7 +31,7 @@ export namespace Wakeup {
   export interface Interface {
     readonly schedule: (input: Input) => Effect.Effect<Info, InvalidTime | PastTime | TooMany>
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
-    readonly cancel: (id: ID) => Effect.Effect<Info | undefined>
+    readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
     readonly adopt: (directory: string) => Effect.Effect<void>
   }
 
@@ -48,6 +48,12 @@ export namespace Wakeup {
       const scope = yield* Effect.scope
       const timers = new Map<ID, Fiber.Fiber<void>>()
       const entries = new Map<ID, Info>()
+      // Ids whose persistence was already dropped and whose resume is in flight.
+      // `adopt` must not re-fire one of these while the slow turn runs.
+      const firing = new Set<ID>()
+      // Serializes the count-and-write in `schedule` so two concurrent schedulers
+      // cannot both pass the cap.
+      const gate = Semaphore.makeUnsafe(1)
 
       const stop = () => {
         for (const fiber of timers.values()) fiber.interruptUnsafe()
@@ -76,15 +82,19 @@ export namespace Wakeup {
         return undefined
       })
 
-      const fireNow = (info: Info) =>
+      const fireNow = (info: Info, inPlace = false) =>
         Effect.gen(function* () {
+          if (firing.has(info.id)) return
+          firing.add(info.id)
           entries.delete(info.id)
           timers.delete(info.id)
-          yield* fire
-            .run(info)
-            .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
+          // Drop the persistence before the resume: the model turn can be slow,
+          // and a concurrent `adopt` that still sees the file would fire twice.
           yield* storage.remove(key(info)).pipe(Effect.ignore)
-        })
+          yield* fire
+            .run(info, { inPlace })
+            .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
+        }).pipe(Effect.ensuring(Effect.sync(() => firing.delete(info.id))))
 
       const arm = (info: Info) =>
         Effect.gen(function* () {
@@ -96,40 +106,51 @@ export namespace Wakeup {
           timers.set(info.id, fiber)
         })
 
-      const schedule = Effect.fn("Wakeup.schedule")(function* (input: Input) {
-        const now = Date.now()
-        const dueAt = yield* schema.resolve(input, now)
-        const pending = yield* storage
-          .list(["wakeup", String(input.sessionID)])
-          .pipe(Effect.catch(() => Effect.succeed([] as string[][])))
-        if (pending.length >= MAX_PER_SESSION) {
-          return yield* new TooMany({ message: `A session can hold at most ${MAX_PER_SESSION} pending wakeups` })
-        }
-        const info: Info = {
-          id: ID.ascending(),
-          sessionID: input.sessionID,
-          directory: input.directory,
-          prompt: input.prompt,
-          reason: input.reason,
-          agent: input.agent,
-          dueAt,
-          created: now,
-        }
-        yield* storage.write(key(info), info).pipe(Effect.orDie)
-        entries.set(info.id, info)
-        yield* arm(info)
-        return info
-      })
-
       const list = Effect.fn("Wakeup.list")(function* (input?: { sessionID?: SessionID }) {
-        return Array.from(entries.values())
+        const found = new Map<ID, Info>(entries)
+        const prefix = input?.sessionID ? ["wakeup", String(input.sessionID)] : ["wakeup"]
+        const keys = yield* storage.list(prefix).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
+        for (const target of keys) {
+          const info = yield* read(target)
+          if (info && !found.has(info.id)) found.set(info.id, info)
+        }
+        return Array.from(found.values())
           .filter((info) => !input?.sessionID || info.sessionID === input.sessionID)
           .toSorted((a, b) => a.dueAt - b.dueAt || a.id.localeCompare(b.id))
       })
 
-      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID) {
+      const schedule = Effect.fn("Wakeup.schedule")(function* (input: Input) {
+        return yield* gate.withPermits(1)(
+          Effect.gen(function* () {
+            const now = Date.now()
+            const dueAt = yield* schema.resolve(input, now)
+            // Count only wakeups that still parse: an unreadable file must not
+            // hold a slot, and the count and the write must be one critical section.
+            const pending = yield* list({ sessionID: input.sessionID })
+            if (pending.length >= MAX_PER_SESSION) {
+              return yield* new TooMany({ message: `A session can hold at most ${MAX_PER_SESSION} pending wakeups` })
+            }
+            const info: Info = {
+              id: ID.ascending(),
+              sessionID: input.sessionID,
+              directory: input.directory,
+              prompt: input.prompt,
+              reason: input.reason,
+              agent: input.agent,
+              dueAt,
+              created: now,
+            }
+            yield* storage.write(key(info), info).pipe(Effect.orDie)
+            entries.set(info.id, info)
+            yield* arm(info)
+            return info
+          }),
+        )
+      })
+
+      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID) {
         const info = yield* lookup(id)
-        if (!info) return undefined
+        if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
         const fiber = timers.get(id)
         if (fiber) {
           timers.delete(id)
@@ -145,9 +166,11 @@ export namespace Wakeup {
         for (const target of keys) {
           const info = yield* read(target)
           if (!info || info.directory !== directory) continue
-          if (entries.has(info.id) || timers.has(info.id)) continue
+          if (entries.has(info.id) || timers.has(info.id) || firing.has(info.id)) continue
           entries.set(info.id, info)
-          if (info.dueAt <= Date.now()) yield* fireNow(info)
+          // Adopt runs inside the directory's bootstrap, so it must resume in
+          // place; `provide` would await the in-flight load and deadlock.
+          if (info.dueAt <= Date.now()) yield* fireNow(info, true)
           else yield* arm(info)
         }
       })
