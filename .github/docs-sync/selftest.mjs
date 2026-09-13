@@ -1878,10 +1878,10 @@ function case10_learnings() {
   }
 
   // Prepare a git repo for learn.mjs tests: set origin refs, create docs-sync-out.
-  function setupLearnRepo(dir) {
+  function setupLearnRepo(dir, branch = "docs/auto-sync") {
     fs.mkdirSync(path.join(dir, "docs-sync-out"), { recursive: true })
     gitIn(dir, ["update-ref", "refs/remotes/origin/main", "main"])
-    gitIn(dir, ["update-ref", "refs/remotes/origin/docs/auto-sync", "docs/auto-sync"])
+    gitIn(dir, ["update-ref", `refs/remotes/origin/${branch}`, branch])
     return dir
   }
 
@@ -3229,7 +3229,7 @@ Just prose, not a rule line.
     fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
     gitIn(dir, ["add", "base.txt"])
     gitIn(dir, ["commit", "-m", "base"])
-    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync/cli"])
 
     // github-actions[bot] authored the only branch commit, so there is no candidate
     // correction and no model call. The run goes straight to the direct marker PATCH.
@@ -3239,7 +3239,7 @@ Just prose, not a rule line.
     gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
     gitIn(dir, ["commit", "-m", "seed learnings", "--author", `github-actions[bot] <${githubBotEmail}>`])
     gitIn(dir, ["remote", "add", "origin", dir]) // learn.mjs fetches origin itself
-    const cwd = setupLearnRepo(dir)
+    const cwd = setupLearnRepo(dir, "docs/auto-sync/cli")
     const tip = gitIn(dir, ["rev-parse", "HEAD"])
 
     // Stub GitHub API. The second read of the pull request returns the maintainer edit.
@@ -3268,7 +3268,7 @@ const server = http.createServer((req, res) => {
       return json(res, {
         number: 1,
         body,
-        head: { ref: "docs/auto-sync" },
+        head: { ref: "docs/auto-sync/cli" },
         user: { login: "github-actions[bot]" },
       })
     }
@@ -3468,6 +3468,7 @@ function case11_prOwner() {
 // ---------------------------------------------------------------------------
 const SURFACE_NOW = "2026-09-01T00:00:00.000Z"
 const SURFACE_PREFIX = "docs/auto-sync/"
+const GITHUB_BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
 const SURFACE_PAGE_FILES = {
   cli: "packages/kilo-docs/pages/getting-started/new.md",
   vscode: "packages/kilo-docs/pages/code-with-ai/platforms/vscode/new.md",
@@ -3502,6 +3503,7 @@ const server = http.createServer((req, res) => {
       const pr = (config.openPrs || []).find((p) => p.number === n) || {}
       return send(res, 200, { number: n, head: { ref: pr.head || "" }, body: pr.body || "", html_url: "https://example.test/pull/" + n })
     }
+    if (req.method === "GET" && /\\/pulls\\/\\d+\\/comments$/.test(path)) return send(res, 200, [])
     if (req.method === "GET" && path.endsWith("/commits")) {
       const query = String(req.url).split("?")[1] || ""
       const m = query.match(/path=([^&]*)/)
@@ -3524,7 +3526,11 @@ const server = http.createServer((req, res) => {
       log({ kind: "create", head: head, number: number, url: url, body: body })
       return send(res, 201, { number: number, html_url: url, head: { ref: head } })
     }
-    if (req.method === "PATCH" && pullMatch) return send(res, 200, { number: Number(pullMatch[1]), html_url: "https://example.test/pull/" + pullMatch[1] })
+    if (req.method === "PATCH" && pullMatch) {
+      const n = Number(pullMatch[1])
+      if ((config.failPatch || []).includes(n)) return send(res, 422, { message: "stub rejected patch " + n })
+      return send(res, 200, { number: n, html_url: "https://example.test/pull/" + n })
+    }
     if (req.method === "POST" && path.endsWith("/labels")) return send(res, 201, {})
     if (req.method === "POST" && path.endsWith("/assignees")) return send(res, 200, {})
     if (req.method === "POST" && path.endsWith("/requested_reviewers")) return send(res, 200, {})
@@ -4494,6 +4500,128 @@ function case25_surfaceBranchRecognized() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 26/27 — learn.mjs against the live API path
+// ---------------------------------------------------------------------------
+
+/**
+ * Repo with a bare origin, `main`, and one bot-authored commit per branch. The
+ * only commits past main are the sync job's own, so every branch yields no
+ * candidate correction and the run takes the direct marker-PATCH route.
+ */
+function setupLearnLiveRepo(branches) {
+  const root = mktemp("docs-sync-learn-live-")
+  const originDir = path.join(root, "origin.git")
+  gitIn(root, ["init", "--bare", "origin.git"])
+  const repoDir = path.join(root, "repo")
+  fs.mkdirSync(repoDir)
+  initRepoWithIdentity(repoDir)
+
+  const write = (rel, text) => {
+    const p = path.join(repoDir, rel)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, text)
+  }
+  write("packages/kilo-docs/LEARNINGS.md", renderLearnings([]))
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "base"])
+  gitIn(repoDir, ["remote", "add", "origin", originDir])
+  gitIn(repoDir, ["push", "-q", "origin", "main"])
+  gitIn(repoDir, ["update-ref", "refs/remotes/origin/main", "main"])
+
+  for (const branch of branches) {
+    gitIn(repoDir, ["checkout", "-q", "-b", branch, "main"])
+    write(`packages/kilo-docs/pages/${branch.replaceAll("/", "-")}.md`, `# ${branch}\n`)
+    gitIn(repoDir, ["add", "packages/kilo-docs"])
+    gitIn(repoDir, ["commit", "-m", `docs ${branch}`, "--author", `github-actions[bot] <${GITHUB_BOT_EMAIL}>`])
+    gitIn(repoDir, ["push", "-q", "origin", branch])
+    gitIn(repoDir, ["update-ref", `refs/remotes/origin/${branch}`, branch])
+    gitIn(repoDir, ["checkout", "-q", "main"])
+    gitIn(repoDir, ["branch", "-D", branch])
+  }
+  fs.mkdirSync(path.join(repoDir, "docs-sync-out"), { recursive: true })
+  return { root, repoDir }
+}
+
+function runLearnLive(repoDir, root, port) {
+  return runNodeScript(LEARN_SCRIPT, {
+    cwd: repoDir,
+    env: {
+      TRIAGE_MODEL: "test/model",
+      GITHUB_REPOSITORY: "acme/repo",
+      GH_TOKEN: "stub-token",
+      DOCS_SYNC_API_BASE: `http://127.0.0.1:${port}`,
+      GITHUB_OUTPUT: path.join(root, "gh-output"),
+      GITHUB_STEP_SUMMARY: path.join(root, "gh-summary"),
+      LEARNINGS_BUDGET_MINUTES: "1",
+      DOCS_SYNC_BACKOFF_MS: "0",
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Case 26 — a legacy dated auto-sync PR is not a learnings target
+// ---------------------------------------------------------------------------
+function case26_learnIgnoresLegacyPr() {
+  console.log("case 26 — learn.mjs ignores a legacy dated auto-sync PR")
+  const { root, repoDir } = setupLearnLiveRepo(["docs/auto-sync/cli", "docs/auto-sync-2026-09-11"])
+
+  const stub = startSurfaceStub({
+    openPrs: [
+      { number: 14043, head: "docs/auto-sync-2026-09-11", body: "" },
+      { number: 77, head: "docs/auto-sync/cli", body: "" },
+    ],
+  })
+  try {
+    const result = runLearnLive(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `learn.mjs must exit 0: ${result.output}`)
+
+    const log = readStubLog(stub.logFile)
+    assert.ok(
+      !log.some((e) => e.url.includes("/pulls/14043/comments")),
+      "the legacy dated PR must not be read as a learning target",
+    )
+    assert.ok(
+      !log.some((e) => e.method === "PATCH" && e.url.includes("/pulls/14043")),
+      "the legacy dated PR body must not be PATCHed",
+    )
+    assert.ok(
+      log.some((e) => e.method === "PATCH" && e.url.includes("/pulls/77")),
+      "the surface PR must still get its marker refreshed",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 27 — one failed marker PATCH does not skip the remaining targets
+// ---------------------------------------------------------------------------
+function case27_patchFailureIsolated() {
+  console.log("case 27 — one failed marker PATCH does not abort the rest")
+  const { root, repoDir } = setupLearnLiveRepo(["docs/auto-sync/cli", "docs/auto-sync/vscode"])
+
+  const stub = startSurfaceStub({
+    openPrs: [
+      { number: 1, head: "docs/auto-sync/cli", body: "" },
+      { number: 2, head: "docs/auto-sync/vscode", body: "" },
+    ],
+    failPatch: [1],
+  })
+  try {
+    const result = runLearnLive(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `a failed marker PATCH must not fail the run: ${result.output}`)
+
+    const log = readStubLog(stub.logFile)
+    assert.ok(
+      log.some((e) => e.method === "PATCH" && e.url.includes("/pulls/2")),
+      "the remaining target's marker must still be published",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -4531,6 +4659,8 @@ function main() {
     case23_cloudHistoryUnreachableFallsBack,
     case24_legacyDatedPrIgnored,
     case25_surfaceBranchRecognized,
+    case26_learnIgnoresLegacyPr,
+    case27_patchFailureIsolated,
   ]
   let failed = 0
   for (const fn of cases) {

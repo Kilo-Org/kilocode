@@ -27,6 +27,8 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
+import { isSurfaceBranch } from "./surfaces.mjs"
+
 const LEARNINGS_FILE = "packages/kilo-docs/LEARNINGS.md"
 const OUT_DIR = "docs-sync-out"
 const ATTEMPTS = 2
@@ -456,6 +458,13 @@ async function extract() {
     for (const item of prs) {
       try {
         const detail = await api(`/repos/${r}/pulls/${item.number}`)
+        // Only a `docs/auto-sync/<surface>` head is one of this job's own PRs.
+        // A legacy dated head (`docs/auto-sync-<date>`) and the bare integration
+        // ref are not learning targets: they are never counted and never PATCHed.
+        if (!isSurfaceBranch(detail.head?.ref)) {
+          log(`ignoring auto-docs PR #${item.number} on ${detail.head?.ref ?? "unknown"}: not a surface branch`)
+          continue
+        }
         targets.push({
           index: targets.length,
           prData: detail,
@@ -942,11 +951,18 @@ async function patchOrLogMarker({ targets, marker, fixture, patchFile }) {
       warn(`could not re-read PR #${t.prNumber} before the marker PATCH: ${err.message}. Using the earlier body.`)
     }
     const newBody = patchMarkerIntoBody(latestBody, marker)
-    await api(`/repos/${repo()}/pulls/${t.prNumber}`, {
-      method: "PATCH",
-      body: { body: newBody },
-    })
-    log(`PATCHed learned-through marker on PR #${t.prNumber}`)
+    try {
+      await api(`/repos/${repo()}/pulls/${t.prNumber}`, {
+        method: "PATCH",
+        body: { body: newBody },
+      })
+      log(`PATCHed learned-through marker on PR #${t.prNumber}`)
+    } catch (err) {
+      // One target's failed PATCH must not skip the remaining targets. On the
+      // next run a stale marker only re-reads a range already learned from, and
+      // the duplicate-rule-text rejection blocks a re-added rule.
+      warn(`could not PATCH the learned-through marker on PR #${t.prNumber}: ${err.message}`)
+    }
   }
 }
 
