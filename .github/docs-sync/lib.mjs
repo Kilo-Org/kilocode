@@ -14,6 +14,11 @@ import fs from "node:fs"
 const API = process.env.DOCS_SYNC_API_BASE || "https://api.github.com"
 const MAX_RETRIES = 3
 
+// Reasoning effort passed to every `kilo run` as `--variant`. The workflow sets
+// DOCS_SYNC_VARIANT (default "max"); scripts fall back to max so a local run or a
+// caller that forgets the env still gets the intended effort.
+export const REASONING_VARIANT = process.env.DOCS_SYNC_VARIANT || "max"
+
 export function token() {
   const t = process.env.GH_TOKEN || process.env.GITHUB_TOKEN
   if (!t) throw new Error("GH_TOKEN (or GITHUB_TOKEN) is required")

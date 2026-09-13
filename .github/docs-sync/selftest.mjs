@@ -14,7 +14,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { sleepSync } from "./lib.mjs"
-import { mergeOrFallback, DEFAULT_BRANCH } from "./prepare-branch.mjs"
+import { mergeOrFallback, DEFAULT_BRANCH, isLegacyRollingPr } from "./prepare-branch.mjs"
 import { applyCap } from "./watermark.mjs"
 import {
   computeUncovered,
@@ -27,6 +27,7 @@ import {
   resolveLearnedThrough,
   renderBody,
   extractSectionRows,
+  surfaceBranch,
 } from "./upsert-pr.mjs"
 import {
   revertTitleKind,
@@ -52,6 +53,8 @@ const EDIT_SCRIPT = path.join(HERE, "edit.mjs")
 const TRIAGE_SCRIPT = path.join(HERE, "triage.mjs")
 const COLLECT_SCRIPT = path.join(HERE, "collect.mjs")
 const LEARN_SCRIPT = path.join(HERE, "learn.mjs")
+const UPSERT_SCRIPT = path.join(HERE, "upsert-pr.mjs")
+const PREP_SCRIPT = path.join(HERE, "prepare-branch.mjs")
 
 const temps = []
 
@@ -2956,19 +2959,19 @@ Just prose, not a rule line.
     )
     assert.ok(upsertSrc.includes("prBody"), "resolveLearnedThrough must receive prBody")
 
-    // (b) prBody is at function scope (let prBody before the if block)
+    // (b) prBody is function-scoped and read before the body is rendered
     const prBodyIdx = upsertSrc.indexOf('let prBody = ""')
     assert.ok(prBodyIdx >= 0, 'prBody must be declared at function scope with let prBody = ""')
-    const ifIdx = upsertSrc.indexOf('if (mode === "update"')
-    assert.ok(prBodyIdx < ifIdx, 'let prBody must appear before if (mode === "update"...)')
 
-    // (c) renderBody({ argument object contains learnedThrough
+    // (c) the renderBody({ argument object contains learnedThrough + surfaceBlock
     const renderBodyIdx = upsertSrc.indexOf("const body = renderBody({")
     assert.ok(renderBodyIdx >= 0, "renderBody call must exist")
+    assert.ok(prBodyIdx < renderBodyIdx, "let prBody must appear before the renderBody call")
     const afterRenderBody = upsertSrc.slice(renderBodyIdx)
     const renderBodyArgsEnd = afterRenderBody.indexOf("})")
     const renderBodyArgs = afterRenderBody.slice(0, renderBodyArgsEnd)
-    assert.ok(renderBodyArgs.includes("learnedThrough"), "renderBody call in main() must pass learnedThrough")
+    assert.ok(renderBodyArgs.includes("learnedThrough"), "renderBody call must pass learnedThrough")
+    assert.ok(renderBodyArgs.includes("surfaceBlock"), "renderBody call must pass the surface block")
   }
 
   // 10q — dry run makes no live write
@@ -3429,26 +3432,458 @@ server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.env.PORT_FILE, Stri
   }
 }
 
-// Case 11 — the created rolling PR gets an assignee and a review request
+// Case 11 — created per-surface PRs get an assignee and a review request
 function case11_prOwner() {
-  console.log("case 11 — created PR assignee and reviewer")
-  const src = fs.readFileSync(path.join(HERE, "upsert-pr.mjs"), "utf8")
+  console.log("case 11 — per-surface assignee and reviewer calls")
+  const src = fs.readFileSync(UPSERT_SCRIPT, "utf8")
 
-  assert.ok(/const DOCS_OWNER = "\S+"/.test(src), "DOCS_OWNER must be a module constant")
+  // The single rolling owner is gone; reviewers come from the surface map.
+  assert.ok(!src.includes("DOCS_OWNER"), "the single DOCS_OWNER constant must be removed")
+  assert.ok(src.includes("computeSurfaceReviewers"), "upsert must compute per-surface reviewers")
+  assert.ok(src.includes("groupBySurface"), "upsert must group docs changes by surface")
+  assert.equal(surfaceBranch("cli"), "docs/auto-sync/cli")
+  assert.equal(surfaceBranch("other"), "docs/auto-sync/other")
+
+  // Created PRs still POST assignees and requested_reviewers, best-effort.
   assert.ok(src.includes("/assignees`, {"), "created PR must POST assignees")
   assert.ok(src.includes("/requested_reviewers`, {"), "created PR must POST requested_reviewers")
+  const assignIdx = src.indexOf("/assignees`, {")
+  const reviewIdx = src.indexOf("/requested_reviewers`, {")
+  const tryIdx = src.lastIndexOf("try {", assignIdx)
+  const catchIdx = src.indexOf("} catch", assignIdx)
+  assert.ok(tryIdx >= 0 && catchIdx > reviewIdx, "both POSTs must sit in one try/catch")
 
-  // Both calls belong to the create arm, after the PR exists.
-  const createIdx = src.indexOf("const pr = await api(`/repos/${repo()}/pulls`")
-  assert.ok(createIdx >= 0, "create-PR call must exist")
-  assert.ok(src.indexOf("/assignees`, {") > createIdx, "assignees POST must follow PR creation")
-  assert.ok(src.indexOf("/requested_reviewers`, {") > createIdx, "reviewer POST must follow PR creation")
+  // Legacy rolling PR helper: only the bare integration branch, never a
+  // per-surface branch.
+  assert.equal(isLegacyRollingPr({ head: { ref: DEFAULT_BRANCH } }), true)
+  assert.equal(isLegacyRollingPr({ head: { ref: surfaceBranch("cli") } }), false)
+  assert.equal(isLegacyRollingPr({ head: { ref: `${DEFAULT_BRANCH}-2026-09-01` } }), false)
+  assert.equal(isLegacyRollingPr({ head: { ref: "" } }), false)
+  assert.equal(isLegacyRollingPr({}), false)
 
-  // A failure here must not fail the run — the PR is already open.
-  const ownerIdx = src.indexOf("/assignees`, {")
-  const tryIdx = src.lastIndexOf("try {", ownerIdx)
-  const catchIdx = src.indexOf("} catch", ownerIdx)
-  assert.ok(tryIdx >= 0 && catchIdx > src.indexOf("/requested_reviewers`, {"), "both POSTs must sit in one try/catch")
+  // prepare-branch no longer repurposes the legacy PR: it comments and closes.
+  const prepSrc = fs.readFileSync(path.join(HERE, "prepare-branch.mjs"), "utf8")
+  assert.ok(prepSrc.includes("isLegacyRollingPr"), "prepare-branch must detect the legacy PR")
+  assert.ok(prepSrc.includes('state: "closed"'), "prepare-branch must close the legacy PR")
+  assert.ok(prepSrc.includes("surfaceBranchPrefix"), "prepare-branch must match per-surface branches")
+}
+
+// ---------------------------------------------------------------------------
+// Case 12/13 — per-surface segmentation against a stub API
+// ---------------------------------------------------------------------------
+const SURFACE_NOW = "2026-09-01T00:00:00.000Z"
+const SURFACE_PREFIX = "docs/auto-sync/"
+const SURFACE_PAGE_FILES = {
+  cli: "packages/kilo-docs/pages/getting-started/new.md",
+  vscode: "packages/kilo-docs/pages/code-with-ai/platforms/vscode/new.md",
+  gateway: "packages/kilo-docs/pages/gateway/new.md",
+  other: "packages/kilo-docs/pages/community/new.md",
+}
+
+// Stub GitHub API. Routes are narrow: search, one pull read, commits by path,
+// collaborator permission, and the write endpoints we capture. No network.
+const SURFACE_STUB_SERVER = `
+const fs = require("node:fs")
+const http = require("node:http")
+const config = JSON.parse(fs.readFileSync(process.env.STUB_CONFIG_FILE, "utf8"))
+let nextPr = 100
+function log(entry) { fs.appendFileSync(process.env.STUB_LOG_FILE, JSON.stringify(entry) + "\\n") }
+function send(res, status, data) {
+  res.writeHead(status, { "content-type": "application/json" })
+  res.end(JSON.stringify(data))
+}
+const server = http.createServer((req, res) => {
+  let raw = ""
+  req.on("data", (c) => (raw += c))
+  req.on("end", () => {
+    let body = null
+    if (raw) { try { body = JSON.parse(raw) } catch (e) { body = raw } }
+    const path = String(req.url).split("?")[0]
+    log({ method: req.method, url: req.url, body })
+    if (req.method === "GET" && path === "/search/issues") return send(res, 200, { items: config.openPrs || [] })
+    const pullMatch = path.match(/^\\/repos\\/[^/]+\\/[^/]+\\/pulls\\/(\\d+)$/)
+    if (req.method === "GET" && pullMatch) {
+      const n = Number(pullMatch[1])
+      const pr = (config.openPrs || []).find((p) => p.number === n) || {}
+      return send(res, 200, { number: n, head: { ref: pr.head || "" }, body: pr.body || "", html_url: "https://example.test/pull/" + n })
+    }
+    if (req.method === "GET" && path.endsWith("/commits")) {
+      const query = String(req.url).split("?")[1] || ""
+      const m = query.match(/path=([^&]*)/)
+      const prefix = m ? decodeURIComponent(m[1]) : ""
+      return send(res, 200, (config.commits || {})[prefix] || [])
+    }
+    if (req.method === "GET" && path.indexOf("/collaborators/") >= 0 && path.endsWith("/permission")) {
+      const login = decodeURIComponent(path.split("/collaborators/")[1].replace("/permission", ""))
+      return send(res, 200, { permission: (config.permissions || {})[login] || "write" })
+    }
+    if (req.method === "POST" && /\\/pulls$/.test(path)) {
+      const head = body && body.head
+      if (config.failHead && head === config.failHead) return send(res, 400, { message: "stub rejected " + head })
+      const number = nextPr++
+      const url = "https://example.test/pull/" + number
+      log({ kind: "create", head: head, number: number, url: url, body: body })
+      return send(res, 201, { number: number, html_url: url, head: { ref: head } })
+    }
+    if (req.method === "PATCH" && pullMatch) return send(res, 200, { number: Number(pullMatch[1]), html_url: "https://example.test/pull/" + pullMatch[1] })
+    if (req.method === "POST" && path.endsWith("/labels")) return send(res, 201, {})
+    if (req.method === "POST" && path.endsWith("/assignees")) return send(res, 200, {})
+    if (req.method === "POST" && path.endsWith("/requested_reviewers")) return send(res, 200, {})
+    send(res, 404, { message: "unhandled " + req.method + " " + req.url })
+  })
+})
+server.listen(0, "127.0.0.1", function () { fs.writeFileSync(process.env.STUB_PORT_FILE, String(server.address().port)) })
+`
+
+function stubCommit(login, daysAgo) {
+  const at = Date.parse(SURFACE_NOW) - daysAgo * 86_400_000
+  return { author: { login, type: "User" }, commit: { author: { date: new Date(at).toISOString() } } }
+}
+
+function startSurfaceStub(config) {
+  const dir = mktemp("docs-sync-stub-")
+  const portFile = path.join(dir, "port")
+  const logFile = path.join(dir, "requests.jsonl")
+  const configFile = path.join(dir, "config.json")
+  fs.writeFileSync(configFile, JSON.stringify(config, null, 2))
+  const script = path.join(dir, "server.cjs")
+  fs.writeFileSync(script, SURFACE_STUB_SERVER)
+  const child = spawn(process.execPath, [script], {
+    stdio: "ignore",
+    env: { ...process.env, STUB_PORT_FILE: portFile, STUB_LOG_FILE: logFile, STUB_CONFIG_FILE: configFile },
+  })
+  let port = ""
+  for (let i = 0; i < 200 && !port; i++) {
+    if (fs.existsSync(portFile)) port = fs.readFileSync(portFile, "utf8").trim()
+    else sleepSync(25)
+  }
+  if (!port) {
+    child.kill()
+    throw new Error("stub API did not report a port")
+  }
+  return { dir, logFile, port, child }
+}
+
+function readStubLog(logFile) {
+  if (!fs.existsSync(logFile)) return []
+  return fs
+    .readFileSync(logFile, "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => JSON.parse(l))
+}
+
+// Temp repo with a bare origin, main carrying base docs, and the integration
+// branch checked out with the working-tree docs changes that span two surfaces
+// plus one unmapped file.
+function setupSurfaceRepo() {
+  const root = mktemp("docs-sync-surface-")
+  const originDir = path.join(root, "origin.git")
+  gitIn(root, ["init", "--bare", "origin.git"])
+  const repoDir = path.join(root, "repo")
+  fs.mkdirSync(repoDir)
+  initRepoWithIdentity(repoDir)
+  for (const section of ["getting-started", "gateway", "community"]) {
+    const p = path.join(repoDir, "packages", "kilo-docs", "pages", section, "base.md")
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, "# base\n")
+  }
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "base docs"])
+  gitIn(repoDir, ["remote", "add", "origin", originDir])
+  gitIn(repoDir, ["push", "-q", "origin", "main"])
+  // The integration branch is local; surface branches are pushed instead.
+  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync"])
+  for (const file of Object.values(SURFACE_PAGE_FILES)) {
+    const p = path.join(repoDir, file)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, "# new\n")
+  }
+  return { root, repoDir }
+}
+
+function runUpsert(repoDir, root, port) {
+  return runNodeScript(UPSERT_SCRIPT, {
+    cwd: repoDir,
+    env: {
+      GITHUB_REPOSITORY: "acme/repo",
+      GH_TOKEN: "stub-token",
+      DOCS_SYNC_API_BASE: `http://127.0.0.1:${port}`,
+      PROCESSED_THROUGH: SURFACE_NOW,
+      SINCE: "2026-08-01T00:00:00.000Z",
+      VERIFIED: "true",
+      BRANCH: "docs/auto-sync",
+      PREP_MODE: "update",
+      GITHUB_OUTPUT: path.join(root, "gh-output"),
+      GITHUB_STEP_SUMMARY: path.join(root, "gh-summary"),
+    },
+  })
+}
+
+function case12_surfaceSegmentation() {
+  console.log("case 12 — per-surface segmentation")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    commits: {
+      "packages/opencode/": [stubCommit("alice", 1), stubCommit("bob", 5)],
+      "packages/kilo-vscode/": [stubCommit("erin", 1), stubCommit("frank", 3)],
+      "packages/kilo-gateway/": [stubCommit("carol", 2), stubCommit("dave", 4)],
+    },
+    permissions: { alice: "write", bob: "write", erin: "write", frank: "write", carol: "write", dave: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const entries = readStubLog(stub.logFile)
+    const creates = entries.filter((e) => e.kind === "create")
+    assert.equal(
+      creates.length,
+      4,
+      `exactly four PRs must be created; got ${JSON.stringify(creates)}\n${result.output}`,
+    )
+    const byHead = new Map(creates.map((c) => [c.head, c]))
+    assert.deepEqual([...byHead.keys()].sort(), [
+      `${SURFACE_PREFIX}cli`,
+      `${SURFACE_PREFIX}gateway`,
+      `${SURFACE_PREFIX}other`,
+      `${SURFACE_PREFIX}vscode`,
+    ])
+
+    const assignees = entries.filter((e) => e.method === "POST" && e.url.endsWith("/assignees"))
+    const reviews = entries.filter((e) => e.method === "POST" && e.url.endsWith("/requested_reviewers"))
+    const pairFor = (name) => {
+      const create = byHead.get(`${SURFACE_PREFIX}${name}`)
+      const a = assignees.find((e) => e.url.includes(`/issues/${create.number}/`))
+      const r = reviews.find((e) => e.url.includes(`/pulls/${create.number}/`))
+      assert.ok(a, `assignee POST for ${name}`)
+      assert.ok(r, `reviewer POST for ${name}`)
+      return { assignees: a.body.assignees, reviewers: r.body.reviewers }
+    }
+    assert.deepEqual(pairFor("cli"), { assignees: ["alice", "bob"], reviewers: ["alice", "bob"] })
+    assert.deepEqual(pairFor("vscode"), { assignees: ["erin", "frank"], reviewers: ["erin", "frank"] })
+    assert.deepEqual(pairFor("gateway"), { assignees: ["carol", "dave"], reviewers: ["carol", "dave"] })
+    assert.deepEqual(pairFor("other"), {
+      assignees: ["lambertjosh", "intentionally-left-nil"],
+      reviewers: ["lambertjosh", "intentionally-left-nil"],
+    })
+
+    for (const create of creates) {
+      const body = create.body.body
+      assert.match(body, /Derived from the repository layout/, `derivation in ${create.head}`)
+      assert.match(body, /`packages\/kilo-docs\/pages\/community\/`/, `other paths in ${create.head}`)
+      assert.match(body, /\.github\/docs-sync\/surfaces\.json/, `map file in ${create.head}`)
+    }
+    assert.match(byHead.get(`${SURFACE_PREFIX}cli`).body.body, /half-life 180 days/)
+    assert.match(byHead.get(`${SURFACE_PREFIX}gateway`).body.body, /half-life 180 days/)
+    assert.match(byHead.get(`${SURFACE_PREFIX}other`).body.body, /fixed reviewers/i)
+
+    // Each surface branch carries exactly its own changed file.
+    const branchFiles = new Map()
+    for (const name of Object.keys(SURFACE_PAGE_FILES)) {
+      const head = `${SURFACE_PREFIX}${name}`
+      const diff = gitIn(repoDir, ["diff", "--name-only", "origin/main", `origin/${head}`])
+      branchFiles.set(name, diff.split("\n").filter(Boolean))
+    }
+    for (const [name, file] of Object.entries(SURFACE_PAGE_FILES)) {
+      assert.deepEqual(branchFiles.get(name), [file], `branch ${name} must carry only its own file`)
+    }
+    const flat = [...branchFiles.values()].flat()
+    assert.equal(flat.length, 4, "four changed files total")
+    assert.equal(new Set(flat).size, 4, "no changed file may appear in two PRs")
+  } finally {
+    stub.child.kill()
+  }
+}
+
+function case13_surfaceFailureIsolated() {
+  console.log("case 13 — one surface's failure is isolated")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    failHead: `${SURFACE_PREFIX}cli`,
+    commits: { "packages/kilo-gateway/": [stubCommit("carol", 2), stubCommit("dave", 4)] },
+    permissions: { carol: "write", dave: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `run must exit 0 when one surface fails: ${result.output}`)
+    assert.match(result.output, /surface cli failed/, "the failure must be warned, not thrown")
+
+    const creates = readStubLog(stub.logFile).filter((e) => e.kind === "create")
+    assert.equal(creates.length, 3, "the other three surfaces must still create PRs")
+    assert.deepEqual([...new Set(creates.map((c) => c.head))].sort(), [
+      `${SURFACE_PREFIX}gateway`,
+      `${SURFACE_PREFIX}other`,
+      `${SURFACE_PREFIX}vscode`,
+    ])
+  } finally {
+    stub.child.kill()
+  }
+}
+
+function case14_prepareBranchSurfaces() {
+  console.log("case 14 — prepare-branch merges surface branches without a ref collision")
+  const root = mktemp("docs-sync-prep-")
+  const originDir = path.join(root, "origin.git")
+  gitIn(root, ["init", "--bare", "origin.git"])
+  const repoDir = path.join(root, "repo")
+  fs.mkdirSync(repoDir)
+  initRepoWithIdentity(repoDir)
+
+  const write = (rel, text) => {
+    const p = path.join(repoDir, rel)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, text)
+  }
+  write("packages/kilo-docs/pages/getting-started/base.md", "# base\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "base"])
+  gitIn(repoDir, ["remote", "add", "origin", originDir])
+  gitIn(repoDir, ["push", "-q", "origin", "main"])
+
+  // Durability integration branch.
+  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync-integration"])
+  write("packages/kilo-docs/pages/getting-started/integ.md", "# integ\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "integ"])
+  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync-integration"])
+
+  // Surface branch carrying a human commit.
+  gitIn(repoDir, ["checkout", "-q", "main"])
+  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync/cli"])
+  write("packages/kilo-docs/pages/getting-started/human.md", "# human\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "human"])
+  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync/cli"])
+  // actions/checkout leaves other branches as remote-tracking refs; drop the
+  // local surface branch so only the integration branch name is a local head.
+  gitIn(repoDir, ["checkout", "-q", "main"])
+  gitIn(repoDir, ["branch", "-D", "docs/auto-sync/cli"])
+
+  const stub = startSurfaceStub({ openPrs: [{ number: 7, head: "docs/auto-sync/cli", body: "" }] })
+  try {
+    const outputFile = path.join(root, "gh-output")
+    const result = runNodeScript(PREP_SCRIPT, {
+      cwd: repoDir,
+      env: {
+        GITHUB_REPOSITORY: "acme/repo",
+        GH_TOKEN: "stub-token",
+        DOCS_SYNC_API_BASE: `http://127.0.0.1:${stub.port}`,
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+    assert.equal(result.status, 0, `prepare-branch must exit 0: ${result.output}`)
+    const out = fs.readFileSync(outputFile, "utf8")
+    assert.match(out, /branch=docs\/auto-sync\n/, "integration branch output")
+    assert.match(out, /mode=update\n/, "mode output")
+    assert.ok(
+      fs.existsSync(path.join(repoDir, "packages/kilo-docs/pages/getting-started/human.md")),
+      "the surface branch's human commit must be merged into the integration tree",
+    )
+    assert.ok(
+      fs.existsSync(path.join(repoDir, "packages/kilo-docs/pages/getting-started/integ.md")),
+      "the durability content must be present",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+function case15_surfaceUpdate() {
+  console.log("case 15 — updating an open surface PR preserves human commits")
+  const stub = startSurfaceStub({
+    openPrs: [
+      {
+        number: 42,
+        head: `${SURFACE_PREFIX}cli`,
+        body: "old body\n<!-- docs-sync:changes:start -->\n| old change | [acme#1](https://example.test/1) |\n<!-- docs-sync:changes:end -->\n",
+      },
+    ],
+    commits: {
+      "packages/opencode/": [stubCommit("alice", 1), stubCommit("bob", 5)],
+      "packages/kilo-gateway/": [stubCommit("carol", 2), stubCommit("dave", 4)],
+    },
+    permissions: { alice: "write", bob: "write", carol: "write", dave: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+
+    // A human commit on the open cli PR branch.
+    gitIn(repoDir, ["checkout", "-q", "-b", "human-tmp", "origin/main"])
+    const human = path.join(repoDir, "packages/kilo-docs/pages/getting-started/human.md")
+    fs.mkdirSync(path.dirname(human), { recursive: true })
+    fs.writeFileSync(human, "# human\n")
+    gitIn(repoDir, ["add", "packages/kilo-docs/pages/getting-started/human.md"])
+    gitIn(repoDir, ["commit", "-m", "human edit"])
+    gitIn(repoDir, ["push", "-q", "origin", "HEAD:refs/heads/docs/auto-sync/cli"])
+    gitIn(repoDir, ["checkout", "-q", "docs/auto-sync"])
+    gitIn(repoDir, ["branch", "-D", "human-tmp"])
+
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const entries = readStubLog(stub.logFile)
+    const creates = entries.filter((e) => e.kind === "create")
+    assert.equal(creates.length, 3, "only the three other surfaces are created")
+    assert.ok(!creates.some((c) => c.head === `${SURFACE_PREFIX}cli`), "cli must be updated, not re-created")
+    const patched = entries.find((e) => e.method === "PATCH" && e.url.includes("/pulls/42"))
+    assert.ok(patched, "the open cli PR must be PATCHed")
+    assert.match(patched.body.body, /old change/, "existing rows must be carried forward")
+
+    // The updated cli branch keeps the human commit and adds the new cli file.
+    const diff = gitIn(repoDir, ["diff", "--name-only", "origin/main", `origin/${SURFACE_PREFIX}cli`])
+    assert.deepEqual(diff.split("\n").filter(Boolean).sort(), [
+      "packages/kilo-docs/pages/getting-started/human.md",
+      "packages/kilo-docs/pages/getting-started/new.md",
+    ])
+  } finally {
+    stub.child.kill()
+  }
+}
+
+function case16_surfaceDeletion() {
+  console.log("case 16 — a deleted doc file reaches its surface PR")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    commits: {
+      "packages/opencode/": [stubCommit("alice", 1)],
+      "packages/kilo-gateway/": [stubCommit("carol", 2), stubCommit("dave", 4)],
+    },
+    permissions: { alice: "write", carol: "write", dave: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // The integration tree removes a page that still exists on origin/main.
+    const gone = path.join(repoDir, "packages/kilo-docs/pages/gateway/base.md")
+    assert.ok(fs.existsSync(gone), "fixture must start with the gateway base page")
+    fs.rmSync(gone)
+    gitIn(repoDir, ["rm", "-q", "packages/kilo-docs/pages/gateway/base.md"])
+    gitIn(repoDir, ["commit", "-m", "remove gateway base page"])
+
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `upsert must exit 0 with a deletion: ${result.output}`)
+    assert.ok(!/surface gateway failed/.test(result.output), `a deletion must not fail its surface: ${result.output}`)
+
+    const creates = readStubLog(stub.logFile).filter((e) => e.kind === "create")
+    const gateway = creates.find((c) => c.head === `${SURFACE_PREFIX}gateway`)
+    assert.ok(gateway, "the gateway surface PR must still be created")
+
+    const status = gitIn(repoDir, ["diff", "--name-status", "origin/main", `origin/${SURFACE_PREFIX}gateway`])
+    const lines = status.split("\n").filter(Boolean)
+    assert.ok(
+      lines.includes("D\tpackages/kilo-docs/pages/gateway/base.md"),
+      `the gateway branch must carry the deletion; got:\n${status}`,
+    )
+    assert.ok(
+      lines.includes("A\tpackages/kilo-docs/pages/gateway/new.md"),
+      `the gateway branch must still add its new page; got:\n${status}`,
+    )
+  } finally {
+    stub.child.kill()
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -3475,6 +3910,11 @@ function main() {
     case9_reverts,
     case10_learnings,
     case11_prOwner,
+    case12_surfaceSegmentation,
+    case13_surfaceFailureIsolated,
+    case14_prepareBranchSurfaces,
+    case15_surfaceUpdate,
+    case16_surfaceDeletion,
   ]
   let failed = 0
   for (const fn of cases) {

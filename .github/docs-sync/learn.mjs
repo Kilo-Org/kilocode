@@ -9,7 +9,8 @@
  *   node learn.mjs           — extraction: fetch corrections, call the model, validate
  *   node learn.mjs --apply   — apply: write learnings.json into LEARNINGS.md
  *
- * Env: TRIAGE_MODEL (provider/model, reused), GH_TOKEN (or GITHUB_TOKEN).
+ * Env: TRIAGE_MODEL (provider/model, reused), DOCS_SYNC_VARIANT (reasoning effort, default max),
+ * GH_TOKEN (or GITHUB_TOKEN).
  * Budget: LEARNINGS_BUDGET_MINUTES (default 10).
  * Test hook: DOCS_SYNC_FIXTURE. When set to a fixture JSON path, skips every
  * GitHub API call and writes any marker PATCH to <fixture>.patched instead of
@@ -400,8 +401,17 @@ async function extract() {
     patchFile = fixturePath + ".patched"
   }
 
-  const { api, repo, searchIssues, appendOutput, appendSummary, backoffMsForAttempt, runKilo, sleepSync } =
-    await import("./lib.mjs")
+  const {
+    api,
+    repo,
+    searchIssues,
+    appendOutput,
+    appendSummary,
+    backoffMsForAttempt,
+    REASONING_VARIANT,
+    runKilo,
+    sleepSync,
+  } = await import("./lib.mjs")
 
   let prData
   let prBody = ""
@@ -712,7 +722,7 @@ async function extract() {
     }
 
     const result = runKilo({
-      args: ["run", prompt, "-m", model, "--dir", process.cwd(), "-f", inputFile],
+      args: ["run", prompt, "-m", model, "--variant", REASONING_VARIANT, "--dir", process.cwd(), "-f", inputFile],
       timeoutMs: Math.min(EXTRACTION_TIMEOUT_MS, left),
       streamStdout: false,
       label: "learnings extraction",
