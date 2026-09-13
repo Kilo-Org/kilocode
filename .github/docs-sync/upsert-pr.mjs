@@ -1,13 +1,16 @@
 // kilocode_change - new file
 
 /**
- * Commits the agent's packages/kilo-docs changes, pushes the rolling branch,
- * and creates or updates the rolling auto-docs PR.
+ * Commits the agent's packages/kilo-docs changes, pushes the rolling
+ * integration branch, and maintains one auto-docs PR per product surface
+ * (plus one `other` PR).
  *
- * No-op when the agent produced no docs changes. PRs become drafts when the
- * diff exceeds the file cap or verification failed. The PR body carries
- * marker-delimited sections so later runs can append rows, plus a
- * machine-readable processed-through watermark.
+ * The integration branch (`BRANCH`, normally `docs/auto-sync`) accumulates the
+ * whole docs tree and has no PR of its own. Every surface PR is rebuilt in a
+ * throwaway worktree that carries only that surface's changed files, so a file
+ * belongs to exactly one PR. Per-surface git and API work is caught: one
+ * surface's failure warns and continues and cannot lose another surface's
+ * changes or stall the watermark.
  *
  * Watermark invariant: processed-through never moves past a PR that has no
  * terminal outcome. Terminal := action !== "pending" (a deliberate agent
@@ -20,22 +23,42 @@
 
 import { execFileSync } from "node:child_process"
 import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
 import { pathToFileURL } from "node:url"
+import {
+  OTHER,
+  derivation,
+  groupBySurface,
+  loadSurfaceMap,
+  otherDocPrefixes,
+  surfaceBranch,
+  surfaceDocPrefixes,
+  surfaceForDoc,
+  surfaceNames,
+  surfaceSourcePrefixes,
+} from "./surfaces.mjs"
+import { computeSurfaceReviewers } from "./reviewers.mjs"
+
+export { surfaceBranch }
 
 const BRANCH = process.env.BRANCH || "docs/auto-sync"
+// Git refs cannot hold both `docs/auto-sync` and `docs/auto-sync/<surface>`: a
+// ref may not be a path prefix of another ref. Surface PRs therefore use the
+// required `docs/auto-sync/<surface>` heads, and the integration tree is pushed
+// to this sibling ref purely for durability (a failed surface cannot lose the
+// run's changes).
+const INTEGRATION_BRANCH = process.env.INTEGRATION_BRANCH || "docs/auto-sync-integration"
 const FILE_CAP = 15
 const ROW_CAP = 150
 const PENDING_DISPLAY_CAP = 60
 const SUMMARY_FILE = ".docs-sync-summary.json"
-// Owner of the rolling docs PR: assigned and asked for review on creation.
-const DOCS_OWNER = "emilieschario"
 const DOCS_PATH = "packages/kilo-docs"
+const MAP_FILE = ".github/docs-sync/surfaces.json"
 export const LEARNINGS_FILE = "packages/kilo-docs/LEARNINGS.md"
 
-const git = (args) =>
-  execFileSync("git", args, { stdio: ["ignore", "pipe", "inherit"] })
-    .toString()
-    .trim()
+const git = (args, cwd) =>
+  execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "inherit"] }).toString().trim()
 
 // Agent-generated strings land in the PR body next to machine-read markers.
 // Strip HTML-comment sequences so a crafted/adversarial value cannot forge
@@ -100,6 +123,7 @@ export function renderBody({
   verified,
   draftReasons,
   note,
+  surfaceBlock = "",
 }) {
   const pendingDisplay =
     pendingRows.length > PENDING_DISPLAY_CAP
@@ -113,7 +137,7 @@ This PR keeps kilo.ai/docs in sync with features merged to [Kilo-Org/cloud](http
 - Window: \`${since}\` → \`${through}\`
 - Verification (docs build + tests): **${verified ? "passing" : "FAILING — needs a human look"}**
 ${note ? `- ${note}\n` : ""}${draftReasons.length > 0 ? `- Draft because: ${draftReasons.join("; ")}\n` : ""}
-### Changes
+${surfaceBlock ? `${surfaceBlock}\n\n` : ""}### Changes
 
 ${section("changes", "| Docs change | Source |", changesRows)}
 
@@ -335,6 +359,29 @@ export function resolveLearnedThrough({ envValue, prBody }) {
 }
 
 /**
+ * Replace the processed-through marker in an existing PR body. Used to refresh
+ * an open surface PR whose surface produced no changed files this run. Without
+ * it that PR keeps an older marker; since the watermark is read from the latest
+ * auto-docs PR, a skipped surface could regress or pin it.
+ */
+export function patchProcessedThrough(body, through) {
+  const marker = `<!-- docs-sync: processed-through ${through} -->`
+  const re = /<!--\s*docs-sync:\s*processed-through\s+\S+\s*-->/
+  const b = String(body ?? "")
+  if (re.test(b)) return b.replace(re, marker)
+  return b + `\n${marker}\n`
+}
+
+/** Replace the learned-through marker in an existing PR body. No-op for an empty marker. */
+export function patchLearnedThrough(body, marker) {
+  if (!marker) return String(body ?? "")
+  const re = /<!--\s*docs-sync:\s*learned-through\s+commit=\S+\s+comment=\S+\s*-->/
+  const b = String(body ?? "")
+  if (re.test(b)) return b.replace(re, marker)
+  return b + `\n${marker}\n`
+}
+
+/**
  * No-diff early-return report. Returns summary markdown and an optional
  * replay warning. Warns IFF sinceOverride && uncovered non-empty (no commit
  * happened — that is the caller's situation).
@@ -361,16 +408,244 @@ export function noDiffReport({ uncovered, sinceOverride }) {
   return { summary, warning }
 }
 
+/** PR title for a surface. */
+export function prTitle(name, date) {
+  return `docs: auto-sync ${name} with merged PRs (through ${date})`
+}
+
+/**
+ * The per-surface block appended to the rolling body. It states the surface,
+ * the derivation and the map file, the source/doc prefixes, the paths that fall
+ * to `other`, and how the two reviewers were computed (or why they were not).
+ */
+export function surfaceBlock({ name, map, reviewers, note }) {
+  const other = map?.other?.name ?? OTHER
+  const sources = surfaceSourcePrefixes(name, map)
+  const docs = surfaceDocPrefixes(name, map)
+  const otherPaths = otherDocPrefixes(map)
+  const list = (prefixes) => (prefixes.length > 0 ? prefixes.map((p) => `\`${p}\``).join(", ") : "_none_")
+  const pair = reviewers.length > 0 ? reviewers.map((r) => `@${r}`).join(" and ") : "_none computed_"
+  return [
+    `### Surface: \`${name}\``,
+    "",
+    `- Assignees / requested reviewers: ${pair}`,
+    `- Derivation: ${derivation(map)}`,
+    `- Map: \`${MAP_FILE}\``,
+    `- Source prefixes: ${list(sources)}`,
+    `- Doc prefixes: ${list(docs)}`,
+    `- Paths that fall to \`${other}\`: ${list(otherPaths)}`,
+    `- How the two were computed: ${note}`,
+  ].join("\n")
+}
+
+/**
+ * Open auto-docs PRs keyed by surface name. Only `docs/auto-sync/<surface>`
+ * heads are considered; the legacy `docs/auto-sync` head is not a surface PR.
+ */
+async function openSurfacePrs({ api, searchIssues, repo, names }) {
+  const prs = await searchIssues(`repo:${repo} is:pr is:open label:auto-docs`, { maxPages: 2 })
+  const byName = new Map()
+  for (const item of prs) {
+    let detail
+    try {
+      detail = await api(`/repos/${repo}/pulls/${item.number}`)
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not read auto-docs PR #${item.number}: ${err.message}`)
+      continue
+    }
+    const ref = String(detail?.head?.ref ?? "")
+    for (const name of names) {
+      if (ref === surfaceBranch(name)) byName.set(name, detail)
+    }
+  }
+  return byName
+}
+
+/**
+ * Split a surface's changed files by whether they still exist at
+ * `integrationSha`. A path deleted in the integration tree has no blob there,
+ * so `git checkout integrationSha -- <path>` fails with `pathspec ... did not
+ * match any file(s) known to git`, and checkout can only restore paths, never
+ * remove one. Deletions must be removed from the worktree instead.
+ */
+function partitionByPresence(git, sha, files) {
+  if (files.length === 0) return { present: [], removed: [] }
+  const names = new Set(git(["ls-tree", "-r", "--name-only", sha, "--", ...files]).split("\n").filter(Boolean))
+  return { present: files.filter((f) => names.has(f)), removed: files.filter((f) => !names.has(f)) }
+}
+
+/**
+ * Build the surface branch in a throwaway worktree and push it. On update the
+ * base is the open PR's remote branch (so human commits survive), merged with
+ * origin/main; otherwise it is a fresh branch from origin/main.
+ */
+function buildSurfaceBranch({ name, files, branch, integrationSha, update, date }) {
+  try {
+    git(["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`])
+  } catch {
+    // Branch may not exist yet; --force-with-lease will create it.
+  }
+  const base = update ? `origin/${branch}` : "origin/main"
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "docs-sync-wt-"))
+  try {
+    git(["worktree", "add", "--detach", tmp, base])
+    if (update) {
+      // Preserve human commits on the open PR branch.
+      git(["merge", "origin/main", "--no-edit"], tmp)
+    }
+    // Remove deletions before restoring the rest, so a file→directory change
+    // cannot block the checkout of a path under the removed file.
+    const { present, removed } = partitionByPresence(git, integrationSha, files)
+    if (removed.length > 0) git(["rm", "-rf", "--ignore-unmatch", "--", ...removed], tmp)
+    if (present.length > 0) {
+      git(["checkout", integrationSha, "--", ...present], tmp)
+      git(["add", "--", ...present], tmp)
+    }
+    const dirty = git(["status", "--porcelain"], tmp)
+    if (dirty !== "") {
+      git(["commit", "-m", `docs: sync ${name} with merged PRs (${date})`], tmp)
+    } else {
+      console.log(`surface ${name}: no file delta over ${base}; refreshing PR body only`)
+    }
+    git(
+      update
+        ? ["push", "origin", `HEAD:refs/heads/${branch}`]
+        : ["push", "--force-with-lease", "origin", `HEAD:refs/heads/${branch}`],
+      tmp,
+    )
+  } finally {
+    try {
+      git(["worktree", "remove", "--force", tmp])
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not remove worktree ${tmp}: ${err.message}`)
+    }
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not delete worktree dir ${tmp}: ${err.message}`)
+    }
+    try {
+      git(["worktree", "prune"])
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not prune worktrees: ${err.message}`)
+    }
+  }
+}
+
+/** Create or update one surface PR. Throws on failure; the caller isolates it. */
+async function upsertSurface({
+  name,
+  files,
+  map,
+  api,
+  repo,
+  now,
+  date,
+  since,
+  through,
+  verified,
+  rows,
+  openPr,
+  integrationSha,
+}) {
+  const branch = surfaceBranch(name)
+  const reviewed = await computeSurfaceReviewers(name, { api, repo, now, map })
+
+  const draftReasons = []
+  if (files.length > FILE_CAP) draftReasons.push(`diff exceeds ${FILE_CAP} files (${files.length})`)
+  if (!verified) draftReasons.push("docs build/tests not passing")
+  const nonContent = nonContentFiles(files)
+  if (nonContent.length > 0) {
+    const listed = nonContent
+      .slice(0, 5)
+      .map((f) => clean(f).replaceAll("|", "\\|"))
+      .join(", ")
+    draftReasons.push(`touches non-content files outside pages/ and lib/nav/: ${listed}`)
+  }
+  const draft = draftReasons.length > 0
+
+  const update = Boolean(openPr)
+  buildSurfaceBranch({ name, files, branch, integrationSha, update, date })
+
+  // Append-only: carry rows already on the surface PR body forward.
+  let oldChanges = []
+  let oldSkipped = []
+  let prBody = ""
+  if (update) {
+    prBody = openPr.body ?? ""
+    oldChanges = extractSectionRows(prBody, "changes")
+    oldSkipped = dropLegacySkipped(extractSectionRows(prBody, "skipped"))
+  }
+  const learnedThrough = resolveLearnedThrough({ envValue: process.env.LEARNED_THROUGH, prBody })
+
+  const body = renderBody({
+    date,
+    since,
+    through,
+    learnedThrough,
+    changesRows: mergeRows(oldChanges, rows.changesRows),
+    pendingRows: rows.pendingRows,
+    skippedRows: mergeRows(oldSkipped, rows.skippedRows),
+    verified,
+    draftReasons,
+    note: "",
+    surfaceBlock: surfaceBlock({ name, map, reviewers: reviewed.reviewers, note: reviewed.note }),
+  })
+  console.log(`--- ${name} PR body ---\n${body}\n--- end ${name} PR body ---`)
+
+  let pr
+  if (update) {
+    pr = await api(`/repos/${repo}/pulls/${openPr.number}`, {
+      method: "PATCH",
+      body: { title: prTitle(name, date), body },
+    })
+  } else {
+    pr = await api(`/repos/${repo}/pulls`, {
+      method: "POST",
+      body: { title: prTitle(name, date), head: branch, base: "main", body, draft },
+    })
+    await api(`/repos/${repo}/issues/${pr.number}/labels`, { method: "POST", body: { labels: ["auto-docs"] } })
+  }
+  // Best effort: the PR already exists here, so a non-collaborator, an author
+  // login, or a revoked account must not fail the surface.
+  if (reviewed.reviewers.length > 0) {
+    try {
+      await api(`/repos/${repo}/issues/${pr.number}/assignees`, {
+        method: "POST",
+        body: { assignees: reviewed.reviewers },
+      })
+      await api(`/repos/${repo}/pulls/${pr.number}/requested_reviewers`, {
+        method: "POST",
+        body: { reviewers: reviewed.reviewers },
+      })
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not assign or request review for ${name}: ${err.message}`)
+    }
+  }
+
+  return {
+    name,
+    url: pr.html_url,
+    number: pr.number,
+    branch,
+    reviewers: reviewed.reviewers,
+    draft,
+    created: !update,
+  }
+}
+
 async function main() {
-  const { api, appendOutput, appendSummary, repo } = await import("./lib.mjs")
+  const { api, appendOutput, appendSummary, repo, searchIssues } = await import("./lib.mjs")
 
   const now = process.env.PROCESSED_THROUGH ?? new Date().toISOString()
   const since = process.env.SINCE ?? "unknown"
   const sinceOverride = process.env.SINCE_OVERRIDE === "true"
   const mode = ["update", "conflict"].includes(process.env.PREP_MODE) ? process.env.PREP_MODE : "fresh"
-  const existingPr = process.env.PR_NUMBER || ""
   const verified = process.env.VERIFIED === "true"
   const date = now.slice(0, 10)
+
+  // The surface map is data, loaded once for the whole run.
+  const map = loadSurfaceMap()
 
   // The agent's run summary is consumed here and never committed.
   const agentSummary = readJson(SUMMARY_FILE, [])
@@ -395,80 +670,24 @@ async function main() {
   // before any commit-creating step, including prepare-branch's merge.
   git(["add", DOCS_PATH])
   git(["commit", "-m", `docs: sync with merged PRs (${date})`])
+  const integrationSha = git(["rev-parse", "HEAD"])
 
   // Watermark: now when fully covered; else earliest uncovered merged_at − 1ms.
   // Pass SINCE as fallback so missing digest-full cannot strand uncovered PRs.
+  // Computed once (global); per-surface failures never touch it.
   const through = computeProcessedThrough({ uncovered, digest, now, fallback: since })
 
-  // The draft cap bounds the cumulative PR diff, not just this run's commit.
+  // Commit the full diff to the integration branch and push it first, so a
+  // single surface's later failure cannot lose the run's changes. A conflicted
+  // run pushes its dated fallback branch; a normal run pushes the durability
+  // ref (see INTEGRATION_BRANCH).
   const changedFiles = git(["diff", "--name-only", "origin/main...HEAD", "--", DOCS_PATH]).split("\n").filter(Boolean)
-  const draftReasons = []
-  if (changedFiles.length > FILE_CAP) draftReasons.push(`diff exceeds ${FILE_CAP} files (${changedFiles.length})`)
-  if (!verified) draftReasons.push("docs build/tests not passing")
-  // Content gate: legitimate bot edits are docs pages and nav files. Anything
-  // else in the docs package (build config, components, tests) executes
-  // during the verify build, so force human review before merge.
-  const nonContent = nonContentFiles(changedFiles)
-  if (nonContent.length > 0) {
-    // File paths are agent-chosen; sanitize before they land in the PR body.
-    const listed = nonContent
-      .slice(0, 5)
-      .map((f) => clean(f).replaceAll("|", "\\|"))
-      .join(", ")
-    draftReasons.push(`touches non-content files outside pages/ and lib/nav/: ${listed}`)
-  }
-  const draft = draftReasons.length > 0
-
+  const durableBranch = mode === "conflict" ? BRANCH : INTEGRATION_BRANCH
   git(
     mode === "update"
-      ? ["push", "origin", `HEAD:${BRANCH}`]
-      : ["push", "--force-with-lease", "origin", `HEAD:${BRANCH}`],
+      ? ["push", "origin", `HEAD:refs/heads/${durableBranch}`]
+      : ["push", "--force-with-lease", "origin", `HEAD:refs/heads/${durableBranch}`],
   )
-
-  const {
-    changesRows: changesNew,
-    pendingRows: pendingNew,
-    skippedRows: skippedNew,
-  } = routeRows({
-    summary: agentSummary,
-    triage,
-    uncovered,
-  })
-
-  let oldChanges = []
-  let oldSkipped = []
-  let oldPending = []
-  let prBody = ""
-  if (mode === "update" && existingPr) {
-    const pr = await api(`/repos/${repo()}/pulls/${existingPr}`)
-    prBody = pr.body ?? ""
-    oldChanges = extractSectionRows(pr.body, "changes")
-    oldSkipped = dropLegacySkipped(extractSectionRows(pr.body, "skipped"))
-    oldPending = extractSectionRows(pr.body, "pending")
-  }
-
-  // Pending is replaced each run (informational only); do not merge legacy
-  // pending rows — uncovered is recomputed fresh. oldPending is read only so
-  // extractSectionRows stays exercised; discarded deliberately.
-  void oldPending
-
-  const learnedThrough = resolveLearnedThrough({ envValue: process.env.LEARNED_THROUGH, prBody })
-
-  const body = renderBody({
-    date,
-    since,
-    through,
-    learnedThrough,
-    changesRows: mergeRows(oldChanges, changesNew),
-    pendingRows: pendingNew,
-    skippedRows: mergeRows(oldSkipped, skippedNew),
-    verified,
-    draftReasons,
-    note:
-      mode === "conflict" && existingPr
-        ? `Continues from #${existingPr}, whose branch conflicted with \`main\` (its commits are preserved there).`
-        : "",
-  })
 
   try {
     await api(`/repos/${repo()}/labels`, {
@@ -479,65 +698,82 @@ async function main() {
     if (err.status !== 422) throw err // 422 = label already exists
   }
 
-  let prNumber
-  let prUrl
-  if (mode === "update" && existingPr) {
-    const pr = await api(`/repos/${repo()}/pulls/${existingPr}`, {
-      method: "PATCH",
-      body: { title: `docs: auto-sync with merged PRs (through ${date})`, body },
-    })
-    prNumber = pr.number
-    prUrl = pr.html_url
-    await api(`/repos/${repo()}/issues/${prNumber}/comments`, {
-      method: "POST",
-      body: {
-        body: `(bot) Appended changes processed through \`${through}\`. Verification: **${verified ? "passing" : "failing"}**.${draft ? ` Draft because: ${draftReasons.join("; ")}.` : ""}`,
-      },
-    })
-  } else {
-    const pr = await api(`/repos/${repo()}/pulls`, {
-      method: "POST",
-      body: {
-        title: `docs: auto-sync with merged PRs (through ${date})`,
-        head: BRANCH,
-        base: "main",
-        body,
-        draft,
-      },
-    })
-    prNumber = pr.number
-    prUrl = pr.html_url
-    await api(`/repos/${repo()}/issues/${prNumber}/labels`, { method: "POST", body: { labels: ["auto-docs"] } })
-    // Best effort: the PR already exists here, so a non-collaborator or a
-    // revoked account must not fail the run.
+  const rows = routeRows({ summary: agentSummary, triage, uncovered })
+  const groups = groupBySurface(changedFiles, map)
+
+  // Run-log proof: the computed surface for every changed file.
+  console.log(`docs-sync surface map (${changedFiles.length} changed files):`)
+  for (const file of changedFiles) console.log(`  ${surfaceForDoc(file, map)} <- ${file}`)
+
+  let open = new Map()
+  try {
+    open = await openSurfacePrs({ api, searchIssues, repo: repo(), names: surfaceNames(map) })
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not list open surface PRs; creating fresh branches: ${err.message}`)
+  }
+
+  const results = []
+  for (const name of surfaceNames(map)) {
+    const files = groups.get(name)
+    if (!files || files.length === 0) continue
     try {
-      await api(`/repos/${repo()}/issues/${prNumber}/assignees`, {
-        method: "POST",
-        body: { assignees: [DOCS_OWNER] },
+      const result = await upsertSurface({
+        name,
+        files,
+        map,
+        api,
+        repo: repo(),
+        now,
+        date,
+        since,
+        through,
+        verified,
+        rows,
+        openPr: open.get(name) ?? null,
+        integrationSha,
       })
-      await api(`/repos/${repo()}/pulls/${prNumber}/requested_reviewers`, {
-        method: "POST",
-        body: { reviewers: [DOCS_OWNER] },
-      })
+      results.push(result)
+      console.log(`surface ${name}: ${result.created ? "created" : "updated"} ${result.url} reviewers=${result.reviewers.join(",") || "none"}`)
     } catch (err) {
-      console.warn(`::warning::docs-sync: could not assign or request review from ${DOCS_OWNER}: ${err.message}`)
-    }
-    if (mode === "conflict" && existingPr) {
-      await api(`/repos/${repo()}/issues/${existingPr}/comments`, {
-        method: "POST",
-        body: {
-          body: `(bot) This branch conflicted with \`main\`, so the sync continues in ${prUrl}. Commits on this branch are preserved — please close this PR after the new one is reviewed.`,
-        },
-      })
+      results.push({ name, error: err })
+      console.warn(`::warning::docs-sync: surface ${name} failed: ${err.message}`)
     }
   }
 
-  appendOutput("pr_url", prUrl)
-  appendSummary(
-    `### docs-sync PR\n\n- ${prUrl}\n- changed files: ${changedFiles.length}\n- draft: ${draft}\n- uncovered: ${uncovered.length}\n- processed-through: ${through}\n`,
-  )
+  // A surface with no changed files is skipped above, so its open PR keeps its
+  // previous processed-through marker. Refresh that marker to this run's value
+  // so a stale marker on a skipped surface cannot regress or pin the watermark
+  // (which is read from the latest auto-docs PR).
+  for (const name of surfaceNames(map)) {
+    const files = groups.get(name)
+    if (files && files.length > 0) continue
+    const openPr = open.get(name)
+    if (!openPr) continue
+    try {
+      const learned = resolveLearnedThrough({ envValue: process.env.LEARNED_THROUGH, prBody: openPr.body ?? "" })
+      let body = patchProcessedThrough(openPr.body ?? "", through)
+      if (learned) body = patchLearnedThrough(body, learned)
+      await api(`/repos/${repo()}/pulls/${openPr.number}`, { method: "PATCH", body: { body } })
+      console.log(`surface ${name}: refreshed markers on #${openPr.number}`)
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not refresh the processed-through marker for ${name}: ${err.message}`)
+    }
+  }
+
+  const summaryLines = ["### docs-sync surface PRs", ""]
+  for (const r of results) {
+    summaryLines.push(r.error ? `- **${r.name}**: failed — ${clean(r.error.message)}` : `- **${r.name}**: ${r.url}`)
+  }
+  summaryLines.push("", `- changed files: ${changedFiles.length}`)
+  summaryLines.push(`- uncovered: ${uncovered.length}`)
+  summaryLines.push(`- processed-through: ${through}`)
+  appendSummary(summaryLines.join("\n"))
+
+  const prUrl = results.find((r) => r.url)?.url ?? ""
+  if (prUrl) appendOutput("pr_url", prUrl)
+  const failures = results.filter((r) => r.error).length
   console.log(
-    `PR ${prNumber}: ${prUrl} (draft=${draft}, files=${changedFiles.length}, uncovered=${uncovered.length}, through=${through})`,
+    `docs-sync: ${results.length - failures} surface PR(s), ${failures} failure(s), files=${changedFiles.length}, uncovered=${uncovered.length}, through=${through}`,
   )
 }
 
