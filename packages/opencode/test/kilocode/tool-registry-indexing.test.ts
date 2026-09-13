@@ -6,6 +6,7 @@ import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
+import { Wakeup } from "../../src/kilocode/wakeup"
 import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
@@ -519,6 +520,15 @@ describe("kilocode tool registry indexing", () => {
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
     const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
+    const wakeup = Layer.succeed(
+      Wakeup.Service,
+      Wakeup.Service.of({
+        schedule: () => Effect.die(new Error("wakeup schedule is not used by this test")),
+        list: () => Effect.succeed([]),
+        cancel: () => Effect.succeed(undefined),
+        adopt: () => Effect.void,
+      }),
+    )
     const indexing = spyOn(KiloIndexing, "init").mockRejectedValue(err)
     const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
@@ -526,7 +536,9 @@ describe("kilocode tool registry indexing", () => {
       await Effect.runPromise(
         KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
           Effect.provide(
-            KilocodeBootstrap.layer.pipe(Layer.provide([sessions, bus, memory, session, summary, provider, watcher])),
+            KilocodeBootstrap.layer.pipe(
+              Layer.provide([sessions, bus, memory, session, summary, provider, watcher, wakeup]),
+            ),
           ),
           Effect.scoped,
         ),

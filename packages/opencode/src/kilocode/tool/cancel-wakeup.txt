@@ -1,0 +1,12 @@
+Review and cancel the wakeups scheduled for this session.
+
+Use this tool to:
+- List the wakeups you scheduled, with their id, due time, and reason (or the scheduled prompt when you gave no reason)
+- Cancel a wakeup you no longer need, by its id
+
+Call it with action "list" first to find the id, then action "cancel" with that id.
+Cancelling an id that is already gone is safe: the tool reports it and does not fail.
+
+Do NOT use this tool:
+- As a poll loop while waiting — the harness wakes you when the wakeup fires
+- To cancel a wakeup that has already fired — it is gone, and the cancel is a no-op
