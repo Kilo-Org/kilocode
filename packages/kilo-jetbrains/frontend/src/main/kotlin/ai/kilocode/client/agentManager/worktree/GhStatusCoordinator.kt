@@ -23,6 +23,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+/**
+ * [probe] always resolves its target directory from [target]'s [Project.kiloRoot], which is the
+ * project's main repository root, never a worktree — so this class does not need to know when a
+ * worktree is being deleted. The one case that still matters (the *open project itself* is a
+ * worktree that another window is deleting) is covered on the backend: `KiloWorktreeRpcApiImpl`'s
+ * `probeGh` checks `WorktreeTrash` before spawning `git`/`gh`, since the RPC is directory-scoped and
+ * cannot rely on this coordinator's behavior.
+ */
 @Service(Service.Level.APP)
 class GhStatusCoordinator(
     private val cs: CoroutineScope,
@@ -110,7 +118,12 @@ class GhStatusCoordinator(
      */
     @RequiresEdt
     private fun focus() {
-        val gone = away.back() ?: return
+        val gone = away.back() ?: run {
+            // Logged so the absence of a frame-focus probe reads as "nothing to answer" rather than as
+            // a listener that never fired, which is otherwise indistinguishable in the log.
+            LOG.info("gh focus ignored, no absence to answer")
+            return
+        }
         syncEdt("frame-focus", Away.ceiling(gone))
     }
 

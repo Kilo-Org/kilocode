@@ -212,6 +212,40 @@ describe("Agent Manager orchestration domain", () => {
     )
   })
 
+  it("delivers a reply to a verified original session outside Agent Manager state", async () => {
+    const get = mock(async () => ({
+      data: { id: "ses_caller", directory: fs.realpathSync(root), title: "Caller" } as Session,
+    }))
+    const promptAsync = mock(async () => ({ data: undefined }))
+    const client = {
+      session: { get, promptAsync },
+      permission: { list: mock(async () => ({ data: [] })) },
+      question: { list: mock(async () => ({ data: noQuestions })) },
+    } as unknown as KiloClient
+
+    await prompt({
+      client,
+      root,
+      state,
+      sessionID: "ses_caller",
+      directory: root,
+      text: "Reply",
+      messageID: "amr_reply",
+    })
+
+    expect(get).toHaveBeenCalledWith({ sessionID: "ses_caller", directory: root })
+    expect(promptAsync).toHaveBeenCalledWith(
+      {
+        sessionID: "ses_caller",
+        directory: root,
+        messageID: "msg_agent_manager_amr_reply",
+        parts: [{ type: "text", text: "Reply" }],
+        snapshotInitialization: "wait",
+      },
+      { throwOnError: true },
+    )
+  })
+
   it("prompts, answers, and moves a session discovered in a managed worktree", async () => {
     const wt = state.addWorktree({ branch: "fix/discovered", path: worktree, parentBranch: "main" })
     const section = state.addSection("Review", null)

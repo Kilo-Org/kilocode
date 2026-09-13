@@ -465,6 +465,24 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("does not close an active terminal from another context", () => {
+    createRoot((dispose) => {
+      const item = scene("wt-2")
+      item.state.add("wt-1", { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.setActiveId("terminal:one")
+
+      expect(item.handlers.closeActive()).toBe(false)
+      expect(item.state.forSelection("wt-1").map((term) => term.id)).toEqual(["terminal:one"])
+      expect(item.posted).toEqual([])
+
+      item.setSelection("wt-1")
+      expect(item.handlers.closeActive()).toBe(true)
+      expect(item.state.forSelection("wt-1")).toEqual([])
+      expect(item.posted).toEqual([{ type: "agentManager.terminal.close", terminalId: "terminal:one" }])
+      dispose()
+    })
+  })
+
   it("moves activation to the last remaining side terminal on close", () => {
     createRoot((dispose) => {
       const item = scene()

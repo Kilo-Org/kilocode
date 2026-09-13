@@ -70,31 +70,25 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve CLI asset URL
+      - name: Download CLI archive
         id: cli
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.cli_version }}
         run: |
-          VERSION="${{ inputs.cli_version }}"
           if [[ -z "$VERSION" ]]; then
-            echo "cli_url=" >> "$GITHUB_OUTPUT"
+            echo "cli_path=" >> "$GITHUB_OUTPUT"
             echo "::notice::Testing latest CLI from npm"
             exit 0
           fi
-          # Resolve the release asset via the API so this works for draft
-          # releases too (browser /releases/download/... URLs 404 on drafts).
-          # The installer passes Accept: application/octet-stream + bearer
-          # auth, which is what the API asset endpoint expects.
-          # The tag_name filter yields at most one release and one asset,
-          # so --jq returns a single URL without needing head/pipefail games.
-          URL=$(gh api "repos/${{ github.repository }}/releases" \
-            --jq ".[] | select(.tag_name == \"v${VERSION}\") | .assets[] | select(.name == \"kilo-linux-x64.tar.gz\") | .url")
-          if [[ -z "$URL" ]]; then
-            echo "::error::asset kilo-linux-x64.tar.gz not found for v${VERSION}"
-            exit 1
-          fi
-          echo "cli_url=$URL" >> "$GITHUB_OUTPUT"
-          echo "::notice::Testing CLI v${VERSION} via asset API: $URL"
+          ARCHIVE="$RUNNER_TEMP/kilo-cli.tar.gz"
+          gh release download "v$VERSION" \
+            --repo "$GH_REPO" \
+            --pattern kilo-linux-x64.tar.gz \
+            --output "$ARCHIVE"
+          echo "cli_path=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "::notice::Testing CLI v${VERSION} from local archive"
 
       # Harbor's default agent-setup timeout is 360s. The hello-world container
       # (FROM ubuntu:24.04) needs apt-get update + apt-get install + a NodeSource
@@ -108,8 +102,7 @@ jobs:
       # limits so this is harmless.
       - name: Run smoke test — hello-world
         env:
-          KILO_CLI_URL: ${{ steps.cli.outputs.cli_url }}
-          KILO_CLI_GITHUB_TOKEN: ${{ github.token }}
+          KILO_CLI_PATH: ${{ steps.cli.outputs.cli_path }}
         run: |
           ./scripts/run_eval.sh \
             -m kilo/anthropic/claude-sonnet-4.6 \
@@ -119,8 +112,7 @@ jobs:
 
       - name: Run smoke test — log-summary-date-ranges
         env:
-          KILO_CLI_URL: ${{ steps.cli.outputs.cli_url }}
-          KILO_CLI_GITHUB_TOKEN: ${{ github.token }}
+          KILO_CLI_PATH: ${{ steps.cli.outputs.cli_path }}
         run: |
           ./scripts/run_eval.sh \
             -m kilo/anthropic/claude-sonnet-4.6 \

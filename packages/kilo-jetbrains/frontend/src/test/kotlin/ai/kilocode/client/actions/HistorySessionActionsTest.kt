@@ -378,6 +378,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchName\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchPath\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.RunSetupScript\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.MoveToWorktree\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.RowMenu\""))
@@ -395,6 +396,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenLocalDiff\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchName\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchPath\""))
+        assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.MoveToWorktree\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
@@ -422,6 +424,18 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
             rename in 0 until openPr && openPr < copyPrRef && copyPrRef < openDiff && openDiff < openLocalDiff &&
                 openLocalDiff < copyName && copyName < copyPath && copyPath < openSetup &&
                 openSetup < runSetup && runSetup < delete,
+        )
+
+        // Worktree session row menu order: move to worktree, (separator), rename, delete.
+        val sessionRowMenuStart = xml.indexOf("<group id=\"Kilo.WorktreeSession.RowMenu\">")
+        val sessionRowMenuEnd = xml.indexOf("</group>", sessionRowMenuStart)
+        val sessionRowMenu = xml.substring(sessionRowMenuStart, sessionRowMenuEnd)
+        val move = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.MoveToWorktree\"")
+        val separator = sessionRowMenu.indexOf("<separator/>")
+        val sessionRename = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.Rename\"")
+        val sessionDelete = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.Delete\"")
+        assertTrue(
+            move in 0 until separator && separator < sessionRename && sessionRename < sessionDelete,
         )
     }
 

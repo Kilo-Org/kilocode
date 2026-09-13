@@ -80,6 +80,15 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Apply frontend-managed diagnostic log settings in the backend process. */
     suspend fun applyLogConfig(config: LogConfigDto)
 
+    /** Whether Kilo-managed worktrees under `.kilo/worktrees` are indexed by their containing project. */
+    suspend fun indexWorktrees(): Boolean
+
+    /**
+     * Persist whether Kilo-managed worktrees under `.kilo/worktrees` are indexed, and reindex every
+     * open project so the change takes effect immediately.
+     */
+    suspend fun setIndexWorktrees(value: Boolean)
+
     /** Read the backend diagnostic log file for download in split mode. Null when absent. */
     suspend fun backendLogFile(): LogFileDto?
 

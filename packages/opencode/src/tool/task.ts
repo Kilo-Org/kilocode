@@ -271,7 +271,6 @@ export const TaskTool = Tool.define(
             agent: next.name,
             tools: {
               question: false, // kilocode_change - subagents cannot prompt the user directly
-              interactive_terminal: false, // kilocode_change - subagents cannot take over the user's terminal
               ...(canTodo ? {} : { todowrite: false }),
               ...(canTask ? {} : { task: false }),
               ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
@@ -308,12 +307,10 @@ export const TaskTool = Tool.define(
         yield* ops.prompt({
           sessionID: ctx.sessionID,
           agent: currentParent.agent ?? ctx.agent,
-          model: selection
-            ? currentParent.model
-              ? { providerID: currentParent.model.providerID, modelID: currentParent.model.id }
-              : source
-            : undefined,
-          variant: selection ? (currentParent.model?.variant ?? reasoning) : variant,
+          model: currentParent.model
+            ? { providerID: currentParent.model.providerID, modelID: currentParent.model.id }
+            : source,
+          variant: currentParent.model ? currentParent.model.variant : reasoning,
           parts: [
             {
               type: "text",

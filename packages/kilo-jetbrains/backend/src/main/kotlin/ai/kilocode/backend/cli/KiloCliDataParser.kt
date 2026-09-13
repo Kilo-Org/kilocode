@@ -881,8 +881,12 @@ object KiloCliDataParser {
             return "{${fields.joinToString(",")}}"
         }
         fields += "\"text\":${escape(part.text.orEmpty())}"
+        if (part.synthetic == true) fields += "\"synthetic\":true"
         return "{${fields.joinToString(",")}}"
     }
+
+    /** Body for `POST /session/{id}/fork`. A whole-session fork sends no body at all; see the caller. */
+    fun buildForkJson(messageId: String): String = """{"messageID":${escape(messageId)}}"""
 
     /**
      * Build the JSON body for `POST /session/{id}/summarize`.

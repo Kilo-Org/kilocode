@@ -18,6 +18,11 @@ import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
+import type { CaffeinationService } from "../services/caffeination"
+
+const INTRO_KEY = "kilo.agentManager.introDismissed"
+const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
+type PRMergeMethod = "merge" | "squash" | "rebase"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -34,6 +39,7 @@ export class VscodeHost implements Host {
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
     private readonly remoteService: RemoteStatusService,
+    private readonly caffeination?: Pick<CaffeinationService, "getState" | "onChange" | "setEnabled">,
   ) {}
 
   setDiffVirtualProvider(provider: DiffVirtualProvider): void {
@@ -104,6 +110,7 @@ export class VscodeHost implements Host {
       title: "Agent Manager",
       port,
       browserAutomation: this.browserAutomation(),
+      introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
       frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
@@ -134,8 +141,27 @@ export class VscodeHost implements Host {
       provider.setDiffVirtualProvider(this.diffVirtual)
     }
     provider.setRemoteService(this.remoteService)
+    const snapshot = () => {
+      if (this.caffeination) {
+        void panel.webview.postMessage({ type: "agentManager.caffeination", ...this.caffeination.getState() })
+      }
+    }
+    const unsubscribe = this.caffeination?.onChange(snapshot)
+    panel.onDidDispose(() => unsubscribe?.())
     provider.attachToWebview(panel.webview, {
-      onBeforeMessage: opts.onBeforeMessage,
+      onBeforeMessage: async (msg) => {
+        if (msg.type === "agentManager.setCaffeination") {
+          if (typeof msg.enabled === "boolean") await this.caffeination?.setEnabled(msg.enabled)
+          return null
+        }
+        if (msg.type === "agentManager.requestCaffeination") {
+          snapshot()
+          return null
+        }
+        if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
+        if (typeof msg.dismissed === "boolean") await this.context.globalState.update(INTRO_KEY, msg.dismissed)
+        return null
+      },
     })
     provider.setStreamVisibility(panel.active && panel.visible)
     const streams = panel.onDidChangeViewState((event) =>
@@ -233,6 +259,12 @@ export class VscodeHost implements Host {
     return getWorkspaceRoot()
   }
 
+  dirtyFiles(): string[] {
+    return vscode.workspace.textDocuments
+      .filter((doc) => doc.isDirty && doc.uri.scheme === "file")
+      .map((doc) => doc.uri.fsPath)
+  }
+
   async pickFolder(): Promise<string | undefined> {
     const uris = await vscode.window.showOpenDialog({
       canSelectFiles: false,
@@ -258,6 +290,18 @@ export class VscodeHost implements Host {
 
   async writeProjects(value: unknown): Promise<void> {
     await this.context.globalState.update("agentManager.projects", value)
+  }
+
+  getPRMergeMethod(repo: string): PRMergeMethod | undefined {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY)
+    const value = values?.[repo]
+    if (value === "merge" || value === "squash" || value === "rebase") return value
+    return undefined
+  }
+
+  async savePRMergeMethod(repo: string, method: PRMergeMethod): Promise<void> {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY) ?? {}
+    await this.context.globalState.update(PR_MERGE_METHODS_KEY, { ...values, [repo]: method })
   }
 
   unregisterProjectRoutes(projectId: string): void {

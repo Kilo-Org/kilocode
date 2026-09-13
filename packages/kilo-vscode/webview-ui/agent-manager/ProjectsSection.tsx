@@ -35,7 +35,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
       class="am-section-header"
       label={<span class="am-section-label">{props.t("agentManager.projects")}</span>}
       actions={
-        <div class="am-projects-tools">
+        <>
           <IconButton
             icon="plus"
             size="small"
@@ -44,7 +44,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
             onClick={props.onAdd}
           />
           {props.tools}
-        </div>
+        </>
       }
     />
     <div class="am-projects-list">

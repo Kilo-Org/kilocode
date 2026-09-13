@@ -163,6 +163,11 @@
                      defaultValue="true"
                      restartRequired="false"
                      overrides="false"/>
+        <registryKey key="kilo.list.fade"
+                     description="Fade list row titles and descriptions into the row background where they do not fit, instead of leaving a bare cut."
+                     defaultValue="true"
+                     restartRequired="false"
+                     overrides="false"/>
     </extensions>
 
     <applicationListeners>
@@ -269,6 +274,68 @@
                                first-keystroke="alt S"/>
         </action>
 
+        <!--
+          The macOS keymaps inherit from $default through MacOSDefaultKeymap, which swaps Ctrl and Cmd
+          on every inherited shortcut. Ctrl+digit would therefore arrive as Cmd+digit (Cmd+1 activates
+          the Project tool window), so each mac keymap re-declares the literal Ctrl shortcut with
+          replace-all to drop the converted one. Same pattern the platform uses for Emmet's edit points.
+        -->
+        <action id="Kilo.Session.CycleMode"
+                class="ai.kilocode.client.actions.CycleModeAction"
+                text="Cycle Mode"
+                description="Switch to the next Kilo mode">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control 1"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control 1"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control 1"
+                               replace-all="true"/>
+        </action>
+
+        <action id="Kilo.Session.CycleModel"
+                class="ai.kilocode.client.actions.CycleModelAction"
+                text="Cycle Model"
+                description="Switch to the next favorite or recommended Kilo model">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control 2"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control 2"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control 2"
+                               replace-all="true"/>
+        </action>
+
+        <action id="Kilo.Session.CycleReasoning"
+                class="ai.kilocode.client.actions.CycleReasoningAction"
+                text="Cycle Reasoning Effort"
+                description="Switch to the next Kilo reasoning effort">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control 3"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control 3"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control 3"
+                               replace-all="true"/>
+        </action>
+
+        <action id="Kilo.Session.ResetModel"
+                class="ai.kilocode.client.actions.ResetModelAction"
+                text="Reset Model"
+                description="Clear the Kilo model override for the current mode">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control 0"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control 0"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control 0"
+                               replace-all="true"/>
+        </action>
+
         <action id="Kilo.Session.Open"
                 class="ai.kilocode.client.actions.OpenSessionAction">
             <keyboard-shortcut keymap="$default" first-keystroke="ENTER"/>
@@ -315,6 +382,12 @@
         <action id="Kilo.WorktreeSession.Delete"
                 class="ai.kilocode.client.actions.DeleteWorktreeSessionAction"/>
 
+        <action id="Kilo.WorktreeSession.MoveToWorktree"
+                class="ai.kilocode.client.actions.MoveWorktreeSessionAction"/>
+
+        <action id="Kilo.WorktreeSession.Fork"
+                class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
+
         <group id="Kilo.Worktree.RowMenu">
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
@@ -333,6 +406,9 @@
         </group>
 
         <group id="Kilo.WorktreeSession.RowMenu">
+            <reference ref="Kilo.WorktreeSession.Fork"/>
+            <reference ref="Kilo.WorktreeSession.MoveToWorktree"/>
+            <separator/>
             <reference ref="Kilo.WorktreeSession.Rename"/>
             <reference ref="Kilo.WorktreeSession.Delete"/>
         </group>
@@ -347,6 +423,9 @@
         <!-- Text and descriptions come from KiloBundle via action.<id>.text / .description. -->
         <action id="Kilo.Session.AutoApprove"
                 class="ai.kilocode.client.actions.SessionAutoApproveAction"/>
+
+        <action id="Kilo.Session.Fork"
+                class="ai.kilocode.client.actions.ForkSessionAction"/>
 
         <action id="Kilo.Session.CompareToBase"
                 class="ai.kilocode.client.actions.CompareToBaseAction"/>
@@ -376,6 +455,8 @@
         <group id="Kilo.Session.ContextMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
             <separator/>
+            <reference ref="Kilo.Session.Fork"/>
+            <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>
             <reference ref="Kilo.Session.CopyPrRef"/>
@@ -396,6 +477,8 @@
         -->
         <group id="Kilo.Session.PromptMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
+            <separator/>
+            <reference ref="Kilo.Session.Fork"/>
             <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>

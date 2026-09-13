@@ -4,6 +4,21 @@ export function taskRunning(status: string | undefined) {
   return status === "pending" || status === "running"
 }
 
+/**
+ * Avatar state for a Task card. The child session's live status wins, because
+ * a background Task tool part completes as soon as the child is started while
+ * the child keeps working. Finished and waiting children keep a static glyph.
+ */
+export function taskAvatarStatus(
+  id: string | undefined,
+  tool: string | undefined,
+  status: Record<string, SessionStatusInfo>,
+) {
+  if (id && (status[id]?.type === "busy" || status[id]?.type === "retry")) return "running" as const
+  if (taskRunning(tool)) return "running" as const
+  return undefined
+}
+
 export function childForeground(
   id: string | undefined,
   part: Record<string, unknown> | undefined,

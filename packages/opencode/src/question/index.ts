@@ -101,7 +101,7 @@ export const layer = Layer.effect(
       const info: Request = {
         id,
         sessionID: input.sessionID,
-        questions: input.questions,
+        questions: input.questions.map(KiloQuestion.normalize), // kilocode_change
         blocking: input.blocking, // kilocode_change
         tool: input.tool,
       }

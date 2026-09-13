@@ -42,8 +42,12 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     count: 2,
     reason: "disk-backed instance integration test cleanup",
   },
+  "kilocode/snapshot-track-timeout.test.ts": {
+    count: 4,
+    reason: "production default snapshot hooks require the shared runtime and instance context",
+  },
   "kilocode/kilo-sessions.test.ts": {
-    count: 36,
+    count: 42,
     reason:
       "K1 W1: real integration test for SessionStatus→detach→heartbeat-fence; " +
       "the test creates a session and sets its status via the global AppRuntime, " +
@@ -55,8 +59,16 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "the global-runtime coupling is exactly what is under test. " +
       "PR-link advertise tests extend this with session creation through the same global AppRuntime. " +
       "Instance metadata tests control the global Vcs.Service read by the production heartbeat " +
-      "to verify refresh, reconnect, bounds, and failure, and create a session through the same " +
-      "Session.Service to verify that instance bounds leave the full session branch unchanged.",
+      "to verify refresh, reconnect, bounds, and failure, create a session through the same " +
+      "Session.Service to verify that instance bounds leave the full session branch unchanged, " +
+      "and stub the global Git.Service the production row builder reads per-session branch " +
+      "metadata from. The session-directory integration test creates and reads back the " +
+      "session through that same global AppRuntime — mirroring create_session inside the " +
+      "child repository — to verify session repository metadata follows the session's " +
+      "directory and meta()'s launch-directory fallback does not throw without an " +
+      "instance context. The repository-metadata self-heal test creates its session " +
+      "through that same global AppRuntime to verify heartbeat rows drop repository " +
+      "metadata while .git is unreadable and restore it on the next gather.",
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },

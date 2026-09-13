@@ -179,6 +179,19 @@ const ExperimentalTab: Component = () => {
         </Show>
 
         <SettingsRow
+          title={language.t("settings.experimental.sharedAgentBoard.title")}
+          description={language.t("settings.experimental.sharedAgentBoard.description")}
+        >
+          <Switch
+            checked={experimental().shared_agent_board ?? false}
+            onChange={(checked) => updateExperimental("shared_agent_board", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.sharedAgentBoard.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}
           description={language.t("settings.experimental.nativeNotebookTools.description")}
         >
@@ -214,6 +227,19 @@ const ExperimentalTab: Component = () => {
             hideLabel
           >
             {language.t("settings.experimental.multiProject.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.claudeMigration.title")}
+          description={language.t("settings.experimental.claudeMigration.description")}
+        >
+          <Switch
+            checked={settings().claudeMigration === true}
+            onChange={(checked) => applySetting("claudeMigration", checked, "experimental.claudeMigration")}
+            hideLabel
+          >
+            {language.t("settings.experimental.claudeMigration.title")}
           </Switch>
         </SettingsRow>
 

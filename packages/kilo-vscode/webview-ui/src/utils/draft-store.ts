@@ -1,7 +1,7 @@
 import type { BrowserReference, ReviewCommentEntry } from "../types/messages"
 import type { ImageAttachment } from "../hooks/useImageAttachments"
 import type { RevertPromptState } from "../context/session-utils"
-import { pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
+import { clearPromptDraftRoutes, pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
 
 export const mentionDrafts = new Map<string, Pick<RevertPromptState, "paths" | "sessions">>()
 export const drafts = new Map<string, string>()
@@ -48,6 +48,7 @@ export function deleteDraftsForSession(id: string) {
   if (!id) return
   remove(sessionDraftKey(id))
   remove(pendingDraftKey(id))
+  clearPromptDraftRoutes(id)
   discardedSessions.delete(id)
 }
 
@@ -55,11 +56,13 @@ export function discardPendingDraft(id: string) {
   const key = pendingDraftKey(id)
   if (!key) return
   remove(key)
+  clearPromptDraftRoutes(id)
   discarded.add(id)
 }
 
 export function deletePendingDraft(id: string) {
   remove(pendingDraftKey(id))
+  clearPromptDraftRoutes(id)
 }
 
 export function isPendingDraftDiscarded(id: string): boolean {

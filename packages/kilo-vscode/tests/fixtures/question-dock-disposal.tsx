@@ -11,6 +11,7 @@ Object.assign(globalThis, {
   Element: window.Element,
   HTMLElement: window.HTMLElement,
   SVGElement: window.SVGElement,
+  Event: window.Event,
   requestAnimationFrame: (callback: FrameRequestCallback) => frames.push(callback),
 })
 
@@ -101,4 +102,80 @@ if (calls.length !== 1 || calls[0]?.id !== request.id || calls[0]?.answers[0]?.[
   throw new Error(`Unexpected question reply: ${JSON.stringify(calls)}`)
 }
 if (root.querySelector('[data-component="question-dock"]')) throw new Error("Question dock did not unmount")
+
+const defaults: QuestionRequest = {
+  ...request,
+  questions: [
+    {
+      question: "Choose a format",
+      header: "Format",
+      options: [
+        { label: "Text", description: "Plain text" },
+        { label: "JSON", description: "Structured output" },
+      ],
+      default: "JSON",
+    },
+  ],
+}
+for (const value of ["", "Draft in progress"]) {
+  prompt.value = value
+  prompt.focus()
+  setActive(defaults)
+  flush()
+  if (document.activeElement !== prompt) throw new Error("Default answer stole composer focus")
+  setActive(structuredClone(defaults))
+  flush()
+  if (document.activeElement !== prompt) throw new Error("Repeated default answer stole composer focus")
+  setActive(undefined)
+  prompt.blur()
+  setActive(defaults)
+  prompt.focus()
+  flush()
+  if (document.activeElement !== prompt) throw new Error("Scheduled default focus interrupted typing")
+  setActive(undefined)
+}
+prompt.value = ""
+prompt.blur()
+setActive(defaults)
+flush()
+const picked = root.querySelector<HTMLButtonElement>('button[data-picked="true"]')
+if (!picked || picked.textContent?.includes("JSON") !== true) throw new Error("Default answer was not selected")
+if (document.activeElement !== picked) throw new Error("Default answer was not focused")
+if (calls.length !== 1) throw new Error("Default answer was submitted without confirmation")
+picked.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, isComposing: true }))
+if (calls.length !== 1) throw new Error("IME Enter submitted the default answer")
+picked.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+if (calls.at(-1)?.answers[0]?.[0] !== "JSON") throw new Error("Enter did not submit the default answer")
+if (root.querySelector('[data-component="question-dock"]')) throw new Error("Default answer was not submitted")
+
+setActive(structuredClone(defaults))
+flush()
+const replacement = root.querySelector<HTMLButtonElement>('[data-slot="question-option"]')
+if (!replacement) throw new Error("Replacement option missing")
+replacement.click()
+if (replacement.dataset.picked !== "true") throw new Error("Could not override the default answer")
+setActive(structuredClone(defaults))
+flush()
+const retained = root.querySelector<HTMLButtonElement>('button[data-picked="true"]')
+if (!retained?.textContent?.includes("Text")) throw new Error("Repeated question reset the user's selection")
+retained.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+if (calls.at(-1)?.answers[0]?.[0] !== "Text") throw new Error("Enter did not submit the replacement")
+
+for (const question of [
+  { ...defaults.questions.at(0)!, default: "Missing" },
+  { ...defaults.questions.at(0)!, multiple: true },
+  { ...defaults.questions.at(0)!, default: undefined },
+]) {
+  setActive({ ...request, questions: [question] })
+  flush()
+  if (root.querySelector('button[data-picked="true"]')) throw new Error("Unexpected default selection")
+  const button = root.querySelector<HTMLButtonElement>('[data-slot="question-footer-actions"] button')
+  if (!button?.disabled) throw new Error("Unanswered question enabled submission")
+  const option = root.querySelector<HTMLButtonElement>('[data-slot="question-option"]')
+  if (!option) throw new Error("Question option missing")
+  option.click()
+  option.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+  if (!root.querySelector('[data-component="question-dock"]')) throw new Error("Ignored default changed Enter behavior")
+  setActive(undefined)
+}
 dispose()

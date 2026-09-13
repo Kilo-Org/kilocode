@@ -12,12 +12,17 @@ import {
   syncMentionedPaths as _syncMentionedPaths,
   buildFileAttachments,
   buildMentionResults,
+  defaultMentionIndex,
+  filePickerNamed,
+  filterSessions,
   buildSessionAttachments,
   buildWorktreeAttachments,
   filterMentionResults,
   isCursorAtMentionEnd,
   getMentionRemovalRange,
   findMentionRange,
+  mentionSettled,
+  modelReferenceToken,
   sessionMentionText,
   sessionMentionToken,
   syncMentionedSessions as _syncMentionedSessions,
@@ -27,6 +32,10 @@ import {
 } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
+/** Past chats offered to the ranking, bounded so chats cannot flood the list. */
+const SESSION_RESULT_LIMIT = 3
+/** How long a spaced query waits for past chats before it counts as prose. */
+const SESSION_FETCH_GRACE_MS = 3000
 const FILE_SEARCH_CACHE_MS = 5000
 const FILE_SEARCH_CACHE_LIMIT = 8
 
@@ -52,10 +61,14 @@ export interface FileMention {
   mentionedPaths: Accessor<Set<string>>
   /** Mentioned past chats, keyed by their `@title` token in the text. */
   mentionedSessions: Accessor<Map<string, SessionSearchItem>>
+  /** Mentioned model references, keyed by their `@providerID/modelID` token. */
+  mentionedModels: Accessor<Set<string>>
   /** Whether the past-chat session picker (AM-style search) is open. */
   sessionPicker: Accessor<boolean>
   /** Directory-scoped past chats shown in the session picker. */
   sessionCandidates: Accessor<SessionSearchItem[]>
+  /** Whether the inline model reference picker is open. */
+  modelPicker: Accessor<boolean>
   worktreePicker: Accessor<boolean>
   worktreeCandidates: Accessor<WorktreeReference[]>
   selectWorktree: (
@@ -66,6 +79,8 @@ export interface FileMention {
   ) => void
   mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
+  /** The in-progress query, or null when the menu is closed. Empty for a bare "@". */
+  mentionQuery: Accessor<string | null>
   showMention: Accessor<boolean>
   onInput: (val: string, cursor: number) => void
   onKeyDown: (
@@ -128,6 +143,8 @@ export interface FileMention {
     setText: (text: string) => void,
     onSelect?: () => void,
   ) => void
+  /** Insert a model reference picked from the model picker as an @-mention. */
+  selectModelReference: (providerID: string, modelID: string, onSelect?: () => void) => void
 }
 
 export function useFileMention(
@@ -135,14 +152,17 @@ export function useFileMention(
   sessionID?: Accessor<string | undefined>,
   git?: Accessor<boolean>,
   worktrees?: Accessor<WorktreeReference[]>,
+  modelKeys?: Accessor<Set<string>>,
 ): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
   const [mentionedSessions, setMentionedSessions] = createSignal<Map<string, SessionSearchItem>>(new Map())
+  const [mentionedModels, setMentionedModels] = createSignal<Set<string>>(new Set())
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
   const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
   const [mentionIndex, setMentionIndex] = createSignal(0)
   const [sessionPicker, setSessionPicker] = createSignal(false)
   const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
+  const [modelPicker, setModelPicker] = createSignal(false)
   const [worktreePicker, setWorktreePicker] = createSignal(false)
   const worktreeCandidates = () => worktrees?.().filter((worktree) => !worktree.disabled) ?? []
   let workspaceDir = ""
@@ -154,6 +174,9 @@ export function useFileMention(
   // Same accumulation for past-chat mentions, keyed by their exact visible
   // token. Duplicate titles receive a numeric suffix so they cannot overwrite.
   const knownSessions = new Map<string, SessionSearchItem>()
+  // Model references are kept apart from knownPaths: they are inline text
+  // tokens, not files, so they must never turn into file attachments.
+  const knownModels = new Set<string>()
   const knownWorktrees = new Map<string, WorktreeReference>()
   const references = () => {
     for (const worktree of worktrees?.() ?? []) {
@@ -162,10 +185,27 @@ export function useFileMention(
     }
     return [...knownWorktrees.values()]
   }
+  // Past chats rank into the main list like files do, so an "@" query finds a
+  // chat by title without first opening the dedicated picker. Only a query can
+  // match a title; an empty "@" keeps offering the Past chats entry instead of
+  // burying the file list under every recent session.
+  const sessionResults = (query: string): MentionResult[] => {
+    if (!query) return []
+    return filterSessions(sessionCandidates(), query)
+      .slice(0, SESSION_RESULT_LIMIT)
+      .map((session) => ({ type: "session", value: sessionMentionToken(session, knownSessions), session }))
+  }
   const results = (query: string, items: Array<FileSearchItem | string>) => {
     references()
-    return buildMentionResults(query, items, git?.() ?? true, worktrees !== undefined)
+    return buildMentionResults(query, items, git?.() ?? true, worktrees !== undefined, sessionResults(query))
   }
+  /** The file-ish entries of a result list, in the shape the builder accepts. */
+  const files = (items: MentionResult[]): FileSearchItem[] =>
+    items.flatMap((item) =>
+      item.type === "file" || item.type === "folder" || item.type === "opened-file"
+        ? [{ path: item.value, type: item.type }]
+        : [],
+    )
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
@@ -174,6 +214,13 @@ export function useFileMention(
   let prewarmRequest: FileSearchRequest | undefined
   let filePickerCounter = 0
   let sessionSearchCounter = 0
+  // Scope whose past chats have been fetched, so opening "@" loads the list
+  // once per session instead of on every keystroke, plus the fetch state a
+  // spaced query consults before deciding it is prose rather than a title.
+  let sessionScope: string | undefined
+  let sessionsInFlight = false
+  let sessionTimer: ReturnType<typeof setTimeout> | undefined
+  let pending: { query: string } | undefined
   let pickerState: {
     requestId: string
     textarea: HTMLTextAreaElement
@@ -182,7 +229,23 @@ export function useFileMention(
     setText: (text: string) => void
     onSelect?: () => void
   } | null = null
+  // The `@query` range that the open model picker will replace on selection.
+  let modelPickerState: { textarea: HTMLTextAreaElement; atStart: number; atEnd: number } | null = null
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
+  // Offset of the "@" that opened the current query, the mention inserted at
+  // each "@" offset, and the last spaced query the file search resolved to
+  // nothing. Since a query may contain spaces, ordinary prose typed after a
+  // completed mention still matches AT_PATTERN. Keying settlement to the
+  // insertion offset keeps a short earlier mention from closing the search for
+  // a longer new path that happens to start the same way, and remembering the
+  // dead query stops a never-completed query from reopening the dropdown on
+  // every following keystroke until the user edits back into a match.
+  let at = 0
+  let dead: { at: number; query: string } | undefined
+  const inserted = new Map<number, string>()
+  // Whether the user has moved the selection themselves, which later results
+  // must not undo. Typing a new query hands the choice back to the default.
+  let touched = false
 
   const showMention = () => mentionQuery() !== null
   const scope = () => sessionID?.() ?? ""
@@ -192,12 +255,22 @@ export function useFileMention(
     const value = scope()
     if (value === activeScope) return value
     activeScope = value
+    dead = undefined
+    inserted.clear()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
     fileSearchRevision++
     fileSearchRequest = undefined
     prewarmRequest = undefined
     workspaceDir = dirs.get(value) ?? ""
+    sessionScope = undefined
+    sessionsInFlight = false
+    pending = undefined
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = undefined
+    setSessionCandidates([])
     setWorktreePicker(false)
+    setModelPicker(false)
+    modelPickerState = null
     setMentionResults([])
     setMentionIndex(0)
     return value
@@ -239,16 +312,27 @@ export function useFileMention(
     const index = mentionIndex()
     const selected = mentionResults()[index]
     setMentionResults(items)
-    if (!selected) {
-      setMentionIndex(0)
+    // An untouched selection follows the results in: it sat on Browse files
+    // only for want of a candidate, so an arriving one should take it.
+    if (!touched || !selected) {
+      setMentionIndex(defaultMentionIndex(items, mentionQuery() ?? ""))
       return
     }
     const next = items.findIndex((item) => item.type === selected.type && item.value === selected.value)
     setMentionIndex(next >= 0 ? next : Math.min(index, Math.max(items.length - 1, 0)))
   }
 
+  /** Move the selection on the user's behalf, pinning it against later results. */
+  const chooseIndex = (index: number) => {
+    touched = true
+    setMentionIndex(index)
+  }
+
   createEffect(() => {
-    if (!showMention()) setMentionIndex(0)
+    if (!showMention()) {
+      touched = false
+      setMentionIndex(0)
+    }
   })
 
   createEffect(() => {
@@ -269,16 +353,67 @@ export function useFileMention(
     })
   })
 
+  /**
+   * Apply a prose-close that was held back until the past chats which could
+   * still rescue the query were known. Re-ranking first keeps a query that a
+   * chat title matches open, so only a query nothing answers is closed.
+   */
+  const resolvePending = () => {
+    if (!pending) return
+    const query = pending.query
+    pending = undefined
+    if (mentionQuery() !== query) return
+    const next = results(query, files(mentionResults()))
+    if (next.every((item) => item.type === "file-picker")) {
+      dead = { at, query }
+      closeMention()
+      return
+    }
+    replaceResults(next)
+  }
+
+  const applyFiles = (query: string, items: FileSearchItem[]) => {
+    const next = results(query, items)
+    // A spaced query that matches nothing is prose, not a filename in progress —
+    // unless it names the Browse files entry, which is a choice, not prose.
+    if (/\s/.test(query) && !filePickerNamed(query) && next.every((item) => item.type === "file-picker")) {
+      // Unless this scope's past chats are still on the way: a chat title is
+      // exactly the kind of spaced query that no file can answer, so hold the
+      // close until the list that could match it has arrived.
+      if (sessionsInFlight) {
+        pending = { query }
+        replaceResults(next)
+        return
+      }
+      dead = { at, query }
+      closeMention()
+      return
+    }
+    pending = undefined
+    replaceResults(next)
+  }
+
+  const applySessions = (sessions: SessionSearchItem[]) => {
+    // Most recently updated first; with a query the List re-ranks by fuzzy score.
+    setSessionCandidates(
+      sessions
+        .map((session) => ({ ...session, title: sessionMentionText(session.title) }))
+        .filter((session) => session.title)
+        .sort((a, b) => b.updated - a.updated),
+    )
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = undefined
+    sessionsInFlight = false
+    resolvePending()
+    // The list can land while the menu is already open on a query that could
+    // match a chat title, so re-rank what is on screen.
+    const open = mentionQuery()
+    if (open) replaceResults(results(open, files(mentionResults())))
+  }
+
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "sessionSearchResult") {
-      if (message.requestId !== `session-search-${sessionSearchCounter}`) return
-      // Most recently updated first; with a query the List re-ranks by fuzzy score.
-      setSessionCandidates(
-        message.sessions
-          .map((session) => ({ ...session, title: sessionMentionText(session.title) }))
-          .filter((session) => session.title)
-          .sort((a, b) => b.updated - a.updated),
-      )
+      if (message.requestId === `session-search-${sessionSearchCounter}`) applySessions(message.sessions)
       return
     }
     if (message.type !== "fileSearchResult") return
@@ -300,12 +435,13 @@ export function useFileMention(
     }
     if (!request.query) writeCache(message.dir, items, request.revision)
     if (!showMention() || request.query !== mentionQuery()) return
-    replaceResults(results(request.query, items))
+    applyFiles(request.query, items)
   })
 
   onCleanup(() => {
     unsubscribe()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    if (sessionTimer) clearTimeout(sessionTimer)
     if (pendingArrowSnap) clearTimeout(pendingArrowSnap.timer)
   })
 
@@ -342,6 +478,7 @@ export function useFileMention(
     setMentionResults([])
     setSessionPicker(false)
     setWorktreePicker(false)
+    setModelPicker(false)
   }
 
   const closeSessionPicker = () => {
@@ -350,22 +487,72 @@ export function useFileMention(
 
   const syncMentionedPaths = (text: string) => {
     references()
+    reclassifyModels()
     setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
     setMentionedSessions(() => _syncMentionedSessions(knownSessions, text))
+    setMentionedModels(() => _syncMentionedPaths(knownModels, text))
   }
 
-  // The past-chat picker searches a directory-scoped session list client-side
-  // (fuzzysort via the kilo-ui List component, same as the Agent Manager
-  // session search). Candidates are refetched each time the picker opens.
-  const openSessionPicker = () => {
-    setSessionPicker(true)
+  // A restored draft can be seeded before the model catalog has loaded, so the
+  // seed-time split between files and models is not final. Re-run it against the
+  // live catalog so a model reference that was momentarily treated as a file
+  // moves to the model set instead of becoming a bogus attachment.
+  const reclassifyModels = () => {
+    const keys = modelKeys?.()
+    if (!keys?.size) return
+    for (const key of keys) {
+      if (!knownPaths.has(key)) continue
+      knownPaths.delete(key)
+      knownModels.add(key)
+    }
+  }
+
+  // Past chats are searched client-side (fuzzysort, same as the Agent Manager
+  // session search) over a directory-scoped list fetched from the extension.
+  // The same list backs both the inline results and the dedicated picker.
+  const requestSessions = () => {
     sessionSearchCounter++
+    sessionsInFlight = true
+    // A reply that never arrives must not leave the prose-close disabled for
+    // the rest of the session, so the wait is bounded.
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = setTimeout(() => {
+      sessionTimer = undefined
+      sessionsInFlight = false
+      resolvePending()
+    }, SESSION_FETCH_GRACE_MS)
     const id = sessionID?.()
     vscode.postMessage({
       type: "requestSessionSearch",
       requestId: `session-search-${sessionSearchCounter}`,
       ...(id ? { sessionID: id } : {}),
     })
+  }
+
+  /** Load the scope's past chats once, so an "@" query can rank titles. */
+  const loadSessions = () => {
+    const id = syncScope()
+    if (sessionScope === id) return
+    sessionScope = id
+    requestSessions()
+  }
+
+  const openSessionPicker = () => {
+    setSessionPicker(true)
+    requestSessions()
+  }
+
+  // Record the mention inserted at an "@" offset, bounded so a long session
+  // cannot grow the map without limit. Entries whose offset later shifts simply
+  // stop matching, which only costs the synchronous close.
+  const remember = (offset: number, token: string) => {
+    inserted.delete(offset)
+    inserted.set(offset, token)
+    while (inserted.size > 16) {
+      const oldest = inserted.keys().next().value
+      if (oldest === undefined) return
+      inserted.delete(oldest)
+    }
   }
 
   const selectMention = (
@@ -404,11 +591,27 @@ export function useFileMention(
       return
     }
 
+    if (result.type === "model") {
+      // Switch the dropdown into the model picker; the actual insertion
+      // happens when a model is picked there.
+      const match = before.match(AT_PATTERN)!
+      const prefix = /^\s/.test(match[0]) ? 1 : 0
+      const atPos = match.index! + prefix
+      modelPickerState = { textarea, atStart: atPos, atEnd: cursor }
+      closeMention()
+      setModelPicker(true)
+      return
+    }
+
+    // Past chats resolve their token again here: inline results are built from
+    // a shared candidate list, so two chats with the same title would otherwise
+    // insert the same token and overwrite each other in knownSessions.
+    const token = result.type === "session" ? sessionMentionToken(result.session, knownSessions) : result.value
+
     // Add to knownPaths BEFORE execCommand so syncMentionedPaths (triggered
     // by the input event) can discover the new path.
-    if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
-      knownPaths.add(result.value)
-    if (result.type === "session") knownSessions.set(result.value, result.session)
+    if (result.type === "file" || result.type === "folder" || result.type === "opened-file") knownPaths.add(token)
+    if (result.type === "session") knownSessions.set(token, result.session)
 
     // Replace the @query with the selected @path via execCommand so the
     // change lands on the browser's native undo stack. AT_PATTERN is
@@ -417,6 +620,7 @@ export function useFileMention(
     const prefix = /^\s/.test(match[0]) ? 1 : 0
     const atPos = match.index! + prefix
     const suffix = /^\s/.test(after) ? "" : " "
+    remember(atPos, token)
     // Restore focus before execCommand: pickers (session search, native file
     // dialog) move focus away from the textarea, which makes execCommand
     // silently no-op.
@@ -424,7 +628,7 @@ export function useFileMention(
     suppress = true
     try {
       textarea.setSelectionRange(atPos, cursor)
-      document.execCommand("insertText", false, `@${result.value}${suffix}`)
+      document.execCommand("insertText", false, `@${token}${suffix}`)
     } finally {
       suppress = false
     }
@@ -432,8 +636,8 @@ export function useFileMention(
     textarea.focus()
 
     if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
-      setMentionedPaths((prev) => new Set([...prev, result.value]))
-    if (result.type === "session") setMentionedSessions((prev) => new Map(prev).set(result.value, result.session))
+      setMentionedPaths((prev) => new Set([...prev, token]))
+    if (result.type === "session") setMentionedSessions((prev) => new Map(prev).set(token, result.session))
     closeMention()
     onSelect?.()
   }
@@ -462,6 +666,35 @@ export function useFileMention(
       onSelect,
     )
 
+  const selectModelReference = (providerID: string, modelID: string, onSelect?: () => void) => {
+    const state = modelPickerState
+    modelPickerState = null
+    setModelPicker(false)
+    if (!state) return
+    const textarea = state.textarea
+    if (!textarea.isConnected) return
+    const token = modelReferenceToken(providerID, modelID)
+    const after = textarea.value.substring(state.atEnd)
+    const suffix = /^\s/.test(after) ? "" : " "
+    // Add to knownModels BEFORE execCommand so syncMentionedPaths (triggered by
+    // the input event) can discover the new reference. Model tokens stay out of
+    // knownPaths so they are never turned into file attachments.
+    knownModels.add(token)
+    remember(state.atStart, token)
+    // Restore focus before execCommand: the picker's search field owns focus,
+    // which makes execCommand silently no-op.
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(state.atStart, state.atEnd)
+      document.execCommand("insertText", false, `@${token}${suffix}`)
+    } finally {
+      suppress = false
+    }
+    setMentionedModels((prev) => new Set([...prev, token]))
+    onSelect?.()
+  }
+
   // When true, onInput skips dropdown logic (used during execCommand changes)
   let suppress = false
 
@@ -471,32 +704,45 @@ export function useFileMention(
     if (suppress) return
     closeSessionPicker()
     setWorktreePicker(false)
+    setModelPicker(false)
     const before = val.substring(0, cursor)
     const match = before.match(AT_PATTERN)
-    if (match) {
-      const query = match[1] ?? ""
-      setMentionQuery(query)
-      const items = readCache(workspaceDir)
-      if (!query) {
-        setMentionResults(results("", items))
-        setMentionIndex(0)
-        requestFileSearch("")
-        return
-      }
-      setMentionResults((prev) => {
-        const base = prev.length ? prev : results("", items)
-        const files = filterMentionResults(query, base).flatMap((item) =>
-          item.type === "file" || item.type === "folder" || item.type === "opened-file"
-            ? [{ path: item.value, type: item.type }]
-            : [],
-        )
-        return results(query, files)
-      })
-      setMentionIndex(0)
-      requestFileSearch(query)
-    } else {
+    if (!match) {
       closeMention()
+      return
     }
+    const query = match[1] ?? ""
+    at = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
+    // The query already covers the mention inserted at this "@" plus more text,
+    // so the rest is prose being written after it, not a longer filename.
+    if (mentionSettled(query, inserted.get(at), mentionTokens())) {
+      closeMention()
+      return
+    }
+    if (dead && dead.at === at && query.startsWith(dead.query)) {
+      closeMention()
+      return
+    }
+    dead = undefined
+    touched = false
+    setMentionQuery(query)
+    const items = readCache(workspaceDir)
+    if (!query) {
+      const empty = results("", items)
+      setMentionResults(empty)
+      setMentionIndex(defaultMentionIndex(empty, ""))
+      requestFileSearch("")
+      return
+    }
+    // Only a typed query can match a chat title, so the list is fetched on the
+    // first character rather than on every bare "@".
+    loadSessions()
+    setMentionResults((prev) => {
+      const base = prev.length ? prev : results("", items)
+      return results(query, files(filterMentionResults(query, base)))
+    })
+    setMentionIndex(defaultMentionIndex(mentionResults(), query))
+    requestFileSearch(query)
   }
 
   const onKeyDown = (
@@ -510,17 +756,24 @@ export function useFileMention(
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
+      touched = true
       setMentionIndex((i) => Math.min(i + 1, Math.max(mentionResults().length - 1, 0)))
       return true
     }
     if (e.key === "ArrowUp") {
       e.preventDefault()
+      touched = true
       setMentionIndex((i) => Math.max(i - 1, 0))
       return true
     }
     if (e.key === "Enter" || e.key === "Tab") {
       const result = mentionResults()[mentionIndex()]
       if (!result) return false
+      // Browse files always stays on offer, so a spaced query that found
+      // nothing else leaves it highlighted with nothing behind it. Sending the
+      // message wins there, unless the query actually names the entry.
+      const query = mentionQuery() ?? ""
+      if (result.type === "file-picker" && /\s/.test(query) && !filePickerNamed(query)) return false
       e.preventDefault()
       if (textarea) selectMention(result, textarea, setText, onSelect)
       return true
@@ -546,12 +799,17 @@ export function useFileMention(
   }
 
   // Mention tokens that count as atomic units for cursor movement, deletion
-  // and selection snapping: file paths plus past-chat title tokens.
-  const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys()])
+  // and selection snapping: file paths, past-chat title tokens and model
+  // references.
+  const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys(), ...mentionedModels()])
 
   const parseFileAttachments = (text: string): FileAttachment[] => {
     const worktrees = references()
-    const paths = new Set([..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path)))
+    reclassifyModels()
+    const keys = modelKeys?.()
+    const paths = new Set(
+      [..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path) && !keys?.has(path)),
+    )
     return [
       ...buildFileAttachments(text, paths, workspaceDir),
       ...buildSessionAttachments(text, mentionedSessions()),
@@ -681,7 +939,11 @@ export function useFileMention(
     const re = /@((?:[A-Za-z]:)?(?:[\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+))/g
     let m: RegExpExecArray | null
     while ((m = re.exec(text))) {
-      knownPaths.add(m[1])
+      const token = m[1]!
+      // A known model reference is inline text, not a path, so it must not be
+      // seeded into knownPaths where it would become a file attachment.
+      if (modelKeys?.().has(token)) knownModels.add(token)
+      else knownPaths.add(token)
     }
     syncMentionedPaths(text)
   }
@@ -718,6 +980,7 @@ export function useFileMention(
       suppress = false
     }
     knownPaths.add(norm)
+    remember(state.atStart, norm)
     setMentionedPaths((prev) => new Set([...prev, norm]))
     syncMentionedPaths(textarea.value)
     state.setText(textarea.value)
@@ -748,8 +1011,10 @@ export function useFileMention(
   return {
     mentionedPaths,
     mentionedSessions,
+    mentionedModels,
     sessionPicker,
     sessionCandidates,
+    modelPicker,
     worktreePicker,
     worktreeCandidates,
     selectWorktree,
@@ -759,7 +1024,8 @@ export function useFileMention(
     onInput,
     onKeyDown,
     selectMention,
-    setMentionIndex,
+    mentionQuery,
+    setMentionIndex: chooseIndex,
     closeMention,
     parseFileAttachments,
     addPaths,
@@ -771,5 +1037,6 @@ export function useFileMention(
     seedFromParts,
     seedSessions,
     selectSession,
+    selectModelReference,
   }
 }

@@ -87,6 +87,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "Kootaan ajatuksia",
   "ui.sessionTurn.status.consideringNextSteps": "Harkitaan seuraavia vaiheita",
   "ui.messagePart.diagnostic.error": "Virhe",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Lue agenttien viestit",
+  "ui.messagePart.board.all": "Kaikki agentit",
+  "ui.messagePart.board.primary": "Pääagentti",
+  "ui.messagePart.board.agent": "Agentti",
+  "ui.messagePart.board.route": "Lähettäjä: {{from}}, vastaanottaja: {{to}}",
+  "ui.messagePart.board.empty": "Ei agenttien viestejä",
+  "ui.messagePart.board.stored": "Vain tallennettu. Toimitusta tai lukemista ei ole vahvistettu.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Muokkaa",
   "ui.messagePart.title.write": "Kirjoita",
   "ui.messagePart.option.typeOwnAnswer": "Kirjoita oma vastauksesi",

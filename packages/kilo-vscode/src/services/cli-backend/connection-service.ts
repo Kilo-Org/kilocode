@@ -1,17 +1,19 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
-import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
+import { createKiloClient, type EventSessionTurnClose, type KiloClient } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter, type SSEPayload } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { createDuplicateEventFilter, resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 import { SandboxPreference } from "../sandbox-preference"
 import { ExplicitAbortState } from "./explicit-abort"
+import type { PermissionResponseResult } from "../../kilo-provider/handlers/permission-handler"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: SSEPayload, directory?: string) => void
 type StateListener = (state: ConnectionState, error?: Error) => void
 type SSEEventFilter = (event: SSEPayload, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
+type SessionAcknowledgedListener = (sessionID: string, eventID: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
@@ -66,6 +68,8 @@ function sameSet(a: Set<string>, b: Set<string>): boolean {
 // Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
+const PERMISSION_RESPONSE_TTL_MS = 60_000
+const PERMISSION_RESPONSE_LIMIT = 256
 
 /** Reject all pending network-offline waits for a given directory. */
 async function drainNetworkWaits(client: KiloClient, dir: string) {
@@ -100,6 +104,8 @@ export class KiloConnectionService {
   private readonly explicitAborts = new ExplicitAbortState()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
+  private readonly sessionAcknowledgedListeners: Set<SessionAcknowledgedListener> = new Set()
+  private readonly completions = new Map<string, { id: string; event?: EventSessionTurnClose }>()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
@@ -109,6 +115,18 @@ export class KiloConnectionService {
   private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
   private currentDirectory: string | undefined
   private readonly permissionDirectories: Map<string, string> = new Map()
+  private readonly permissionSessions: Map<string, string> = new Map()
+  private readonly permissionResponses = new Map<
+    string,
+    {
+      sessionID: string
+      promise?: Promise<PermissionResponseResult>
+      result?: PermissionResponseResult
+      expires: number
+      discard?: boolean
+    }
+  >()
+  private permissionRevision = 0
   private readonly questionDirectories: Map<string, string> = new Map()
   private questionRevision = 0
 
@@ -338,6 +356,21 @@ export class KiloConnectionService {
   }
 
   /**
+   * Remove permission state only after the backend session is deleted. A normal
+   * prune can temporarily release a live child, so its route and response claim
+   * must remain available to another provider.
+   */
+  clearPermissionSession(sessionID: string): void {
+    for (const [id, sid] of this.permissionSessions) {
+      if (sid !== sessionID) continue
+      this.permissionSessions.delete(id)
+      this.permissionDirectories.delete(id)
+      this.permissionRevision += 1
+    }
+    this.clearPermissionResponsesForSession(sessionID)
+  }
+
+  /**
    * Best-effort sessionID extraction for an SSE event.
    * Returns undefined for global events.
    */
@@ -349,22 +382,34 @@ export class KiloConnectionService {
     )
   }
 
-  recordPermissionDirectory(requestID: string, directory: string): void {
+  recordPermissionDirectory(requestID: string, directory: string, sessionID?: string): void {
     if (!requestID || !directory) {
       return
     }
     this.permissionDirectories.set(requestID, directory)
+    if (sessionID) this.permissionSessions.set(requestID, sessionID)
   }
 
   getPermissionDirectory(requestID: string): string | undefined {
     return this.permissionDirectories.get(requestID)
   }
 
+  getPermissionSession(requestID: string): string | undefined {
+    return this.permissionSessions.get(requestID)
+  }
+
   clearPermissionDirectory(requestID: string): void {
     this.permissionDirectories.delete(requestID)
+    this.permissionSessions.delete(requestID)
+    this.permissionRevision += 1
+  }
+
+  getPermissionRevision(): number {
+    return this.permissionRevision
   }
 
   prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void {
+    const size = this.permissionDirectories.size
     for (const [id, dir] of this.permissionDirectories) {
       if (active.has(id)) {
         continue
@@ -373,6 +418,81 @@ export class KiloConnectionService {
         continue
       }
       this.permissionDirectories.delete(id)
+      this.permissionSessions.delete(id)
+    }
+    if (this.permissionDirectories.size !== size) this.permissionRevision += 1
+  }
+
+  runPermissionResponse(
+    requestID: string,
+    sessionID: string,
+    action: () => Promise<PermissionResponseResult>,
+  ): Promise<PermissionResponseResult> {
+    this.prunePermissionResponses()
+    const current = this.permissionResponses.get(requestID)
+    if (current?.promise) return current.promise
+    if (current?.result) return Promise.resolve(current.result)
+
+    const promise = Promise.resolve().then(action)
+    const record: {
+      sessionID: string
+      promise?: Promise<PermissionResponseResult>
+      result?: PermissionResponseResult
+      expires: number
+      discard?: boolean
+    } = { sessionID, promise, expires: Number.POSITIVE_INFINITY }
+    this.permissionResponses.set(requestID, record)
+    void promise.then(
+      (result) => {
+        if (this.permissionResponses.get(requestID) !== record) return
+        if (result.kind === "error") {
+          this.permissionResponses.delete(requestID)
+          return
+        }
+        if (record.discard) {
+          this.permissionResponses.delete(requestID)
+          return
+        }
+        record.promise = undefined
+        record.result = result
+        record.expires = Date.now() + PERMISSION_RESPONSE_TTL_MS
+        this.prunePermissionResponses()
+      },
+      () => {
+        if (this.permissionResponses.get(requestID) === record) this.permissionResponses.delete(requestID)
+      },
+    )
+    return promise
+  }
+
+  isPermissionResponseClaimed(requestID: string): boolean {
+    this.prunePermissionResponses()
+    return this.permissionResponses.has(requestID)
+  }
+
+  clearPermissionResponse(requestID: string): void {
+    this.permissionResponses.delete(requestID)
+  }
+
+  // Preserve in-flight claims until their action settles; dropping one here can
+  // let a duplicate caller start a second backend response sequence.
+  clearPermissionResponsesForSession(sessionID: string): void {
+    for (const [id, record] of this.permissionResponses) {
+      if (record.sessionID !== sessionID) continue
+      if (record.promise) record.discard = true
+      else this.permissionResponses.delete(id)
+    }
+  }
+
+  private prunePermissionResponses(): void {
+    const now = Date.now()
+    for (const [id, record] of this.permissionResponses) {
+      if (record.expires !== Number.POSITIVE_INFINITY && record.expires <= now) this.permissionResponses.delete(id)
+    }
+    while (this.permissionResponses.size > PERMISSION_RESPONSE_LIMIT) {
+      const id = [...this.permissionResponses].find(([, record]) => record.promise === undefined)?.[0]
+      if (!id) return
+      this.permissionResponses.delete(id)
     }
   }
 
@@ -423,6 +543,25 @@ export class KiloConnectionService {
     for (const listener of this.notificationDismissListeners) {
       listener(notificationId)
     }
+  }
+
+  onSessionAcknowledged(listener: SessionAcknowledgedListener): () => void {
+    this.sessionAcknowledgedListeners.add(listener)
+    return () => {
+      this.sessionAcknowledgedListeners.delete(listener)
+    }
+  }
+
+  notifySessionAcknowledged(sessionID: string, eventID: string): void {
+    const state = this.completions.get(sessionID)
+    if (state?.event?.id === eventID) state.event = undefined
+    for (const listener of this.sessionAcknowledgedListeners) {
+      listener(sessionID, eventID)
+    }
+  }
+
+  getPendingCompletions() {
+    return [...this.completions.values()].flatMap((state) => (state.event ? [state.event] : []))
   }
 
   /**
@@ -633,6 +772,16 @@ export class KiloConnectionService {
   /**
    * Unregister a provider's visible sessions (e.g. on hide, clear, or dispose).
    */
+  /**
+   * Whether any surface is currently displaying this session. Registrations are
+   * already gated on their panel's visibility, so a retained-but-hidden webview
+   * does not count.
+   */
+  isVisible(sessionID: string): boolean {
+    for (const ids of this.visible.values()) if (ids.has(sessionID)) return true
+    return false
+  }
+
   unregisterVisible(key: string): void {
     if (!this.visible.has(key)) return
     this.visible.delete(key)
@@ -683,6 +832,8 @@ export class KiloConnectionService {
     this.explicitAborts.clear()
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
+    this.sessionAcknowledgedListeners.clear()
+    this.completions.clear()
     this.profileChangeListeners.clear()
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
@@ -691,6 +842,9 @@ export class KiloConnectionService {
     this.currentDirectory = undefined
     this.messageSessionIdsByMessageId.clear()
     this.permissionDirectories.clear()
+    this.permissionSessions.clear()
+    this.permissionResponses.clear()
+    this.permissionRevision += 1
     this.questionDirectories.clear()
     this.questionRevision += 1
     if (this.client?.session?.viewed) {
@@ -786,6 +940,9 @@ export class KiloConnectionService {
     this.config = null
     this.info = null
     this.permissionDirectories.clear()
+    this.permissionSessions.clear()
+    this.permissionResponses.clear()
+    this.permissionRevision += 1
     this.questionDirectories.clear()
     this.questionRevision += 1
   }
@@ -887,6 +1044,27 @@ export class KiloConnectionService {
   }
 
   private broadcast(event: SSEPayload, directory?: string): void {
+    if (event.type === "session.turn.close") {
+      const sid = event.properties.sessionID
+      const state = this.completions.get(sid)
+      if (!state || event.id > state.id) {
+        this.completions.set(sid, {
+          id: event.id,
+          event: event.properties.reason === "completed" ? event : undefined,
+        })
+      }
+    }
+    if (
+      event.type === "session.turn.open" ||
+      (event.type === "session.status" && event.properties.status.type !== "idle") ||
+      event.type === "session.error" ||
+      event.type === "session.deleted" ||
+      (event.type === "sync" && event.name === "session.deleted.1")
+    ) {
+      const sid = event.type === "sync" ? event.data.sessionID : event.properties.sessionID
+      const state = sid ? this.completions.get(sid) : undefined
+      if (sid && state && event.id > state.id) this.completions.set(sid, { id: event.id })
+    }
     this.handlePermissionEvent(event, directory)
     this.handleQuestionEvent(event, directory)
     for (const listener of this.eventListeners) listener(event, directory)
@@ -915,7 +1093,8 @@ export class KiloConnectionService {
 
   private handlePermissionEvent(event: SSEPayload, directory?: string): void {
     if (event.type === "permission.asked" && directory) {
-      this.recordPermissionDirectory(event.properties.id, directory)
+      this.permissionRevision += 1
+      this.recordPermissionDirectory(event.properties.id, directory, event.properties.sessionID)
       return
     }
     if (event.type === "permission.replied") {

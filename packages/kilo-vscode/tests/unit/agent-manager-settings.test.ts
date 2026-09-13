@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
 const ROOT = join(import.meta.dir, "..", "..")
+const PACKAGE = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+  contributes: { configuration: { properties: Record<string, { type: string; default?: unknown; scope?: string }> } }
+}
 
 describe("Agent Manager settings navigation", () => {
   const actions = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectActions.tsx"), "utf8")
@@ -21,6 +24,14 @@ describe("Agent Manager settings navigation", () => {
     expect(settings).toContain('type: "requestAgentManagerSettingsBranches"')
     expect(settings).toContain('type: "setAgentManagerDefaultBaseBranch"')
     expect(settings).toContain('type: "configureAgentManagerSetupScript"')
+  })
+
+  it("stages application-wide branch naming controls outside the project selection", () => {
+    expect(settings).toContain('updateSetting("agentManager.autoBranchNaming", value)')
+    expect(settings).toContain('updateSetting("agentManager.branchPrefix", value)')
+    expect(settings.indexOf('title={language.t("agentManager.settings.branchPrefix.title")}')).toBeLessThan(
+      settings.indexOf("<Show when={project()}"),
+    )
   })
 
   it("keeps the repository default branch selectable without an empty value", () => {
@@ -46,5 +57,105 @@ describe("Agent Manager settings navigation", () => {
   it("opens the existing branch picker dialog", () => {
     expect(settings).toContain("dialog.show(() =>")
     expect(settings).toContain("<ProjectBranchDialog")
+  })
+})
+
+describe("Agent Manager application settings", () => {
+  it.each([
+    [undefined, undefined, true, ""],
+    [false, "team/", false, "team/"],
+    [true, "", true, ""],
+  ] as const)("loads and saves naming preferences (%s, %s)", async (enabled, prefix, expected, text) => {
+    const vscode = await import("vscode")
+    const { KiloProvider } = await import("../../src/KiloProvider")
+    const original = vscode.workspace.getConfiguration
+    const values = new Map<string, unknown>()
+    if (enabled !== undefined) values.set("autoBranchNaming", enabled)
+    if (prefix !== undefined) values.set("branchPrefix", prefix)
+    const writes: unknown[] = []
+    vscode.workspace.getConfiguration = ((section?: string) => ({
+      get: (key: string, fallback: unknown) =>
+        section === "kilo-code.new.agentManager" && values.has(key) ? values.get(key) : fallback,
+      update: async (key: string, value: unknown, target: unknown) => {
+        writes.push({ section, key, value, target })
+        values.set(key, value)
+      },
+    })) as typeof original
+    try {
+      const provider = new KiloProvider({} as never, {} as never) as unknown as {
+        configSettings(): Record<string, unknown>
+        handleUpdateSetting(key: string, value: unknown): Promise<void>
+      }
+      expect(provider.configSettings()["agentManager.autoBranchNaming"]).toBe(expected)
+      expect(provider.configSettings()["agentManager.branchPrefix"]).toBe(text)
+      expect(provider.configSettings()["agentManager.pushFixes"]).toBe(true)
+      expect(provider.configSettings().multiProject).toBe(false)
+      await provider.handleUpdateSetting("agentManager.autoBranchNaming", !expected)
+      await provider.handleUpdateSetting("agentManager.branchPrefix", "")
+      expect(writes).toEqual([
+        {
+          section: "kilo-code.new.agentManager",
+          key: "autoBranchNaming",
+          value: !expected,
+          target: vscode.ConfigurationTarget.Global,
+        },
+        {
+          section: "kilo-code.new.agentManager",
+          key: "branchPrefix",
+          value: "",
+          target: vscode.ConfigurationTarget.Global,
+        },
+      ])
+      expect(provider.configSettings()["agentManager.autoBranchNaming"]).toBe(!expected)
+      expect(provider.configSettings()["agentManager.branchPrefix"]).toBe("")
+    } finally {
+      vscode.workspace.getConfiguration = original
+    }
+  })
+})
+
+describe("Claude migration application setting", () => {
+  it("declares an opt-in application setting", () => {
+    expect(PACKAGE.contributes.configuration.properties["kilo-code.new.experimental.claudeMigration"]).toEqual({
+      type: "boolean",
+      default: false,
+      scope: "application",
+      description: expect.any(String),
+    })
+  })
+
+  it("loads and saves the migration setting globally", async () => {
+    const vscode = await import("vscode")
+    const { KiloProvider } = await import("../../src/KiloProvider")
+    const original = vscode.workspace.getConfiguration
+    const values = new Map<string, unknown>()
+    const writes: unknown[] = []
+    vscode.workspace.getConfiguration = ((section?: string) => ({
+      get: (key: string, fallback: unknown) =>
+        section === "kilo-code.new.experimental" && values.has(key) ? values.get(key) : fallback,
+      update: async (key: string, value: unknown, target: unknown) => {
+        writes.push({ section, key, value, target })
+        values.set(key, value)
+      },
+    })) as typeof original
+    try {
+      const provider = new KiloProvider({} as never, {} as never) as unknown as {
+        configSettings(): Record<string, unknown>
+        handleUpdateSetting(key: string, value: unknown): Promise<void>
+      }
+      expect(provider.configSettings().claudeMigration).toBe(false)
+      await provider.handleUpdateSetting("experimental.claudeMigration", true)
+      expect(writes).toEqual([
+        {
+          section: "kilo-code.new.experimental",
+          key: "claudeMigration",
+          value: true,
+          target: vscode.ConfigurationTarget.Global,
+        },
+      ])
+      expect(provider.configSettings().claudeMigration).toBe(true)
+    } finally {
+      vscode.workspace.getConfiguration = original
+    }
   })
 })

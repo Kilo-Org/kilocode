@@ -334,6 +334,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           // kilocode_change end
 
           const cleanup = Effect.fnUntraced(function* () {
+            if ((yield* config.get()).snapshot === false) return undefined // kilocode_change - skip locks for disabled periodic cleanup too
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return
@@ -930,6 +931,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
         }),
         // kilocode_change start - isolate turn-facing snapshot work from poisoned locks
         track: Effect.fn("Snapshot.track")(function* (opts) {
+          // Check before starting progress or waiting on an earlier snapshot's lock.
+          if ((yield* config.get()).snapshot === false) return undefined
           const ctx = yield* InstanceState.context
           const guard = trackState(ctx.worktree)
           return yield* KiloSnapshotTrack.protect({
@@ -946,6 +949,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           })
         }),
         patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
+          if ((yield* config.get()).snapshot === false) return { hash, files: [] }
           const ctx = yield* InstanceState.context
           const guard = trackState(ctx.worktree)
           return yield* KiloSnapshotTrack.protect({

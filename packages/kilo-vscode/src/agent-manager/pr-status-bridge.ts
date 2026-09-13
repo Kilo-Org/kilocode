@@ -5,12 +5,24 @@
  * so the provider only needs thin delegation calls.
  */
 import type { Worktree } from "./WorktreeStateManager"
-import type { AgentManagerOutMessage, PRStatus } from "./types"
+import type { AgentManagerOutMessage, PRMergeMethod, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
-import { resolveComment, unresolveComment } from "./pr/PRActions"
-import { ghErrorReason, mergePRStatus } from "./pr/am-pr-utils"
+import {
+  addCommentReaction,
+  isPRReactionContent,
+  removeCommentReaction,
+  replyComment,
+  resolveComment,
+  unresolveComment,
+} from "./pr/PRActions"
+import { ghErrorReason, mergePRStatus, retainPRStatus } from "./pr/am-pr-utils"
+import { mutateComment } from "./pr/mutate-comment"
+import { PRReviewActions } from "./pr/review-actions"
+import { PRMergeActions } from "./pr/merge-actions"
+import { PRSuggestionActions } from "./pr/suggestion-actions"
+import type { PRReviewContext, PRReviewHost } from "./pr/review-context"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -22,6 +34,10 @@ interface PRBridgeHost {
   log(...args: unknown[]): void
   semaphore?: Semaphore
   projectId?: () => string | undefined
+  dirtyFiles?: () => string[]
+  conflicts?: (cwd: string, remote: string, base: string, head: string) => Promise<string[]>
+  getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
+  savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
 }
 
 /** Minimal panel surface needed by the bridge (subset of PanelContext). */
@@ -30,17 +46,60 @@ interface PanelLike {
   onDidChangeVisibility(cb: (visible: boolean) => void): Disposable
 }
 
+interface ReactionRequest {
+  id: string
+  commentId: string
+  content: Parameters<typeof addCommentReaction>[1]
+  add: boolean
+}
+
+function reactionRequest(m: Record<string, unknown>): ReactionRequest | undefined {
+  if (typeof m.worktreeId !== "string") return
+  if (typeof m.commentId !== "string") return
+  if (!isPRReactionContent(m.reaction)) return
+  if (typeof m.add !== "boolean") return
+  return { id: m.worktreeId, commentId: m.commentId, content: m.reaction, add: m.add }
+}
+
+function hasComment(pr: PRStatus, id: string): boolean {
+  return (
+    pr.comments?.comments.some((comment) => comment.id === id || comment.replies?.some((reply) => reply.id === id)) ||
+    pr.conversation?.some((comment) => comment.id === id) ||
+    false
+  )
+}
+
 export class PRStatusBridge {
   readonly poller: PRStatusPoller
+  private reviews: PRReviewActions
+  private merges: PRMergeActions
+  private suggestions: PRSuggestionActions
   private readonly cache = new Map<string, AgentManagerOutMessage>()
   /** Branch each cached PR was found on, so a branch switch still clears it. */
   private readonly branches = new Map<string, string>()
   private readonly host: PRBridgeHost
+  private readonly actionHost: PRReviewHost
   private lastErrorNotified: "gh_missing" | "gh_auth" | "fetch_failed" | undefined
 
   constructor(host: PRBridgeHost) {
     this.host = host
     this.poller = new PRStatusPoller(bridgePollerOpts(this, host))
+    const actions: PRReviewHost = {
+      context: (message) => this.context(message),
+      post: (message) => host.postToWebview(message),
+      refresh: (context, settle) => {
+        if (host.projectId?.() === context.projectId) this.poller.refresh(context.worktreeId, settle)
+      },
+      dirtyFiles: () => host.dirtyFiles?.() ?? [],
+      conflicts: async (context, base, head) =>
+        (await host.conflicts?.(context.directory, context.remote ?? "origin", base, head)) ?? [],
+      getPRMergeMethod: host.getPRMergeMethod,
+      savePRMergeMethod: host.savePRMergeMethod,
+    }
+    this.actionHost = actions
+    this.reviews = new PRReviewActions(actions)
+    this.merges = new PRMergeActions(actions)
+    this.suggestions = new PRSuggestionActions(actions)
   }
 
   static create(opts: {
@@ -53,6 +112,10 @@ export class PRStatusBridge {
     log: (...args: unknown[]) => void
     semaphore?: Semaphore
     projectId?: () => string | undefined
+    dirtyFiles?: () => string[]
+    conflicts?: (cwd: string, remote: string, base: string, head: string) => Promise<string[]>
+    getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
+    savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
   }): PRStatusBridge {
     return new PRStatusBridge(opts)
   }
@@ -82,6 +145,7 @@ export class PRStatusBridge {
 
   /** Handle an incoming webview message. Returns true if handled. */
   handleMessage(m: Record<string, unknown>): boolean {
+    if (this.actions(m)) return true
     if (m.type === "agentManager.refreshPR") {
       if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return true
       this.poller.refresh(m.worktreeId as string)
@@ -98,46 +162,157 @@ export class PRStatusBridge {
       if (url) this.host.openExternal(url)
       return true
     }
-    if (m.type === "agentManager.resolveComment" || m.type === "agentManager.unresolveComment")
-      return this.handleComment(m)
+    if (m.type === "agentManager.commentReaction") return this.handleReaction(m)
+    if (
+      m.type === "agentManager.replyComment" ||
+      m.type === "agentManager.mutateComment" ||
+      m.type === "agentManager.resolveComment" ||
+      m.type === "agentManager.unresolveComment"
+    )
+      return this.comment(m, `${m.type}Result`)
     return false
   }
 
-  private handleComment(m: Record<string, unknown>): boolean {
+  private actions(m: Record<string, unknown>): boolean {
+    return this.reviews.handle(m) || this.merges.handle(m) || this.suggestions.handle(m)
+  }
+
+  private handleReaction(m: Record<string, unknown>): boolean {
     if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return true
-    const id = m.worktreeId as string
-    const threadId = m.threadId as string
+    const request = reactionRequest(m)
+    if (!request) return true
+    const { id, commentId, content, add } = request
     const projectId = typeof m.projectId === "string" ? m.projectId : this.host.projectId?.()
-    const wt = this.host.getWorktrees().find((w) => w.id === id)
-    const cwd = wt?.path ?? this.host.getWorkspaceRoot()
-    const resolve = m.type === "agentManager.resolveComment"
-    const resultType = resolve ? "agentManager.resolveCommentResult" : "agentManager.unresolveCommentResult"
-    const result = (success: boolean, error?: string) =>
+    const result = (success: boolean, error?: string) => {
       this.host.postToWebview({
-        type: resultType,
+        type: "agentManager.commentReactionResult",
         ...(projectId ? { projectId } : {}),
         worktreeId: id,
-        threadId,
+        commentId,
+        reaction: content,
+        add,
         success,
         ...(error ? { error } : {}),
       })
-    if (!cwd) {
-      this.host.log("resolveComment: no cwd for worktree", id)
-      result(false)
+    }
+    const wt = this.host.getWorktrees().find((item) => item.id === id)
+    const cached = this.cache.get(id)
+    const pr = cached?.type === "agentManager.prStatus" ? cached.pr : undefined
+    if (!wt || this.branches.get(id) !== wt.branch || !pr || !hasComment(pr, commentId)) {
+      result(false, "PR comment not found. Refresh and try again.")
       return true
     }
-    const action = resolve ? resolveComment : unresolveComment
-    action(threadId, cwd).then(
+    const action = add ? addCommentReaction : removeCommentReaction
+    action(commentId, content, wt.path).then(
       () => {
         result(true)
-        this.poller.refresh(id)
+        if (this.host.projectId?.() === projectId) this.poller.refresh(id)
       },
       (err: unknown) => {
-        this.host.log(`${resultType} failed: ${err instanceof Error ? err.message : String(err)}`)
-        result(false, ghErrorReason(err instanceof Error ? err.message : String(err)))
+        const message = err instanceof Error ? err.message : String(err)
+        this.host.log(`commentReaction failed: ${message}`)
+        result(false, ghErrorReason(message))
       },
     )
     return true
+  }
+
+  private context(m: Record<string, unknown>): PRReviewContext {
+    const projectId = this.host.projectId?.()
+    if (m.projectId !== undefined && m.projectId !== projectId)
+      throw new Error("Project changed. Reopen the PR review.")
+    const wt = this.host.getWorktrees().find((item) => item.id === m.worktreeId)
+    const cached = wt && this.cache.get(wt.id)
+    if (!wt || this.branches.get(wt.id) !== wt.branch || cached?.type !== "agentManager.prStatus" || !cached.pr) {
+      throw new Error("Pull request not found in this worktree.")
+    }
+    if (m.prNumber !== cached.pr.number || m.prUrl !== cached.pr.url)
+      throw new Error("Pull request changed. Refresh and try again.")
+    return { pr: cached.pr, directory: wt.path, worktreeId: wt.id, projectId, branch: wt.branch, remote: wt.remote }
+  }
+
+  private comment(
+    m: Record<string, unknown>,
+    type:
+      | "agentManager.replyCommentResult"
+      | "agentManager.mutateCommentResult"
+      | "agentManager.resolveCommentResult"
+      | "agentManager.unresolveCommentResult",
+  ): boolean {
+    const explicit =
+      m.type === "agentManager.mutateComment" ? m.projectId !== undefined : typeof m.projectId === "string"
+    const id = m.worktreeId as string
+    const current = this.host.projectId?.()
+    const requested = typeof m.projectId === "string" ? m.projectId : undefined
+    const projectId = explicit ? requested : current
+    const result = (success: boolean, error?: string) => {
+      const route = {
+        ...(projectId ? { projectId } : {}),
+        worktreeId: id,
+        success,
+        ...(error ? { error } : {}),
+      }
+      const requestId = m.requestId as string
+      const threadId = m.threadId as string
+      this.host.postToWebview(
+        type === "agentManager.mutateCommentResult"
+          ? { ...route, type, requestId }
+          : type === "agentManager.replyCommentResult"
+            ? { ...route, type, requestId, threadId }
+            : { ...route, type, threadId },
+      )
+    }
+    if (explicit && requested !== current) {
+      result(false, "Project changed. Reopen the PR review.")
+      return true
+    }
+    const fail = (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err)
+      this.host.log(`${type} failed: ${message}`)
+      result(false, ghErrorReason(message))
+    }
+    try {
+      const task = this.action(m)
+      if (!task) result(false)
+      task?.then(() => {
+        result(true)
+        if (this.host.projectId?.() === projectId) this.poller.refresh(id)
+      }, fail)
+    } catch (err) {
+      fail(err)
+    }
+    return true
+  }
+
+  private action(m: Record<string, unknown>): Promise<void> | undefined {
+    const id = m.worktreeId as string
+    const threadId = m.threadId as string
+    const wt = this.host.getWorktrees().find((w) => w.id === id)
+    if (m.type === "agentManager.resolveComment" || m.type === "agentManager.unresolveComment") {
+      // Only legacy resolve actions may fall back to the workspace directory.
+      const cwd = wt?.path ?? this.host.getWorkspaceRoot()
+      if (!cwd) {
+        this.host.log("resolveComment: no cwd for worktree", id)
+        return
+      }
+      const action = m.type === "agentManager.resolveComment" ? resolveComment : unresolveComment
+      return action(threadId, cwd)
+    }
+    if (m.type === "agentManager.replyComment" && (typeof m.body !== "string" || !m.body.trim()))
+      throw new Error("Reply cannot be blank.")
+    const cached = this.cache.get(id)
+    const pr = cached?.type === "agentManager.prStatus" ? cached.pr : undefined
+    if (!wt || this.branches.get(id) !== wt.branch || !pr) {
+      throw new Error(
+        m.type === "agentManager.replyComment"
+          ? "Review thread not found in this worktree."
+          : "Pull request not found in this worktree.",
+      )
+    }
+    if (m.type === "agentManager.mutateComment") return mutateComment(m, pr, wt.path)
+    if (!pr.comments?.comments.some((comment) => comment.threadId === threadId))
+      throw new Error("Review thread not found in this worktree.")
+    return replyComment(threadId, m.body as string, wt.path)
   }
 
   /** Remove cached status for a deleted worktree. */
@@ -148,6 +323,10 @@ export class PRStatusBridge {
 
   reset(): void {
     this.poller.stop()
+    this.suggestions.dispose()
+    this.reviews = new PRReviewActions(this.actionHost)
+    this.merges = new PRMergeActions(this.actionHost)
+    this.suggestions = new PRSuggestionActions(this.actionHost)
     this.cache.clear()
     this.branches.clear()
     this.lastErrorNotified = undefined
@@ -183,6 +362,7 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
       accept(bridge, host, id, pr)
     },
     log: (...args: unknown[]) => host.log(...args),
+    getPRMergeMethod: host.getPRMergeMethod,
   }
 }
 
@@ -219,7 +399,7 @@ function accept(bridge: PRStatusBridge, host: PRBridgeHost, id: string, pr: PRSt
   // PR cannot leave a branch, so on the same branch the known PR is kept:
   // forwarding pr:null would unmount the panel and throw away the comment the
   // user is reading.
-  if (!pr && prev && branch !== undefined && bridge["branches"].get(id) === branch) {
+  if (prev && retainPRStatus(prev, bridge["branches"].get(id), branch, pr)) {
     host.log(`PR status: keeping PR #${prev.number} for ${id}, empty result on ${branch}`)
     return
   }
