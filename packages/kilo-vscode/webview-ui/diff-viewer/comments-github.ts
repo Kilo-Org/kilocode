@@ -1,7 +1,7 @@
 import type { Accessor } from "solid-js"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { parsePatch } from "../../src/shared/pr-patch"
-import type { WorktreeFileDiff } from "../src/types/messages"
+import type { WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 import type { ReviewComment } from "./review-comments"
 import { canCommentOnPRLine } from "./pr-diff"
 import { reviewRequest } from "../agent-manager/pr/pr-review-request"
@@ -62,7 +62,7 @@ interface Options {
   target: Accessor<PRTarget | undefined>
   snapshot: Accessor<PRDiffSnapshot | undefined>
   diffs: Accessor<WorktreeFileDiff[]>
-  post: (message: never) => void
+  post: (message: WebviewMessage) => void
   /** Gate publication, for example when only local changes are shown. */
   canPublish?: Accessor<boolean>
 }

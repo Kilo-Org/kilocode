@@ -1,10 +1,10 @@
 import { createSignal, untrack, type Accessor } from "solid-js"
 import type { PRDiffSnapshot, PRTarget } from "../../../src/shared/pr-comment-actions"
-import type { PRStatus } from "../../src/types/messages"
+import type { PRStatus, WebviewMessage } from "../../src/types/messages"
 import { reviewRequest } from "./pr-review-request"
 
 interface Options {
-  post: (message: never) => void
+  post: (message: WebviewMessage) => void
   project: Accessor<string | undefined>
   statuses: Accessor<Record<string, Pick<PRStatus, "number" | "url" | "baseRefOid" | "headRefOid"> | null>>
 }

@@ -275,12 +275,12 @@ async function saveProject(ctx: ActionContext, config: Config) {
   await ctx.client.config.update({ config, directory: ctx.workspaceDir }, { throwOnError: true })
 }
 
-async function removeAuth(ctx: ActionContext, id: string, configured: boolean) {
+async function removeAuth(ctx: ActionContext, id: string, custom: boolean) {
   try {
     await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
   } catch (err) {
-    if (!configured) throw err
-    console.warn(`[Kilo New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
+    if (!custom) throw err
+    console.warn(`[Kilo New] auth.remove failed for custom provider ${id} (non-fatal):`, err)
   }
 }
 

@@ -215,6 +215,20 @@ describe("disconnectProvider", () => {
     ])
   })
 
+  it("tolerates credential cleanup failure for a custom provider and still removes it", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx({ provider: { myprovider: createSavedProvider() } })
+    ctx.client.auth.remove = async () => {
+      throw new Error("Credential cleanup failed")
+    }
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toEqual([{ config: { provider: { myprovider: null }, disabled_providers: [] } }])
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.posts.at(-1)).toEqual({ type: "providerDisconnected", requestId: "req", providerID: "myprovider" })
+    expect(calls.posts).not.toContainEqual(expect.objectContaining({ type: "providerActionError" }))
+  })
+
   it("removes configured oauth providers without changing unrelated disabled providers", async () => {
     const existing = {
       disabled_providers: ["openai", "groq"],

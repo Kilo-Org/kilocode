@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { postAllGithub, resolveGithubContext, type CommentsGithub } from "../../webview-ui/diff-viewer/comments-github"
+import {
+  createCommentsGithub,
+  postAllGithub,
+  resolveGithubContext,
+  type CommentsGithub,
+} from "../../webview-ui/diff-viewer/comments-github"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import type { ReviewComment } from "../../webview-ui/diff-viewer/review-comments"
 
@@ -111,5 +116,59 @@ describe("postAllGithub", () => {
     expect(sent).toEqual(["first", "second"])
     expect(result.posted.map((item) => item.id)).toEqual(["first"])
     expect(result.failure).toBe("boom")
+  })
+})
+
+describe("createCommentsGithub", () => {
+  it("posts the resolved comment and settles on its result", async () => {
+    const events = new EventTarget()
+    const view = {
+      addEventListener: (type: string, listener: EventListenerOrEventListenerObject) =>
+        events.addEventListener(type, listener),
+      removeEventListener: (type: string, listener: EventListenerOrEventListenerObject) =>
+        events.removeEventListener(type, listener),
+    }
+    const previous = globalThis.window
+    globalThis.window = view as unknown as typeof globalThis.window
+
+    try {
+      const posted: unknown[] = []
+      const github = createCommentsGithub({
+        target: () => target,
+        snapshot: () => snapshot,
+        diffs: () => [{ file: "src/file.ts", before: "", after: "", patch, additions: 1, deletions: 1 }],
+        post: (message) => posted.push(message),
+      })
+
+      const pending = github.send(comment("first", 2))
+      const request = posted[0] as {
+        type: string
+        requestId: string
+        worktreeId: string
+        prNumber: number
+        prUrl: string
+      }
+      expect(request).toMatchObject({
+        type: "agentManager.createReviewComment",
+        worktreeId: "wt-1",
+        prNumber: 7,
+        prUrl: target.prUrl,
+        path: "src/file.ts",
+        side: "RIGHT",
+        startLine: 2,
+        endLine: 2,
+        body: "first",
+      })
+
+      events.dispatchEvent(
+        new MessageEvent("message", {
+          data: { ...request, type: "agentManager.createReviewCommentResult", success: true },
+        }),
+      )
+
+      await expect(pending).resolves.toEqual({ success: true, error: undefined })
+    } finally {
+      globalThis.window = previous
+    }
   })
 })
