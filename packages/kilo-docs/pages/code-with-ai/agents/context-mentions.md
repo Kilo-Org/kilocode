@@ -39,13 +39,17 @@ Very long chat histories are truncated, keeping the beginning and end, so a sing
 
 ### Drag and Drop
 
-You can also add file mentions by dragging and dropping:
+You can also add context by dragging and dropping:
 
 | Source | How | Result |
 |---|---|---|
 | **Explorer / Editor tabs** | Drag a file or folder from VS Code's Explorer or an editor tab into the chat input | Inserts an `@/relative/path` mention |
 | **Multiple files** | Drag several files at once | Inserts space-separated `@` mentions |
 | **Agent Manager diff headers** | Drag a file header from the Agent Manager's diff panel into chat | Inserts an `@file` mention |
+| **Agent Manager session tab** | Drag an Agent Manager session tab into the prompt | Inserts a session mention; sending the message attaches that chat's history |
+| **Agent Manager worktree card** | Drag a worktree card from the Agent Manager sidebar into the prompt | Inserts a worktree mention with its branch and path metadata |
+| **Agent Manager terminal tab** | Drag a terminal tab into the prompt | Inserts an `@terminal` mention |
+| **Agent Manager document tab** | Drag a document tab from the Documents inspector into the prompt | Inserts an `@/relative/path` file mention |
 | **Images** | Hold **Shift** while dragging an image file from your OS file manager into the chat input | Attaches the image |
 
 {% callout type="info" %}

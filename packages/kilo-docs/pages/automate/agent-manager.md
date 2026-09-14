@@ -103,6 +103,8 @@ Agent Manager worktree defaults belong to a repository. Open a project's setting
 
 The **Worktree Setup Script** control opens or creates the setup script for the selected repository. See [Setup Scripts](#setup-scripts) for supported filenames and execution behavior.
 
+**Pre-warm worktrees** is enabled by default. It keeps one ready worktree per open project so new sessions start faster, and it uses one extra checkout of disk space per open project. Disable it in the Agent Manager settings tab or with `kilo-code.new.agentManager.worktreePool`; the change applies immediately.
+
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
@@ -462,10 +464,13 @@ The worktree creation base and the diff comparison base are separate. The Branch
 - Supports unified and split diff views
 - Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
+- **Drag references into the prompt** — drag an Agent Manager session tab, worktree card, terminal tab, or document tab into the prompt to insert its mention. A session tab attaches that chat's history, a worktree card attaches the worktree's branch and path metadata, a terminal tab inserts `@terminal`, and a document tab inserts a file mention
 
 ### Sending review comments
 
-Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
+Add comments in the diff panel or in the rendered view of a Markdown document. Each comment has a destination: **Save local** keeps it in the review, **Send to agent** gives it to the agent, and **Post to GitHub** publishes it to the pull request when the branch matches a checked-out PR.
+
+Click **Send all to chat** to send the collected comments to chat, or **Send N to GitHub #N** to post the publishable comments to the pull request. If an Agent Manager terminal is active, **Send all to chat** sends the comments to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to send all to chat from the review panel; only that action carries the shortcut.
 
 After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
 
