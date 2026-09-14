@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import path from "path"
+import { stat } from "node:fs/promises"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSnapshotMaterialize } from "./materialize"
@@ -39,9 +40,18 @@ export namespace KiloSnapshotSeed {
 
   const list = (text: string) => text.split("\0").filter(Boolean)
   const feed = (items: string[]) => items.join("\0") + "\0"
+  const falsy = (text: string) => ["", "false", "no", "off", "0"].includes(text.trim().toLowerCase())
+  // `git config --get` exits 1 for an unset key.
+  const off = (result: Result) => result.code === 1 || (result.code === 0 && falsy(result.text))
+  const lines = (text: string) =>
+    text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .sort()
+      .join("\n")
   const snap = (input: Input, cmd: string[]) => ["--git-dir", input.gitdir, "--work-tree", input.worktree, ...cmd]
-  // Match the existing snapshot add() stat fanout so seeding has the same filesystem pressure.
-  const concurrency = 8
+  const batch = 256
 
   export const seed = Effect.fnUntraced(function* (input: Input) {
     const started = Date.now()
@@ -88,20 +98,41 @@ export namespace KiloSnapshotSeed {
       if (unmerged.code !== 0) return yield* reset("unmerged-check-failed", true)
       if (unmerged.text) return yield* reset("unmerged-index")
 
-      const [src, root, idx, fmt, dst] = yield* Effect.all(
+      const [src, root, idx, fmt, dst, crlf, links, attrs, theirs, ours] = yield* Effect.all(
         [
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-dir"]),
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-common-dir"]),
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-path", "index"]),
           input.git(["-C", input.worktree, "rev-parse", "--show-object-format"]),
           input.git(["--git-dir", input.gitdir, "rev-parse", "--show-object-format"]),
+          input.git(["-C", input.worktree, "config", "--get", "core.autocrlf"]),
+          input.git(["-C", input.worktree, "config", "--get", "core.symlinks"]),
+          input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-path", "info/attributes"]),
+          input.git(["-C", input.worktree, "config", "--get-regexp", "^filter\\."]),
+          input.git(["--git-dir", input.gitdir, "config", "--get-regexp", "^filter\\."]),
         ],
-        { concurrency: 5 },
+        { concurrency: 10 },
       )
       if ([src, root, idx, fmt, dst].some((item) => item.code !== 0)) {
         return yield* reset("metadata", true)
       }
       if (fmt.text.trim() !== dst.text.trim()) return yield* reset("object-format")
+      // The source stat data is only valid for the snapshot repository when both hash
+      // worktree bytes the same way: no autocrlf conversion, real symlinks, and no
+      // repository-private attributes that the snapshot repository cannot see.
+      const trusted = yield* Effect.gen(function* () {
+        if (!off(crlf) || (links.code === 0 && falsy(links.text)) || (links.code !== 0 && links.code !== 1))
+          return false
+        if (attrs.code !== 0) return false
+        const file = attrs.text.trim()
+        if (!file) return false
+        const info = yield* input.fs.stat(file).pipe(Effect.catch(() => Effect.void))
+        return !info || Number(info.size) === 0
+      })
+      // Filter drivers such as LFS rewrite content on the way into the object store. When
+      // both repositories see the same driver configuration (global config), the source
+      // index already holds what the snapshot repository would produce.
+      const shared = trusted && (theirs.code === 1 || theirs.code === 0) && lines(theirs.text) === lines(ours.text)
 
       const source = src.text.trim()
       const common = root.text.trim()
@@ -146,18 +177,52 @@ export namespace KiloSnapshotSeed {
       pinned.hash = hash
       const materialize = { gitdir: common, staging, hash }
 
-      // Discard source stat data and entry flags so reconciliation observes the
-      // filesystem under snapshot filter and line-ending semantics.
-      const read = yield* input.git(snap(input, ["read-tree", hash]), { cwd: input.dir })
-      if (read.code !== 0) return yield* reset("read-tree", true)
-      yield* input.fs.remove(temp).pipe(Effect.catch(() => Effect.void))
+      // With matching semantics the private copy becomes the snapshot index so unchanged
+      // files keep their stat data and the first snapshot only hashes what differs.
+      // Otherwise discard source stat data and entry flags so reconciliation observes
+      // the filesystem under snapshot filter and line-ending semantics.
+      if (trusted) {
+        yield* input.fs.rename(temp, path.join(input.gitdir, "index"))
+      }
+      if (!trusted) {
+        const read = yield* input.git(snap(input, ["read-tree", hash]), { cwd: input.dir })
+        if (read.code !== 0) return yield* reset("read-tree", true)
+        yield* input.fs.remove(temp).pipe(Effect.catch(() => Effect.void))
+      }
 
-      const tracked = yield* input.git(snap(input, ["ls-files", "-z", "--", "."]), { cwd: input.dir })
+      const tracked = yield* input.git(snap(input, ["ls-files", "-v", "-s", "-z", "--", "."]), { cwd: input.dir })
       if (tracked.code !== 0) return yield* reset("list", true)
-      const files = list(tracked.text)
+      const entries = list(tracked.text).flatMap((line) => {
+        const match = line.match(/^(\S) (\d+) ([0-9a-f]+) \d\t(.*)$/s)
+        return match ? [{ tag: match[1]!, mode: match[2]!, oid: match[3]!, path: match[4]! }] : []
+      })
+      const files = entries.map((entry) => entry.path)
       if (!files.length) {
         log.info("snapshot seed complete", { paths: 0, dropped: 0, duration: Date.now() - started })
         return { source: materialize } satisfies Output
+      }
+
+      // Entries that a driver unknown to the snapshot repository rewrites, or that carry
+      // assume-unchanged or skip-worktree flags, lose their stat data so the first
+      // snapshot rehashes them.
+      const rewritten = new Set<string>()
+      if (trusted && !shared) {
+        const checked = yield* input.git(["-C", input.worktree, "check-attr", "--stdin", "-z", "filter"], {
+          stdin: feed(files),
+        })
+        if (checked.code !== 0) return yield* reset("attributes", true)
+        const parts = checked.text.split("\0")
+        for (let i = 0; i + 2 < parts.length; i += 3) {
+          if (parts[i + 2] !== "unspecified" && parts[i + 2] !== "unset") rewritten.add(parts[i]!)
+        }
+      }
+      const risky = trusted ? entries.filter((entry) => entry.tag !== "H" || rewritten.has(entry.path)) : []
+      if (risky.length) {
+        const result = yield* input.git(snap(input, ["update-index", "-z", "--index-info"]), {
+          cwd: input.dir,
+          stdin: feed(risky.map((entry) => `${entry.mode} ${entry.oid}\t${entry.path}`)),
+        })
+        if (result.code !== 0) return yield* reset("index-info", true)
       }
 
       const ignored = yield* input.git(["-C", input.worktree, "check-ignore", "--no-index", "--stdin", "-z"], {
@@ -165,21 +230,25 @@ export namespace KiloSnapshotSeed {
       })
       if (ignored.code !== 0 && ignored.code !== 1) return yield* reset("ignore", true)
 
-      const large = (yield* Effect.all(
-        files.map((file) =>
-          input.fs
-            .stat(path.join(input.dir, file))
-            .pipe(Effect.catch(() => Effect.void))
-            .pipe(
-              Effect.map((info) => {
-                if (!info || info.type !== "File") return
-                const size = typeof info.size === "bigint" ? Number(info.size) : info.size
-                return size > input.limit ? file : undefined
-              }),
+      // Tens of thousands of stats go straight through the libuv pool; wrapping each one
+      // in an Effect made this the slowest seed step in large worktrees.
+      const large = yield* Effect.promise(async () => {
+        const found: string[] = []
+        for (let i = 0; i < files.length; i += batch) {
+          const sizes = await Promise.all(
+            files.slice(i, i + batch).map((file) =>
+              stat(path.join(input.dir, file)).then(
+                (info) => (info.isFile() ? info.size : 0),
+                () => 0,
+              ),
             ),
-        ),
-        { concurrency },
-      )).filter((file): file is string => Boolean(file))
+          )
+          sizes.forEach((size, j) => {
+            if (size > input.limit) found.push(files[i + j]!)
+          })
+        }
+        return found
+      })
 
       const dropped = Array.from(new Set([...list(ignored.text), ...large]))
       if (dropped.length) {
@@ -195,6 +264,9 @@ export namespace KiloSnapshotSeed {
         dropped: dropped.length,
         ignored: list(ignored.text).length,
         large: large.length,
+        trusted,
+        shared,
+        reset: risky.length,
         duration: Date.now() - started,
       })
       return { source: materialize } satisfies Output

@@ -8,6 +8,23 @@ export namespace KiloSnapshotPrepare {
   /** Marks a repository whose seed finished before any snapshot was tracked. */
   export const MARKER = "kilo-prepared"
 
+  // Snapshot repositories hash worktree bytes as-is and never run a filesystem monitor.
+  // The index and untracked-cache settings keep per-step scans cheap in large worktrees.
+  const CONFIG = [
+    "[core]",
+    "\tautocrlf = false",
+    "\tlongpaths = true",
+    "\tsymlinks = true",
+    "\tfsmonitor = false",
+    "\tuntrackedCache = true",
+    "[feature]",
+    "\tmanyFiles = true",
+    "[index]",
+    "\tversion = 4",
+    "\tthreads = true",
+    "",
+  ].join("\n")
+
   const services = new WeakMap<Snapshot.Interface, () => Effect.Effect<boolean>>()
 
   export function bind(service: Snapshot.Interface, prepare: () => Effect.Effect<boolean>) {
@@ -44,20 +61,13 @@ export namespace KiloSnapshotPrepare {
     // worktree was removed. Do not recreate a repository for a worktree that is gone.
     if (prepare && !(yield* input.fs.exists(input.worktree).pipe(Effect.orDie))) return
     yield* input.fs.ensureDir(input.gitdir).pipe(Effect.orDie)
-    const commands = [
-      ["init"],
-      ["--git-dir", input.gitdir, "config", "core.autocrlf", "false"],
-      ["--git-dir", input.gitdir, "config", "core.longpaths", "true"],
-      ["--git-dir", input.gitdir, "config", "core.symlinks", "true"],
-      ["--git-dir", input.gitdir, "config", "core.fsmonitor", "false"],
-    ]
     return yield* Effect.gen(function* () {
-      for (const cmd of commands) {
-        const result = yield* input.git(cmd, {
-          env: { GIT_DIR: input.gitdir, GIT_WORK_TREE: input.worktree },
-        })
-        if (result.code !== 0) return yield* Effect.die(new Error(`Snapshot initialization failed: ${result.stderr}`))
-      }
+      const result = yield* input.git(["init"], { env: { GIT_DIR: input.gitdir, GIT_WORK_TREE: input.worktree } })
+      if (result.code !== 0) return yield* Effect.die(new Error(`Snapshot initialization failed: ${result.stderr}`))
+      // One config write replaces a spawn per key. Repeated sections are valid git config.
+      const config = path.join(input.gitdir, "config")
+      const current = yield* input.fs.readFileString(config).pipe(Effect.catch(() => Effect.succeed("")))
+      yield* input.fs.writeFileString(config, current.trimEnd() + "\n" + CONFIG).pipe(Effect.orDie)
       const seeded: KiloSnapshotSeed.Output = yield* KiloSnapshotSeed.seed(input)
       if (prepare) yield* input.fs.writeFileString(path.join(input.gitdir, MARKER), "").pipe(Effect.orDie)
       yield* Effect.logInfo("initialized")

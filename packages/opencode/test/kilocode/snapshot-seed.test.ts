@@ -58,7 +58,11 @@ function run<A>(dir: string, body: (snapshot: Snapshot.Interface) => Effect.Effe
       const value = yield* body(snapshot)
       const gitdir = path.join(Global.Path.data, "snapshot", Instance.project.id, Hash.fast(Instance.worktree))
       return { value, gitdir }
-    }).pipe(provideInstance(dir), Effect.provide(AppNodeBuilder.build(Snapshot.node)), Effect.provide(testInstanceStoreLayer)),
+    }).pipe(
+      provideInstance(dir),
+      Effect.provide(AppNodeBuilder.build(Snapshot.node)),
+      Effect.provide(testInstanceStoreLayer),
+    ),
   )
 }
 
@@ -366,7 +370,10 @@ test("interrupted seed removes borrowed state after source gc", async () => {
             ),
           )
       const git = (cmd: string[], opts?: { cwd?: string; env?: Record<string, string>; stdin?: string }) => {
-        const read = cmd[1] === gitdir && cmd.includes("read-tree") && cmd.at(-1) !== "--empty"
+        // Hang the first snapshot-index command after the source pin: read-tree on the
+        // cold path, or the entry listing when the seed reuses the source index.
+        const read =
+          cmd[1] === gitdir && ((cmd.includes("read-tree") && cmd.at(-1) !== "--empty") || cmd.includes("ls-files"))
         if (read) return Deferred.succeed(reached, undefined).pipe(Effect.andThen(Effect.never))
         return raw(cmd, opts)
       }
@@ -400,6 +407,96 @@ test("interrupted seed removes borrowed state after source gc", async () => {
   ]) {
     await expect(fs.access(file)).rejects.toThrow()
   }
+})
+
+test("regular seed keeps source stat data except for rewritten or flagged entries", async () => {
+  const init = async (dir: string) => {
+    await $`git config filter.snapshot-keep.clean "tr a-z A-Z"`.cwd(dir).quiet()
+    await $`git config filter.snapshot-keep.smudge cat`.cwd(dir).quiet()
+    await Filesystem.write(path.join(dir, ".gitattributes"), "*.flt filter=snapshot-keep\n")
+    await Filesystem.write(path.join(dir, "plain.txt"), "plain\n")
+    await Filesystem.write(path.join(dir, "filtered.flt"), "filtered\n")
+    await Filesystem.write(path.join(dir, "assume.txt"), "assume\n")
+    await Filesystem.write(path.join(dir, "skip.txt"), "skip\n")
+    await $`git add .`.cwd(dir).quiet()
+    await $`git commit -m baseline`.cwd(dir).quiet()
+    await $`git update-index --assume-unchanged assume.txt`.cwd(dir).quiet()
+    await $`git update-index --skip-worktree skip.txt`.cwd(dir).quiet()
+    await $`git status --porcelain`.cwd(dir).quiet()
+  }
+  const seed = (dir: string, gitdir: string, init = true) =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const process = yield* AppProcess.Service
+        const fsys = yield* FSUtil.Service
+        const git = (cmd: string[], opts?: { cwd?: string; env?: Record<string, string>; stdin?: string }) =>
+          process
+            .run(ChildProcess.make("git", cmd, { cwd: opts?.cwd, env: opts?.env, extendEnv: true }), {
+              stdin: opts?.stdin,
+            })
+            .pipe(
+              Effect.map((result) => ({
+                code: ChildProcessSpawner.ExitCode(result.exitCode),
+                text: result.stdout.toString("utf8"),
+                stderr: result.stderr.toString("utf8"),
+              })),
+              Effect.catch((err) =>
+                Effect.succeed({ code: ChildProcessSpawner.ExitCode(1), text: "", stderr: String(err) }),
+              ),
+            )
+        if (init) yield* Effect.promise(() => $`git init --bare ${gitdir}`.quiet())
+        const out: KiloSnapshotSeed.Output = yield* KiloSnapshotSeed.seed({
+          dir,
+          worktree: dir,
+          gitdir,
+          limit: 2 * 1024 * 1024,
+          git,
+          fs: fsys,
+        })
+        return out
+      }).pipe(Effect.provide(infra)),
+    )
+  const dirty = async (dir: string, gitdir: string) =>
+    (await $`git --git-dir=${gitdir} --work-tree=${dir} diff-files --name-only -z`.text())
+      .split("\0")
+      .filter(Boolean)
+      .sort()
+
+  await using trusted = await tmpdir({ git: true, init })
+  await using root = await tmpdir()
+  const kept = path.join(root.path, "kept.git")
+  expect((await seed(trusted.path, kept)).source).toBeTruthy()
+  // Only entries a content driver rewrites or that hide worktree changes are stat-dirty.
+  expect(await dirty(trusted.path, kept)).toEqual(["assume.txt", "filtered.flt", "skip.txt"])
+  expect(
+    (await $`git --git-dir=${kept} ls-files -v`.text()).split("\n").filter((line) => !line.startsWith("H ")),
+  ).toEqual([""])
+
+  // A driver the snapshot repository can also run (normally global LFS config) keeps its entries.
+  await using shared = await tmpdir({ git: true, init })
+  const same = path.join(root.path, "same.git")
+  await $`git init --bare ${same}`.quiet()
+  await $`git --git-dir=${same} config filter.snapshot-keep.clean "tr a-z A-Z"`.quiet()
+  await $`git --git-dir=${same} config filter.snapshot-keep.smudge cat`.quiet()
+  expect((await seed(shared.path, same, false)).source).toBeTruthy()
+  expect(await dirty(shared.path, same)).toEqual(["assume.txt", "skip.txt"])
+
+  await using converted = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await init(dir)
+      await $`git config core.autocrlf true`.cwd(dir).quiet()
+    },
+  })
+  const cold = path.join(root.path, "cold.git")
+  expect((await seed(converted.path, cold)).source).toBeTruthy()
+  expect(await dirty(converted.path, cold)).toEqual([
+    ".gitattributes",
+    "assume.txt",
+    "filtered.flt",
+    "plain.txt",
+    "skip.txt",
+  ])
 })
 
 test("regular seed falls back for subdirectory sessions", async () => {
