@@ -1130,6 +1130,7 @@ describe("useFileMention", () => {
     expect(mention.showMention()).toBe(true)
     await wait(170)
     const search = posted.findLast((message) => message.type === "requestFileSearch")
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
     for (const handler of handlers) {
       handler({
         type: "fileSearchResult",
@@ -1140,6 +1141,17 @@ describe("useFileMention", () => {
           { path: "agents/", type: "folder" },
           { path: "agents/skills/dsf.md", type: "file" },
         ],
+      })
+    }
+    // The folder is on offer, but the past chats could still match the query,
+    // so the close waits for them.
+    expect(mention.showMention()).toBe(true)
+
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [],
       })
     }
     expect(mention.showMention()).toBe(false)
@@ -1176,6 +1188,37 @@ describe("useFileMention", () => {
     expect(mention.showMention()).toBe(false)
     mention.onInput("see @README.md and then", 23)
     expect(mention.showMention()).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("does not settle a new query on a mention earlier in the text", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const input = editor("@sr")
+    mockDocument(input)
+    try {
+      mention.onInput("@sr", 3)
+      mention.selectMention({ type: "file", value: "src" }, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe("@src ")
+
+    // "src" sits earlier in the text, but this fresh "@src utils" could still
+    // grow into a longer path, so the search must stay open until the results
+    // say otherwise rather than reading the earlier mention as prose.
+    mention.onInput("@src then @src utils", 20)
+    expect(mention.showMention()).toBe(true)
 
     dispose.fn?.()
   })
