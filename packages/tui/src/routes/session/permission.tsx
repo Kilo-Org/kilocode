@@ -14,6 +14,7 @@ import { Locale } from "../../util/locale"
 import { webSearchProviderLabel } from "../../util/tool-display"
 import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../config"
+import { useExit } from "../../context/exit" // kilocode_change
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
@@ -533,6 +534,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
 }
 
 function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: () => void }) {
+  const exit = useExit() // kilocode_change
   let input: TextareaRenderable
   const { theme } = useTheme()
   const tuiConfig = useTuiConfig()
@@ -543,11 +545,11 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
     commands: [
       {
         name: "app.exit",
-        title: "Cancel permission rejection",
-        category: "Permission",
-        run() {
-          props.onCancel()
-        },
+        // kilocode_change start - keep configured exit shortcuts distinct from Escape
+        title: "Exit the app",
+        category: "System",
+        run: () => exit(),
+        // kilocode_change end
       },
     ],
     bindings: [
@@ -632,18 +634,18 @@ function Prompt<const T extends Record<string, string>>(props: {
   })
   const narrow = createMemo(() => dimensions().width < 80)
   const fullscreenHint = useCommandShortcut("permission.prompt.fullscreen")
+  const exit = useExit() // kilocode_change
 
   useBindings(() => ({
     mode: KILO_BASE_MODE,
     commands: [
       {
         name: "app.exit",
-        title: "Reject permission",
-        category: "Permission",
-        run() {
-          if (!props.escapeKey) return
-          props.onSelect(props.escapeKey)
-        },
+        // kilocode_change start - keep configured exit shortcuts distinct from Escape
+        title: "Exit the app",
+        category: "System",
+        run: () => exit(),
+        // kilocode_change end
       },
       {
         name: "permission.prompt.fullscreen",

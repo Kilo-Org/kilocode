@@ -60,7 +60,12 @@ function request(
   }
 }
 
-async function mount(root: string, requests: { path: string; body: unknown }[], req: PermissionRequest = request()) {
+async function mount(
+  root: string,
+  requests: { path: string; body: unknown }[],
+  req: PermissionRequest = request(),
+  opts: { exit?: () => void; shortcut?: string } = {},
+) {
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, vim_enabled: false }))
   const events = createEventSource()
   const calls = createFetch(undefined, events)
@@ -71,7 +76,7 @@ async function mount(root: string, requests: { path: string; body: unknown }[], 
     return calls.fetch(input, init)
   }) as typeof globalThis.fetch
 
-  const config = createTuiResolvedConfig()
+  const config = createTuiResolvedConfig(opts.shortcut ? { keybinds: { app_exit: opts.shortcut } } : {})
 
   function Ready() {
     const sync = useSync()
@@ -108,9 +113,12 @@ async function mount(root: string, requests: { path: string; body: unknown }[], 
                       <PermissionProvider>
                         <ProjectProvider>
                           <ExitProvider
-                            exit={() => {
-                              throw new Error("Unexpected exit")
-                            }}
+                            exit={
+                              opts.exit ??
+                              (() => {
+                                throw new Error("Unexpected exit")
+                              })
+                            }
                           >
                             <EpilogueProvider set={() => {}}>
                               <SyncProvider>
@@ -142,6 +150,67 @@ async function mount(root: string, requests: { path: string; body: unknown }[], 
     throw error
   }
 }
+
+for (const key of ["c", "x"]) {
+  for (const stage of ["permission", "feedback", "always"]) {
+    test(`Ctrl+${key} exits from ${stage} without replying or changing stages`, async () => {
+      await using tmp = await tmpdir()
+      const requests: { path: string; body: unknown }[] = []
+      let exits = 0
+      const app = await mount(tmp.path, requests, request(), {
+        exit: () => {
+          exits++
+        },
+        ...(key === "x" ? { shortcut: "ctrl+x" } : {}),
+      })
+      try {
+        await capture(app, "Permission required")
+        if (stage === "feedback") {
+          app.mockInput.pressEscape()
+          await app.flush()
+          await wait(() => app.renderer.currentFocusedEditor instanceof TextareaRenderable)
+          await app.mockInput.typeText("keep this feedback")
+        }
+        if (stage === "always") {
+          await app.mockInput.pressKey("l")
+          await app.flush()
+          await app.mockInput.pressEnter()
+        }
+        const title =
+          stage === "feedback" ? "Reject permission" : stage === "always" ? "Always allow" : "Permission required"
+        await capture(app, title)
+        app.mockInput.pressKey(key, { ctrl: true })
+        await app.flush()
+        expect(exits).toBe(1)
+        expect(requests).toEqual([])
+        expect(await capture(app, title)).toContain(title)
+        if (stage === "feedback") {
+          expect((app.renderer.currentFocusedEditor as TextareaRenderable).plainText).toBe("keep this feedback")
+        }
+      } finally {
+        app.renderer.destroy()
+      }
+    })
+  }
+}
+
+test("Escape cancels feedback and allows rejection again without exiting or replying", async () => {
+  await using tmp = await tmpdir()
+  const requests: { path: string; body: unknown }[] = []
+  const app = await mount(tmp.path, requests)
+  try {
+    await capture(app, "Permission required")
+    app.mockInput.pressEscape()
+    await capture(app, "Reject permission")
+    app.mockInput.pressEscape()
+    await capture(app, "Permission required")
+    app.mockInput.pressEscape()
+    await capture(app, "Reject permission")
+    expect(requests).toEqual([])
+  } finally {
+    app.renderer.destroy()
+  }
+})
 
 test("rejecting a permission stages a feedback prompt and sends the message", async () => {
   await using tmp = await tmpdir()
