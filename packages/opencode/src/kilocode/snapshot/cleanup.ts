@@ -1,11 +1,17 @@
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { AppProcess } from "@opencode-ai/core/process"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Hash } from "@opencode-ai/core/util/hash"
+import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
+import { ChildProcess } from "effect/unstable/process"
 import path from "path"
+import { KiloSnapshotMaterialize } from "./materialize"
 import { KiloSnapshotPrepare } from "./prepare"
 
 export namespace KiloSnapshotCleanup {
+  const log = Log.create({ service: "snapshot.cleanup" })
+
   export interface Input {
     readonly root: string
     readonly project: string
@@ -148,6 +154,20 @@ export namespace KiloSnapshotCleanup {
     )
   })
 
+  // Seeding pins the seed tree in the project's common git dir so the source objects
+  // survive gc while the snapshot repository borrows them. Materialization releases
+  // that pin, so a repository removed before it ever materialized must release it here.
+  // Git run from the project root resolves the shared refs itself, also for worktrees.
+  const release = Effect.fnUntraced(function* (fs: FSUtil.Interface, directory: string, gitdir: string) {
+    if (!(yield* inspect(fs, path.join(directory, ".git"))).exists) return
+    const app = yield* AppProcess.Service
+    const result = yield* app.run(
+      ChildProcess.make("git", ["update-ref", "-d", KiloSnapshotMaterialize.ref(gitdir)], { cwd: directory }),
+    )
+    if (result.exitCode !== 0)
+      log.warn("failed to release snapshot seed pin", { directory, stderr: result.stderr.toString() })
+  })
+
   export const remove = Effect.fnUntraced(function* (input: Input) {
     const root = path.resolve(input.root)
     const directory = path.resolve(input.directory)
@@ -217,6 +237,7 @@ export namespace KiloSnapshotCleanup {
         )
           return yield* Effect.fail(new Error("snapshot repository changed during cleanup"))
         yield* Effect.uninterruptible(input.fs.remove(quarantine, { recursive: true, force: true }))
+        yield* release(input.fs, directory, gitdir)
         return true
       }),
       `snapshot:${gitdir}`,

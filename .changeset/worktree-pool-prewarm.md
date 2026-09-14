@@ -7,4 +7,4 @@ Speed up Agent Manager worktree creation by pre-warming reusable worktrees and c
 
 Prepare snapshots during session creation to reduce first-prompt initialization work. Start no-script sessions after environment files are copied, while preserving setup-script completion before agent startup. Discarded worktrees now remove their checkpoint data instead of leaving it behind.
 
-Resolve the primary checkout with one git call instead of five and discover agents and skills for a new worktree before the first prompt arrives, so the first response starts sooner.
+Resolve the primary checkout with one git call instead of four and discover agents and skills for a new worktree before the first prompt arrives, so the first response starts sooner.

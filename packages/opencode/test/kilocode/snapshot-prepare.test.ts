@@ -5,6 +5,8 @@ import { existsSync } from "fs"
 import path from "path"
 import { Effect, Layer } from "effect"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppProcess } from "@opencode-ai/core/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
@@ -16,6 +18,7 @@ import { Session } from "../../src/session/session"
 import { Server } from "../../src/server/server"
 import { InstanceState } from "../../src/effect/instance-state"
 import { InstanceStore } from "../../src/project/instance-store"
+import { KiloSnapshotCleanup } from "../../src/kilocode/snapshot/cleanup"
 import { KiloSnapshotPrepare } from "../../src/kilocode/snapshot/prepare"
 import { KiloSnapshotMaterialize } from "../../src/kilocode/snapshot/materialize"
 import {
@@ -33,6 +36,58 @@ afterEach(async () => {
   await disposeAllInstances()
   await resetDatabase()
 })
+
+test("removing a prepared worktree that was never tracked releases only its seed pin", async () => {
+  await using source = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await Bun.write(path.join(dir, "note.txt"), "committed\n")
+      await $`git add note.txt`.cwd(dir).quiet()
+      await $`git commit -m baseline`.cwd(dir).quiet()
+    },
+  })
+  const dir = path.join(source.path, ".kilo", "worktrees", "abandoned")
+  await $`git worktree add --detach ${dir} HEAD`.cwd(source.path).quiet()
+  const ctx = await reloadTestInstance({ directory: dir })
+  const gitdir = path.join(Global.Path.data, "snapshot", ctx.project.id, Hash.fast(ctx.worktree))
+  const pin = KiloSnapshotMaterialize.ref(gitdir)
+  const other = KiloSnapshotMaterialize.ref(path.join(gitdir, "other"))
+  const app = Server.Default().app
+
+  const prepared = await app.request("/kilocode/snapshot/prepare", {
+    method: "POST",
+    headers: { "x-kilo-directory": dir },
+  })
+  expect(prepared.status).toBe(200)
+  const hash = (await $`git rev-parse --verify ${pin}`.cwd(source.path).text()).trim()
+  await $`git update-ref ${other} ${hash}`.cwd(source.path).quiet()
+
+  await $`git worktree remove --force ${dir}`.cwd(source.path).quiet()
+  await disposeAllInstances()
+  const removed = await Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FSUtil.Service
+      const flock = yield* EffectFlock.Service
+      return yield* KiloSnapshotCleanup.remove({
+        root: path.join(Global.Path.data, "snapshot"),
+        project: ctx.project.id,
+        directory: source.path,
+        worktree: dir,
+        fs,
+        flock,
+      })
+    }).pipe(
+      Effect.provide(
+        LayerNode.compile(LayerNode.group([FSUtil.node, AppProcess.node, EffectFlock.node, CrossSpawnSpawner.node])),
+      ),
+    ),
+  )
+  expect(removed).toBe(true)
+  expect(existsSync(gitdir)).toBe(false)
+  const format = "%(refname)"
+  const refs = (await $`git for-each-ref --format=${format} refs/kilo/materialize`.cwd(source.path).text()).trim()
+  expect(refs).toBe(other)
+}, 30_000)
 
 test("prepares a routed worktree once without tracking, then tracks current content without reseeding", async () => {
   await using source = await tmpdir({
