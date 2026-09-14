@@ -20,7 +20,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. The JetBrains
 
 ## Chat diagrams
 
-Fenced `mermaid` blocks in chat render natively as diagrams — no webview required. All Mermaid diagram types are supported: flowchart, sequence, class, state, ER, Gantt, pie, user journey, quadrant, requirement, git graph, C4, mindmap, timeline, sankey, XY chart, block, packet, kanban, architecture, radar, and treemap. The diagram source remains visible and copyable.
+Ask Kilo for a Mermaid diagram to visualize a workflow, sequence, or architecture in chat. The diagram's source remains visible and copyable.
 
 ## Reviewing session changes
 
@@ -53,15 +53,15 @@ Sharing requires you to be signed in to Kilo, and is unavailable when sharing is
 
 In Agent Manager worktree sessions, the worktree editor header has a **Build/Run** dropdown that runs IDE run configurations against the selected worktree:
 
-- **Start** — lists the supported run configurations (Gradle and command-line style types) and starts one inside the worktree. Command-line style configurations run with the worktree as their working directory and receive `WORKTREE_PATH` and `REPO_PATH` environment variables.
+- **Start** — lists supported run configurations and starts one inside the worktree. Command-line style configurations run with the worktree as their working directory and receive `WORKTREE_PATH` and `REPO_PATH` environment variables.
 - **Running** — lists live worktree processes with **Stop** and **Show Output** actions. Stop behaves like the IDE's own Stop button, including a second press that force-kills processes that support it. Output opens in the Run tool window.
 - **Build** / **Rebuild** — compile the worktree with the project's build tool, when the project supports it.
 
-Configurations that rely on module classpaths are not listed, because they would run the main checkout's compiled classes. For full run and debug support, use **Open in New Frame** in the same dropdown to open the worktree in a separate IDE window.
+Eligible application configurations, including Application and Spring Boot configurations, can run through the project's build system using the worktree's code. For unsupported configurations or full IDE run and debug support, use **Open in New Frame** to open the worktree in a separate IDE window.
 
 ## Worktree setup scripts
 
-Agent Manager runs a setup script when a new worktree is created, so a fresh worktree can install dependencies or link local config before the agent starts. Create the script in `.kilo/` using the filename for your platform:
+Agent Manager starts a setup script in a terminal when a new worktree is created. It does not wait for setup to finish before starting the session, so wait before asking the agent to use installed dependencies or generated configuration. Create the script in `.kilo/` using the filename for your platform:
 
 | Platform | Filename (checked in order) |
 |---|---|

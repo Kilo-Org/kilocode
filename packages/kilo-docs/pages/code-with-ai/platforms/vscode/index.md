@@ -61,7 +61,7 @@ While background agents are running, the strip also shows a **Stop all (N)** but
 
 Stopping the main session with `Esc` or the chat's **Stop** button ends the current response but keeps background agents running. Completed background results are retained and delivered when you send the next message or use **Continue**.
 
-## Follow-up Messages
+## Follow-up messages
 
 The prompt input stays editable while the agent is working. Send a message while a response is running to add it to the session's queue; queued messages are processed in order.
 

@@ -194,7 +194,7 @@ Scheduled triggers fire on a recurring schedule using cron expressions. You can 
 
 The minimum schedule interval is 10 minutes. Scheduled triggers use `{{scheduledTime}}` and `{{timestamp}}` as prompt template variables (webhook-specific variables like `{{body}}` are not available since there is no inbound HTTP request).
 
-### Invoking a Scheduled Trigger On Demand
+### Invoking a scheduled trigger on demand
 
 Run an active scheduled trigger immediately without waiting for its next scheduled occurrence:
 

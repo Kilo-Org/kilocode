@@ -153,9 +153,9 @@ The Settings UI writes the same `agent.<name>.model` entry, so either method pro
 
 For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
 
-### Per-Task Model Selection (Experimental)
+### Per-task model selection (experimental)
 
-Subagent model overrides are normally fixed in config. The experimental **Task Subagent Model Selection** setting instead lets the orchestrating agent choose a model, provider, and reasoning effort for each individual `task` call.
+The experimental **Task Subagent Model Selection** setting lets you request a different model, provider, or reasoning effort for individual subagent tasks. Without an explicit request, the agent keeps the normal subagent defaults.
 
 Enable it in **Settings → Experimental → Task Subagent Model Selection**, or set it in `kilo.jsonc`:
 
@@ -170,7 +170,7 @@ Enable it in **Settings → Experimental → Task Subagent Model Selection**, or
 The setting is off by default. When enabled:
 
 - The `task` tool accepts optional `model`, `provider`, and `variant` overrides. An invalid selection fails instead of silently falling back to another model.
-- The agent can call the `agent_manager_models` tool to discover available models, providers, and reasoning variants on demand. This does not create Agent Manager sessions.
+- The agent looks up available models when you request an override. This does not create Agent Manager sessions.
 - Resumed tasks keep their last model and reasoning variant unless overridden. A model override does not inherit the parent's reasoning effort.
 
 When the setting is off, subagents keep using the configured defaults described above.

@@ -312,10 +312,12 @@ See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-wor
 Agent Manager can show a live preview of a local application next to the chat, so frontend feedback is based on the rendered page instead of a hand-written description. The browser is session-scoped and experimental: enable **Browser Automation** under **Settings → Experimental** (the `kilo-code.new.experimental.browserAutomation` setting, off by default), then toggle the Browser panel from the session tab bar.
 
 - **Preview with developer tools** — open a local URL in the panel and expand the embedded DevTools frontend. Console diagnostics are grouped below the preview.
-- **Element feedback** — use the inspect control to click an element on the page. Kilo captures a unique selector, a bounded DOM breadcrumb, sanitized HTML, and relevant colors, and attaches them to your next message as a reference card. The agent receives that context alongside your instruction, so it can find the right source even when a page has several similar elements.
+- **Element feedback** — use the inspect control to select an element and attach its details to your next message, so Kilo can identify the part of the page you want to change.
 - **Source hints** — when the page provides one and the file can be verified inside the session workspace, a captured element includes its source file and location.
 
-The browser runs headlessly; the page preview stays inside Agent Manager. By default it uses your installed Google Chrome; disable **Use System Chrome** in the same settings section to use a compatible Playwright Chromium instead.
+For agent-driven inspection, use an HTTP URL on `localhost` or `127.0.0.1`. The automation browser blocks requests to other origins, including separate API ports and external assets.
+
+Installed Google Chrome is used by default. To use an already-installed compatible Playwright Chromium browser, turn off **Use System Chrome** under **Settings → Web Tools**.
 
 ## Documents inspector
 
