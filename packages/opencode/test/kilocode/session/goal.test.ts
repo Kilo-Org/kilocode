@@ -754,11 +754,16 @@ for (const disposed of [false, true]) {
 }
 
 it.instance(
-  "pauses a working goal when a human prompt arrives",
+  "keeps a working goal active and continues after a human prompt",
   Effect.gen(function* () {
     const { llm, prompt, session, command, metadata, paused, wait } = yield* setup()
     const gate = Promise.withResolvers<void>()
-    yield* llm.push(reply().wait(gate.promise).text("Goal step complete").stop(), reply().text("Human reply").stop())
+    yield* llm.push(
+      reply().wait(gate.promise).text("Goal step complete").stop(),
+      reply().text("Human reply").stop(),
+      reply().tool("goal_report", { status: "complete", reason: "Human input resolved the goal." }),
+      reply().text("Final report").stop(),
+    )
     yield* command(objective)
     yield* wait(1)
     const human = yield* prompt
@@ -769,17 +774,22 @@ it.instance(
         parts: [{ type: "text", text: "Answer this instead" }],
       })
       .pipe(Effect.forkChild)
-    yield* paused
     gate.resolve()
     const response = yield* awaitWithTimeout(Fiber.join(human), "human prompt did not finish", "10 seconds")
     expect(response.parts).toEqual(expect.arrayContaining([expect.objectContaining({ text: "Human reply" })]))
+    yield* paused
     expect(yield* metadata).toMatchObject({
       ...retained,
-      "kilo.goal": { text: objective, active: false, status: "paused" },
+      "kilo.goal": {
+        text: objective,
+        active: false,
+        status: "complete",
+        reason: expect.stringContaining("Human input resolved the goal."),
+      },
     })
-    expect(JSON.stringify((yield* llm.hits).at(-1)?.body)).toContain("Answer this instead")
-    yield* Effect.sleep("5200 millis")
-    expect(yield* llm.hits).toHaveLength(2)
+    const bodies = (yield* llm.hits).map((hit) => JSON.stringify(hit.body))
+    expect(bodies.some((body) => body.includes("Answer this instead"))).toBe(true)
+    expect(bodies.some((body) => body.includes("Continue working toward this session goal"))).toBe(true)
   }),
   30_000,
 )
