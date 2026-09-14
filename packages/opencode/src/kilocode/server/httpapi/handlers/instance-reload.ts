@@ -29,7 +29,7 @@ export const instanceReloadHandlers = HttpApiBuilder.group(InstanceHttpApi, "ins
           }),
         )
       }
-      yield* reloadProject(store, String(ctx.project.id))
+      yield* reloadProject(store, String(ctx.project.id), ctx.directory)
       return true
     })
 
