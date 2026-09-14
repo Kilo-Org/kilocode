@@ -112,4 +112,19 @@ describe("postAllGithub", () => {
     expect(result.posted.map((item) => item.id)).toEqual(["first"])
     expect(result.failure).toBe("boom")
   })
+
+  it("treats a rejected send as the first failure and keeps the unposted comments", async () => {
+    const sent: string[] = []
+    const result = await postAllGithub(
+      [comment("first", 2), comment("second", 1), comment("third", 1)],
+      fake((item) => {
+        sent.push(item.id)
+        if (item.id === "second") throw new Error("network down")
+        return { success: true }
+      }),
+    )
+    expect(sent).toEqual(["first", "second"])
+    expect(result.posted.map((item) => item.id)).toEqual(["first"])
+    expect(result.failure).toBe("network down")
+  })
 })

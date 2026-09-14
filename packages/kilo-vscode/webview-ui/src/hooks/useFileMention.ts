@@ -737,7 +737,10 @@ export function useFileMention(
     setText(textarea.value)
     closeMention()
     onSelect?.()
-    return true
+    // execCommand can silently no-op when the editor is not editable. Report the
+    // drop as unhandled when the text did not change so callers do not treat a
+    // failed insert as a consumed drag.
+    return textarea.value !== val
   }
 
   const insertDrop = (
