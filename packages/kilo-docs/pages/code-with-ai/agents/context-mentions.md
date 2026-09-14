@@ -46,6 +46,10 @@ You can also add file mentions by dragging and dropping:
 | **Explorer / Editor tabs** | Drag a file or folder from VS Code's Explorer or an editor tab into the chat input | Inserts an `@/relative/path` mention |
 | **Multiple files** | Drag several files at once | Inserts space-separated `@` mentions |
 | **Agent Manager diff headers** | Drag a file header from the Agent Manager's diff panel into chat | Inserts an `@file` mention |
+| **Agent Manager session tabs** | Drag a session tab from the Agent Manager tab strip into the chat input | Inserts an `@` mention that adds that session's chat history |
+| **Agent Manager worktree cards** | Drag a worktree card from the Agent Manager sidebar into the chat input | Inserts a mention for the worktree directory and its session metadata, not file contents or chat history |
+| **Agent Manager terminal tabs** | Drag a main or side terminal tab into the chat input | Inserts an `@terminal` mention for the focused terminal |
+| **Agent Manager document tabs** | Drag a tab from the Documents inspector into the chat input | Inserts an `@file` mention for that document |
 | **Images** | Hold **Shift** while dragging an image file from your OS file manager into the chat input | Attaches the image |
 
 {% callout type="info" %}
