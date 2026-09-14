@@ -11,13 +11,10 @@ export interface GithubContext {
   prNumber: number
   prUrl: string
   snapshotId: string
-  label: string
   closed: boolean
 }
 
 export interface CommentsGithub {
-  /** True when a PR with a loaded snapshot is available for publication. */
-  available: () => boolean
   /** Resolve the GitHub target for a comment. `closed` means the line is not publishable. */
   resolve: (comment: ReviewComment) => GithubContext | undefined
   send: (comment: ReviewComment) => Promise<{ success: boolean; error?: string }>
@@ -53,7 +50,6 @@ export function resolveGithubContext(opts: {
     prNumber: opts.target.prNumber,
     prUrl: opts.target.prUrl,
     snapshotId: opts.snapshot.id,
-    label: `GitHub #${opts.target.prNumber}`,
     closed: !allowed,
   }
 }
@@ -81,8 +77,6 @@ export function createCommentsGithub(opts: Options): CommentsGithub {
       patch: diff?.patch,
     })
   }
-
-  const available = () => opts.canPublish?.() !== false && !!opts.target() && !!opts.snapshot()
 
   const send = (comment: ReviewComment) => {
     const { promise, resolve: settle } = Promise.withResolvers<{ success: boolean; error?: string }>()
@@ -113,7 +107,7 @@ export function createCommentsGithub(opts: Options): CommentsGithub {
     return promise
   }
 
-  return { available, resolve, send }
+  return { resolve, send }
 }
 
 /**

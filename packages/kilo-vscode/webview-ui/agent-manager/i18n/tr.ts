@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Dal öneki",
   "agentManager.settings.branchPrefix.description":
     "Tüm projelerde otomatik adlandırılan dallar için önek, örneğin feature/. Açıkça belirtilen dal adlarına uygulanmaz. Önek kullanmamak için boş bırakın.",
+  "agentManager.settings.worktreePool.title": "Worktree'leri önceden ısıtma",
+  "agentManager.settings.worktreePool.description":
+    "Yeni Agent Manager oturumlarının daha hızlı başlaması için arka planda hazır bir worktree oluşturun. Açık proje başına bir checkout için fazladan disk alanı kullanır.",
   "agentManager.settings.project.title": "Proje",
   "agentManager.settings.project.description": "Worktree ayarlarını düzenlemek istediğiniz repository'yi seçin.",
   "agentManager.settings.project.empty": "Kullanılabilir Agent Manager projesi yok.",

@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefiks grane",
   "agentManager.settings.branchPrefix.description":
     "Prefiks za automatski imenovane grane u svim projektima, na primjer feature/. Ne primjenjuje se na izričite nazive grana. Ostavite prazno ako ne želite prefiks.",
+  "agentManager.settings.worktreePool.title": "Prethodno zagrijavanje worktree-a",
+  "agentManager.settings.worktreePool.description":
+    "Pripremite spreman worktree u pozadini da nove sesije Agent Manager-a počinju brže. Koristi dodatni prostor na disku za jedan checkout po otvorenom projektu.",
   "agentManager.settings.project.title": "Projekat",
   "agentManager.settings.project.description": "Izaberite repository čije worktree postavke želite urediti.",
   "agentManager.settings.project.empty": "Nema dostupnih projekata u Agent Manager.",
