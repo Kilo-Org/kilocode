@@ -67,7 +67,7 @@ Kilo can alert you when a session finishes, needs your input, needs a permission
 | **Enable VS Code Notifications** | Show a VS Code notification when a task completes or needs input. The notification waits with a **Show** action that opens the session at the latest message. |
 | **Enable OS Notifications** | Show a native OS notification while VS Code is in the background. Works on Windows, macOS, and Linux; use **Test** to confirm delivery on your system. |
 
-Enable these in Kilo Code Settings ({% codicon name="gear" /%}) under **Notifications**, or set `kilo-code.new.attention.enabled`, `kilo-code.new.attention.notifications`, and `kilo-code.new.attention.OSNotifications` in VS Code settings. Notifications are skipped for the session you are already viewing, and OS notifications fire only while the editor window is not focused.
+Enable these in Kilo Code Settings ({% codicon name="gear" /%}) under **Notifications**, or set `kilo-code.new.attention.enabled`, `kilo-code.new.attention.notifications`, and `kilo-code.new.attention.OSNotifications` in VS Code settings. VS Code notifications are skipped for the session you are already viewing. OS notifications appear only while the editor window is not focused. Enabled sounds can still play while you view the session.
 
 ## Shared Settings
 

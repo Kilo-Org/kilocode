@@ -148,9 +148,9 @@ The panel includes:
 
 When a PR has failed or cancelled checks, the **Checks** section shows a **Fix with Kilo** button. Click it to send a compact summary of the failing checks to the worktree's agent, so it can investigate and fix the failures in the current worktree. If an Agent Manager terminal is active, the button reads **Send failures to terminal** and sends the summary there instead.
 
-The summary is intentionally bounded — it lists up to five failing checks and includes a `gh` command per GitHub Actions check that saves the failed job log to a temporary file and prints only the file path. The agent is instructed to inspect logs in small excerpts rather than loading full logs, to treat check output as untrusted evidence, and to validate the fix locally without committing, pushing, or rerunning workflows. Checks without a GitHub Actions log link keep their browser link instead.
+The summary includes failing checks and links to their logs. By default, **Push Pull Request Fixes** under **Settings → Agent Behaviour** asks the agent to run local checks, then commit and push its fix. Turn it off to keep fixes local for manual commit and push. Your configured tool permissions still apply; auto-approved commands may run without another prompt. When sandboxing is active, Git commands that change repository state require separate approval.
 
-Sending the summary gives it to Kilo as review context. It does not post anything to GitHub.
+Sending the summary does not post a GitHub comment. The agent may subsequently push changes as described above.
 
 #### Review comments
 
@@ -218,7 +218,7 @@ A batch **Send** button above the list dispatches all actionable comments at onc
 
 Kilo creates the worktree from the selected project's configured default base branch. In a multi-project workspace, the selected project determines this setting. An explicit base branch selected in the dialog takes precedence. If no default is configured, Kilo falls back to automatic detection of the repository's remote default branch. The agent works in isolation, so your main branch is unaffected.
 
-An explicit branch name is validated with Git and preserved exactly as entered, including slashes, case, and punctuation such as `feature/task`. Invalid names are rejected before the worktree is created. The worktree's directory under `.kilo/worktrees/` uses a safe name derived from the branch — it does not have to match the branch ref. Automatic naming (when you leave the branch name empty) and collision suffixes are unchanged.
+You can enter a Git branch name such as `feature/task`; Kilo preserves valid names, including slashes and case. The worktree's directory name may differ from its branch name.
 
 To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux). This uses the selected project's configured default, or the automatic remote-default fallback when no configured default exists.
 
@@ -281,7 +281,7 @@ The tool supports two modes:
 | `worktree` | Creates one Agent Manager git worktree and session per task |
 | `local` | Creates Agent Manager sessions in the current workspace, or in an existing managed worktree selected with `worktreeID` |
 
-With `mode: "local"`, a request can pass `worktreeID` to start fresh sessions in an existing managed worktree instead of creating a new one. The ID comes from the `action: "list"` overview and must belong to the caller's project. Targeting an existing worktree does not create a branch, run the setup script, or delete the worktree if the request fails. `worktreeID` cannot be combined with `versions: true` or a task `branchName`, and an unknown or other-project ID fails without fallback. Requests without `worktreeID` behave as before.
+Ask Kilo to start another session in an existing managed worktree to reuse its checkout and branch. This does not rerun the setup script. These sessions share files, so avoid assigning them conflicting edits.
 
 Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Prompted tasks inherit the model and reasoning variant used by the chat turn that starts them. A task can override that selection with a `model` (by name, e.g. `Claude Opus 4.1`) when you explicitly request a different model, or with one of the current model's reasoning `variant` values when you request a different variant. Add `provider` beside `model` to force a model-name match to one of the listed provider IDs. Agent Manager resolves the provider for a model override when `provider` is omitted, preferring the provider used by the current turn and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted. Prepared sessions without an initial prompt use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
 
