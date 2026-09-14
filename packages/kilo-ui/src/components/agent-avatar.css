@@ -23,6 +23,7 @@
      around it, so the symbol remains recognizable. */
   &[data-status="running"] circle:not([data-lit]) {
     animation: agent-avatar-pulse 1.4s ease-in-out infinite both;
+    animation-delay: var(--agent-avatar-delay);
   }
 
   /* Eight well-separated hues: the six VS Code chart colors plus teal and pink,

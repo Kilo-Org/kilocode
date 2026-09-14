@@ -17,21 +17,99 @@
   }
 }
 
-[data-slot="task-agent-avatar"][data-clickable="true"] {
+[data-slot="task-agent-avatar"] {
   display: inline-flex;
   flex: 0 0 18px;
   width: 18px;
   height: 18px;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
 
   [data-component="agent-avatar"] {
-    transition: filter 120ms ease;
+    /* Both transitions live here so the base avatar rule stays free of them.
+       The shorthand would otherwise reset transition-property and drop the
+       color fade on this card while still applying it everywhere else. */
+    transition:
+      color 620ms ease,
+      filter 120ms ease;
   }
+}
+
+[data-slot="task-agent-avatar"][data-clickable="true"] {
+  cursor: pointer;
 
   &:hover [data-component="agent-avatar"] {
     filter: drop-shadow(0 0 3px currentColor);
+  }
+}
+
+/* ============================================
+   Task avatar: neutral frame shimmer while the child session id is unknown,
+   then a one-shot resolve into the hashed identity glyph.
+   ============================================ */
+
+[data-slot="task-agent-avatar"] [data-component="agent-avatar"] circle {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* No identity yet: every ring dot shimmers in place, so it reads as working
+   without showing a placeholder glyph that then has to be swapped out. The svg
+   qualifier outranks the base running-pulse rule so all dots shimmer, not just
+   the unlit ones. */
+[data-slot="task-agent-avatar"] svg[data-component="agent-avatar"]:not([data-color]) circle {
+  animation: task-avatar-frame 1.4s ease-in-out infinite both;
+  animation-delay: var(--agent-avatar-delay);
+}
+
+/* Identity arrived: the lit dots ignite in grid order. The wrapper only sets
+   data-resolve on the unknown-to-known transition, so a virtualized remount
+   starts already resolved and does not replay this. */
+[data-slot="task-agent-avatar"][data-resolve="true"] [data-component="agent-avatar"][data-color] circle[data-lit] {
+  animation: task-avatar-resolve 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--agent-avatar-order) * 16ms);
+}
+
+@keyframes task-avatar-frame {
+  0%,
+  100% {
+    opacity: 0.1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes task-avatar-resolve {
+  0% {
+    opacity: 0.25;
+    transform: scale(0.62);
+  }
+
+  55% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="task-agent-avatar"] [data-component="agent-avatar"] {
+    transition: none;
+  }
+
+  [data-slot="task-agent-avatar"] svg[data-component="agent-avatar"]:not([data-color]) circle {
+    animation: none;
+    opacity: 0.3;
+  }
+
+  [data-slot="task-agent-avatar"] svg[data-component="agent-avatar"] circle[data-lit] {
+    animation: none;
   }
 }
 

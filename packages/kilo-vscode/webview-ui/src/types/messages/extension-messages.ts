@@ -929,6 +929,15 @@ export interface AgentManagerSelectionActivatedMessage {
   target: AgentManagerSidebarTarget
 }
 
+/** Host request to select a managed session and scroll its chat to the latest message. */
+export interface AgentManagerRevealSessionMessage {
+  type: "agentManager.revealSession"
+  projectId: string
+  /** Absent when the session lives in the project's Local tabs. */
+  worktreeId?: string
+  sessionId: string
+}
+
 export interface AgentManagerProjectSessionsMessage {
   type: "agentManager.projectSessions"
   projectId: string
@@ -1287,6 +1296,8 @@ export interface EnhancePromptErrorMessage {
 export interface ViewSubAgentSessionMessage {
   type: "viewSubAgentSession"
   sessionID: string
+  /** True for async background agents, whose reasoning shows a capped preview. */
+  background?: boolean
 }
 
 export interface DiffViewerContextMessage {
@@ -1671,6 +1682,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage
+  | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage
   | AgentManagerRunStatusMessage
   | AgentManagerCaffeinationMessage

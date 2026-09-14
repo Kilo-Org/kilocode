@@ -270,6 +270,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
   "notification.permission.titleSandboxEscalation": "サンドボックス外での Git 操作を許可しますか？",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.reject": "拒否",
+  "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
+  "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
   "ui.permission.rule.addToAllowed": "許可リストに追加",
@@ -458,6 +461,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "カスタムプロバイダー",
   "settings.providers.connected.environmentDescription": "環境変数から接続されています",
   "settings.providers.action.signInChatGPT": "ChatGPT でサインイン",
+  "settings.providers.action.changeApiKey": "APIキーを変更",
   "settings.providers.custom.description": "ベース URL でカスタムプロバイダーを追加します。",
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
@@ -917,7 +921,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code 移行（実験的）",
+  "settings.experimental.claudeMigration.title": "Claude Code 移行",
   "settings.experimental.claudeMigration.description":
     "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
   "settings.experimental.multiProject.description":
@@ -1108,6 +1112,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "自動および手動の圧縮に使用するモデル。チャットモデルを使用するには未設定のままにしてください。コスト、速度、要約の品質はモデルによって異なります。",
   "settings.context.compactionModel.useChatModel": "チャットモデルを使用",
+  "settings.context.compactionModel.hint": "圧縮に使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
@@ -1293,6 +1298,18 @@ export const dict = {
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ローカルに保存",
+  "diffViewer.comment.sendToAgent": "エージェントに送信",
+  "diffViewer.comment.postToGithub": "GitHubに投稿",
+  "diffViewer.comment.loadFailed": "プルリクエストの変更を読み込めませんでした。",
+  "diffViewer.comment.unavailable": "この行は現在のプルリクエストのスナップショットでは利用できません。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "プルリクエストを開く",
+  "diffViewer.comment.localChanges": "ローカルの変更",
+  "diffViewer.comment.prChanges": "PRの変更",
+  "diffViewer.comment.sendToKilo": "Kiloに送信",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}}に送信",
+  "diffViewer.comment.chooseDestination": "送信先を選択",
   "diffViewer.notice.snapshotsDisabled":
     "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
 

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import { describe, expect, it, beforeEach, afterEach, afterAll, spyOn } from "bun:test"
 import * as actions from "../../src/agent-manager/pr/PRActions"
 import * as gh from "../../src/agent-manager/gh"
+import * as shellEnv from "../../src/agent-manager/shell-env"
 
 const resolveComment = spyOn(actions, "resolveComment").mockResolvedValue(undefined)
 const unresolveComment = spyOn(actions, "unresolveComment").mockResolvedValue(undefined)
@@ -1420,5 +1421,253 @@ describe("PRStatusBridge.handleMessage commentReaction", () => {
         success: false,
       }),
     )
+  })
+})
+
+// --- batched full-sync lookups ---
+
+function graphQuery(args: string[]): string {
+  return args.find((arg) => arg.startsWith("query=")) ?? ""
+}
+
+const batchNode = {
+  id: "PR_7",
+  number: 7,
+  title: "Batched PR",
+  body: "Body",
+  url: "https://github.com/example/repo/pull/7",
+  state: "OPEN",
+  isDraft: false,
+  reviewDecision: null,
+  additions: 1,
+  deletions: 0,
+  changedFiles: 1,
+  headRefName: "feature",
+  baseRefOid: refs.baseRefOid,
+  headRefOid: refs.headRefOid,
+  isCrossRepository: false,
+  createdAt: "2026-09-01T00:00:00Z",
+  author: { login: "alice" },
+  mergeable: "MERGEABLE",
+  mergeStateStatus: "CLEAN",
+  autoMergeRequest: null,
+  reviewRequests: { nodes: [] },
+  reviews: { nodes: [] },
+  commits: { nodes: [{ commit: { statusCheckRollup: { contexts: { totalCount: 0, nodes: [] } } } }] },
+}
+
+const legacy = {
+  number: 9,
+  title: "Legacy PR",
+  body: "",
+  url: "https://github.com/example/repo/pull/9",
+  state: "OPEN",
+  isDraft: false,
+  reviewDecision: null,
+  additions: 0,
+  deletions: 0,
+  changedFiles: 0,
+  headRefName: "feature",
+  baseRefOid: refs.baseRefOid,
+  headRefOid: refs.headRefOid,
+  statusCheckRollup: [],
+  reviewRequests: [],
+  reviews: [],
+}
+
+function batchPayload(query: string, node: unknown): unknown {
+  const repo: Record<string, unknown> = {}
+  for (const match of query.matchAll(/([bc]\d+):/g)) {
+    const alias = match[1]!
+    repo[alias] = alias === "b0" && node ? { nodes: [node] } : { nodes: [] }
+  }
+  return { data: { repository: repo, rateLimit: { cost: 2 } } }
+}
+
+function ghRouter(calls: string[][], node: unknown) {
+  return async (args: string[]) => {
+    calls.push(args)
+    if (args[0] === "--version") return { stdout: "gh version 2", stderr: "" }
+    if (args[0] === "repo")
+      return {
+        stdout: JSON.stringify({
+          owner: { login: "example" },
+          name: "repo",
+          squashMergeAllowed: true,
+          mergeCommitAllowed: true,
+          rebaseMergeAllowed: true,
+          viewerPermission: "WRITE",
+        }),
+        stderr: "",
+      }
+    if (args[0] === "api" && args[1] === "repos")
+      return { stdout: JSON.stringify({ allow_auto_merge: false }), stderr: "" }
+    if (args[0] === "api") {
+      const query = graphQuery(args)
+      if (query.includes("pullRequests(headRefName"))
+        return { stdout: JSON.stringify(batchPayload(query, node)), stderr: "" }
+      if (query.includes("reviewThreads")) return { stdout: JSON.stringify(page([])), stderr: "" }
+      return {
+        stdout: JSON.stringify({
+          data: { repository: { pullRequest: { reviewRequests: { nodes: [] }, reviews: { nodes: [] } } } },
+        }),
+        stderr: "",
+      }
+    }
+    if (args[0] === "pr" && args[1] === "checks") return { stdout: "[]", stderr: "" }
+    return { stdout: JSON.stringify(legacy), stderr: "" }
+  }
+}
+
+describe("PRStatusPoller batched full sync", () => {
+  const git = spyOn(shellEnv, "execWithShellEnv")
+
+  beforeEach(() => {
+    execute.mockReset()
+    git.mockReset()
+    git.mockImplementation(async (cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return { stdout: `${refs.headRefOid}\n`, stderr: "" }
+      if (cmd === "git" && args[0] === "config") return { stdout: "", stderr: "" }
+      return { stdout: "", stderr: "" }
+    })
+  })
+
+  afterEach(() => {
+    execute.mockReset()
+    git.mockReset()
+  })
+
+  afterAll(() => git.mockRestore())
+
+  it("resolves every worktree in one GraphQL request and skips pr view", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(ghRouter(calls, batchNode))
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => graphQuery(args).includes("pullRequests(headRefName"))).toHaveLength(1)
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 7 }),
+      }),
+    ])
+  })
+
+  it("keeps showing a merged PR from the batch instead of dropping it", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(ghRouter(calls, { ...batchNode, state: "MERGED", mergeStateStatus: "UNKNOWN" }))
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 7, state: "merged" }),
+      }),
+    ])
+  })
+
+  it("does not attribute a fork PR that only shares the branch name and skips legacy lookups", async () => {
+    // headRefName "main" on the base repo matches fork PRs opened from the fork's main.
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(
+      ghRouter(calls, { ...batchNode, number: 13207, isCrossRepository: true, headRefOid: "f".repeat(40) }),
+    )
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(sent).toEqual([expect.objectContaining({ type: "agentManager.prStatus", worktreeId: "wt1", pr: null })])
+  })
+
+  it("runs the legacy pr view when the batch returns no nodes for a tracking ref", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(ghRouter(calls, undefined))
+    git.mockImplementation(async (cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return { stdout: `${refs.headRefOid}\n`, stderr: "" }
+      if (cmd === "git" && args[0] === "config") return { stdout: "refs/pull/9/head\n", stderr: "" }
+      return { stdout: "", stderr: "" }
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr" && args[1] === "view").length).toBeGreaterThan(0)
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 9 }),
+      }),
+    ])
+  })
+
+  it("falls back to legacy lookups when the batch request rejects", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    const router = ghRouter(calls, batchNode)
+    execute.mockImplementation(async (args: string[]) => {
+      if (graphQuery(args).includes("pullRequests(headRefName")) throw new Error("network error")
+      return router(args)
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr" && args[1] === "view").length).toBeGreaterThan(0)
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 9 }),
+      }),
+    ])
+  })
+
+  it("retries the batch with base fields after an unknown-field error", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    const router = ghRouter(calls, { number: 7, state: "OPEN", isCrossRepository: false, headRefOid: refs.headRefOid })
+    execute.mockImplementation(async (args: string[]) => {
+      const query = graphQuery(args)
+      if (query.includes("pullRequests(headRefName") && query.includes("statusCheckRollup")) {
+        calls.push(args)
+        throw new Error('GraphQL: Unknown field "mergeStateStatus"')
+      }
+      return router(args)
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    const batches = calls.filter((args) => graphQuery(args).includes("pullRequests(headRefName"))
+    expect(batches).toHaveLength(2)
+    expect(graphQuery(batches[0]!)).toContain("statusCheckRollup")
+    expect(graphQuery(batches[1]!)).not.toContain("statusCheckRollup")
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 7 }),
+      }),
+    ])
   })
 })

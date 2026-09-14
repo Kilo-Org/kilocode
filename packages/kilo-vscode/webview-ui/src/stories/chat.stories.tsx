@@ -225,7 +225,7 @@ export const ChatViewSessionDockStability: Story = {
       status,
       statusInfo: () => ({ type: status() }),
       statusText: () => (busy() ? labels[step() % labels.length] : undefined),
-      busySince: () => (busy() ? Date.now() - 2000 : undefined),
+      busyTiming: () => (busy() ? { active: 2000, since: Date.now() } : undefined),
       submitting: () => busy(),
       isSubmitting: () => busy(),
       messages: () => [{ id: "msg-001" }] as any[],
@@ -914,7 +914,7 @@ export const MessageListLayoutCorrection: Story = {
       status,
       statusInfo: () => ({ type: status() }),
       statusText: () => (status() === "busy" ? "Thinking…" : undefined),
-      busySince: () => (status() === "busy" ? Date.now() - 2000 : undefined),
+      busyTiming: () => (status() === "busy" ? { active: 2000, since: Date.now() } : undefined),
       messages: () => correctionMessages,
       userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
       getParts: (id: string) => {

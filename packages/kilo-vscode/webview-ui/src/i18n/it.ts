@@ -208,6 +208,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
   "notification.permission.titleSandboxEscalation": "Consentire l'operazione Git al di fuori della sandbox?",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
+  "ui.permission.reject": "Rifiuta",
+  "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
+  "ui.permission.feedbackHint": "Enter per rifiutare, Esc per annullare",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
   "ui.permission.doomLoop.rule": "Continua le chiamate a {{tool}}",
   "ui.permission.rule.addToAllowed": "Aggiungi alla lista consentiti",
@@ -318,6 +321,7 @@ export const dict = {
   "settings.providers.tag.other": "Altro",
   "settings.providers.connected.environmentDescription": "Connesso dalle variabili d'ambiente",
   "settings.providers.action.signInChatGPT": "Accedi con ChatGPT",
+  "settings.providers.action.changeApiKey": "Modifica API key",
   "settings.providers.custom.description": "Aggiungi un provider personalizzato tramite URL base.",
   "provider.custom.title": "Provider personalizzato",
   "provider.custom.description.prefix": "Configura un provider personalizzato. Vedi la ",
@@ -786,7 +790,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
-  "settings.experimental.claudeMigration.title": "Migrazione Claude Code (Sperimentale)",
+  "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
   "settings.experimental.multiProject.description":
@@ -993,6 +997,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modello usato per la compattazione automatica e manuale. Lascia non impostato per usare il modello di chat. Costo, velocità e qualità del riepilogo dipendono dal modello.",
   "settings.context.compactionModel.useChatModel": "Usa il modello di chat",
+  "settings.context.compactionModel.hint":
+    "Per scegliere quale modello usare per la compattazione, vedi le impostazioni Modelli.",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",
@@ -1181,6 +1187,18 @@ export const dict = {
     "File modificati da Kilo durante la sessione corrente, basati su snapshot per turno. Si resetta quando inizi una nuova sessione.",
   "diffViewer.group.session": "Sessione",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Salva in locale",
+  "diffViewer.comment.sendToAgent": "Invia all'agente",
+  "diffViewer.comment.postToGithub": "Pubblica su GitHub",
+  "diffViewer.comment.loadFailed": "Impossibile caricare le modifiche della pull request.",
+  "diffViewer.comment.unavailable": "Questa riga non è disponibile nell'istantanea attuale della pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Apri pull request",
+  "diffViewer.comment.localChanges": "Modifiche locali",
+  "diffViewer.comment.prChanges": "Modifiche della PR",
+  "diffViewer.comment.sendToKilo": "Invia a Kilo",
+  "diffViewer.comment.sendToGithub": "Invia a GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Scegli destinazione",
   "diffViewer.notice.snapshotsDisabled":
     "Gli snapshot sono disabilitati per questa repository. Modifica i file di configurazione per visualizzare le modifiche della sessione.",
   "diffViewer.baseBranch.auto": "Predefinito",

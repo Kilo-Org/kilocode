@@ -218,7 +218,12 @@ for (const width of [340, 532, 720, 1400]) {
     expect(bounds.x).toBe(baseline.x)
     expect(bounds.width).toBe(baseline.width)
     expect(bounds.height).toBe(baseline.height)
-    expect(await geometry(page)).toEqual(idle)
+    // The dock hugs the visible state, so a wrapped actions row hands its extra
+    // height back to the transcript viewport; the composer itself never moves.
+    const working = await geometry(page)
+    expect(working.dock).toBeLessThanOrEqual(idle.dock)
+    expect(working.viewport - idle.viewport).toBe(idle.dock - working.dock)
+    expect(working.transcriptBottom - idle.transcriptBottom).toBe(idle.dock - working.dock)
     await expect(status.locator("svg circle")).toHaveCount(3)
     if (width >= 532) {
       await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
@@ -401,13 +406,63 @@ test("a wrapped narrow-sidebar actions row is not clipped", async ({ page }) => 
   expect(wrapped.dock).toBeGreaterThanOrEqual(wrapped.row)
   expect(wrapped.overflowBelow).toBeLessThanOrEqual(0)
 
-  // The swap still leaves the transcript untouched at this width.
-  const idle = await geometry(page)
+  // The wrapped row grows the dock only while it is shown. While a turn runs
+  // the dock is exactly the indicator, not the taller hidden actions row.
+  await page.getByTestId("toggle-busy").click()
+  const indicator = page.locator('[data-component="session-dock"] .working-indicator')
+  await expect(indicator).toBeVisible()
+  const working = await geometry(page)
+  const box = await indicator.boundingBox()
+  if (!box) throw new Error("indicator missing")
+
+  expect(working.dock).toBeLessThan(wrapped.dock)
+  // Within the one-line floor that keeps unwrapped surfaces free of sub-pixel
+  // shifts across the swap.
+  expect(working.dock - box.height).toBeGreaterThanOrEqual(0)
+  expect(working.dock - box.height).toBeLessThanOrEqual(1)
+})
+
+/**
+ * The hidden state used to reserve the wrapped narrow-sidebar actions height,
+ * so the spinner floated in an empty band whose size depended on the sidebar
+ * width. The dock now hugs the indicator, so the spinner keeps the same small
+ * distance from the composer at every width.
+ */
+test("the working indicator hugs the composer at every width", async ({ page }) => {
+  await openStory(page)
+  const measure = async () => {
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    return page.evaluate(() => {
+      const dock = document.querySelector('[data-component="session-dock"]')
+      const indicator = document.querySelector(".working-indicator")
+      const spinner = document.querySelector('.working-indicator [data-component="spinner"]')
+      const prompt = document.querySelector(".chat-input > .prompt-input-container")
+      if (
+        !(dock instanceof HTMLElement) ||
+        !(indicator instanceof HTMLElement) ||
+        !(spinner instanceof Element) ||
+        !(prompt instanceof HTMLElement)
+      )
+        throw new Error("missing")
+      return {
+        slack: dock.getBoundingClientRect().height - indicator.getBoundingClientRect().height,
+        gap: prompt.getBoundingClientRect().top - spinner.getBoundingClientRect().bottom,
+      }
+    })
+  }
+
   await page.getByTestId("toggle-busy").click()
   await expect(page.locator('[data-component="session-dock"] .working-indicator')).toBeVisible()
-  const working = await geometry(page)
+  const wide = await measure()
 
-  expect(working.dock).toBe(idle.dock)
-  expect(working.viewport).toBe(idle.viewport)
-  expect(working.transcriptBottom).toBe(idle.transcriptBottom)
+  // 340px wraps the actions row, which used to make the reserved dock (and the
+  // floating spinner gap) much taller than the indicator itself.
+  await page.setViewportSize({ width: 340, height: 640 })
+  const narrow = await measure()
+
+  // Only the one-line floor remains around the indicator, never the wrapped row.
+  expect(wide.slack).toBeLessThanOrEqual(1)
+  expect(narrow.slack).toBeLessThanOrEqual(1)
+  expect(narrow.gap).toBeLessThanOrEqual(12)
+  expect(narrow.gap).toBe(wide.gap)
 })

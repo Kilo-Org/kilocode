@@ -270,6 +270,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
   "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
+  "ui.permission.reject": "Afvis",
+  "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
+  "ui.permission.feedbackHint": "Enter for at afvise, Esc for at annullere",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
   "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
   "ui.permission.rule.addToAllowed": "Tilføj til tilladelseslisten",
@@ -462,6 +465,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Brugerdefineret udbyder",
   "settings.providers.connected.environmentDescription": "Forbundet fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Log ind med ChatGPT",
+  "settings.providers.action.changeApiKey": "Skift API-nøgle",
   "settings.providers.custom.description": "Tilføj en brugerdefineret udbyder via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodel",
   "settings.providers.subagentModel.description":
@@ -923,7 +927,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code-migrering (Eksperimentel)",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
   "settings.experimental.multiProject.description":
@@ -1114,6 +1118,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model, der bruges til automatisk og manuel komprimering. Lad feltet være tomt for at bruge chatmodellen. Omkostninger, hastighed og kvaliteten af opsummeringen afhænger af modellen.",
   "settings.context.compactionModel.useChatModel": "Brug chatmodel",
+  "settings.context.compactionModel.hint":
+    "For at vælge hvilken model der bruges til komprimering, se Modelindstillinger.",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
@@ -1300,6 +1306,18 @@ export const dict = {
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Gem lokalt",
+  "diffViewer.comment.sendToAgent": "Send til agent",
+  "diffViewer.comment.postToGithub": "Udgiv på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke indlæse ændringerne i pull requesten.",
+  "diffViewer.comment.unavailable": "Denne linje er ikke tilgængelig i det aktuelle snapshot af pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åbn PR",
+  "diffViewer.comment.localChanges": "Lokale ændringer",
+  "diffViewer.comment.prChanges": "PR-ændringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Vælg destination",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 

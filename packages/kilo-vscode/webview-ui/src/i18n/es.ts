@@ -273,6 +273,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "¿Ejecutar comandos de shell de la habilidad «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "¿Permitir la operación de Git fuera del entorno aislado?",
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
+  "ui.permission.reject": "Rechazar",
+  "ui.permission.feedbackPlaceholder": "Dile a Kilo qué debe hacer de otra forma",
+  "ui.permission.feedbackHint": "Enter para rechazar, Esc para cancelar",
   "ui.permission.doomLoop.prompt": "Se detectó un posible bucle en la herramienta {{tool}}. ¿Continuar ejecutando?",
   "ui.permission.doomLoop.rule": "Continuar llamadas a {{tool}}",
   "ui.permission.rule.addToAllowed": "Añadir a la lista de permitidos",
@@ -464,6 +467,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Proveedor personalizado",
   "settings.providers.connected.environmentDescription": "Conectado desde tus variables de entorno",
   "settings.providers.action.signInChatGPT": "Iniciar sesión con ChatGPT",
+  "settings.providers.action.changeApiKey": "Cambiar clave API",
   "settings.providers.custom.description": "Añade un proveedor personalizado por URL base.",
   "settings.providers.subagentModel.title": "Modelo de subagente",
   "settings.providers.subagentModel.description":
@@ -932,7 +936,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
-  "settings.experimental.claudeMigration.title": "Migración de Claude Code (Experimental)",
+  "settings.experimental.claudeMigration.title": "Migración de Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
   "settings.experimental.multiProject.description":
@@ -1129,6 +1133,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modelo utilizado para la compactación automática y manual. Déjalo sin configurar para usar el modelo de chat. El coste, la velocidad y la calidad del resumen dependen del modelo.",
   "settings.context.compactionModel.useChatModel": "Usar modelo de chat",
+  "settings.context.compactionModel.hint":
+    "Para elegir qué modelo se usa para la compactación, consulta la configuración de Modelos.",
   "settings.context.compactionLimit.title": "Límite de compactación automática",
   "settings.context.compactionLimit.description":
     "Compactar cuando el contexto alcance este porcentaje de la ventana del modelo. Déjalo en blanco para usar solo el búfer de seguridad.",
@@ -1316,6 +1322,18 @@ export const dict = {
     "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
   "diffViewer.group.session": "Sesión",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Guardar localmente",
+  "diffViewer.comment.sendToAgent": "Enviar al agente",
+  "diffViewer.comment.postToGithub": "Publicar en GitHub",
+  "diffViewer.comment.loadFailed": "No se pudieron cargar los cambios del pull request.",
+  "diffViewer.comment.unavailable": "Esta línea no está disponible en la instantánea actual del pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Abrir pull request",
+  "diffViewer.comment.localChanges": "Cambios locales",
+  "diffViewer.comment.prChanges": "Cambios del PR",
+  "diffViewer.comment.sendToKilo": "Enviar a Kilo",
+  "diffViewer.comment.sendToGithub": "Enviar a GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Elegir destino",
   "diffViewer.notice.snapshotsDisabled":
     "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
 

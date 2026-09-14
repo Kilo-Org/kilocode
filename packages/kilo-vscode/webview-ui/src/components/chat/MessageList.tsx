@@ -96,6 +96,10 @@ interface MessageListProps {
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  /** Show reasoning as a compact capped preview (background subagent transcripts). */
+  reasoningCapped?: boolean
+  /** Whether inline questions and suggestions are actionable on this surface. */
+  interactivePrompts?: boolean
   queuedDisabled?: boolean
   editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
@@ -445,16 +449,17 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Matches TaskToolExpanded.tsx (the renderer this webview actually
   // registers for "task", overriding kilo-ui's default) exactly: title is
-  // always `i18n.t("ui.tool.agent", { type })` regardless of status — the
-  // "capitalize" CSS class only changes how it *looks*, the DOM text node
-  // itself is the raw, lowercase subagent_type. The "(N)" child-tool-count
-  // suffix shown there is a live value from session.getSessionToolCount(),
-  // not stored on the part at all, so it can't be indexed from a snapshot —
-  // searching for that count isn't meaningful content anyway.
+  // `i18n.t("ui.tool.agent", { type })` once subagent_type is known, and
+  // `ui.tool.agent.default` while it is still absent. The "capitalize" CSS
+  // class only changes how it *looks*, the DOM text node itself is the raw,
+  // lowercase subagent_type. The "(N)" child-tool-count suffix shown there is
+  // a live value from session.getSessionToolCount(), not stored on the part at
+  // all, so it can't be indexed from a snapshot — searching for that count
+  // isn't meaningful content anyway.
   function taskText(part: Part & { type: "tool" }, state: ToolState): string[] {
     const input = state.input as { subagent_type?: string; description?: string } | undefined
-    const type = input?.subagent_type || part.tool
-    const chunks = [i18n.t("ui.tool.agent", { type })]
+    const type = input?.subagent_type
+    const chunks = [type ? i18n.t("ui.tool.agent", { type }) : i18n.t("ui.tool.agent.default")]
     if (input?.description) chunks.push(input.description)
     // TaskToolExpanded.tsx only shows the raw <task_result> body when there's
     // no live child session to display instead (result() there resolves to
@@ -955,6 +960,29 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const indexes = createMemo(() => new Map(keys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
 
+  // A row handed from the direct tail to Virtua (each new step of the same
+  // turn moves the previous assistant message) mounts at the 260px estimate
+  // until Virtua's ResizeObserver measures it. The auto-scroll pins to that
+  // shorter layout, the correction lands in the same ResizeObserver pass, and
+  // the follow-up pin is deferred to the next frame, so one frame paints with
+  // the transcript sitting below the bottom. Measure the handed rows in the
+  // same task and re-pin before anything is painted.
+  createEffect(
+    on(
+      () => ({ sid: session.currentSessionID(), keys: keys() }),
+      (now, prev) => {
+        if (!prev || prev.sid !== now.sid) return
+        if (now.keys.length <= prev.keys.length || now.keys.at(-1) === prev.keys.at(-1)) return
+        queueMicrotask(() => {
+          const handle = virtualizer()
+          if (!handle) return
+          handle.measure()
+          autoScroll.scrollToBottom()
+        })
+      },
+    ),
+  )
+
   const [pending, setPending] = createSignal<{ sid: string; key: string }>()
 
   // Scrolls the transcript to a row by key. Virtualized rows jump through
@@ -1358,6 +1386,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                         readonly={props.readonly}
+                        interactivePrompts={props.interactivePrompts}
+                        reasoningCapped={props.reasoningCapped}
                       />
                     )}
                   </Virtualizer>
@@ -1377,6 +1407,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
                       readonly={props.readonly}
+                      interactivePrompts={props.interactivePrompts}
+                      reasoningCapped={props.reasoningCapped}
                     />
                   )}
                 </For>
@@ -1398,12 +1430,16 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                   readonly={props.readonly}
+                  interactivePrompts={props.interactivePrompts}
+                  reasoningCapped={props.reasoningCapped}
                 />
               )}
             </For>
             <TurnOutcome />
-            <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
-            <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            <Show when={props.interactivePrompts !== false}>
+              <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
+              <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            </Show>
           </Show>
         </div>
       </div>

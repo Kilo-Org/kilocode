@@ -272,6 +272,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.reject": "Відхилити",
+  "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
+  "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
   "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
@@ -421,6 +424,7 @@ export const dict = {
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
   "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Змінити API-ключ",
   "settings.providers.custom.description": "Додати власного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",
@@ -914,7 +918,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
-  "settings.experimental.claudeMigration.title": "Міграція Claude Code (експериментальна)",
+  "settings.experimental.claudeMigration.title": "Міграція Claude Code",
   "settings.experimental.claudeMigration.description":
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
   "settings.experimental.multiProject.description":
@@ -1073,6 +1077,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
   "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
+  "settings.context.compactionModel.hint": "Щоб вибрати модель для стискання, див. Налаштування моделей.",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1316,6 +1321,18 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Зберегти локально",
+  "diffViewer.comment.sendToAgent": "Надіслати агенту",
+  "diffViewer.comment.postToGithub": "Опублікувати на GitHub",
+  "diffViewer.comment.loadFailed": "Не вдалося завантажити зміни пул-реквесту.",
+  "diffViewer.comment.unavailable": "Цей рядок недоступний у поточному знімку пул-реквесту.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Відкрити PR",
+  "diffViewer.comment.localChanges": "Локальні зміни",
+  "diffViewer.comment.prChanges": "Зміни PR",
+  "diffViewer.comment.sendToKilo": "Надіслати до Kilo",
+  "diffViewer.comment.sendToGithub": "Надіслати до GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Вибрати призначення",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 

@@ -255,6 +255,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
   "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
+  "ui.permission.reject": "拒絕",
+  "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
+  "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
   "ui.permission.rule.addToAllowed": "加入允許清單",
@@ -403,6 +406,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "自訂提供商",
   "settings.providers.connected.environmentDescription": "從您的環境變數連線",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登入",
+  "settings.providers.action.changeApiKey": "更改 API 金鑰",
   "settings.providers.custom.description": "透過基礎 URL 新增自訂提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的預設模型和推理工作量。留空以繼承呼叫代理的模型。",
@@ -846,7 +850,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code 遷移（實驗性）",
+  "settings.experimental.claudeMigration.title": "Claude Code 遷移",
   "settings.experimental.claudeMigration.description":
     "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
   "settings.experimental.multiProject.description":
@@ -1018,6 +1022,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "用於自動和手動壓縮的模型。留空以使用聊天模型。成本、速度和摘要品質取決於模型。",
   "settings.context.compactionModel.useChatModel": "使用聊天模型",
+  "settings.context.compactionModel.hint": "若要選擇用於壓縮的模型，請參閱模型設定。",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
   "settings.context.prune.title": "修剪舊輸出",
@@ -1235,6 +1240,18 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "儲存至本機",
+  "diffViewer.comment.sendToAgent": "傳送給代理程式",
+  "diffViewer.comment.postToGithub": "發佈到 GitHub",
+  "diffViewer.comment.loadFailed": "無法載入提取請求的變更。",
+  "diffViewer.comment.unavailable": "此行在目前的提取請求快照中無法使用。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "開啟提取請求",
+  "diffViewer.comment.localChanges": "本機變更",
+  "diffViewer.comment.prChanges": "PR 變更",
+  "diffViewer.comment.sendToKilo": "傳送到 Kilo",
+  "diffViewer.comment.sendToGithub": "傳送到 GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "選擇目標",
   "diffViewer.notice.snapshotsDisabled": "此存放庫的快照已停用。請編輯設定檔以顯示工作階段的變更。",
 
   "diffViewer.baseBranch.auto": "預設",

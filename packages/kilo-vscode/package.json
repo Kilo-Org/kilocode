@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.5.16",
+  "version": "7.6.2",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -1069,6 +1069,12 @@
           "default": "",
           "scope": "application",
           "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
+        },
+        "kilo-code.new.agentManager.worktreePool": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Pre-warm a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space equal to one checkout per open project. Turn off to create worktrees only on demand."
         },
         "kilo-code.new.experimental.multiProject": {
           "type": "boolean",

@@ -268,6 +268,9 @@ export const dict = {
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
   "notification.permission.titleSandboxEscalation": "อนุญาตการดำเนินการ Git นอกแซนด์บ็อกซ์หรือไม่?",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
+  "ui.permission.reject": "ปฏิเสธ",
+  "ui.permission.feedbackPlaceholder": "บอก Kilo ว่าควรทำต่างออกไปอย่างไร",
+  "ui.permission.feedbackHint": "Enter เพื่อปฏิเสธ, Esc เพื่อยกเลิก",
   "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
   "ui.permission.doomLoop.rule": "เรียกใช้ {{tool}} ต่อไป",
   "ui.permission.rule.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",
@@ -457,6 +460,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "ผู้ให้บริการที่กำหนดเอง",
   "settings.providers.connected.environmentDescription": "เชื่อมต่อจากตัวแปรสภาพแวดล้อมของคุณ",
   "settings.providers.action.signInChatGPT": "ลงชื่อเข้าใช้ด้วย ChatGPT",
+  "settings.providers.action.changeApiKey": "เปลี่ยนคีย์ API",
   "settings.providers.custom.description": "เพิ่มผู้ให้บริการแบบกำหนดเองด้วย URL พื้นฐาน",
   "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
   "settings.providers.subagentModel.description":
@@ -909,7 +913,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
-  "settings.experimental.claudeMigration.title": "การย้าย Claude Code (ทดลอง)",
+  "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
   "settings.experimental.claudeMigration.description":
     "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
   "settings.experimental.multiProject.description":
@@ -1094,6 +1098,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "โมเดลที่ใช้สำหรับการบีบอัดอัตโนมัติและด้วยตนเอง เว้นว่างไว้เพื่อใช้โมเดลแชท ค่าใช้จ่าย ความเร็ว และคุณภาพของสรุปขึ้นอยู่กับโมเดล",
   "settings.context.compactionModel.useChatModel": "ใช้โมเดลแชท",
+  "settings.context.compactionModel.hint": "เลือกโมเดลที่ใช้สำหรับการบีบอัดได้ที่การตั้งค่าโมเดล",
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
@@ -1277,6 +1282,18 @@ export const dict = {
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
   "diffViewer.group.session": "เซสชัน",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "บันทึกในเครื่อง",
+  "diffViewer.comment.sendToAgent": "ส่งไปยังเอเจนต์",
+  "diffViewer.comment.postToGithub": "โพสต์ไปยัง GitHub",
+  "diffViewer.comment.loadFailed": "ไม่สามารถโหลดการเปลี่ยนแปลงของคำขอรวมโค้ดได้",
+  "diffViewer.comment.unavailable": "บรรทัดนี้ไม่มีอยู่ในสแนปช็อตปัจจุบันของคำขอรวมโค้ด",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "เปิด Pull Request",
+  "diffViewer.comment.localChanges": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.comment.prChanges": "การเปลี่ยนแปลงของ PR",
+  "diffViewer.comment.sendToKilo": "ส่งไปยัง Kilo",
+  "diffViewer.comment.sendToGithub": "ส่งไปยัง GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "เลือกปลายทาง",
   "diffViewer.notice.snapshotsDisabled":
     "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
 

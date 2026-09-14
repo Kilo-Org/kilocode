@@ -180,6 +180,7 @@ import { useTabScroll } from "./tab-scroll"
 import { DiffPanelCache } from "./DiffPanelCache"
 import { createPRNavigation, PRPanelHost } from "./pr/PRPanelHost"
 import { createPRReview } from "./pr/review"
+import { createPRDiffCommentState } from "./pr/diff-comment-state"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -731,7 +732,7 @@ const AgentManagerContent: Component = () => {
     if (!pending && !existing) tabOrderSync.append(LOCAL, id)
     if (pending && pending === active) setActivePendingId(undefined)
   }
-  const focusLocalSession = (id: string) => {
+  const focusLocalSession = (id: string, scrollToBottom = false) => {
     const pending = activePendingId()
     const replace = pending && localSessionIDs().includes(pending) ? pending : undefined
     placeLocal(id, replace, replace)
@@ -739,7 +740,7 @@ const AgentManagerContent: Component = () => {
     terms.setActiveId(undefined)
     setReviewActive(false)
     setSelection(LOCAL)
-    session.selectSession(id)
+    session.selectSession(id, { scrollToBottom })
     requestChatFocus()
   }
   persistLocalTabs({
@@ -1087,13 +1088,13 @@ const AgentManagerContent: Component = () => {
     return true
   }
 
-  const focusManagedSession = (worktreeId: string, sid: string) => {
+  const focusManagedSession = (worktreeId: string, sid: string, scrollToBottom = false) => {
     selectWorktree(worktreeId)
     closeHistory()
     terms.setActiveId(undefined)
     setActivePendingId(undefined)
     setReviewActive(false)
-    session.selectSession(sid)
+    session.selectSession(sid, { scrollToBottom })
     requestChatFocus()
     return true
   }
@@ -1515,6 +1516,12 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
+      if (msg.type === "agentManager.revealSession") {
+        if (currentProjectId() !== msg.projectId) return
+        if (msg.worktreeId) focusManagedSession(msg.worktreeId, msg.sessionId, true)
+        else focusLocalSession(msg.sessionId, true)
+        return
+      }
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.state") preserveSidebarScroll(() => stateHandlers.state(msg))
       stateHandlers.browser(msg)
@@ -1693,6 +1700,16 @@ const AgentManagerContent: Component = () => {
       setReviewActive(false)
       panels.open(SidePanel.Diff)
     },
+  })
+  const prDiffComments = createPRDiffCommentState({
+    post: vscode.postMessage,
+    project: activeProjectId,
+    statuses: prStatuses,
+  })
+  createEffect(() => {
+    const ctx = diffCtx()
+    if (!ctx || (!diffOpen() && !reviewActive())) return
+    prDiffComments.load(ctx)
   })
   createEffect(() => {
     const panel = diffOpen()
@@ -2594,6 +2611,10 @@ const AgentManagerContent: Component = () => {
                       }
                       remoteComments={remote.comments}
                       remoteTarget={remote.target}
+                      prTarget={prDiffComments.target}
+                      prSnapshot={prDiffComments.snapshot}
+                      prLoading={prDiffComments.loading}
+                      prError={prDiffComments.error}
                       focusedComment={remote.focus}
                       composer={composers.get}
                       lead={() => diffScopeControls(true)}
@@ -2703,6 +2724,10 @@ const AgentManagerContent: Component = () => {
                   sessionKey={`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`}
                   projectId={activeProjectId()}
                   worktreeId={diffCtx()}
+                  prTarget={prDiffComments.target(diffCtx())}
+                  prSnapshot={prDiffComments.snapshot(diffCtx())}
+                  prLoading={prDiffComments.loading(diffCtx())}
+                  prError={prDiffComments.error(diffCtx())}
                   notice={diffNotice()}
                   lead={diffScopeControls(false)}
                   canRevert={scopeCapabilities(review.scope()).revert}

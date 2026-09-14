@@ -265,6 +265,9 @@ export const dict = {
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
   "notification.permission.titleSandboxEscalation": "Allow Git operation outside the sandbox?",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.reject": "Reject",
+  "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
+  "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
   "ui.permission.rule.addToAllowed": "Add to allowed list",
@@ -381,6 +384,7 @@ export const dict = {
   "settings.providers.tag.other": "Other",
   "settings.providers.connected.environmentDescription": "Connected from your environment variables",
   "settings.providers.action.signInChatGPT": "Sign in with ChatGPT",
+  "settings.providers.action.changeApiKey": "Change API key",
   "settings.providers.custom.description": "Add a custom provider by base URL.",
 
   "provider.custom.title": "Custom provider",
@@ -906,7 +910,7 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
-  "settings.experimental.claudeMigration.title": "Claude Code Migration (Experimental)",
+  "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",
   "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
@@ -1092,6 +1096,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model used for automatic and manual compaction. Leave unset to use the chat model. Cost, speed, and summary quality depend on the model.",
   "settings.context.compactionModel.useChatModel": "Use chat model",
+  "settings.context.compactionModel.hint": "To choose which model is used for compaction, see the Models settings.",
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
@@ -1288,6 +1293,18 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
+  "diffViewer.comment.saveLocal": "Save local",
+  "diffViewer.comment.sendToAgent": "Send to agent",
+  "diffViewer.comment.postToGithub": "Post to GitHub",
+  "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
+  "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Open pull request",
+  "diffViewer.comment.localChanges": "Local changes",
+  "diffViewer.comment.prChanges": "PR changes",
+  "diffViewer.comment.sendToKilo": "Send to Kilo",
+  "diffViewer.comment.sendToGithub": "Send to GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choose destination",
 
   "diffViewer.baseBranch.auto": "Default",
   "diffViewer.baseBranch.default": "Default",

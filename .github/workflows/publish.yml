@@ -442,7 +442,8 @@ jobs:
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
 
-      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
+      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli,
+      # then apply changesets so the packaged VSIX ships the current changelog
       - uses: actions/download-artifact@v8
         with:
           name: kilo-cli-signed.tar.zst
@@ -453,6 +454,12 @@ jobs:
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
+
+      - name: Apply changesets to changelog
+        run: bun script/kilocode/changeset-version.ts
+        env:
+          KILO_VERSION: ${{ needs.build-cli.outputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
       # kilocode_change end
       - name: Build VSIX packages
         run: bun script/build.ts

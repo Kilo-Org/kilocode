@@ -665,7 +665,14 @@ export namespace BoardStore {
     const total = counts?.total ?? 0
     const active = counts?.active ?? 0
     const inactive = counts?.inactive ?? 0
-    return { observedAt: input.snapshot.observedAt, total, active, inactive, unknown: total - active - inactive }
+    return {
+      observedAt: input.snapshot.observedAt,
+      total,
+      active,
+      inactive,
+      unknown: total - active - inactive,
+      ...(target === ALL ? {} : { recipientState: input.snapshot.sessions.get(target)?.state ?? "unknown" }),
+    }
   })
 
   function titles(tx: DB | TX, root: string, ids: string[], verified = false) {

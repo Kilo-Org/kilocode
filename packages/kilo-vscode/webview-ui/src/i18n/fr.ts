@@ -273,6 +273,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
   "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
+  "ui.permission.reject": "Rejeter",
+  "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
+  "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
   "ui.permission.doomLoop.rule": "Continuer les appels à {{tool}}",
   "ui.permission.rule.addToAllowed": "Ajouter à la liste des autorisés",
@@ -465,6 +468,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Fournisseur personnalisé",
   "settings.providers.connected.environmentDescription": "Connecté depuis vos variables d'environnement",
   "settings.providers.action.signInChatGPT": "Se connecter avec ChatGPT",
+  "settings.providers.action.changeApiKey": "Modifier la clé API",
   "settings.providers.custom.description": "Ajoutez un fournisseur personnalisé par URL de base.",
   "settings.providers.subagentModel.title": "Modèle de sous-agent",
   "settings.providers.subagentModel.description":
@@ -945,7 +949,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
-  "settings.experimental.claudeMigration.title": "Migration Claude Code (Expérimental)",
+  "settings.experimental.claudeMigration.title": "Migration Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",
   "settings.experimental.multiProject.description":
@@ -1146,6 +1150,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modèle utilisé pour le compactage automatique et manuel. Laissez ce champ vide pour utiliser le modèle de chat. Le coût, la vitesse et la qualité du résumé dépendent du modèle.",
   "settings.context.compactionModel.useChatModel": "Utiliser le modèle de chat",
+  "settings.context.compactionModel.hint":
+    "Pour choisir le modèle utilisé pour le compactage, consultez les paramètres des Modèles.",
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
@@ -1337,6 +1343,18 @@ export const dict = {
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Enregistrer localement",
+  "diffViewer.comment.sendToAgent": "Envoyer à l’agent",
+  "diffViewer.comment.postToGithub": "Publier sur GitHub",
+  "diffViewer.comment.loadFailed": "Impossible de charger les modifications de la pull request.",
+  "diffViewer.comment.unavailable": "Cette ligne n’est pas disponible dans l’instantané actuel de la pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Ouvrir la pull request",
+  "diffViewer.comment.localChanges": "Modifications locales",
+  "diffViewer.comment.prChanges": "Modifications du PR",
+  "diffViewer.comment.sendToKilo": "Envoyer à Kilo",
+  "diffViewer.comment.sendToGithub": "Envoyer à GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choisir la destination",
   "diffViewer.notice.snapshotsDisabled":
     "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
 

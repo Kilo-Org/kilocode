@@ -297,6 +297,7 @@ export async function activate(context: vscode.ExtensionContext) {
     visible: (sessionID) => connectionService.isVisible(sessionID),
     os: showOSNotification,
     show: async (sessionID, directory) => {
+      if (await agentManagerProvider.revealSession(sessionID)) return
       await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
       await provider.openSession(sessionID, directory)
     },
@@ -597,8 +598,8 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand(
       "kilo-code.new.openSubAgentViewer",
-      (sessionID: string, title?: string, directory?: string) => {
-        subAgentViewerProvider.openPanel(sessionID, title, directory)
+      (sessionID: string, title?: string, directory?: string, background?: boolean) => {
+        subAgentViewerProvider.openPanel(sessionID, title, directory, background)
       },
     ),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {

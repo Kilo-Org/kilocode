@@ -273,6 +273,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Executar comandos de shell da skill “{{skill}}”?",
   "notification.permission.titleSandboxEscalation": "Permitir operação do Git fora da sandbox?",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
+  "ui.permission.reject": "Rejeitar",
+  "ui.permission.feedbackPlaceholder": "Diga ao Kilo o que fazer de forma diferente",
+  "ui.permission.feedbackHint": "Enter para rejeitar, Esc para cancelar",
   "ui.permission.doomLoop.prompt": "Possível loop detectado na ferramenta {{tool}}. Continuar executando?",
   "ui.permission.doomLoop.rule": "Continuar chamadas de {{tool}}",
   "ui.permission.rule.addToAllowed": "Adicionar à lista de permitidos",
@@ -422,6 +425,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Provedor personalizado",
   "settings.providers.connected.environmentDescription": "Conectado a partir das suas variáveis de ambiente",
   "settings.providers.action.signInChatGPT": "Entrar com ChatGPT",
+  "settings.providers.action.changeApiKey": "Alterar chave de API",
   "settings.providers.custom.description": "Adicione um provedor personalizado pela URL base.",
   "settings.providers.subagentModel.title": "Modelo de Subagente",
   "settings.providers.subagentModel.description":
@@ -930,7 +934,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
-  "settings.experimental.claudeMigration.title": "Migração do Claude Code (Experimental)",
+  "settings.experimental.claudeMigration.title": "Migração do Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
   "settings.experimental.multiProject.description":
@@ -1127,6 +1131,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modelo usado para compactação automática e manual. Deixe sem definir para usar o modelo de chat. O custo, a velocidade e a qualidade do resumo dependem do modelo.",
   "settings.context.compactionModel.useChatModel": "Usar modelo de chat",
+  "settings.context.compactionModel.hint":
+    "Para escolher qual modelo é usado para compactação, veja as configurações de Modelos.",
   "settings.context.compactionLimit.title": "Limite de compactação automática",
   "settings.context.compactionLimit.description":
     "Compacte quando o contexto atingir esta porcentagem da janela do modelo. Deixe em branco para usar apenas a margem de segurança.",
@@ -1315,6 +1321,18 @@ export const dict = {
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
   "diffViewer.group.session": "Sessão",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Salvar localmente",
+  "diffViewer.comment.sendToAgent": "Enviar para o agente",
+  "diffViewer.comment.postToGithub": "Publicar no GitHub",
+  "diffViewer.comment.loadFailed": "Não foi possível carregar as alterações da solicitação de extração.",
+  "diffViewer.comment.unavailable": "Esta linha não está disponível no snapshot atual da solicitação de extração.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Abrir PR",
+  "diffViewer.comment.localChanges": "Alterações locais",
+  "diffViewer.comment.prChanges": "Alterações do PR",
+  "diffViewer.comment.sendToKilo": "Enviar para o Kilo",
+  "diffViewer.comment.sendToGithub": "Enviar para o GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Escolher destino",
   "diffViewer.notice.snapshotsDisabled":
     "Os snapshots estão desativados para este repositório. Edite seus arquivos de configuração para exibir as alterações da sessão.",
 

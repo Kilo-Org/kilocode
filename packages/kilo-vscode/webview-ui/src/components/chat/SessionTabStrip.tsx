@@ -13,7 +13,8 @@ import { useVSCode } from "../../context/vscode"
 import { SessionTab } from "./SessionTab"
 import { SessionTabMenu } from "./SessionTabMenu"
 import { SessionTabSwitcher } from "./SessionTabSwitcher"
-import { ConstrainDragYAxis, SortableTabContainer } from "./TabDnd"
+import { ConstrainDragYAxis, SortableTabContainer, outsideTabBar } from "./TabDnd"
+import { beginPromptMentionDrop, endPromptMentionDrop, sessionDrop } from "../../utils/prompt-mention-drop"
 
 export const SessionTabStrip: Component = () => {
   const tabs = useLocalTabs()
@@ -86,13 +87,20 @@ export const SessionTabStrip: Component = () => {
     if (typeof id !== "string") return
     freeze()
     setDragging(id)
+    if (isPendingTab(id)) return
+    const item = items().get(id)
+    beginPromptMentionDrop(sessionDrop(item ?? { id }))
   }
   const dragOver = (event: DragEvent) => {
+    // Once the tab is below the bar it is on its way to the prompt, so stop
+    // reordering the tabs under it.
+    if (outsideTabBar(event)) return
     const from = event.draggable?.id
     const to = event.droppable?.id
     if (typeof from === "string" && typeof to === "string") tabs.reorder(from, to)
   }
   const dragEnd = () => {
+    endPromptMentionDrop()
     setDragging(undefined)
     release()
     tabs.persist()

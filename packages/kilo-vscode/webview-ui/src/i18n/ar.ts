@@ -263,6 +263,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
   "notification.permission.titleSandboxEscalation": "السماح بعملية Git خارج البيئة المعزولة؟",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
+  "ui.permission.reject": "رفض",
+  "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
+  "ui.permission.feedbackHint": "Enter للرفض، Esc للإلغاء",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
   "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
   "ui.permission.rule.addToAllowed": "أضف إلى قائمة المسموح",
@@ -411,6 +414,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "مزود مخصص",
   "settings.providers.connected.environmentDescription": "متصل من متغيرات البيئة الخاصة بك",
   "settings.providers.action.signInChatGPT": "تسجيل الدخول باستخدام ChatGPT",
+  "settings.providers.action.changeApiKey": "تغيير مفتاح API",
   "settings.providers.custom.description": "أضف مزودًا مخصصًا عبر عنوان URL الأساسي.",
   "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
@@ -900,7 +904,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
-  "settings.experimental.claudeMigration.title": "ترحيل Claude Code (تجريبي)",
+  "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
   "settings.experimental.multiProject.description":
@@ -1086,6 +1090,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "النموذج المستخدم للضغط التلقائي واليدوي. اتركه فارغاً لاستخدام نموذج الدردشة. تعتمد التكلفة والسرعة وجودة الملخص على النموذج.",
   "settings.context.compactionModel.useChatModel": "استخدام نموذج الدردشة",
+  "settings.context.compactionModel.hint": "لاختيار النموذج المستخدم للضغط، راجع إعدادات النماذج.",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
@@ -1271,6 +1276,18 @@ export const dict = {
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "حفظ محليًا",
+  "diffViewer.comment.sendToAgent": "إرسال إلى الوكيل",
+  "diffViewer.comment.postToGithub": "نشر على GitHub",
+  "diffViewer.comment.loadFailed": "تعذر تحميل تغييرات طلب السحب.",
+  "diffViewer.comment.unavailable": "هذا السطر غير متاح في اللقطة الحالية لطلب السحب.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "فتح طلب السحب",
+  "diffViewer.comment.localChanges": "التغييرات المحلية",
+  "diffViewer.comment.prChanges": "تغييرات PR",
+  "diffViewer.comment.sendToKilo": "إرسال إلى Kilo",
+  "diffViewer.comment.sendToGithub": "إرسال إلى GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "اختيار الوجهة",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 

@@ -268,6 +268,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
   "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
+  "ui.permission.reject": "رد",
+  "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
+  "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
   "ui.permission.rule.addToAllowed": "افزودن به لیست مجاز",
@@ -385,6 +388,7 @@ export const dict = {
   "settings.providers.tag.other": "سایر",
   "settings.providers.connected.environmentDescription": "از متغیرهای محیطی شما متصل شده است",
   "settings.providers.action.signInChatGPT": "ورود با ChatGPT",
+  "settings.providers.action.changeApiKey": "تغییر کلید API",
   "settings.providers.custom.description": "یک ارائه‌دهنده سفارشی از طریق URL پایه اضافه کنید.",
 
   "provider.custom.title": "ارائه‌دهنده سفارشی",
@@ -909,7 +913,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
-  "settings.experimental.claudeMigration.title": "مهاجرت Claude Code (آزمایشی)",
+  "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
   "settings.experimental.claudeMigration.description":
     "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
   "settings.experimental.multiProject.description":
@@ -1101,6 +1105,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "مدل مورد استفاده برای فشرده‌سازی خودکار و دستی. برای استفاده از مدل چت، خالی بگذارید. هزینه، سرعت و کیفیت خلاصه به مدل بستگی دارند.",
   "settings.context.compactionModel.useChatModel": "استفاده از مدل چت",
+  "settings.context.compactionModel.hint": "برای انتخاب مدل مورد استفاده در فشرده‌سازی، به تنظیمات مدل‌ها مراجعه کنید.",
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",
@@ -1300,6 +1305,18 @@ export const dict = {
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ذخیرهٔ محلی",
+  "diffViewer.comment.sendToAgent": "ارسال به عامل",
+  "diffViewer.comment.postToGithub": "انتشار در GitHub",
+  "diffViewer.comment.loadFailed": "بارگذاری تغییرات درخواست ادغام ممکن نشد.",
+  "diffViewer.comment.unavailable": "این خط در تصویر لحظه‌ای فعلی درخواست ادغام موجود نیست.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "باز کردن درخواست ادغام",
+  "diffViewer.comment.localChanges": "تغییرات محلی",
+  "diffViewer.comment.prChanges": "تغییرات PR",
+  "diffViewer.comment.sendToKilo": "ارسال به Kilo",
+  "diffViewer.comment.sendToGithub": "ارسال به GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "انتخاب مقصد",
   "diffViewer.notice.snapshotsDisabled":
     "عکس‌های فوری برای این مخزن غیرفعال هستند. لطفاً فایل‌های پیکربندی خود را ویرایش کنید تا تغییرات جلسه نمایش داده شوند.",
 

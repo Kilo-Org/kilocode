@@ -4,7 +4,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --top-nav-height: 141px; /* 105px nav + 36px banner */
+  --top-nav-height: 105px;
   --border-color: #dce6e9;
   --bg-color: theme(colors.zinc.50);
   --bg-secondary: theme(colors.zinc.100);
@@ -385,7 +385,7 @@ pre[class*="language-"] {
 
 @media (max-width: 768px) {
   :root {
-    --top-nav-height: 116px; /* 60px nav + 56px banner */
+    --top-nav-height: 60px;
   }
 
   /* Hide desktop sidenav, show via mobile toggle */

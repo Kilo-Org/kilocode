@@ -57,6 +57,10 @@ These tools help Kilo Code run commands:
 
 - `bash` - Runs shell commands with configurable timeout and working directory
 
+{% callout type="info" %}
+The `interactive_terminal` tool and the in-session terminal controls were removed, along with their API endpoints and SDK types. Run commands that need keyboard input in your own terminal, and use the `bash` tool for non-interactive shell commands. See [Shell Integration](/docs/automate/extending/shell-integration) for details.
+{% /callout %}
+
 ### Web Tools
 
 These tools help Kilo Code access web content:
@@ -145,7 +149,7 @@ Background subagents are available when the server exposes the background capabi
 
 ### Kilo Swarm board tools
 
-Kilo Swarm is an optional shared board for one main session and its `task` descendants, including nested descendants. Enable it in **Settings > Experimental** or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
+Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
 
 - `board_post` stores a concise material update for another participant. Use it for findings, questions, results, blockers, or corrections.
 - `board_read` reads board messages explicitly. Use the cursor from the previous read for incremental reads instead of polling.

@@ -171,7 +171,7 @@ Layer review in before asking a teammate:
 - **`/review branch [base] [guidance]`** — review the whole branch vs. its detected or specified base, with optional guidance.
 - **`/review <commit-hash>` or `/review <PR URL or number>`** — review a specific commit or pull request.
 - **`kilo review` in CI** — automated PR review. See [Code Reviews](/docs/automate/code-reviews/overview) for the setup.
-- **Human review** — push the branch from the session terminal and `gh pr create`. The PR badge appears on the worktree and stays in sync with CI and reviews.
+- **Human review** — push the branch from the session terminal and `gh pr create`. The PR badge appears on the worktree and stays in sync with CI and reviews. Review, comment on, and merge the pull request from the internal PR panel; see [Reviewing a pull request](/docs/automate/agent-manager#reviewing-a-pull-request).
 
 A typical sequence: self-review in the diff panel → `/review` → push → CI review → teammate review.
 

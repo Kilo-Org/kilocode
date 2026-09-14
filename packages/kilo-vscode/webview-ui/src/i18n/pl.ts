@@ -271,6 +271,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
   "notification.permission.titleSandboxEscalation": "Zezwolić na operację Git poza piaskownicą?",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
+  "ui.permission.reject": "Odrzuć",
+  "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",
+  "ui.permission.feedbackHint": "Enter, aby odrzucić, Esc, aby anulować",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
   "ui.permission.doomLoop.rule": "Kontynuuj wywołania {{tool}}",
   "ui.permission.rule.addToAllowed": "Dodaj do listy dozwolonych",
@@ -419,6 +422,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Niestandardowy dostawca",
   "settings.providers.connected.environmentDescription": "Połączony z twoich zmiennych środowiskowych",
   "settings.providers.action.signInChatGPT": "Zaloguj przez ChatGPT",
+  "settings.providers.action.changeApiKey": "Zmień klucz API",
   "settings.providers.custom.description": "Dodaj niestandardowego dostawcę przez bazowy URL.",
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
@@ -881,7 +885,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
   "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
-  "settings.experimental.claudeMigration.title": "Migracja Claude Code (Eksperymentalna)",
+  "settings.experimental.claudeMigration.title": "Migracja Claude Code",
   "settings.experimental.claudeMigration.description":
     "Jednorazowo importuj obsługiwane globalne instrukcje CLAUDE.md, proste umiejętności i wyłączone definicje MCP. Oryginalne pliki Claude pozostają niezmienione; po włączeniu uruchom ponownie backend.",
   "settings.experimental.multiProject.description":
@@ -1119,6 +1123,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model używany do automatycznej i ręcznej kompakcji. Pozostaw puste, aby używać modelu czatu. Koszt, szybkość i jakość podsumowania zależą od modelu.",
   "settings.context.compactionModel.useChatModel": "Użyj modelu czatu",
+  "settings.context.compactionModel.hint": "Aby wybrać model używany do kompakcji, zobacz Ustawienia modeli.",
   "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
   "settings.context.compactionLimit.description":
     "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
@@ -1306,6 +1311,18 @@ export const dict = {
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Zapisz lokalnie",
+  "diffViewer.comment.sendToAgent": "Wyślij do agenta",
+  "diffViewer.comment.postToGithub": "Opublikuj na GitHubie",
+  "diffViewer.comment.loadFailed": "Nie udało się wczytać zmian pull requesta.",
+  "diffViewer.comment.unavailable": "Ten wiersz nie jest dostępny w bieżącej migawce pull requesta.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Otwórz pull request",
+  "diffViewer.comment.localChanges": "Zmiany lokalne",
+  "diffViewer.comment.prChanges": "Zmiany PR",
+  "diffViewer.comment.sendToKilo": "Wyślij do Kilo",
+  "diffViewer.comment.sendToGithub": "Wyślij do GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Wybierz miejsce docelowe",
   "diffViewer.notice.snapshotsDisabled":
     "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 

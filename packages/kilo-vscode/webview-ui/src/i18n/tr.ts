@@ -270,6 +270,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation":
     "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.reject": "Reddet",
+  "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
+  "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
   "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
   "ui.permission.rule.addToAllowed": "İzin listesine ekle",
@@ -418,6 +421,7 @@ export const dict = {
   "settings.providers.tag.other": "Diğer",
   "settings.providers.connected.environmentDescription": "Ortam değişkenlerinizden bağlandı",
   "settings.providers.action.signInChatGPT": "ChatGPT ile oturum aç",
+  "settings.providers.action.changeApiKey": "API anahtarını değiştir",
   "settings.providers.custom.description": "Temel URL üzerinden özel bir sağlayıcı ekleyin.",
 
   "provider.custom.title": "Özel sağlayıcı",
@@ -913,7 +917,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code Geçişi (Deneysel)",
+  "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
   "settings.experimental.multiProject.description":
@@ -1074,6 +1078,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Otomatik ve manuel sıkıştırma için kullanılan model. Sohbet modelini kullanmak için boş bırakın. Maliyet, hız ve özet kalitesi modele bağlıdır.",
   "settings.context.compactionModel.useChatModel": "Sohbet modelini kullan",
+  "settings.context.compactionModel.hint": "Sıkıştırma için kullanılacak modeli seçmek için Modeller ayarlarına bakın.",
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
@@ -1316,6 +1321,18 @@ export const dict = {
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Yerel olarak kaydet",
+  "diffViewer.comment.sendToAgent": "Ajana gönder",
+  "diffViewer.comment.postToGithub": "GitHub'da paylaş",
+  "diffViewer.comment.loadFailed": "Çekme isteğindeki değişiklikler yüklenemedi.",
+  "diffViewer.comment.unavailable": "Bu satır, çekme isteğinin mevcut anlık görüntüsünde bulunmuyor.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull request'i aç",
+  "diffViewer.comment.localChanges": "Yerel değişiklikler",
+  "diffViewer.comment.prChanges": "PR değişiklikleri",
+  "diffViewer.comment.sendToKilo": "Kilo'ya gönder",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}} hedefine gönder",
+  "diffViewer.comment.chooseDestination": "Hedef seç",
   "diffViewer.notice.snapshotsDisabled":
     "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
 

@@ -278,6 +278,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
   "notification.permission.titleSandboxEscalation": "Git-Vorgang außerhalb der Sandbox zulassen?",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
+  "ui.permission.reject": "Ablehnen",
+  "ui.permission.feedbackPlaceholder": "Teile Kilo mit, was es anders machen soll",
+  "ui.permission.feedbackHint": "Enter zum Ablehnen, Esc zum Abbrechen",
   "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",
   "ui.permission.doomLoop.rule": "{{tool}}-Aufrufe fortsetzen",
   "ui.permission.rule.addToAllowed": "Zur Erlaubt-Liste hinzufügen",
@@ -470,6 +473,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Benutzerdefinierter Anbieter",
   "settings.providers.connected.environmentDescription": "Verbunden über Ihre Umgebungsvariablen",
   "settings.providers.action.signInChatGPT": "Mit ChatGPT anmelden",
+  "settings.providers.action.changeApiKey": "API-Schlüssel ändern",
   "settings.providers.custom.description": "Fügen Sie einen benutzerdefinierten Anbieter über die Basis-URL hinzu.",
   "settings.providers.subagentModel.title": "Subagenten-Modell",
   "settings.providers.subagentModel.description":
@@ -943,7 +947,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude-Code-Migration (Experimentell)",
+  "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
   "settings.experimental.claudeMigration.description":
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
   "settings.experimental.multiProject.description":
@@ -1139,6 +1143,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modell für die automatische und manuelle Komprimierung. Leer lassen, um das Chatmodell zu verwenden. Kosten, Geschwindigkeit und Zusammenfassungsqualität hängen vom Modell ab.",
   "settings.context.compactionModel.useChatModel": "Chatmodell verwenden",
+  "settings.context.compactionModel.hint":
+    "Um zu wählen, welches Modell für die Komprimierung verwendet wird, siehe Modelleinstellungen.",
   "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
   "settings.context.compactionLimit.description":
     "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
@@ -1328,6 +1334,18 @@ export const dict = {
     "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
   "diffViewer.group.session": "Sitzung",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Lokal speichern",
+  "diffViewer.comment.sendToAgent": "An Agent senden",
+  "diffViewer.comment.postToGithub": "Auf GitHub veröffentlichen",
+  "diffViewer.comment.loadFailed": "Die Änderungen des Pull Requests konnten nicht geladen werden.",
+  "diffViewer.comment.unavailable": "Diese Zeile ist im aktuellen Snapshot des Pull Requests nicht verfügbar.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull Request öffnen",
+  "diffViewer.comment.localChanges": "Lokale Änderungen",
+  "diffViewer.comment.prChanges": "PR-Änderungen",
+  "diffViewer.comment.sendToKilo": "An Kilo senden",
+  "diffViewer.comment.sendToGithub": "An GitHub #{{number}} senden",
+  "diffViewer.comment.chooseDestination": "Ziel auswählen",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
 

@@ -6,7 +6,6 @@ import { getErrorMessage } from "../kilo-provider-utils"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
 import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
-import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
 import { composeDiffId, normalizeScope } from "./diff-scope"
@@ -19,8 +18,10 @@ import {
   deleteLifecycleWorktree,
   promoteLifecycleSession,
   removeStaleLifecycleWorktree,
+  removeWorktreeSnapshot,
   type LifecycleHost,
 } from "./provider-lifecycle"
+import { Timing } from "./creation-timing"
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
@@ -31,14 +32,13 @@ import type { GitExecutable } from "../util/git-executable"
 import { versionedName } from "./branch-name"
 import { BranchNamingController } from "./branch-naming"
 import { SetupScriptService } from "./SetupScriptService"
-import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { discardWorktree as discard } from "./discard-worktree"
 import { acquirePtyCleanup } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
-import { runWorktreeSetupScript } from "./setup-script-task"
+import { runLifecycleSetup } from "./provider-lifecycle"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
 import { createRunController, createScriptTerminalRuntime, clearScriptTerminals } from "./script-terminal-runtime"
@@ -62,7 +62,7 @@ import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { createOrchestrationBridge } from "./orchestration-setup"
 import type { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
-import { startSession } from "./mcp-warmup"
+import { prepareDirectory, startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, handleDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
@@ -78,6 +78,8 @@ import { createMultiVersion, type MultiVersionHost } from "./provider-multi-vers
 import { handleProjectMessage, routeProjectSession, type ProjectMessageDeps } from "./project/messages"
 import { createProjectWiring, type ProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
+import { revealManagedSession } from "./reveal-session"
+import { resolveWorktreeFile } from "./worktree-file-path"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
@@ -950,6 +952,8 @@ export class AgentManagerProvider implements Disposable {
     branch: string,
     worktreeId?: string,
     source?: { sandboxInheritanceToken?: string },
+    boot?: { at: number; metadata: () => Promise<Record<string, unknown>> },
+    timing?: Timing,
   ): Promise<Session | null> {
     let client: KiloClient
     try {
@@ -979,7 +983,11 @@ export class AgentManagerProvider implements Disposable {
     })
 
     try {
-      const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath)
+      // Detached: preparation must not gate session creation or failure reporting.
+      void prepareDirectory(client, worktreePath).catch((err) => this.log("Worktree preparation failed:", err))
+      const metadata = await (boot?.metadata() ??
+        sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath))
+      if (boot) timing?.mark("boot", boot.at)
       const { data: session } = await startSession(
         client,
         worktreePath,
@@ -995,6 +1003,7 @@ export class AgentManagerProvider implements Disposable {
           ),
         (...args) => this.log(...args),
       )
+      timing?.mark("session")
       return session
     } catch (error) {
       const err = getErrorMessage(error)
@@ -1093,14 +1102,18 @@ export class AgentManagerProvider implements Disposable {
           const releasePtyCleanup = await this.acquirePtyCleanup(dir)
           try {
             await this.getWorktreeManager()?.removeWorktree(dir)
+            const root = this.getRoot()
+            if (root) await removeWorktreeSnapshot(this.lifecycleHost, root, dir)
             this.getStateManager()?.removeWorktree(wid)
             this.pushState()
           } finally {
             releasePtyCleanup()
           }
         },
-        setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-        createSessionInWorktree: (dir, branch, id, source) => this.createSessionInWorktree(dir, branch, id, source),
+        hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
+        setup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early),
+        createSessionInWorktree: (dir, branch, id, source, boot, timing) =>
+          this.createSessionInWorktree(dir, branch, id, source, boot, timing),
         sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
@@ -1119,7 +1132,8 @@ export class AgentManagerProvider implements Disposable {
   private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
-    return createLifecycleWorktree(ctx, this.lifecycleHost, { baseBranch, branchName })
+    await createLifecycleWorktree(ctx, this.lifecycleHost, { baseBranch, branchName })
+    return null
   }
 
   /** Delete a worktree and dissociate its sessions. */
@@ -1220,41 +1234,32 @@ export class AgentManagerProvider implements Disposable {
   }
 
   /** Copy .env files and run the worktree setup script. Blocks until complete. Shows progress in overlay. */
-  private async runSetupScriptForWorktree(worktreePath: string, branch?: string, worktreeId?: string): Promise<void> {
+  private async runSetupScriptForWorktree(
+    worktreePath: string,
+    branch?: string,
+    worktreeId?: string,
+    early?: () => Promise<void>,
+  ): Promise<void> {
     const root = this.getRoot()
     if (!root) return
 
-    // Always copy .env files from the main repo (before the setup script so it can override)
-    await copyEnvFiles(root, worktreePath, (msg) => this.outputChannel.appendLine(`[EnvCopy] ${msg}`))
-
-    try {
-      await runWorktreeSetupScript(
-        {
-          service: this.getSetupScriptService(),
-          destination: this.destination.value(),
-          projectId: this.context?.id,
-          worktreeId,
-          branch,
-          trusted: () => this.host.isTrusted(),
-          manager: this.scripts.manager,
-          vscode: executeVscodeTask,
-          log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
-          post: (message) => this.postToWebview(message),
-        },
-        { worktreePath, repoPath: root },
-      )
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      this.outputChannel.appendLine(`[AgentManager] Setup script error: ${msg}`)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: `Setup script failed: ${msg}`,
+    await runLifecycleSetup(
+      {
+        service: this.getSetupScriptService(),
+        destination: this.destination.value(),
         projectId: this.context?.id,
-        branch,
         worktreeId,
-      })
-    }
+        branch,
+        trusted: () => this.host.isTrusted(),
+        manager: this.scripts.manager,
+        vscode: executeVscodeTask,
+        log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
+        post: (message) => this.postToWebview(message),
+      },
+      { worktreePath, repoPath: root },
+      (msg) => this.outputChannel.appendLine(msg),
+      early,
+    )
   }
 
   // Repo info
@@ -1448,8 +1453,10 @@ export class AgentManagerProvider implements Disposable {
   private get lifecycleHost(): LifecycleHost {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
-      runSetup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-      createSession: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+      hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
+      runSetup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early),
+      createSession: (dir, branch, id, boot, timing) =>
+        this.createSessionInWorktree(dir, branch, id, undefined, boot, timing),
       notifyReady: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       sessions: {
         register: (session) => this.panel?.sessions.registerSession(session),
@@ -1645,34 +1652,10 @@ export class AgentManagerProvider implements Disposable {
     this.host.openFolder(target, true)
   }
 
-  /** Open a file from a worktree or local session in the VS Code editor.
-   * Absolute paths are opened directly; relative paths resolve against the
-   * context's worktree directory (repo root for local) with symlink-traversal
-   * protection. The id may be a worktree id, session id, or `local`. */
+  /** Open a file from a worktree or local session in the VS Code editor. */
   private openWorktreeFile(id: string, filePath: string, line?: number, column?: number): void {
-    if (isAbsolutePath(filePath)) {
-      this.host.openFile(filePath, line, column)
-      return
-    }
-    const state = this.getStateManager()
-    if (!state) return
-    const worktree = state.getWorktree(id)
-    const session = worktree ? undefined : state.getSession(id)
-    const base = worktree?.path ?? (session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getRoot())
-    if (!base) return
-    // Resolve real paths to prevent symlink traversal and normalize for
-    // consistent comparison on both Unix and Windows.
-    let resolved: string
-    try {
-      const root = fs.realpathSync(base)
-      resolved = fs.realpathSync(path.resolve(base, filePath))
-      // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) return
-    } catch (err) {
-      console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
-      return
-    }
-    this.host.openFile(resolved, line, column)
+    const target = resolveWorktreeFile(this.getStateManager(), id, filePath, this.getRoot())
+    if (target) this.host.openFile(target, line, column)
   }
 
   private postToWebview(message: AgentManagerOutMessage): void {
@@ -1762,6 +1745,23 @@ export class AgentManagerProvider implements Disposable {
   /** Expose worktree session→directory mappings for the auto-approve toggle. */
   public getSessionDirectories(): ReadonlyMap<string, string> {
     return this.panel?.sessions.getSessionDirectories() ?? new Map()
+  }
+
+  /**
+   * Reveal a session Agent Manager owns: activate its project, open the panel,
+   * and select its worktree and session tab. False means Agent Manager does not
+   * own the session (or its worktree is gone) and the caller should fall back.
+   */
+  public revealSession(sessionId: string): Promise<boolean> {
+    return revealManagedSession(sessionId, this.contexts, {
+      directories: () => this.getSessionDirectories(),
+      activate: (ctx) => this.activateProject(ctx),
+      projects: () => this.pushProjects(),
+      open: () => this.openPanel(),
+      state: () => this.waitForStateReady("revealSession"),
+      ready: () => this.waitForReady(),
+      post: (message) => this.panel?.postMessage(message),
+    })
   }
 
   public getWorktreeDirectories(): string[] {
