@@ -26,6 +26,7 @@ import { useConfig } from "../../context/config"
 import { openSubagent } from "./open-subagent"
 import {
   showChildPromotion,
+  taskAutoOpen,
   taskAvatarStatus,
   taskBackground,
   taskResult,
@@ -89,10 +90,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       { defer: true },
     ),
   )
-  // Auto-open only once the call is running: while "pending" the streamed
-  // input cannot yet tell a background task from a foreground one, and a
-  // background card must never open on its own.
-  const auto = () => props.status === "running" && !backgroundTask()
+  // Auto-open only once the call is running: a pending call cannot yet tell a
+  // background task from a foreground one, and a background card must never
+  // open on its own.
+  const auto = () => taskAutoOpen(props.status, backgroundTask())
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
   // true never transitions, so this local signal must also seed itself from
