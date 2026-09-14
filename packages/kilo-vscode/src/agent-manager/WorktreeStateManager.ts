@@ -91,6 +91,7 @@ interface StateFile {
   closedSessions?: Record<string, string | null>
   sections?: Record<string, Omit<Section, "id">>
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -123,6 +124,7 @@ export class WorktreeStateManager {
   private closed = new Map<string, string | null>()
   private sections = new Map<string, Section>()
   private tabOrder: Record<string, string[]> = {}
+  private pinnedTabs: Record<string, string[]> = {}
   private worktreeOrder: string[] = []
   private collapsed = true
   private sidebar = false
@@ -341,6 +343,7 @@ export class WorktreeStateManager {
 
     // Clean up tab order for this worktree
     delete this.tabOrder[id]
+    delete this.pinnedTabs[id]
 
     this.setNormalizedWorktreeOrder(this.worktreeOrder.filter((item) => item !== id))
 
@@ -401,6 +404,14 @@ export class WorktreeStateManager {
       }
     }
 
+    for (const [key, pinned] of Object.entries(this.pinnedTabs)) {
+      const idx = pinned.indexOf(id)
+      if (idx !== -1) {
+        pinned.splice(idx, 1)
+        if (pinned.length === 0) delete this.pinnedTabs[key]
+      }
+    }
+
     void this.save()
   }
 
@@ -419,6 +430,25 @@ export class WorktreeStateManager {
 
   removeTabOrder(key: string): void {
     delete this.tabOrder[key]
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pinned tabs
+  // ---------------------------------------------------------------------------
+
+  getPinnedTabs(): Record<string, string[]> {
+    return this.pinnedTabs
+  }
+
+  /** Pinned session ids for one context, in pin order. An empty list clears the key. */
+  setPinnedTabs(key: string, ids: string[]): void {
+    if (ids.length === 0) {
+      delete this.pinnedTabs[key]
+      void this.save()
+      return
+    }
+    this.pinnedTabs[key] = ids
     void this.save()
   }
 
@@ -731,6 +761,7 @@ export class WorktreeStateManager {
     this.closed.clear()
     this.sections.clear()
     this.tabOrder = {}
+    this.pinnedTabs = {}
     this.worktreeOrder = []
     this.reviewDiffStyle = "unified"
 
@@ -763,6 +794,9 @@ export class WorktreeStateManager {
     }
     if (data.tabOrder) {
       this.tabOrder = data.tabOrder
+    }
+    if (data.pinnedTabs) {
+      this.pinnedTabs = data.pinnedTabs
     }
     if (data.worktreeOrder) {
       this.worktreeOrder = data.worktreeOrder
@@ -878,6 +912,9 @@ export class WorktreeStateManager {
     }
     if (Object.keys(this.tabOrder).length > 0) {
       data.tabOrder = this.tabOrder
+    }
+    if (Object.keys(this.pinnedTabs).length > 0) {
+      data.pinnedTabs = this.pinnedTabs
     }
     if (this.worktreeOrder.length > 0) {
       data.worktreeOrder = this.worktreeOrder

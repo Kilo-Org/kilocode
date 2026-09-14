@@ -491,6 +491,70 @@ describe("WorktreeStateManager", () => {
     })
   })
 
+  describe("pinned tabs", () => {
+    it("sets and gets pinned tabs for a key", () => {
+      manager.setPinnedTabs("wt-1", ["s2", "s1"])
+      expect(manager.getPinnedTabs()["wt-1"]).toEqual(["s2", "s1"])
+    })
+
+    it("drops the key when the last tab is unpinned", () => {
+      manager.setPinnedTabs("wt-1", ["s1"])
+      manager.setPinnedTabs("wt-1", [])
+      expect(manager.getPinnedTabs()["wt-1"]).toBeUndefined()
+    })
+
+    it("cleans up pinned tabs when a worktree is removed", () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.addSession("s1", wt.id)
+      manager.setPinnedTabs(wt.id, ["s1"])
+
+      manager.removeWorktree(wt.id)
+      expect(manager.getPinnedTabs()[wt.id]).toBeUndefined()
+    })
+
+    it("removes a session from pinned tabs when the session is removed", () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.addSession("s1", wt.id)
+      manager.addSession("s2", wt.id)
+      manager.setPinnedTabs(wt.id, ["s1", "s2"])
+
+      manager.removeSession("s1")
+      expect(manager.getPinnedTabs()[wt.id]).toEqual(["s2"])
+    })
+
+    it("removes the pinned entry when its last session is removed", () => {
+      manager.addSession("s1", null)
+      manager.setPinnedTabs("local", ["s1"])
+
+      manager.removeSession("s1")
+      expect(manager.getPinnedTabs()["local"]).toBeUndefined()
+    })
+
+    it("persists and loads pinned tabs", async () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.setPinnedTabs(wt.id, ["s2", "s1"])
+      manager.setPinnedTabs("local", ["s3"])
+      await manager.flush()
+      await manager.save()
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+
+      expect(loaded.getPinnedTabs()[wt.id]).toEqual(["s2", "s1"])
+      expect(loaded.getPinnedTabs()["local"]).toEqual(["s3"])
+    })
+
+    it("does not persist empty pinned tabs", async () => {
+      manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      await manager.flush()
+      await manager.save()
+
+      const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
+      const data = JSON.parse(content)
+      expect(data.pinnedTabs).toBeUndefined()
+    })
+  })
+
   describe("sessionsCollapsed", () => {
     it("defaults to true when state is missing", async () => {
       await manager.load()

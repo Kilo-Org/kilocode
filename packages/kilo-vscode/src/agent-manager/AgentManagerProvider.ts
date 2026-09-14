@@ -41,6 +41,7 @@ import { executeVscodeTask } from "./task-runner"
 import { runLifecycleSetup } from "./provider-lifecycle"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
+import { handleTabLayoutMessage } from "./tab-layout"
 import { createRunController, createScriptTerminalRuntime, clearScriptTerminals } from "./script-terminal-runtime"
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
@@ -761,10 +762,7 @@ export class AgentManagerProvider implements Disposable {
       this.onRequestState()
       return null
     }
-    if (m.type === "agentManager.setTabOrder") {
-      this.state?.setTabOrder(m.key, m.order)
-      return null
-    }
+    if (handleTabLayoutMessage(this.state, m)) return null
     if (m.type === "agentManager.setWorktreeOrder") {
       const state = this.getStateManager()
       if (state) {
@@ -1404,6 +1402,7 @@ export class AgentManagerProvider implements Disposable {
       sections: state.getSections(),
       staleWorktreeIds: active ? this.staleWorktreesForState(worktrees) : [],
       tabOrder: state.getTabOrder(),
+      pinnedTabs: state.getPinnedTabs(),
       worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
       sidebarCollapsed: state.getSidebarCollapsed(),

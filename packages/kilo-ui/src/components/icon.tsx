@@ -123,6 +123,14 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 20 20",
     path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.25"/><path d="M7 8h.01M13 8h.01M7 12c.9 1.2 2 1.8 3 1.8s2.1-.6 3-1.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
   },
+  pin: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M10 13.75V17.5M7.5 7.5V4.375A.625.625 0 0 1 8.125 3.75a1.25 1.25 0 0 0 0-2.5h3.75a1.25 1.25 0 0 0 0 2.5.625.625 0 0 1 .625.625V7.5a2.5 2.5 0 0 0 1.382 2.236l1.113.557a1.25 1.25 0 0 1 .693 1.118v.464a.625.625 0 0 1-.625.625H5.062a.625.625 0 0 1-.625-.625v-.464a1.25 1.25 0 0 1 .694-1.118l1.112-.557A2.5 2.5 0 0 0 7.5 7.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  "pin-filled": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M10 13.75V17.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M7.5 7.5V4.375A.625.625 0 0 1 8.125 3.75a1.25 1.25 0 0 1 0-2.5h3.75a1.25 1.25 0 0 0 0 2.5.625.625 0 0 1 .625.625V7.5a2.5 2.5 0 0 0 1.382 2.236l1.113.557a1.25 1.25 0 0 1 .693 1.118v.464a.625.625 0 0 1-.625.625H5.062a.625.625 0 0 1-.625-.625v-.464a1.25 1.25 0 0 1 .694-1.118l1.112-.557A2.5 2.5 0 0 0 7.5 7.5Z" fill="currentColor"/>`,
+  },
 }
 
 type Name = keyof typeof icons

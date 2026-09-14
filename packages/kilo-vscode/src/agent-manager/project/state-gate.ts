@@ -22,6 +22,7 @@ export const STATE_GATED = new Set<string>([
   "agentManager.importExternalWorktree",
   "agentManager.importAllExternalWorktrees",
   "agentManager.setTabOrder",
+  "agentManager.setPinnedTabs",
   "agentManager.setWorktreeOrder",
   "agentManager.setSessionsCollapsed",
   "agentManager.setSidebarCollapsed",

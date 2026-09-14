@@ -885,6 +885,7 @@ export interface AgentManagerStateMessage {
   sections?: SectionState[]
   staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
