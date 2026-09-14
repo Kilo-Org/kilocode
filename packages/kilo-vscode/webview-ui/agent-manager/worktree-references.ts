@@ -60,6 +60,7 @@ export function worktreeDropReference(
   worktree: WorktreeState,
   name: string,
   sessions: { id: string; title?: string }[],
+  disabled: boolean,
 ): WorktreeReference {
   return {
     id: worktree.id,
@@ -68,7 +69,7 @@ export function worktreeDropReference(
     path: worktree.path,
     base: worktree.parentBranch,
     sessions,
-    disabled: false,
+    disabled,
   }
 }
 

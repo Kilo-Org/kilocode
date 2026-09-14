@@ -1998,6 +1998,14 @@ describe("useFileMention reference drops", () => {
     })
   })
 
+  it("keeps the dropdown closed while typing after a dropped mention", () => {
+    withMention("", undefined, (mention, area) => {
+      mention.insertDrop({ kind: "terminal" }, area, () => {}, "")
+      mention.onInput("@terminal what failed", 21)
+      expect(mention.showMention()).toBe(false)
+    })
+  })
+
   it("inserts a relative file reference from a document tab", () => {
     withMention("", undefined, (mention, area) => {
       expect(mention.insertDrop({ kind: "file", path: "/repo/docs/plan.md" }, area, () => {}, "/repo")).toBe(true)

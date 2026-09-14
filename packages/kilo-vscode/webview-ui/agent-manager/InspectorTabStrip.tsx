@@ -7,7 +7,7 @@ import {
   type DragEvent,
 } from "@thisbeyond/solid-dnd"
 import { For, Show, createSignal, type Accessor, type Component, type JSX } from "solid-js"
-import { ConstrainDragYAxis, outsideSidePanel } from "../src/components/chat/TabDnd"
+import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import { beginPromptMentionDrop, endPromptMentionDrop, type PromptMentionDrop } from "../src/utils/prompt-mention-drop"
 import { createTabFocus } from "../src/utils/tab-navigation"
 import { useTabScroll } from "../src/utils/tab-scroll"
@@ -60,8 +60,9 @@ export const InspectorTabStrip: Component<Props> = (props) => {
   }
   const over = (event: DragEvent) => {
     // Once the tab leaves the side panel it is on its way to the prompt, so stop
-    // reordering the tabs under it. Only applies to drag-to-prompt strips.
-    if (props.drag && outsideSidePanel(event)) return
+    // reordering the tabs under it. Use the strip bounds, not the tab's own
+    // rect, so leftward reordering inside the strip still works.
+    if (props.drag && event.draggable.transformed.center.x < host.getBoundingClientRect().left) return
     const from = event.draggable?.id
     const to = event.droppable?.id
     if (typeof from !== "string" || typeof to !== "string") return

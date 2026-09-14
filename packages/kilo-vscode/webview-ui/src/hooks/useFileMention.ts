@@ -727,11 +727,15 @@ export function useFileMention(
     const prefix = before.length > 0 && !/\s$/.test(before) ? " " : ""
     // Always leave a trailing space so the user can keep typing after a drop.
     const suffix = /^\s/.test(after) ? "" : " "
+    // Record the inserted mention so onInput reads text typed after it as prose
+    // instead of reopening the @ dropdown for "@token prose".
+    remember(start + prefix.length, token)
     replaceRange(textarea, start, end, `${prefix}@${token}${suffix}`)
     // The browser fires an input event for execCommand, but tests and some edge
     // paths do not, so sync from the textarea to register the mention.
     syncMentionedPaths(textarea.value)
     setText(textarea.value)
+    closeMention()
     onSelect?.()
     return true
   }

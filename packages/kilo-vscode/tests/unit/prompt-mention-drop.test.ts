@@ -3,6 +3,8 @@ import {
   beginPromptMentionDrop,
   endPromptMentionDrop,
   insideRect,
+  promptMentionDragging,
+  promptMentionOver,
   registerPromptMentionDrop,
   type PromptMentionDrop,
 } from "../../webview-ui/src/utils/prompt-mention-drop"
@@ -95,6 +97,21 @@ describe("prompt mention drop", () => {
     mockDocument()
     beginPromptMentionDrop(drop)
     expect(listeners.size).toBe(0)
+    expect(endPromptMentionDrop()).toBe(false)
+  })
+
+  it("tears down an active drag when the prompt unmounts", () => {
+    mockDocument()
+    registerPromptMentionDrop(target(), () => true)
+    beginPromptMentionDrop(drop)
+    expect(listeners.size).toBe(1)
+    expect(promptMentionDragging()).toBe(true)
+
+    registerPromptMentionDrop(undefined, undefined)
+
+    expect(listeners.size).toBe(0)
+    expect(promptMentionDragging()).toBe(false)
+    expect(promptMentionOver()).toBe(false)
     expect(endPromptMentionDrop()).toBe(false)
   })
 })

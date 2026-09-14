@@ -19,11 +19,6 @@ export function outsideTabBar(event: DragEvent): boolean {
   return event.draggable.transformed.center.y > event.draggable.layout.bottom
 }
 
-/** Same idea for a side panel tab strip, where leaving means moving left. */
-export function outsideSidePanel(event: DragEvent): boolean {
-  return event.draggable.transformed.center.x < event.draggable.layout.left
-}
-
 /**
  * Keep tab drags in the tab bar normally, but allow a session tab to move down
  * out of the bar while it is being dragged to the prompt.

@@ -211,6 +211,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           wt,
           wt.label || firstOrderedTitle(sessions(wt.id), store.tabOrder()[wt.id], wt.branch),
           sessions(wt.id).map((session) => ({ id: session.id })),
+          wt.id === props.selection || store.staleWorktreeIds().has(wt.id) || store.busy().has(wt.id),
         ),
       })
     }
@@ -243,10 +244,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     setDragOrigin(undefined)
     document.body.classList.remove("am-wt-dragging-active")
     // A drop on the prompt inserts a mention. Do not also move the worktree to
-    // whatever section happens to be under the pointer.
-    if (handled) return
-    // A release outside the sidebar is not a section move or list reorder.
-    if (outsideSidebar(event.draggable)) {
+    // whatever section happens to be under the pointer. Both this path and an
+    // outside release undo the reorder applied while passing over sibling rows.
+    if (handled || outsideSidebar(event.draggable)) {
       if (origin) store.setWorktreeOrder(origin)
       return
     }

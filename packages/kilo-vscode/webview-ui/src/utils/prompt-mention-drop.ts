@@ -52,7 +52,17 @@ export function registerPromptMentionDrop(
   insert: ((drop: PromptMentionDrop) => boolean) | undefined,
 ) {
   target = element && insert ? { element, insert } : undefined
-  if (!element) setOver(false)
+  if (target) return
+  // Unmounting mid-drag must not leak the pointer listener or the active drop.
+  // Otherwise ordinary pointer movement flips the highlight and keeps the tab
+  // constraint loose until an unrelated drag happens to end.
+  if (active) {
+    document.removeEventListener("pointermove", move)
+    active = undefined
+    point = undefined
+    setDragging(false)
+  }
+  setOver(false)
 }
 
 export function beginPromptMentionDrop(drop: PromptMentionDrop) {
