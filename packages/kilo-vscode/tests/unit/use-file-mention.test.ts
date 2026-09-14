@@ -1223,6 +1223,38 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("does not settle a fresh query after the picked mention was deleted", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const input = editor("@sr")
+    mockDocument(input)
+    try {
+      mention.onInput("@sr", 3)
+      mention.selectMention({ type: "file", value: "src" }, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe("@src ")
+
+    // Deleting the mention drops its record, so the next "@src ..." is a new
+    // query rather than prose after the deleted one.
+    mention.onInput("", 0)
+    expect(mention.showMention()).toBe(false)
+    mention.onInput("@src utils", 10)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
   it("keeps the dropdown closed after Escape until the query shrinks", () => {
     const ctx = {
       postMessage: () => {},

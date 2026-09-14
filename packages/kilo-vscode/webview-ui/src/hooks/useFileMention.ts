@@ -255,8 +255,9 @@ export function useFileMention(
   let dead: { at: number; query: string } | undefined
   // Mentions inserted by selection, keyed by how many "@" the text holds before
   // them rather than by absolute offset: an edit before the mention shifts its
-  // offset but not that count. This is what lets a picked mention settle its
-  // prose without letting a short mention elsewhere close a new, longer query.
+  // offset but not that count. Entries are pruned as soon as their token leaves
+  // the text, so deleting a picked mention cannot close a later query that
+  // happens to reuse the same "@" count.
   const inserted = new Map<number, string>()
   // Whether the user has moved the selection themselves, which later results
   // must not undo. Typing a new query hands the choice back to the default.
@@ -406,6 +407,14 @@ export function useFileMention(
       const oldest = inserted.keys().next().value
       if (oldest === undefined) return
       inserted.delete(oldest)
+    }
+  }
+
+  /** Drop records whose mention is no longer present in the text. */
+  const pruneInserted = () => {
+    const live = mentionTokens()
+    for (const [index, token] of inserted) {
+      if (!live.has(token)) inserted.delete(index)
     }
   }
 
@@ -826,6 +835,7 @@ export function useFileMention(
     syncScope()
     syncMentionedPaths(val)
     if (suppress) return
+    pruneInserted()
     closeSessionPicker()
     setWorktreePicker(false)
     setModelPicker(false)
