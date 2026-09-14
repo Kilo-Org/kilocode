@@ -194,7 +194,10 @@ export async function runWithMessageConfirmation<T>(
   }
 }
 
-export function sessionToWebview(session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert">) {
+export function sessionToWebview(
+  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata">,
+) {
+  const goal = session.metadata?.["kilo.goal"]
   return {
     id: session.id,
     parentID: session.parentID ?? null,
@@ -206,6 +209,26 @@ export function sessionToWebview(session: Pick<Session, "id" | "parentID" | "tit
     // SolidJS store merge never clears the existing revert state.
     revert: session.revert ?? null,
     summary: session.summary ?? null,
+    goal:
+      goal &&
+      typeof goal === "object" &&
+      "text" in goal &&
+      typeof goal.text === "string" &&
+      "active" in goal &&
+      typeof goal.active === "boolean"
+        ? {
+            text: goal.text,
+            active: goal.active,
+            ...("status" in goal &&
+            (goal.status === "active" ||
+              goal.status === "complete" ||
+              goal.status === "blocked" ||
+              goal.status === "paused")
+              ? { status: goal.status }
+              : {}),
+            ...("reason" in goal && typeof goal.reason === "string" ? { reason: goal.reason } : {}),
+          }
+        : null,
   }
 }
 

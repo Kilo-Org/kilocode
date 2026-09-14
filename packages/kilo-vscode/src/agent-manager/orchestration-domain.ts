@@ -317,6 +317,7 @@ interface Target {
   state: WorktreeStateManager
   sessionID: string
   managed?: ManagedSession
+  directory?: string
 }
 
 interface Located {
@@ -324,13 +325,15 @@ interface Located {
   name: string
 }
 
-// Verify the target is a live managed session of this workspace and return its authoritative
-// directory plus display name, so error messages can echo exact IDs back to the caller.
+// Verify the target session and return its authoritative directory plus display name, so error
+// messages can echo exact IDs back to the caller. Reply routes may provide a verified directory.
 async function locate(input: Target): Promise<Located> {
   const managed = input.state.getSession(input.sessionID) ?? input.managed
-  if (!managed || managed.id !== input.sessionID)
+  if (managed && managed.id !== input.sessionID)
     throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
-  const dir = directory(input.root, input.state, managed)
+  const dir = input.directory ?? (managed ? directory(input.root, input.state, managed) : undefined)
+  if (!managed && !input.directory)
+    throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
   if (
     !dir ||
     !(await fs.promises.access(dir).then(
@@ -395,10 +398,12 @@ export async function prompt(input: {
   messageID: string
   signal?: AbortSignal
   managed?: ManagedSession
+  directory?: string
   questions?: "dismiss"
   model?: { providerID: string; modelID: string }
   variant?: string
   agent?: string
+  metadata?: Record<string, unknown>
 }): Promise<void> {
   if (input.signal?.aborted) return
   const target = await locate(input)
@@ -410,7 +415,7 @@ export async function prompt(input: {
       sessionID: input.sessionID,
       directory: target.dir,
       messageID: `msg_agent_manager_${input.messageID}`,
-      parts: [{ type: "text", text: input.text }],
+      parts: [{ type: "text", text: input.text, ...(input.metadata ? { metadata: input.metadata } : {}) }],
       model: input.model,
       variant: input.variant,
       agent: input.agent,

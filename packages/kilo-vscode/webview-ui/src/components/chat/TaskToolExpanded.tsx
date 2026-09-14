@@ -11,6 +11,7 @@ import { Component, createEffect, createMemo, createSignal, Index, Show, on, onC
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
 import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { AgentAvatar } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -23,7 +24,15 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID, latestTaskPart } from "../../context/session-utils"
 import { useConfig } from "../../context/config"
 import { openSubagent } from "./open-subagent"
-import { showChildPromotion, taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import {
+  showChildPromotion,
+  taskAutoOpen,
+  taskAvatarStatus,
+  taskBackground,
+  taskResult,
+  taskRunning,
+  taskVisible,
+} from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -58,6 +67,33 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   )
 
   const running = createMemo(() => taskRunning(props.status))
+  // Background task cards stay collapsed: they must not auto-open or show the
+  // "Starting..." status, which would flicker the transcript as the child runs.
+  // The input carries `background` from the first part update; promoted tasks
+  // only gain the state metadata flag later.
+  const backgroundTask = createMemo(() => taskBackground(props.input, props.partMetadata, props.metadata))
+  const avatar = createMemo(() => {
+    const id = childSessionId()
+    return taskAvatarStatus(id, props.status, session.allStatusMap())
+  })
+  // The avatar shimmers until the child session id is known, then plays a
+  // one-shot resolve into the identity glyph. Only an actual unknown-to-known
+  // transition sets this, so a virtualized remount that starts with the id
+  // already known shows the resolved glyph without replaying the animation.
+  const [resolved, setResolved] = createSignal(false)
+  createEffect(
+    on(
+      childSessionId,
+      (id, prev) => {
+        if (id && !prev) setResolved(true)
+      },
+      { defer: true },
+    ),
+  )
+  // Auto-open only once the call is running: a pending call cannot yet tell a
+  // background task from a foreground one, and a background card must never
+  // open on its own.
+  const auto = () => taskAutoOpen(props.status, backgroundTask())
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
   // true never transitions, so this local signal must also seed itself from
@@ -67,10 +103,27 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     initialOpen({
       tool: props.tool,
       partID: props.partID,
-      defaultOpen: running(),
+      defaultOpen: auto(),
       forceOpen: props.forceOpen,
     }),
   )
+  // The open state is controlled so the card settles once the input arrives.
+  // A stored preference, a search match, or a manual toggle wins over it.
+  const [touched, setTouched] = createSignal(
+    !!props.forceOpen || initialOpen({ tool: props.tool, partID: props.partID }) !== undefined,
+  )
+  const change = (value: boolean) => {
+    setTouched(true)
+    setOpen(value)
+  }
+  createEffect(() => {
+    if (touched()) return
+    if (auto()) {
+      setOpen(true)
+      return
+    }
+    if (backgroundTask()) setOpen(false)
+  })
 
   let synced: string | undefined
   createEffect(() => {
@@ -85,7 +138,11 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     if (synced) session.unsyncSession(synced)
   })
 
-  const title = createMemo(() => i18n.t("ui.tool.agent", { type: props.input.subagent_type || props.tool }))
+  const title = createMemo(() =>
+    props.input.subagent_type
+      ? i18n.t("ui.tool.agent", { type: props.input.subagent_type })
+      : i18n.t("ui.tool.agent.default"),
+  )
 
   const description = createMemo(() => {
     const val = props.input.description
@@ -148,6 +205,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       sessionID: id,
       title: description(),
       parentSessionID: session.currentSessionID(),
+      background: backgroundTask(),
       worktree: !!worktree,
       post: vscode.postMessage,
     })
@@ -161,14 +219,14 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   }
 
   const trigger = () => (
-    <div data-slot="basic-tool-tool-info-structured">
+    <div data-slot="basic-tool-tool-info-structured" data-component="task-tool-heading">
       <div data-slot="basic-tool-tool-info-main">
-        <span data-slot="basic-tool-tool-title" class="capitalize">
-          {title()}
+        <span data-slot="basic-tool-tool-title" title={description() || title()}>
+          {description() || title()}
         </span>
         <Show when={description() || childToolCount() > 0}>
           <span data-slot="basic-tool-tool-subtitle">
-            {description()}
+            {description() ? title() : undefined}
             <Show when={childToolCount() > 0}>
               {description() ? " " : ""}({childToolCount()})
             </Show>
@@ -202,18 +260,30 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     <div data-component="tool-part-wrapper">
       <BasicTool
         icon="task"
+        iconNode={
+          <span
+            data-slot="task-agent-avatar"
+            data-clickable={childSessionId() ? "true" : undefined}
+            data-resolve={resolved() ? "true" : undefined}
+            title={childSessionId() ? (worktree ? "Open sub-agent in panel" : "Open sub-agent in tab") : undefined}
+            onClick={childSessionId() ? openInTab : undefined}
+          >
+            <AgentAvatar id={childSessionId() ?? ""} status={avatar()} />
+          </span>
+        }
         status={props.status}
         tool={props.tool}
         partID={props.partID}
         trigger={trigger()}
-        defaultOpen={running()}
+        defaultOpen={auto()}
+        open={open()}
         forceOpen={props.forceOpen}
         defer
-        onOpenChange={setOpen}
+        onOpenChange={change}
       >
         <div ref={viewport} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={content} data-component="task-tools">
-            <Show when={running() && childToolCount() === 0}>
+            <Show when={running() && childToolCount() === 0 && !backgroundTask()}>
               <div data-slot="task-tool-item" data-state="starting">
                 <span data-slot="task-tool-title">{language.t("session.messages.taskStarting")}</span>
               </div>

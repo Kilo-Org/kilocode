@@ -1,5 +1,6 @@
 import { For, Show, createSignal, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { browserFeedbackData, type BrowserReference } from "../../../../src/shared/browser-feedback"
 import { useLanguage } from "../../context/language"
@@ -82,14 +83,14 @@ export const BrowserReferences: Component<BrowserReferencesProps> = (props) => {
                     </Show>
                   </button>
                   <Show when={props.onRemove}>
-                    <button
-                      type="button"
+                    <IconButton
+                      icon="close-small"
+                      variant="ghost"
+                      size="small"
                       class="prompt-review-row-remove"
                       onClick={() => props.onRemove?.(item.id)}
                       aria-label={language.t("common.delete")}
-                    >
-                      ×
-                    </button>
+                    />
                   </Show>
                 </div>
 

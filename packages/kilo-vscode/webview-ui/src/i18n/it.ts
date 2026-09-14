@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Completato (segnalato dal modello)",
+  "session.goal.blocked": "Bloccato",
+  "session.goal.restart": "Riavvia obiettivo",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Bacheca",
+  "task.swarm.refresh": "Aggiorna",
+  "task.swarm.reset": "Reimposta bacheca",
+  "task.swarm.resetTitle": "Reimpostare questa bacheca?",
+  "task.swarm.resetDescription":
+    "Cancellare i messaggi visibili? Le conversazioni e le attività in corso restano invariate. Gli agenti possono pubblicare nuovi messaggi.",
+  "task.swarm.loading": "Caricamento della bacheca...",
+  "task.swarm.failed": "Impossibile caricare o reimpostare la bacheca. Prova ad aggiornarla.",
   "command.provider.connect": "Connetti provider",
   "session.activity.waiting": "In attesa di una risposta o approvazione.",
   "session.activity.error": "Errore o connessione persa.",
@@ -197,6 +208,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
   "notification.permission.titleSandboxEscalation": "Consentire l'operazione Git al di fuori della sandbox?",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
+  "ui.permission.reject": "Rifiuta",
+  "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
+  "ui.permission.feedbackHint": "Enter per rifiutare, Esc per annullare",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
   "ui.permission.doomLoop.rule": "Continua le chiamate a {{tool}}",
   "ui.permission.rule.addToAllowed": "Aggiungi alla lista consentiti",
@@ -307,6 +321,7 @@ export const dict = {
   "settings.providers.tag.other": "Altro",
   "settings.providers.connected.environmentDescription": "Connesso dalle variabili d'ambiente",
   "settings.providers.action.signInChatGPT": "Accedi con ChatGPT",
+  "settings.providers.action.changeApiKey": "Modifica API key",
   "settings.providers.custom.description": "Aggiungi un provider personalizzato tramite URL base.",
   "provider.custom.title": "Provider personalizzato",
   "provider.custom.description.prefix": "Configura un provider personalizzato. Vedi la ",
@@ -720,7 +735,17 @@ export const dict = {
   "settings.notifications.enable.title": "Abilita le notifiche sonore",
   "settings.notifications.enable.description":
     "Riproduci suoni quando le sessioni si concludono, si verifica un errore o è richiesto il tuo intervento",
+  "settings.notifications.workbench.title": "Abilita le notifiche di VS Code",
+  "settings.notifications.workbench.description":
+    "Mostra notifiche di VS Code quando Kilo completa un'attività o richiede il tuo intervento",
+  "settings.notifications.os.title": "Abilita le notifiche del sistema operativo",
+  "settings.notifications.os.description":
+    "Mostra avvisi di notifica nativi del sistema operativo quando Kilo completa un'attività o richiede il tuo intervento mentre VS Code non è attivo.",
   "settings.notifications.testSound": "Prova",
+  "settings.notifications.testOS": "Prova",
+  "settings.notifications.testOS.testing": "Invio della notifica di prova…",
+  "settings.notifications.testOS.success": "Notifica di prova inviata.",
+  "settings.notifications.testOS.error": "Invio della notifica di prova non riuscito",
   "settings.notifications.sound.default": "Predefinito",
   "settings.notifications.sound.system": "Sistema",
   "settings.notifications.sound.description":
@@ -765,6 +790,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
+  "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
   "settings.experimental.multiProject.description":
     "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
   "settings.experimental.taskModelSelection.title": "Selezione del modello del sub-agent Task",
@@ -840,6 +868,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "File istruzioni aggiuntivi",
   "settings.agentBehaviour.instructionFiles.description":
     "Percorsi ai file istruzioni aggiuntivi inclusi nel prompt di sistema",
+  "settings.agentBehaviour.pushFixes.title": "Esegui il push delle correzioni della pull request",
+  "settings.agentBehaviour.pushFixes.description":
+    "Quando invii all'agente errori CI o commenti di revisione di una pull request, o aggiorni un worktree dalla sua base, chiedigli di eseguire commit e push così che la pull request si aggiorni. Le richieste di autorizzazione restano attive. Disattiva per eseguire i commit manualmente.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilità Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Carica file Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -966,6 +997,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modello usato per la compattazione automatica e manuale. Lascia non impostato per usare il modello di chat. Costo, velocità e qualità del riepilogo dipendono dal modello.",
   "settings.context.compactionModel.useChatModel": "Usa il modello di chat",
+  "settings.context.compactionModel.hint":
+    "Per scegliere quale modello usare per la compattazione, vedi le impostazioni Modelli.",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",
@@ -1154,6 +1187,18 @@ export const dict = {
     "File modificati da Kilo durante la sessione corrente, basati su snapshot per turno. Si resetta quando inizi una nuova sessione.",
   "diffViewer.group.session": "Sessione",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Salva in locale",
+  "diffViewer.comment.sendToAgent": "Invia all'agente",
+  "diffViewer.comment.postToGithub": "Pubblica su GitHub",
+  "diffViewer.comment.loadFailed": "Impossibile caricare le modifiche della pull request.",
+  "diffViewer.comment.unavailable": "Questa riga non è disponibile nell'istantanea attuale della pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Apri pull request",
+  "diffViewer.comment.localChanges": "Modifiche locali",
+  "diffViewer.comment.prChanges": "Modifiche della PR",
+  "diffViewer.comment.sendToKilo": "Invia a Kilo",
+  "diffViewer.comment.sendToGithub": "Invia a GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Scegli destinazione",
   "diffViewer.notice.snapshotsDisabled":
     "Gli snapshot sono disabilitati per questa repository. Modifica i file di configurazione per visualizzare le modifiche della sessione.",
   "diffViewer.baseBranch.auto": "Predefinito",
@@ -1174,6 +1219,14 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrotto.",
   "session.outcome.error": "Turno fallito.",
   "session.outcome.finish": "Motivo tecnico di fine: {{reason}}",
+  "session.goal.label": "Obiettivo",
+  "prompt.goal.set": "Imposta obiettivo",
+  "prompt.goal.start": "Avvia obiettivo",
+  "session.goal.active": "Attivo",
+  "session.goal.paused": "In pausa",
+  "session.goal.pause": "Pausa",
+  "session.goal.resume": "Riprendi",
+  "session.goal.clear": "Cancella obiettivo",
   "session.costAlert.header": "Avviso costo sessione",
   "session.costAlert.continue": "Continua",
   "session.costAlert.question":

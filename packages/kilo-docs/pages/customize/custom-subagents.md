@@ -23,6 +23,8 @@ Key characteristics of subagents:
 - **Invocable by agents or users**: Primary agents invoke subagents via the Task tool, or you can invoke them manually with `@agent-name`
 - **Results flow back**: When a subagent completes, its result summary is returned to the parent agent
 
+When a primary agent invokes a subagent with `task`, the child is non-interactive: it cannot ask the end user a question directly. The child can still use its permitted tools and communicate through its result, shared files, or the optional [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) board. Foreground tasks return before the parent continues. Background tasks use `background: true`, return immediately, and deliver their result to the parent when they finish.
+
 ### Built-in Subagents
 
 Kilo Code includes two built-in subagents:
@@ -232,7 +234,7 @@ Once configured, subagents can be used in two ways:
 
 ### Automatic Invocation
 
-Primary agents (especially the Orchestrator) can automatically invoke subagents via the Task tool when the subagent's `description` matches the task at hand. Write clear, descriptive `description` values to help primary agents select the right subagent.
+Primary agents with full tool access can automatically invoke subagents via the Task tool when the subagent's `description` matches the task at hand. Write clear, descriptive `description` values to help primary agents select the right subagent. The deprecated Orchestrator agent is not required.
 
 ### Manual Invocation via @ Mentions
 
@@ -396,5 +398,5 @@ To disable a built-in agent entirely:
 
 - [Custom Modes](/docs/customize/custom-modes) — Create specialized primary agents with tool restrictions
 - [Custom Rules](/docs/customize/custom-rules) — Define rules that apply to specific file types or situations
-- [Orchestrator Mode](/docs/code-with-ai/agents/orchestrator-mode) — Legacy mode for task delegation (now built into all agents)
-- [Task tool](/docs/automate/tools) — The tool used to invoke subagents
+- [Orchestrator Mode](/docs/code-with-ai/agents/orchestrator-mode) — Legacy mode for task delegation (now built into full-tool agents)
+- [Task tool](/docs/automate/tools#task-tool) — The tool used to invoke subagents

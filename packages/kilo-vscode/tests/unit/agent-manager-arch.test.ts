@@ -83,6 +83,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/SendAllButton.tsx"),
 ]
 const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
@@ -232,7 +233,7 @@ describe("Agent Manager Provider Messages", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted lifecycle module so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+)\(/)
     if (!delegated) return text
     const lifecycle = project.addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
     const fn = lifecycle.getFunction(delegated[1]!)
@@ -467,6 +468,19 @@ describe("Agent Manager Worktree Actions", () => {
     expect(action).not.toContain('msg.action === "newMainTerminal"')
   })
 
+  it("keeps Cmd+W terminal handling before the empty-worktree fallback", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf("const closeActiveTab = () =>")
+    const end = source.indexOf("// Close the currently selected worktree", start)
+    const action = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(action).toContain("termHandlers.closeFocused()")
+    expect(action).toContain("termHandlers.closeActive()")
+    expect(action).toContain("if (tabs.length === 0)")
+  })
+
   it("forwards the quick-worktree command to immediate creation", () => {
     const source = fs.readFileSync(path.join(ROOT, "src/extension.ts"), "utf-8")
     const start = source.indexOf('vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree"')
@@ -519,7 +533,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted handler modules so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+|createMultiVersion)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+|createMultiVersion)\(/)
     if (!delegated) return text
     const module = delegated[1] === "createMultiVersion" ? "provider-multi-version.ts" : "provider-lifecycle.ts"
     const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))
@@ -684,13 +698,20 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 
-  it("limits snapshot cleanup to explicit worktree deletion without deleting sessions", () => {
-    const text = body("onDeleteWorktree")
-    expect(text).toContain(".kilocode.removeSnapshot")
-    expect(text).not.toContain("session.delete")
-    for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
-      expect(body(name)).not.toContain("removeSnapshot")
+  it("cleans worktree snapshots only after worktree removal without deleting sessions", () => {
+    const del = body("onDeleteWorktree")
+    expect(del).toContain("removeWorktreeSnapshot")
+    expect(del).not.toContain("session.delete")
+    for (const name of ["onCreateWorktree", "onCreateMultiVersion"]) {
+      const text = body(name)
+      expect(text, `${name} must not delete sessions`).not.toContain("session.delete")
+      const disk = text.indexOf(".removeWorktree(")
+      const snapshot = text.indexOf("removeWorktreeSnapshot(")
+      if (snapshot < 0) continue
+      expect(disk, `${name} must remove the worktree before its snapshots`).toBeGreaterThanOrEqual(0)
+      expect(snapshot, `${name} must remove the worktree before its snapshots`).toBeGreaterThan(disk)
     }
+    expect(body("onRemoveStaleWorktree")).not.toContain("removeWorktreeSnapshot")
   })
 
   // -- onCreateWorktree invariants -------------------------------------------

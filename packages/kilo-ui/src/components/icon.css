@@ -1,0 +1,17 @@
+[data-component="icon"] [data-slot="icon-svg"] {
+  color: currentColor;
+  stroke-width: 1.25px;
+}
+
+[data-component="icon"] [data-slot="icon-svg"][viewBox="0 0 16 16"] {
+  stroke-width: 1px;
+}
+
+[data-component="icon"] [data-slot="icon-svg"][viewBox="0 0 20 20"] [stroke-width="2"] {
+  stroke-width: 1.25px;
+}
+
+[data-component="icon"] [data-slot="icon-svg"][viewBox="0 0 24 24"],
+[data-component="icon"] [data-slot="icon-svg"][viewBox="0 0 24 24"] [stroke-width="2"] {
+  stroke-width: 1.5px;
+}

@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "تکمیل‌شده (گزارش مدل)",
+  "session.goal.blocked": "مسدود",
+  "session.goal.restart": "شروع مجدد هدف",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "برد",
+  "task.swarm.refresh": "تازه‌سازی",
+  "task.swarm.reset": "بازنشانی برد",
+  "task.swarm.resetTitle": "این برد بازنشانی شود؟",
+  "task.swarm.resetDescription":
+    "پیام‌های قابل مشاهده پاک شوند؟ گفتگوها و کارهای در حال اجرا تغییر نمی‌کنند. عامل‌ها می‌توانند پیام‌های جدید منتشر کنند.",
+  "task.swarm.loading": "در حال بارگیری برد...",
+  "task.swarm.failed": "بارگیری یا بازنشانی برد ممکن نشد. تازه‌سازی را امتحان کنید.",
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
@@ -257,6 +268,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
   "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
+  "ui.permission.reject": "رد",
+  "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
+  "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
   "ui.permission.rule.addToAllowed": "افزودن به لیست مجاز",
@@ -374,6 +388,7 @@ export const dict = {
   "settings.providers.tag.other": "سایر",
   "settings.providers.connected.environmentDescription": "از متغیرهای محیطی شما متصل شده است",
   "settings.providers.action.signInChatGPT": "ورود با ChatGPT",
+  "settings.providers.action.changeApiKey": "تغییر کلید API",
   "settings.providers.custom.description": "یک ارائه‌دهنده سفارشی از طریق URL پایه اضافه کنید.",
 
   "provider.custom.title": "ارائه‌دهنده سفارشی",
@@ -701,6 +716,14 @@ export const dict = {
   "session.outcome.interrupted": "نوبت قطع شد.",
   "session.outcome.error": "نوبت با شکست مواجه شد.",
   "session.outcome.finish": "دلیل فنی پایان: {{reason}}",
+  "session.goal.label": "هدف",
+  "prompt.goal.set": "تعیین هدف",
+  "prompt.goal.start": "شروع هدف",
+  "session.goal.active": "فعال",
+  "session.goal.paused": "متوقف",
+  "session.goal.pause": "توقف موقت",
+  "session.goal.resume": "ازسرگیری",
+  "session.goal.clear": "پاک کردن هدف",
   "session.costAlert.header": "هشدار هزینه جلسه",
   "session.costAlert.continue": "ادامه",
   "session.costAlert.question": "هزینه این جلسه از آستانه هشدار {{limit}} شما فراتر رفت و {{cost}} شد. ادامه می‌دهید؟",
@@ -831,7 +854,17 @@ export const dict = {
   "settings.notifications.sounds": "صداها",
   "settings.notifications.enable.title": "فعال‌سازی اعلان‌های صوتی",
   "settings.notifications.enable.description": "پخش صدا هنگام تکمیل جلسات، بروز خطا یا نیاز به ورودی شما",
+  "settings.notifications.workbench.title": "فعال‌سازی اعلان‌های VS Code",
+  "settings.notifications.workbench.description":
+    "نمایش اعلان‌های VS Code هنگام تکمیل یک وظیفه توسط Kilo یا نیاز به ورودی شما",
+  "settings.notifications.os.title": "فعال‌سازی اعلان‌های سیستم‌عامل",
+  "settings.notifications.os.description":
+    "نمایش هشدارهای اعلان بومی سیستم‌عامل هنگام تکمیل یک وظیفه توسط Kilo یا نیاز به ورودی شما در زمانی که VS Code فعال نیست.",
   "settings.notifications.testSound": "آزمایش",
+  "settings.notifications.testOS": "آزمایش",
+  "settings.notifications.testOS.testing": "در حال ارسال اعلان آزمایشی…",
+  "settings.notifications.testOS.success": "اعلان آزمایشی ارسال شد.",
+  "settings.notifications.testOS.error": "ارسال اعلان آزمایشی ناموفق بود",
   "settings.notifications.sound.default": "پیش‌فرض",
   "settings.notifications.sound.system": "سیستم",
   "settings.notifications.sound.description":
@@ -880,6 +913,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
   "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
@@ -939,6 +975,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "فایل‌های دستورالعمل اضافی",
   "settings.agentBehaviour.instructionFiles.description":
     "مسیرهای فایل‌های دستورالعمل اضافی که در پرامپت سیستم گنجانده می‌شوند",
+  "settings.agentBehaviour.pushFixes.title": "پوش کردن اصلاحات درخواست ادغام",
+  "settings.agentBehaviour.pushFixes.description":
+    "وقتی خطاهای CI یا نظرات بازبینی یک درخواست ادغام را برای عامل می‌فرستید، یا یک worktree را از شاخه پایه به‌روز می‌کنید، از عامل بخواهید کامیت و پوش کند تا درخواست ادغام به‌روز شود. درخواست‌های مجوز همچنان اعمال می‌شوند. برای کامیت دستی این گزینه را خاموش کنید.",
   "settings.agentBehaviour.claudeCompat.heading": "سازگاری با Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "بارگذاری فایل‌های Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1066,6 +1105,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "مدل مورد استفاده برای فشرده‌سازی خودکار و دستی. برای استفاده از مدل چت، خالی بگذارید. هزینه، سرعت و کیفیت خلاصه به مدل بستگی دارند.",
   "settings.context.compactionModel.useChatModel": "استفاده از مدل چت",
+  "settings.context.compactionModel.hint": "برای انتخاب مدل مورد استفاده در فشرده‌سازی، به تنظیمات مدل‌ها مراجعه کنید.",
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",
@@ -1265,6 +1305,18 @@ export const dict = {
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ذخیرهٔ محلی",
+  "diffViewer.comment.sendToAgent": "ارسال به عامل",
+  "diffViewer.comment.postToGithub": "انتشار در GitHub",
+  "diffViewer.comment.loadFailed": "بارگذاری تغییرات درخواست ادغام ممکن نشد.",
+  "diffViewer.comment.unavailable": "این خط در تصویر لحظه‌ای فعلی درخواست ادغام موجود نیست.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "باز کردن درخواست ادغام",
+  "diffViewer.comment.localChanges": "تغییرات محلی",
+  "diffViewer.comment.prChanges": "تغییرات PR",
+  "diffViewer.comment.sendToKilo": "ارسال به Kilo",
+  "diffViewer.comment.sendToGithub": "ارسال به GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "انتخاب مقصد",
   "diffViewer.notice.snapshotsDisabled":
     "عکس‌های فوری برای این مخزن غیرفعال هستند. لطفاً فایل‌های پیکربندی خود را ویرایش کنید تا تغییرات جلسه نمایش داده شوند.",
 

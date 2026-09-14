@@ -166,8 +166,8 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         toolbar.component.isOpaque = false
         syncToolbar()
         list.installPopup(group)
-        // The list starts detached: a worktree opens with its sessions hidden until a stored choice or
-        // a second session says otherwise.
+        // The list starts detached: a worktree opens with its sessions hidden until a stored choice
+        // says otherwise (see restore()). Session count never forces it open on its own.
         splitter.secondComponent = manager.component
         addToTop(top())
         addToCenter(splitter)
@@ -376,7 +376,9 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
 
     /**
      * Applies the stored visibility once the backend answers. A click that landed first already
-     * decided, so a late answer must not overwrite it.
+     * decided, so a late answer must not overwrite it. No stored value (`null`) leaves the list
+     * exactly as it started -- hidden -- and writes nothing; only an explicit [flip] ever persists
+     * a choice.
      */
     @RequiresEdt
     private fun restore(value: Boolean?) {
@@ -384,19 +386,6 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         ready = true
         pref = value
         value?.let(::syncExpanded)
-        resolve()
-    }
-
-    /**
-     * Shows the list the first time this worktree holds more than one session. Only that promotion is
-     * persisted, so a worktree the user never touched keeps writing nothing while it has one session.
-     */
-    @RequiresEdt
-    private fun resolve() {
-        if (!ready || pref != null || count() < AUTO) return
-        syncExpanded(true)
-        pref = true
-        save(true)
     }
 
     @RequiresEdt
@@ -569,7 +558,6 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         // the list hold that key until a refresh brings it in.
         val shown = if (pending) SessionHost.NEW else key
         list.update(rows, shown?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
-        resolve()
         syncToggle()
     }
 
@@ -711,9 +699,6 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     private companion object {
         private val LOG = KiloLog.create(WorktreeSessionEditorPanel::class.java)
         private val TERMINAL_DIR = Key.create<String>("kilo.worktree.terminal.dir")
-
-        /** Sessions a worktree must hold before the list shows itself without being asked. */
-        private const val AUTO = 2
 
         /** Classic UI leaves the toolbar inset key unset; matches the platform's own fallback. */
         private const val STRIP_PAD = 2

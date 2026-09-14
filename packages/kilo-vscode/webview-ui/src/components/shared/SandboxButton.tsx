@@ -1,7 +1,7 @@
 /** Shared sandbox lock control used by the chat prompt and Agent Manager. */
 
 import { type Component, type JSX } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
@@ -75,7 +75,8 @@ export const SandboxButtonBase: Component<SandboxButtonBaseProps> = (props) => {
       placement="top"
       openDelay={0}
     >
-      <Button
+      <IconButton
+        icon="lock"
         variant="ghost"
         size="small"
         onClick={props.onToggle}
@@ -85,9 +86,7 @@ export const SandboxButtonBase: Component<SandboxButtonBaseProps> = (props) => {
         }
         aria-pressed={props.enabled}
         class={`prompt-status-button ${props.enabled ? "prompt-status-button--active" : ""}`}
-      >
-        <Icon name="lock" size="small" />
-      </Button>
+      />
     </Tooltip>
   )
 }

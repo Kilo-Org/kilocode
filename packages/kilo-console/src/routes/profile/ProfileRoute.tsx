@@ -19,6 +19,7 @@ import {
   wasDisconnected,
 } from "./profile-utils"
 import { useProfileServer } from "./server"
+import "../../styles/profile.css"
 
 type Org = NonNullable<KiloProfileData["profile"]["organizations"]>[number]
 type State = { kind: "connected"; data: KiloProfileData } | { kind: "disconnected" }
@@ -142,7 +143,12 @@ export function ProfileRoute() {
               <span>Usage</span>
               <Icon name="square-arrow-top-right" size="small" />
             </a>
-            <a class="config-top-option config-top-option-external" href={creditsUrl()} target="_blank" rel="noreferrer">
+            <a
+              class="config-top-option config-top-option-external"
+              href={creditsUrl()}
+              target="_blank"
+              rel="noreferrer"
+            >
               <span>Buy Credits</span>
               <Icon name="square-arrow-top-right" size="small" />
             </a>

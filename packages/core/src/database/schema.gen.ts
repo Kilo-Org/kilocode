@@ -111,6 +111,7 @@ export default {
           \`objective\` text NOT NULL,
           \`objective_message_id\` text,
           \`next_seq\` integer DEFAULT 1 NOT NULL,
+          \`cleared_seq\` integer DEFAULT 0 NOT NULL,
           \`message_count\` integer DEFAULT 0 NOT NULL,
           \`message_bytes\` integer DEFAULT 0 NOT NULL,
           \`time_created\` integer NOT NULL,

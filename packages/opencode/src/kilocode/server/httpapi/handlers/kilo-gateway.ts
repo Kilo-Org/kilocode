@@ -33,6 +33,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Database } from "@opencode-ai/core/database/database"
 import { KilocodeConfig } from "@/kilocode/config/config"
+import { ClaudeMigration } from "@/kilocode/config/claude-migration"
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import { organization as catalogOrganization } from "@/kilocode/provider/catalog"
@@ -326,9 +327,10 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         worktree: Instance.worktree,
         scanProject: !Flag.KILO_DISABLE_PROJECT_CONFIG,
       })
-      const append = <T>(list: T[]) => (notice ? [...list, notice] : list)
+      const claude = yield* Effect.promise(() => ClaudeMigration.notification())
+      const append = <T>(list: T[]) => [...list, ...(notice ? [notice] : []), ...(claude ? [claude] : [])]
 
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
       const token = getToken(info)
       if (!token) return append([])
 

@@ -191,12 +191,16 @@ describe("Agent Manager PTY cleanup", () => {
     const host = {
       push: () => calls.push("push"),
       acquirePtyCleanup: async () => release,
-      client: () => ({ session: { delete: async () => undefined } }) as unknown as KiloClient,
+      client: () =>
+        ({
+          session: { delete: async () => undefined },
+          kilocode: { removeSnapshot: async () => calls.push("snapshots") },
+        }) as unknown as KiloClient,
       log: () => undefined,
     } as unknown as LifecycleHost
 
     await discardWorktree(ctx, host, "wt-1", "/worktree", "branch")
-    expect(calls).toEqual(["disk", "state", "push", "release"])
+    expect(calls).toEqual(["disk", "snapshots", "state", "push", "release"])
   })
 
   it("continues disk cleanup when session deletion fails", async () => {
@@ -215,11 +219,12 @@ describe("Agent Manager PTY cleanup", () => {
               throw new Error("session offline")
             },
           },
+          kilocode: { removeSnapshot: async () => calls.push("snapshots") },
         }) as unknown as KiloClient,
       log: () => calls.push("log"),
     } as unknown as LifecycleHost
 
     await discardWorktree(ctx, host, "wt-1", "/worktree", "branch", "session-1")
-    expect(calls).toEqual(["log", "disk", "state", "push", "release"])
+    expect(calls).toEqual(["log", "disk", "snapshots", "state", "push", "release"])
   })
 })

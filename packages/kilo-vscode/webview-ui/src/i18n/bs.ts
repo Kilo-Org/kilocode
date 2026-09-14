@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Završeno (prema modelu)",
+  "session.goal.blocked": "Blokirano",
+  "session.goal.restart": "Ponovo pokreni cilj",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Ploča",
+  "task.swarm.refresh": "Osvježi",
+  "task.swarm.reset": "Resetuj ploču",
+  "task.swarm.resetTitle": "Resetovati ovu ploču?",
+  "task.swarm.resetDescription":
+    "Obrisati vidljive poruke? Razgovori i zadaci koji se izvršavaju ostaju nepromijenjeni. Agenti mogu objaviti nove poruke.",
+  "task.swarm.loading": "Učitavanje ploče...",
+  "task.swarm.failed": "Ploču nije moguće učitati ili resetovati. Pokušajte je osvježiti.",
 
   "command.provider.connect": "Poveži provajdera",
 
@@ -260,6 +271,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
   "notification.permission.titleSandboxEscalation": "Dozvoliti Git operaciju izvan sandboxa?",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
+  "ui.permission.reject": "Odbij",
+  "ui.permission.feedbackPlaceholder": "Recite Kilu šta da uradi drugačije",
+  "ui.permission.feedbackHint": "Enter za odbijanje, Esc za otkazivanje",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
   "ui.permission.doomLoop.rule": "Nastavi pozive alata {{tool}}",
   "ui.permission.rule.addToAllowed": "Dodaj na listu dozvoljenih",
@@ -452,6 +466,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Prilagođeni provajder",
   "settings.providers.connected.environmentDescription": "Povezano iz vaših varijabli okruženja",
   "settings.providers.action.signInChatGPT": "Prijavi se putem ChatGPT",
+  "settings.providers.action.changeApiKey": "Promijeni API ključ",
   "settings.providers.custom.description": "Dodaj prilagođeni provajder putem osnovnog URL-a.",
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
@@ -752,6 +767,14 @@ export const dict = {
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",
+  "session.goal.label": "Cilj",
+  "prompt.goal.set": "Postavi cilj",
+  "prompt.goal.start": "Pokreni cilj",
+  "session.goal.active": "Aktivan",
+  "session.goal.paused": "Pauziran",
+  "session.goal.pause": "Pauziraj",
+  "session.goal.resume": "Nastavi",
+  "session.goal.clear": "Obriši cilj",
   "session.costAlert.header": "Upozorenje o trošku sesije",
   "session.costAlert.continue": "Nastavi",
   "session.costAlert.question":
@@ -849,7 +872,17 @@ export const dict = {
   "settings.notifications.enable.title": "Omogući zvučne obavijesti",
   "settings.notifications.enable.description":
     "Reproduciraj zvukove kada se sesije završe, naiđu na grešku ili trebaju vaš unos",
+  "settings.notifications.workbench.title": "Omogući VS Code obavijesti",
+  "settings.notifications.workbench.description":
+    "Prikaži VS Code obavijesti kada Kilo završi zadatak ili treba vaš unos",
+  "settings.notifications.os.title": "Omogući obavijesti operativnog sistema",
+  "settings.notifications.os.description":
+    "Prikaži izvorna obavještenja operativnog sistema kada Kilo završi zadatak ili treba vaš unos dok VS Code nije aktivan.",
   "settings.notifications.testSound": "Testiraj",
+  "settings.notifications.testOS": "Testiraj",
+  "settings.notifications.testOS.testing": "Slanje testnog obavještenja…",
+  "settings.notifications.testOS.success": "Testno obavještenje je poslano.",
+  "settings.notifications.testOS.error": "Slanje testnog obavještenja nije uspjelo",
   "settings.notifications.sound.default": "Zadano",
   "settings.notifications.sound.system": "Sistem",
   "settings.notifications.sound.description":
@@ -895,6 +928,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code migracija",
+  "settings.experimental.claudeMigration.description":
+    "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
   "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
@@ -1011,6 +1047,9 @@ export const dict = {
     "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
   "settings.agentBehaviour.instructionFiles.description": "Putanje do dodatnih datoteka uputa u sistemskom promptu",
+  "settings.agentBehaviour.pushFixes.title": "Pošalji ispravke pull requesta",
+  "settings.agentBehaviour.pushFixes.description":
+    "Kada agentu pošalješ CI greške ili komentare pregleda iz pull requesta, ili ažuriraš radno stablo iz osnovne grane, zatraži da napravi commit i push kako bi se pull request ažurirao. Upiti za dozvole i dalje važe. Isključi da bi commite radio ručno.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code kompatibilnost",
   "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1084,6 +1123,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model koji se koristi za automatsku i ručnu kompresiju. Ostavite nepostavljeno da biste koristili model za chat. Trošak, brzina i kvalitet sažetka zavise od modela.",
   "settings.context.compactionModel.useChatModel": "Koristi model za chat",
+  "settings.context.compactionModel.hint":
+    "Da odaberete koji se model koristi za kompresiju, pogledajte postavke Modela.",
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
@@ -1271,6 +1312,18 @@ export const dict = {
     "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
   "diffViewer.group.session": "Sesija",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Sačuvaj lokalno",
+  "diffViewer.comment.sendToAgent": "Pošalji agentu",
+  "diffViewer.comment.postToGithub": "Objavi na GitHubu",
+  "diffViewer.comment.loadFailed": "Nije moguće učitati izmjene zahtjeva za povlačenje.",
+  "diffViewer.comment.unavailable": "Ovaj red nije dostupan u trenutnom snimku zahtjeva za povlačenje.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Otvori PR",
+  "diffViewer.comment.localChanges": "Lokalne izmjene",
+  "diffViewer.comment.prChanges": "PR izmjene",
+  "diffViewer.comment.sendToKilo": "Pošalji Kilu",
+  "diffViewer.comment.sendToGithub": "Pošalji na GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Odaberi odredište",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
 

@@ -1,5 +1,92 @@
 # @kilocode/cli
 
+## 7.6.2
+
+### Patch Changes
+
+- [#14013](https://github.com/Kilo-Org/kilocode/pull/14013) [`d2381d7`](https://github.com/Kilo-Org/kilocode/commit/d2381d7ac0949226df5c05680de0c5c5e0a3b690) - Enable the experimental shared agent board (Kilo Swarm) with the `KILO_EXPERIMENTAL_SHARED_AGENT_BOARD` environment variable, or the umbrella `KILO_EXPERIMENTAL`, in addition to the `experimental.shared_agent_board` config key.
+
+## 7.6.1
+
+### Patch Changes
+
+- [#14003](https://github.com/Kilo-Org/kilocode/pull/14003) [`7c23a3e`](https://github.com/Kilo-Org/kilocode/commit/7c23a3e9380dcca59aec248c9e4e3058464e311d) - Fix the TUI question dialog so Enter submits and Escape cancels a custom answer while the prompt autocomplete mode is active.
+
+## 7.6.0
+
+### Major Changes
+
+- [#13793](https://github.com/Kilo-Org/kilocode/pull/13793) [`b5cf426`](https://github.com/Kilo-Org/kilocode/commit/b5cf426158d86573eb0eeb08d754231d813f2d64) - Remove the `interactive_terminal` tool, in-session terminal controls, and related API endpoints. Run commands that need keyboard input in your own terminal instead.
+
+### Minor Changes
+
+- [#13927](https://github.com/Kilo-Org/kilocode/pull/13927) [`ed3cdc6`](https://github.com/Kilo-Org/kilocode/commit/ed3cdc6a144c73215e3fa50bea0555130d6c5796) - Add the `/caffeinate` command and notifications that explain when Kilo keeps the computer awake while agents work.
+
+- [#13929](https://github.com/Kilo-Org/kilocode/pull/13929) [`9dae829`](https://github.com/Kilo-Org/kilocode/commit/9dae82992534ee7d91f221dc8fe6690b3e7ddc2a) Thanks [@WebReflection](https://github.com/WebReflection)! - Add an opt-in, one-time import of supported global Claude Code instructions, simple skills, and disabled MCP definitions into Kilo.
+
+- [#13679](https://github.com/Kilo-Org/kilocode/pull/13679) [`e27ff0a`](https://github.com/Kilo-Org/kilocode/commit/e27ff0a6db3763de6170776eda552cfcb9340ba0) - Keep working toward a session goal with `/goal`, with shared pause, resume, and clear controls in the terminal and VS Code. Pause goals after no-action replies, terminal failures, Stop, new messages, and backend restarts. Rename custom commands or MCP prompts named `goal` to use this reserved command. Show a labeled Goal icon with hover details while work runs.
+
+  Compose multiline goals with images and file attachments in VS Code. Select `/goal` to enter goal mode, or cancel to keep the draft as ordinary chat. Keep drafts and attachments when submission fails.
+
+  Keep the current goal running when replacement attachments are invalid. Make pending Goal submissions read-only, and preserve the draft when Cancel exits Goal mode before acknowledgement.
+
+  Disable clarification questions during active goals and delegated work while keeping permission approvals unchanged. Make safe, reversible decisions autonomously and report completion or blockers.
+
+  Retain Active, Complete, Blocked, and Paused goals with their objective and reason until explicitly cleared. Let the working model explicitly report completion or a blocker with the Goal-only reporting tool, without a separate evaluator or independent verification claim. Pause no-action turns that have no explicit report. Keep complete goals complete after a backend restart and label their resume action as Restart.
+
+  Starting a Goal while a response is running replaces that response after the Goal request is validated.
+
+- [#13782](https://github.com/Kilo-Org/kilocode/pull/13782) [`4d2d800`](https://github.com/Kilo-Org/kilocode/commit/4d2d8001e550c39cfb871f83943b1d5411fd5234) - View and reset the shared agent board from its owning session without stopping agents or clearing conversations.
+
+### Patch Changes
+
+- [#13990](https://github.com/Kilo-Org/kilocode/pull/13990) [`7febec5`](https://github.com/Kilo-Org/kilocode/commit/7febec58fe96ffacc60592e5e94a0b800f9bdd2c) - Report the direct recipient execution state in board_post results and warn when that recipient stopped, failed, was cancelled, or is unknown, so agents do not assume a finished subagent will read the message.
+
+- [#13944](https://github.com/Kilo-Org/kilocode/pull/13944) [`1423442`](https://github.com/Kilo-Org/kilocode/commit/1423442f2659429bc29e7e65bc416099e7ebc710) - Improve CLI link activation and hover feedback across terminal emulators.
+
+- [#13921](https://github.com/Kilo-Org/kilocode/pull/13921) [`36d6d7d`](https://github.com/Kilo-Org/kilocode/commit/36d6d7dab6c7305ff1a25b2cb1d6c6bd22b8f3df) - Include CLI changes alongside VS Code changes in GitHub release notes.
+
+- [#13960](https://github.com/Kilo-Org/kilocode/pull/13960) [`445660b`](https://github.com/Kilo-Org/kilocode/commit/445660b420c791e963b927b6f25500e690dc6c05) - Keep TypeScript file edits responsive while refreshing diagnostics after parallel edits, moves, deletes, and failed checks.
+
+- [#13945](https://github.com/Kilo-Org/kilocode/pull/13945) [`9db9718`](https://github.com/Kilo-Org/kilocode/commit/9db971865f3f95d8150b6fde1b307026402f4edb) - Prevent interrupted snapshot progress from poisoning future prompts, and skip snapshot lock waits when snapshots are disabled.
+
+- Updated dependencies [[`b5cf426`](https://github.com/Kilo-Org/kilocode/commit/b5cf426158d86573eb0eeb08d754231d813f2d64), [`4d2d800`](https://github.com/Kilo-Org/kilocode/commit/4d2d8001e550c39cfb871f83943b1d5411fd5234)]:
+  - @kilocode/sdk@8.0.0
+  - @kilocode/plugin@7.5.17
+  - @opencode-ai/tui@7.5.17
+  - @opencode-ai/ui@7.5.17
+  - @kilocode/kilo-gateway@7.5.17
+  - @kilocode/kilo-indexing@7.5.17
+  - @kilocode/plugin-atomic-chat@7.5.17
+  - @opencode-ai/server@7.5.17
+  - @kilocode/kilo-telemetry@7.5.17
+
+## 7.5.16
+
+### Minor Changes
+
+- [#13861](https://github.com/Kilo-Org/kilocode/pull/13861) [`e207b42`](https://github.com/Kilo-Org/kilocode/commit/e207b423518f170ac716ae68d6900964c57fae15) - Support starting Agent Manager sessions in an explicitly selected existing managed worktree.
+
+- [#13877](https://github.com/Kilo-Org/kilocode/pull/13877) [`a1c674a`](https://github.com/Kilo-Org/kilocode/commit/a1c674adacdea502870aeba79ae77f2cdc661e11) - Allow Agent Manager sessions to reply to the session that sent them a prompt.
+
+- [#13851](https://github.com/Kilo-Org/kilocode/pull/13851) [`251f280`](https://github.com/Kilo-Org/kilocode/commit/251f2809ba85f15f995f8b8c645e359729fc1980) - Add an explicit --prompt-stdin option to Cloud start and send commands.
+
+### Patch Changes
+
+- [#13848](https://github.com/Kilo-Org/kilocode/pull/13848) [`261edcd`](https://github.com/Kilo-Org/kilocode/commit/261edcde55a3fcee8fb94a51f4698a8013b0bd8a) - Show shared agent board messages in the CLI with sender and recipient names, message bodies, and storage status.
+
+- [#13868](https://github.com/Kilo-Org/kilocode/pull/13868) [`66053ef`](https://github.com/Kilo-Org/kilocode/commit/66053ef651ad70747a8b9313b50dfa7a68b5d514) - Load recent messages faster when opening large sessions, speed up token-usage totals across child sessions, and keep older history available on demand.
+
+- [#13896](https://github.com/Kilo-Org/kilocode/pull/13896) [`6275016`](https://github.com/Kilo-Org/kilocode/commit/627501673a4df40708e4b9e7384cf5f9e850860a) Thanks [@esc](https://github.com/esc)! - Fix `kilo session list --all` crashing with "undefined is not an object" instead of listing sessions across all projects.
+
+- [#13855](https://github.com/Kilo-Org/kilocode/pull/13855) [`d75ae54`](https://github.com/Kilo-Org/kilocode/commit/d75ae546bcee5f484cece2a7a59bb723de77e569) - Restore Home and End cursor movement while editing session prompts.
+
+- [#13883](https://github.com/Kilo-Org/kilocode/pull/13883) [`6024a76`](https://github.com/Kilo-Org/kilocode/commit/6024a76db57dc0b5f1d3e904eea426a299bcf653) - Open saved plan files automatically when an agent requests user review in VS Code.
+
+- [#13882](https://github.com/Kilo-Org/kilocode/pull/13882) [`4e2b7a0`](https://github.com/Kilo-Org/kilocode/commit/4e2b7a0358e51457e77155e14c88a1776cd2c34d) - Prevent swarm agents from sending shared board messages to themselves.
+
+- [#13854](https://github.com/Kilo-Org/kilocode/pull/13854) [`8ae6197`](https://github.com/Kilo-Org/kilocode/commit/8ae61973bfc2825639bf89bdb29a2d2c839079cd) - Speed up Windows CLI startup by reusing CPU compatibility checks and skipping detection for explicitly selected or cached binaries.
+
 ## 7.5.15
 
 ### Patch Changes

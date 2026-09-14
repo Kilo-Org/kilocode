@@ -1,9 +1,29 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test"
+import { readFile } from "node:fs/promises"
+import { describe, expect, it, beforeEach, afterEach, afterAll, spyOn } from "bun:test"
+import * as actions from "../../src/agent-manager/pr/PRActions"
+import * as gh from "../../src/agent-manager/gh"
+import * as shellEnv from "../../src/agent-manager/shell-env"
 
-const resolveComment = mock(async (_threadId: string, _cwd: string) => {})
-const unresolveComment = mock(async (_threadId: string, _cwd: string) => {})
+const resolveComment = spyOn(actions, "resolveComment").mockResolvedValue(undefined)
+const unresolveComment = spyOn(actions, "unresolveComment").mockResolvedValue(undefined)
+const addCommentReaction = spyOn(actions, "addCommentReaction").mockResolvedValue(undefined)
+const removeCommentReaction = spyOn(actions, "removeCommentReaction").mockResolvedValue(undefined)
+const execute = spyOn(gh, "execGhRead")
 
-mock.module("../../src/agent-manager/pr/PRActions", () => ({ resolveComment, unresolveComment }))
+async function readInput(args: string[]) {
+  const index = args.indexOf("--input")
+  const file = args.at(index + 1)
+  if (index < 0 || !file) throw new Error("Missing gh input file")
+  return JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>
+}
+
+afterAll(() => {
+  resolveComment.mockRestore()
+  unresolveComment.mockRestore()
+  addCommentReaction.mockRestore()
+  removeCommentReaction.mockRestore()
+  execute.mockRestore()
+})
 
 import { PRStatusBridge } from "../../src/agent-manager/pr-status-bridge"
 import { PRStatusPoller } from "../../src/agent-manager/PRStatusPoller"
@@ -45,13 +65,17 @@ function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
   const sent: AgentManagerOutMessage[] = []
   const opened: string[] = []
   const reads: (string | undefined)[] = []
+  const done = Promise.withResolvers<void>()
   const worktrees: { id: string; path: string; branch: string; prUrl?: string }[] = [
     { id: "wt1", path: "/repo/wt1", branch: "feature" },
   ]
   const bridge = PRStatusBridge.create({
     getWorktrees: () => worktrees as never,
     getWorkspaceRoot: () => "/repo",
-    postToWebview: (msg) => sent.push(msg),
+    postToWebview: (msg) => {
+      sent.push(msg)
+      if (typeof msg.type === "string" && msg.type.endsWith("Result")) done.resolve()
+    },
     updateWorktreePR: () => {},
     hasPersistedPR: () => opts.hasPersisted ?? false,
     openExternal: (url) => opened.push(url),
@@ -62,7 +86,7 @@ function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
     },
   })
   const onStatus = (bridge.poller as unknown as { options: { onStatus: (...a: unknown[]) => void } }).options.onStatus
-  return { bridge, sent, opened, onStatus, worktrees, reads }
+  return { bridge, sent, opened, onStatus, worktrees, reads, done: done.promise }
 }
 
 describe("PRStatusPoller batched GitHub queries", () => {
@@ -143,6 +167,46 @@ describe("PRStatusPoller batched GitHub queries", () => {
     poller.stop()
   })
 
+  it("merges reviewer avatars from the GraphQL query and caches them per login", async () => {
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => "/repo",
+      onStatus: () => undefined,
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      reviewers: (
+        pr: { number: number; reviewers?: Array<{ login: string; state: string; avatar?: string }> },
+        cwd: string,
+      ) => Promise<Array<{ login: string; state: string; avatar?: string }>>
+      fetchReviewers: (
+        number: number,
+        cwd: string,
+      ) => Promise<{
+        items: Array<{ login: string; state: string; avatar?: string }>
+        ok: boolean
+      }>
+    }
+    const fetches: number[] = []
+    internal.fetchReviewers = async (number) => {
+      fetches.push(number)
+      return {
+        items: [{ login: "eshurakov", state: "commented", avatar: "https://avatar/eshurakov" }],
+        ok: true,
+      }
+    }
+    const result = [{ login: "eshurakov", state: "approved", avatar: "https://avatar/eshurakov" }]
+
+    expect(
+      await internal.reviewers({ number: 7, reviewers: [{ login: "eshurakov", state: "approved" }] }, "/repo"),
+    ).toEqual(result)
+    expect(
+      await internal.reviewers({ number: 7, reviewers: [{ login: "eshurakov", state: "approved" }] }, "/repo"),
+    ).toEqual(result)
+    expect(fetches).toEqual([7])
+    poller.stop()
+  })
+
   it("forwards the actual branch for null PR results", async () => {
     const values: Array<{ pr: PRStatus | null; branch?: string }> = []
     const branches: string[] = []
@@ -208,6 +272,26 @@ describe("PRStatusPoller batched GitHub queries", () => {
     poller.stop()
   })
 
+  it("invalidates lookup and dedup caches and refreshes all comment metadata", () => {
+    const { bridge } = harness()
+    const internal = bridge.poller as unknown as {
+      active: boolean
+      generation: number
+      prCache: Map<string, unknown>
+      lastHash: Map<string, string>
+      fetchOne: (id: string, generation: number, full: boolean) => Promise<void>
+    }
+    const fetch = spyOn(internal, "fetchOne").mockResolvedValue(undefined)
+    internal.prCache.set("/repo\0feature", { result: pr, expires: Infinity })
+    internal.lastHash.set("wt1", "stale")
+    bridge.poller.refresh("wt1")
+    expect(internal.prCache.size).toBe(0)
+    expect(internal.lastHash.size).toBe(0)
+    expect(fetch).not.toHaveBeenCalled()
+    internal.active = true
+    bridge.poller.refresh("wt1")
+    expect(fetch).toHaveBeenCalledWith("wt1", internal.generation, true)
+  })
   it("loads checks and reviewers with one request and isolates projects and detached worktrees", async () => {
     let root = "/alpha"
     const tree = { id: "wt1", path: "/alpha/feature", branch: "feature" }
@@ -316,6 +400,8 @@ describe("PRStatusPoller unresolved threads", () => {
     nodes.at(100)?.comments.nodes.push({ id: "reply", body: "Agreed" })
     internal.gh = async (args) => {
       if (args[0] === "repo") return { stdout: JSON.stringify({ owner: { login: "x" }, name: "y" }), stderr: "" }
+      if (args[0] === "api" && args[1] !== "graphql")
+        return { stdout: JSON.stringify({ allow_auto_merge: true }), stderr: "" }
       if (args[0] === "pr") {
         return { stdout: JSON.stringify({ ...pr, statusCheckRollup: [], reviewRequests: [], reviews: [] }), stderr: "" }
       }
@@ -329,8 +415,26 @@ describe("PRStatusPoller unresolved threads", () => {
       )
       if (active && !after)
         Object.assign(data.data.repository.pullRequest, {
-          comments: { nodes: [{ id: "conversation", body: "General comment" }] },
-          reviews: { nodes: [{ id: "review", body: "Review summary", state: "CHANGES_REQUESTED" }] },
+          timelineItems: {
+            pageInfo: { hasPreviousPage: true },
+            nodes: [
+              {
+                __typename: "IssueComment",
+                id: "conversation",
+                author: { login: "alice" },
+                body: "General comment",
+                createdAt: "2026-09-01T10:00:00Z",
+              },
+              {
+                __typename: "PullRequestReview",
+                id: "review",
+                author: { login: "bob" },
+                body: "Review summary",
+                state: "CHANGES_REQUESTED",
+                submittedAt: "2026-09-01T11:00:00Z",
+              },
+            ],
+          },
         })
       return { stdout: JSON.stringify(data), stderr: "" }
     }
@@ -346,9 +450,12 @@ describe("PRStatusPoller unresolved threads", () => {
       expect(query).toContain("baseRefOid")
       expect(query).toContain("headRefOid")
       expect(query.includes("comments(first: 10)")).toBe(active)
+      expect(query.includes("latest: comments(last: 10)")).toBe(active)
       expect(query.includes("body")).toBe(active)
-      expect(query.includes("comments(last: 50)")).toBe(active && !args.includes("cursor=next"))
-      expect(query.includes("reviews(last: 50)")).toBe(active && !args.includes("cursor=next"))
+      expect(query.includes("timelineItems(last: 100")).toBe(active && !args.includes("cursor=next"))
+      expect(query.includes("PULL_REQUEST_COMMIT")).toBe(active && !args.includes("cursor=next"))
+      expect(query.includes("pageInfo { hasPreviousPage }")).toBe(active && !args.includes("cursor=next"))
+      expect(query.includes("viewerDidAuthor viewerCanUpdate viewerCanDelete")).toBe(active)
     }
     if (active) {
       expect(status?.comments).toMatchObject({ total: 102, unresolved: 2 })
@@ -358,6 +465,7 @@ describe("PRStatusPoller unresolved threads", () => {
         { id: "conversation", body: "General comment" },
         { id: "review", body: "Review summary", state: "changes_requested" },
       ])
+      expect(status?.conversationHasEarlier).toBe(true)
     }
     if (!active) {
       expect(status?.comments).toBeUndefined()
@@ -465,6 +573,381 @@ describe("PRStatusPoller unresolved threads", () => {
     expect(status?.number).toBe(pr.number)
     expect(status?.unresolvedThreads).toBeUndefined()
   })
+})
+
+function cached(status: PRStatus, projectId?: string) {
+  const h = harness({ projectId })
+  h.onStatus("wt1", status)
+  h.sent.length = 0
+  const refresh = spyOn(h.bridge.poller, "refresh").mockImplementation(() => {})
+  return { ...h, refresh }
+}
+
+describe("PRStatusBridge replies", () => {
+  const request = {
+    type: "agentManager.replyComment",
+    worktreeId: "wt1",
+    threadId: "PRT_1",
+    body: "@.env\n@alice PTAL\n'quoted' $(touch nope) `command` \\ true\n\n```suggestion\n  const value = \"$HOME\"\n  return value\n```\n",
+    requestId: "request-1",
+  }
+  const status: PRStatus = {
+    ...pr,
+    comments: {
+      total: 1,
+      unresolved: 1,
+      comments: [{ id: "comment", threadId: "PRT_1", author: "reviewer", body: "Review", resolved: false }],
+    },
+  }
+  const response = { data: { addPullRequestReviewThreadReply: { comment: { id: "reply" } } } }
+  const inputs: Record<string, unknown>[] = []
+  beforeEach(() => {
+    inputs.length = 0
+    execute.mockImplementation(async (args) => {
+      if (args.includes("--input")) inputs.push(await readInput(args))
+      return { stdout: JSON.stringify(response), stderr: "" }
+    })
+  })
+  afterEach(() => execute.mockClear())
+
+  it.each([undefined, "alpha"])(
+    "replies with raw variables and refreshes the owning project (%s)",
+    async (projectId) => {
+      const { bridge, sent, refresh, done } = cached(status, projectId)
+      expect(bridge.handleMessage({ ...request, projectId })).toBe(true)
+      await done
+      expect(execute).toHaveBeenCalledTimes(1)
+      const [args, opts] = execute.mock.calls.at(0)!
+      expect(args).toEqual(["api", "graphql", "--method", "POST", "--input", expect.any(String)])
+      expect(args.some((arg) => arg.startsWith("body=") || arg.includes(".env"))).toBe(false)
+      expect(inputs).toHaveLength(1)
+      expect(inputs[0]).toEqual(
+        expect.objectContaining({
+          query: expect.stringContaining("addPullRequestReviewThreadReply"),
+          variables: { id: "PRT_1", body: request.body },
+        }),
+      )
+      expect(opts?.cwd).toBe("/repo/wt1")
+      expect(sent).toEqual([
+        {
+          type: "agentManager.replyCommentResult",
+          worktreeId: "wt1",
+          threadId: "PRT_1",
+          requestId: "request-1",
+          success: true,
+          ...(projectId ? { projectId } : {}),
+        },
+      ])
+      expect(refresh).toHaveBeenCalledWith("wt1")
+    },
+  )
+
+  it.each(["blank", "missing worktree", "missing thread", "missing cache", "changed branch", "other project"])(
+    "rejects %s without a GitHub mutation",
+    (kind) => {
+      const { bridge, sent, onStatus, worktrees } = harness({ projectId: "alpha" })
+      if (kind !== "missing cache") onStatus("wt1", status)
+      sent.length = 0
+      if (kind === "missing worktree") worktrees.length = 0
+      if (kind === "changed branch") worktrees.at(0)!.branch = "other"
+      bridge.handleMessage({
+        ...request,
+        projectId: kind === "other project" ? "beta" : "alpha",
+        body: kind === "blank" ? " \n\t" : request.body,
+        threadId: kind === "missing thread" ? "other" : request.threadId,
+      })
+      expect(execute).not.toHaveBeenCalled()
+      if (kind === "other project")
+        expect(sent).toEqual([
+          expect.objectContaining({
+            type: "agentManager.replyCommentResult",
+            projectId: "beta",
+            worktreeId: "wt1",
+            threadId: "PRT_1",
+            requestId: "request-1",
+            success: false,
+          }),
+        ])
+      else
+        expect(sent).toEqual([
+          expect.objectContaining({ success: false, requestId: "request-1", error: expect.any(String) }),
+        ])
+    },
+  )
+
+  it.each(["GraphQL", "missing data", "process"])("reports %s failure without refreshing", async (kind) => {
+    const { bridge, sent, refresh, done } = cached(status)
+    if (kind === "process") execute.mockRejectedValueOnce(new Error("gh: Not Found"))
+    else
+      execute.mockResolvedValueOnce({
+        stdout: JSON.stringify(kind === "GraphQL" ? { ...response, errors: [{ message: "Forbidden" }] } : {}),
+        stderr: "",
+      })
+    bridge.handleMessage(request)
+    await done
+    expect(sent).toEqual([
+      expect.objectContaining({ success: false, requestId: "request-1", error: expect.any(String) }),
+    ])
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it("retains the root and newest replies without duplicates in a long thread", async () => {
+    const { parseComments } = await import("../../src/agent-manager/pr/am-pr-utils")
+    const comments = Array.from({ length: 25 }, (_, index) => ({ id: String(index), body: `Comment ${index}` }))
+    for (const count of [1, 11, 25]) {
+      const nodes = comments.slice(0, count)
+      const parsed = parseComments([
+        {
+          id: "PRT_1",
+          comments: { nodes: nodes.slice(0, 10).map((node) => ({ ...node, path: "file.ts" })) },
+          latest: { nodes: nodes.slice(-10) },
+        },
+      ])
+      expect(parsed.at(0)?.body).toBe("Comment 0")
+      expect(parsed.at(0)?.file).toBe("file.ts")
+      if (count > 1) expect(parsed.at(0)?.replies?.at(-1)?.body).toBe(`Comment ${count - 1}`)
+      expect(new Set(parsed.at(0)?.replies?.map((reply) => reply.body)).size).toBe(parsed.at(0)?.replies?.length ?? 0)
+    }
+  })
+})
+
+describe("PRStatusBridge comment mutations", () => {
+  afterEach(() => execute.mockClear())
+  const status: PRStatus = {
+    ...pr,
+    id: "PR_1",
+    conversation: [
+      { id: "issue", kind: "issue", author: "me", body: "Mine", canEdit: true, canDelete: true },
+      { id: "other", kind: "issue", author: "other", body: "Not mine", canEdit: false, canDelete: false },
+      { id: "summary", kind: "review", author: "me", body: "Review", canEdit: true, canDelete: true },
+    ],
+    comments: {
+      total: 1,
+      unresolved: 1,
+      comments: [
+        {
+          id: "root",
+          threadId: "thread",
+          author: "me",
+          body: "Root",
+          resolved: false,
+          canEdit: true,
+          canDelete: true,
+          replies: [{ id: "reply", author: "me", body: "Reply", canEdit: true, canDelete: true }],
+        },
+      ],
+    },
+  }
+  const request = {
+    type: "agentManager.mutateComment",
+    worktreeId: "wt1",
+    requestId: "request",
+    prNumber: 1,
+    prUrl: pr.url,
+    body: "@.env\n@alice PTAL\n'quoted' $(touch nope) `command` \\ true\n\n```suggestion\n  const value = \"$HOME\"\n  return value\n```\n",
+  }
+  it.each([
+    ["create", "ignored", "addComment", "subjectId", "PR_1", { commentEdge: { node: { id: "new" } } }],
+    ["edit", "issue", "updateIssueComment", "id", "issue", { issueComment: { id: "issue" } }],
+    ["delete", "issue", "deleteIssueComment", "id", "issue", { clientMutationId: null }],
+    [
+      "edit",
+      "root",
+      "updatePullRequestReviewComment",
+      "pullRequestReviewCommentId",
+      "root",
+      { pullRequestReviewComment: { id: "root" } },
+    ],
+    [
+      "edit",
+      "reply",
+      "updatePullRequestReviewComment",
+      "pullRequestReviewCommentId",
+      "reply",
+      { pullRequestReviewComment: { id: "reply" } },
+    ],
+    ["delete", "reply", "deletePullRequestReviewComment", "id", "reply", { clientMutationId: null }],
+  ] as const)("routes %s %s from cached metadata", async (action, commentId, operation, field, id, payload) => {
+    const { bridge, sent, refresh, done } = cached(status, "alpha")
+    const inputs: Record<string, unknown>[] = []
+    execute.mockImplementation(async (args) => {
+      inputs.push(await readInput(args))
+      return { stdout: JSON.stringify({ data: { [operation]: payload } }), stderr: "" }
+    })
+    expect(bridge.handleMessage({ ...request, projectId: "alpha", action, commentId, kind: "bogus" })).toBe(true)
+    await done
+    expect(execute).toHaveBeenCalledTimes(1)
+    const [args, opts] = execute.mock.calls.at(0)!
+    expect(args).toEqual(["api", "graphql", "--method", "POST", "--input", expect.any(String)])
+    expect(
+      args.some(
+        (arg) => arg.startsWith("body=") || arg.startsWith("id=") || arg.startsWith("query=") || arg.includes(".env"),
+      ),
+    ).toBe(false)
+    expect(inputs).toEqual([
+      expect.objectContaining({
+        query: expect.stringContaining(`${operation}(input: { ${field}: $id`),
+        variables: {
+          id,
+          ...(action === "delete" ? {} : { body: request.body }),
+        },
+      }),
+    ])
+    expect(opts?.cwd).toBe("/repo/wt1")
+    expect(sent).toEqual([
+      {
+        type: "agentManager.mutateCommentResult",
+        projectId: "alpha",
+        worktreeId: "wt1",
+        requestId: "request",
+        success: true,
+      },
+    ])
+    expect(refresh).toHaveBeenCalledWith("wt1")
+  })
+
+  it.each([
+    "blank",
+    "missing worktree",
+    "missing cache",
+    "changed branch",
+    "number",
+    "url",
+    "unknown",
+    "other",
+    "summary",
+    "permission",
+    "node",
+    "action",
+    "project",
+  ])("rejects %s without mutation", async (kind) => {
+    const { bridge, sent, onStatus, worktrees } = harness({ projectId: "alpha" })
+    const cached = structuredClone(status)
+    if (kind === "node") delete cached.id
+    if (kind === "permission") cached.conversation!.at(0)!.canDelete = false
+    if (kind !== "missing cache") onStatus("wt1", cached)
+    sent.length = 0
+    if (kind === "missing worktree") worktrees.length = 0
+    if (kind === "changed branch") worktrees.at(0)!.branch = "other"
+    const refresh = spyOn(bridge.poller, "refresh").mockImplementation(() => {})
+    bridge.handleMessage({
+      ...request,
+      projectId: kind === "project" ? "beta" : "alpha",
+      prNumber: kind === "number" ? 2 : 1,
+      prUrl: kind === "url" ? "https://github.com/other/repo/pull/1" : pr.url,
+      action: kind === "action" ? "bogus" : kind === "permission" ? "delete" : kind === "node" ? "create" : "edit",
+      commentId: ["unknown", "other", "summary"].includes(kind) ? kind : "issue",
+      body: kind === "blank" ? " \n\t" : request.body,
+    })
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(execute).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
+    if (kind === "project")
+      expect(sent).toEqual([
+        expect.objectContaining({
+          type: "agentManager.mutateCommentResult",
+          projectId: "beta",
+          worktreeId: "wt1",
+          requestId: "request",
+          success: false,
+        }),
+      ])
+    else
+      expect(sent).toEqual([
+        expect.objectContaining({ success: false, requestId: "request", error: expect.any(String) }),
+      ])
+  })
+
+  it.each([
+    [
+      "GraphQL",
+      { data: { updateIssueComment: { issueComment: { id: "issue" } } }, errors: [{ message: "Forbidden" }] },
+    ],
+    ["missing data", {}],
+    ["wrong id", { data: { updateIssueComment: { issueComment: { id: "other" } } } }],
+    ["empty delete", { data: { deleteIssueComment: {} } }],
+    ["process", new Error("gh: Forbidden")],
+    ["invalid JSON", "not JSON"],
+  ])("reports %s and retains cached UI", async (kind, response) => {
+    const { bridge, sent, refresh, done } = cached(status)
+    if (response instanceof Error) execute.mockRejectedValueOnce(response)
+    else
+      execute.mockResolvedValueOnce({
+        stdout: typeof response === "string" ? response : JSON.stringify(response),
+        stderr: "",
+      })
+    bridge.handleMessage({ ...request, action: kind === "empty delete" ? "delete" : "edit", commentId: "issue" })
+    await done
+    expect(sent).toEqual([expect.objectContaining({ success: false, requestId: "request", error: expect.any(String) })])
+    expect(refresh).not.toHaveBeenCalled()
+    expect(bridge.snapshot().get("wt1")).toEqual(status)
+  })
+})
+
+describe("PRStatusBridge project routing", () => {
+  it.each([
+    ["agentManager.loadPRFiles", {}],
+    [
+      "agentManager.createReviewComment",
+      { snapshotId: "snapshot", path: "file.ts", side: "RIGHT", startLine: 1, endLine: 1, body: "body" },
+    ],
+    ["agentManager.submitPRReview", { snapshotId: "snapshot", head: "head", event: "COMMENT", body: "body" }],
+    ["agentManager.previewPRSuggestion", { commentId: "comment", suggestion: 0 }],
+    ["agentManager.applyPRSuggestion", { token: "token" }],
+  ] as const)("acknowledges a %s mismatch on its original route", async (type, fields) => {
+    execute.mockClear()
+    const { bridge, sent } = harness({ projectId: "active" })
+    const refresh = spyOn(bridge.poller, "refresh").mockImplementation(() => {})
+    const requestId = `${type}-request`
+    expect(
+      bridge.handleMessage({
+        type,
+        projectId: "background",
+        worktreeId: "wt1",
+        requestId,
+        prNumber: 1,
+        prUrl: pr.url,
+        ...fields,
+      }),
+    ).toBe(true)
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(execute).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: `${type}Result`,
+        projectId: "background",
+        worktreeId: "wt1",
+        requestId,
+        prNumber: 1,
+        prUrl: pr.url,
+        success: false,
+      }),
+    ])
+    expect(JSON.stringify(sent)).not.toContain("active")
+  })
+})
+
+it.each(["resolveComment", "unresolveComment"])("settles %s without refreshing a different project", async (action) => {
+  const opts = { projectId: "original" }
+  const { bridge, sent } = harness(opts)
+  const pending = Promise.withResolvers<void>()
+  const operation = action === "resolveComment" ? resolveComment : unresolveComment
+  operation.mockReturnValueOnce(pending.promise)
+  const refresh = spyOn(bridge.poller, "refresh").mockImplementation(() => {})
+  bridge.handleMessage({
+    type: `agentManager.${action}`,
+    projectId: opts.projectId,
+    worktreeId: "wt1",
+    threadId: "thread",
+  })
+  opts.projectId = "other"
+  pending.resolve()
+  await Promise.resolve()
+  expect(sent).toEqual([
+    expect.objectContaining({ type: `agentManager.${action}Result`, projectId: "original", success: true }),
+  ])
+  expect(refresh).not.toHaveBeenCalled()
 })
 
 describe("PRStatusBridge.handleMessage openPR", () => {
@@ -701,6 +1184,50 @@ describe("PRStatusBridge.reset", () => {
     bridge.notifyError("gh_auth")
     expect(sent).toHaveLength(1)
   })
+
+  it("disposes suggestions, drops review snapshots, and allows future actions", async () => {
+    const { bridge, sent } = harness()
+    const current = bridge as unknown as {
+      reviews: { snapshots: Map<string, unknown> }
+      suggestions: { tokens: Map<string, unknown>; disposed: boolean }
+    }
+    const reviews = current.reviews
+    const suggestions = current.suggestions
+    reviews.snapshots.set("snapshot", { data: "x" })
+    suggestions.tokens.set("token", { snapshot: "x" })
+
+    bridge.reset()
+
+    const next = bridge as unknown as {
+      reviews: { snapshots: Map<string, unknown> }
+      suggestions: { tokens: Map<string, unknown>; disposed: boolean }
+    }
+    expect(suggestions.disposed).toBe(true)
+    expect(suggestions.tokens.size).toBe(0)
+    expect(next.reviews).not.toBe(reviews)
+    expect(next.reviews.snapshots.size).toBe(0)
+    expect(next.suggestions).not.toBe(suggestions)
+    expect(next.suggestions.disposed).toBe(false)
+
+    bridge.handleMessage({
+      type: "agentManager.previewPRSuggestion",
+      worktreeId: "wt1",
+      requestId: "future",
+      prNumber: 1,
+      prUrl: pr.url,
+      commentId: "comment",
+      suggestion: 0,
+    })
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(sent.at(-1)).toEqual(
+      expect.objectContaining({
+        type: "agentManager.previewPRSuggestionResult",
+        requestId: "future",
+        success: false,
+      }),
+    )
+    expect((sent.at(-1) as { error?: string }).error).not.toContain("disposed")
+  })
 })
 
 // --- resolveComment / unresolveComment message handling ---
@@ -775,5 +1302,372 @@ describe("PRStatusBridge.handleMessage resolveComment", () => {
     bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt-missing", threadId: "PRT_1" })
     expect(resolveComment).not.toHaveBeenCalled()
     expect(logged.length).toBeGreaterThan(0)
+  })
+})
+
+describe("PRStatusBridge.handleMessage commentReaction", () => {
+  beforeEach(() => {
+    addCommentReaction.mockReset()
+    removeCommentReaction.mockReset()
+  })
+
+  it("adds a reaction to a cached review comment and reports success", async () => {
+    const { bridge, sent, onStatus } = harness()
+    onStatus("wt1", {
+      ...pr,
+      comments: {
+        total: 1,
+        unresolved: 1,
+        comments: [
+          { id: "PRRC_1", threadId: "PRRT_1", author: "alice", body: "note", resolved: false, outdated: false },
+        ],
+      },
+    })
+    addCommentReaction.mockResolvedValueOnce(undefined)
+
+    expect(
+      bridge.handleMessage({
+        type: "agentManager.commentReaction",
+        worktreeId: "wt1",
+        commentId: "PRRC_1",
+        reaction: "HEART",
+        add: true,
+      }),
+    ).toBe(true)
+    await Promise.resolve()
+
+    expect(addCommentReaction).toHaveBeenCalledWith("PRRC_1", "HEART", "/repo/wt1")
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "agentManager.commentReactionResult",
+        worktreeId: "wt1",
+        commentId: "PRRC_1",
+        reaction: "HEART",
+        add: true,
+        success: true,
+      }),
+    )
+  })
+
+  it("adds a reaction to a cached thread reply and reports success", async () => {
+    const { bridge, sent, onStatus } = harness()
+    onStatus("wt1", {
+      ...pr,
+      comments: {
+        total: 1,
+        unresolved: 1,
+        comments: [
+          {
+            id: "PRRC_1",
+            threadId: "PRRT_1",
+            author: "alice",
+            body: "note",
+            resolved: false,
+            outdated: false,
+            replies: [{ id: "PRRC_2", author: "bob", body: "reply" }],
+          },
+        ],
+      },
+    })
+    addCommentReaction.mockResolvedValueOnce(undefined)
+
+    expect(
+      bridge.handleMessage({
+        type: "agentManager.commentReaction",
+        worktreeId: "wt1",
+        commentId: "PRRC_2",
+        reaction: "HEART",
+        add: true,
+      }),
+    ).toBe(true)
+    await Promise.resolve()
+
+    expect(addCommentReaction).toHaveBeenCalledWith("PRRC_2", "HEART", "/repo/wt1")
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "agentManager.commentReactionResult",
+        worktreeId: "wt1",
+        commentId: "PRRC_2",
+        reaction: "HEART",
+        add: true,
+        success: true,
+      }),
+    )
+  })
+
+  it("removes a reaction and reports a failure", async () => {
+    const { bridge, sent, onStatus } = harness()
+    onStatus("wt1", {
+      ...pr,
+      conversation: [{ id: "IC_1", author: "alice", body: "note" }],
+    })
+    removeCommentReaction.mockRejectedValueOnce(new Error("gh: forbidden"))
+
+    bridge.handleMessage({
+      type: "agentManager.commentReaction",
+      worktreeId: "wt1",
+      commentId: "IC_1",
+      reaction: "HEART",
+      add: false,
+    })
+    await Promise.resolve()
+
+    expect(removeCommentReaction).toHaveBeenCalledWith("IC_1", "HEART", "/repo/wt1")
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "agentManager.commentReactionResult",
+        commentId: "IC_1",
+        add: false,
+        success: false,
+      }),
+    )
+  })
+})
+
+// --- batched full-sync lookups ---
+
+function graphQuery(args: string[]): string {
+  return args.find((arg) => arg.startsWith("query=")) ?? ""
+}
+
+const batchNode = {
+  id: "PR_7",
+  number: 7,
+  title: "Batched PR",
+  body: "Body",
+  url: "https://github.com/example/repo/pull/7",
+  state: "OPEN",
+  isDraft: false,
+  reviewDecision: null,
+  additions: 1,
+  deletions: 0,
+  changedFiles: 1,
+  headRefName: "feature",
+  baseRefOid: refs.baseRefOid,
+  headRefOid: refs.headRefOid,
+  isCrossRepository: false,
+  createdAt: "2026-09-01T00:00:00Z",
+  author: { login: "alice" },
+  mergeable: "MERGEABLE",
+  mergeStateStatus: "CLEAN",
+  autoMergeRequest: null,
+  reviewRequests: { nodes: [] },
+  reviews: { nodes: [] },
+  commits: { nodes: [{ commit: { statusCheckRollup: { contexts: { totalCount: 0, nodes: [] } } } }] },
+}
+
+const legacy = {
+  number: 9,
+  title: "Legacy PR",
+  body: "",
+  url: "https://github.com/example/repo/pull/9",
+  state: "OPEN",
+  isDraft: false,
+  reviewDecision: null,
+  additions: 0,
+  deletions: 0,
+  changedFiles: 0,
+  headRefName: "feature",
+  baseRefOid: refs.baseRefOid,
+  headRefOid: refs.headRefOid,
+  statusCheckRollup: [],
+  reviewRequests: [],
+  reviews: [],
+}
+
+function batchPayload(query: string, node: unknown): unknown {
+  const repo: Record<string, unknown> = {}
+  for (const match of query.matchAll(/([bc]\d+):/g)) {
+    const alias = match[1]!
+    repo[alias] = alias === "b0" && node ? { nodes: [node] } : { nodes: [] }
+  }
+  return { data: { repository: repo, rateLimit: { cost: 2 } } }
+}
+
+function ghRouter(calls: string[][], node: unknown) {
+  return async (args: string[]) => {
+    calls.push(args)
+    if (args[0] === "--version") return { stdout: "gh version 2", stderr: "" }
+    if (args[0] === "repo")
+      return {
+        stdout: JSON.stringify({
+          owner: { login: "example" },
+          name: "repo",
+          squashMergeAllowed: true,
+          mergeCommitAllowed: true,
+          rebaseMergeAllowed: true,
+          viewerPermission: "WRITE",
+        }),
+        stderr: "",
+      }
+    if (args[0] === "api" && args[1] === "repos")
+      return { stdout: JSON.stringify({ allow_auto_merge: false }), stderr: "" }
+    if (args[0] === "api") {
+      const query = graphQuery(args)
+      if (query.includes("pullRequests(headRefName"))
+        return { stdout: JSON.stringify(batchPayload(query, node)), stderr: "" }
+      if (query.includes("reviewThreads")) return { stdout: JSON.stringify(page([])), stderr: "" }
+      return {
+        stdout: JSON.stringify({
+          data: { repository: { pullRequest: { reviewRequests: { nodes: [] }, reviews: { nodes: [] } } } },
+        }),
+        stderr: "",
+      }
+    }
+    if (args[0] === "pr" && args[1] === "checks") return { stdout: "[]", stderr: "" }
+    return { stdout: JSON.stringify(legacy), stderr: "" }
+  }
+}
+
+describe("PRStatusPoller batched full sync", () => {
+  const git = spyOn(shellEnv, "execWithShellEnv")
+
+  beforeEach(() => {
+    execute.mockReset()
+    git.mockReset()
+    git.mockImplementation(async (cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return { stdout: `${refs.headRefOid}\n`, stderr: "" }
+      if (cmd === "git" && args[0] === "config") return { stdout: "", stderr: "" }
+      return { stdout: "", stderr: "" }
+    })
+  })
+
+  afterEach(() => {
+    execute.mockReset()
+    git.mockReset()
+  })
+
+  afterAll(() => git.mockRestore())
+
+  it("resolves every worktree in one GraphQL request and skips pr view", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(ghRouter(calls, batchNode))
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => graphQuery(args).includes("pullRequests(headRefName"))).toHaveLength(1)
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 7 }),
+      }),
+    ])
+  })
+
+  it("keeps showing a merged PR from the batch instead of dropping it", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(ghRouter(calls, { ...batchNode, state: "MERGED", mergeStateStatus: "UNKNOWN" }))
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 7, state: "merged" }),
+      }),
+    ])
+  })
+
+  it("does not attribute a fork PR that only shares the branch name and skips legacy lookups", async () => {
+    // headRefName "main" on the base repo matches fork PRs opened from the fork's main.
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(
+      ghRouter(calls, { ...batchNode, number: 13207, isCrossRepository: true, headRefOid: "f".repeat(40) }),
+    )
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(sent).toEqual([expect.objectContaining({ type: "agentManager.prStatus", worktreeId: "wt1", pr: null })])
+  })
+
+  it("runs the legacy pr view when the batch returns no nodes for a tracking ref", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    execute.mockImplementation(ghRouter(calls, undefined))
+    git.mockImplementation(async (cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return { stdout: `${refs.headRefOid}\n`, stderr: "" }
+      if (cmd === "git" && args[0] === "config") return { stdout: "refs/pull/9/head\n", stderr: "" }
+      return { stdout: "", stderr: "" }
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr" && args[1] === "view").length).toBeGreaterThan(0)
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 9 }),
+      }),
+    ])
+  })
+
+  it("falls back to legacy lookups when the batch request rejects", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    const router = ghRouter(calls, batchNode)
+    execute.mockImplementation(async (args: string[]) => {
+      if (graphQuery(args).includes("pullRequests(headRefName")) throw new Error("network error")
+      return router(args)
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr" && args[1] === "view").length).toBeGreaterThan(0)
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 9 }),
+      }),
+    ])
+  })
+
+  it("retries the batch with base fields after an unknown-field error", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    const router = ghRouter(calls, { number: 7, state: "OPEN", isCrossRepository: false, headRefOid: refs.headRefOid })
+    execute.mockImplementation(async (args: string[]) => {
+      const query = graphQuery(args)
+      if (query.includes("pullRequests(headRefName") && query.includes("statusCheckRollup")) {
+        calls.push(args)
+        throw new Error('GraphQL: Unknown field "mergeStateStatus"')
+      }
+      return router(args)
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    const batches = calls.filter((args) => graphQuery(args).includes("pullRequests(headRefName"))
+    expect(batches).toHaveLength(2)
+    expect(graphQuery(batches[0]!)).toContain("statusCheckRollup")
+    expect(graphQuery(batches[1]!)).not.toContain("statusCheckRollup")
+    expect(sent).toEqual([
+      expect.objectContaining({
+        type: "agentManager.prStatus",
+        worktreeId: "wt1",
+        pr: expect.objectContaining({ number: 7 }),
+      }),
+    ])
   })
 })

@@ -36,9 +36,9 @@ import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
-import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { KiloSession } from "@/kilocode/session"
 import { forkWriter } from "@/kilocode/session/fork"
+import { GoalState } from "@/kilocode/session/goal/state"
 import { kiloSessionFork } from "@/kilocode/session/fork-command"
 import { KiloSessionEvent } from "@/kilocode/session/event"
 import { SessionExport } from "@/kilocode/session-export"
@@ -117,7 +117,7 @@ export function fromRow(row: SessionRow): Info {
       },
     },
     share,
-    metadata: row.metadata ?? undefined,
+    metadata: GoalState.project(row.id, row.metadata), // kilocode_change
     revert,
     permission: row.permission ? [...row.permission] : undefined,
     time: {
@@ -661,6 +661,7 @@ export const layer: Layer.Layer<
       if (source) yield* SandboxPolicy.inherit(source, result.id, input.sandboxFallback, input.sourceDirectory)
       // kilocode_change end
 
+      result.metadata = GoalState.project(result.id, result.metadata) // kilocode_change
       yield* events.publish(SessionV1.Event.Created, { sessionID: result.id, info: result })
 
       return result
@@ -708,6 +709,7 @@ export const layer: Layer.Layer<
     // kilocode_change end
 
     const remove: Interface["remove"] = Effect.fnUntraced(function* (sessionID: SessionID) {
+      GoalState.pause(sessionID) // kilocode_change
       const session = yield* get(sessionID)
       try {
         // `remove` needs to work in all cases, such as broken sessions that
@@ -731,7 +733,6 @@ export const layer: Layer.Layer<
             KiloSession.clearPlatformOverride(sessionID)
             if (hasInstance) {
               yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
-              yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID)).pipe(Effect.ignore)
               void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
                 app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(
                   () => {},
@@ -933,6 +934,7 @@ export const layer: Layer.Layer<
           revert: info.revert === null ? undefined : (info.revert ?? current.revert),
           permission: info.permission === null ? undefined : (info.permission ?? current.permission),
         } as Info
+        next.metadata = GoalState.project(sessionID, next.metadata) // kilocode_change
         yield* events.publish(SessionV1.Event.Updated, { sessionID, info: next })
       })
 
@@ -945,6 +947,7 @@ export const layer: Layer.Layer<
     })
 
     const setArchived = Effect.fn("Session.setArchived")(function* (input: { sessionID: SessionID; time?: number }) {
+      if (input.time != null) GoalState.pause(input.sessionID) // kilocode_change
       yield* patch(input.sessionID, { time: { archived: input.time } }).pipe(Effect.orDie)
     })
 

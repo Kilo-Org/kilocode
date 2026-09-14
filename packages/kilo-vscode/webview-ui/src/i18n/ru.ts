@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Завершено (по сообщению модели)",
+  "session.goal.blocked": "Заблокировано",
+  "session.goal.restart": "Перезапустить цель",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Доска",
+  "task.swarm.refresh": "Обновить",
+  "task.swarm.reset": "Сбросить доску",
+  "task.swarm.resetTitle": "Сбросить эту доску?",
+  "task.swarm.resetDescription":
+    "Очистить видимые сообщения? Разговоры и выполняемые задачи останутся без изменений. Агенты могут публиковать новые сообщения.",
+  "task.swarm.loading": "Загрузка доски...",
+  "task.swarm.failed": "Не удалось загрузить или сбросить доску. Попробуйте обновить её.",
 
   "command.provider.connect": "Подключить провайдера",
 
@@ -257,6 +268,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.reject": "Отклонить",
+  "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
+  "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
   "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",
@@ -447,6 +461,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Пользовательский провайдер",
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Изменить API-ключ",
   "settings.providers.custom.description": "Добавьте пользовательский провайдер по базовому URL.",
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
@@ -749,6 +764,14 @@ export const dict = {
   "session.outcome.interrupted": "Раунд прерван",
   "session.outcome.error": "Раунд завершился с ошибкой",
   "session.outcome.finish": "Причина завершения: {{reason}}",
+  "session.goal.label": "Цель",
+  "prompt.goal.set": "Задать цель",
+  "prompt.goal.start": "Начать работу над целью",
+  "session.goal.active": "Активна",
+  "session.goal.paused": "Приостановлена",
+  "session.goal.pause": "Пауза",
+  "session.goal.resume": "Возобновить",
+  "session.goal.clear": "Очистить цель",
   "session.costAlert.header": "Оповещение о стоимости сессии",
   "session.costAlert.continue": "Продолжить",
   "session.costAlert.question":
@@ -845,7 +868,17 @@ export const dict = {
   "settings.notifications.enable.title": "Включить звуковые уведомления",
   "settings.notifications.enable.description":
     "Воспроизводить звуки при завершении сеансов, возникновении ошибки или необходимости вашего участия",
+  "settings.notifications.workbench.title": "Включить уведомления VS Code",
+  "settings.notifications.workbench.description":
+    "Показывать уведомления VS Code, когда Kilo завершает задачу или требуется ваше участие",
+  "settings.notifications.os.title": "Включить уведомления операционной системы",
+  "settings.notifications.os.description":
+    "Показывать нативные уведомления операционной системы, когда Kilo завершает задачу или требуется ваше участие, а VS Code неактивен.",
   "settings.notifications.testSound": "Тест",
+  "settings.notifications.testOS": "Тест",
+  "settings.notifications.testOS.testing": "Отправка тестового уведомления…",
+  "settings.notifications.testOS.success": "Тестовое уведомление отправлено.",
+  "settings.notifications.testOS.error": "Не удалось отправить тестовое уведомление",
   "settings.notifications.sound.default": "По умолчанию",
   "settings.notifications.sound.system": "Системный",
   "settings.notifications.sound.description":
@@ -891,6 +924,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.claudeMigration.title": "Миграция Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
   "settings.experimental.taskModelSelection.title": "Выбор модели субагента Task",
@@ -1007,6 +1043,9 @@ export const dict = {
     "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
   "settings.agentBehaviour.instructionFiles.description": "Пути к дополнительным файлам инструкций в системном промпте",
+  "settings.agentBehaviour.pushFixes.title": "Отправлять исправления пул-реквеста",
+  "settings.agentBehaviour.pushFixes.description":
+    "Когда вы отправляете агенту ошибки CI или комментарии ревью из пул-реквеста либо обновляете worktree из базовой ветки, попросить его сделать коммит и push, чтобы пул-реквест обновился. Запросы разрешений по-прежнему действуют. Отключите, чтобы делать коммиты вручную.",
   "settings.agentBehaviour.claudeCompat.heading": "Совместимость с Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Загружать файлы Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1079,6 +1118,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, используемая для автоматического и ручного сжатия. Оставьте поле пустым, чтобы использовать модель чата. Стоимость, скорость и качество сводки зависят от модели.",
   "settings.context.compactionModel.useChatModel": "Использовать модель чата",
+  "settings.context.compactionModel.hint": "Чтобы выбрать модель для сжатия, см. настройки Моделей.",
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
@@ -1265,6 +1305,18 @@ export const dict = {
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Сохранить локально",
+  "diffViewer.comment.sendToAgent": "Отправить агенту",
+  "diffViewer.comment.postToGithub": "Опубликовать на GitHub",
+  "diffViewer.comment.loadFailed": "Не удалось загрузить изменения запроса на слияние.",
+  "diffViewer.comment.unavailable": "Эта строка недоступна в текущем снимке запроса на слияние.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Открыть PR",
+  "diffViewer.comment.localChanges": "Локальные изменения",
+  "diffViewer.comment.prChanges": "Изменения PR",
+  "diffViewer.comment.sendToKilo": "Отправить в Kilo",
+  "diffViewer.comment.sendToGithub": "Отправить в GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Выбрать назначение",
   "diffViewer.notice.snapshotsDisabled":
     "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
 

@@ -429,6 +429,26 @@ describe("WorktreeManager.createWorktree", () => {
     )
   })
 
+  it("reports when an explicit base branch is selected in a repository with no commits", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-empty-"))
+    tempDirs.push(root)
+    gitExec(["git", "init", "-b", "main", root])
+
+    await expect(createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" })).rejects.toThrow(
+      "This repository has no commits yet. Create an initial commit before using worktrees.",
+    )
+  })
+
+  it("allows an explicit base branch from an orphan current branch", async () => {
+    const root = await createTempRepo()
+    gitExec(["git", "-C", root, "checkout", "--orphan", "orphan"])
+    gitExec(["git", "-C", root, "rm", "-rf", "."])
+
+    const result = await createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" })
+
+    expect(result.parentBranch).toBe("main")
+  })
+
   it("throws when workspace is not a git repo", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-nogit-"))
     tempDirs.push(dir)
@@ -457,7 +477,7 @@ describe("WorktreeManager.createWorktree", () => {
     expect(result.parentBranch).toBe(branch)
   })
 
-  it("uses two checkout workers without changing Git configuration", async () => {
+  it("uses four checkout workers without changing Git configuration", async () => {
     const root = await createTempRepo()
     const hook = path.join(root, ".git", "hooks", "post-checkout")
     const file = path.join(root, "workers")
@@ -466,7 +486,7 @@ describe("WorktreeManager.createWorktree", () => {
 
     await createManager(root).createWorktree({ branchName: "parallel-checkout" })
 
-    expect((await fs.readFile(file, "utf8")).trim()).toBe("2")
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("4")
     expect((await simpleGit(root).getConfig("checkout.workers")).value).toBeNull()
   })
 

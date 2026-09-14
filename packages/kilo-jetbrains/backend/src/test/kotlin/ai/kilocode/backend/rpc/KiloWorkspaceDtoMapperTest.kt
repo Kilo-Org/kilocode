@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.workspace.ModelInfo
 import ai.kilocode.backend.workspace.ModelCostInfo
 import ai.kilocode.backend.workspace.ModelOptionsInfo
@@ -8,6 +9,7 @@ import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KiloWorkspaceDtoMapperTest {
@@ -85,5 +87,25 @@ class KiloWorkspaceDtoMapperTest {
         assertEquals(0.1, result.cost?.input)
         assertEquals("Preview text", result.options?.description)
         assertEquals(0.5, result.terminalBench?.overallScore)
+    }
+
+    @Test
+    fun `warning maps path, message and detail`() {
+        val warning = ConfigWarning(path = ".kilo/kilo.json", message = "Invalid JSON", detail = "CloseBraceExpected")
+
+        val dto = KiloWorkspaceDtoMapper.warning(warning)
+
+        assertEquals(".kilo/kilo.json", dto.path)
+        assertEquals("Invalid JSON", dto.message)
+        assertEquals("CloseBraceExpected", dto.detail)
+    }
+
+    @Test
+    fun `warning maps missing detail to null`() {
+        val warning = ConfigWarning(path = ".kilo/kilo.json", message = "Invalid JSON")
+
+        val dto = KiloWorkspaceDtoMapper.warning(warning)
+
+        assertNull(dto.detail)
     }
 }

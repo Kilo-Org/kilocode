@@ -66,6 +66,29 @@ function meta(part: ToolPart, key: string): unknown {
   return (part.state as { metadata?: Record<string, unknown> }).metadata?.[key]
 }
 
+/** Child session IDs of Task tool parts, optionally restricted to background jobs. */
+function taskChildren(tools: ToolPart[], background?: boolean): string[] {
+  const ids: string[] = []
+  for (const part of tools) {
+    if (part.tool !== "task") continue
+    if (background !== undefined && meta(part, "background") !== background) continue
+    const id = text(meta(part, "sessionId"))
+    if (!id || ids.includes(id)) continue
+    ids.push(id)
+  }
+  return ids
+}
+
+/** Child session IDs of every Task tool part, in spawn order, without duplicates. */
+export function children(tools: ToolPart[]): string[] {
+  return taskChildren(tools)
+}
+
+/** Child session IDs spawned as background jobs, which show a capped reasoning preview. */
+export function backgroundChildren(tools: ToolPart[]): Set<string> {
+  return new Set(taskChildren(tools, true))
+}
+
 function working(status: SessionStatusInfo | undefined): boolean {
   return status?.type === "busy" || status?.type === "retry"
 }

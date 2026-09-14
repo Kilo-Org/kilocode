@@ -186,6 +186,21 @@ describe("agent_manager tool", () => {
       "filter",
       "sessionID",
       "prompt",
+      "replyTo",
+      "sectionID",
+      "questionID",
+      "answers",
+    ])
+    expect(schema.required).toEqual([
+      "mode",
+      "versions",
+      "tasks",
+      "worktreeID",
+      "action",
+      "filter",
+      "sessionID",
+      "prompt",
+      "replyTo",
       "sectionID",
       "questionID",
       "answers",
@@ -208,6 +223,7 @@ describe("agent_manager tool", () => {
       "filter",
       "sessionID",
       "prompt",
+      "replyTo",
       "sectionID",
       "questionID",
       "answers",
@@ -382,6 +398,14 @@ describe("agent_manager tool", () => {
       action: "prompt",
       sessionID: "ses_target",
       prompt: "go",
+    })
+    expect(
+      decode({ ...blanks, action: "prompt", sessionID: "ses_target", prompt: "done", replyTo: "amr_request" }),
+    ).toEqual({
+      action: "prompt",
+      sessionID: "ses_target",
+      prompt: "done",
+      replyTo: "amr_request",
     })
   })
 
@@ -609,6 +633,66 @@ describe("agent_manager tool", () => {
     expect(result.output).toContain("queued behind active work")
     expect(result.output).toContain("does not wait for completion")
     expect(result.metadata).toEqual(expect.objectContaining({ action: "prompt", sessionID: "ses_target" }))
+    await rt.dispose()
+  })
+
+  test("forwards a peer reply reference to Agent Manager", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return { operation: "prompt" as const, sessionID: SessionID.make("ses_caller"), delivered: true as const }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          {
+            action: "prompt",
+            sessionID: SessionID.make("ses_caller"),
+            prompt: "The change is complete.",
+            replyTo: "amr_request",
+          },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["prompt"],
+        always: ["prompt"],
+        metadata: {
+          action: "prompt",
+          sessionID: "ses_caller",
+          replyTo: "amr_request",
+          description: expect.any(String),
+        },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "prompt",
+        sessionID: ctx.sessionID,
+        sourceSessionID: ctx.sessionID,
+        targetSessionID: "ses_caller",
+        prompt: "The change is complete.",
+        replyTo: "amr_request",
+      },
+    ])
+    expect(result.title).toBe("Reply accepted")
+    expect(result.output).toContain("does not wait for completion")
+    expect(result.metadata).toEqual(
+      expect.objectContaining({ action: "prompt", sessionID: "ses_caller", replyTo: "amr_request" }),
+    )
     await rt.dispose()
   })
 
