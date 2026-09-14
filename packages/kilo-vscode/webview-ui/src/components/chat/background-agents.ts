@@ -78,6 +78,18 @@ export function children(tools: ToolPart[]): string[] {
   return ids
 }
 
+/** Child session IDs spawned as background jobs, which show a capped reasoning preview. */
+export function backgroundChildren(tools: ToolPart[]): Set<string> {
+  const ids = new Set<string>()
+  for (const part of tools) {
+    if (part.tool !== "task") continue
+    if (meta(part, "background") !== true) continue
+    const id = text(meta(part, "sessionId"))
+    if (id) ids.add(id)
+  }
+  return ids
+}
+
 function working(status: SessionStatusInfo | undefined): boolean {
   return status?.type === "busy" || status?.type === "retry"
 }

@@ -1295,6 +1295,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.sessionID,
             message.title,
             this.getWorkspaceDirectory(message.parentSessionID),
+            message.background === true,
           )
           break
         case "saveImage":

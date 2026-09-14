@@ -96,6 +96,8 @@ interface MessageListProps {
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  /** Show reasoning as a compact capped preview (background subagent transcripts). */
+  reasoningCapped?: boolean
   /** Whether inline questions and suggestions are actionable on this surface. */
   interactivePrompts?: boolean
   queuedDisabled?: boolean
@@ -1385,6 +1387,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                         readonly={props.readonly}
                         interactivePrompts={props.interactivePrompts}
+                        reasoningCapped={props.reasoningCapped}
                       />
                     )}
                   </Virtualizer>
@@ -1405,6 +1408,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
                       readonly={props.readonly}
                       interactivePrompts={props.interactivePrompts}
+                      reasoningCapped={props.reasoningCapped}
                     />
                   )}
                 </For>
@@ -1427,6 +1431,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                   readonly={props.readonly}
                   interactivePrompts={props.interactivePrompts}
+                  reasoningCapped={props.reasoningCapped}
                 />
               )}
             </For>
