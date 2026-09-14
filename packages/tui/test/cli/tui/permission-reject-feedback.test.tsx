@@ -153,7 +153,7 @@ async function mount(
 
 for (const key of ["c", "x"]) {
   for (const stage of ["permission", "feedback", "always"]) {
-    test(`Ctrl+${key} exits from ${stage} without replying or changing stages`, async () => {
+    test(`Ctrl+${key} interrupts ${stage} without exiting the app`, async () => {
       await using tmp = await tmpdir()
       const requests: { path: string; body: unknown }[] = []
       let exits = 0
@@ -181,11 +181,16 @@ for (const key of ["c", "x"]) {
         await capture(app, title)
         app.mockInput.pressKey(key, { ctrl: true })
         await app.flush()
-        expect(exits).toBe(1)
-        expect(requests).toEqual([])
-        expect(await capture(app, title)).toContain(title)
-        if (stage === "feedback") {
-          expect((app.renderer.currentFocusedEditor as TextareaRenderable).plainText).toBe("keep this feedback")
+        expect(exits).toBe(0)
+        if (stage === "always") {
+          expect(requests).toEqual([])
+          expect(await capture(app, "Permission required")).toContain("Permission required")
+        }
+        if (stage !== "always") {
+          await wait(() => requests.some((item) => item.path === "/permission/perm-reject-1/reply"))
+          const reply = requests.find((item) => item.path === "/permission/perm-reject-1/reply")
+          expect((reply?.body as { reply?: string }).reply).toBe("reject")
+          expect((reply?.body as { message?: string }).message).toBeUndefined()
         }
       } finally {
         app.renderer.destroy()

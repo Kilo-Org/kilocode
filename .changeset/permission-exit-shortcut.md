@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Keep the app exit shortcut working in permission prompts and rejection feedback. Preserve Escape to reject or cancel.
+Reject pending permissions without feedback when using the app exit shortcut, returning to the normal prompt and its exit confirmation. Preserve Escape to open or cancel rejection feedback.
