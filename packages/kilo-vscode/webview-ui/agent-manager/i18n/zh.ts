@@ -130,6 +130,10 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "打开一个包含 git 存储库的文件夹以使用 worktrees。",
   "agentManager.setup.error.lfs_missing": "此存储库使用 Git LFS，但找不到 git-lfs。请安装 Git LFS。",
   "agentManager.setup.error.no_commits": "此存储库尚无提交。在使用 worktrees 之前，请创建一个初始提交。",
+  "agentManager.setup.error.worktree_missing": "该 worktree 的文件夹已不存在。可从其分支恢复，或移除该 worktree。",
+  "agentManager.setup.error.worktree_unregistered":
+    "git 已不再将该文件夹作为 worktree 跟踪。请移除后新建一个 worktree。",
+  "agentManager.setup.error.git_timeout": "Git 未及时响应。请确认仓库可访问后重试。",
   "agentManager.shortcuts.title": "键盘快捷键",
   "agentManager.shortcuts.category.sidebar": "侧边栏",
   "agentManager.shortcuts.category.tabs": "标签页",

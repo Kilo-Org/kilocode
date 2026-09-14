@@ -1,4 +1,5 @@
 import { existsSync } from "fs"
+import { isTimeout } from "./command-budget"
 
 export interface BranchListItem {
   name: string
@@ -60,6 +61,13 @@ export type WorktreeErrorContext = {
   probeFailed?: boolean
   /** Existence check, injectable for tests. */
   exists?: (dir: string) => boolean
+  /**
+   * The original error, when the caller still has it.
+   *
+   * A command killed for exceeding its budget carries `killed`/`signal` and a generic
+   * "Command failed" message, so the text alone cannot prove a timeout — see {@link isTimeout}.
+   */
+  err?: unknown
 }
 
 export function parsePRUrl(url: string): PRUrlParts | null {
@@ -199,7 +207,9 @@ function spawnFailure(msg: string): boolean {
  * to install git when git works is worse than showing the raw message.
  */
 export function classifyWorktreeError(msg: string, ctx?: WorktreeErrorContext): WorktreeSetupErrorCode | undefined {
-  if (msg.includes("timed out")) return "git_timeout"
+  // Not a text match: `execWithShellEnv` watchdogs surface as `killed`/`SIGTERM` with a generic
+  // "Command failed" message, which `isTimeout` recognizes and `msg.includes("timed out")` misses.
+  if (isTimeout(ctx?.err ?? msg)) return "git_timeout"
   if (ctx?.probeFailed) return "git_not_found"
   if (msg.includes("not found in PATH")) return "git_not_found"
 

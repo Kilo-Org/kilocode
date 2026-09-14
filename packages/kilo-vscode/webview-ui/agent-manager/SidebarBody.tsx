@@ -31,7 +31,7 @@ import { useVSCode } from "../src/context/vscode"
 import { OrphanNotice } from "./OrphanNotice"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
-import { WorktreeItem } from "./WorktreeItem"
+import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
@@ -367,7 +367,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 busy={props.busy(wt.id)}
                                 activity={props.activityFor(wt.id)}
                                 blocked={props.blocked(wt.id)}
-                                stale={props.isStaleWorktree(wt.id) || props.worktreeHealth?.(wt.id) !== undefined}
+                                stale={props.isStaleWorktree(wt.id) || actionable(props.worktreeHealth?.(wt.id))}
                                 health={props.worktreeHealth?.(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}

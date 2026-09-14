@@ -243,6 +243,11 @@ class WorktreeStatusService internal constructor(
         prTimer?.stop()
         trail?.stop()
         prJob?.cancel()
+        // The stats/dirty guards are what keep polls from stacking, so a job that outlives its last
+        // attach() would make them skip every refresh after the next attach — for the life of the
+        // service if the RPC never returns.
+        statsJob?.cancel()
+        dirtyJob?.cancel()
         generation++
         debounce = null
         statsTimer = null
@@ -250,6 +255,8 @@ class WorktreeStatusService internal constructor(
         trail = null
         pending = null
         prJob = null
+        statsJob = null
+        dirtyJob = null
     }
 
     /**
@@ -297,7 +304,7 @@ class WorktreeStatusService internal constructor(
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().stats(dir) }
                 .onSuccess { dto ->
-                    statsFlow.value = merge(statsFlow.value, dto.items, { it.path }, { it.unavailable })
+                    statsFlow.value = merge(statsFlow.value, dto.items, { it.path }, { it.unavailable }, !dto.unavailable)
                 }
                 .onFailure { err -> LOG.warn("worktree stats refresh failed dir=$dir (previous values kept)", err) }
         }
@@ -315,7 +322,7 @@ class WorktreeStatusService internal constructor(
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().dirty(dir) }
                 .onSuccess { dto ->
-                    dirtyFlow.value = merge(dirtyFlow.value, dto.items, { it.path }, { it.unavailable })
+                    dirtyFlow.value = merge(dirtyFlow.value, dto.items, { it.path }, { it.unavailable }, !dto.unavailable)
                 }
                 .onFailure { err -> LOG.warn("worktree dirty refresh failed dir=$dir (previous values kept)", err) }
         }
@@ -360,15 +367,19 @@ class WorktreeStatusService internal constructor(
      *
      * An unavailable row carries zeros, and publishing those would render a failed poll as a clean
      * worktree — a badge silently disappearing is worse than a badge being briefly stale. Rows the
-     * backend stopped reporting altogether are dropped: those are gone, not unmeasured.
+     * backend stopped reporting altogether are dropped, but only when [drop] says the poll itself
+     * answered: the backend also returns an empty list when `git worktree list` fails, and dropping
+     * on that is the same "failed poll renders as clean" bug one level up.
      */
     private fun <T> merge(
         previous: Map<String, T>,
         items: List<T>,
         key: (T) -> String,
         stale: (T) -> Boolean,
+        drop: Boolean,
     ): Map<String, T> {
-        val next = LinkedHashMap<String, T>(items.size)
+        val next = LinkedHashMap<String, T>(maxOf(items.size, previous.size))
+        if (!drop) next.putAll(previous)
         for (item in items) {
             val id = normalizeWorktreePath(key(item))
             val kept = previous[id]

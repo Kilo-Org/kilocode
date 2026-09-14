@@ -146,6 +146,12 @@ export const dict = {
     "Цей репозиторій використовує Git LFS, але git-lfs не знайдено. Будь ласка, встановіть Git LFS.",
   "agentManager.setup.error.no_commits":
     "У цьому репозиторії ще немає коммітів. Створіть початковий комміт перед використанням worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Теки цього worktree більше немає. Відновіть її з гілки або вилучіть worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git більше не відслідковує цю теку як worktree. Вилучіть її та створіть новий worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git не відповів вчасно. Перевірте доступність репозиторію й спробуйте ще раз.",
   "agentManager.shortcuts.title": "Клавіатурні скорочення",
   "agentManager.shortcuts.category.sidebar": "Бічна панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",

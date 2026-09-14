@@ -132,6 +132,11 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "เปิดโฟลเดอร์ที่มีที่เก็บ git เพื่อใช้ worktrees",
   "agentManager.setup.error.lfs_missing": "ที่เก็บนี้ใช้ Git LFS แต่ไม่พบ git-lfs โปรดติดตั้ง Git LFS",
   "agentManager.setup.error.no_commits": "ที่เก็บนี้ยังไม่มีการคอมมิต สร้างการคอมมิตเริ่มต้นก่อนใช้ worktrees",
+  "agentManager.setup.error.worktree_missing":
+    "โฟลเดอร์ของ worktree นี้ไม่มีอยู่แล้ว กู้คืนจากแบรนช์ หรือลบ worktree นี้",
+  "agentManager.setup.error.worktree_unregistered":
+    "git ไม่ติดตามโฟลเดอร์นี้เป็น worktree อีกแล้ว ลบออกแล้วสร้าง worktree ใหม่",
+  "agentManager.setup.error.git_timeout": "Git ไม่ตอบกลับทันเวลา ตรวจสอบว่าเข้าถึงที่เก็บโค้ดได้ แล้วลองอีกครั้ง",
   "agentManager.shortcuts.title": "ปุ่มลัดแป้นพิมพ์",
   "agentManager.shortcuts.category.sidebar": "แถบด้านข้าง",
   "agentManager.shortcuts.category.tabs": "แท็บ",

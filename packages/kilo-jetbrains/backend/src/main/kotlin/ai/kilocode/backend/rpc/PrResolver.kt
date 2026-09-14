@@ -184,6 +184,10 @@ internal class PrResolver(
         if (!threads || found.node.isEmpty()) return found
         val out = gh(dir, listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=${found.node}"), GH_READ_TIMEOUT_MS)
         if (out.ok) return found.copy(pr = pr.copy(comments = parseThreads(out.stdout)))
+        // A killed process flushes no stderr, so neither the rate-limit nor the refusal test below can
+        // see a timeout. Left to fall through it would return `found` with the default count, reading
+        // as "every conversation settled" — the same position as a refusal, so reported the same way.
+        if (out.timeout) return PrLookup(availability = GhAvailability.TIMEOUT)
         if (rateLimited(out.stderr.lowercase())) return PrLookup(availability = GhAvailability.RATE_LIMITED)
         if (richRefusal(out.stderr) == RichRefusal.FIELD) {
             threads = false

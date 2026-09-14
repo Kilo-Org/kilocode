@@ -140,6 +140,11 @@ export const dict = {
     "این مخزن از Git LFS استفاده می‌کند، اما git-lfs یافت نشد. لطفاً Git LFS را نصب کنید.",
   "agentManager.setup.error.no_commits":
     "این مخزن هنوز هیچ کامیتی ندارد. قبل از استفاده از Worktree، یک کامیت اولیه ایجاد کنید.",
+  "agentManager.setup.error.worktree_missing":
+    "پوشه این worktree دیگر وجود ندارد. آن را از شاخه‌اش بازیابی کنید یا worktree را حذف کنید.",
+  "agentManager.setup.error.worktree_unregistered":
+    "گیت دیگر این پوشه را به‌عنوان worktree پیگیری نمی‌کند. آن را حذف کنید و worktree جدیدی بسازید.",
+  "agentManager.setup.error.git_timeout": "Git به‌موقع پاسخ نداد. بررسی کنید که مخزن در دسترس است و دوباره تلاش کنید.",
   "agentManager.shortcuts.title": "میانبرهای صفحه‌کلید",
   "agentManager.shortcuts.category.sidebar": "نوار کناری",
   "agentManager.shortcuts.category.tabs": "تب‌ها",

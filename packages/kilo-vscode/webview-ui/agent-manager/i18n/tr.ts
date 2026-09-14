@@ -143,6 +143,12 @@ export const dict = {
     "Bu depo Git LFS kullanıyor, ancak git-lfs bulunamadı. Lütfen Git LFS'yi yükleyin.",
   "agentManager.setup.error.no_commits":
     "Bu depoda henüz commit bulunmuyor. Worktree'leri kullanmadan önce bir başlangıç commit'i oluşturun.",
+  "agentManager.setup.error.worktree_missing":
+    "Bu worktree'nin klasörü artık yok. Dalından geri yükleyin veya worktree'yi kaldırın.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git bu klasörü artık worktree olarak izlemiyor. Kaldırıp yeni bir worktree oluşturun.",
+  "agentManager.setup.error.git_timeout":
+    "Git zamanında yanıt vermedi. Deponun erişilebilir olduğunu doğrulayıp yeniden deneyin.",
   "agentManager.shortcuts.title": "Klavye Kısayolları",
   "agentManager.shortcuts.category.sidebar": "Kenar Çubuğu",
   "agentManager.shortcuts.category.tabs": "Sekmeler",

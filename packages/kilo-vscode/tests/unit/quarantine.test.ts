@@ -89,10 +89,14 @@ describe("isTimeout", () => {
 describe("PRStatusPoller failure isolation", () => {
   type Internal = {
     fetchOne: (id: string) => Promise<void>
+    fetchAll: () => Promise<void>
     gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
     target: (id: string) => unknown
     quarantine: Quarantine
+    failures: number
   }
+
+  const killed = () => Object.assign(new Error("Command failed: gh pr view"), { killed: true, signal: "SIGTERM" })
 
   function poller(onStatus: (id: string, error?: string) => void) {
     const worktrees = [
@@ -152,6 +156,52 @@ describe("PRStatusPoller failure isolation", () => {
     })
 
     expect((instance as unknown as Internal).target("unregistered")).toBeUndefined()
+    instance.stop()
+  })
+
+  // A hanging gh has established nothing about the PR. Reporting "no PR" would clear the quarantine
+  // and render a wedged lookup as a clean, PR-less worktree.
+  it("reports a timed-out strategy ladder as a failure, not as no PR", async () => {
+    const seen: string[] = []
+    const { instance, internal } = poller((id, error) => seen.push(`${id}:${error ?? "none"}`))
+    internal.gh = async () => {
+      throw killed()
+    }
+
+    await internal.fetchOne("broken").catch(() => undefined)
+
+    expect(seen).toEqual(["broken:fetch_failed"])
+    expect(internal.quarantine.failures("broken")).toBe(1)
+    instance.stop()
+  })
+
+  it("still reports a genuinely absent PR as no PR", async () => {
+    const seen: string[] = []
+    const { instance, internal } = poller((id, error) => seen.push(`${id}:${error ?? "none"}`))
+    internal.gh = async () => {
+      throw new Error("no pull requests found for branch")
+    }
+
+    await internal.fetchOne("broken")
+
+    expect(seen).toEqual(["broken:none"])
+    expect(internal.quarantine.failures("broken")).toBe(0)
+    instance.stop()
+  })
+
+  // Comparing the rejection total against the quarantined total let one long-parked worktree cancel
+  // out a healthy one that just started failing, so the loop-level backoff never engaged.
+  it("counts a fresh failure even while another worktree is quarantined", async () => {
+    const { instance, internal } = poller(() => undefined)
+    for (let i = 0; i < QUARANTINE_THRESHOLD; i++) internal.quarantine.fail("broken")
+    internal.gh = async (args) => {
+      if (args.includes("--version")) return { stdout: "gh version 2.0.0", stderr: "" }
+      throw killed()
+    }
+
+    await internal.fetchAll()
+
+    expect(internal.failures).toBe(1)
     instance.stop()
   })
 })

@@ -4,7 +4,7 @@ import path from "node:path"
 import fs from "node:fs/promises"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
-import { reconcileWorktrees, summarize, unhealthy } from "../../src/agent-manager/worktree-reconcile"
+import { broken, reconcileWorktrees, summarize, unhealthy } from "../../src/agent-manager/worktree-reconcile"
 
 // Real git repositories in temp dirs: the whole point of this module is agreeing with git.
 const tempDirs: string[] = []
@@ -140,6 +140,40 @@ describe("reconcileWorktrees", () => {
     expect(h.state.getSession("ses_1")).toBeTruthy()
   })
 
+  // The session count is read while classifying, then `prune` is awaited before the drop loop. A
+  // session attached during that window would be deleted along with the row.
+  it("never drops a row that gained a session during the pass", async () => {
+    const h = await harness()
+    const dir = await worktree(h.root, "late-session")
+    const row = h.state.addWorktree({ branch: "late-session", path: dir, parentBranch: "main" })
+    await fs.rm(dir, { recursive: true, force: true })
+    git(["git", "-C", h.root, "worktree", "prune"])
+    git(["git", "-C", h.root, "branch", "-D", "late-session"])
+
+    const report = await reconcileWorktrees({
+      root: h.root,
+      dir: h.manager.worktreesDir,
+      rows: () => h.state.getWorktrees().map((wt) => ({ id: wt.id, path: wt.path, branch: wt.branch })),
+      sessions: (id) => h.state.getSessions(id).length,
+      registered: () => h.manager.registeredPaths(),
+      dirs: () => h.manager.worktreeDirs(),
+      exists: async () => false,
+      branchExists: async () => false,
+      // Stands in for anything that can attach a session while the pass is awaiting git.
+      prune: async () => {
+        h.state.addSession("ses_late", row.id)
+      },
+      drop: () => {
+        throw new Error("must not drop a row that owns sessions")
+      },
+      log: (msg) => h.logs.push(msg),
+    })
+
+    expect(report.entries[0].health).toBe("absent-gone")
+    expect(report.dropped).toEqual([])
+    expect(h.state.getSession("ses_late")).toBeTruthy()
+  })
+
   it("flags a directory git no longer tracks as unregistered", async () => {
     const h = await harness()
     const dir = await worktree(h.root, "orphaned")
@@ -233,5 +267,41 @@ describe("reconcileWorktrees", () => {
     await fs.mkdir(path.join(h.manager.worktreesDir, "leftover"), { recursive: true })
 
     expect(summarize(await h.run())).toBe("ok=1 orphans=1")
+  })
+})
+
+describe("broken", () => {
+  it("counts the states a user can act on", () => {
+    expect(broken("absent-restorable")).toBe(true)
+    expect(broken("absent-gone")).toBe(true)
+    expect(broken("unregistered")).toBe(true)
+  })
+
+  // One failed `git worktree list` marks every row unavailable; that is "not checked", not "broken".
+  it("does not count ok or unavailable", () => {
+    expect(broken("ok")).toBe(false)
+    expect(broken("unavailable")).toBe(false)
+  })
+
+  it("keeps unavailable rows out of the skip set", async () => {
+    const h = await harness()
+    const row = h.state.addWorktree({ branch: "x", path: path.join(h.root, "x"), parentBranch: "main" })
+
+    const report = await reconcileWorktrees({
+      root: h.root,
+      dir: h.manager.worktreesDir,
+      rows: () => h.state.getWorktrees().map((wt) => ({ id: wt.id, path: wt.path, branch: wt.branch })),
+      sessions: () => 0,
+      registered: async () => undefined,
+      dirs: () => h.manager.worktreeDirs(),
+      exists: async () => false,
+      branchExists: async () => false,
+      prune: async () => {},
+      drop: () => {},
+      log: (msg) => h.logs.push(msg),
+    })
+
+    expect(report.entries[0].health).toBe("unavailable")
+    expect(unhealthy(report).has(row.id)).toBe(false)
   })
 })

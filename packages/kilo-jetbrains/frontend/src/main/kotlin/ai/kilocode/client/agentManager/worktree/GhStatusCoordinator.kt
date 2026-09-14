@@ -262,7 +262,10 @@ class GhStatusCoordinator(
         if (next == GhAvailability.OK) {
             notified = false
         } else if (!notified) {
-            notified = true
+            // TIMEOUT pops nothing (see [notify]), so it must not consume the one-shot either.
+            // `notified` only clears on a return to OK, so marking it here would silence an
+            // actionable MISSING/UNAUTH reached directly from TIMEOUT.
+            if (next != GhAvailability.TIMEOUT) notified = true
             notify(project, next)
         }
         schedule()

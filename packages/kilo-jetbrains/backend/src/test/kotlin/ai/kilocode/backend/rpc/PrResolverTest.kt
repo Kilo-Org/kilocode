@@ -308,6 +308,19 @@ class PrResolverTest {
     }
 
     @Test
+    fun `reports a timed-out review conversation lookup without a pull request`() {
+        // A killed process flushes no stderr, so the rate-limit and refusal tests both miss it. Left to
+        // fall through, the PR would carry the default count — "every conversation settled" — and blank a
+        // badge over a query that never ran.
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { CmdOut(-1, "", "", timeout = true) })
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.TIMEOUT, lookup.availability)
+        assertNull(lookup.pr, "a PR carrying a zeroed count would blank a conversation badge already shown")
+    }
+
+    @Test
     fun `keeps the pull request and latches when gh rejects the review conversation field`() {
         // The one failure that is true of every repository this process sees, so it may latch.
         val resolver = resolver(

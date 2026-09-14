@@ -137,6 +137,12 @@ export const dict = {
     "このリポジトリはGit LFSを使用していますが、git-lfsが見つかりませんでした。Git LFSをインストールしてください。",
   "agentManager.setup.error.no_commits":
     "このリポジトリにはまだコミットがありません。worktreesを使用する前に最初のコミットを作成してください。",
+  "agentManager.setup.error.worktree_missing":
+    "この worktree のフォルダーは存在しません。ブランチから復元するか、worktree を削除してください。",
+  "agentManager.setup.error.worktree_unregistered":
+    "git はこのフォルダーを worktree として追跡していません。削除して新しい worktree を作成してください。",
+  "agentManager.setup.error.git_timeout":
+    "Git が時間内に応答しませんでした。リポジトリに接続できるか確認して、もう一度お試しください。",
   "agentManager.shortcuts.title": "キーボードショートカット",
   "agentManager.shortcuts.category.sidebar": "サイドバー",
   "agentManager.shortcuts.category.tabs": "タブ",

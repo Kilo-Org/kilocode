@@ -133,6 +133,12 @@ export const dict = {
     "يستخدم هذا المستودع Git LFS، ولكن لم يتم العثور على git-lfs. يرجى تثبيت Git LFS.",
   "agentManager.setup.error.no_commits":
     "هذا المستودع لا يحتوي على أي التزامات (commits) بعد. قم بإنشاء التزام أولي قبل استخدام مساحات العمل (worktrees).",
+  "agentManager.setup.error.worktree_missing":
+    "مجلد هذا الـ worktree لم يعد موجودًا. استعده من فرعه أو أزل الـ worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "git لم يعد يتتبع هذا المجلد كـ worktree. أزله وأنشئ worktree جديدًا.",
+  "agentManager.setup.error.git_timeout":
+    "لم يستجب Git في الوقت المناسب. تحقق من إمكانية الوصول إلى المستودع وحاول مرة أخرى.",
   "agentManager.shortcuts.title": "اختصارات لوحة المفاتيح",
   "agentManager.shortcuts.category.sidebar": "الشريط الجانبي",
   "agentManager.shortcuts.category.tabs": "علامات التبويب",

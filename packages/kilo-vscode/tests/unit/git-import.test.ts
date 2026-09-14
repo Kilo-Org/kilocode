@@ -480,4 +480,21 @@ describe("classifyWorktreeError", () => {
       "git_timeout",
     )
   })
+
+  // A watchdog kill from execFile carries no "timed out" text — only killed/signal — so the message
+  // alone would classify it as an unexplained failure and show the raw "Command failed" string.
+  it("reports a killed process as a timeout", () => {
+    const err = Object.assign(new Error("Command failed: git --version"), { killed: true, signal: "SIGTERM" })
+
+    expect(classifyWorktreeError(err.message, { cwd: "/repo", exists: () => true, err })).toBe("git_timeout")
+  })
+
+  // A killed shape must win over probeFailed: a wedged probe is not a missing binary.
+  it("prefers a timeout over a failed probe", () => {
+    const err = Object.assign(new Error("Command failed: git --version"), { killed: true, signal: "SIGKILL" })
+
+    expect(classifyWorktreeError(err.message, { cwd: "/repo", exists: () => true, probeFailed: true, err })).toBe(
+      "git_timeout",
+    )
+  })
 })

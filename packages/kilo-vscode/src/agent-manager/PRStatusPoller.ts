@@ -327,10 +327,15 @@ export class PRStatusPoller {
     this.quarantine.retain(new Set(worktrees.map((wt) => wt.id)))
     // Cycle-level backoff must reflect the loop's health, not one worktree's. A worktree that keeps
     // failing is quarantined by handleError; counting it here would slow polling for every other
-    // worktree until the whole panel felt broken.
-    const quarantined = targets.filter((wt) => this.quarantine.blocked(wt.id)).length
-    const failed = results.filter((r) => r.status === "rejected").length
-    if (failed === 0 || failed <= quarantined) {
+    // worktree until the whole panel felt broken. So exclude blocked targets from the count rather
+    // than comparing two unrelated totals: a single long-parked worktree must not cancel out a
+    // healthy worktree that just started failing.
+    const failed = results.filter((r, i) => {
+      if (r.status !== "rejected") return false
+      const id = targets.at(i)?.id
+      return id === undefined || !this.quarantine.blocked(id)
+    }).length
+    if (failed === 0) {
       this.failures = 0
       return
     }
@@ -516,15 +521,29 @@ export class PRStatusPoller {
     // where the tracking ref (refs/pull/N/head) is what identifies the PR. Short budget: this is the
     // form that hangs.
     // Strategy 3: `gh pr list --search "<sha>"` — last resort, finds PRs by HEAD commit SHA.
-    return (
-      (await this.ghPRView(cwd, branch)) ??
-      (await this.ghPRView(cwd, undefined, BUDGET.probe)) ??
-      (await this.ghPRListBySHA(cwd))
-    )
+    //
+    // A timeout in any strategy is remembered rather than swallowed. Falling through to the next
+    // strategy is right — a hang is not proof the PR is missing — but so is refusing to answer once
+    // they have all fallen through: `null` here reaches `empty()`, which clears the quarantine and
+    // reports "no PR", so a wedged `gh` would render as a clean, PR-less worktree.
+    const timeouts: unknown[] = []
+    const found =
+      (await this.ghPRView(cwd, branch, BUDGET.gh, timeouts)) ??
+      (await this.ghPRView(cwd, undefined, BUDGET.probe, timeouts)) ??
+      (await this.ghPRListBySHA(cwd, timeouts))
+    if (found) return found
+    const timeout = timeouts.at(0)
+    if (timeout !== undefined) throw timeout
+    return null
   }
 
   /** Run `gh pr view [branch] --json ...` and parse the result, or return null. */
-  private async ghPRView(cwd: string, branch?: string, timeout: number = BUDGET.gh): Promise<PRResult | null> {
+  private async ghPRView(
+    cwd: string,
+    branch?: string,
+    timeout: number = BUDGET.gh,
+    timeouts?: unknown[],
+  ): Promise<PRResult | null> {
     try {
       const args = ["pr", "view"]
       if (branch) args.push(branch)
@@ -535,6 +554,7 @@ export class PRStatusPoller {
       // A hanging lookup is not evidence that the PR does not exist; let the next strategy answer.
       if (isTimeout(err)) {
         this.options.log(`PR lookup timed out (${branch ?? "current branch"}), trying next strategy`)
+        timeouts?.push(err)
         return null
       }
       throw err
@@ -555,7 +575,7 @@ export class PRStatusPoller {
   }
 
   /** Search for PRs containing the current HEAD SHA. Finds PRs when branch name/tracking ref don't match. */
-  private async ghPRListBySHA(cwd: string): Promise<PRResult | null> {
+  private async ghPRListBySHA(cwd: string, timeouts?: unknown[]): Promise<PRResult | null> {
     try {
       const { stdout: sha } = await this.shell("git", ["rev-parse", "HEAD"], { cwd, timeout: 5_000 })
       const head = sha.trim()
@@ -575,7 +595,8 @@ export class PRStatusPoller {
         if (data.headRefOid === head) return parsePRResult(JSON.stringify(data))
       }
       return null
-    } catch {
+    } catch (err) {
+      if (isTimeout(err)) timeouts?.push(err)
       return null
     }
   }

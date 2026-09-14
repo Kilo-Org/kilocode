@@ -48,7 +48,17 @@ data class WorktreeStatsDto(
 )
 
 @Serializable
-data class WorktreeStatsListDto(val items: List<WorktreeStatsDto> = emptyList())
+data class WorktreeStatsListDto(
+    val items: List<WorktreeStatsDto> = emptyList(),
+    /**
+     * True when the worktree listing itself failed, so [items] means "unknown", not "none".
+     *
+     * Without it an empty list is indistinguishable from a repository that has no worktrees, and the
+     * client drops every badge it was showing — a failed poll rendering as clean, which is exactly
+     * what [WorktreeStatsDto.unavailable] exists to prevent per row.
+     */
+    val unavailable: Boolean = false,
+)
 
 /**
  * Uncommitted state of one worktree, relative to its own HEAD — staged, unstaged, and untracked
@@ -71,7 +81,11 @@ data class WorktreeDirtyDto(
 )
 
 @Serializable
-data class WorktreeDirtyListDto(val items: List<WorktreeDirtyDto> = emptyList())
+data class WorktreeDirtyListDto(
+    val items: List<WorktreeDirtyDto> = emptyList(),
+    /** True when the worktree listing itself failed; see [WorktreeStatsListDto.unavailable]. */
+    val unavailable: Boolean = false,
+)
 
 @Serializable
 enum class GhState { OPEN, DRAFT, MERGED, CLOSED }

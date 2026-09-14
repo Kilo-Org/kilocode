@@ -138,6 +138,12 @@ export const dict = {
     "Este repositório usa Git LFS, mas o git-lfs não foi encontrado. Instale o Git LFS.",
   "agentManager.setup.error.no_commits":
     "Este repositório ainda não possui commits. Crie um commit inicial antes de usar worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "A pasta deste worktree não existe mais. Restaure a partir do branch ou remova o worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "O git não rastreia mais esta pasta como worktree. Remova-a e crie um novo worktree.",
+  "agentManager.setup.error.git_timeout":
+    "O Git não respondeu em tempo. Verifique se o repositório está acessível e tente de novo.",
   "agentManager.shortcuts.title": "Atalhos de Teclado",
   "agentManager.shortcuts.category.sidebar": "Barra lateral",
   "agentManager.shortcuts.category.tabs": "Abas",

@@ -137,6 +137,11 @@ export const dict = {
     "Dette repository bruger Git LFS, men git-lfs blev ikke fundet. Installer venligst Git LFS.",
   "agentManager.setup.error.no_commits":
     "Dette repository har ingen commits endnu. Opret et indledende commit før du bruger worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Mappen til dette worktree findes ikke længere. Gendan den fra dens branch, eller fjern worktreet.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git sporer ikke længere denne mappe som worktree. Fjern den og opret et nyt worktree.",
+  "agentManager.setup.error.git_timeout": "Git svarede ikke i tid. Kontrollér, at repositoryet kan nås, og prøv igen.",
   "agentManager.shortcuts.title": "Tastaturgenveje",
   "agentManager.shortcuts.category.sidebar": "Sidebjælke",
   "agentManager.shortcuts.category.tabs": "Faner",

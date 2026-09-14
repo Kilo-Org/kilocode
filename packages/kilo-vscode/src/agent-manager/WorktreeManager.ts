@@ -712,8 +712,11 @@ export class WorktreeManager {
     await this.ensureGitAvailable()
     await this.withGitLock(async () => {
       await this.ensureDir()
-      // Prune first: a leftover registration for this path would fail the add.
-      await this.git.raw(["worktree", "prune"]).catch(() => {})
+      // Prune first: a leftover registration for this path would fail the add. A failed prune is not
+      // fatal, but it is the likely cause of any add failure that follows, so make it visible.
+      await this.git
+        .raw(["worktree", "prune"])
+        .catch((err: unknown) => this.log(`restoreWorktree: prune failed: ${err}`))
       await this.git.raw(["worktree", "add", worktreePath, branch])
     })
     this.log(`Restored worktree ${worktreePath} from branch ${branch}`)
@@ -729,8 +732,13 @@ export class WorktreeManager {
     if (!this.isManagedPath(target)) {
       throw new Error(`Refusing to remove a path outside the worktrees directory: ${target}`)
     }
+    // Fail closed: an unanswerable `git worktree list` is not evidence the path is orphaned, and
+    // this is the only re-check between a stale webview orphan list and a recursive delete.
     const registered = await this.registeredPaths()
-    if (registered?.has(pathKey(target))) {
+    if (!registered) {
+      throw new Error(`Refusing to remove a worktree directory while git cannot list worktrees: ${target}`)
+    }
+    if (registered.has(pathKey(target))) {
       throw new Error(`Refusing to remove a live worktree: ${target}`)
     }
     await fs.promises.rm(target, RM_OPTS)

@@ -1051,6 +1051,20 @@ describe("WorktreeManager.removeOrphanDirectory", () => {
     await expect(mgr.removeOrphanDirectory(path.join(root, "outside"))).rejects.toThrow(/outside/)
     expect(existsSync(path.join(root, "outside"))).toBe(true)
   })
+
+  // The manager re-check is the only thing between a stale webview orphan list and a recursive
+  // delete, so an unanswerable `git worktree list` has to fail closed. Not a repository at all is the
+  // simplest way to make the listing fail for real.
+  it("refuses to remove anything while git cannot list worktrees", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-nogit-"))
+    tempDirs.push(root)
+    const mgr = createManager(root)
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(leftover, { recursive: true })
+
+    await expect(mgr.removeOrphanDirectory(leftover)).rejects.toThrow(/cannot list worktrees/)
+    expect(existsSync(leftover)).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------

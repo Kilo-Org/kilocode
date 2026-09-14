@@ -165,6 +165,16 @@ internal const val GIT_READ_TIMEOUT_MS = 15_000
 /** Default watchdog for a git command. Cheap queries only — a destructive delete needs its own, wider budget. */
 internal const val GIT_COMMAND_TIMEOUT_MS = GIT_READ_TIMEOUT_MS
 
+/**
+ * Budget for commands that write a working tree or talk to a remote: `git worktree add`, `worktree
+ * prune`, and `git fetch`.
+ *
+ * These legitimately run for minutes on a large repository or a slow network, so the read budget
+ * would cut them off for reasons that have nothing to do with a wedged git — reporting a normal
+ * checkout as a failure, which is the opposite of what the tighter budgets are for.
+ */
+internal const val GIT_WRITE_TIMEOUT_MS = 180_000
+
 /** Commands that only touch `.git` metadata and must answer almost immediately. */
 private val PROBES = setOf(
     "--version",

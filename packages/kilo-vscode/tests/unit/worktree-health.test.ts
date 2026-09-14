@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { HealthScheduler, applyPresence, healthPayload } from "../../src/agent-manager/worktree-health"
+import { HealthScheduler, applyPresence, healthPayload, needsReconcile } from "../../src/agent-manager/worktree-health"
 import { formatLog } from "../../src/agent-manager/log-format"
 import type { WorktreeHealthReport } from "../../src/agent-manager/worktree-reconcile"
 
@@ -94,6 +94,59 @@ describe("applyPresence", () => {
     applyPresence({ worktrees: [], degraded: false }, stale, [{ id: "kept" }], () => false)
 
     expect([...stale]).toEqual([])
+  })
+
+  // updateWorktreeBranch returns true only when it changed a row, so `some` would stop at the first
+  // drifted worktree and leave every later one on its old branch.
+  it("syncs every drifted branch, not just the first", () => {
+    const branches: string[] = []
+
+    const applied = applyPresence(
+      {
+        worktrees: [
+          { worktreeId: "a", missing: false, branch: "one" },
+          { worktreeId: "b", missing: false, branch: "two" },
+          { worktreeId: "c", missing: false, branch: "three" },
+        ],
+        degraded: false,
+      },
+      new Set<string>(),
+      [{ id: "a" }, { id: "b" }, { id: "c" }],
+      (id, branch) => {
+        branches.push(`${id}:${branch}`)
+        return true
+      },
+    )
+
+    expect(branches).toEqual(["a:one", "b:two", "c:three"])
+    expect(applied.branchChanged).toBe(true)
+  })
+
+  it("reports no branch change when nothing drifted", () => {
+    const applied = applyPresence(
+      { worktrees: [{ worktreeId: "a", missing: false, branch: "one" }], degraded: false },
+      new Set<string>(),
+      [{ id: "a" }],
+      () => false,
+    )
+
+    expect(applied.branchChanged).toBe(false)
+  })
+})
+
+describe("needsReconcile", () => {
+  it("asks for a reconcile when the stale set changed", () => {
+    expect(needsReconcile({ staleChanged: true }, report())).toBe(true)
+  })
+
+  // A degraded report learned nothing; this probe answered, so git can be asked again.
+  it("retries a degraded report even when nothing changed", () => {
+    expect(needsReconcile({ staleChanged: false }, report({ degraded: true }))).toBe(true)
+  })
+
+  it("stays quiet on a healthy, unchanged probe", () => {
+    expect(needsReconcile({ staleChanged: false }, report())).toBe(false)
+    expect(needsReconcile({ staleChanged: false }, undefined)).toBe(false)
   })
 })
 

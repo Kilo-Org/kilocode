@@ -3,6 +3,7 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.diff.GIT_COMMAND_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.backend.worktree.WorktreeTrash
@@ -203,7 +204,7 @@ class KiloWorktreeRpcApiImpl(
 
     override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val items = sync(root) ?: return@withContext WorktreeStatsListDto()
+        val items = sync(root) ?: return@withContext WorktreeStatsListDto(unavailable = true)
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> statsSafe(item, fallback) })
     }
@@ -216,7 +217,7 @@ class KiloWorktreeRpcApiImpl(
      */
     override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
+        val items = sync(root) ?: return@withContext WorktreeDirtyListDto(unavailable = true)
         WorktreeDirtyListDto(parallel(items) { item -> dirtySafe(item) })
     }
 
@@ -557,10 +558,14 @@ class KiloWorktreeRpcApiImpl(
                 }
                 val head = parsePrHead(view.stdout)
                 val branch = prBranchName(head, ref.number)
-                val failure = fetchPrBranch({ args -> runGit(base, args) }, ref.number, head, branch)
+                // Write budget: `git fetch` talks to the remote, and the read budget turns a slow
+                // network into a reported failure.
+                val failure = fetchPrBranch({ args -> runGit(base, args, GIT_WRITE_TIMEOUT_MS) }, ref.number, head, branch)
                 if (failure != null) {
-                    LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()}")
-                    return@lock CreateWorktreeResultDto(error = failure.stderr.ifBlank { "Failed to check out the pull request branch" })
+                    LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()} timeout=${failure.timeout}")
+                    return@lock CreateWorktreeResultDto(
+                        error = reason(failure, "Failed to check out the pull request branch"),
+                    )
                 }
                 addWorktree(base, branch, existing = true, baseRef = null)
             }
@@ -590,8 +595,8 @@ class KiloWorktreeRpcApiImpl(
         LOG.info("worktree add requested: branch=$branch existing=$existing base=${baseRef ?: "(current)"} dir=$dir")
         val res = add(base, args)
         if (!res.ok) {
-            LOG.warn("worktree add failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()}")
-            return CreateWorktreeResultDto(error = res.stderr.ifBlank { "git worktree add failed" })
+            LOG.warn("worktree add failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()} timeout=${res.timeout}")
+            return CreateWorktreeResultDto(error = reason(res, "git worktree add failed"))
         }
         LOG.info("worktree created: branch=$branch dir=$dir")
         invalidate()
@@ -864,12 +869,18 @@ class KiloWorktreeRpcApiImpl(
         }
     }
 
+    /**
+     * `git worktree add`, with one prune-and-retry when a stale registration is in the way.
+     *
+     * Runs on the write budget: checking out a working tree is not a metadata query, and the read
+     * budget cuts off perfectly healthy adds on large repositories.
+     */
     private fun add(base: Path, args: List<String>): CmdOut {
-        val first = runGit(base, *args.toTypedArray())
+        val first = runGit(base, args, GIT_WRITE_TIMEOUT_MS)
         if (first.ok || !stale(first.stderr)) return first
-        val prune = runGit(base, "worktree", "prune")
+        val prune = runGit(base, listOf("worktree", "prune"), GIT_WRITE_TIMEOUT_MS)
         if (!prune.ok) LOG.warn("worktree prune before retry failed: exit=${prune.exit} stderr=${prune.stderr.trim()}")
-        return runGit(base, *args.toTypedArray())
+        return runGit(base, args, GIT_WRITE_TIMEOUT_MS)
     }
 
     private fun stale(text: String): Boolean {

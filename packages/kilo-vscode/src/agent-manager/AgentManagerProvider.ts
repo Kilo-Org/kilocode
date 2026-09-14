@@ -91,7 +91,8 @@ import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
-import { HealthScheduler, applyPresence, healthPayload, staleForState } from "./worktree-health"
+import { HealthScheduler, applyPresence, healthPayload, needsReconcile, staleForState } from "./worktree-health"
+import { broken } from "./worktree-reconcile"
 import { handleRecovery, type RecoveryMessage } from "./worktree-recovery"
 import { runDoctor } from "./worktree-doctor"
 import type { BrowserBroker } from "../services/browser-automation"
@@ -283,7 +284,7 @@ export class AgentManagerProvider implements Disposable {
         }
         return ids
       },
-      isUnhealthy: (id) => this.context?.report?.entries.some((e) => e.id === id && e.health !== "ok") === true,
+      isUnhealthy: (id) => this.context?.report?.entries.some((e) => e.id === id && broken(e.health)) === true,
       visible: () => this.panel?.visible ?? false,
       post: (msg) => this.postToWebview(msg),
       cache: (msg) => {
@@ -1353,8 +1354,7 @@ export class AgentManagerProvider implements Disposable {
     const applied = applyPresence(result, this.staleWorktreeIds, state.getWorktrees(), sync)
     if (applied.degraded) return this.log("Skipping stale worktree update: degraded worktree probe")
     if (applied.staleChanged || applied.branchChanged) this.pushState()
-    // A worktree that just became unhealthy needs a reconcile to say why and to self-heal.
-    if (applied.staleChanged && this.context) this.healthScheduler.schedule(this.context)
+    if (this.context && needsReconcile(applied, this.context.report)) this.healthScheduler.schedule(this.context)
   }
 
   /** Sync the poller's skip set with currently collapsed sections. */

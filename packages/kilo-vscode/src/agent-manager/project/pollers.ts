@@ -21,6 +21,7 @@ import type { ProjectContexts } from "./contexts"
 import type { Semaphore } from "../semaphore"
 import type { AgentManagerOutMessage } from "../types"
 import type { WorktreeStateManager } from "../WorktreeStateManager"
+import { broken } from "../worktree-reconcile"
 
 export interface PollerPair {
   stats: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
@@ -53,7 +54,7 @@ interface PollerDeps {
 /** True when the last reconcile decided this worktree cannot answer a git or gh query. */
 function unhealthyWorktree(ctx: ProjectContext, id: string): boolean {
   const entry = ctx.report?.entries.find((item) => item.id === id)
-  return entry !== undefined && entry.health !== "ok"
+  return entry !== undefined && broken(entry.health)
 }
 
 function hot(state: WorktreeStateManager | undefined): Set<string> {

@@ -135,6 +135,12 @@ export const dict = {
     "이 리포지토리는 Git LFS를 사용하지만 git-lfs를 찾을 수 없습니다. Git LFS를 설치하세요.",
   "agentManager.setup.error.no_commits":
     "이 리포지토리에는 아직 커밋이 없습니다. worktrees를 사용하기 전에 초기 커밋을 생성하세요.",
+  "agentManager.setup.error.worktree_missing":
+    "이 worktree의 폴더가 더 이상 없습니다. 브랜치에서 복원하거나 worktree를 제거하세요.",
+  "agentManager.setup.error.worktree_unregistered":
+    "git이 이 폴더를 worktree로 추적하지 않습니다. 제거한 뒤 새 worktree를 만드세요.",
+  "agentManager.setup.error.git_timeout":
+    "Git이 제때 응답하지 않았습니다. 저장소에 접근할 수 있는지 확인하고 다시 시도하세요.",
   "agentManager.shortcuts.title": "키보드 단축키",
   "agentManager.shortcuts.category.sidebar": "사이드바",
   "agentManager.shortcuts.category.tabs": "탭",

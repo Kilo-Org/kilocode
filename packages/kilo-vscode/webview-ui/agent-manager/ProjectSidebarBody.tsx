@@ -24,7 +24,7 @@ import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
 import { OrphanNotice } from "./OrphanNotice"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
-import { WorktreeItem } from "./WorktreeItem"
+import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
@@ -307,7 +307,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           blocked={props.blocked(worktree.id)}
           stale={
             state()?.staleWorktreeIds?.includes(worktree.id) === true ||
-            state()?.worktreeHealth?.[worktree.id] !== undefined
+            actionable(state()?.worktreeHealth?.[worktree.id])
           }
           health={state()?.worktreeHealth?.[worktree.id]}
           stats={props.stats?.[worktree.id]}

@@ -127,7 +127,10 @@ export async function reconcileWorktrees(deps: ReconcileDeps): Promise<WorktreeH
 
   const dropped: string[] = []
   for (const entry of entries) {
-    if (entry.health !== "absent-gone" || entry.sessions > 0) continue
+    if (entry.health !== "absent-gone") continue
+    // Re-read the session count: `deps.drop` deletes every session on the row, and a session could
+    // have been attached during the awaits above (classification, prune) since it was counted.
+    if (entry.sessions > 0 || deps.sessions(entry.id) > 0) continue
     deps.log(`worktree health: dropping ${entry.id} (${entry.path}, branch ${entry.branch} gone, no sessions)`)
     deps.drop(entry.id)
     dropped.push(entry.id)
@@ -148,11 +151,23 @@ export async function reconcileWorktrees(deps: ReconcileDeps): Promise<WorktreeH
   return { entries, orphans, dropped, pruned: stale, degraded: false }
 }
 
+/**
+ * True for the health states that really do block a worktree from answering a git or gh query.
+ *
+ * `unavailable` is deliberately excluded: a single failed `git worktree list` marks every row
+ * `unavailable`, and that means "we could not check", not "the worktree is broken". Treating it as
+ * broken would pause polling for the rest of the session and offer destructive recovery actions for
+ * a worktree that is almost certainly fine.
+ */
+export function broken(health: WorktreeHealth): boolean {
+  return health !== "ok" && health !== "unavailable"
+}
+
 /** Worktrees that must not be polled: they cannot answer, or answering would be misleading. */
 export function unhealthy(report: WorktreeHealthReport): Set<string> {
   const ids = new Set<string>()
   for (const entry of report.entries) {
-    if (entry.health !== "ok") ids.add(entry.id)
+    if (broken(entry.health)) ids.add(entry.id)
   }
   return ids
 }

@@ -876,6 +876,12 @@ html[data-theme="kilo-vscode"]
   color: currentColor;
 }
 
+/* "Health could not be determined" is not a warning: nothing is known to be wrong yet. */
+.am-worktree-stale-badge[data-health="unavailable"],
+.am-worktree-item-active .am-worktree-stale-badge[data-health="unavailable"] {
+  color: var(--text-weak);
+}
+
 .am-tooltip-wrap {
   max-width: 240px;
   white-space: normal;
@@ -3701,6 +3707,10 @@ body.am-wt-dragging-active * {
   gap: 6px;
   color: var(--text-warning, #f59e0b);
   font-weight: 600;
+}
+
+.am-hover-card-stale-pill[data-health="unavailable"] {
+  color: var(--text-weak);
 }
 
 .am-hover-card-note {

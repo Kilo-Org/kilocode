@@ -49,14 +49,28 @@ export function applyPresence(
   const entries = result.worktrees.filter((item) => ids.has(item.worktreeId))
   if (entries.length === 0) return { staleChanged: false, branchChanged: false, degraded: false }
 
-  const branchChanged = entries.some(
-    (entry) => entry.branch !== undefined && syncBranch(entry.worktreeId, entry.branch),
-  )
+  // Every drifted branch must be synced, so no short-circuiting: `some` would stop at the first
+  // row that actually changed and leave the rest stale until a later tick.
+  const branchChanged = entries
+    .map((entry) => entry.branch !== undefined && syncBranch(entry.worktreeId, entry.branch))
+    .includes(true)
   const next = new Set(entries.filter((entry) => entry.missing).map((entry) => entry.worktreeId))
   const staleChanged = next.size !== stale.size || [...next].some((id) => !stale.has(id))
   stale.clear()
   for (const id of next) stale.add(id)
   return { staleChanged, branchChanged, degraded: false }
+}
+
+/**
+ * Whether a presence probe should ask for a fresh reconcile.
+ *
+ * A changed stale set needs one to say why and to self-heal. A degraded report needs one too: it
+ * learned nothing, so every row is `unavailable`, and a probe that answered has just proved git can
+ * answer again. Without this the report stays degraded until an explicit recovery action, because an
+ * unchanged missing-set never sets `staleChanged`.
+ */
+export function needsReconcile(applied: { staleChanged: boolean }, report?: { degraded: boolean }): boolean {
+  return applied.staleChanged || report?.degraded === true
 }
 
 /**

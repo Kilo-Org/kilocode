@@ -130,6 +130,56 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test a failed listing keeps every badge instead of clearing them`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        // What the backend answers when `git worktree list` itself fails: an empty list that must not
+        // be read as "the worktrees are gone".
+        rpc.statsResult = WorktreeStatsListDto(emptyList(), unavailable = true)
+        rpc.dirtyResult = WorktreeDirtyListDto(emptyList(), unavailable = true)
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test a stats poll in flight is cancelled when the last handle closes`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeStats = { gate.await() }
+        val first = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(1, rpc.statsCalls.size)
+
+        // Detaching with a slow poll unanswered used to leave the in-flight guard set, so every
+        // refresh after the next attach was skipped — permanently if the RPC never returned.
+        first.close()
+        rpc.beforeStats = {}
+        gate.complete(Unit)
+        drain()
+
+        val second = service.attach()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(2, rpc.statsCalls.size)
+        assertEquals(1, service.stats.value[key]?.additions)
+        second.close()
+    }
+
     fun `test a stats poll does not stack while one is in flight`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))

@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.app.kiloRoot
+import ai.kilocode.client.util.edt
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
@@ -34,7 +35,9 @@ internal object WorktreeDiagnosticsAction {
             val text = runCatching { collect(project) }.getOrElse { err ->
                 "Kilo Agent Manager — worktree health\nfailed to collect: ${err.message}"
             }
-            CopyPasteManager.getInstance().setContents(StringSelection(text))
+            // CopyPasteManager.setContents is an EDT API (see ui/Clipboard.kt), and this runs on the
+            // service's Dispatchers.Default scope.
+            edt { CopyPasteManager.getInstance().setContents(StringSelection(text)) }
             notify(project, NotificationType.INFORMATION, KiloBundle.message("worktree.diagnostics.copied"))
         }
     }

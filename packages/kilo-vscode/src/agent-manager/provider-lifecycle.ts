@@ -15,6 +15,7 @@ import { Timing } from "./creation-timing"
 import { plan, type Start } from "./creation-plan"
 import { copyEnvFiles } from "./env-copy"
 import { runWorktreeSetupScript } from "./setup-script-task"
+import { broken } from "./worktree-reconcile"
 
 export async function runLifecycleSetup(
   input: Parameters<typeof runWorktreeSetupScript>[0],
@@ -351,7 +352,8 @@ export async function removeStaleLifecycleWorktree(
   if (!state) return null
   // Either signal is proof enough: the presence probe saw it disappear, or the health reconcile
   // classified it as something that cannot answer.
-  const unhealthy = ctx.report?.entries.some((entry) => entry.id === worktreeId && entry.health !== "ok") === true
+  // `unavailable` is not proof of anything, so it must not authorize an entry-dropping removal.
+  const unhealthy = ctx.report?.entries.some((entry) => entry.id === worktreeId && broken(entry.health)) === true
   if (!ctx.stale.has(worktreeId) && !unhealthy) {
     host.log(`Ignored stale removal for non-stale worktree ${worktreeId}`)
     return null
