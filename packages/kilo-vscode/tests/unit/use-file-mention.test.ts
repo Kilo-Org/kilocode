@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { useFileMention } from "../../webview-ui/src/hooks/useFileMention"
-import { FILE_PICKER_RESULT, MODEL_RESULT, TERMINAL_RESULT } from "../../webview-ui/src/hooks/file-mention-utils"
+import {
+  FILE_PICKER_RESULT,
+  MODEL_RESULT,
+  TERMINAL_RESULT,
+  type WorktreeReference,
+} from "../../webview-ui/src/hooks/file-mention-utils"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 declare global {
@@ -1923,5 +1928,90 @@ describe("useFileMention", () => {
     expect(mention.mentionResults()).not.toContainEqual({ type: "file", value: "late.ts" })
 
     dispose.fn?.()
+  })
+})
+
+describe("useFileMention reference drops", () => {
+  const ctx = {
+    postMessage: () => {},
+    onMessage: () => () => {},
+  }
+
+  const worktree: WorktreeReference = {
+    id: "w1",
+    name: "Feature",
+    branch: "feature",
+    path: "/repo/worktrees/feature",
+    base: "main",
+    sessions: [{ id: "s1", title: "Chat" }],
+    disabled: false,
+  }
+
+  const withMention = (
+    text: string,
+    worktrees: WorktreeReference[] | undefined,
+    run: (mention: ReturnType<typeof useFileMention>, area: ReturnType<typeof editor>) => void,
+  ) => {
+    const area = editor(text)
+    mockDocument(area)
+    const dispose: { fn?: () => void } = {}
+    let mention!: ReturnType<typeof useFileMention>
+    createRoot((root) => {
+      dispose.fn = root
+      mention = useFileMention(
+        ctx,
+        () => "s1",
+        () => false,
+        worktrees ? () => worktrees : undefined,
+      )
+    })
+    try {
+      run(mention, area)
+    } finally {
+      dispose.fn?.()
+      restoreDocument()
+    }
+  }
+
+  it("inserts a worktree reference after existing text and attaches it", () => {
+    withMention("hello", [worktree], (mention, area) => {
+      mention.insertDrop({ kind: "worktree", worktree }, area, () => {}, "")
+      expect(area.value).toBe("hello @/repo/worktrees/feature ")
+      expect(mention.mentionedPaths().has(worktree.path)).toBe(true)
+      expect(mention.parseFileAttachments(area.value).map((file) => file.filename)).toContain("worktree-w1.txt")
+    })
+  })
+
+  it("inserts a session reference and attaches it", () => {
+    withMention("", undefined, (mention, area) => {
+      mention.insertDrop({ kind: "session", session: { id: "s2", title: "My Chat", updated: 5 } }, area, () => {}, "")
+      expect(area.value).toBe("@My Chat ")
+      expect(mention.mentionedSessions().has("My Chat")).toBe(true)
+      expect(mention.parseFileAttachments(area.value).map((file) => file.url)).toContain("session:s2")
+    })
+  })
+
+  it("inserts the terminal reference", () => {
+    withMention("", undefined, (mention, area) => {
+      expect(mention.insertDrop({ kind: "terminal" }, area, () => {}, "")).toBe(true)
+      expect(area.value).toBe("@terminal ")
+    })
+  })
+
+  it("inserts a relative file reference from a document tab", () => {
+    withMention("", undefined, (mention, area) => {
+      expect(mention.insertDrop({ kind: "file", path: "/repo/docs/plan.md" }, area, () => {}, "/repo")).toBe(true)
+      expect(area.value).toBe("@docs/plan.md ")
+      expect(mention.mentionedPaths().has("docs/plan.md")).toBe(true)
+    })
+  })
+
+  it("skips a disabled worktree reference", () => {
+    withMention("", [worktree], (mention, area) => {
+      expect(
+        mention.insertDrop({ kind: "worktree", worktree: { ...worktree, disabled: true } }, area, () => {}, ""),
+      ).toBe(false)
+      expect(area.value).toBe("")
+    })
   })
 })

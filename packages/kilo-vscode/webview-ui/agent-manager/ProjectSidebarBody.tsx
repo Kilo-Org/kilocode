@@ -37,13 +37,15 @@ import {
   isGrouped,
 } from "./section-helpers"
 import { LOCAL, nextSelectionAfterDelete } from "./navigate"
-import { sectionAwareDetector } from "./section-dnd"
+import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 import { rootSessions } from "./project/session-filter"
 import { createWorktreeCompletion } from "./worktree-completion"
+import { worktreeDropReference } from "./worktree-references"
+import { beginPromptMentionDrop, endPromptMentionDrop } from "../src/utils/prompt-mention-drop"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -201,10 +203,24 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     if (!id || !worktreeIds().has(id)) return
     setDragging(id)
     setDragOrigin(order())
+    const wt = worktrees().find((item) => item.id === id)
+    if (wt) {
+      beginPromptMentionDrop({
+        kind: "worktree",
+        worktree: worktreeDropReference(
+          wt,
+          wt.label || firstOrderedTitle(sessions(wt.id), store.tabOrder()[wt.id], wt.branch),
+          sessions(wt.id).map((session) => ({ id: session.id })),
+        ),
+      })
+    }
     document.body.classList.add("am-wt-dragging-active")
   }
 
   const onDragOver = (event: DragEvent) => {
+    // Once the card leaves the sidebar it is on its way to the prompt, so stop
+    // reordering the list under it.
+    if (outsideSidebar(event.draggable)) return
     const from = parse("worktree", event.draggable?.id)
     const to = parse("worktree", event.droppable?.id)
     if (!from || !to || !worktreeIds().has(from) || !worktreeIds().has(to)) return
@@ -218,6 +234,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   }
 
   const onDragEnd = (event: DragEvent) => {
+    const handled = endPromptMentionDrop()
     const from = parse("worktree", event.draggable?.id)
     const section = parse("section", event.droppable?.id)
     const to = parse("worktree", event.droppable?.id)
@@ -225,6 +242,14 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     const origin = dragOrigin()
     setDragOrigin(undefined)
     document.body.classList.remove("am-wt-dragging-active")
+    // A drop on the prompt inserts a mention. Do not also move the worktree to
+    // whatever section happens to be under the pointer.
+    if (handled) return
+    // A release outside the sidebar is not a section move or list reorder.
+    if (outsideSidebar(event.draggable)) {
+      if (origin) store.setWorktreeOrder(origin)
+      return
+    }
     if (!from || !worktreeIds().has(from)) {
       if (origin) store.setWorktreeOrder(origin)
       return
