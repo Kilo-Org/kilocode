@@ -60,7 +60,7 @@ export function createProjectWiring(opts: {
       opts.host.unregisterProjectRoutes(id)
       opts.removed?.(id)
     },
-    deps: { log: opts.output, git: opts.git },
+    deps: { log: opts.output, git: opts.git, worktreePool: () => opts.host.worktreePool() },
   })
   const messages: ProjectMessageDeps = {
     registry,
@@ -94,6 +94,14 @@ export function createProjectWiring(opts: {
       }
       opts.push()
       opts.pushState()
+    }),
+    opts.host.onDidChangeWorktreePool((enabled) => {
+      for (const project of contexts.snapshots()) {
+        const manager = contexts.get(project.id)?.peekWorktrees()
+        if (!manager) continue
+        if (enabled) manager.warmPool()
+        else manager.disposePool().catch((err) => opts.log("Failed to clear worktree pool:", err))
+      }
     }),
   ]
   return {
