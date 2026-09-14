@@ -411,10 +411,8 @@ test("interrupted seed removes borrowed state after source gc", async () => {
 
 test("regular seed keeps source stat data except for rewritten or flagged entries", async () => {
   const init = async (dir: string) => {
-    // The trusted path requires the semantics the snapshot repository uses; Git for
-    // Windows defaults to autocrlf=true and symlinks=false, which take the cold path.
+    // Git for Windows defaults to autocrlf=true, which takes the cold path.
     await $`git config core.autocrlf false`.cwd(dir).quiet()
-    await $`git config core.symlinks true`.cwd(dir).quiet()
     await $`git config filter.snapshot-keep.clean "tr a-z A-Z"`.cwd(dir).quiet()
     await $`git config filter.snapshot-keep.smudge cat`.cwd(dir).quiet()
     await Filesystem.write(path.join(dir, ".gitattributes"), "*.flt filter=snapshot-keep\n")

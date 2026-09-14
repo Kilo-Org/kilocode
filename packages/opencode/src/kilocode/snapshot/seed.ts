@@ -101,7 +101,7 @@ export namespace KiloSnapshotSeed {
       if (unmerged.code !== 0) return yield* reset("unmerged-check-failed", true)
       if (unmerged.text) return yield* reset("unmerged-index")
 
-      const [src, root, idx, fmt, dst, crlf, links, attrs, theirs, ours, mine, yours] = yield* Effect.all(
+      const [src, root, idx, fmt, dst, crlf, attrs, theirs, ours, mine, yours] = yield* Effect.all(
         [
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-dir"]),
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-common-dir"]),
@@ -109,26 +109,25 @@ export namespace KiloSnapshotSeed {
           input.git(["-C", input.worktree, "rev-parse", "--show-object-format"]),
           input.git(["--git-dir", input.gitdir, "rev-parse", "--show-object-format"]),
           input.git(["-C", input.worktree, "config", "--get", "core.autocrlf"]),
-          input.git(["-C", input.worktree, "config", "--get", "core.symlinks"]),
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-path", "info/attributes"]),
           input.git(["-C", input.worktree, "config", "--get-regexp", "^filter\\."]),
           input.git(["--git-dir", input.gitdir, "config", "--get-regexp", "^filter\\."]),
           input.git(["-C", input.worktree, "config", "--get", "core.attributesFile"]),
           input.git(["--git-dir", input.gitdir, "config", "--get", "core.attributesFile"]),
         ],
-        { concurrency: 12 },
+        { concurrency: 11 },
       )
       if ([src, root, idx, fmt, dst].some((item) => item.code !== 0)) {
         return yield* reset("metadata", true)
       }
       if (fmt.text.trim() !== dst.text.trim()) return yield* reset("object-format")
       // The source stat data is only valid for the snapshot repository when both hash
-      // worktree bytes the same way: no autocrlf conversion, real symlinks, and no
-      // repository-private attributes (info/attributes, a local core.attributesFile)
-      // that the snapshot repository cannot see.
+      // worktree bytes the same way: no autocrlf conversion and no repository-private
+      // attributes (info/attributes, a local core.attributesFile) that the snapshot
+      // repository cannot see. A checkout without symlink support is fine: its symlink
+      // entries show up as type changes and are rehashed like on the cold path.
       const trusted = yield* Effect.gen(function* () {
-        if (!off(crlf) || (links.code === 0 && falsy(links.text)) || (links.code !== 0 && links.code !== 1))
-          return false
+        if (!off(crlf)) return false
         if (!same(mine, yours)) return false
         if (attrs.code !== 0) return false
         const file = attrs.text.trim()
