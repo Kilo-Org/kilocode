@@ -242,9 +242,9 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ github.token }}
-          # Read-only token for the private Kilo-Org/cloud history; a cloud
-          # surface falls back to the fixed `other` reviewers when it is unset.
-          CLOUD_REPO_TOKEN: ${{ secrets.DOCS_SYNC_CLOUD_TOKEN }}
+          # Read-only token for the Kilo-Org/cloud history; a cloud surface
+          # falls back to the fixed `other` reviewers when it is unset.
+          CLOUD_REPO_TOKEN: ${{ secrets.CROSS_REPO_ACCESS_TOKEN }}
           LEARNED_THROUGH: ${{ steps.learn.outputs.learned_through }}
           PROCESSED_THROUGH: ${{ steps.wm.outputs.now }}
           SINCE: ${{ steps.wm.outputs.since }}

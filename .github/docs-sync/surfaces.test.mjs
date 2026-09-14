@@ -358,7 +358,7 @@ test("an unreachable cloud history falls back to the fixed other pair, never thr
   assert.deepEqual(result.sourcePrefixes, ["apps/web/"])
   assert.match(result.note, /Kilo-Org\/cloud/)
   assert.match(result.note, /fixed `other` reviewers/)
-  assert.match(result.note, /DOCS_SYNC_CLOUD_TOKEN/)
+  assert.match(result.note, /CROSS_REPO_ACCESS_TOKEN/)
   assert.match(result.note, /CLOUD_REPO_TOKEN/)
 })
 
@@ -380,7 +380,7 @@ test("a cloud surface with no token falls back before making any call", async ()
     assert.equal(calls, 0)
     assert.deepEqual(result.reviewers, ["lambertjosh", "intentionally-left-nil"])
     assert.equal(result.fallback, true)
-    assert.match(result.note, /DOCS_SYNC_CLOUD_TOKEN/)
+    assert.match(result.note, /CROSS_REPO_ACCESS_TOKEN/)
   } finally {
     if (saved !== undefined) process.env.CLOUD_REPO_TOKEN = saved
     else delete process.env.CLOUD_REPO_TOKEN
