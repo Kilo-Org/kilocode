@@ -735,7 +735,11 @@ export const kiloScenarios: Scenario[] = [
       path: `/kilocode/snapshot/prepare?directory=${encodeURIComponent(directory(ctx))}`,
       headers: ctx.headers(),
     }))
-    .status(401),
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.prepared === "boolean", "snapshot preparation should report whether it prepared")
+      check(typeof body.durationMs === "number", "snapshot preparation should report its duration")
+    }),
   http.protected
     .post("/kilocode/snapshot/remove", "kilocode.removeSnapshot")
     .mutating()
