@@ -163,7 +163,7 @@ Once your integrations are connected, the following features are enabled in Kilo
 
 ### Bitbucket
 
-Organization accounts can select Bitbucket repositories when starting [Cloud Agent sessions in the mobile app](/docs/code-with-ai/platforms/mobile). This option is not available for personal accounts.
+Organization accounts can connect Bitbucket Cloud and select its repositories when starting [Cloud Agent sessions](/docs/code-with-ai/platforms/cloud-agent) on the web or in the mobile app. Connect Bitbucket from your organization's **Integrations** page. Bitbucket is not available for personal accounts.
 
 ---
 

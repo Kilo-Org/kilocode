@@ -19,7 +19,7 @@ Cloud Agents let you run Kilo Code in the cloud from any device, without relying
 Before using Cloud Agents:
 
 - **A GitHub, GitLab, or Bitbucket integration must be configured**
-  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories.
+  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories. For Bitbucket, use your organization's **Integrations** page; its repositories are available in both web and mobile Cloud Agent sessions.
 
 ## Cost
 
