@@ -43,7 +43,7 @@ Parallel work pays off when sessions are **independent** — neither one's outpu
 
 - **Good candidates:** independent features, module-scoped refactors, a feature plus an unrelated bug fix, trying 2–4 approaches to the same problem.
 - **Poor candidates:** tasks editing the same files, steps with tight sequential dependencies.
-- **Low-conflict candidates:** read-only investigation, code tours, and log analysis. Tests can write files or use shared services, so coordinate test runs too.
+- **Always safe:** read-only work (investigation, code tours, running tests, log analysis). Nothing touches the filesystem, so multiple sessions on the same branch never collide.
 
 ## The default loop
 
@@ -194,7 +194,7 @@ graph LR
 Three ways, pick based on how much collaboration the change needs:
 
 - **Apply to local** — from the diff panel. Copies the worktree's changes onto your checkout of the parent branch. You can stop there, or commit and push from your normal terminal. Fastest path for solo work.
-- **Merge directly** - in the checkout where the parent branch is active, run `git merge <worktree-branch>`. Do not try to check out a branch already in use by another worktree.
+- **Merge directly** — from the session terminal: `git checkout main && git merge <branch>`. The natural flow on teams without a PR culture.
 - **Open a PR** — `git push -u origin <branch> && gh pr create --fill` from the session terminal. The PR badge appears on the worktree and stays in sync with CI and reviews.
 
 ### Parent branch → worktree
@@ -218,7 +218,7 @@ Merge the most foundational one first. Then run `/update-from-base` in each rema
 ## Hygiene
 
 - Merge within a day or two. Past that, pull the parent branch into the worktree rather than letting it drift.
-- After a branch merges, close the worktree from its context menu. Closing a managed worktree deletes its checkout and local branch. Imported external worktrees keep their directory and branch.
+- After a branch merges, close the worktree from its context menu. The branch is preserved; the directory is removed.
 - Periodically clean up dependencies, build output, containers, volumes, simulators, and databases created by old worktrees. Closing a managed worktree removes the checkout, not external resources.
 - Do not run more than four or five agents at once. The practical limit is review and integration cost, not memory.
 

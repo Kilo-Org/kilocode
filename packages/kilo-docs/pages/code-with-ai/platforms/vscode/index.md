@@ -58,7 +58,6 @@ Use these controls in the background-agent strip:
 - **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
 - **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
 - **Clear finished** hides all agents that are no longer running.
-- **Open all** opens all agents that have not been dismissed, including finished agents and those behind the overflow count.
 - **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
 
 Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed background results are available when you send the next message or use **Continue**.

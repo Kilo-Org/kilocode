@@ -236,10 +236,6 @@ Once configured, subagents can be used in two ways:
 
 Primary agents with full tool access can automatically invoke subagents via the Task tool when the subagent's `description` matches the task at hand. Write clear, descriptive `description` values to help primary agents select the right subagent. The deprecated Orchestrator agent is not required.
 
-### Per-task model selection
-
-With the experimental [Task Subagent Model Selection](/docs/getting-started/settings#task-subagent-model-selection) setting enabled, you can explicitly request a different model, provider, or reasoning effort for an individual task. It is off by default. Without your request, subagents keep their configured or inherited defaults; the agent does not choose overrides autonomously.
-
 ### Manual Invocation via @ Mentions
 
 You can manually invoke any subagent by typing `@agent-name` in your message:

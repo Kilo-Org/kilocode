@@ -87,8 +87,6 @@ Every stored post includes the receipt text "Stored only. This does not confirm 
 
 The panel opens as an editor tab and stays active across focus changes.
 
-Empty sessions show a short introduction to worktrees. Select **Create a worktree** to get started, or **Skip introduction** to use the normal welcome screen. You can reopen it with **How Agent Manager works**; Kilo remembers your choice across reloads.
-
 ## Requirements
 
 - Open a VS Code workspace folder
@@ -299,7 +297,7 @@ Turn the setting off to keep fixes local for manual commit and push. Local draft
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to open the new worktree dialog
-2. Optionally expand **Advanced options** to enter a branch name; otherwise Kilo generates one
+2. Enter a branch name (or let Kilo generate one)
 3. Type your first message, then create the worktree
 
 Kilo creates the worktree from the selected project's configured default base branch. In a multi-project workspace, the selected project determines this setting. An explicit base branch selected in the dialog takes precedence. If no default is configured, Kilo falls back to automatic detection of the repository's remote default branch. The agent works in isolation, so your main branch is unaffected.
@@ -422,7 +420,6 @@ Use `Cmd+T` / `Ctrl+T` in the panel, or `mode: "local"` with a selected `worktre
 - **Sessions in one worktree:** Use targeted `agent_manager` prompts for conversation. They also see the same files, commits, and branch, so coordinate before making overlapping edits.
 - **Sessions in different worktrees:** Use targeted prompts plus commits, diffs, or pull requests to pass changes between isolated checkouts. Files are not shared automatically.
 - **Task descendants:** A `task` child belongs to the session that launched it. Its Kilo Swarm board is scoped to that session tree, not to every Agent Manager session in the project.
-- **Peer replies:** A receiving agent can reply to the originating session through its normal prompt queue. Requests and replies are coordination data, not user instructions or approval.
 
 Messages sent by another agent show **Sent by Kilo from another session**. Select the source link to open that session. If it is closed, the message shows **Session not open** instead.
 
@@ -466,7 +463,7 @@ Right-click the section header and select **Delete Section**. The section is rem
 ## Sending Messages, Approvals, and Control
 
 - **Continue the conversation:** Send a follow-up message to the running agent
-- **Approvals:** The Permission Dock shows tool approval prompts. Choose approve once, approve always, or deny. **Deny** opens an optional feedback field; **Reject** confirms the refusal and sends your feedback to the agent.
+- **Approvals:** The Permission Dock shows tool approval prompts — approve once, approve always, or deny
 - **Cancel:** Sends a cooperative stop signal to the agent
 - **Stop:** Force-terminates the session and marks it as stopped
 
@@ -494,13 +491,9 @@ Files marked `linguist-generated` in the repository's `.gitattributes` start col
 
 ### Sending review comments
 
-Add comments in the diff panel or a rendered Markdown document. In the diff comment composer, **Save** keeps a comment in your local review collection. **Send to Kilo** sends it to the session, or to the active Agent Manager terminal.
+Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
 
-For a checked-out pull request, the send button's menu also offers **Send to GitHub #PR**. This posts a review comment to GitHub, rather than asking Kilo to act on it. The selected lines must belong to the current PR diff.
-
-In the diff composer, `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) saves locally. Plain `Enter` sends to Kilo only when Kilo is the selected destination. Publishing to GitHub requires clicking the button.
-
-The review toolbar can send the whole collection with **Send all to chat**, or post matching comments with **Send N to GitHub #PR**. The toolbar's `Cmd+Enter` / `Ctrl+Enter` shortcut sends to chat, never GitHub. Successfully sent comments leave the collection; if a GitHub batch fails partway through, the remaining comments stay available to retry. Use **Clear all** in the chat input to discard drafts without sending them.
+After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
 
 ### PR review comments in the diff
 

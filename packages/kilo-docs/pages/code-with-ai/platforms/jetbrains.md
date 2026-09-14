@@ -16,7 +16,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
-- **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It is on by default and requires the GitHub CLI (`gh`) to be installed and authenticated.
+- **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
 
 ## Chat and worktrees
@@ -24,7 +24,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 Use **Chat** for the current workspace and **Agents** to manage parallel tasks in isolated git worktrees. **+ Session** starts a conversation; **+ Worktree** opens the worktree creation dialog.
 
 - **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**.
-- **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. Resolve any merge conflicts before moving. This action is also available from the main checkout's session list.
+- **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. This action is also available from the main checkout's session list.
 - Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it and drag worktree rows to reorder them.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
 
@@ -37,7 +37,7 @@ Add a setup script to install dependencies or prepare configuration in new workt
 | macOS / Linux | `.kilo/setup-script`, `.kilo/setup-script.sh` |
 | Windows | `.kilo/setup-script.ps1`, `.kilo/setup-script.cmd`, `.kilo/setup-script.bat` |
 
-The terminal runs in the worktree directory with `WORKTREE_PATH` (the worktree directory) and `REPO_PATH` (the repository root) available as environment variables. POSIX scripts run with `sh`, so they do not need executable permissions. Use the worktree row menu to create or open the script, or choose **Run Worktree Setup** to run it again.
+The terminal runs in the worktree directory with `WORKTREE_PATH` (the worktree directory) and `REPO_PATH` (the repository root) available as environment variables. Use the worktree row menu to create or open the script, or choose **Run Worktree Setup** to run it again.
 
 ### Running code in a worktree
 
@@ -67,9 +67,7 @@ Worktree rows separate committed changes against the base branch from uncommitte
 
 Right-click in a session or open the prompt bar's more menu to compare changes, copy the session ID, or share the conversation. **Share Session** creates a public link; **Stop Sharing** revokes it. Sharing requires signing in to Kilo and must be allowed by your configuration. The right-click menu also includes **Stop Session**. Its **Auto-Approve** toggle applies across Kilo sessions in the IDE, not just the current conversation.
 
-Selecting a mode applies it to the current session and remembers it for new sessions without changing the CLI's global default agent.
-
-If a turn fails, use **Retry** after resolving the problem or selecting a different model or agent. Retry uses the current selections. If a Kilo configuration reload interrupts a task, Kilo explains why it stopped and offers Retry. A turn you stop yourself is marked as stopped, not as a failure.
+If a turn fails, use **Retry** after resolving the problem or selecting a different model or agent. Retry uses the current selections. A turn you stop yourself is marked as stopped, not as a failure.
 
 ### Keyboard shortcuts
 

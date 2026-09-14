@@ -31,8 +31,6 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
 
-Queries can contain spaces, such as `@my report.txt`. Matching files, past chat titles, and menu actions appear together, ranked by relevance.
-
 Terminal context is limited to 500 lines or 50,000 characters. Longer output is truncated. If no terminal content is available, Kilo reports that terminal content is unavailable instead of attaching an empty file.
 
 ### Referencing Past Chats
@@ -49,17 +47,13 @@ Choose **Model** to insert an inline `@provider/model` reference. Use it to requ
 
 ### Drag and Drop
 
-You can also add mentions by dragging and dropping:
+You can also add file mentions by dragging and dropping:
 
 | Source | How | Result |
 |---|---|---|
 | **Explorer / Editor tabs** | Drag a file or folder from VS Code's Explorer or an editor tab into the chat input | Inserts an `@/relative/path` mention |
 | **Multiple files** | Drag several files at once | Inserts space-separated `@` mentions |
 | **Agent Manager diff headers** | Drag a file header from the Agent Manager's diff panel into chat | Inserts an `@file` mention |
-| **Session tabs** | Drag a chat session tab into the input | References that session's chat history |
-| **Worktree cards** | Drag an Agent Manager worktree card into the input | References the worktree's location and metadata |
-| **Terminal tabs** | Drag an Agent Manager terminal tab into the input | Inserts an `@terminal` mention |
-| **Document tabs** | Drag a tab from the Agent Manager Documents inspector into the input | Inserts a file mention |
 | **Images** | Hold **Shift** while dragging an image file from your OS file manager into the chat input | Attaches the image |
 
 {% callout type="info" %}

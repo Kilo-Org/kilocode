@@ -19,7 +19,7 @@ Tools are organized into logical groups based on their functionality:
 | **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
 | **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
 | **Web Group** | Fetch and search web content | `webfetch`, `websearch` | Research, documentation lookup |
-| **Browser Group** | Local application inspection in Agent Manager | `browser_open` | Previewing and checking rendered pages |
+| **Browser Preview** | Agent Manager's built-in browser preview | `browser_open` | Previewing and checking locally running apps |
 | **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
 | **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager`, `board_post`, `board_read` | Context switching and task organization |
 
@@ -96,7 +96,9 @@ Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 
 The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Browser panel and returns a screenshot and diagnostics. Enable **Browser Automation** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium.
 
-The automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` only, and blocks resources from other origins. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback. Browser tools from a separately configured MCP server follow that server's capabilities and permissions instead.
+The `browser_open` automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` only, and blocks resources from other origins. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback.
+
+This restriction is specific to `browser_open`, not Kilo's web access in general. Use `websearch` and `webfetch` to find and read public web pages. Browser tools from a separately configured MCP server can provide interactive web browsing according to that server's capabilities and permissions.
 
 ### MCP Tools
 
@@ -113,7 +115,6 @@ These tools help manage the conversation and task flow:
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 - `open_plan` - Opens a saved plan for review in the VS Code extension
-- `schedule_wakeup` / `cancel_wakeup` - Schedule a later continuation, or list and cancel scheduled wakeups
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
 - `board_post` / `board_read` - Exchange messages on the experimental Kilo Swarm board
 
@@ -142,14 +143,6 @@ For example, a primary agent can start independent background research with a ca
 ```
 
 Background subagents are available when the server exposes the background capability. Do not poll for progress or duplicate work in the same files. If Kilo returns a `task_id` after a failed or interrupted child, use it to resume that child when the current session and permissions allow it. A child can create more task children only when its configured depth and `task` permission allow it.
-
-### Scheduled wakeups
-
-In the CLI and VS Code extension, the agent can use `schedule_wakeup` to continue a session later, for example to check on a deployment or CI run. Ask for a one-time follow-up and say what it should check. This does not create a repeating schedule.
-
-Wakeups can be scheduled from 10 seconds to 7 days ahead, with at most 10 pending per session. Use `cancel_wakeup` to list or cancel them. A wakeup resumes with the scheduled prompt, not a new message from you; it does not grant additional permissions.
-
-The Kilo backend must be running to fire a wakeup. Pending wakeups survive restarts and are restored when the project opens again; overdue ones then fire. A paused session does not resume when its wakeup fires, and that failure is logged.
 
 ### Kilo Swarm board tools
 

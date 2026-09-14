@@ -55,7 +55,7 @@ Each enabled channel decides independently. The OS notification follows window f
 | Not focused | Visible | Yes | No |
 | Not focused | Not visible | Yes | Yes |
 
-Both channels can fire for the same event. The VS Code notification includes the workspace and session names and a **Show** button. **Show** opens the session at its latest message in Agent Manager when it owns the session, selecting the matching project and worktree or Local tab. Otherwise, it opens the session in the Kilo sidebar.
+Both channels can fire for the same event. The VS Code notification includes the workspace and session names and a **Show** button. **Show** focuses the Kilo sidebar and opens the session at its latest message.
 
 ### Native notification support
 

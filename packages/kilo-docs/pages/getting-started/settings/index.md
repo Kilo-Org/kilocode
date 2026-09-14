@@ -187,7 +187,6 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
-- **Enable Browser Automation** - enable [Agent Manager browser automation](/docs/automate/agent-manager#browser-previews) (off by default)
 - **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
@@ -221,7 +220,7 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
 
-Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. You can also enable it with `KILO_EXPERIMENTAL_SHARED_AGENT_BOARD=true` or the broader `KILO_EXPERIMENTAL=true` environment flag; these enable it even if the config value is `false`.
+Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
 
 Use it when agents can benefit from discoveries during work:
 
@@ -244,7 +243,7 @@ This lets you explicitly request a different model, provider, or reasoning effor
 
 ### Claude Code migration
 
-Enable **Claude Code Migration** in **Settings → Experimental**, or set `KILO_EXPERIMENTAL_CLAUDE_MIGRATION=true`, to import supported global Claude Code configuration on the next backend start. It is off by default and runs once, with no automatic retry.
+Enable **Claude Code Migration** in **Settings → Experimental** to import supported global Claude Code configuration on the next backend start. It is off by default and runs once, with no automatic retry.
 
 The migration imports:
 

@@ -89,13 +89,6 @@ To allow only specific providers and disable everything else, use `enabled_provi
 
 Both fields accept provider IDs — the lowercase identifier used in the `provider/model` format (e.g. `kilo`, `anthropic`, `openai`, `google`, `groq`).
 
-## Managing provider connections
-
-In the VS Code extension, open **Settings > Providers** to manage a connected provider:
-
-- **Change API key** replaces the stored key without disconnecting first. This action is available for providers with a standard API-key form.
-- **Disconnect** removes stored credentials and the provider's saved configuration from global and project config. You can reconnect without restarting the extension.
-
 ## Next Steps
 
 - **New to Kilo Code?** Start with the [Kilo Code provider](/docs/ai-providers/kilocode) - no setup required

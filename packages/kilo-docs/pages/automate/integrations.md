@@ -63,10 +63,6 @@ Once approved:
 - GitHub will show a **Connected** status.
 - Your Kilo workspace can now access GitHub repositories securely.
 
-### 5. Choose the GitHub AI model
-
-Use **AI Model** in the GitHub integration panel to choose the model for replies to `@kilocode-bot` mentions on issues and pull requests. Personal accounts have one selector; organizations have one per connected installation. Changing an organization's model requires permission to manage organization billing.
-
 ---
 
 ## Connecting GitLab

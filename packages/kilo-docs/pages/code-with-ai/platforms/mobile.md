@@ -25,13 +25,9 @@ The mobile app lets you:
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
-## Finding sessions and switching accounts
+## Finding sessions
 
 The **Agents** tab shows live sessions. Tap **See all** there to search past sessions, filter by platform or project, and change the sort order. **See all** on Home opens the live Agents list instead.
-
-Use the account control below the title on **Home** or **Agents** to switch between Personal and your organizations. The app remembers your selection. A session's header shows the account that owns that session, independently of your selection elsewhere.
-
-The Agents screen and tab badge show the live session count for the selected account. The badge stays visible when you visit another tab.
 
 ## Privacy and telemetry
 
@@ -49,11 +45,9 @@ Images embedded in model replies stay hidden until you tap **Load**. The app sho
 
 Web links in model replies ask you to confirm the destination host before opening. Choose **Trust this host** to skip future confirmations for that host. Review or revoke trusted hosts in **Preferences > Trusted hosts**; signing out clears the list. This confirmation applies to HTTP and HTTPS links, not other link types.
 
-## Language and display
+## Language and region
 
 The app follows your device language, with English as the fallback. Choose another language from the login screen or **Preferences**. The picker supports search and shows languages in their own scripts. Dates, times, and currency formatting follow the selected language. Switching between left-to-right and right-to-left layouts restarts the app.
-
-To hide reasoning text in chats and subagent sheets, turn on **Hide thinking details** in **Settings > Preferences > General**. It is off by default and remembered across launches. The activity indicator still says **Thinking** while the model reasons.
 
 ## Kilo Pass and billing
 
@@ -78,7 +72,7 @@ On Android, you can buy, restore, and change Kilo Pass tiers through Google Play
 The new-session screen includes a **Run on** picker that chooses where your session runs:
 
 - **Cloud Agent** — the managed cloud environment (the default).
-- **A connected instance**: a CLI connected from your own machine. The picker groups available connections under **Remotes** and **Terminals**.
+- **A connected CLI instance**: a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. Use **Folder** to choose a child folder, including nested folders, before starting. If the CLI cannot list folders, the app explains this and starts in the launch directory instead. In organization context, the new session belongs to that organization.
 
@@ -90,14 +84,6 @@ Open a finished session and tap **Continue** to copy its conversation into a new
 
 The CLI must support importing sessions. If it does not, the app explains why and disables **Start** rather than creating an empty session. An unavailable model or repository also prevents starting until you choose an available option.
 
-## Goals and permissions
-
-In supported sessions, use `/goal <objective>` to start a [goal](/docs/code-with-ai/agents/goals). Its objective and status stay below the session header while you scroll. Tap the goal to edit, pause, resume, or remove it. If your CLI does not support `/goal`, the app asks you to upgrade rather than sending the command as ordinary chat. Sending an ordinary follow-up message does not pause an active goal.
-
-Tap the context information in the session header to open the context sheet, then turn on **Auto-approve** to approve permission requests for that session, including a request already waiting. Tools can then run without asking you first. Clarification questions still require your answer, and other sessions keep their own settings.
-
-Turn Auto-approve off to restore permission prompts. It does not change your global configuration, is not saved across app restarts, and clears when you sign out or switch accounts. Sessions that cannot answer permission requests, such as read-only sessions, show the control as unavailable.
-
 ## Queueing follow-up messages
 
 The composer stays editable while the agent is working, so you don't have to wait for a session to finish before sending your next message. Type your follow-up and press **Send** to add it to the session's queue; queued messages are processed in order. While a session is streaming, **Stop** appears only when the composer is empty — with text entered, Send takes its place.
@@ -106,9 +92,9 @@ A queued message shows a subtle **Queued** badge on its bubble. The badge clears
 
 ## Voice input
 
-Use the microphone in the composer to dictate a prompt. By default, the app uses your operating system's speech recognizer. To transcribe through your Kilo account instead, turn on **Gateway transcription** in **Preferences** and choose a transcription model. If you have not selected one, the app uses the first available gateway model and remembers it.
+Use the microphone in the composer to dictate a prompt. By default, the app uses your operating system's speech recognizer. To transcribe through your Kilo account instead, turn on **Gateway transcription** in **Preferences** and choose a transcription model. Your model choice is remembered across launches.
 
-The selected engine handles the whole dictation; the app does not fall back to the other engine. Gateway transcription follows your organization's provider and data-collection policies. Tap the microphone to cancel an in-progress transcription. If no model is available, the app directs you to transcription settings.
+The selected engine handles the whole dictation; the app does not fall back to the other engine. Tap the microphone to cancel an in-progress transcription.
 
 ## Attachments in remote sessions
 
@@ -131,7 +117,7 @@ While the CLI is connected, the agent can deliver a file to your phone with the 
 
 Open a pull request from a PR link to review it without leaving the app:
 
-- **Overview**: PR state, CI checks, dates, labels, reviewers and their review status, assignees, and linked issues.
+- **Overview**: PR state and CI checks at a glance.
 - **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
 - **Discussion** — review threads with replies, resolve/unresolve, and reactions.
 

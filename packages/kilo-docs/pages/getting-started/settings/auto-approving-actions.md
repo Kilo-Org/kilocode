@@ -63,10 +63,8 @@ When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt with
 
 | Option | Behavior |
 |---|---|
-| **Allow once** | Allow this specific invocation |
-| **Deny** | Open an optional feedback field before rejecting |
-
-After selecting **Deny**, explain what the agent should do differently, then choose **Reject** or press `Enter`. Leave the field empty to reject without feedback, or press `Esc` to return to the approval prompt. Feedback lets the agent revise its proposal; it does not approve any action or create an allow rule.
+| **Run** | Allow this specific invocation |
+| **Deny** | Block this specific invocation |
 
 Use the shield button in the prompt controls to toggle runtime auto-approve for permission prompts without opening Settings. When enabled, the shield is highlighted and pending permission prompts are approved automatically. The runtime state stays synced across the sidebar, open Kilo tabs, and Agent Manager session views.
 

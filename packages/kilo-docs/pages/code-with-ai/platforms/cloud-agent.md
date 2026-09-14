@@ -89,32 +89,27 @@ Standard-input prompts must be valid UTF-8 and contain no more than 100,000 char
   - Expect slightly longer setup after idle periods
   - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
 
-Use the sandbox status indicator in the chat header to check whether the cloud environment is active, sleeping, or unavailable without starting new work.
-
 ## Worktrees and chats
 
 A worktree is a checkout of your repository on its own branch. It can host multiple chats with separate conversations, but edits from one chat are visible to the others. Use separate worktrees for tasks that need separate checkouts.
 
-The sidebar groups chats by worktree. Open a worktree's menu to start a **New chat**, **Rename worktree**, or **Delete worktree**. Deleting a worktree removes all of its chats too.
-
-Each open chat has its own tab. Double-click a tab, or focus it and press `F2`, to rename it. Closing a tab hides the chat without stopping it. Reopen it from **Sessions** in the tab options menu.
+Each chat opens as its own tab in the worktree group. You can rename tabs, close and reopen them, or delete a whole worktree and all of its chats.
 
 ### Workspace folders
 
 Group worktrees into folders in the sidebar. Folders are private to you, not shared with your organization.
 
-- Select **New folder** and give it a name and an optional color.
-- Drag a worktree onto a folder or use **Move to folder** in the worktree menu. Choose **Ungrouped** to remove it from a folder.
+- Create a folder with a name and an optional color, then drag worktrees onto it.
 - Use the folder menu to rename it, change its color, move it up or down, or delete it. Deleting a folder returns its worktrees to **Ungrouped** without deleting them.
 - Click a folder's header to collapse or expand it.
 
 ## Reviewing changes
 
-Select **Changes** in the chat header to review the worktree's saved change summary, including file status and lines added and removed. The panel shows the comparison's base branch and when the summary was saved. Choose **Flat** or **Tree** to change the layout, and use **Refresh changes** to request an updated summary. Large summaries can be partial, with some files or line counts omitted.
+Select **Changes** in the chat header to review the worktree's saved change summary, including file status and lines added and removed. The panel shows the comparison's base branch and when the summary was saved. Refresh the panel to load the latest saved summary. Large summaries can be partial, with some files or line counts omitted.
 
-Select a file to open its saved diff in a read-only tab. When full contents are available, use **Show all lines** to expand unchanged context or **Preview** to render Markdown. **Reload saved file** reads the latest saved revision without starting the workspace.
+Select a file to open its saved diff and, when available, full contents in a read-only tab. Reloading reads the latest saved revision without starting the workspace.
 
-These are saved snapshots, not a live view of the checkout. Diffs or contents may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full. The tab reports when content is unavailable or a saved revision has changed.
+These are saved snapshots, not a live view of the checkout. Diffs or contents may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
 
 ## Agent Environment Profiles
 

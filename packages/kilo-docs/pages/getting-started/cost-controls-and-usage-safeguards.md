@@ -108,7 +108,7 @@ Auto-compaction is **enabled by default** — Kilo automatically compacts when a
 
 **Where to configure:** Toggle auto-compaction in **Settings → Context** (VS Code) or set `compaction.auto` in `kilo.jsonc`. Configure the trigger threshold with `compaction.threshold_percent` (e.g. `80` to compact at 80% of the model's context window).
 
-You can also configure a cheaper model specifically for compaction, so summarization does not consume frontier model tokens. Choose **Compaction model** under **Settings → Models** in VS Code, or set it in `kilo.jsonc`:
+You can also configure a cheaper model specifically for compaction, so summarization does not consume frontier model tokens:
 
 ```jsonc
 {

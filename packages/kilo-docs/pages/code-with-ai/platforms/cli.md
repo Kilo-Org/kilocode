@@ -566,15 +566,9 @@ Selecting an "Always run" option will:
 
 Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
 
-Select **Reject** or press `Esc` to open an optional feedback field. Explain what the agent should do differently, then press `Enter` to reject, or leave it empty to reject without feedback. Press `Esc` again to return to the approval prompt. Feedback does not approve the action.
-
 ### Pasting Large Text
 
 Pasting a large block of text (five or more lines, or over 800 characters) into the prompt collapses it into a placeholder such as `[Pasted ~6 lines]` to keep the prompt readable. To view or edit the pasted text, paste the same text again — the matching placeholder expands in place.
-
-### Answering questions
-
-In interactive `kilo run`, use the arrow keys to focus an answer and `Enter` to select it. For questions that allow multiple answers, `Space` toggles an option and `Enter` advances to the next question or the final review. If the agent suggests a default for a single-select question, you can confirm it or choose another answer; it never submits automatically. Follow the footer hints to navigate or dismiss questions.
 
 ## Autonomous Mode (Non-Interactive)
 
