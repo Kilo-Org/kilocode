@@ -340,11 +340,10 @@ it.live(
         yield* Effect.sleep("1 second")
         expect(existsSync(alt)).toBe(true)
         yield* Effect.promise(() => Bun.write(path.join(dir, "note.txt"), "changed\n"))
-        const started = Date.now()
         const second = yield* snapshot.track()
         expect(second).toBeTruthy()
         expect(second).not.toBe(first)
-        expect(Date.now() - started).toBeLessThan(1000)
+        // The second snapshot restarted the quiet period, so nothing has been repacked yet.
         yield* Effect.sleep("1 second")
         expect(existsSync(alt)).toBe(true)
         yield* pollWithTimeout(

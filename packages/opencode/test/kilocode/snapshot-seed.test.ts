@@ -411,6 +411,10 @@ test("interrupted seed removes borrowed state after source gc", async () => {
 
 test("regular seed keeps source stat data except for rewritten or flagged entries", async () => {
   const init = async (dir: string) => {
+    // The trusted path requires the semantics the snapshot repository uses; Git for
+    // Windows defaults to autocrlf=true and symlinks=false, which take the cold path.
+    await $`git config core.autocrlf false`.cwd(dir).quiet()
+    await $`git config core.symlinks true`.cwd(dir).quiet()
     await $`git config filter.snapshot-keep.clean "tr a-z A-Z"`.cwd(dir).quiet()
     await $`git config filter.snapshot-keep.smudge cat`.cwd(dir).quiet()
     await Filesystem.write(path.join(dir, ".gitattributes"), "*.flt filter=snapshot-keep\n")
@@ -481,6 +485,8 @@ test("regular seed keeps source stat data except for rewritten or flagged entrie
   expect((await seed(shared.path, same, false)).source).toBeTruthy()
   expect(await dirty(shared.path, same)).toEqual(["assume.txt", "skip.txt"])
 
+  // Line-ending conversion and repository-private attribute sources take the cold path.
+  const everything = [".gitattributes", "assume.txt", "filtered.flt", "plain.txt", "skip.txt"]
   await using converted = await tmpdir({
     git: true,
     init: async (dir) => {
@@ -490,14 +496,22 @@ test("regular seed keeps source stat data except for rewritten or flagged entrie
   })
   const cold = path.join(root.path, "cold.git")
   expect((await seed(converted.path, cold)).source).toBeTruthy()
-  expect(await dirty(converted.path, cold)).toEqual([
-    ".gitattributes",
-    "assume.txt",
-    "filtered.flt",
-    "plain.txt",
-    "skip.txt",
-  ])
-})
+  expect(await dirty(converted.path, cold)).toEqual(everything)
+
+  await using local = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await init(dir)
+      await Filesystem.write(path.join(dir, "local-attributes"), "plain.txt filter=snapshot-keep\n")
+      await $`git add local-attributes`.cwd(dir).quiet()
+      await $`git commit -m attributes`.cwd(dir).quiet()
+      await $`git config core.attributesFile local-attributes`.cwd(dir).quiet()
+    },
+  })
+  const hidden = path.join(root.path, "hidden.git")
+  expect((await seed(local.path, hidden)).source).toBeTruthy()
+  expect(await dirty(local.path, hidden)).toEqual([...everything, "local-attributes"].sort())
+}, 35_000)
 
 test("regular seed falls back for subdirectory sessions", async () => {
   await using tmp = await tmpdir({

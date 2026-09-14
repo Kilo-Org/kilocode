@@ -190,17 +190,14 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             // kilocode_change start
             // A new root snapshot covers the full worktree, so a single pathspec avoids
             // quadratic matching against every tracked path in very large repositories.
-            // Large candidate sets (a stat-less index after restore, or mass changes) take
-            // the same route: the candidates already exclude ignored and oversized paths.
-            const bulk = opts?.root || (files.length > 1000 && state.directory === state.worktree)
-            const cmd = bulk
+            const cmd = opts?.root
               ? ["add", "--all", "--sparse", "--", "."]
               : ["add", "--all", "--sparse", "--pathspec-from-file=-", "--pathspec-file-nul"]
 
             const result = yield* git([...cfg, ...args(cmd)], {
               cwd: state.directory,
               env: opts?.env,
-              stdin: bulk ? undefined : literal(files),
+              stdin: opts?.root ? undefined : literal(files),
             })
             // kilocode_change end
             if (result.code === 0) return
@@ -318,9 +315,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             yield* sync(Array.from(block))
             // Stage only the allowed candidate paths so snapshot updates stay scoped.
             // kilocode_change start - initial seeded writes stay protected by the source pin
+            // A large candidate set with nothing filtered out is the whole worktree, so one
+            // bulk add is equivalent and avoids quadratic pathspec matching.
+            const bulk = allow.length > 1000 && !ignored.size && !block.size && state.directory === state.worktree
             yield* stage(
               allow.filter((item) => !block.has(item)),
-              opts,
+              { ...opts, root: opts?.root || bulk },
             )
           })
 

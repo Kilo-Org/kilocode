@@ -50,6 +50,9 @@ export namespace KiloSnapshotSeed {
       .filter(Boolean)
       .sort()
       .join("\n")
+  // Two `git config` views agree when both are unset or both list the same values.
+  const same = (a: Result, b: Result) =>
+    (a.code === 0 || a.code === 1) && (b.code === 0 || b.code === 1) && lines(a.text) === lines(b.text)
   const snap = (input: Input, cmd: string[]) => ["--git-dir", input.gitdir, "--work-tree", input.worktree, ...cmd]
   const batch = 256
 
@@ -98,7 +101,7 @@ export namespace KiloSnapshotSeed {
       if (unmerged.code !== 0) return yield* reset("unmerged-check-failed", true)
       if (unmerged.text) return yield* reset("unmerged-index")
 
-      const [src, root, idx, fmt, dst, crlf, links, attrs, theirs, ours] = yield* Effect.all(
+      const [src, root, idx, fmt, dst, crlf, links, attrs, theirs, ours, mine, yours] = yield* Effect.all(
         [
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-dir"]),
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-common-dir"]),
@@ -110,8 +113,10 @@ export namespace KiloSnapshotSeed {
           input.git(["-C", input.worktree, "rev-parse", "--path-format=absolute", "--git-path", "info/attributes"]),
           input.git(["-C", input.worktree, "config", "--get-regexp", "^filter\\."]),
           input.git(["--git-dir", input.gitdir, "config", "--get-regexp", "^filter\\."]),
+          input.git(["-C", input.worktree, "config", "--get", "core.attributesFile"]),
+          input.git(["--git-dir", input.gitdir, "config", "--get", "core.attributesFile"]),
         ],
-        { concurrency: 10 },
+        { concurrency: 12 },
       )
       if ([src, root, idx, fmt, dst].some((item) => item.code !== 0)) {
         return yield* reset("metadata", true)
@@ -119,20 +124,26 @@ export namespace KiloSnapshotSeed {
       if (fmt.text.trim() !== dst.text.trim()) return yield* reset("object-format")
       // The source stat data is only valid for the snapshot repository when both hash
       // worktree bytes the same way: no autocrlf conversion, real symlinks, and no
-      // repository-private attributes that the snapshot repository cannot see.
+      // repository-private attributes (info/attributes, a local core.attributesFile)
+      // that the snapshot repository cannot see.
       const trusted = yield* Effect.gen(function* () {
         if (!off(crlf) || (links.code === 0 && falsy(links.text)) || (links.code !== 0 && links.code !== 1))
           return false
+        if (!same(mine, yours)) return false
         if (attrs.code !== 0) return false
         const file = attrs.text.trim()
         if (!file) return false
-        const info = yield* input.fs.stat(file).pipe(Effect.catch(() => Effect.void))
+        const info = yield* input.fs
+          .stat(file)
+          .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+          .pipe(Effect.catch(() => Effect.succeed(null)))
+        if (info === null) return false
         return !info || Number(info.size) === 0
       })
       // Filter drivers such as LFS rewrite content on the way into the object store. When
       // both repositories see the same driver configuration (global config), the source
       // index already holds what the snapshot repository would produce.
-      const shared = trusted && (theirs.code === 1 || theirs.code === 0) && lines(theirs.text) === lines(ours.text)
+      const shared = trusted && same(theirs, ours)
 
       const source = src.text.trim()
       const common = root.text.trim()
