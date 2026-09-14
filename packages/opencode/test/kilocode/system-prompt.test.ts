@@ -21,6 +21,17 @@ import PROMPT_LING from "../../src/session/prompt/ling.txt"
 import PROMPT_TRINITY from "../../src/session/prompt/trinity.txt"
 
 describe("SystemPrompt.provider", () => {
+  test.each(["gpt-6-astra", "openai/gpt-6-astra", "openai/gpt-6-astra-pro", "~openai/gpt-astra-latest"])(
+    "uses the shared GPT prompt for %s without metadata",
+    (id) => {
+      const model = ProviderTest.model({
+        prompt: undefined,
+        api: { id, url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      expect(SystemPrompt.provider(model)).toEqual([PROMPT_GPT])
+    },
+  )
+
   describe("model.prompt override", () => {
     test("anthropic prompt is selected when model.prompt is 'anthropic'", () => {
       const model = ProviderTest.model({ prompt: "anthropic" })

@@ -79,6 +79,14 @@ async function execute(dir: string, params: RecallParams, context: Tool.Context 
 }
 
 describe("kilo_memory_recall description", () => {
+  test("requires a historical need rather than a repository-search prerequisite", () => {
+    expect(MemoryTool.RecallDescription).toContain("specific relevant memory entry is too abbreviated")
+    expect(MemoryTool.RecallDescription).toContain("Memory recall is not a prerequisite")
+    expect(MemoryTool.RecallDescription).not.toContain("Use this before Grep, Glob, Read")
+    expect(MemoryTool.RecallDescription).toContain("and the historical detail is still needed")
+    expect(MemoryTool.RecallDescription).toContain("Stop when no relevant entry is available")
+  })
+
   test("does not over-promise synonym or semantic expansion", () => {
     expect(MemoryTool.RecallDescription).not.toMatch(/retry once with synonyms/i)
     expect(MemoryTool.RecallDescription).toContain("no synonym expansion")
@@ -172,7 +180,6 @@ describe("kilo_memory_recall", () => {
       const direct = await execute(dir.path, { mode: "digest", sessionID: "ses_memory_only", query: "unrelated" })
 
       expect(direct.output).toContain("continue memory digest recall")
-
     })
   })
 
@@ -391,7 +398,6 @@ describe("kilo_memory_recall", () => {
       expect(result.title).toContain("no results")
       expect(result.output).toContain("active session")
       expect(result.output).not.toContain("useful prior work")
-
     })
   })
 
@@ -487,7 +493,6 @@ describe("kilo_memory_recall", () => {
       expect(result.output).toContain("cli_tests")
       expect(result.output).toContain("type=session_digest")
       expect(result.output).toContain('topic="catalog recall"')
-
     })
   })
 

@@ -2,9 +2,16 @@ import { describe, expect, test } from "bun:test"
 import DESCRIPTION_WRITE from "../../src/tool/todowrite.txt"
 
 describe("todowrite description", () => {
-  test("requires an update between each task", () => {
-    expect(DESCRIPTION_WRITE).toContain("call this tool before starting the first item")
-    expect(DESCRIPTION_WRITE).toContain("After completing each item, call this tool before starting the next item")
-    expect(DESCRIPTION_WRITE).toContain("Do not complete multiple items or continue through multiple steps")
+  test("tracks milestones without requiring updates for routine actions", () => {
+    expect(DESCRIPTION_WRITE).toContain("Track meaningful milestones rather than individual tool calls")
+    expect(DESCRIPTION_WRITE).toContain("routine intermediate actions do not need separate updates")
+    expect(DESCRIPTION_WRITE).not.toContain("When in doubt, use it")
+  })
+
+  test("preserves truthful completion and a single active milestone", () => {
+    expect(DESCRIPTION_WRITE).toContain("Keep exactly one `in_progress` while work remains")
+    expect(DESCRIPTION_WRITE).toContain("Mark `completed` only after the required work is actually done")
+    expect(DESCRIPTION_WRITE).toContain("including any required verification")
+    expect(DESCRIPTION_WRITE).toContain("reconcile the list with what was actually completed or remains blocked")
   })
 })

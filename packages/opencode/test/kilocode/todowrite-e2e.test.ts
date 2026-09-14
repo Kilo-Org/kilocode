@@ -38,7 +38,7 @@ const todos = [
 
 describe("todowrite end-to-end", () => {
   cliIt.live(
-    "persists every sequential update through the real CLI session",
+    "persists milestone updates through the real CLI session",
     ({ llm, opencode }) =>
       Effect.gen(function* () {
         const server = yield* opencode.serve()
@@ -61,7 +61,7 @@ describe("todowrite end-to-end", () => {
         opencode.expectExit(result, 0)
 
         expect(JSON.stringify(yield* llm.inputs)).toContain(
-          "After completing each item, call this tool before starting the next item",
+          "Track meaningful milestones rather than individual tool calls",
         )
         const saved = yield* Effect.promise(() => client.session.todo({ sessionID }))
         const final = todos[todos.length - 1]?.map((todo) => ({ ...todo }))

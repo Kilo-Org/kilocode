@@ -147,7 +147,7 @@ Use this skill.
   )
 
   // kilocode_change start
-  it.live("built-in kilo-config keeps rendered shell examples inert", () =>
+  it.live("built-in kilo-customization keeps rendered shell examples inert", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
@@ -177,7 +177,7 @@ Use this skill.
               }),
           }
 
-          const result = yield* tool.execute({ name: "kilo-config" }, ctx)
+          const result = yield* tool.execute({ name: "kilo-customization" }, ctx)
 
           expect(result.metadata.dir).toBe("builtin")
           expect(result.output).toContain("Finding a named command")

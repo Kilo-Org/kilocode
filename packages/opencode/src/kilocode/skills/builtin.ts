@@ -4,6 +4,10 @@
 // Registered before all discovery phases so user skills with the same name override.
 
 import KILO_CONFIG from "./kilo-config.md" with { type: "text" }
+import KILO_CUSTOMIZATION from "./kilo-customization.md" with { type: "text" }
+import KILO_TOOLS from "./kilo-tools.md" with { type: "text" }
+import KILO_AGENT_MANAGER from "./kilo-agent-manager.md" with { type: "text" }
+import KILO_TUI from "./kilo-tui.md" with { type: "text" }
 
 export interface BuiltinSkill {
   name: string
@@ -15,7 +19,28 @@ export const BUILTIN_SKILLS: BuiltinSkill[] = [
   {
     name: "kilo-config",
     description:
-      "Guide for Kilo configuration: config paths, kilo.json fields, commands, agents, skills, permissions, MCPs, providers, TUI settings, plus Agent Manager worktree setup/run scripts, workflows, and state. Use for Kilo config questions, locating loaded config, changing settings, or Agent Manager questions about run/setup scripts, worktree setup/workflows, apply/merge/PR/conflicts, missing sessions/worktrees, and agent-manager.json recovery.",
+      "Locate Kilo config files, resolve precedence, and set kilo.json options, including models and providers.",
     content: KILO_CONFIG,
+  },
+  {
+    name: "kilo-customization",
+    description: "Create or locate Kilo custom commands, agents, skills, and legacy workflows.",
+    content: KILO_CUSTOMIZATION,
+  },
+  {
+    name: "kilo-tools",
+    description: "Configure Kilo tool permissions and local or remote MCP servers.",
+    content: KILO_TOOLS,
+  },
+  {
+    name: "kilo-agent-manager",
+    description:
+      "Configure VS Code Agent Manager setup/run scripts, integrate worktrees, or troubleshoot conflicts and missing worktree/session state.",
+    content: KILO_AGENT_MANAGER,
+  },
+  {
+    name: "kilo-tui",
+    description: "Find Kilo CLI keybinds, slash commands, themes, and interactive display or session controls.",
+    content: KILO_TUI,
   },
 ]
