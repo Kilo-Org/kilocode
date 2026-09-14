@@ -388,6 +388,7 @@ export const dict = {
   "settings.providers.tag.other": "سایر",
   "settings.providers.connected.environmentDescription": "از متغیرهای محیطی شما متصل شده است",
   "settings.providers.action.signInChatGPT": "ورود با ChatGPT",
+  "settings.providers.action.changeApiKey": "تغییر کلید API",
   "settings.providers.custom.description": "یک ارائه‌دهنده سفارشی از طریق URL پایه اضافه کنید.",
 
   "provider.custom.title": "ارائه‌دهنده سفارشی",
