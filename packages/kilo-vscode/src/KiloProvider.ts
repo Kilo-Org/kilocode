@@ -1218,6 +1218,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.response,
             message.approvedAlways,
             message.deniedAlways,
+            message.feedback,
           )
           break
         case "createSession":
@@ -1297,6 +1298,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.sessionID,
             message.title,
             this.getWorkspaceDirectory(message.parentSessionID),
+            message.background === true,
           )
           break
         case "saveImage":
@@ -3670,11 +3672,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       if (!snapshot) throw new Error("Config update returned no authoritative snapshot")
+      const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
+      // Issue bindings after async reads so a concurrent refresh cannot expire them before publication.
       const bindings = this.bindingsFor(dir, snapshot.targets)
       const global = snapshot.targets.global.raw as Config
       const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
       this.cachedGlobalConfig = global
-      const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
       this.cachedConfigMessage = {
         type: "configLoaded",
         config: snapshot.effective,
@@ -4018,6 +4021,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       browserAutomation: this.browserAutomationSetting(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
+      "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),
       "agentManager.pushFixes": pushFixes(),
       "autoCleanup.enabled": cleanup.enabled,
       "autoCleanup.defaultRetentionDays": cleanup.defaultRetentionDays,
@@ -4805,7 +4809,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     ])
   }
 
-  /** Reload config, skills, agents, and commands from disk by rebooting the instance. */
+  /** Reload config, skills, agents, and commands from disk by rebooting the project's instances. */
   private async handleReload(): Promise<void> {
     if (!this.client) {
       console.warn("[Kilo New] handleReload: no client connection")
@@ -4821,7 +4825,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         cause && typeof cause === "object" && "status" in cause ? (cause as { status?: number }).status : undefined
       if (status === 409) {
         vscode.window.showWarningMessage(
-          "Cannot reload while a session is running. Wait for it to finish or abort it first.",
+          "Cannot reload while a session is running in this project. Wait for it to finish or abort it first.",
         )
         return
       }
@@ -4833,7 +4837,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.clearCommandsCache()
     if (!sameDirectory(dir, this.getWorkspaceDirectory())) {
       await this.reloadAfterAuthChange()
+      return
     }
+    await Promise.all([
+      this.fetchAndSendConfig(),
+      this.fetchAndSendAgents(),
+      this.fetchAndSendSkills(),
+      this.fetchAndSendCommands(),
+    ])
   }
 
   /** Public reload entry point for VS Code commands. */

@@ -97,6 +97,7 @@ export interface PermissionResponseRequest {
   response: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  feedback?: string
 }
 
 export interface CreateSessionRequest {
@@ -1269,6 +1270,8 @@ export interface OpenSubAgentViewerRequest {
   sessionID: string
   title?: string
   parentSessionID?: string
+  /** True for async background agents, whose reasoning shows a capped preview. */
+  background?: boolean
 }
 
 // Preview an image attachment in VS Code's built-in image viewer

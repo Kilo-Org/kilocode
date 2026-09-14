@@ -284,6 +284,10 @@ export class VscodeHost implements Host {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
   }
 
+  worktreePool(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.agentManager").get("worktreePool", true)
+  }
+
   readProjects(): unknown {
     return this.context.globalState.get("agentManager.projects")
   }
@@ -315,6 +319,12 @@ export class VscodeHost implements Host {
   onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
     return vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
+    })
+  }
+
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable {
+    return vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.agentManager.worktreePool")) cb(this.worktreePool())
     })
   }
 
