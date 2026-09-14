@@ -377,20 +377,33 @@ describe("shared board tools", () => {
     ),
   )
 
-  it.live("is absent by default and rejects direct execution while disabled", () =>
+  it.live("is enabled by default", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
         const registry = yield* ToolRegistry.Service
-        expect(yield* registry.ids()).not.toContain("board_read")
-        expect(yield* registry.ids()).not.toContain("board_post")
-        const root = yield* seed("Disabled")
-        const ctx = yield* context(root.session.id, root.message)
-        const post = yield* Tool.init(yield* BoardPostTool)
-        const result = yield* Effect.exit(post.execute({ to: "ALL", type: "INFO", body: "Not posted" }, ctx))
-        expect(Exit.isFailure(result)).toBe(true)
-        if (Exit.isFailure(result)) expect(Cause.pretty(result.cause)).toContain("shared agent board is disabled")
-        expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(0)
+        const ids = yield* registry.ids()
+        expect(ids).toContain("board_read")
+        expect(ids).toContain("board_post")
       }),
+    ),
+  )
+
+  it.live("is absent and rejects direct execution when config disables it", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const registry = yield* ToolRegistry.Service
+          expect(yield* registry.ids()).not.toContain("board_read")
+          expect(yield* registry.ids()).not.toContain("board_post")
+          const root = yield* seed("Disabled")
+          const ctx = yield* context(root.session.id, root.message)
+          const post = yield* Tool.init(yield* BoardPostTool)
+          const result = yield* Effect.exit(post.execute({ to: "ALL", type: "INFO", body: "Not posted" }, ctx))
+          expect(Exit.isFailure(result)).toBe(true)
+          if (Exit.isFailure(result)) expect(Cause.pretty(result.cause)).toContain("shared agent board is disabled")
+          expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(0)
+        }),
+      { config: { experimental: { shared_agent_board: false } } },
     ),
   )
 
