@@ -24,7 +24,15 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID, latestTaskPart } from "../../context/session-utils"
 import { useConfig } from "../../context/config"
 import { openSubagent } from "./open-subagent"
-import { showChildPromotion, taskAvatarStatus, taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import {
+  showChildPromotion,
+  taskAutoOpen,
+  taskAvatarStatus,
+  taskBackground,
+  taskResult,
+  taskRunning,
+  taskVisible,
+} from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -61,14 +69,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const running = createMemo(() => taskRunning(props.status))
   // Background task cards stay collapsed: they must not auto-open or show the
   // "Starting..." status, which would flicker the transcript as the child runs.
-  // The input carries `background` from the first part update; promoted tasks
-  // only gain the state metadata flag later.
-  const backgroundTask = createMemo(
-    () =>
-      props.input.background === true ||
-      ((props.partMetadata as Record<string, unknown> | undefined)?.background ??
-        (props.metadata as Record<string, unknown> | undefined)?.background) === true,
-  )
+  const backgroundTask = createMemo(() => taskBackground(props.input, props.partMetadata, props.metadata))
   const avatar = createMemo(() => {
     const id = childSessionId()
     return taskAvatarStatus(id, props.status, session.allStatusMap())
@@ -87,10 +88,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       { defer: true },
     ),
   )
-  // Auto-open only once the call is running: while "pending" the streamed
-  // input cannot yet tell a background task from a foreground one, and a
-  // background card must never open on its own.
-  const auto = () => props.status === "running" && !backgroundTask()
+  // Auto-open only once the call is running: a pending call cannot yet tell a
+  // background task from a foreground one, and a background card must never
+  // open on its own.
+  const auto = () => taskAutoOpen(props.status, backgroundTask())
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
   // true never transitions, so this local signal must also seed itself from
