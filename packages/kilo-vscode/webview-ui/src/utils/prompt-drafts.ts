@@ -1,6 +1,15 @@
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import type { SendMessageFailedMessage } from "../types/messages"
 
+export function composePromptMessage(parts: {
+  review: string
+  browser: string
+  annotations: string
+  draft: string
+}): string {
+  return [parts.review, parts.browser, parts.annotations, parts.draft].filter(Boolean).join("\n\n")
+}
+
 export function failedPrompt(failed: Pick<SendMessageFailedMessage, "text" | "review" | "browserFeedback">) {
   if (!failed.review && !failed.browserFeedback) return { text: failed.text, comments: [], browsers: [] }
   const parsed = partFeedback({ kilo: { review: failed.review, browserFeedback: failed.browserFeedback } }, failed.text)
@@ -69,33 +78,74 @@ export function clearPromptDraftRoutes(id?: string): void {
   }
 }
 
-export function movePromptDraft<T, C, I, S, B>(
+interface PromptDraftLookupStores {
+  text: ReadonlyMap<string, unknown>
+  comments: ReadonlyMap<string, unknown>
+  images: ReadonlyMap<string, unknown>
+  scrolls: ReadonlyMap<string, unknown>
+  browsers?: ReadonlyMap<string, unknown>
+  annotations?: ReadonlyMap<string, unknown>
+  editors?: ReadonlyMap<string, unknown>
+}
+
+export function promptDraftStorageKey(raw: string, fallback: string, stores: PromptDraftLookupStores): string {
+  const suffix = `:${raw}`
+  const maps: ReadonlyMap<string, unknown>[] = [stores.text, stores.comments, stores.images, stores.scrolls]
+  if (stores.browsers) maps.push(stores.browsers)
+  if (stores.annotations) maps.push(stores.annotations)
+  if (stores.editors) maps.push(stores.editors)
+  for (const map of maps) {
+    for (const key of map.keys()) {
+      if (key.endsWith(suffix)) return key
+    }
+  }
+  return scopeDraftKey(fallback, raw)
+}
+
+export function promptDraftPromotion(
+  raw: string,
+  sessionID: string,
+  fallback: string,
+  stores: PromptDraftLookupStores,
+) {
+  const suffix = `:${raw}`
+  const source = promptDraftStorageKey(raw, fallback, stores)
+  const box = source.slice(0, -suffix.length)
+  return { source, target: scopeDraftKey(box, sessionDraftKey(sessionID)) }
+}
+
+export function movePromptDraft<T, C, I, S, B, A, E>(
   stores: {
     text: Map<string, T>
     comments: Map<string, C>
     images: Map<string, I>
     scrolls: Map<string, S>
     browsers?: Map<string, B>
+    annotations?: Map<string, A>
+    editors?: Map<string, E>
   },
   source: string,
   target: string,
-): { text?: T; comments?: C; images?: I; scroll?: S; browsers?: B } {
+): { text?: T; comments?: C; images?: I; scroll?: S; browsers?: B; annotations?: A; editor?: E } {
   const draft = {
     text: stores.text.get(source),
     comments: stores.comments.get(source),
     images: stores.images.get(source),
     scroll: stores.scrolls.get(source),
     ...(stores.browsers?.has(source) ? { browsers: stores.browsers.get(source) } : {}),
+    ...(stores.annotations?.has(source) ? { annotations: stores.annotations.get(source) } : {}),
+    ...(stores.editors?.has(source) ? { editor: stores.editors.get(source) } : {}),
   }
-  if (draft.text !== undefined && !stores.text.has(target)) stores.text.set(target, draft.text)
-  if (draft.comments !== undefined && !stores.comments.has(target)) stores.comments.set(target, draft.comments)
-  if (draft.images !== undefined && !stores.images.has(target)) stores.images.set(target, draft.images)
-  if (draft.scroll !== undefined && !stores.scrolls.has(target)) stores.scrolls.set(target, draft.scroll)
-  if (draft.browsers !== undefined) stores.browsers?.set(target, draft.browsers)
-  stores.text.delete(source)
-  stores.comments.delete(source)
-  stores.images.delete(source)
-  stores.scrolls.delete(source)
-  stores.browsers?.delete(source)
+  const move = <V>(map: Map<string, V> | undefined, value: V | undefined) => {
+    if (value !== undefined && !map?.has(target)) map?.set(target, value)
+    map?.delete(source)
+  }
+  move(stores.text, draft.text)
+  move(stores.comments, draft.comments)
+  move(stores.images, draft.images)
+  move(stores.scrolls, draft.scroll)
+  move(stores.browsers, draft.browsers)
+  move(stores.annotations, draft.annotations)
+  move(stores.editors, draft.editor)
   return draft
 }

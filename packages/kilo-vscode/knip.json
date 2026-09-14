@@ -2,6 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/extension.ts",
+    "src/kilo-provider/response-lens-document-worker.ts",
     "webview-ui/agent-manager/index.tsx",
     "webview-ui/documents/index.tsx",
     "webview-ui/diff-viewer/index.tsx",

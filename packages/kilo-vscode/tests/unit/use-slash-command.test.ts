@@ -10,6 +10,7 @@ function setup(
     exclude?: () => Set<string>
     include?: Set<string>
     extra?: SlashCommandEntry[]
+    beforeAction?: (command: SlashCommandEntry) => boolean
   } = {},
 ) {
   const sent: WebviewMessage[] = []
@@ -29,6 +30,7 @@ function setup(
       options.include,
       undefined,
       options.extra,
+      options.beforeAction,
     ),
   }))
   const fire = (message: ExtensionMessage) => {
@@ -273,6 +275,32 @@ describe("useSlashCommand sandbox action", () => {
     expect(handled).toBe(true)
     expect(state.toggles).toBe(0)
     expect(state.text).toBe("/sandbox")
+    expect(textarea.value).toBe("/sandbox")
+    ctx.dispose()
+  })
+
+  it("keeps the command text and skips local actions when the caller blocks them", () => {
+    const state = { toggles: 0, text: "/sandbox", blocked: "" }
+    const ctx = setup(() => state.toggles++, {
+      beforeAction: (command) => {
+        state.blocked = command.name
+        return false
+      },
+    })
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key: "Enter",
+      isComposing: false,
+      preventDefault: () => {},
+    } as unknown as KeyboardEvent
+
+    ctx.slash.onInput(state.text, state.text.length)
+    expect(ctx.slash.onKeyDown(event, textarea, (text) => (state.text = text))).toBe(true)
+    expect(state).toEqual({ toggles: 0, text: "/sandbox", blocked: "sandbox" })
     expect(textarea.value).toBe("/sandbox")
     ctx.dispose()
   })

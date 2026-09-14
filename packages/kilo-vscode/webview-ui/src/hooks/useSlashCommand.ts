@@ -60,6 +60,7 @@ export function useSlashCommand(
   include?: Set<string> | Accessor<Set<string>>,
   scope?: string,
   extra?: SlashCommandEntry[],
+  beforeAction?: (command: SlashCommandEntry) => boolean,
 ): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
@@ -349,6 +350,7 @@ export function useSlashCommand(
 
     if (cmd.action || cmd.select) {
       if (cmd.enabled && !cmd.enabled()) return
+      if (beforeAction && !beforeAction(cmd)) return
       textarea.value = trailingText
       setText(trailingText)
       textarea.setSelectionRange(0, 0)

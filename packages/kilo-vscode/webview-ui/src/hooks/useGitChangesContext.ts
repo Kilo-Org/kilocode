@@ -11,7 +11,17 @@ interface VSCodeContext {
 
 export interface GitChangesContext {
   pending: Accessor<boolean>
-  resolveAttachment: (text: string, sessionID?: string, context?: string) => Promise<FileAttachment | undefined>
+  resolveAttachment: (
+    text: string,
+    sessionID?: string,
+    scope?: CapturedGitChangesScope,
+  ) => Promise<FileAttachment | undefined>
+}
+
+export interface CapturedGitChangesScope {
+  captured: true
+  agentManagerContext?: string
+  available: boolean
 }
 
 export function useGitChangesContext(
@@ -37,16 +47,18 @@ export function useGitChangesContext(
     requests.dispose("Git changes context request cancelled", true)
   })
 
-  const resolveAttachment = async (text: string, sessionID?: string, scope?: string) => {
+  const resolveAttachment = async (text: string, sessionID?: string, scope?: CapturedGitChangesScope) => {
     if (!hasGitChangesMention(text)) return undefined
-    if (git?.() === false) return undefined
+    const available = scope?.captured ? scope.available : git?.()
+    if (available === false) return undefined
+    const agentManagerContext = scope?.captured ? scope.agentManagerContext : context?.()
 
     const content = await requests.request((requestId) => {
       vscode.postMessage({
         type: "requestGitChangesContext",
         requestId,
         sessionID,
-        agentManagerContext: scope ?? context?.(),
+        ...(agentManagerContext === undefined ? {} : { agentManagerContext }),
       })
     })
     return buildGitChangesAttachment(text, content)

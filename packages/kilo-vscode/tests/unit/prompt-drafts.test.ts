@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect } from "bun:test"
 import { createEffect, createRoot, createSignal, on } from "solid-js"
 import { browserFeedbackData, formatBrowserFeedback } from "../../src/shared/browser-feedback"
 import { formatReviewCommentsMarkdown } from "../../src/shared/review-comments"
+import { formatAnnotationsMarkdown, newAnnotation } from "../../webview-ui/src/utils/annotations"
 import {
   browserDrafts,
   deleteDraftsForSession,
@@ -13,12 +14,15 @@ import {
 } from "../../webview-ui/src/utils/draft-store"
 import {
   clearPromptDraftRoutes,
+  composePromptMessage,
   createdDraftKey,
   failedPrompt,
   movePromptDraft,
   pendingDraftKey,
   promotePromptDraft,
   promptDraftKey,
+  promptDraftPromotion,
+  promptDraftStorageKey,
   scopeDraftKey,
   sessionDraftKey,
 } from "../../webview-ui/src/utils/prompt-drafts"
@@ -62,6 +66,48 @@ describe("failedPrompt", () => {
     const text = `${formatReviewCommentsMarkdown(review.comments)}\n\n${formatBrowserFeedback(browser.references)}\n\nApply both`
     expect(failedPrompt({ text, review, browserFeedback: browser })).toEqual({
       text: "Apply both",
+      comments: review.comments,
+      browsers: browser.references,
+    })
+  })
+
+  it("round-trips review, browser, annotations, and draft through backend-failure restoration", () => {
+    const review = {
+      version: 1 as const,
+      comments: [
+        {
+          id: "review",
+          file: "src/app.ts",
+          side: "additions" as const,
+          line: 3,
+          comment: "Keep this",
+          selectedText: "value",
+        },
+      ],
+    }
+    const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save" }])!
+    const annotations = formatAnnotationsMarkdown([
+      newAnnotation({
+        sessionID: "session",
+        messageID: "message-full-id",
+        selectedText: "assistant quote",
+        comment: "Explain this",
+      }),
+    ])
+    const draft = "Apply all feedback"
+    const text = composePromptMessage({
+      review: formatReviewCommentsMarkdown(review.comments),
+      browser: formatBrowserFeedback(browser.references),
+      annotations,
+      draft,
+    })
+
+    expect(text.match(/## Review Comments/g)).toHaveLength(1)
+    expect(text.match(/## Browser Feedback/g)).toHaveLength(1)
+    expect(text.match(/## Annotations on previous responses/g)).toHaveLength(1)
+    expect(text.match(/Apply all feedback/g)).toHaveLength(1)
+    expect(failedPrompt({ text, review, browserFeedback: browser })).toEqual({
+      text: `${annotations}\n\n${draft}`,
       comments: review.comments,
       browsers: browser.references,
     })
@@ -278,7 +324,7 @@ describe("createdDraftKey", () => {
 })
 
 describe("movePromptDraft", () => {
-  it("moves text, review comments, and images to the created session", () => {
+  it("moves text, attachments, annotations, and an open editor to the created session", () => {
     const source = scopeDraftKey("prompt:default", createdDraftKey(undefined, true))
     const target = scopeDraftKey("prompt:default", sessionDraftKey("session-1"))
     const comment = { id: "comment-1", body: "Keep this review note" }
@@ -288,24 +334,34 @@ describe("movePromptDraft", () => {
     const images = new Map([[source, [image]]])
     const scrolls = new Map([[source, 128]])
     const browser = new Map([[source, [{ id: "browser-1", sessionId: "session-1", selector: "#save" }]]])
+    const annotations = new Map([[source, [{ id: "annotation-1", comment: "saved" }]]])
+    const editors = new Map([[source, { id: "annotation-2", comment: "still typing" }]])
     const expected = browser.get(source)
 
-    expect(movePromptDraft({ text, comments, images, scrolls, browsers: browser }, source, target)).toEqual({
+    expect(
+      movePromptDraft({ text, comments, images, scrolls, browsers: browser, annotations, editors }, source, target),
+    ).toEqual({
       text: "Keep this prompt",
       comments: [comment],
       images: [image],
       scroll: 128,
       browsers: expected,
+      annotations: [{ id: "annotation-1", comment: "saved" }],
+      editor: { id: "annotation-2", comment: "still typing" },
     })
     expect(text.get(target)).toBe("Keep this prompt")
     expect(comments.get(target)).toEqual([comment])
     expect(images.get(target)).toEqual([image])
     expect(browser.get(target)).toEqual([{ id: "browser-1", sessionId: "session-1", selector: "#save" }])
+    expect(annotations.get(target)).toEqual([{ id: "annotation-1", comment: "saved" }])
+    expect(editors.get(target)).toEqual({ id: "annotation-2", comment: "still typing" })
     expect(scrolls.get(target)).toBe(128)
     expect(text.has(source)).toBe(false)
     expect(comments.has(source)).toBe(false)
     expect(images.has(source)).toBe(false)
     expect(browser.has(source)).toBe(false)
+    expect(annotations.has(source)).toBe(false)
+    expect(editors.has(source)).toBe(false)
     expect(scrolls.has(source)).toBe(false)
   })
 
@@ -329,15 +385,68 @@ describe("movePromptDraft", () => {
       [target, 128],
     ])
 
-    movePromptDraft({ text, comments, images, scrolls }, source, target)
+    const browsers = new Map([
+      [source, ["pending-browser"]],
+      [target, ["existing-browser"]],
+    ])
+    const annotations = new Map([
+      [source, [{ id: "pending-note", number: 1 }]],
+      [target, [{ id: "existing-note", number: 2 }]],
+    ])
+    const editors = new Map([
+      [source, { comment: "pending editor" }],
+      [target, { comment: "existing editor" }],
+    ])
+
+    movePromptDraft({ text, comments, images, scrolls, browsers, annotations, editors }, source, target)
 
     expect(text.get(target)).toBe("existing prompt")
     expect(comments.get(target)).toEqual([{ id: "existing-comment" }])
     expect(images.get(target)).toEqual(["existing-image"])
     expect(scrolls.get(target)).toBe(128)
+    expect(browsers.get(target)).toEqual(["existing-browser"])
+    expect(annotations.get(target)).toEqual([{ id: "existing-note", number: 2 }])
+    expect(editors.get(target)).toEqual({ comment: "existing editor" })
     expect(text.has(source)).toBe(false)
     expect(comments.has(source)).toBe(false)
     expect(images.has(source)).toBe(false)
     expect(scrolls.has(source)).toBe(false)
+    expect(browsers.has(source)).toBe(false)
+    expect(annotations.has(source)).toBe(false)
+    expect(editors.has(source)).toBe(false)
+  })
+
+  it("promotes the originating worktree draft after the live worktree context switches", () => {
+    const source = scopeDraftKey("agent-manager:worktree-a", pendingDraftKey("draft-a"))
+    const text = new Map([[source, "originating prompt"]])
+    const comments = new Map<string, unknown>()
+    const images = new Map<string, unknown>()
+    const scrolls = new Map<string, unknown>()
+    const annotations = new Map([[source, [{ id: "annotation-a", comment: "saved" }]]])
+    const editors = new Map([[source, { id: "annotation-b", comment: "still typing" }]])
+    const stores = { text, comments, images, scrolls, annotations, editors }
+
+    const route = promptDraftPromotion("pending:draft-a", "session-a", "agent-manager:worktree-b", stores)
+    expect(route).toEqual({
+      source,
+      target: scopeDraftKey("agent-manager:worktree-a", sessionDraftKey("session-a")),
+    })
+    movePromptDraft(stores, route.source, route.target)
+    expect(text.get(route.target)).toBe("originating prompt")
+    expect(annotations.get(route.target)).toEqual([{ id: "annotation-a", comment: "saved" }])
+    expect(editors.get(route.target)).toEqual({ id: "annotation-b", comment: "still typing" })
+    expect(text.has(scopeDraftKey("agent-manager:worktree-b", pendingDraftKey("draft-a")))).toBe(false)
+  })
+
+  it("targets a reverted session's stored worktree instead of the currently visible worktree", () => {
+    const target = scopeDraftKey("agent-manager:worktree-a", sessionDraftKey("session-a"))
+    const stores = {
+      text: new Map<string, unknown>(),
+      comments: new Map<string, unknown>(),
+      images: new Map<string, unknown>(),
+      scrolls: new Map<string, unknown>(),
+      annotations: new Map([[target, [{ id: "annotation-a" }]]]),
+    }
+    expect(promptDraftStorageKey("session:session-a", "agent-manager:worktree-b", stores)).toBe(target)
   })
 })

@@ -1,0 +1,17 @@
+{
+  "name": "response-lens-real-host-helper",
+  "publisher": "local-test",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.105.1"
+  },
+  "main": "./extension.cjs",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  }
+}
