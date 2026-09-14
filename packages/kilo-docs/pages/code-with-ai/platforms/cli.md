@@ -140,6 +140,8 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
+`/reload` reloads every instance of the project, including the main checkout and sibling worktrees. Kilo refuses the reload while any session in the project is running; wait for it to finish or abort it first.
+
 #### Kilo Gateway Commands (when connected)
 
 | Command | Aliases | Description |
