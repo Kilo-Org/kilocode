@@ -58,7 +58,7 @@ Use these controls in the expanded strip:
 - **Clear finished** hides all agents that are no longer running.
 - **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
 
-## Keep Awake
+## Keep awake
 
 Keep Awake prevents your computer from sleeping while Kilo sessions are busy or retrying. It is off by default and is available only in a local VS Code window (not in remote workspaces).
 
@@ -69,7 +69,7 @@ Toggle it in either of these ways:
 
 The first time you enable it, Kilo asks for confirmation and, in an untrusted workspace, asks you to trust the workspace first. Keep Awake prevents system sleep only — it does not keep the display on or disable screen locking, and agents may continue to access files, network services, and available credentials while the computer is locked. On Linux, it can also block manual suspend; turn Keep Awake off before suspending.
 
-The sleep inhibitor releases when sessions go idle, and it turns off when the VS Code window reloads. A notification explains enable, disable, and runtime failure states.
+Your computer can sleep again when sessions are idle. Keep Awake turns off when the VS Code window reloads.
 
 ## Shared Settings
 

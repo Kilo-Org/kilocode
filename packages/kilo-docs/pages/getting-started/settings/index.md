@@ -232,9 +232,9 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
-### Claude Code Migration
+### Claude Code migration
 
-Claude Code Migration is an opt-in, one-time import of supported global Claude Code configuration into Kilo. Enable **Claude Code Migration (Experimental)** in the VS Code **Experimental** settings; the migration runs once on the next backend start and never retries automatically. It is off by default.
+Claude Code Migration is an opt-in, one-time import of supported global Claude Code configuration into Kilo. Enable **Claude Code Migration** in the VS Code **Experimental** settings; the migration runs once on the next backend start and never retries automatically. It is off by default.
 
 The migration imports the supported global subset only:
 

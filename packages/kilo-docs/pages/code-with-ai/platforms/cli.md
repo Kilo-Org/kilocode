@@ -239,13 +239,12 @@ The `attention.sound_pack` setting selects a sound pack registered by a TUI plug
 
 There is no notification slash command or command-palette toggle. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration.
 
-## Keep Awake
+## Keep awake
 
 Keep Awake prevents your computer from sleeping while Kilo sessions are busy or retrying. It is off by default; toggle it with the `/caffeinate` command (also available as `/caffenate`) or the **Enable Keep Awake** command-palette action.
 
 - The first time you enable it, Kilo asks for confirmation. Keep Awake prevents system sleep only — it does not keep the display on or disable screen locking, and agents may continue to access files, network services, and available credentials while the computer is locked.
-- The sleep inhibitor activates when a session is busy or retrying and releases when sessions are idle.
-- The inhibitor is cleaned up when you exit the CLI. A toast message confirms enable and disable, and reports runtime failures.
+- Your computer can sleep again when sessions are idle or you exit the CLI.
 
 ## Slash Commands
 

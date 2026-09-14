@@ -99,7 +99,9 @@ In a managed worktree's chat, type `/update-from-base` and select the action to 
 
 The saved base stays the same if you switch branches in Local or change the project's default base. For example, a worktree created from `main` still updates from `main` when Local has `release` checked out. If you switch branches inside the managed worktree, the agent updates that worktree's current branch, not its original branch. Select the intended worktree before running the command; it does not update Local.
 
-The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. The request prohibits stashing and discarding uncommitted work. When [push fixes](#pushing-fixes-to-the-pull-request) is enabled (the default) and the worktree has a pull request, the agent pushes the branch after a clean merge so the pull request updates; otherwise the request prohibits pushing. Existing merge or rebase operations and blocking dirty changes require your input. Normal tool approvals still apply.
+The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. It is instructed to preserve uncommitted edits in a verified recovery copy, then restore them and their staging state after merging, without using Git stash. It asks for input if it cannot verify that recovery copy or a merge or rebase is already in progress.
+
+When [push fixes](#pushing-fixes-to-the-pull-request) is enabled (the default) and the worktree has a pull request, the agent is asked to push after a clean merge and successful checks; otherwise it is instructed not to push. Normal tool permissions still apply.
 
 ### Worktree Location
 
@@ -193,7 +195,9 @@ The panel header also provides **Copy PR link**, **Open in browser**, and **Clos
 
 #### Pushing fixes to the pull request
 
-When you send pull request CI failures or review comments to the agent from the PR panel — or update a worktree from its base while the worktree has a pull request — the agent is asked to validate its fix with local checks, then commit and push to the PR branch so the pull request updates and CI runs again. The agent is instructed never to force-push, and normal permission prompts still confirm each commit and push.
+When you send pull request CI failures or review comments to the agent from the PR panel, it is asked to run local checks, then commit and push the fix so the pull request updates and CI runs again. Updating a worktree from its base can also push to its pull request. The agent is instructed never to force-push.
+
+Your configured tool permissions still apply. Auto-approved commands can run without another prompt; when sandboxing is active, mutating Git commands require a separate, one-shot approval.
 
 This behavior is controlled by the **Push Pull Request Fixes** toggle under **Settings → Agent Behaviour** (the `kilo-code.new.agentManager.pushFixes` setting), and it is on by default. Turn it off to keep fixes local for manual commit and push. Local inline review comments you send from the diff panel stay manual either way.
 
@@ -216,7 +220,7 @@ The available actions depend on the state:
 - **Merge method menu** — merge with a merge commit, squash, or rebase. Only the methods the repository allows are listed, and the last method you used is remembered per repository.
 - **Enable auto-merge / Disable auto-merge** — shown when the repository allows auto-merge. GitHub merges the pull request automatically once its requirements are met, with the selected method.
 - **Update branch** — merge the latest base branch changes into the PR branch via GitHub when the branch is behind.
-- **Fix with Kilo** — send the conflicting file list to the agent to resolve merge conflicts. Conflicting files are detected without changing your worktree and shown in a bounded list.
+- **Fix with Kilo** — ask the agent to fetch and merge the worktree's saved base branch and resolve conflicts. The [Push Pull Request Fixes](#pushing-fixes-to-the-pull-request) setting controls whether it also pushes.
 
 Merges run remotely on GitHub. The panel refuses stale actions when the pull request changed since the data was loaded; refresh the panel and try again in that case.
 
