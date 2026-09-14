@@ -2535,6 +2535,7 @@ export type Config = {
   enabled_providers?: Array<string>
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
+  reasoning_display?: "expanded" | "preview" | "headline"
   indexing?: IndexingConfig
   console?: {
     /**

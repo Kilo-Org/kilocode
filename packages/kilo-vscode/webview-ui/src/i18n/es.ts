@@ -1179,9 +1179,12 @@ export const dict = {
   "settings.display.fontSize.title": "Tamaño de fuente",
   "settings.display.fontSize.description":
     "Ajusta el tamaño de fuente de la webview UI de Kilo de forma independiente a VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Contraer razonamiento automáticamente",
-  "settings.display.reasoningAutoCollapse.description":
-    "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",
+  "settings.display.reasoningDisplay.title": "Bloques de razonamiento",
+  "settings.display.reasoningDisplay.description":
+    "Elige cómo empiezan los bloques de razonamiento. Expandidos muestra el texto completo, Vista previa lo limita a una vista previa breve con desplazamiento, y Encabezado muestra solo el título y el indicador de streaming hasta que lo abras.",
+  "settings.display.reasoningDisplay.expanded": "Expandidos",
+  "settings.display.reasoningDisplay.preview": "Vista previa",
+  "settings.display.reasoningDisplay.headline": "Encabezado",
   "settings.display.shiftTabCycle.title": "Alternar el esfuerzo de razonamiento con Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pulsa Shift+Tab en un campo de entrada de prompt para cambiar al siguiente nivel de esfuerzo de razonamiento. Desactívalo para conservar Shift+Tab para la navegación del foco con el teclado.",

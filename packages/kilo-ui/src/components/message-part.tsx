@@ -65,6 +65,8 @@ import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { reasoningHeading, reasoningSummary } from "./reasoning-heading"
+import { reasoningOpenState, type ReasoningDisplay } from "./reasoning-open"
+export type { ReasoningDisplay } from "./reasoning-open"
 import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
@@ -161,7 +163,9 @@ export interface MessagePartProps {
    * that file's `filePath`) whose accordion contains the current match —
    * lets that one nested item open instead of every file in the patch. */
   forceOpenFile?: string
-  reasoningAutoCollapse?: boolean
+  /** How reasoning blocks render: expanded (open body), preview (capped
+   * scrolling viewport), or headline (header only until opened). */
+  reasoningDisplay?: ReasoningDisplay
   /** Show reasoning as a capped preview that starts open and never auto-expands
    * while streaming. Used for background subagent transcripts. */
   reasoningCapped?: boolean
@@ -434,7 +438,7 @@ export function AssistantParts(props: {
   turnDiffSummary?: () => JSX.Element
   working?: boolean
   showReasoningSummaries?: boolean
-  reasoningAutoCollapse?: boolean
+  reasoningDisplay?: ReasoningDisplay
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
   mcpToolDefaultOpen?: boolean
@@ -700,7 +704,7 @@ export function AssistantParts(props: {
                               props.editToolDefaultOpen,
                               props.mcpToolDefaultOpen,
                             )}
-                            reasoningAutoCollapse={props.reasoningAutoCollapse}
+                            reasoningDisplay={props.reasoningDisplay}
                             hideDetails={false}
                             animate={props.animate}
                             working={props.working}
@@ -1083,7 +1087,7 @@ export function Part(props: MessagePartProps) {
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
         forceOpenFile={props.forceOpenFile}
-        reasoningAutoCollapse={props.reasoningAutoCollapse}
+        reasoningDisplay={props.reasoningDisplay}
         reasoningCapped={props.reasoningCapped}
         settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
@@ -1886,20 +1890,37 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const id = (props.part as any).id as string
   if (!done()) rememberReasoningState(streamed, id)
 
-  // Auto-collapse mode: streaming or streamed this session -> open (capped),
-  // historical -> collapsed, unless the user toggled it. Expanded mode: open
-  // unless the user explicitly collapsed this reasoning part. Background
-  // transcripts always start open in the capped preview so they stay compact.
-  const capped = () => props.reasoningAutoCollapse || props.reasoningCapped
-  const initial =
-    props.reasoningAutoCollapse && !props.reasoningCapped
-      ? !userCollapsed.has(id) && (streamed.has(id) || userOpened.has(id))
-      : !userCollapsed.has(id)
-  const [open, setOpen] = createSignal(initial)
+  // Three display modes. Preview streams open in a capped viewport, historical
+  // blocks collapse. Headline shows only the header until the user opens it.
+  // Expanded opens the full body unless the user collapsed it. Background
+  // transcripts are always capped so they stay compact.
+  const mode = () => (props.reasoningCapped ? "preview" : (props.reasoningDisplay ?? "expanded"))
+  const capped = () => props.reasoningCapped || mode() === "preview"
+  const headline = () => !props.reasoningCapped && mode() === "headline"
+  const trackable = () => capped() || headline()
+  const derive = () =>
+    reasoningOpenState({
+      capped: props.reasoningCapped ?? false,
+      mode: mode(),
+      streamed: streamed.has(id),
+      userOpened: userOpened.has(id),
+      userCollapsed: userCollapsed.has(id),
+    })
+  const [open, setOpen] = createSignal(derive())
+  // Mount-time value for the inline content styles and lazy body mount, before
+  // the re-derive effect can run. useCollapsible owns later transitions.
+  const start = open()
+  // Re-derive when the resolved mode changes (config arriving after the part
+  // mounted), unless the user already made an explicit open/close choice.
+  createEffect(() => {
+    if (userOpened.has(id) || userCollapsed.has(id)) return
+    setOpen(derive())
+  })
   const [manual, setManual] = createSignal(capped() && userOpened.has(id))
   const title = createMemo(() => {
     const value = view().title
     if (value) return value
+    if (headline() && !open()) return reasoningSummary(view().body)
     if (!done() || open()) return ""
     return reasoningSummary(view().body)
   })
@@ -1915,7 +1936,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const track = (value: boolean) => {
     if (value) userCollapsed.delete(id)
     else rememberReasoningState(userCollapsed, id)
-    if (capped()) {
+    if (trackable()) {
       if (value) rememberReasoningState(userOpened, id)
       else userOpened.delete(id)
       setManual(value)
@@ -1931,7 +1952,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   createEffect(() => {
     if (!props.forceOpen || open()) return
     userCollapsed.delete(id)
-    if (capped()) {
+    if (trackable()) {
       rememberReasoningState(userOpened, id)
       setManual(true)
     }
@@ -1956,7 +1977,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     follow = undefined
   }
 
-  const [mounted, setMounted] = createSignal(initial)
+  const [mounted, setMounted] = createSignal(start)
   createEffect(() => {
     if (open()) setMounted(true)
   })
@@ -2015,6 +2036,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
         data-component="reasoning-part"
         data-streaming={!done() ? "" : undefined}
         data-auto-collapse={capped() ? "" : undefined}
+        data-headline={headline() ? "" : undefined}
         data-manual={manual() ? "" : undefined}
       >
         <Show
@@ -2035,7 +2057,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Content>
               <div
                 ref={content}
-                style={{ overflow: "clip", height: initial ? "auto" : "0px", display: initial ? "" : "none" }}
+                style={{ overflow: "clip", height: start ? "auto" : "0px", display: start ? "" : "none" }}
               >
                 <div ref={frame} data-slot="reasoning-details">
                   <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>

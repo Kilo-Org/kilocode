@@ -339,6 +339,21 @@ describe("Expanded tool motion and typography (source)", () => {
     expect(cap).not.toContain("data-streaming")
   })
 
+  it("renders the headline mode as a header-only block that opens on demand", () => {
+    expect(reasoning).toContain(`data-headline={headline() ? "" : undefined}`)
+    expect(reasoning).toContain(`const mode = () => (props.reasoningCapped ? "preview" : (props.reasoningDisplay ?? "expanded"))`)
+    expect(reasoning).toContain(`const headline = () => !props.reasoningCapped && mode() === "headline"`)
+    expect(reasoning).toContain("const trackable = () => capped() || headline()")
+    expect(reasoning).toContain(`if (headline() && !open()) return reasoningSummary(view().body)`)
+  })
+
+  it("derives the open state through reasoningOpenState and re-derives when the mode resolves", () => {
+    expect(reasoning).toContain("reasoningOpenState(")
+    expect(reasoning).toContain("const [open, setOpen] = createSignal(derive())")
+    expect(reasoning).toContain("if (userOpened.has(id) || userCollapsed.has(id)) return")
+    expect(reasoning).toContain("setOpen(derive())")
+  })
+
   it("does not smooth streaming reasoning scroll updates", () => {
     const css = fs.readFileSync(KILO_MESSAGE_PART_CSS_FILE, "utf-8")
     expect(css).not.toContain("scroll-behavior: smooth")

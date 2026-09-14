@@ -81,13 +81,21 @@ You can also enable it in `kilo.jsonc`:
 
 ### Reasoning Blocks
 
-Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
+Reasoning blocks show the agent's thinking. Choose a mode for **Reasoning Blocks** in the Display tab, or set `reasoning_display` in `kilo.jsonc`:
 
 ```json
 {
-  "auto_collapse_reasoning": true
+  "reasoning_display": "preview"
 }
 ```
+
+- `expanded`: The full reasoning text stays open.
+- `preview`: A short scrolling preview shows while the agent is writing, then the block collapses.
+- `headline`: Only the header and streaming indicator show until you open the block.
+
+Valid values are `expanded`, `preview`, and `headline`. The default is `expanded`.
+
+Older configs that set `auto_collapse_reasoning: true` map to `preview`. That boolean is deprecated, so use `reasoning_display` instead.
 
 ### Terminal Command Blocks
 

@@ -1123,9 +1123,12 @@ export const dict = {
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
   "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
-  "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
-  "settings.display.reasoningAutoCollapse.description":
-    "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
+  "settings.display.reasoningDisplay.title": "Akıl Yürütme Blokları",
+  "settings.display.reasoningDisplay.description":
+    "Akıl yürütme bloklarının nasıl başlayacağını seçin. Genişletilmiş tam metni gösterir, Önizleme kısa ve kaydırılabilir bir önizlemeyle sınırlar, Başlık ise siz açana kadar yalnızca başlığı ve akış göstergesini gösterir.",
+  "settings.display.reasoningDisplay.expanded": "Genişletilmiş",
+  "settings.display.reasoningDisplay.preview": "Önizleme",
+  "settings.display.reasoningDisplay.headline": "Başlık",
   "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
   "settings.display.shiftTabCycle.description":
     "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
