@@ -544,8 +544,9 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
   )
 }
 
+// kilocode_change start - separate interruption from cancelling feedback
 function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: () => void; onInterrupt: () => void }) {
-  // kilocode_change
+  // kilocode_change end
   let input: TextareaRenderable
   const { theme } = useTheme()
   const tuiConfig = useTuiConfig()
