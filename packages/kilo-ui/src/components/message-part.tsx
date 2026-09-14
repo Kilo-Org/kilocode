@@ -162,6 +162,9 @@ export interface MessagePartProps {
    * lets that one nested item open instead of every file in the patch. */
   forceOpenFile?: string
   reasoningAutoCollapse?: boolean
+  /** Show reasoning as a capped preview that starts open and never auto-expands
+   * while streaming. Used for background subagent transcripts. */
+  reasoningCapped?: boolean
   /** True when the stream has moved past this reasoning part. Encrypted
    * reasoning items hold every summary's `time.end` until the whole item
    * finishes, so the caller settles finished summaries from the part order. */
@@ -1081,6 +1084,7 @@ export function Part(props: MessagePartProps) {
         forceOpen={props.forceOpen}
         forceOpenFile={props.forceOpenFile}
         reasoningAutoCollapse={props.reasoningAutoCollapse}
+        reasoningCapped={props.reasoningCapped}
         settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
@@ -1884,12 +1888,15 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   // Auto-collapse mode: streaming or streamed this session -> open (capped),
   // historical -> collapsed, unless the user toggled it. Expanded mode: open
-  // unless the user explicitly collapsed this reasoning part.
-  const initial = props.reasoningAutoCollapse
-    ? !userCollapsed.has(id) && (streamed.has(id) || userOpened.has(id))
-    : !userCollapsed.has(id)
+  // unless the user explicitly collapsed this reasoning part. Background
+  // transcripts always start open in the capped preview so they stay compact.
+  const capped = () => props.reasoningAutoCollapse || props.reasoningCapped
+  const initial =
+    props.reasoningAutoCollapse && !props.reasoningCapped
+      ? !userCollapsed.has(id) && (streamed.has(id) || userOpened.has(id))
+      : !userCollapsed.has(id)
   const [open, setOpen] = createSignal(initial)
-  const [manual, setManual] = createSignal(props.reasoningAutoCollapse && userOpened.has(id))
+  const [manual, setManual] = createSignal(capped() && userOpened.has(id))
   const title = createMemo(() => {
     const value = view().title
     if (value) return value
@@ -1908,7 +1915,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const track = (value: boolean) => {
     if (value) userCollapsed.delete(id)
     else rememberReasoningState(userCollapsed, id)
-    if (props.reasoningAutoCollapse) {
+    if (capped()) {
       if (value) rememberReasoningState(userOpened, id)
       else userOpened.delete(id)
       setManual(value)
@@ -1924,7 +1931,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   createEffect(() => {
     if (!props.forceOpen || open()) return
     userCollapsed.delete(id)
-    if (props.reasoningAutoCollapse) {
+    if (capped()) {
       rememberReasoningState(userOpened, id)
       setManual(true)
     }
@@ -2007,7 +2014,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
       <div
         data-component="reasoning-part"
         data-streaming={!done() ? "" : undefined}
-        data-auto-collapse={props.reasoningAutoCollapse ? "" : undefined}
+        data-auto-collapse={capped() ? "" : undefined}
         data-manual={manual() ? "" : undefined}
       >
         <Show

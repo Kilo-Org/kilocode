@@ -70,9 +70,11 @@ Kilo pauses an active goal when progress stops or the session changes direction:
 - The agent replies with no successful action and no completion report.
 - Work fails, such as a model error or a failed command.
 - You press Stop.
-- You send a new message or run a shell command.
+- You run a shell command.
 - A permission request or tool call is rejected, which marks the goal blocked instead of paused.
 - The backend restarts. An active goal becomes paused; a complete goal stays complete.
+
+A new message you send is not an automatic pause. It takes priority for that turn, then the goal continues toward the objective. Use Stop or `/goal pause` to stop active work.
 
 ## Completion reports
 

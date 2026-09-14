@@ -17,6 +17,9 @@ import { addCommentReaction, isPRReactionContent, removeCommentReaction } from "
 import type { PRStatus } from "../agent-manager/types"
 import { ghErrorReason } from "../agent-manager/pr/am-pr-utils"
 import { createDiffCommentActions } from "./comment-actions"
+import { PRReviewActions } from "../agent-manager/pr/review-actions"
+import type { PRReviewContext } from "../agent-manager/pr/review-context"
+import { execWithShellEnv } from "../agent-manager/shell-env"
 
 type CommentHandler = (comments: unknown[], autoSend: boolean) => void
 type OpenArgs = {
@@ -120,6 +123,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private baseBranchOverride: string | undefined
   private target: CommentHandler | undefined
   private readonly prPolling: ReturnType<typeof createDiffPRPolling>
+  private readonly reviews: PRReviewActions
   private focusPending = false
   private openGeneration = 0
   private readonly identity = randomUUID()
@@ -148,6 +152,23 @@ export class DiffViewerProvider implements vscode.Disposable {
       createPoller: opts.createPRPoller,
       onStatus: () => this.sendComments(),
       log: (...args) => this.log(...args),
+    })
+    this.reviews = new PRReviewActions({
+      context: (message) => this.reviewContext(message),
+      post: (message) => {
+        void this.panel?.webview.postMessage(message)
+      },
+      refresh: (review) => {
+        if (this.commentContext()?.token === review.projectId) this.prPolling.refresh()
+      },
+      dirtyFiles: () => [],
+      checkBranch: async (directory) => {
+        const result = await execWithShellEnv("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+          cwd: directory,
+          timeout: 5_000,
+        })
+        return result.stdout.trim()
+      },
     })
   }
 
@@ -279,7 +300,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   private onMessage(msg: Record<string, unknown>): void {
-    if (this.actions.handle(msg)) return
+    if (this.actions.handle(msg) || this.reviews.handle(msg)) return
     const handler = this.messageHandlers[msg.type as string]
     handler?.(msg)
   }
@@ -483,7 +504,14 @@ export class DiffViewerProvider implements vscode.Disposable {
     const comments = selected && !match ? [...live, { ...selected, outdated: true }] : live
     const ctx = this.commentContext()
     const target = ctx
-      ? { projectId: ctx.token, worktreeId: "diff", prNumber: ctx.pr.number, prUrl: ctx.pr.url }
+      ? {
+          projectId: ctx.token,
+          worktreeId: "diff",
+          prNumber: ctx.pr.number,
+          prUrl: ctx.pr.url,
+          baseRefOid: ctx.pr.baseRefOid,
+          headRefOid: ctx.pr.headRefOid,
+        }
       : undefined
     void this.panel.webview.postMessage({
       type: "diffViewer.prComments",
@@ -519,6 +547,25 @@ export class DiffViewerProvider implements vscode.Disposable {
       directory,
       branch,
       pr,
+    }
+  }
+
+  private reviewContext(message: Record<string, unknown>): PRReviewContext {
+    const ctx = this.commentContext()
+    if (
+      !ctx ||
+      message.projectId !== ctx.token ||
+      message.worktreeId !== "diff" ||
+      message.prNumber !== ctx.pr.number ||
+      message.prUrl !== ctx.pr.url
+    )
+      throw new Error("Pull request context changed. Refresh and try again.")
+    return {
+      pr: ctx.pr,
+      directory: ctx.directory,
+      branch: ctx.branch,
+      worktreeId: "diff",
+      projectId: ctx.token,
     }
   }
 

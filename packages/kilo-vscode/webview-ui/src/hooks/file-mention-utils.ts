@@ -24,6 +24,16 @@ export type WorktreeReference = {
   disabled: boolean
 }
 
+/**
+ * A mention inserted directly at the caret without an open `@` query, for
+ * example when a session tab or worktree card is dropped on the prompt.
+ */
+export type PromptMentionDrop =
+  | { kind: "worktree"; worktree: WorktreeReference }
+  | { kind: "session"; session: SessionSearchItem }
+  | { kind: "terminal" }
+  | { kind: "file"; path: string }
+
 export const PAST_CHATS_MENTION = "past-chats"
 
 const model = {

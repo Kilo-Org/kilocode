@@ -29,10 +29,12 @@ import {
   syncMentionedSessions as _syncMentionedSessions,
   FILE_PICKER_RESULT,
   type MentionResult,
+  type PromptMentionDrop,
   type WorktreeReference,
 } from "./file-mention-utils"
 import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
+import { convertToMentionPath } from "../utils/path-mentions"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
 /** Past chats offered to the ranking, bounded so chats cannot flood the list. */
@@ -148,6 +150,14 @@ export interface FileMention {
   ) => void
   /** Insert a model reference picked from the model picker as an @-mention. */
   selectModelReference: (providerID: string, modelID: string, onSelect?: () => void) => void
+  /** Insert a dragged reference at the caret (no open @ query). Returns true when inserted. */
+  insertDrop: (
+    drop: PromptMentionDrop,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    cwd: string,
+    onSelect?: () => void,
+  ) => boolean
 }
 
 export function useFileMention(
@@ -564,6 +574,20 @@ export function useFileMention(
     requestSessions()
   }
 
+  // Replace a textarea range through execCommand so the change lands on the
+  // browser's native undo stack. Restore focus first: pickers and drags can
+  // leave the textarea unfocused, which makes execCommand silently no-op.
+  const replaceRange = (textarea: HTMLTextAreaElement, start: number, end: number, value: string) => {
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(start, end)
+      document.execCommand("insertText", false, value)
+    } finally {
+      suppress = false
+    }
+  }
+
   const selectMention = (
     result: MentionResult,
     textarea: HTMLTextAreaElement,
@@ -629,17 +653,7 @@ export function useFileMention(
     const prefix = /^\s/.test(match[0]) ? 1 : 0
     const atPos = match.index! + prefix
     const suffix = /^\s/.test(after) ? "" : " "
-    // Restore focus before execCommand: pickers (session search, native file
-    // dialog) move focus away from the textarea, which makes execCommand
-    // silently no-op.
-    textarea.focus()
-    suppress = true
-    try {
-      textarea.setSelectionRange(atPos, cursor)
-      document.execCommand("insertText", false, `@${token}${suffix}`)
-    } finally {
-      suppress = false
-    }
+    replaceRange(textarea, atPos, cursor, `@${token}${suffix}`)
 
     textarea.focus()
 
@@ -704,6 +718,60 @@ export function useFileMention(
 
   // When true, onInput skips dropdown logic (used during execCommand changes)
   let suppress = false
+
+  const insertToken = (
+    token: string,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ): boolean => {
+    const val = textarea.value
+    const start = textarea.selectionStart ?? val.length
+    const end = textarea.selectionEnd ?? start
+    const before = val.substring(0, start)
+    const after = val.substring(end)
+    const prefix = before.length > 0 && !/\s$/.test(before) ? " " : ""
+    // Always leave a trailing space so the user can keep typing after a drop.
+    const suffix = /^\s/.test(after) ? "" : " "
+    replaceRange(textarea, start, end, `${prefix}@${token}${suffix}`)
+    // The browser fires an input event for execCommand, but tests and some edge
+    // paths do not, so sync from the textarea to register the mention.
+    syncMentionedPaths(textarea.value)
+    setText(textarea.value)
+    closeMention()
+    onSelect?.()
+    return true
+  }
+
+  const insertDrop = (
+    drop: PromptMentionDrop,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    cwd: string,
+    onSelect?: () => void,
+  ): boolean => {
+    if (drop.kind === "worktree") {
+      if (drop.worktree.disabled) return false
+      // Register before execCommand so the input sync finds the path and it is
+      // not turned into a plain file attachment.
+      knownWorktrees.set(drop.worktree.path, drop.worktree)
+      knownPaths.add(drop.worktree.path)
+      return insertToken(drop.worktree.path, textarea, setText, onSelect)
+    }
+    if (drop.kind === "session") {
+      const normalized = { ...drop.session, title: sessionMentionText(drop.session.title) }
+      const token = sessionMentionToken(normalized, knownSessions)
+      // Register before execCommand so the input sync finds the token.
+      knownSessions.set(token, normalized)
+      return insertToken(token, textarea, setText, onSelect)
+    }
+    if (drop.kind === "terminal") return insertToken(TERMINAL_MENTION, textarea, setText, onSelect)
+    const resolved = convertToMentionPath(drop.path, cwd)
+    if (cwd) workspaceDir = cwd
+    // Register before execCommand so the input sync finds the path.
+    knownPaths.add(resolved)
+    return insertToken(resolved, textarea, setText, onSelect)
+  }
 
   const onInput = (val: string, cursor: number) => {
     syncScope()
@@ -1052,5 +1120,6 @@ export function useFileMention(
     seedSessions,
     selectSession,
     selectModelReference,
+    insertDrop,
   }
 }

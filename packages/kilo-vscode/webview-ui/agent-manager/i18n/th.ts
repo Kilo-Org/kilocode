@@ -226,6 +226,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "ส่งทั้งหมดไปยังแชท ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "ส่ง {{count}} รายการไปยัง GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "หยุดการส่งเนื่องจากข้อผิดพลาดของ GitHub: {{error}}",
   "agentManager.review.inlineCount": "ความคิดเห็นในเครื่อง ({{count}})",
   "agentManager.review.prCount": "ความคิดเห็น PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} ไฟล์",

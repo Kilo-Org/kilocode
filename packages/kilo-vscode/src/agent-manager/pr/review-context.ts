@@ -18,4 +18,5 @@ export interface PRReviewHost {
   conflicts?: (context: PRReviewContext, base: string, head: string) => Promise<string[]>
   getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
   savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
+  checkBranch?: (directory: string) => Promise<string>
 }

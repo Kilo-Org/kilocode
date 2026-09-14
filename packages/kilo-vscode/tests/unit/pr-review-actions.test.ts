@@ -116,7 +116,17 @@ function harness() {
     })
   const review = (snapshot: { id: string }, fields: Record<string, unknown> = {}) =>
     send("submitPRReview", { snapshotId: snapshot.id, event: "APPROVE", head, body: "", ...fields })
-  return { context, host, actions, sent, refresh, send, load, comment, review }
+  return {
+    context,
+    host,
+    actions,
+    sent,
+    refresh,
+    send,
+    load,
+    comment,
+    review,
+  }
 }
 
 function transport(
@@ -147,6 +157,32 @@ function transport(
 }
 
 describe("commit-bound PR review actions", () => {
+  it("rejects a request when the checked-out branch changed", async () => {
+    const h = harness()
+    const completion = Promise.withResolvers<PRReviewResult>()
+    const actions = new PRReviewActions({
+      context: () => h.context,
+      post: completion.resolve,
+      refresh: () => {},
+      dirtyFiles: () => [],
+      checkBranch: async () => "other",
+    })
+    expect(
+      actions.handle({
+        type: "agentManager.loadPRFiles",
+        projectId: h.context.projectId,
+        worktreeId: h.context.worktreeId,
+        prNumber: h.context.pr.number,
+        prUrl: h.context.pr.url,
+        requestId: "branch",
+      }),
+    ).toBe(true)
+    const result = await completion.promise
+    expect(result.success).toBe(false)
+    expect(result.error).toContain("Diff branch changed")
+    expect(execute).not.toHaveBeenCalled()
+  })
+
   it("loads actual GitHub patches and posts exact raw body with a multiline range", async () => {
     let input: Record<string, unknown> | undefined
     transport([file], (value) => {
