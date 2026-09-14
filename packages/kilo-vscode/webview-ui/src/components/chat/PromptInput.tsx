@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
+import { createSignal, createEffect, on, onMount, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -43,6 +43,7 @@ import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
+import { promptMentionOver, registerPromptMentionDrop } from "../../utils/prompt-mention-drop"
 import { SessionMentionPicker } from "./SessionMentionPicker"
 import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
@@ -277,6 +278,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+  let containerRef: HTMLDivElement | undefined
 
   /**
    * True after the last menu entry of a bare `@`, which lists the entries above
@@ -1637,10 +1639,23 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (textareaRef) textareaRef.style.height = "auto"
   }
 
+  onMount(() => {
+    registerPromptMentionDrop(containerRef, (drop) => {
+      const ref = textareaRef
+      if (!ref || !ref.isConnected || readonly()) return false
+      return mention.insertDrop(drop, ref, setText, server.workspaceDirectory(), adjustHeight)
+    })
+    onCleanup(() => registerPromptMentionDrop(undefined, undefined))
+  })
+
   return (
     <div
+      ref={containerRef}
       class="prompt-input-container"
-      classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
+      classList={{
+        "prompt-input-container--dragging": imageAttach.dragging(),
+        "prompt-input-container--mention-drop": promptMentionOver(),
+      }}
       onDragOver={imageAttach.handleDragOver}
       onDragLeave={imageAttach.handleDragLeave}
       onDrop={(event) => {

@@ -15,6 +15,7 @@ import { AbsolutePath } from "@opencode-ai/core/schema"
 import { SessionTable } from "@opencode-ai/core/session/sql"
 import { SessionID } from "../../src/session/schema"
 import { KiloSnapshotCleanup } from "../../src/kilocode/snapshot/cleanup"
+import { KiloSnapshotPrepare } from "../../src/kilocode/snapshot/prepare"
 import { tmpdirScoped, testInstanceStoreLayer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import path from "path"
@@ -519,6 +520,21 @@ for (const marker of [
     }),
   )
 }
+
+it.live("removes a prepared repository that was never tracked", () =>
+  Effect.gen(function* () {
+    const base = yield* tmpdirScoped()
+    const input = item(base, "project", "prepared")
+    const current = yield* repo(input)
+    yield* drop(input.worktree)
+    yield* write(path.join(current.dir, KiloSnapshotPrepare.MARKER), "")
+    yield* write(path.join(current.dir, "objects", "info", "alternates"), "pending")
+    yield* write(path.join(current.dir, "seed-objects", "part"), "pending")
+
+    expect(yield* remove(input)).toBe(true)
+    expect(yield* exist(current.dir)).toBe(false)
+  }),
+)
 
 it.live("accepts a macOS temporary-directory alias", () =>
   Effect.gen(function* () {
