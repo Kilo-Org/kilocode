@@ -19,6 +19,19 @@ export function taskAvatarStatus(
   return undefined
 }
 
+/**
+ * True when a Task part is a background child. The streamed input carries the
+ * flag from the first part update; part metadata wins over state metadata.
+ */
+export function taskBackground(
+  input: Record<string, unknown> | undefined,
+  part: Record<string, unknown> | undefined,
+  state: Record<string, unknown> | undefined,
+) {
+  if (input?.background === true) return true
+  return (part?.background ?? state?.background) === true
+}
+
 export function childForeground(
   id: string | undefined,
   part: Record<string, unknown> | undefined,

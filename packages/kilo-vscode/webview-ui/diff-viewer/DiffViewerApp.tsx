@@ -8,7 +8,6 @@ import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { File } from "@kilocode/kilo-ui/file"
-import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -28,6 +27,7 @@ import type { PRComment } from "../agent-manager/pr/pr-types"
 import { reviewRequest } from "../agent-manager/pr/pr-review-request"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { createPRDiffs } from "./pr-diff"
+import { DiffViewerNotice as DiffViewerNoticeBanner } from "./DiffViewerNotice"
 
 // Compare only the PR identity. Ref-only refreshes must not clear local comments.
 function samePR(a: PRTarget | undefined, b: PRTarget | undefined) {
@@ -144,14 +144,19 @@ const DiffViewerContent: Component = () => {
     }
   }
 
+  // Clear all PR-specific state so a new source, target, or request starts clean.
+  const resetPR = () => {
+    prKey = ""
+    prRequestId = ""
+    setPRSnapshot(undefined)
+    setPRLoading(false)
+    setPRError(undefined)
+    setPRMode(false)
+  }
+
   const requestPRFiles = (next: PRTarget | undefined) => {
     if (!next) {
-      prKey = ""
-      prRequestId = ""
-      setPRSnapshot(undefined)
-      setPRLoading(false)
-      setPRError(undefined)
-      setPRMode(false)
+      resetPR()
       return
     }
     const key = JSON.stringify(next)
@@ -204,12 +209,7 @@ const DiffViewerContent: Component = () => {
         setCurrentBase(undefined)
         setCurrentBranch(undefined)
         setIsAuto(true)
-        prKey = ""
-        prRequestId = ""
-        setPRSnapshot(undefined)
-        setPRLoading(false)
-        setPRError(undefined)
-        setPRMode(false)
+        resetPR()
       })
       return
     }
@@ -409,22 +409,8 @@ const DiffViewerContent: Component = () => {
           }
         />
       </Show>
-      <Show when={noticeText()}>
-        <div class="diff-viewer-notice" role="status">
-          <span class="diff-viewer-notice-icon">
-            <Icon name="warning" size="small" />
-          </span>
-          <span class="diff-viewer-notice-text">{noticeText()}</span>
-        </div>
-      </Show>
-      <Show when={prError()}>
-        <div class="diff-viewer-notice" role="alert">
-          <span class="diff-viewer-notice-icon">
-            <Icon name="warning" size="small" />
-          </span>
-          <span class="diff-viewer-notice-text">{prError()}</span>
-        </div>
-      </Show>
+      <DiffViewerNoticeBanner text={noticeText()} role="status" />
+      <DiffViewerNoticeBanner text={prError()} role="alert" />
       <FullScreenDiffView
         diffs={activeDiffs()}
         loading={activeLoading()}

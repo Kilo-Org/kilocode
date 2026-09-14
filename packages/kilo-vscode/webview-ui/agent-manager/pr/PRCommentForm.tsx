@@ -64,7 +64,6 @@ type Props = {
         prNumber: number
         prUrl: string
         snapshotId: string
-        label: string
         closed: boolean
       }
       initialBody?: string

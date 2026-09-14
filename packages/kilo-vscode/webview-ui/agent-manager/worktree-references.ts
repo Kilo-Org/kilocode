@@ -34,15 +34,12 @@ export function worktreeReferences(
         worktree.path,
         Math.max(Date.parse(worktree.createdAt) || 0, ...sessions.map((session) => updated.get(session.id) ?? 0)),
       )
-      return {
-        id: worktree.id,
-        name: worktree.label || firstOrderedTitle(sessions, state.tabOrder()[worktree.id], basename || worktree.branch),
-        branch: worktree.branch,
-        path: worktree.path,
-        base: worktree.parentBranch,
+      return worktreeDropReference(
+        worktree,
+        worktree.label || firstOrderedTitle(sessions, state.tabOrder()[worktree.id], basename || worktree.branch),
         sessions,
-        disabled: worktree.id === current || state.staleWorktreeIds().has(worktree.id) || state.busy().has(worktree.id),
-      }
+        worktree.id === current || state.staleWorktreeIds().has(worktree.id) || state.busy().has(worktree.id),
+      )
     })
     .sort(
       (a, b) =>

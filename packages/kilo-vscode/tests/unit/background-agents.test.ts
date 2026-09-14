@@ -3,6 +3,7 @@ import {
   backgroundAgents,
   backgroundChildren,
   backgroundJobAgents,
+  children,
   fitBackgroundAgents,
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
@@ -98,6 +99,24 @@ describe("backgroundChildren", () => {
     const bash = { id: "part_3", type: "tool", tool: "bash", state: { status: "running", input: {} } } as ToolPart
 
     expect([...backgroundChildren([bash, taskPart({ id: "part_4", background: true })])]).toEqual([])
+  })
+})
+
+describe("children", () => {
+  it("keeps background children while listing each task child once in spawn order", () => {
+    const tools = [
+      taskPart({ id: "part_1", child: "ses_a" }),
+      taskPart({ id: "part_2", child: "ses_b", background: true }),
+      taskPart({ id: "part_3", child: "ses_a" }),
+    ]
+
+    expect(children(tools)).toEqual(["ses_a", "ses_b"])
+  })
+
+  it("ignores non-task tools and parts without a child session", () => {
+    const bash = { id: "part_3", type: "tool", tool: "bash", state: { status: "running", input: {} } } as ToolPart
+
+    expect(children([bash, taskPart({ id: "part_4", background: true })])).toEqual([])
   })
 })
 

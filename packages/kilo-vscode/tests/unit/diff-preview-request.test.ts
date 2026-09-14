@@ -344,6 +344,7 @@ async function renderSurface(script: string) {
                 "Spinner",
                 "DiffPickerHeader",
                 "BaseBranchPicker",
+                "DiffViewerNotice",
               ]
                 .map((name) => `export const ${name} = (props) => props.children`)
                 .join("\n")}
