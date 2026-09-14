@@ -186,7 +186,6 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
-- **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
 - **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
@@ -220,7 +219,7 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
 
-Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
+Kilo Swarm is on by default. Turn it off in the VS Code **Agent Behaviour** settings, or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
 
 Use it when agents can benefit from discoveries during work:
 
