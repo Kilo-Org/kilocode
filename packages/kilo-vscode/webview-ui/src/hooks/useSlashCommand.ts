@@ -234,11 +234,42 @@ export function useSlashCommand(
 
   const commands = (): SlashCommandEntry[] => {
     const list = client()
-    const names = new Set(list.map((c) => c.name))
+    const actionNames = new Set(list.map((c) => c.name))
     const set = excluded()
     const only = included()
-    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name)))
-    return [...list, ...filtered]
+
+    const commandNames = new Set(actionNames)
+    for (const c of server()) {
+      if (c.source !== "skill" && !actionNames.has(c.name)) {
+        commandNames.add(c.name)
+      }
+    }
+
+    const filteredServerCommands: SlashCommandEntry[] = []
+    const filteredServerSkills: SlashCommandEntry[] = []
+
+    for (const c of server()) {
+      if (set?.has(c.name)) continue
+      if (only && !only.has(c.name)) continue
+
+      if (c.source === "skill") {
+        if (commandNames.has(c.name)) {
+          filteredServerSkills.push({
+            ...c,
+            name: `${c.name}:skill`,
+            hints: [...c.hints, c.name],
+          })
+        } else {
+          filteredServerSkills.push(c)
+        }
+      } else {
+        if (!actionNames.has(c.name)) {
+          filteredServerCommands.push(c)
+        }
+      }
+    }
+
+    return [...list, ...filteredServerCommands, ...filteredServerSkills]
   }
 
   const show = () => query() !== null
@@ -285,8 +316,12 @@ export function useSlashCommand(
 
   const results = () => {
     const list = matched()
-    // PromptInput renders contiguous Actions and Commands groups, so keyboard indexes must use the same order.
-    return [...list.filter((cmd) => cmd.action), ...list.filter((cmd) => !cmd.action)]
+    // PromptInput renders contiguous Actions, Commands, and Skills groups, so keyboard indexes must use the same order.
+    return [
+      ...list.filter((cmd) => cmd.action),
+      ...list.filter((cmd) => !cmd.action && cmd.source !== "skill"),
+      ...list.filter((cmd) => !cmd.action && cmd.source === "skill"),
+    ]
   }
 
   const unsubscribe = vscode.onMessage((message) => {
