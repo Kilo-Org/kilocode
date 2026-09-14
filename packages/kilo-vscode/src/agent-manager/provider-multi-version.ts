@@ -5,7 +5,7 @@ import type { AgentManagerInMessage } from "./types"
 import { sanitizeBranchName, versionedName } from "./branch-name"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
-import { beginBoot, prepareSession, type LifecycleHost } from "./provider-lifecycle"
+import { beginBoot, prepareSession, removeWorktreeSnapshot, type LifecycleHost } from "./provider-lifecycle"
 import { plan } from "./creation-plan"
 import { Timing } from "./creation-timing"
 import { Semaphore } from "./semaphore"
@@ -218,6 +218,7 @@ async function provisionVersion(
     }
     try {
       await ctx.worktreeManager().removeWorktree(wt.result.path, wt.result.branch)
+      await removeWorktreeSnapshot(host, ctx.root, wt.result.path)
       ctx.peekState()?.removeWorktree(wt.worktree.id)
       host.push()
     } catch (error) {

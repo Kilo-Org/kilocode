@@ -18,6 +18,7 @@ import {
   deleteLifecycleWorktree,
   promoteLifecycleSession,
   removeStaleLifecycleWorktree,
+  removeWorktreeSnapshot,
   type LifecycleHost,
 } from "./provider-lifecycle"
 import { Timing } from "./creation-timing"
@@ -981,11 +982,9 @@ export class AgentManagerProvider implements Disposable {
       worktreeId,
     })
 
-    const preparation = { pending: Promise.resolve() }
     try {
-      preparation.pending = prepareDirectory(client, worktreePath).catch((err) =>
-        this.log("Worktree preparation failed:", err),
-      )
+      // Detached: preparation must not gate session creation or failure reporting.
+      void prepareDirectory(client, worktreePath).catch((err) => this.log("Worktree preparation failed:", err))
       const metadata = await (boot?.metadata() ??
         sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath))
       if (boot) timing?.mark("boot", boot.at)
@@ -1007,7 +1006,6 @@ export class AgentManagerProvider implements Disposable {
       timing?.mark("session")
       return session
     } catch (error) {
-      await preparation.pending
       const err = getErrorMessage(error)
       this.postToWebview({
         type: "agentManager.worktreeSetup",
@@ -1104,6 +1102,8 @@ export class AgentManagerProvider implements Disposable {
           const releasePtyCleanup = await this.acquirePtyCleanup(dir)
           try {
             await this.getWorktreeManager()?.removeWorktree(dir)
+            const root = this.getRoot()
+            if (root) await removeWorktreeSnapshot(this.lifecycleHost, root, dir)
             this.getStateManager()?.removeWorktree(wid)
             this.pushState()
           } finally {

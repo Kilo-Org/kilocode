@@ -178,6 +178,7 @@ export async function createLifecycleWorktree(
     }
     try {
       await ctx.worktreeManager().removeWorktree(created.result.path, created.result.branch)
+      await removeWorktreeSnapshot(host, ctx.root, created.result.path)
       ctx.peekState()?.removeWorktree(created.worktree.id)
       host.push()
     } catch (error) {
@@ -211,6 +212,17 @@ export async function createLifecycleWorktree(
   })
   host.log(`Created worktree ${created.worktree.id} with session ${session.id}`)
   return { session, ready }
+}
+
+/** Remove a worktree's snapshot repository. Teardown must still complete if removal fails. */
+export async function removeWorktreeSnapshot(host: LifecycleHost, root: string, dir: string): Promise<boolean> {
+  try {
+    await host.client().kilocode.removeSnapshot({ directory: root, worktree: dir }, { throwOnError: true })
+    return true
+  } catch (error) {
+    host.log(`Failed to remove worktree snapshots: ${error}`)
+    return false
+  }
 }
 
 /** Delete a worktree and dissociate its sessions. */
@@ -300,10 +312,7 @@ export async function deleteLifecycleWorktree(
         ),
       ),
     )
-    try {
-      await client.kilocode.removeSnapshot({ directory: ctx.root, worktree: worktree.path }, { throwOnError: true })
-    } catch (error) {
-      host.log(`Failed to remove worktree snapshots: ${error}`)
+    if (!(await removeWorktreeSnapshot(host, ctx.root, worktree.path))) {
       host.notify(
         "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
       )

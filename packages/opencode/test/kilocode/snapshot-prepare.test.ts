@@ -6,6 +6,7 @@ import path from "path"
 import { Effect, Layer } from "effect"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
@@ -134,6 +135,34 @@ const it = testEffect(
 )
 
 it.live(
+  "does not prepare a worktree that no longer exists",
+  () =>
+    Effect.gen(function* () {
+      const root = yield* tmpdirScoped()
+      const worktree = path.join(root, "gone")
+      const gitdir = path.join(root, "snapshot")
+
+      const result = yield* FSUtil.Service.use((fs) =>
+        KiloSnapshotPrepare.initialize(
+          {
+            dir: worktree,
+            worktree,
+            gitdir,
+            limit: 1024,
+            git: () => Effect.die(new Error("preparation must not run git for a missing worktree")),
+            fs,
+          },
+          true,
+        ),
+      ).pipe(Effect.provide(AppNodeBuilder.build(FSUtil.node)))
+
+      expect(result).toBeUndefined()
+      expect(existsSync(gitdir)).toBe(false)
+    }),
+  30_000,
+)
+
+it.live(
   "prepared objects survive source pruning and later materialization preserves index-only recovery",
   () =>
     Effect.gen(function* () {
@@ -192,8 +221,11 @@ it.live(
 
         const hash = yield* snapshot.track().pipe(provideInstance(dir))
         expect(hash).toBeTruthy()
+        // Materialization removes the alternate then the staging directory, so wait for both.
         const wait = pollWithTimeout(
-          Effect.sync(() => (!existsSync(alt) && !existsSync(`${alt}.materializing`) ? true : undefined)),
+          Effect.sync(() =>
+            !existsSync(alt) && !existsSync(`${alt}.materializing`) && !existsSync(staging) ? true : undefined,
+          ),
           "snapshot materialization did not finish",
           "5 seconds",
         )

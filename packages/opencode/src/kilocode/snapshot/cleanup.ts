@@ -3,6 +3,7 @@ import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { Effect } from "effect"
 import path from "path"
+import { KiloSnapshotPrepare } from "./prepare"
 
 export namespace KiloSnapshotCleanup {
   export interface Input {
@@ -123,7 +124,12 @@ export namespace KiloSnapshotCleanup {
   const pending = Effect.fnUntraced(function* (fs: FSUtil.Interface, gitdir: string) {
     const root = yield* fs.readDirectoryEntries(gitdir)
     const names = new Set(root.map((entry) => entry.name))
-    if (names.has("seed.index") || names.has("seed.index.lock") || names.has("seed-objects")) return true
+    if (names.has("seed.index") || names.has("seed.index.lock")) return true
+    // A prepared repository that was never tracked keeps its seed artifacts but has
+    // nothing materializing, so cleanup may remove it. Preparation clears this marker
+    // before it starts materializing.
+    if (names.has(KiloSnapshotPrepare.MARKER)) return false
+    if (names.has("seed-objects")) return true
 
     const objects = root.find((entry) => entry.name === "objects")
     if (!objects) return false

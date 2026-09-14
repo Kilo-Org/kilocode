@@ -697,13 +697,20 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 
-  it("limits snapshot cleanup to explicit worktree deletion without deleting sessions", () => {
-    const text = body("onDeleteWorktree")
-    expect(text).toContain(".kilocode.removeSnapshot")
-    expect(text).not.toContain("session.delete")
-    for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
-      expect(body(name)).not.toContain("removeSnapshot")
+  it("cleans worktree snapshots only after worktree removal without deleting sessions", () => {
+    const del = body("onDeleteWorktree")
+    expect(del).toContain("removeWorktreeSnapshot")
+    expect(del).not.toContain("session.delete")
+    for (const name of ["onCreateWorktree", "onCreateMultiVersion"]) {
+      const text = body(name)
+      expect(text, `${name} must not delete sessions`).not.toContain("session.delete")
+      const disk = text.indexOf(".removeWorktree(")
+      const snapshot = text.indexOf("removeWorktreeSnapshot(")
+      if (snapshot < 0) continue
+      expect(disk, `${name} must remove the worktree before its snapshots`).toBeGreaterThanOrEqual(0)
+      expect(snapshot, `${name} must remove the worktree before its snapshots`).toBeGreaterThan(disk)
     }
+    expect(body("onRemoveStaleWorktree")).not.toContain("removeWorktreeSnapshot")
   })
 
   // -- onCreateWorktree invariants -------------------------------------------

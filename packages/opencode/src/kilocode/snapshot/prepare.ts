@@ -5,6 +5,9 @@ import { KiloSnapshotMaterialize } from "./materialize"
 import type { Snapshot } from "@/snapshot"
 
 export namespace KiloSnapshotPrepare {
+  /** Marks a repository whose seed finished before any snapshot was tracked. */
+  export const MARKER = "kilo-prepared"
+
   const services = new WeakMap<Snapshot.Interface, () => Effect.Effect<boolean>>()
 
   export function bind(service: Snapshot.Interface, prepare: () => Effect.Effect<boolean>) {
@@ -20,7 +23,7 @@ export namespace KiloSnapshotPrepare {
 
   // Called under the snapshot lock so preparation cannot race startup recovery.
   export const resume = Effect.fnUntraced(function* (input: KiloSnapshotMaterialize.Input) {
-    const marker = path.join(input.gitdir, "kilo-prepared")
+    const marker = path.join(input.gitdir, MARKER)
     if (yield* input.fs.exists(marker)) {
       const refs = yield* input.git([
         "--git-dir",
@@ -37,6 +40,9 @@ export namespace KiloSnapshotPrepare {
 
   export const initialize = Effect.fnUntraced(function* (input: KiloSnapshotSeed.Input, prepare = false) {
     if (yield* input.fs.exists(input.gitdir).pipe(Effect.orDie)) return
+    // Preparation runs detached from session creation, so it can arrive after the
+    // worktree was removed. Do not recreate a repository for a worktree that is gone.
+    if (prepare && !(yield* input.fs.exists(input.worktree).pipe(Effect.orDie))) return
     yield* input.fs.ensureDir(input.gitdir).pipe(Effect.orDie)
     const commands = [
       ["init"],
@@ -53,7 +59,7 @@ export namespace KiloSnapshotPrepare {
         if (result.code !== 0) return yield* Effect.die(new Error(`Snapshot initialization failed: ${result.stderr}`))
       }
       const seeded: KiloSnapshotSeed.Output = yield* KiloSnapshotSeed.seed(input)
-      if (prepare) yield* input.fs.writeFileString(path.join(input.gitdir, "kilo-prepared"), "").pipe(Effect.orDie)
+      if (prepare) yield* input.fs.writeFileString(path.join(input.gitdir, MARKER), "").pipe(Effect.orDie)
       yield* Effect.logInfo("initialized")
       return seeded
     }).pipe(
