@@ -314,6 +314,59 @@ it.live(
   30_000,
 )
 
+it.live(
+  "materialization waits for a quiet snapshot repository and restarts the wait on every snapshot",
+  () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({
+        git: true,
+        init: (dir) =>
+          Effect.promise(async () => {
+            await Bun.write(path.join(dir, "note.txt"), "committed\n")
+            await $`git add .`.cwd(dir).quiet()
+            await $`git commit -m baseline`.cwd(dir).quiet()
+          }),
+      })
+      const previous = process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"]
+      process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"] = "1500"
+      yield* Effect.gen(function* () {
+        const snapshot = yield* Snapshot.Service
+        const ctx = yield* InstanceState.context
+        const gitdir = path.join(Global.Path.data, "snapshot", ctx.project.id, Hash.fast(ctx.worktree))
+        const alt = path.join(gitdir, "objects", "info", "alternates")
+        const first = yield* snapshot.track()
+        expect(first).toBeTruthy()
+        // Snapshot operations during the quiet period are not blocked behind the repack.
+        yield* Effect.sleep("1 second")
+        expect(existsSync(alt)).toBe(true)
+        yield* Effect.promise(() => Bun.write(path.join(dir, "note.txt"), "changed\n"))
+        const second = yield* snapshot.track()
+        expect(second).toBeTruthy()
+        expect(second).not.toBe(first)
+        // The second snapshot restarted the quiet period, so nothing has been repacked yet.
+        yield* Effect.sleep("1 second")
+        expect(existsSync(alt)).toBe(true)
+        yield* pollWithTimeout(
+          Effect.sync(() => (!existsSync(alt) && !existsSync(`${alt}.materializing`) ? true : undefined)),
+          "snapshot materialization did not run after the quiet period",
+          "10 seconds",
+        )
+        expect(
+          (yield* Effect.promise(() => $`git --git-dir=${gitdir} cat-file -e ${second}^{tree}`.nothrow())).exitCode,
+        ).toBe(0)
+      }).pipe(
+        provideInstance(dir),
+        Effect.ensuring(
+          Effect.sync(() => {
+            if (previous === undefined) delete process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"]
+            if (previous !== undefined) process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"] = previous
+          }),
+        ),
+      )
+    }),
+  30_000,
+)
+
 test("does not prepare disabled snapshots or directories outside git", async () => {
   for (const opts of [{ git: true, config: { snapshot: false } }, {}]) {
     await using tmp = await tmpdir(opts)

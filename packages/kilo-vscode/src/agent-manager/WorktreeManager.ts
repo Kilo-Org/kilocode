@@ -118,6 +118,12 @@ export class WorktreeManager {
   private readonly binary: string
   private readonly log: (msg: string) => void
   private readonly pool: WorktreePool
+  /**
+   * Delay before a claimed slot is replaced. The replacement checkout competes for disk
+   * and CPU with the first prompt of the new session (snapshot seed, backend warm-up),
+   * so it waits until that startup work has normally finished.
+   */
+  rewarmDelay = 8_000
   private migrated = false
 
   constructor(
@@ -282,7 +288,7 @@ export class WorktreeManager {
   ): Promise<{ path: string; branch: string } | undefined> {
     const slot = await this.pool.claim(branch, oid, auto)
     if (!slot) return undefined
-    setTimeout(() => this.pool.warm(base), 0)
+    setTimeout(() => this.pool.warm(base), this.rewarmDelay)
 
     // Keep the folder name aligned with the branch, as the normal path does.
     const target = path.join(this.dir, directory(slot.branch))

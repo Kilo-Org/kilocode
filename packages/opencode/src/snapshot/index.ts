@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } from "effect"
-import { Struct } from "effect" // kilocode_change
+import { Struct, Fiber } from "effect" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
@@ -315,21 +315,43 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             yield* sync(Array.from(block))
             // Stage only the allowed candidate paths so snapshot updates stay scoped.
             // kilocode_change start - initial seeded writes stay protected by the source pin
+            // A large candidate set with nothing filtered out is the whole worktree, so one
+            // bulk add is equivalent and avoids quadratic pathspec matching.
+            const bulk = allow.length > 1000 && !ignored.size && !block.size && state.directory === state.worktree
             yield* stage(
               allow.filter((item) => !block.has(item)),
-              opts,
+              { ...opts, root: opts?.root || bulk },
             )
           })
 
-          const materialize = Effect.fnUntraced(function* () {
-            yield* locked(KiloSnapshotPrepare.resume({ gitdir: state.gitdir, git, fs }).pipe(Effect.orDie)).pipe(
-              Effect.timeout("5 minutes"),
-              Effect.catchCause((cause) =>
-                Effect.logError("snapshot materialization failed", { cause: Cause.pretty(cause) }),
+          // Materialization repacks every borrowed object under the snapshot lock. After a
+          // snapshot it waits until the repository has been quiet, so the tool steps of the
+          // running turn are not blocked behind it; every new snapshot restarts the wait.
+          const scheduled = { fiber: undefined as Fiber.Fiber<void> | undefined, running: false }
+          const materialize = Effect.fnUntraced(function* (idle = 0) {
+            if (scheduled.running) return
+            if (scheduled.fiber) yield* Fiber.interrupt(scheduled.fiber)
+            const work = Effect.gen(function* () {
+              yield* Effect.sleep(Duration.millis(idle))
+              // Nothing to resume for a repository that does not exist yet; taking the lock
+              // here would only race the first snapshot and then repack right behind it.
+              if (!(yield* exists(state.gitdir))) return
+              scheduled.running = true
+              yield* locked(KiloSnapshotPrepare.resume({ gitdir: state.gitdir, git, fs }).pipe(Effect.orDie)).pipe(
+                Effect.timeout("5 minutes"),
+                Effect.catchCause((cause) =>
+                  Effect.logError("snapshot materialization failed", { cause: Cause.pretty(cause) }),
+                ),
+              )
+            }).pipe(
+              Effect.ensuring(
+                Effect.sync(() => {
+                  scheduled.running = false
+                  scheduled.fiber = undefined
+                }),
               ),
-              Effect.forkDetach,
-              Effect.asVoid,
             )
+            scheduled.fiber = yield* Effect.forkDetach(work)
           })
           // kilocode_change end
 
@@ -374,7 +396,10 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return false
-                return (yield* initialize(true)) !== undefined
+                if ((yield* initialize(true)) === undefined) return false
+                // Reconcile the working tree now so the first snapshot only records later changes.
+                yield* add({ root: state.directory === state.worktree })
+                return true
               }),
             )
           })
@@ -419,7 +444,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   return
                 if (!(yield* KiloSnapshotMaterialize.pin({ gitdir: state.gitdir, git, fs }, hash))) return
                 const alt = path.join(state.gitdir, "objects", "info", "alternates")
-                if (yield* exists(alt)) yield* materialize()
+                if (yield* exists(alt)) yield* materialize(KiloSnapshotMaterialize.idle())
                 // kilocode_change end
                 yield* Effect.logInfo("tracking", { hash, cwd: state.directory, git: state.gitdir })
                 return hash
