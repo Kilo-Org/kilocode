@@ -46,6 +46,10 @@ For instructions that apply across all your projects, place an `AGENTS.md` file 
 
 Project-level instructions are loaded before global instructions and apply to every session.
 
+{% callout type="note" %}
+After the experimental [Claude Code Migration](/docs/getting-started/settings#claude-code-migration) runs, Kilo stops loading global `~/.claude/CLAUDE.md` instructions. Project-level `CLAUDE.md` files keep working.
+{% /callout %}
+
 ### Per-Directory Instructions
 
 You can place `AGENTS.md` files in any subdirectory of your project. These are loaded dynamically — when the agent's Read tool accesses a file in that directory, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags.
@@ -122,6 +126,10 @@ For instructions that apply across all your projects, place an `AGENTS.md` file 
 - **Claude-compatible:** `~/.claude/CLAUDE.md`
 
 Project-level instructions are loaded before global instructions and apply to every session.
+
+{% callout type="note" %}
+After the experimental [Claude Code Migration](/docs/getting-started/settings#claude-code-migration) runs, Kilo stops loading global `~/.claude/CLAUDE.md` instructions. Project-level `CLAUDE.md` files keep working.
+{% /callout %}
 
 ### Per-Directory Instructions
 

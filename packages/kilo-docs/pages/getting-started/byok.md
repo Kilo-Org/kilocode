@@ -24,6 +24,7 @@ Use your provider API key to route matching models through your account:
 
 - Anthropic
 - AWS Bedrock
+- Azure OpenAI
 - DeepSeek
 - Fireworks
 - Google AI Studio
@@ -67,7 +68,18 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 
 ### AWS Bedrock configuration
 
-AWS Bedrock requires credentials in a different format than other providers. Instead of a single API key, you must provide your AWS credentials as a JSON object:
+AWS Bedrock requires credentials as a JSON object rather than a single API key. Use exactly one of these two formats.
+
+**Bedrock API key** — generate a key in the AWS Bedrock console, use a region where the key and model are available, and replace the key before it expires:
+
+```json
+{
+  "apiKey": "...",
+  "region": "us-east-1"
+}
+```
+
+**IAM credentials** — use an IAM user or role:
 
 ```json
 {
@@ -79,14 +91,35 @@ AWS Bedrock requires credentials in a different format than other providers. Ins
 
 | Field | Description |
 |---|---|
-| `accessKeyId` | Your AWS access key ID |
-| `secretAccessKey` | Your AWS secret access key |
+| `apiKey` | Your Bedrock API key (API-key format only) |
+| `accessKeyId` | Your AWS access key ID (IAM format only) |
+| `secretAccessKey` | Your AWS secret access key (IAM format only) |
 | `region` | The AWS region where Bedrock is enabled (e.g., `us-east-1`, `eu-west-1`) |
 
-Your IAM user or role must have the following permissions:
+Don't mix fields from both formats in the same object.
+
+An IAM user or role must have the following permissions:
 
 - `bedrock:InvokeModel`
 - `bedrock:InvokeModelWithResponseStream`
+
+### Azure OpenAI configuration
+
+Azure OpenAI requires your API key and resource name rather than a single key. Provide both as a JSON object:
+
+```json
+{
+  "apiKey": "...",
+  "resourceName": "my-azure-resource"
+}
+```
+
+| Field | Description |
+|---|---|
+| `apiKey` | Your Azure OpenAI API key. |
+| `resourceName` | The name of your Azure OpenAI resource, which is the subdomain of your endpoint URL. |
+
+If your Azure deployment names differ from the model IDs you select in Kilo, add optional deployment mappings so each model resolves to its deployment.
 
 ## How Bring Your Own Key works
 

@@ -34,6 +34,13 @@ To treat a control word as the objective, separate it with `--`:
 The `--` delimiter sets the literal objective `pause` instead of pausing the current goal. The VS Code goal composer adds this delimiter for you.
 
 {% /tab %}
+{% tab label="Mobile" %}
+
+Select `/goal` in the composer with no objective to start goal-compose mode, then enter the objective. The next message you send forwards `/goal <objective>`. To set a goal without compose mode, type `/goal <objective>` and send it directly.
+
+Goals require a connected CLI that advertises the `goal` command. A session whose CLI does not support it shows an upgrade message instead of sending.
+
+{% /tab %}
 {% /tabs %}
 
 An objective can be up to 10,000 characters.
@@ -49,6 +56,8 @@ An objective can be up to 10,000 characters.
 | `/goal clear` | Remove the saved objective and report |
 
 The CLI and VS Code also show a goal control next to the composer. Select it to pause, resume, or clear the goal. When a goal is complete, the control label is **Restart goal** instead of **Resume**.
+
+In the mobile app, a session with a goal shows a fixed goal section under the session header. The section shows the status and objective, plus the CLI's reason when it provides one; tap it to **Edit** the objective, **Pause** or **Resume**, or **Remove** the goal. Editing sends `/goal <objective>`, and the other actions send `/goal pause`, `/goal resume`, and `/goal clear`.
 
 ## Goal statuses
 
