@@ -782,9 +782,7 @@ describe("skill commands and collision disambiguation", () => {
     const ctx = setup(() => {})
     ctx.fire({
       type: "commandsLoaded",
-      commands: [
-        { name: "reload", description: "Reload skill", source: "skill", hints: [] },
-      ],
+      commands: [{ name: "reload", description: "Reload skill", source: "skill", hints: [] }],
     })
     ctx.slash.onInput("/reload", 7)
     const results = ctx.slash.results()
@@ -805,4 +803,3 @@ describe("skill commands and collision disambiguation", () => {
     ctx.dispose()
   })
 })
-
