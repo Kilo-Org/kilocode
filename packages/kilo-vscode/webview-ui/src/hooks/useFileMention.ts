@@ -21,6 +21,7 @@ import {
   isCursorAtMentionEnd,
   getMentionRemovalRange,
   findMentionRange,
+  mentionNamed,
   mentionSettled,
   modelReferenceToken,
   sessionMentionText,
@@ -30,6 +31,8 @@ import {
   type MentionResult,
   type WorktreeReference,
 } from "./file-mention-utils"
+import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
+import { TERMINAL_MENTION } from "./terminal-context-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
 /** Past chats offered to the ranking, bounded so chats cannot flood the list. */
@@ -232,17 +235,14 @@ export function useFileMention(
   // The `@query` range that the open model picker will replace on selection.
   let modelPickerState: { textarea: HTMLTextAreaElement; atStart: number; atEnd: number } | null = null
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
-  // Offset of the "@" that opened the current query, the mention inserted at
-  // each "@" offset, and the last spaced query the file search resolved to
-  // nothing. Since a query may contain spaces, ordinary prose typed after a
-  // completed mention still matches AT_PATTERN. Keying settlement to the
-  // insertion offset keeps a short earlier mention from closing the search for
-  // a longer new path that happens to start the same way, and remembering the
-  // dead query stops a never-completed query from reopening the dropdown on
-  // every following keystroke until the user edits back into a match.
+  // Offset of the "@" that opened the current query, and the last query at
+  // that "@" the dropdown closed on: prose past a completed mention, a spaced
+  // query nothing answered, or one the user dismissed with Escape. Since a
+  // query may contain spaces, ordinary prose typed after a mention still
+  // matches AT_PATTERN, so remembering the dead query keeps the dropdown shut
+  // on every following keystroke until the user edits back into a match.
   let at = 0
   let dead: { at: number; query: string } | undefined
-  const inserted = new Map<number, string>()
   // Whether the user has moved the selection themselves, which later results
   // must not undo. Typing a new query hands the choice back to the default.
   let touched = false
@@ -256,7 +256,6 @@ export function useFileMention(
     if (value === activeScope) return value
     activeScope = value
     dead = undefined
-    inserted.clear()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
     fileSearchRevision++
     fileSearchRequest = undefined
@@ -372,8 +371,31 @@ export function useFileMention(
     replaceResults(next)
   }
 
+  /**
+   * Whether a spaced query is prose past a completed mention, judged against
+   * the mentions in the text and the files on offer. Folders are offered with
+   * a trailing slash that a hand-typed `@agents ` does not have, so both forms
+   * count.
+   */
+  const settled = (query: string, items: MentionResult[]) => {
+    if (!/\s/.test(query)) return false
+    const tokens = new Set([...mentionTokens(), TERMINAL_MENTION, GIT_CHANGES_MENTION])
+    for (const file of files(items)) {
+      tokens.add(file.path)
+      tokens.add(file.path.replace(/\/$/, ""))
+    }
+    return mentionSettled(query, tokens)
+  }
+
   const applyFiles = (query: string, items: FileSearchItem[]) => {
     const next = results(query, items)
+    // The folder the query names may only arrive now, when the space was typed
+    // before the search for the name came back.
+    if (settled(query, next)) {
+      dead = { at, query }
+      closeMention()
+      return
+    }
     // A spaced query that matches nothing is prose, not a filename in progress —
     // unless it names the Browse files entry, which is a choice, not prose.
     if (/\s/.test(query) && !filePickerNamed(query) && next.every((item) => item.type === "file-picker")) {
@@ -542,19 +564,6 @@ export function useFileMention(
     requestSessions()
   }
 
-  // Record the mention inserted at an "@" offset, bounded so a long session
-  // cannot grow the map without limit. Entries whose offset later shifts simply
-  // stop matching, which only costs the synchronous close.
-  const remember = (offset: number, token: string) => {
-    inserted.delete(offset)
-    inserted.set(offset, token)
-    while (inserted.size > 16) {
-      const oldest = inserted.keys().next().value
-      if (oldest === undefined) return
-      inserted.delete(oldest)
-    }
-  }
-
   const selectMention = (
     result: MentionResult,
     textarea: HTMLTextAreaElement,
@@ -620,7 +629,6 @@ export function useFileMention(
     const prefix = /^\s/.test(match[0]) ? 1 : 0
     const atPos = match.index! + prefix
     const suffix = /^\s/.test(after) ? "" : " "
-    remember(atPos, token)
     // Restore focus before execCommand: pickers (session search, native file
     // dialog) move focus away from the textarea, which makes execCommand
     // silently no-op.
@@ -680,7 +688,6 @@ export function useFileMention(
     // the input event) can discover the new reference. Model tokens stay out of
     // knownPaths so they are never turned into file attachments.
     knownModels.add(token)
-    remember(state.atStart, token)
     // Restore focus before execCommand: the picker's search field owns focus,
     // which makes execCommand silently no-op.
     textarea.focus()
@@ -713,13 +720,14 @@ export function useFileMention(
     }
     const query = match[1] ?? ""
     at = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
-    // The query already covers the mention inserted at this "@" plus more text,
-    // so the rest is prose being written after it, not a longer filename.
-    if (mentionSettled(query, inserted.get(at), mentionTokens())) {
+    if (dead && dead.at === at && query.startsWith(dead.query)) {
       closeMention()
       return
     }
-    if (dead && dead.at === at && query.startsWith(dead.query)) {
+    // The query already covers a mention at this "@" plus more text, so the
+    // rest is prose being written after it, not a longer filename.
+    if (settled(query, mentionResults())) {
+      dead = { at, query }
       closeMention()
       return
     }
@@ -774,6 +782,10 @@ export function useFileMention(
       // message wins there, unless the query actually names the entry.
       const query = mentionQuery() ?? ""
       if (result.type === "file-picker" && /\s/.test(query) && !filePickerNamed(query)) return false
+      // A spaced query the highlighted result only loosely fits is prose the
+      // close has not caught up with, so Enter sends the message rather than
+      // trading the draft for a fuzzy hit. Choosing the result by hand still wins.
+      if (/\s/.test(query) && !touched && !mentionNamed(query, result)) return false
       e.preventDefault()
       if (textarea) selectMention(result, textarea, setText, onSelect)
       return true
@@ -781,6 +793,9 @@ export function useFileMention(
     if (e.key === "Escape") {
       e.preventDefault()
       e.stopPropagation()
+      // Dismissing the query dismisses everything typed onward from it too, so
+      // the dropdown does not return on the very next keystroke.
+      dead = { at, query: mentionQuery() ?? "" }
       closeMention()
       return true
     }
@@ -980,7 +995,6 @@ export function useFileMention(
       suppress = false
     }
     knownPaths.add(norm)
-    remember(state.atStart, norm)
     setMentionedPaths((prev) => new Set([...prev, norm]))
     syncMentionedPaths(textarea.value)
     state.setText(textarea.value)
