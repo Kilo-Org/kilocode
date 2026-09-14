@@ -140,6 +140,8 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
+`/reload` reboots every loaded instance of the project, including the main checkout and sibling worktrees. Kilo refuses the reload while any session in the project is running; wait for it to finish or abort it first.
+
 #### Kilo Gateway Commands (when connected)
 
 | Command | Aliases | Description |
@@ -564,6 +566,8 @@ Selecting an "Always run" option will:
 3. Auto-approve future matching commands, including matching approvals already waiting in other open sessions
 
 Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
+
+Choosing **Reject** opens an optional feedback field, and anything you enter is sent to the agent with the denial.
 
 ### Pasting Large Text
 
