@@ -263,14 +263,7 @@ describe("tracked tab restore", () => {
 
   it("drops a closed id even when it is present in current and order", () => {
     expect(
-      restoreTrackedTabs(
-        inventory(["s1", "s2"]),
-        ["s1", "s2"],
-        ["s1", "s2"],
-        trackedPending,
-        reorder,
-        new Set(["s2"]),
-      ),
+      restoreTrackedTabs(inventory(["s1", "s2"]), ["s1", "s2"], ["s1", "s2"], trackedPending, reorder, new Set(["s2"])),
     ).toEqual(["s1"])
   })
 
