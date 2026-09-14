@@ -24,7 +24,14 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID, latestTaskPart } from "../../context/session-utils"
 import { useConfig } from "../../context/config"
 import { openSubagent } from "./open-subagent"
-import { showChildPromotion, taskAvatarStatus, taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import {
+  showChildPromotion,
+  taskAvatarStatus,
+  taskBackground,
+  taskResult,
+  taskRunning,
+  taskVisible,
+} from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -63,12 +70,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   // "Starting..." status, which would flicker the transcript as the child runs.
   // The input carries `background` from the first part update; promoted tasks
   // only gain the state metadata flag later.
-  const backgroundTask = createMemo(
-    () =>
-      props.input.background === true ||
-      ((props.partMetadata as Record<string, unknown> | undefined)?.background ??
-        (props.metadata as Record<string, unknown> | undefined)?.background) === true,
-  )
+  const backgroundTask = createMemo(() => taskBackground(props.input, props.partMetadata, props.metadata))
   const avatar = createMemo(() => {
     const id = childSessionId()
     return taskAvatarStatus(id, props.status, session.allStatusMap())
@@ -115,11 +117,11 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   }
   createEffect(() => {
     if (touched()) return
-    if (backgroundTask()) {
-      setOpen(false)
+    if (auto()) {
+      setOpen(true)
       return
     }
-    if (props.status === "running") setOpen(true)
+    if (backgroundTask()) setOpen(false)
   })
 
   let synced: string | undefined
