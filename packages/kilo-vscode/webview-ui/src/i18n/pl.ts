@@ -1311,6 +1311,18 @@ export const dict = {
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Zapisz lokalnie",
+  "diffViewer.comment.sendToAgent": "Wyślij do agenta",
+  "diffViewer.comment.postToGithub": "Opublikuj na GitHubie",
+  "diffViewer.comment.loadFailed": "Nie udało się wczytać zmian pull requesta.",
+  "diffViewer.comment.unavailable": "Ten wiersz nie jest dostępny w bieżącej migawce pull requesta.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Otwórz pull request",
+  "diffViewer.comment.localChanges": "Zmiany lokalne",
+  "diffViewer.comment.prChanges": "Zmiany PR",
+  "diffViewer.comment.sendToKilo": "Wyślij do Kilo",
+  "diffViewer.comment.sendToGithub": "Wyślij do GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Wybierz miejsce docelowe",
   "diffViewer.notice.snapshotsDisabled":
     "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 

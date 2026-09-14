@@ -1321,6 +1321,18 @@ export const dict = {
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Yerel olarak kaydet",
+  "diffViewer.comment.sendToAgent": "Ajana gönder",
+  "diffViewer.comment.postToGithub": "GitHub'da paylaş",
+  "diffViewer.comment.loadFailed": "Çekme isteğindeki değişiklikler yüklenemedi.",
+  "diffViewer.comment.unavailable": "Bu satır, çekme isteğinin mevcut anlık görüntüsünde bulunmuyor.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull request'i aç",
+  "diffViewer.comment.localChanges": "Yerel değişiklikler",
+  "diffViewer.comment.prChanges": "PR değişiklikleri",
+  "diffViewer.comment.sendToKilo": "Kilo'ya gönder",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}} hedefine gönder",
+  "diffViewer.comment.chooseDestination": "Hedef seç",
   "diffViewer.notice.snapshotsDisabled":
     "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
 

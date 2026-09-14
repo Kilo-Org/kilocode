@@ -1321,6 +1321,18 @@ export const dict = {
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
   "diffViewer.group.session": "Sessão",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Salvar localmente",
+  "diffViewer.comment.sendToAgent": "Enviar para o agente",
+  "diffViewer.comment.postToGithub": "Publicar no GitHub",
+  "diffViewer.comment.loadFailed": "Não foi possível carregar as alterações da solicitação de extração.",
+  "diffViewer.comment.unavailable": "Esta linha não está disponível no snapshot atual da solicitação de extração.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Abrir PR",
+  "diffViewer.comment.localChanges": "Alterações locais",
+  "diffViewer.comment.prChanges": "Alterações do PR",
+  "diffViewer.comment.sendToKilo": "Enviar para o Kilo",
+  "diffViewer.comment.sendToGithub": "Enviar para o GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Escolher destino",
   "diffViewer.notice.snapshotsDisabled":
     "Os snapshots estão desativados para este repositório. Edite seus arquivos de configuração para exibir as alterações da sessão.",
 

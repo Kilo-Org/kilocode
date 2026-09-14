@@ -1276,6 +1276,18 @@ export const dict = {
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "حفظ محليًا",
+  "diffViewer.comment.sendToAgent": "إرسال إلى الوكيل",
+  "diffViewer.comment.postToGithub": "نشر على GitHub",
+  "diffViewer.comment.loadFailed": "تعذر تحميل تغييرات طلب السحب.",
+  "diffViewer.comment.unavailable": "هذا السطر غير متاح في اللقطة الحالية لطلب السحب.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "فتح طلب السحب",
+  "diffViewer.comment.localChanges": "التغييرات المحلية",
+  "diffViewer.comment.prChanges": "تغييرات PR",
+  "diffViewer.comment.sendToKilo": "إرسال إلى Kilo",
+  "diffViewer.comment.sendToGithub": "إرسال إلى GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "اختيار الوجهة",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 

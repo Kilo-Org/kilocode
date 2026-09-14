@@ -1334,6 +1334,18 @@ export const dict = {
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Lokaal opslaan",
+  "diffViewer.comment.sendToAgent": "Naar agent sturen",
+  "diffViewer.comment.postToGithub": "Op GitHub plaatsen",
+  "diffViewer.comment.loadFailed": "De wijzigingen van de pull request konden niet worden geladen.",
+  "diffViewer.comment.unavailable": "Deze regel is niet beschikbaar in de huidige snapshot van de pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull request openen",
+  "diffViewer.comment.localChanges": "Lokale wijzigingen",
+  "diffViewer.comment.prChanges": "PR-wijzigingen",
+  "diffViewer.comment.sendToKilo": "Naar Kilo sturen",
+  "diffViewer.comment.sendToGithub": "Naar GitHub #{{number}} sturen",
+  "diffViewer.comment.chooseDestination": "Bestemming kiezen",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 

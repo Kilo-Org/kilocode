@@ -1305,6 +1305,18 @@ export const dict = {
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ذخیرهٔ محلی",
+  "diffViewer.comment.sendToAgent": "ارسال به عامل",
+  "diffViewer.comment.postToGithub": "انتشار در GitHub",
+  "diffViewer.comment.loadFailed": "بارگذاری تغییرات درخواست ادغام ممکن نشد.",
+  "diffViewer.comment.unavailable": "این خط در تصویر لحظه‌ای فعلی درخواست ادغام موجود نیست.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "باز کردن درخواست ادغام",
+  "diffViewer.comment.localChanges": "تغییرات محلی",
+  "diffViewer.comment.prChanges": "تغییرات PR",
+  "diffViewer.comment.sendToKilo": "ارسال به Kilo",
+  "diffViewer.comment.sendToGithub": "ارسال به GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "انتخاب مقصد",
   "diffViewer.notice.snapshotsDisabled":
     "عکس‌های فوری برای این مخزن غیرفعال هستند. لطفاً فایل‌های پیکربندی خود را ویرایش کنید تا تغییرات جلسه نمایش داده شوند.",
 

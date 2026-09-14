@@ -1343,6 +1343,18 @@ export const dict = {
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Enregistrer localement",
+  "diffViewer.comment.sendToAgent": "Envoyer à l’agent",
+  "diffViewer.comment.postToGithub": "Publier sur GitHub",
+  "diffViewer.comment.loadFailed": "Impossible de charger les modifications de la pull request.",
+  "diffViewer.comment.unavailable": "Cette ligne n’est pas disponible dans l’instantané actuel de la pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Ouvrir la pull request",
+  "diffViewer.comment.localChanges": "Modifications locales",
+  "diffViewer.comment.prChanges": "Modifications du PR",
+  "diffViewer.comment.sendToKilo": "Envoyer à Kilo",
+  "diffViewer.comment.sendToGithub": "Envoyer à GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choisir la destination",
   "diffViewer.notice.snapshotsDisabled":
     "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
 

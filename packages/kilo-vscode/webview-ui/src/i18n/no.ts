@@ -1302,6 +1302,19 @@ export const dict = {
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Lagre lokalt",
+  "diffViewer.comment.sendToAgent": "Send til agent",
+  "diffViewer.comment.postToGithub": "Publiser på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke laste inn endringene i pull requesten.",
+  "diffViewer.comment.unavailable":
+    "Denne linjen er ikke tilgjengelig i det gjeldende øyeblikksbildet av pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åpne pull request",
+  "diffViewer.comment.localChanges": "Lokale endringer",
+  "diffViewer.comment.prChanges": "PR-endringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Velg mål",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 
