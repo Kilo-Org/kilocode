@@ -690,11 +690,20 @@ export class WorktreeManager {
     })
   }
 
-  /** Directory names directly under `.kilo/worktrees/`, excluding in-flight deletions. */
+  /**
+   * Directory names directly under `.kilo/worktrees/`, excluding in-flight deletions.
+   *
+   * Sorted: `readdir` order is filesystem-dependent (ext4 does not return alphabetical order the way
+   * APFS/HFS+ tend to), and an orphan list that reorders itself between reconciles for no reason a
+   * user can see is confusing in the UI and flaky in tests that assert on it.
+   */
   async worktreeDirs(): Promise<string[]> {
     if (!fs.existsSync(this.dir)) return []
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
-    return entries.filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX)).map((e) => e.name)
+    return entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX))
+      .map((e) => e.name)
+      .sort()
   }
 
   /**
