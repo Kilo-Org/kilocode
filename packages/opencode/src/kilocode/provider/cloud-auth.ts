@@ -1,4 +1,5 @@
 import type { Auth } from "@/auth"
+import { patchOpenAICompatibleOptions } from "./provider"
 
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
@@ -57,6 +58,7 @@ export function providerKey(providerID: string, auth: Auth.Info) {
 const VERTEX_CREDENTIALS = "kiloVertexCredentials"
 
 export function vertexOptions(providerID: string, npm: string, options: Record<string, unknown>) {
+  patchOpenAICompatibleOptions(npm, options)
   const getter = options[VERTEX_CREDENTIALS]
   delete options[VERTEX_CREDENTIALS]
   if (providerID !== "google-vertex" || npm.includes("@ai-sdk/openai-compatible")) return
