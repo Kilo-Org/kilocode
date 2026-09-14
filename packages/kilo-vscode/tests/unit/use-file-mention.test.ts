@@ -2412,4 +2412,13 @@ describe("useFileMention reference drops", () => {
       expect(area.value).toBe("")
     })
   })
+
+  it("reports a drop as unhandled when the editor does not apply the insert", () => {
+    withMention("", undefined, (mention, area) => {
+      // execCommand can silently no-op; the textarea stays unchanged.
+      globalThis.document.execCommand = () => false
+      expect(mention.insertDrop({ kind: "terminal" }, area, () => {}, "")).toBe(false)
+      expect(area.value).toBe("")
+    })
+  })
 })

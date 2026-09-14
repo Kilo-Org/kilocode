@@ -78,7 +78,9 @@ export function createCommentsGithub(opts: Options): CommentsGithub {
     })
   }
 
-  const send = (comment: ReviewComment) => {
+  // async so a synchronous throw while building the request becomes a rejection
+  // that postAllGithub can report instead of escaping the per-comment loop.
+  const send = async (comment: ReviewComment) => {
     const { promise, resolve: settle } = Promise.withResolvers<{ success: boolean; error?: string }>()
     const target = opts.target()
     const context = resolve(comment)
@@ -122,7 +124,12 @@ export async function postAllGithub(
 ): Promise<{ posted: ReviewComment[]; failure?: string }> {
   const posted: ReviewComment[] = []
   for (const comment of comments) {
-    const result = await github.send(comment)
+    // A rejected send is a failed request too. Convert it into a result so the
+    // batch stops at the first failure and the caller can clear its pending state.
+    const result = await github.send(comment).then(
+      (value) => value,
+      (error: unknown) => ({ success: false, error: error instanceof Error ? error.message : String(error) }),
+    )
     if (!result.success) return { posted, failure: result.error }
     posted.push(comment)
   }
