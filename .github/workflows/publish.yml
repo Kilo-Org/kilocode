@@ -336,7 +336,6 @@ jobs:
     needs: build-cli
     runs-on: windows-2025
     if: github.repository == 'Kilo-Org/kilocode'
-    environment: GithubActionEVCodeSignDev
     timeout-minutes: 20
     steps:
       - uses: actions/download-artifact@v8
@@ -361,19 +360,24 @@ jobs:
       - name: Az login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.EV_CODE_SIGN_APP_CLIENT_ID }}
-          tenant-id: ${{ secrets.TENANT_ID }}
-          subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign Windows binaries with EV certificate
         shell: bash
         run: |
           dotnet tool install --global AzureSignTool
           export PATH="$USERPROFILE/.dotnet/tools:$PATH"
+          # AzureSignTool requires an explicit auth option (-kva/-kvi/-kvm; there is no
+          # DefaultAzureCredential fallback). Mint a Key Vault token from the azure/login
+          # OIDC session and pass it via -kva.
+          token="$(az account get-access-token --resource https://vault.azure.net --query accessToken -o tsv)"
           for exe in dist/@kilocode/cli-windows-*/bin/kilo.exe; do
             AzureSignTool sign -v \
-              -kvu "${{ secrets.KEY_VAULT_URI }}" \
-              -kvc "${{ secrets.EV_CERT_NAME }}" \
+              -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" \
+              -kvc "${{ secrets.AZURE_CERT_NAME }}" \
+              -kva "$token" \
               -tr http://timestamp.digicert.com \
               -d "Kilo CLI" \
               "$exe"
@@ -414,6 +418,7 @@ jobs:
           gh release upload "v${{ needs.build-cli.outputs.version }}" $archives --clobber
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
   # kilocode_change end
 
   build-vscode:
