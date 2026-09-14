@@ -1215,6 +1215,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.response,
             message.approvedAlways,
             message.deniedAlways,
+            message.feedback,
           )
           break
         case "createSession":

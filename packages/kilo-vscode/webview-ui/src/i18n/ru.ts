@@ -268,6 +268,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.reject": "Отклонить",
+  "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
+  "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
   "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",
