@@ -284,11 +284,11 @@ async function removeAuth(ctx: ActionContext, id: string, configured: boolean) {
   }
 }
 
-async function removeCustom(ctx: ActionContext, id: string, global: Config, merged: Config) {
+async function removeConfigured(ctx: ActionContext, id: string, global: Config, merged: Config) {
   const cfg = global.provider?.[id]
   const effective = merged.provider?.[id]
   const tasks = []
-  if (customProvider(cfg)) {
+  if (cfg) {
     tasks.push(
       saveGlobal(ctx, {
         provider: { [id]: null },
@@ -296,22 +296,10 @@ async function removeCustom(ctx: ActionContext, id: string, global: Config, merg
       }),
     )
   }
-  if (customProvider(effective)) {
+  if (effective) {
     tasks.push(saveProject(ctx, { provider: { [id]: null } }))
   }
   await Promise.all(tasks)
-}
-
-async function disableConfigured(ctx: ActionContext, id: string, config: Config) {
-  const disabled = config.disabled_providers ?? []
-  if (disabled.includes(id)) return
-  await saveGlobal(ctx, { disabled_providers: [...disabled, id] })
-}
-
-async function enableConfigured(ctx: ActionContext, id: string, config: Config) {
-  const disabled = disabledWithout(config.disabled_providers, id)
-  if (disabled.length === (config.disabled_providers ?? []).length) return
-  await saveGlobal(ctx, { disabled_providers: disabled })
 }
 
 export async function connectProvider(
@@ -407,36 +395,20 @@ export async function disconnectProvider(
     const effective = config.merged.provider?.[id]
     const configured = !!cfg || !!effective
     const custom = customProvider(cfg) || customProvider(effective)
-    const { response } = await fetchProviderData(ctx.client, ctx.workspaceDir)
-    const active = response.all.find((item) => item.id === id)
-    const oauth = active?.source === "custom" && configured && !custom
-
-    // Config-sourced providers may not have auth store entries because
-    // credentials can come from config or env, so auth removal is non-fatal.
-    await removeAuth(ctx, id, configured)
+    // Remove stored credentials and config so configured providers cannot
+    // reconnect automatically with an old key after logout.
+    await removeAuth(ctx, id, custom)
 
     if (id === "kilo") {
       ctx.postMessage({ type: "profileData", data: null })
     }
 
-    if (custom) {
-      await removeCustom(ctx, id, config.global, config.merged)
+    if (configured) {
+      await removeConfigured(ctx, id, config.global, config.merged)
     }
-
-    // Config-sourced built-in providers stay "connected" after auth.remove
-    // because the server rebuilds state from config. Add to disabled_providers
-    // so the server excludes them while preserving config for re-enable.
-    if (configured && !oauth && !custom) {
-      await disableConfigured(ctx, id, config.global)
-    }
-
-    if (oauth) {
-      await enableConfigured(ctx, id, config.global)
-    }
-
-    if (configured) await refreshConfig(ctx, setCachedConfig)
 
     await ctx.disposeGlobal(`provider disconnect (${id})`)
+    if (configured) await refreshConfig(ctx, setCachedConfig)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerDisconnected", requestId, providerID: id })
   } catch (error) {

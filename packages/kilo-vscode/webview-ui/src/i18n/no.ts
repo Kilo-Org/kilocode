@@ -425,6 +425,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Egendefinert leverandør",
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
+  "settings.providers.action.changeApiKey": "Endre API-nøkkel",
   "settings.providers.custom.description": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":

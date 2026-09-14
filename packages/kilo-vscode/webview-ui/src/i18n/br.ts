@@ -422,6 +422,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Provedor personalizado",
   "settings.providers.connected.environmentDescription": "Conectado a partir das suas variáveis de ambiente",
   "settings.providers.action.signInChatGPT": "Entrar com ChatGPT",
+  "settings.providers.action.changeApiKey": "Alterar chave de API",
   "settings.providers.custom.description": "Adicione um provedor personalizado pela URL base.",
   "settings.providers.subagentModel.title": "Modelo de Subagente",
   "settings.providers.subagentModel.description":

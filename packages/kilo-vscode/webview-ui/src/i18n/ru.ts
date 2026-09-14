@@ -458,6 +458,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Пользовательский провайдер",
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Изменить API-ключ",
   "settings.providers.custom.description": "Добавьте пользовательский провайдер по базовому URL.",
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":

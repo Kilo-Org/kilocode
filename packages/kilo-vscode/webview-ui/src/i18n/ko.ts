@@ -419,6 +419,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "사용자 정의 공급자",
   "settings.providers.connected.environmentDescription": "환경 변수에서 연결됨",
   "settings.providers.action.signInChatGPT": "ChatGPT로 로그인",
+  "settings.providers.action.changeApiKey": "API 키 변경",
   "settings.providers.custom.description": "기본 URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":

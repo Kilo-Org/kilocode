@@ -3637,11 +3637,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       if (!snapshot) throw new Error("Config update returned no authoritative snapshot")
+      const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
+      // Issue bindings after async reads so a concurrent refresh cannot expire them before publication.
       const bindings = this.bindingsFor(dir, snapshot.targets)
       const global = snapshot.targets.global.raw as Config
       const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
       this.cachedGlobalConfig = global
-      const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
       this.cachedConfigMessage = {
         type: "configLoaded",
         config: snapshot.effective,
