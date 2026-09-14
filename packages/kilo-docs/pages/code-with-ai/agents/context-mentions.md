@@ -32,9 +32,9 @@ Selecting a suggestion inserts the mention and highlights it in the input. File 
 
 Terminal context is limited to 500 lines or 50,000 characters. Longer output is truncated. If no terminal content is available, Kilo reports that terminal content is unavailable instead of attaching an empty file.
 
-### Referencing a Model
+### Referencing a model
 
-Choosing **Model** from the `@` menu opens the model picker; picking a model inserts an `@provider/model` token into the prompt, for example `@anthropic/claude-sonnet-4`. The token is inline text — not a file attachment — and it does not change the session's active model. It keeps the exact model key visible to the agent reading the prompt, so an orchestrator can pass it as the model for an Agent Manager session or a subagent.
+Choose **Model** from the `@` menu to insert a model reference such as `@anthropic/claude-sonnet-4`. Use the reference to ask Kilo to run an Agent Manager session or subagent with that model. The reference does not attach a file or change the current session's model.
 
 ### Referencing Past Chats
 

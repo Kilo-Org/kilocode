@@ -11,7 +11,7 @@ Instead of maintaining a static list that's perpetually behind, we built somethi
 
 ## Model Routing and Configuration
 
-Kilo's IDE Extension and CLI configurations have five separate, independently configurable model slots:
+You can configure models separately for different tasks in the VS Code extension and kilo CLI:
 
 - **Main model** — the primary model your agent uses for coding tasks, chat, and reasoning. This is what you pick with the model selector, `/models`, or the `model` key in `kilo.jsonc`. See [How to Select and Switch Models](#how-to-select-and-switch-models) for the full precedence order and per-agent config.
   - The main model is also used for todo-list generation, and for context compaction/summarization when no compaction model is set.
