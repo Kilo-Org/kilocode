@@ -187,6 +187,9 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
+- **Enable Browser Automation** - enable the Agent Manager browser panel and the `browser_open` tool (off by default)
+- **Task Subagent Model Selection** - let the agent choose a model, provider, and reasoning variant for each `task` subagent (off by default)
+- **Claude Code Migration** - one-time import of supported global Claude Code instructions, skills, and MCP definitions (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -218,7 +221,7 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
 
-Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
+Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. You can also enable it with the `KILO_EXPERIMENTAL_SHARED_AGENT_BOARD` environment variable, or with the umbrella `KILO_EXPERIMENTAL=true`, without editing config. The environment flag is an additional enable path, so an explicit config `false` does not disable the board when the flag is set. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
 
 Use it when agents can benefit from discoveries during work:
 
@@ -232,3 +235,25 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
 When a main session has board messages, open the **Board** icon in its task header to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+
+### Task Subagent Model Selection
+
+Task subagents normally use the model and reasoning variant configured for the subagent or inherited from the parent. With **Task Subagent Model Selection** enabled, the orchestrating agent can choose a model, provider, and reasoning variant for an individual `task` subagent instead.
+
+Enable it in the VS Code **Experimental** settings, or set `experimental.task_model_selection` to `true` in `kilo.jsonc`. It is off by default. When the setting is on, the agent can search available models with the `agent_manager_models` tool and pass `model`, `provider`, and `variant` when it starts a subagent. Explicit selections are validated before the child session starts, so an invalid model, provider, or variant fails instead of silently falling back. A resumed subagent keeps its last model and reasoning variant unless it is overridden. See [Custom Subagents](/docs/customize/custom-subagents#per-task-model-selection).
+
+### Claude Code Migration
+
+**Claude Code Migration** is a one-time, opt-in import of supported global Claude Code configuration into Kilo. It runs on the next backend start after you enable it. A receipt and a global config lock ensure the import is attempted only once, with no automatic retry.
+
+Enable it in the VS Code **Experimental** settings, or set the `KILO_EXPERIMENTAL_CLAUDE_MIGRATION` environment variable. It is off by default.
+
+The migration imports only:
+
+- Global instructions from `~/.claude/CLAUDE.md`, written to Kilo's global `AGENTS.md`
+- Standalone skills from `~/.claude/skills/`, imported one directory per skill with a `SKILL.md`
+- Top-level MCP server definitions from `~/.claude.json`, imported disabled
+
+Your original Claude files are never changed or deleted. Existing Kilo instructions, skills, commands, and MCP names take precedence: anything that would conflict with existing content is skipped, along with unsupported syntax, symlinks, skill bundles with extra files, unsafe destination paths, and custom config routing. Imported MCP servers stay disabled until you enable them.
+
+After the attempt, Kilo stops using global `~/.claude` instructions and skills as a fallback, while project-level Claude compatibility (such as a `CLAUDE.md` in a repository) still works. A notification reports what was imported, skipped, or failed and points to the migration receipt for the full list.

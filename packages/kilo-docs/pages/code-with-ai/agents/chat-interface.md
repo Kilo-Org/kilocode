@@ -109,7 +109,7 @@ Type `@` in the TUI to get file autocomplete suggestions, or mention file paths 
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
-- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state.
+- Mermaid code blocks → In VS Code and JetBrains, fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state. The terminal cannot render Mermaid, so Ask mode in the CLI uses plain-text or ASCII diagrams instead; explicitly requesting Mermaid source still returns it.
 - Charts → In VS Code, asking for a chart, graph, or plot renders an inline chart in the conversation. Supported types include bar, line, scatter, pie, doughnut, radar, bubble, and polar area. Diagrams and flowcharts still render as Mermaid.
 
 **Status signals:**
@@ -139,6 +139,8 @@ When Kilo Code needs more information to complete a task, it asks a follow-up qu
 1. **Question Appears** - Kilo Code asks a question using the `question` tool
 2. **Options Displayed** - Selectable options are presented that you can choose from
 3. **Selection** - Pick an option or type a custom response
+
+For single-select questions, the agent can mark one option as the default answer. That option starts selected and focused, so pressing `Enter` confirms it. You can still choose another option, and a default never submits on its own or takes focus from the message composer.
 
 **Benefits:**
 

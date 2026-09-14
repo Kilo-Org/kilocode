@@ -118,6 +118,8 @@ These tools help manage the conversation and task flow:
 - `todoread` - Reads the current session TODO list
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
+- `schedule_wakeup` - Schedules a future turn for the current session
+- `cancel_wakeup` - Lists or cancels the current session's scheduled wakeups
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
 - `board_post` / `board_read` - Exchange messages on the experimental Kilo Swarm board
 
@@ -146,6 +148,21 @@ For example, a primary agent can start independent background research with a ca
 ```
 
 Background subagents are available when the server exposes the background capability. Do not poll for progress or duplicate work in the same files. If Kilo returns a `task_id` after a failed or interrupted child, use it to resume that child when the current session and permissions allow it. A child can create more task children only when its configured depth and `task` permission allow it.
+
+### Scheduled wakeups
+
+In the CLI and VS Code extension, the agent can defer its own continuation with `schedule_wakeup` instead of holding a turn open:
+
+- The agent gives a prompt to resume with and exactly one of `delay` (for example `30s`, `5m`, `2h`, `1d`; a bare number is seconds) or `when` (an absolute ISO-8601 date-time).
+- A delay under 10 seconds is raised to 10 seconds, a time more than 7 days away is pulled back to 7 days, and a time at or before now is rejected.
+- One session holds at most 10 pending wakeups.
+- When the wakeup fires, the session resumes with the scheduled prompt marked `[scheduled wakeup]`, and a note that no user is present.
+- Wakeups are stored and re-armed when the project is opened again, so they survive a restart. An overdue wakeup fires when the project opens.
+- A wakeup that fires while the session is paused is logged as unresumable instead of resuming.
+
+`cancel_wakeup` lists the session's pending wakeups with their id, due time, and reason (or the scheduled prompt when no reason was given) and cancels one by id. Cancelling an id that already fired or was cancelled reports it without failing.
+
+This is for waiting on something outside a blocking command, such as a build, deploy, or CI window, or a later check-in on a slowly changing task. For short waits, use a blocking shell command with a raised `timeout` instead.
 
 ### Kilo Swarm board tools
 

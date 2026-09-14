@@ -95,7 +95,7 @@ Compaction is configured in your `kilo.jsonc` file:
 
 ### Use a different model for compaction
 
-Summarization can use a cheaper or larger-context model than your main agent. Configure a dedicated compaction agent:
+Summarization can use a cheaper or larger-context model than your main agent. In the VS Code extension, select the **Compaction model** under **Settings → Models**, next to the other per-purpose model selectors. To configure it in `kilo.jsonc`, set a dedicated compaction agent:
 
 ```jsonc
 {

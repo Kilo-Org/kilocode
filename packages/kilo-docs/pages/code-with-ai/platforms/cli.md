@@ -131,6 +131,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | Command | Aliases | Description |
 |---|---|---|
 | `/status` | - | View status |
+| `/about` | - | Show version, channel, runtime, config path, project root, connected providers, and default model; press `c` to copy a diagnostic block |
 | `/themes` | - | Switch theme |
 | `/help` | - | Show help |
 | `/reload` | - | Reload every instance of the project from disk (config, skills, agents, and commands) |
@@ -246,7 +247,9 @@ There is no slash command or command-palette toggle for notifications or sounds.
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
 
-Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch or to changes from the last assistant turn. Use `/move` to move the current session to another project directory.
+Use `/about` to open the About dialog, either from the command palette (under **Kilo**) or as a slash command. It shows the CLI version and channel, runtime and platform, configuration and project paths, connected providers, and the default model, with links to the docs, GitHub, issues, and Discord. Press `c` to copy a diagnostic block for bug reports.
+
+Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch, to changes from the last assistant turn, or to changes from the last commit (`HEAD` vs `HEAD~1`). Use `/move` to move the current session to another project directory.
 
 The `diff_open` and `session_move` TUI keybindings run the same actions and are unbound by default. Set them under `keybinds` in `tui.jsonc`:
 
@@ -565,9 +568,25 @@ Selecting an "Always run" option will:
 
 Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
 
+### Rejecting with Feedback
+
+Select **Reject**, or press `Esc`, to open a rejection message field instead of rejecting immediately. Type what the agent should do differently, then press `Enter` to reject with that feedback. Press `Esc` to cancel and return to the approval prompt.
+
+The feedback is optional. Leave the field empty and press `Enter` to reject without feedback. With feedback, the agent can revise its proposal and ask for approval again; an empty rejection is a plain denial.
+
 ### Pasting Large Text
 
 Pasting a large block of text (five or more lines, or over 800 characters) into the prompt collapses it into a placeholder such as `[Pasted ~6 lines]` to keep the prompt readable. To view or edit the pasted text, paste the same text again — the matching placeholder expands in place.
+
+### Answering Questions
+
+When `kilo run` asks a question with selectable options, the footer shows the available keys. For multiple-choice questions:
+
+- `Space` toggles the focused option.
+- `Enter` advances to the next question, or to the review and confirm step on the last question.
+- `1`–`9` toggle an option directly, and `↑`/`↓` move the focus. `Tab` and `Shift+Tab` switch between questions.
+
+For single-select questions, `Enter` submits the answer. When the agent defines a default answer, that option starts selected and `Enter` confirms it. `Esc` dismisses the question.
 
 ## Autonomous Mode (Non-Interactive)
 
@@ -603,7 +622,9 @@ This instructs the AI to proceed without user input.
 
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
-- `1`: Error (initialization or execution failure)
+- `1`: Error (initialization, execution, or request failure)
+
+A run that completes without producing any assistant output also exits `1`, so an empty run is not mistaken for a successful one. Kilo prints `run ended without an assistant message; the model returned no output` to stderr, or emits it as a final `error` record when you use `--format json`. A run that produces assistant output still exits `0`. If the prompt request itself fails, that error is reported instead and the empty-output diagnostic is not added.
 
 Without `--auto`, a non-interactive run cannot prompt for approval and auto-rejects any permission request it receives. If a run auto-rejected at least one request, it exits `1` with a stderr diagnostic naming the cause, since the task likely did not complete. Pass `--auto` for autonomous use.
 
