@@ -27,6 +27,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -204,6 +205,88 @@ class KiloBackendWorkspaceTest {
         }
 
         assertIs<KiloWorkspaceState.Ready>(ws.state.value)
+    }
+
+    // ------ Config warnings ------
+
+    @Test
+    fun `workspace warnings are loaded into Ready`() = runBlocking {
+        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+
+        val app = setup()
+        val ws = ready(app)
+        loaded(ws)
+
+        val state = ws.state.value as KiloWorkspaceState.Ready
+        assertEquals(1, state.warnings.size)
+        assertEquals(".kilo/kilo.json", state.warnings.first().path)
+        assertEquals("Invalid JSON", state.warnings.first().message)
+        assertEquals("CloseBraceExpected", state.warnings.first().detail)
+    }
+
+    @Test
+    fun `workspace warnings default to empty`() = runBlocking {
+        mock.warnings = "[]"
+
+        val app = setup()
+        val ws = ready(app)
+        loaded(ws)
+
+        val state = ws.state.value as KiloWorkspaceState.Ready
+        assertTrue(state.warnings.isEmpty())
+    }
+
+    @Test
+    fun `failing warnings fetch does not fail workspace load`() = runBlocking {
+        mock.warningsStatus = 500
+
+        val app = setup()
+        val ws = ready(app)
+        loaded(ws)
+
+        val state = ws.state.value as KiloWorkspaceState.Ready
+        assertTrue(state.warnings.isEmpty())
+    }
+
+    @Test
+    fun `hung warnings do not prevent Ready`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.warningsGate = gate
+
+        try {
+            val app = setup()
+            val ws = ready(app)
+
+            // The bounded warnings client aborts the stalled call, so Ready still arrives with
+            // the required catalog and no warnings.
+            loaded(ws)
+
+            val state = ws.state.value as KiloWorkspaceState.Ready
+            assertTrue(state.warnings.isEmpty())
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `config updated SSE refreshes workspace warnings`() = runBlocking {
+        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+
+        val app = setup()
+        val ws = ready(app)
+        loaded(ws)
+
+        assertEquals(1, (ws.state.value as KiloWorkspaceState.Ready).warnings.size)
+
+        mock.warnings = "[]"
+        val before = mock.requestCount("/config/warnings")
+        mock.awaitSseConnection()
+        mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
+
+        assertTrue(mock.awaitRequestCount("/config/warnings", before + 1))
+        withTimeout(5_000) {
+            ws.state.first { it is KiloWorkspaceState.Ready && it.warnings.isEmpty() }
+        }
     }
 
     // ------ Error handling ------

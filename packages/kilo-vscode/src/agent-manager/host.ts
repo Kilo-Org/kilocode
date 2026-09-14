@@ -126,6 +126,9 @@ export interface Host {
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
 
+  /** Local files with unsaved editor changes. */
+  dirtyFiles(): string[]
+
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
   pickFolder(): Promise<string | undefined>
 
@@ -133,11 +136,21 @@ export interface Host {
   multiProject(): boolean
   browserAutomation(): boolean
 
+  /** Whether background worktree pre-warming is enabled. */
+  worktreePool(): boolean
+
+  /** Listen for changes to the worktree pre-warming setting. */
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable
+
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown
 
   /** Persist the additional-project registry payload. */
   writeProjects(value: unknown): Promise<void>
+
+  /** Read and persist the user's last PR merge method per repository. */
+  getPRMergeMethod?(repo: string): "merge" | "squash" | "rebase" | undefined
+  savePRMergeMethod?(repo: string, method: "merge" | "squash" | "rebase"): Promise<void>
 
   unregisterProjectRoutes(projectId: string): void
 

@@ -11,12 +11,6 @@ const STATE_LABEL: Record<PRStatus["state"], string> = {
   closed: "Closed",
 }
 
-const REVIEW_LABEL: Partial<Record<NonNullable<PRStatus["review"]>, string>> = {
-  approved: "Approved",
-  changes_requested: "Changes Requested",
-  pending: "Review Pending",
-}
-
 export function PROverview(props: { pr: PRStatus; worktree?: WorktreeState }) {
   return (
     <div class="am-pr-panel-section">
@@ -38,14 +32,6 @@ export function PROverview(props: { pr: PRStatus; worktree?: WorktreeState }) {
           {STATE_LABEL[props.pr.state]}
         </span>
       </div>
-      <Show when={props.pr.review}>
-        {(review) => (
-          <div class="am-pr-panel-row am-pr-row">
-            <span class="am-pr-panel-label">Review</span>
-            <span class="am-pr-panel-value">{REVIEW_LABEL[review()]}</span>
-          </div>
-        )}
-      </Show>
     </div>
   )
 }

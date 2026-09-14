@@ -1,5 +1,6 @@
 import { Component, createSignal, createMemo, createEffect, Switch, Match, Show, onMount, onCleanup } from "solid-js"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
+import { BoardNavigationProvider } from "@kilocode/kilo-ui/context/board-navigation"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
 import { useVSCode } from "./context/vscode"
@@ -12,13 +13,15 @@ import { ProviderShell } from "./context/provider-shell"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { SidebarTopBar } from "./components/chat/SidebarTopBar"
+import { openSubagent } from "./components/chat/open-subagent"
+import { backgroundChildren } from "./components/chat/background-agents"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 import { useWorktreeMode } from "./context/worktree-mode"
 import { useDiffStyle } from "./context/diff-style"
 import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
 import { strongest } from "./utils/session-activity"
-import { planOpens } from "./utils/open-plan"
+import { createPlanOpener } from "./utils/open-plan"
 import type { PermissionFileDiff } from "./types/messages"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
@@ -34,7 +37,6 @@ import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
 const VALID_VIEWS = new Set<string>(["newTask", "history", "profile", "settings", "subAgentViewer"])
-const opened = new Set<string>()
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -129,6 +131,19 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     session.rejectQuestion(input.requestID)
   }
 
+  const openAgent = (id: string, title?: string) => {
+    const parent = session.sessions().find((item) => item.id === id)?.parentID ?? session.currentSessionID()
+    const background = parent ? backgroundChildren(session.getSessionToolParts(parent)).has(id) : false
+    openSubagent({
+      sessionID: id,
+      title,
+      parentSessionID: parent,
+      background,
+      worktree: !!worktree,
+      post: vscode.postMessage,
+    })
+  }
+
   const open = (filePath: string, line?: number, column?: number, sessionID?: string) => {
     const event = new CustomEvent("kilo:open-file", {
       cancelable: true,
@@ -138,14 +153,11 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column, sessionID })
   }
 
-  const unsubscribePlans = vscode.onMessage((message) => {
-    for (const plan of planOpens(message)) {
-      const id = `${plan.sessionID}:${plan.id}`
-      if (opened.has(id)) continue
-      opened.add(id)
-      queueMicrotask(() => open(plan.path, undefined, undefined, plan.sessionID))
-    }
-  })
+  const opener = createPlanOpener(session.currentSessionID, (plan) =>
+    open(plan.path, undefined, undefined, plan.sessionID),
+  )
+  const unsubscribePlans = vscode.onMessage(opener.accept)
+  createEffect(() => opener.flush(session.currentSessionID()))
   onCleanup(unsubscribePlans)
 
   const openDiff = (diff: PermissionFileDiff) => {
@@ -224,7 +236,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onValidateFiles={validateFiles}
       onNavigateToSession={(id) => session.selectSession(id)}
     >
-      {props.children}
+      <BoardNavigationProvider open={openAgent}>{props.children}</BoardNavigationProvider>
     </DataProvider>
   )
 }
@@ -234,6 +246,7 @@ const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
   const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
+  const [subAgentCapped, setSubAgentCapped] = createSignal(false)
   const [migration, setMigration] = createSignal(false)
   const session = useSession()
   const tabs = useLocalTabs()
@@ -304,6 +317,14 @@ const AppContent: Component = () => {
     if (message.type === "selectKiloModel") setCurrentView("newTask")
   }
 
+  const open = (message: { type?: string; sessionID?: string }) => {
+    if (message.type !== "openSession" || !message.sessionID) return
+    console.log("[Kilo New] App: opening local session:", message.sessionID)
+    if (tabs) tabs.open(message.sessionID, { scrollToBottom: true })
+    if (!tabs) session.selectSession(message.sessionID, { scrollToBottom: true })
+    setCurrentView("newTask")
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const message = event.data
@@ -323,10 +344,12 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      open(message)
       handleKiloModel(message)
       handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
+        setSubAgentCapped(message.background === true)
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
       }
@@ -421,7 +444,7 @@ const AppContent: Component = () => {
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>
-              <ChatView readonly />
+              <ChatView readonly reasoningCapped={subAgentCapped()} />
             </Match>
           </Switch>
         }

@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fuldført (rapporteret af modellen)",
+  "session.goal.blocked": "Blokeret",
+  "session.goal.restart": "Genstart mål",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Opdater",
+  "task.swarm.reset": "Nulstil tavle",
+  "task.swarm.resetTitle": "Nulstil denne tavle?",
+  "task.swarm.resetDescription":
+    "Ryd synlige beskeder? Samtaler og igangværende opgaver ændres ikke. Agenter kan sende nye beskeder.",
+  "task.swarm.loading": "Indlæser tavle...",
+  "task.swarm.failed": "Tavlen kunne ikke indlæses eller nulstilles. Prøv at opdatere den.",
 
   "command.provider.connect": "Tilslut udbyder",
 
@@ -259,6 +270,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
   "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
+  "ui.permission.reject": "Afvis",
+  "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
+  "ui.permission.feedbackHint": "Enter for at afvise, Esc for at annullere",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
   "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
   "ui.permission.rule.addToAllowed": "Tilføj til tilladelseslisten",
@@ -451,6 +465,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Brugerdefineret udbyder",
   "settings.providers.connected.environmentDescription": "Forbundet fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Log ind med ChatGPT",
+  "settings.providers.action.changeApiKey": "Skift API-nøgle",
   "settings.providers.custom.description": "Tilføj en brugerdefineret udbyder via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodel",
   "settings.providers.subagentModel.description":
@@ -750,6 +765,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angiv mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Sat på pause",
+  "session.goal.pause": "Sæt på pause",
+  "session.goal.resume": "Genoptag",
+  "session.goal.clear": "Ryd mål",
   "session.costAlert.header": "Advarsel om sessionsomkostning",
   "session.costAlert.continue": "Fortsæt",
   "session.costAlert.question":
@@ -848,7 +871,17 @@ export const dict = {
   "settings.notifications.enable.title": "Aktivér lydnotifikationer",
   "settings.notifications.enable.description":
     "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.workbench.title": "Aktivér VS Code-notifikationer",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-notifikationer, når Kilo fuldfører en opgave eller har brug for input fra dig",
+  "settings.notifications.os.title": "Aktivér OS-notifikationer",
+  "settings.notifications.os.description":
+    "Vis oprindelige OS-notifikationsadvarsler, når Kilo fuldfører en opgave eller har brug for input fra dig, mens VS Code ikke er aktiv.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sender testnotifikation…",
+  "settings.notifications.testOS.success": "Testnotifikation sendt.",
+  "settings.notifications.testOS.error": "Testnotifikation mislykkedes",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -894,6 +927,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
+  "settings.experimental.claudeMigration.description":
+    "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
   "settings.experimental.taskModelSelection.title": "Valg af Task-underagentmodel",
@@ -1009,6 +1045,9 @@ export const dict = {
     "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
+  "settings.agentBehaviour.pushFixes.title": "Push pull request-rettelser",
+  "settings.agentBehaviour.pushFixes.description":
+    "Når du sender CI-fejl eller review-kommentarer fra en pull request til agenten, eller opdaterer et worktree fra dets base, bedes agenten committe og pushe, så pull requesten opdateres. Tilladelsesprompter gælder stadig. Slå fra for at committe manuelt.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1079,6 +1118,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model, der bruges til automatisk og manuel komprimering. Lad feltet være tomt for at bruge chatmodellen. Omkostninger, hastighed og kvaliteten af opsummeringen afhænger af modellen.",
   "settings.context.compactionModel.useChatModel": "Brug chatmodel",
+  "settings.context.compactionModel.hint":
+    "For at vælge hvilken model der bruges til komprimering, se Modelindstillinger.",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
@@ -1265,6 +1306,18 @@ export const dict = {
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Gem lokalt",
+  "diffViewer.comment.sendToAgent": "Send til agent",
+  "diffViewer.comment.postToGithub": "Udgiv på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke indlæse ændringerne i pull requesten.",
+  "diffViewer.comment.unavailable": "Denne linje er ikke tilgængelig i det aktuelle snapshot af pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åbn PR",
+  "diffViewer.comment.localChanges": "Lokale ændringer",
+  "diffViewer.comment.prChanges": "PR-ændringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Vælg destination",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 

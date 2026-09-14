@@ -38,6 +38,33 @@ function setup(
 }
 
 describe("worktree update slash action", () => {
+  it("activates a composer selection without turning the goal shortcut into a client action", () => {
+    let active = false
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "goal",
+          hints: [],
+          select: () => {
+            active = true
+          },
+        },
+      ],
+    })
+    const textarea = {
+      value: "/goal\nKeep this objective",
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput(textarea.value, 5)
+    const entry = ctx.slash.results().find((item) => item.name === "goal")!
+    expect(entry.action).toBeUndefined()
+    ctx.slash.select(entry, textarea, () => {})
+    expect(active).toBe(true)
+    expect(textarea.value).toBe("\nKeep this objective")
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
   it("uses the current worktree selection and preserves text after the action", () => {
     const state = { selected: "first", sent: "", text: "/update-from-base keep this draft" }
     const ctx = setup(() => {}, {

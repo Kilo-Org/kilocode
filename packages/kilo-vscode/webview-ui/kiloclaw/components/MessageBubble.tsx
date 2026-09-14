@@ -10,6 +10,7 @@
 
 import { Show, For, createMemo, createSignal } from "solid-js"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ContentBlock, ExecApprovalDecision, Message } from "../lib/types"
 import { useKiloClawLanguage } from "../context/language"
@@ -148,77 +149,55 @@ export function MessageBubble(props: MessageBubbleProps) {
         <div class="kiloclaw-msg-bubble-wrap">
           <Show when={!props.message.deleted && !isEditing() && !isDeleting() && !isOptimistic()}>
             <div class="kiloclaw-msg-toolbar">
-              <button
-                type="button"
-                class="kiloclaw-iconbtn-sm"
+              <IconButton
+                icon="smile"
+                variant="ghost"
+                size="small"
                 onClick={() => setShowReactionPick((v) => !v)}
                 title={t("kiloClaw.message.react")}
                 aria-label={t("kiloClaw.message.react")}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                  <line x1="9" y1="9" x2="9.01" y2="9" />
-                  <line x1="15" y1="9" x2="15.01" y2="9" />
-                </svg>
-              </button>
+                aria-pressed={showReactionPick()}
+              />
               <Show when={!empty()}>
-                <button
-                  type="button"
-                  class="kiloclaw-iconbtn-sm"
+                <IconButton
+                  icon="copy"
+                  variant="ghost"
+                  size="small"
                   onClick={copyText}
                   title={t("kiloClaw.message.copy")}
                   aria-label={t("kiloClaw.message.copy")}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                </button>
+                />
               </Show>
               <Show when={!props.message.deliveryFailed}>
-                <button
-                  type="button"
-                  class="kiloclaw-iconbtn-sm"
+                <IconButton
+                  icon="reply"
+                  variant="ghost"
+                  size="small"
                   onClick={() => props.onReply(props.message)}
                   title={t("kiloClaw.message.reply")}
                   aria-label={t("kiloClaw.message.reply")}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="9 17 4 12 9 7" />
-                    <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-                  </svg>
-                </button>
+                />
               </Show>
               <Show when={props.isOwn && !props.message.deliveryFailed}>
-                <button
-                  type="button"
-                  class="kiloclaw-iconbtn-sm"
+                <IconButton
+                  icon="edit"
+                  variant="ghost"
+                  size="small"
                   onClick={startEdit}
                   title={t("kiloClaw.message.edit")}
                   aria-label={t("kiloClaw.message.edit")}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                </button>
+                />
               </Show>
               <Show when={props.isOwn}>
-                <button
-                  type="button"
-                  class="kiloclaw-iconbtn-sm kiloclaw-iconbtn-danger"
+                <IconButton
+                  icon="trash"
+                  variant="ghost"
+                  size="small"
+                  tone="danger"
                   onClick={() => props.onRequestDelete(props.message.id)}
                   title={t("kiloClaw.message.delete")}
                   aria-label={t("kiloClaw.message.delete")}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
-                    <path d="M10 11v6M14 11v6" />
-                    <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-                  </svg>
-                </button>
+                />
               </Show>
             </div>
           </Show>
@@ -265,22 +244,22 @@ export function MessageBubble(props: MessageBubbleProps) {
                     autofocus
                   />
                   <div class="kiloclaw-msg-edit-actions">
-                    <button
-                      type="button"
-                      class="kiloclaw-iconbtn-sm"
+                    <IconButton
+                      icon="check-small"
+                      variant="ghost"
+                      size="small"
                       onClick={saveEdit}
                       title={t("kiloClaw.message.save")}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      type="button"
-                      class="kiloclaw-iconbtn-sm"
+                      aria-label={t("kiloClaw.message.save")}
+                    />
+                    <IconButton
+                      icon="close-small"
+                      variant="ghost"
+                      size="small"
                       onClick={cancelEdit}
                       title={t("kiloClaw.message.cancel")}
-                    >
-                      ×
-                    </button>
+                      aria-label={t("kiloClaw.message.cancel")}
+                    />
                   </div>
                 </div>
               </Show>
@@ -288,22 +267,22 @@ export function MessageBubble(props: MessageBubbleProps) {
               <Show when={isDeleting()}>
                 <div class="kiloclaw-msg-confirm-delete">
                   <span>{t("kiloClaw.message.confirmDelete")}</span>
-                  <button
-                    type="button"
-                    class="kiloclaw-iconbtn-sm"
+                  <IconButton
+                    icon="check-small"
+                    variant="ghost"
+                    size="small"
                     onClick={() => props.onConfirmDelete(props.message.id)}
                     title={t("kiloClaw.message.confirmDelete")}
-                  >
-                    ✓
-                  </button>
-                  <button
-                    type="button"
-                    class="kiloclaw-iconbtn-sm"
+                    aria-label={t("kiloClaw.message.confirmDelete")}
+                  />
+                  <IconButton
+                    icon="close-small"
+                    variant="ghost"
+                    size="small"
                     onClick={() => props.onCancelDelete()}
                     title={t("kiloClaw.message.cancel")}
-                  >
-                    ×
-                  </button>
+                    aria-label={t("kiloClaw.message.cancel")}
+                  />
                 </div>
               </Show>
 

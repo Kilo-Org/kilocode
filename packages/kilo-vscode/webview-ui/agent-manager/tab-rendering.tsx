@@ -272,9 +272,14 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
           />
         </TooltipKeybind>
         <DropdownMenu gutter={4} placement="bottom-end">
-          <DropdownMenu.Trigger class="am-split-arrow" aria-label={deps.moreOptionsLabel}>
-            <Icon name="chevron-down" size="small" />
-          </DropdownMenu.Trigger>
+          <DropdownMenu.Trigger
+            as={IconButton}
+            icon="chevron-down"
+            size="small"
+            variant="ghost"
+            class="am-split-arrow"
+            aria-label={deps.moreOptionsLabel}
+          />
           <DropdownMenu.Portal>
             <DropdownMenu.Content class="am-split-menu">
               <DropdownMenu.Item onSelect={deps.onNewSession}>

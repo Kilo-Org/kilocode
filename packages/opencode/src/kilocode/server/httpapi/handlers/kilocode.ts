@@ -30,7 +30,9 @@ import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
+import { ConflictError, InvalidRequestError, UnknownError } from "@/server/routes/instance/httpapi/errors"
+import { Database } from "@opencode-ai/core/database/database"
+import { BoardStore } from "@/kilocode/board/store"
 import { Skill } from "@/skill"
 import { BackgroundJob } from "@/background/job"
 import { SessionRunState } from "@/session/run-state"
@@ -39,6 +41,8 @@ import { Drained } from "@opencode-ai/schema/kilocode/session-drain"
 import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
+import { Snapshot } from "@/snapshot"
+import { KiloSnapshotPrepare } from "@/kilocode/snapshot/prepare"
 import { Global } from "@opencode-ai/core/global"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
@@ -56,6 +60,8 @@ import {
   DrainSessionPayload,
   BackgroundJobInfo,
   BackgroundJobsQuery,
+  SessionBoardQuery,
+  ResetSessionBoardPayload,
 } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -80,7 +86,49 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const permission = yield* Permission.Service
     const question = yield* Question.Service
     const events = yield* EventV2Bridge.Service
+    const database = yield* Database.Service
     const scope = yield* Scope.Scope
+    const snapshot = yield* Snapshot.Service
+
+    const board = <A>(work: Effect.Effect<A, BoardStore.Error | BoardStore.Conflict, Database.Service>) =>
+      work.pipe(
+        Effect.provideService(Database.Service, database),
+        Effect.mapError((error) =>
+          error instanceof BoardStore.Conflict
+            ? new ConflictError({ message: error.message })
+            : error.kind === "storage"
+              ? new UnknownError({ message: error.message })
+              : new InvalidRequestError({ message: error.message }),
+        ),
+      )
+
+    const sessionBoard = Effect.fn("KilocodeHttpApi.sessionBoard")(function* (ctx: {
+      params: { sessionID: SessionID }
+      query: typeof SessionBoardQuery.Type
+    }) {
+      yield* mapStorageNotFound(sessions.get(ctx.params.sessionID))
+      return yield* board(
+        BoardStore.observe({
+          ...ctx.query,
+          sessionID: ctx.params.sessionID,
+          directory: yield* InstanceState.directory,
+        }),
+      )
+    })
+
+    const resetSessionBoard = Effect.fn("KilocodeHttpApi.resetSessionBoard")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof ResetSessionBoardPayload.Type
+    }) {
+      yield* mapStorageNotFound(sessions.get(ctx.params.sessionID))
+      return yield* board(
+        BoardStore.reset({
+          sessionID: ctx.params.sessionID,
+          revision: ctx.payload.revision,
+          directory: yield* InstanceState.directory,
+        }),
+      )
+    })
 
     const drainSession = Effect.fn("KilocodeHttpApi.drainSession")(function* (ctx: {
       params: { sessionID: SessionID }
@@ -349,12 +397,21 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     return handlers
       .handle("resumeSession", resumeSession)
       .handle("drainSession", drainSession)
+      .handle("sessionBoard", sessionBoard)
+      .handle("resetSessionBoard", resetSessionBoard)
       .handle("heapSnapshot", heapSnapshot)
       .handle("commandFiles", commandFiles)
       .handle("removeCommand", removeCommand)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
       .handle("removeSnapshot", removeSnapshot)
+      .handle("prepareSnapshot", () =>
+        Effect.gen(function* () {
+          const started = performance.now()
+          const prepared = yield* KiloSnapshotPrepare.run(snapshot)
+          return { prepared, durationMs: performance.now() - started }
+        }),
+      )
       .handle("providerUsage", providerUsage)
       .handle("providerUsageRefresh", providerUsageRefresh)
       .handle("notebookList", notebookList)

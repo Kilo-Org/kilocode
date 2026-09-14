@@ -8,6 +8,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Agent } from "../../src/agent/agent"
 import { Session } from "../../src/session/session"
 import { SessionStatus } from "../../src/session/status"
@@ -33,6 +34,7 @@ const it = testEffect(
       BackgroundJob.node,
       SessionProjector.node,
       Config.node,
+      RuntimeFlags.node,
       Database.node,
       Agent.node,
       Truncate.node,

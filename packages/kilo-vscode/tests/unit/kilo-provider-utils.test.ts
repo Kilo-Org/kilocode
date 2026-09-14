@@ -165,7 +165,42 @@ describe("sessionToWebview", () => {
     const result = sessionToWebview(makeSession())
     expect(result.revert).toBeNull()
     expect(result.summary).toBeNull()
+    expect(result.goal).toBeNull()
   })
+
+  it.each([true, false])("projects the saved goal with active=%s", (active) => {
+    const goal = { text: "Fix the failing tests", active }
+    const result = sessionToWebview(makeSession({ metadata: { "kilo.goal": goal, unrelated: "private" } }))
+    expect(result.goal).toEqual(goal)
+    expect(result).not.toHaveProperty("metadata")
+  })
+
+  it("clears the saved goal through JSON serialization and a session merge", () => {
+    const saved = sessionToWebview(makeSession({ metadata: { "kilo.goal": { text: "Fix tests", active: true } } }))
+    const cleared = JSON.parse(JSON.stringify(sessionToWebview(makeSession({ metadata: {} }))))
+    expect({ ...saved, ...cleared }.goal).toBeNull()
+  })
+
+  it.each(["active", "complete", "blocked", "paused"] as const)(
+    "carries %s goal state and report through JSON",
+    (status) => {
+      const goal = {
+        text: "Fix tests",
+        status,
+        active: status === "active",
+        reason: "Reported by the working model, not independently verified.",
+      }
+      const result = sessionToWebview(makeSession({ metadata: { "kilo.goal": goal } }))
+      expect(JSON.parse(JSON.stringify(result)).goal).toEqual(goal)
+    },
+  )
+
+  it.each([null, "text", { text: 1, active: true }, { text: "Goal" }, { text: "Goal", active: "true" }])(
+    "ignores invalid goal metadata %j",
+    (goal) => {
+      expect(sessionToWebview(makeSession({ metadata: { "kilo.goal": goal } })).goal).toBeNull()
+    },
+  )
 
   it("preserves the workspace restoration outcome from a revert response", () => {
     const session = {

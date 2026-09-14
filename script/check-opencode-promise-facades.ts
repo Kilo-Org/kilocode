@@ -42,8 +42,12 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     count: 2,
     reason: "disk-backed instance integration test cleanup",
   },
+  "kilocode/snapshot-track-timeout.test.ts": {
+    count: 4,
+    reason: "production default snapshot hooks require the shared runtime and instance context",
+  },
   "kilocode/kilo-sessions.test.ts": {
-    count: 36,
+    count: 42,
     reason:
       "K1 W1: real integration test for SessionStatus→detach→heartbeat-fence; " +
       "the test creates a session and sets its status via the global AppRuntime, " +
@@ -55,8 +59,16 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "the global-runtime coupling is exactly what is under test. " +
       "PR-link advertise tests extend this with session creation through the same global AppRuntime. " +
       "Instance metadata tests control the global Vcs.Service read by the production heartbeat " +
-      "to verify refresh, reconnect, bounds, and failure, and create a session through the same " +
-      "Session.Service to verify that instance bounds leave the full session branch unchanged.",
+      "to verify refresh, reconnect, bounds, and failure, create a session through the same " +
+      "Session.Service to verify that instance bounds leave the full session branch unchanged, " +
+      "and stub the global Git.Service the production row builder reads per-session branch " +
+      "metadata from. The session-directory integration test creates and reads back the " +
+      "session through that same global AppRuntime — mirroring create_session inside the " +
+      "child repository — to verify session repository metadata follows the session's " +
+      "directory and meta()'s launch-directory fallback does not throw without an " +
+      "instance context. The repository-metadata self-heal test creates its session " +
+      "through that same global AppRuntime to verify heartbeat rows drop repository " +
+      "metadata while .git is unreadable and restore it on the next gather.",
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },
@@ -67,6 +79,19 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "server/experimental-session-list.test.ts": { count: 2, reason: "Kilo session list integration test" },
   "kilocode/server/cloud-session-import.test.ts": { count: 5, reason: "full app cloud import transaction integration" },
   "kilocode/server/listener-runtime.test.ts": { count: 4, reason: "listener and AppRuntime integration test" },
+  "kilocode/wakeup/wakeup-resume.test.ts": {
+    count: 11,
+    reason:
+      "the wakeup resume integration test schedules through the production Wakeup service and asserts the mock " +
+      "model receives the scheduled prompt, so it must run the production Fire/resume path " +
+      "(src/kilocode/wakeup/resume.ts). That path resolves Session and SessionPrompt from the global AppRuntime " +
+      "because a static layer dependency is impossible: Wakeup.node <- kilocode/tool/registry.ts (via " +
+      "schedule_wakeup/cancel_wakeup) <- SessionPrompt.node <- ToolRegistry.node, which already depends on Wakeup.node. " +
+      "The test therefore creates the instance, session, and wakeup through that same global runtime and asserts the " +
+      "pending list on it; scoped layers cannot express the boundary under test. The paused-session case pauses the " +
+      "session and reads SessionPrompt.paused through the same runtime to prove resume refuses and logs instead of " +
+      "dropping the wake.",
+  },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
 }
 

@@ -2,11 +2,13 @@ import { Cause, Effect } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Config } from "@/config/config"
 import { Permission } from "@/permission"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Agent } from "@/agent/agent"
 import { Session } from "@/session/session"
 import type { MessageV2 } from "@/session/message-v2"
 import type { Tool } from "@/tool/tool"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt"
+import { BoardEnabled } from "./enabled"
 import { BoardStore } from "./store"
 import { BoardNotice } from "./notice"
 
@@ -48,6 +50,7 @@ export namespace BoardContext {
 
   export const notifier = Effect.fn("BoardContext.notifier")(function* (input: Input) {
     const config = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
     const sessions = yield* Session.Service
     const agents = yield* Agent.Service
     const database = yield* Database.Service
@@ -56,7 +59,14 @@ export namespace BoardContext {
       Effect.gen(function* () {
         if (signal?.aborted) return output
         const cfg = yield* config.get()
-        if (cfg.experimental?.shared_agent_board !== true) return output
+        if (
+          !BoardEnabled.resolve({
+            config: cfg.experimental?.shared_agent_board,
+            flag: flags.experimentalSharedAgentBoard,
+          })
+        ) {
+          return output
+        }
         const session = yield* sessions.get(input.session.id)
         const agent = yield* agents.get(input.agent.name, cfg)
         if (!agent || !allowed({ session, agent, user: input.user })) return output

@@ -12,8 +12,10 @@ import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from ".
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { RequestMigrationDataMessage, StartMigrationMessage } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
+import type { RequestSessionBoardMessage, ResetSessionBoardMessage } from "./board"
 import type { Activity } from "../../utils/session-activity"
 import type { PRReactionContent } from "../../../agent-manager/pr/pr-types"
+import type { PRMergeRequest } from "../../../../src/shared/pr-comment-actions"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -95,6 +97,7 @@ export interface PermissionResponseRequest {
   response: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  feedback?: string
 }
 
 export interface CreateSessionRequest {
@@ -616,6 +619,10 @@ export interface RequestNotificationSettingsMessage {
 export interface TestNotificationMessage {
   type: "testNotification"
   sound: string
+}
+
+export interface TestOSNotificationMessage {
+  type: "testOSNotification"
 }
 
 export interface ResetAllSettingsRequest {
@@ -1255,6 +1262,8 @@ export interface OpenSubAgentViewerRequest {
   sessionID: string
   title?: string
   parentSessionID?: string
+  /** True for async background agents, whose reasoning shows a capped preview. */
+  background?: boolean
 }
 
 // Preview an image attachment in VS Code's built-in image viewer
@@ -1354,6 +1363,10 @@ export interface ToggleSandboxMessage {
 
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
+}
+
+export interface ToggleCaffeinationMessage {
+  type: "toggleCaffeination"
 }
 
 export interface SetRemoteEnabledMessage {
@@ -1551,6 +1564,7 @@ export interface DismissAgentMigrationBannerMessage {
 
 export type WebviewMessage =
   | import("./agent-manager").BaseUpdateRequest
+  | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
@@ -1561,6 +1575,8 @@ export type WebviewMessage =
   | ResumeSessionRequest
   | AbortRequest
   | RequestBackgroundJobsMessage
+  | RequestSessionBoardMessage
+  | ResetSessionBoardMessage
   | CancelBackgroundJobMessage
   | PromoteBackgroundJobMessage
   | RevertSessionRequest
@@ -1655,6 +1671,7 @@ export type WebviewMessage =
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
   | TestNotificationMessage
+  | TestOSNotificationMessage
   | ResetAllSettingsRequest
   | ResetReadNotificationsRequest
   | SettingsTabChangedMessage
@@ -1782,6 +1799,7 @@ export type WebviewMessage =
   | PersistModelSelectionRequest
   | RequestModelSelectionsMessage
   | ToggleRemoteMessage
+  | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage
   | ContinueInWorktreeRequest

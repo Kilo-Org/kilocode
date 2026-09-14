@@ -96,30 +96,14 @@
   }
 
   [data-slot="permission-command-copy"] {
-    all: unset;
     position: absolute;
     top: 6px;
     right: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
-    cursor: pointer;
-    color: var(--vscode-icon-foreground, var(--vscode-foreground));
     opacity: 0;
     transition: opacity 0.15s ease;
 
-    &:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-      opacity: 1;
-    }
-
     &:focus-visible {
       opacity: 1;
-      outline: 1px solid var(--vscode-focusBorder);
-      outline-offset: 1px;
     }
   }
 
@@ -399,43 +383,9 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
-    /* Pull 3px left to align the 16px icon inside the 22px toggle button
+    /* Pull 2px left to align the 16px icon inside the 20px toggle button
        with the chevron icon in the "Permission rules" header above. */
-    margin-left: -3px;
-  }
-
-  [data-slot="permission-rule-toggle"] {
-    all: unset;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
-    cursor: pointer;
-    color: var(--text-weak, var(--vscode-descriptionForeground));
-    transition:
-      color 0.1s,
-      background-color 0.1s;
-
-    &:hover:not(:disabled) {
-      background-color: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-
-    &[data-variant="approve"][data-active] {
-      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
-      background-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #5cb85c) 15%, transparent);
-    }
-
-    &[data-variant="deny"][data-active] {
-      color: var(--text-error, var(--vscode-errorForeground, #f44));
-      background-color: color-mix(in srgb, var(--vscode-errorForeground, #f44) 15%, transparent);
-    }
+    margin-left: -2px;
   }
 
   [data-slot="permission-footer"] {
@@ -469,6 +419,53 @@
   [data-slot="permission-actions"] > [data-component="button"][data-variant="ghost"] {
     border: none;
     box-shadow: none;
+  }
+
+  [data-slot="permission-feedback"] {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0 0;
+    flex-shrink: 0;
+  }
+
+  [data-slot="permission-feedback-input"] {
+    width: 100%;
+    min-height: 2.5em;
+    max-height: 8em;
+    resize: vertical;
+    padding: 6px 8px;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border, transparent));
+    border-radius: 4px;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font-family: var(--vscode-font-family, inherit);
+    font-size: var(--kilo-font-size-12);
+    line-height: 1.4;
+    outline: none;
+
+    &::placeholder {
+      color: var(--vscode-input-placeholderForeground, var(--text-weak));
+    }
+
+    &:focus {
+      border-color: var(--vscode-focusBorder);
+    }
+  }
+
+  [data-slot="permission-feedback-hint"] {
+    font-size: var(--kilo-font-size-11);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+
+  [data-slot="permission-actions"] > [data-component="button"][data-slot="permission-reject-confirm"] {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-inputValidation-errorBorder, #be1100);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.15);
+    }
   }
 }
 

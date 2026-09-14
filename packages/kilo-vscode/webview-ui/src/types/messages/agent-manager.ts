@@ -1,4 +1,4 @@
-export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
+export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing" | "no_commits"
 
 export interface BaseUpdateRequest {
   type: "agentManager.updateFromBase"
@@ -65,7 +65,8 @@ import type {
   PRCheck,
   PRComment,
   PRReviewer,
-  PRConversationComment,
+  PRTimelineItem,
+  PRMergeStatus,
 } from "../../../agent-manager/pr/pr-types"
 export type {
   PRState,
@@ -76,40 +77,19 @@ export type {
   PRComment,
   PRCommentReply,
   PRReviewer,
+  PRStatus,
   PRConversationComment,
+  PRCommitItem,
+  PREventItem,
+  PREventKind,
+  PRTimelineItem,
   PRReaction,
   PRReactionContent,
+  PRMergeMethod,
+  PRMergeability,
+  PRMergeState,
+  PRMergeStatus,
 } from "../../../agent-manager/pr/pr-types"
-
-export interface PRStatus {
-  number: number
-  baseRefOid?: string
-  headRefOid?: string
-  title: string
-  body?: string
-  url: string
-  state: PRState
-  review: ReviewDecision | null
-  checks: {
-    status: AggregateCheckStatus
-    total: number
-    passed: number
-    failed: number
-    pending: number
-    checks: PRCheck[]
-  }
-  reviewers: PRReviewer[]
-  unresolvedThreads?: number
-  comments?: {
-    total: number
-    unresolved: number
-    comments: PRComment[]
-  }
-  conversation?: PRConversationComment[]
-  additions: number
-  deletions: number
-  files: number
-}
 
 export type RunState = "idle" | "running" | "stopping"
 

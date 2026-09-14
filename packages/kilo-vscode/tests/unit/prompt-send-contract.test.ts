@@ -57,11 +57,13 @@ describe("sendMessage dismisses pending tool requests", () => {
   })
 
   it("dismisses suggestions before sending", () => {
-    expect(body).toContain("dismissSuggestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissSuggestion")
   })
 
   it("rejects questions before sending", () => {
-    expect(body).toContain("dismissQuestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissQuestion")
   })
 })
 
@@ -74,11 +76,13 @@ describe("sendCommand dismisses pending tool requests", () => {
   })
 
   it("dismisses suggestions before sending", () => {
-    expect(body).toContain("dismissSuggestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissSuggestion")
   })
 
   it("rejects questions before sending", () => {
-    expect(body).toContain("dismissQuestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissQuestion")
   })
 
   it("applies model, agent, and variant overrides when provided by a command", () => {
@@ -318,16 +322,22 @@ describe("sendMessage / sendCommand draft id contract", () => {
   it("sendCommand seeds the pending agent before resolving draft-scoped settings", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const settings = submission\(scope, effectiveSelection\)/,
+      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*submission\(scope, effectiveSelection\)/,
     )
   })
 
   it("sendMessage and sendCommand post the settings returned by submission", () => {
     expect(extractFunctionBody(source, "sendMessage")).toContain("const settings = submission(scope, selection)")
     expect(extractFunctionBody(source, "sendCommand")).toContain(
-      "const settings = submission(scope, effectiveSelection)",
+      "const { model, ...settings } = submission(scope, effectiveSelection)",
     )
     expect(extractFunctionBody(source, "submission")).toContain("agent: resolvePromptAgent({")
+  })
+
+  it("does not resolve submission defaults for model-free Goal controls", () => {
+    const body = extractFunctionBody(source, "sendCommand")
+    expect(body).toMatch(/if \(!effectiveSelection\) return\s+const \{ model, \.\.\.settings \} = submission/)
+    expect(body).not.toContain("effectiveSelection ?? undefined")
   })
 
   it("createSession and clearCurrentSession do not pin the provisional default agent", () => {
@@ -414,11 +424,13 @@ describe("PromptInput send origin contract", () => {
     const end = source.indexOf("\n  return (", start)
     const body = source.slice(start, end)
     const send = Math.max(body.indexOf("session.sendMessage("), body.indexOf("session.sendCommand("))
-    const append = body.lastIndexOf("history.append(draft)")
+    const clear = body.indexOf("clearDraft(key, draft)")
+    const append = body.lastIndexOf("history.append(value)")
     const guard = body.indexOf("if (draftKey() !== key) return")
 
     expect(send).toBeGreaterThan(-1)
-    expect(append).toBeGreaterThan(send)
+    expect(clear).toBeGreaterThan(send)
+    expect(append).toBeGreaterThan(clear)
     expect(append).toBeLessThan(guard)
     expect(body.indexOf('setText("")', guard)).toBeGreaterThan(guard)
   })
@@ -685,7 +697,7 @@ describe("browser element reference contract", () => {
   it("includes browser reference content only when the user sends the prompt", () => {
     expect(source).toContain("browserFeedbackData(browsers())")
     expect(source).toContain("formatBrowserFeedback(browserData.references)")
-    expect(source).toContain('const message = [review, browserText, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain('const message = [review, push, browserText, draft].filter(Boolean).join("\\n\\n")')
     expect(source).toContain("references.delete(key)")
   })
 

@@ -1,5 +1,5 @@
 function board(name: string) {
-  return name === "kilocode_board" || name.endsWith("_kilocode_board")
+  return /(?:^|_)kilocode_board(?:_reset)?$/.test(name)
 }
 
 export function file(name: string, value: string) {

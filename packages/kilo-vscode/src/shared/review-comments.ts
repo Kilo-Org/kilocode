@@ -116,6 +116,17 @@ export function formatReviewCommentsMarkdown(comments: ReviewCommentEntry[]): st
   return lines.join("\n").trimEnd()
 }
 
+/**
+ * Closes the loop for pull request feedback: the fix has to reach the PR for
+ * CI to rerun and the badge to update. Only PR and CI origins qualify; local
+ * inline comments carry the user's own instructions. The permission prompts
+ * on commit and push remain the confirmation step.
+ */
+export function pushInstruction(comments: ReviewCommentEntry[], enabled: boolean): string {
+  if (!enabled || !comments.some((item) => isPRReviewComment(item) || isCIReviewComment(item))) return ""
+  return "When the changes pass local checks, commit them and push to this branch so the pull request updates. Do not force-push."
+}
+
 export function record(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
   return value as Record<string, unknown>

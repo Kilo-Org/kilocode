@@ -2,24 +2,38 @@
 import { For, Show, createMemo, createSignal } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { PRStatus } from "../../src/types/messages"
 import type { PRCheck, CheckStatus } from "./pr-types"
 import type { CheckBucket } from "./pr-check-groups"
 import { counts, expands, groups } from "./pr-check-groups"
 import { SectionHeading } from "./SectionHeading"
+import { useConfig } from "../../src/context/config"
 import { useVSCode } from "../../src/context/vscode"
 import { useLanguage } from "../../src/context/language"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { checkFeedback } from "./pr-check-feedback"
 import { commentState, patchCommentState } from "./pr-comment-state"
 
-const CHECK: Record<CheckStatus, { icon: string; key: string }> = {
-  success: { icon: "circle-check", key: "success" },
-  failure: { icon: "circle-x-outline", key: "failure" },
-  cancelled: { icon: "stop", key: "cancelled" },
-  skipped: { icon: "circle-ban-sign", key: "skipped" },
-  pending: { icon: "play", key: "pending" },
+const CHECK: Record<CheckStatus, string> = {
+  success: "success",
+  failure: "failure",
+  cancelled: "cancelled",
+  skipped: "skipped",
+  pending: "pending",
+}
+
+const CHECK_ICON: Record<Exclude<CheckStatus, "pending">, string> = {
+  success: "circle-check",
+  failure: "circle-x-outline",
+  cancelled: "stop",
+  skipped: "circle-ban-sign",
+}
+
+function CheckIcon(props: { status: CheckStatus }) {
+  if (props.status === "pending") return <Spinner class="am-pr-check-icon" />
+  return <Icon name={CHECK_ICON[props.status]} size="small" class="am-pr-check-icon" aria-hidden="true" />
 }
 
 const GROUP_KEYS: Record<CheckBucket, { one: string; other: string }> = {
@@ -71,6 +85,7 @@ const TALLY_KEYS: Record<CheckBucket, { one: string; other: string }> = {
 export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTerminalId?: string }) {
   const vscode = useVSCode()
   const { t } = useLanguage()
+  const { settings } = useConfig()
   const [localOpen, setLocalOpen] = createSignal(true)
   const [localGroups, setLocalGroups] = createSignal<Partial<Record<CheckBucket, boolean>>>({})
   const state = () => (props.worktreeId ? commentState(props.worktreeId) : undefined)
@@ -89,9 +104,15 @@ export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTermi
       .map((item) => tallyLabel(item.bucket, item.count))
       .join(` ${t("agentManager.pr.checks.separator")} `)
   })
-  const feedback = createMemo(() => checkFeedback(props.pr, t("agentManager.pr.checks.feedback")))
+  const feedback = createMemo(() =>
+    checkFeedback(
+      props.pr,
+      t("agentManager.pr.checks.feedback"),
+      !props.activeTerminalId && settings()["agentManager.pushFixes"] !== false,
+    ),
+  )
   const groupOpen = (bucket: CheckBucket) => state()?.checkGroups[bucket] ?? localGroups()[bucket] ?? expands(bucket)
-  const statusLabel = (status: CheckStatus) => t(`agentManager.pr.checks.status.${CHECK[status].key}`)
+  const statusLabel = (status: CheckStatus) => t(`agentManager.pr.checks.status.${CHECK[status]}`)
   const send = () => {
     const item = feedback()
     if (!item) return
@@ -140,12 +161,12 @@ export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTermi
                     aria-expanded={groupOpen(group.bucket)}
                     onClick={() => toggleGroup(group.bucket)}
                   >
+                    <span>{groupLabel(group.bucket, group.checks.length)}</span>
                     <Icon
                       name={groupOpen(group.bucket) ? "chevron-down" : "chevron-right"}
                       size="small"
                       class="am-pr-section-chevron"
                     />
-                    <span>{groupLabel(group.bucket, group.checks.length)}</span>
                   </button>
                   <Show when={groupOpen(group.bucket)}>
                     <div class="am-pr-check-group-items am-pr-col">
@@ -156,12 +177,7 @@ export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTermi
                             data-status={check.status}
                             aria-label={statusLabel(check.status)}
                           >
-                            <Icon
-                              name={CHECK[check.status].icon}
-                              size="small"
-                              class="am-pr-check-icon"
-                              aria-hidden="true"
-                            />
+                            <CheckIcon status={check.status} />
                             <span class="am-pr-check-name">{check.name}</span>
                             <Show when={check.duration}>
                               <span class="am-pr-check-duration">{check.duration}</span>

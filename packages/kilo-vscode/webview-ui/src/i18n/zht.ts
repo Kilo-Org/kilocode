@@ -55,8 +55,18 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完成（模型回報）",
+  "session.goal.blocked": "受阻",
+  "session.goal.restart": "重新開始目標",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "重新整理",
+  "task.swarm.reset": "重設看板",
+  "task.swarm.resetTitle": "重設此看板？",
+  "task.swarm.resetDescription": "清除可見訊息？對話和執行中的工作不會改變。代理可以發布新訊息。",
+  "task.swarm.loading": "正在載入看板...",
+  "task.swarm.failed": "無法載入或重設看板。請嘗試重新整理。",
 
   "command.provider.connect": "連接供應商",
 
@@ -245,6 +255,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
   "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
+  "ui.permission.reject": "拒絕",
+  "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
+  "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
   "ui.permission.rule.addToAllowed": "加入允許清單",
@@ -393,6 +406,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "自訂提供商",
   "settings.providers.connected.environmentDescription": "從您的環境變數連線",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登入",
+  "settings.providers.action.changeApiKey": "更改 API 金鑰",
   "settings.providers.custom.description": "透過基礎 URL 新增自訂提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的預設模型和推理工作量。留空以繼承呼叫代理的模型。",
@@ -685,6 +699,14 @@ export const dict = {
   "session.outcome.interrupted": "回合已中斷",
   "session.outcome.error": "回合失敗",
   "session.outcome.finish": "結束原因：{{reason}}",
+  "session.goal.label": "目標",
+  "prompt.goal.set": "設定目標",
+  "prompt.goal.start": "開始目標",
+  "session.goal.active": "執行中",
+  "session.goal.paused": "已暫停",
+  "session.goal.pause": "暫停",
+  "session.goal.resume": "繼續",
+  "session.goal.clear": "清除目標",
   "session.costAlert.header": "工作階段費用提醒",
   "session.costAlert.continue": "繼續",
   "session.costAlert.question": "此工作階段剛剛超過每工作階段提醒門檻 {{limit}}，目前費用為 {{cost}}。是否繼續？",
@@ -774,7 +796,16 @@ export const dict = {
   "settings.notifications.sounds": "聲音",
   "settings.notifications.enable.title": "啟用聲音通知",
   "settings.notifications.enable.description": "在工作階段完成、遇到錯誤或需要你輸入時播放聲音",
+  "settings.notifications.workbench.title": "啟用 VS Code 通知",
+  "settings.notifications.workbench.description": "在 Kilo 完成工作或需要你輸入時顯示 VS Code 通知",
+  "settings.notifications.os.title": "啟用作業系統通知",
+  "settings.notifications.os.description":
+    "在 VS Code 未處於使用中狀態時，若 Kilo 完成工作或需要你輸入，則顯示原生作業系統通知提醒。",
   "settings.notifications.testSound": "測試",
+  "settings.notifications.testOS": "測試",
+  "settings.notifications.testOS.testing": "正在傳送測試通知…",
+  "settings.notifications.testOS.success": "測試通知已傳送。",
+  "settings.notifications.testOS.error": "測試通知傳送失敗",
   "settings.notifications.sound.default": "預設",
   "settings.notifications.sound.system": "系統",
   "settings.notifications.sound.description":
@@ -819,6 +850,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 遷移",
+  "settings.experimental.claudeMigration.description":
+    "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
   "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
@@ -926,6 +960,9 @@ export const dict = {
     "規則是引導代理行為的指令檔案。它們會被包含在每次對話的系統提示詞中。在下方新增檔案路徑以包含額外的規則。",
   "settings.agentBehaviour.instructionFiles": "附加指令檔案",
   "settings.agentBehaviour.instructionFiles.description": "包含在系統提示詞中的附加指令檔案路徑",
+  "settings.agentBehaviour.pushFixes.title": "推送提取請求修正",
+  "settings.agentBehaviour.pushFixes.description":
+    "當你將提取請求的 CI 失敗或審查留言傳送給代理程式，或從基礎分支更新 worktree 時，要求代理程式提交並推送，以更新提取請求。權限確認仍然適用。關閉後可手動提交。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 相容性",
   "settings.agentBehaviour.claudeCompat.title": "載入 Claude Code 檔案",
   "settings.agentBehaviour.claudeCompat.description":
@@ -985,6 +1022,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "用於自動和手動壓縮的模型。留空以使用聊天模型。成本、速度和摘要品質取決於模型。",
   "settings.context.compactionModel.useChatModel": "使用聊天模型",
+  "settings.context.compactionModel.hint": "若要選擇用於壓縮的模型，請參閱模型設定。",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
   "settings.context.prune.title": "修剪舊輸出",
@@ -1202,6 +1240,18 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "儲存至本機",
+  "diffViewer.comment.sendToAgent": "傳送給代理程式",
+  "diffViewer.comment.postToGithub": "發佈到 GitHub",
+  "diffViewer.comment.loadFailed": "無法載入提取請求的變更。",
+  "diffViewer.comment.unavailable": "此行在目前的提取請求快照中無法使用。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "開啟提取請求",
+  "diffViewer.comment.localChanges": "本機變更",
+  "diffViewer.comment.prChanges": "PR 變更",
+  "diffViewer.comment.sendToKilo": "傳送到 Kilo",
+  "diffViewer.comment.sendToGithub": "傳送到 GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "選擇目標",
   "diffViewer.notice.snapshotsDisabled": "此存放庫的快照已停用。請編輯設定檔以顯示工作階段的變更。",
 
   "diffViewer.baseBranch.auto": "預設",

@@ -1,14 +1,18 @@
 import "@kilocode/kilo-web-ui/styles"
 import { Router, Route } from "@solidjs/router"
+import { lazy } from "solid-js"
 import { render } from "solid-js/web"
 import App from "./App"
 import "./styles.css"
-import { ProjectConsoleRoute } from "./routes/projects/ProjectConsoleRoute"
 import { ProjectsRoute } from "./routes/projects/ProjectsRoute"
-import { ProfileRoute } from "./routes/profile/ProfileRoute"
-import { LoginRoute } from "./routes/profile/LoginRoute"
-import { ConfigLayout } from "./layouts/ConfigLayout"
 import { configSections } from "./routes/config/sections"
+
+const ProjectConsoleRoute = lazy(() =>
+  import("./routes/projects/ProjectConsoleRoute").then((mod) => ({ default: mod.ProjectConsoleRoute })),
+)
+const ConfigLayout = lazy(() => import("./layouts/ConfigLayout").then((mod) => ({ default: mod.ConfigLayout })))
+const ProfileRoute = lazy(() => import("./routes/profile/ProfileRoute").then((mod) => ({ default: mod.ProfileRoute })))
+const LoginRoute = lazy(() => import("./routes/profile/LoginRoute").then((mod) => ({ default: mod.LoginRoute })))
 
 const root = document.getElementById("root")
 if (!root) throw new Error("Missing root element")

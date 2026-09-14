@@ -77,14 +77,12 @@ for (const width of [420, 200]) {
     await header.scrollIntoViewIfNeeded()
     await header.focus()
     const original = await header.evaluateHandle((el) => el)
-    const title = await header.locator(".am-pr-comment-preview").textContent()
     const position = await header.evaluate((el) => ({
       x: el.getBoundingClientRect().x,
       y: el.getBoundingClientRect().y,
     }))
 
     async function stable() {
-      await expect(header.locator(".am-pr-comment-preview")).toHaveText(title!)
       await expect(card).toHaveCount(1)
       await expect(header).toHaveCount(1)
       await expect(header).toBeFocused()
@@ -95,6 +93,7 @@ for (const width of [420, 200]) {
 
     async function inline() {
       await expect(header).toHaveAttribute("aria-expanded", "true")
+      await expect(header.locator(".am-pr-comment-preview")).toHaveCount(0)
       await expect(diff.locator(".am-pr-diff-context-marker + [data-component='diff']")).toHaveCount(0)
       await expect(annotation.locator(".am-pr-comment-head")).toHaveCount(0)
       await expect(annotation.locator(".am-pr-comment-body").first()).toContainText("This throws when")
@@ -142,6 +141,7 @@ for (const width of [420, 200]) {
       await expect(diff).toHaveCount(0)
       await expect(card.locator(".am-pr-comment-body")).toHaveCount(0)
       await expect(header).toHaveAttribute("aria-expanded", "false")
+      await expect(header.locator(".am-pr-comment-preview")).toContainText("This throws when")
       await stable()
       if (input === "click") await header.click()
       if (input !== "click") await page.keyboard.press(input)
@@ -198,18 +198,18 @@ test("preserves scroll while adding and editing a review comment", async ({ page
   const line = target.locator('[data-line="1"]').last()
   await line.hover()
   await target.locator("[data-utility-button]").last().click()
-  await expect(target.locator(".am-annotation-textarea")).toBeVisible()
-  await target.locator(".am-annotation-textarea").fill("Keep this stable")
+  await expect(target.locator(".am-annotation-draft textarea")).toBeVisible()
+  await target.locator(".am-annotation-draft textarea").fill("Keep this stable")
   const top = await target.evaluate((el) => el.getBoundingClientRect().top)
   const before = await scroller.evaluate((el) => el.scrollTop)
 
   await page.getByRole("button", { name: "Apply agent edit" }).click()
   await expect(page.getByTestId("agent-edit-version")).toHaveText("after")
-  await expect(target.locator(".am-annotation-textarea")).toHaveValue("Keep this stable")
+  await expect(target.locator(".am-annotation-draft textarea")).toHaveValue("Keep this stable")
   await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeCloseTo(before, 0)
   await expect.poll(async () => target.evaluate((el) => el.getBoundingClientRect().top)).toBeCloseTo(top, 0)
 
-  await target.getByRole("button", { name: "Comment" }).click()
+  await target.locator('[data-action="save"]').click()
   await expect(target.getByText("Keep this stable")).toBeVisible()
   const saved = await scroller.evaluate((el) => el.scrollTop)
 
@@ -229,15 +229,15 @@ for (const modifier of ["Meta", "Control"] as const) {
     for (const text of ["First comment", "Second comment"]) {
       await target.locator('[data-line="1"]').last().hover()
       await target.locator("[data-utility-button]").last().click()
-      await target.locator(".am-annotation-textarea").fill(text)
+      await target.locator(".am-annotation-draft textarea").fill(text)
       if (text === "First comment") {
-        await target.getByRole("button", { name: "Comment", exact: true }).click()
+        await target.locator('[data-action="save"]').click()
         await expect(target.getByText(text, { exact: true })).toBeVisible()
       }
     }
 
     await page.keyboard.press("Shift+Enter")
-    await expect(target.locator(".am-annotation-textarea")).toHaveValue("Second comment\n")
+    await expect(target.locator(".am-annotation-draft textarea")).toHaveValue("Second comment\n")
 
     const result = await page.evaluate((modifier) => {
       const sent: Array<{ comments: Array<{ comment: string }>; autoSend: boolean }> = []
