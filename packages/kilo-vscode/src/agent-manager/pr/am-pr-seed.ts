@@ -59,6 +59,8 @@ export async function seed(targets: Worktree[], host: SeedHost): Promise<Seeds> 
 async function collect(targets: Worktree[], host: SeedHost): Promise<Item[]> {
   const items: Item[] = []
   for (const wt of targets) {
+    // Stop spawning git for the remaining worktrees once the generation is superseded.
+    if (host.stale()) break
     const item = await one(wt, host)
     if (item) items.push(item)
   }

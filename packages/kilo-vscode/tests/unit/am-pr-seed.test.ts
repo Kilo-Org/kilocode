@@ -80,4 +80,18 @@ describe("am-pr-seed", () => {
     expect(seeds.get("w0")).toBeUndefined()
     expect(seeds.get("w1")?.number).toBe(7)
   })
+
+  it("stops resolving worktrees once the generation is superseded", async () => {
+    let branches = 0
+    const h = host(() => ({ data: { repository: { b0: { nodes: [node(7)] } } } }))
+    h.stale = () => branches > 0
+    h.branch = async (wt) => {
+      branches++
+      return wt.branch
+    }
+    const seeds = await seed([worktree("w0", "a"), worktree("w1", "b")], h)
+    expect(branches).toBe(1)
+    expect(h.calls).toHaveLength(0)
+    expect(seeds.size).toBe(0)
+  })
 })
