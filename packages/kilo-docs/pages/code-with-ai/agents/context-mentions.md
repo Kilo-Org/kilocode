@@ -38,7 +38,7 @@ Choosing **Past chats** from the `@` menu opens a searchable picker of sessions 
 
 Very long chat histories are truncated, keeping the beginning and end, so a single mention cannot fill the context window.
 
-### Referencing Agent Manager Worktrees
+### Referencing Agent Manager worktrees
 
 In Agent Manager, choosing **Worktrees** from the `@` menu opens a searchable picker of the project's worktrees. Search matches worktree names, branches, and session titles. Recently opened worktrees sort first, then worktrees with the most recent activity.
 

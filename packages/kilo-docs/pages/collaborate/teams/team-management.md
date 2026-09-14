@@ -23,13 +23,15 @@ Members can use the Kilo Code extension and see data on the team's usage in the 
 
 {% image src="/docs/img/team-management/invite-member.png" alt="invite-member" width="619" caption="invite-member" /%}
 
-## Joining Automatically with a Verified Domain
+## Joining automatically with a verified domain
 
-Instead of inviting each teammate individually, you can verify your organization's email domain so matching users join automatically:
+An organization Owner or Admin can verify the organization's email domain so matching users join automatically:
 
 1. **Navigate to your Organization dashboard** and open the **Verified Domains** card
 2. **Add your company's email domain** and complete the verification steps to prove ownership
-3. Once verified, **anyone who signs in to Kilo with a matching email address** is added to the organization as a Member automatically
+3. Return to **Verified Domains** and click **Check status** to confirm the domain shows **Verified**
+
+Once the domain is verified, anyone who signs in to Kilo with a matching email address is added to the organization as a Member automatically.
 
 Auto-join applies to browser sign-in, SSO sign-in, and the mobile app's native sign-in. It adds users as ordinary Members only — Owner roles still require an explicit role change. Users keep their personal account and any unrelated organization memberships, and a member who is removed from the organization is not re-added automatically.
 

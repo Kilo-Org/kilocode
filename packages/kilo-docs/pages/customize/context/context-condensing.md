@@ -109,7 +109,7 @@ Summarization can use a cheaper or larger-context model than your main agent. Co
 
 If no compaction agent is set, the current session's model is used.
 
-You can also pick the compaction model without editing config: open **Settings → Context** and use the compaction model selector. It applies to both automatic and manual compaction, and does not change your chat model. Clear the selection to go back to using the chat model.
+You can also pick the compaction model without editing config: open **Settings → Models** and use the compaction model selector. It applies to both automatic and manual compaction, and does not change your chat model. Clear the selection to go back to using the chat model.
 
 ### Environment overrides
 

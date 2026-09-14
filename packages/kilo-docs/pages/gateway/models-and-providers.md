@@ -56,7 +56,7 @@ This returns model information including pricing, context window, and supported 
 
 ### Free models
 
-Several models are available at no cost, subject to rate limits:
+Several models are available at no cost, subject to rate limits. Availability changes; check the [live model catalog](https://kilo.ai/models) for current free options.
 
 | Model ID | Description |
 |---|---|
@@ -65,8 +65,6 @@ Several models are available at no cost, subject to rate limits:
 | `poolside/laguna-xs-2.1:free` | Poolside Laguna XS 2.1 |
 | `nvidia/nemotron-3-ultra-550b-a55b:free` | NVIDIA Nemotron 3 Ultra |
 | `tencent/hy3:free` | Tencent Hy3 |
-| `minimax/minimax-m3:free` | MiniMax M3 |
-| `minimax/minimax-m2.7:free` | MiniMax M2.7 |
 | `openrouter/free` | Best available free model |
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.

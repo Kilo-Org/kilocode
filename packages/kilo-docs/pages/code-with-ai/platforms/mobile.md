@@ -76,7 +76,7 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **Cloud Agent** — the managed cloud environment (the default).
 - **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
-Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
+Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. The picker also appears in organization context, where the spawned session is attributed to the organization.
 
 When you start a session on a connected CLI instance, a **Folder** field lets you pick a child folder of the instance's launch directory as the session workspace. You can drill down any number of levels, and **Start** opens the session in the chosen folder. A connected instance running an older CLI version that cannot list folders shows a message instead, and **Start** opens the session in the instance's launch folder.
 

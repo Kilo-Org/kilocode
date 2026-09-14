@@ -46,7 +46,7 @@ When the branch has an associated pull request, the dock shows the PR badge and 
 
 ## Mermaid diagrams in chat
 
-Chat renders `mermaid` and `mmd` code fences as inline diagrams. Flowcharts (`flowchart`/`graph`) and sequence diagrams (`sequenceDiagram`) are supported; other Mermaid diagram types fall back to the source with a render note. While a reply is still streaming, or if a diagram fails to render, the fence shows its source instead.
+Chat renders `mermaid` and `mmd` code fences as inline diagrams. While a reply is still streaming, or if a diagram fails to render, the fence shows its source instead.
 
 - **Viewer window** — click a rendered diagram to open it in a resizable viewer with zoom controls, trackpad pinch zoom, Cmd/Ctrl+wheel zoom, drag to pan, and double-click to fit.
 - **Editor tab** — use the open action on a diagram's toolbar to open it in its own editor tab with a rendered **Diagram** view and a read-only **Source** view.

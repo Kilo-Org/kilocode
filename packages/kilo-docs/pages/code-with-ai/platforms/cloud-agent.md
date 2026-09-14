@@ -40,7 +40,7 @@ See [Kilo Code pricing](https://kilo.ai/pricing) for current rates and pricing f
 The session header shows two separate entries:
 
 - **Token Usage** — the session's inference spend (model usage), paid in Kilo credits.
-- **Compute** — a server-provided estimate for the session's container: an estimated hourly rate while idle, a shared interval estimate while active, and **Not currently charged** in shadow mode. Stopping and unavailable states are shown when no estimate is available.
+- **Compute** — the estimated cost of the cloud environment, which may be shared with other sessions. The display shows an hourly rate while idle or an estimate for the active period. **Not currently charged** means compute charges are not being applied.
 
 If a compute billing check fails — for example, when the paying account has insufficient credits — the error appears next to the composer with recovery actions appropriate to the paying account (personal or organization) and your role in it. Your prompt text is preserved so you can retry after resolving the billing issue.
 
@@ -51,7 +51,7 @@ If a compute billing check fails — for example, when the paying account has in
 3. **Add environment variables** (secrets supported) and set optional startup commands.
 4. **Start chatting with Kilo Code.**
 
-Your work is always pushed to your repository, ensuring nothing is lost.
+Automatic commit and push depends on your session settings. If it is disabled, review, commit, and push the changes you want to keep.
 
 ## Starting Tasks from the CLI
 
