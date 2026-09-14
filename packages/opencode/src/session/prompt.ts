@@ -96,6 +96,7 @@ import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kil
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
+import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1973,8 +1974,10 @@ export const layer = Layer.effect(
             closeReasons.set(sessionID, "superseded")
             // kilocode_change - record which turn handed off so a goal loop that
             // owns it can continue after the queued prompt instead of pausing.
+            // Only record while a goal is active, so plain sessions never
+            // accumulate markers.
             const handoff = KiloSessionPromptQueue.active(sessionID)
-            if (handoff) KiloSessionPromptQueue.markSuperseded(sessionID, handoff)
+            if (handoff && GoalState.active(sessionID)) KiloSessionPromptQueue.markSuperseded(sessionID, handoff)
             return "break" as const
           }
           // kilocode_change end

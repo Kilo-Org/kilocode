@@ -774,6 +774,11 @@ it.instance(
         parts: [{ type: "text", text: "Answer this instead" }],
       })
       .pipe(Effect.forkChild)
+    yield* pollWithTimeout(
+      Effect.sync(() => (KiloSessionPromptQueue.snapshot(session.id).length > 0 ? true : undefined)),
+      "human prompt was not queued",
+      "10 seconds",
+    )
     gate.resolve()
     const response = yield* awaitWithTimeout(Fiber.join(human), "human prompt did not finish", "10 seconds")
     expect(response.parts).toEqual(expect.arrayContaining([expect.objectContaining({ text: "Human reply" })]))

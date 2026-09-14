@@ -129,13 +129,14 @@ export namespace KiloSessionPromptQueue {
     superseded.set(sessionID, set)
   }
 
-  // Read and clear the superseded marker for `target`.
+  // Read and clear the superseded markers for the session. Returns whether
+  // `target` was among them. Clearing the whole set bounds stale markers left
+  // by handoffs no owner consumed.
   export function consumeSuperseded(sessionID: SessionID, target: MessageID) {
     const set = superseded.get(sessionID)
-    if (!set?.has(target)) return false
-    set.delete(target)
-    if (set.size === 0) superseded.delete(sessionID)
-    return true
+    if (!set) return false
+    superseded.delete(sessionID)
+    return set.has(target)
   }
 
   /**

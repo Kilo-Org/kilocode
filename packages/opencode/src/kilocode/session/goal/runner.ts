@@ -419,10 +419,10 @@ export namespace Goal {
                     )
                     // A real user prompt preempts this continuation for its turn.
                     // Keep the goal active and loop again after the user's turn
-                    // instead of settling the goal to paused.
+                    // instead of settling the goal to paused. A blocked or failed
+                    // goal turn still wins, matching the documented pause rules.
                     const preempted = KiloSessionPromptQueue.consumeSuperseded(id, messageID)
                     yield* drain.wait(id).pipe(Effect.raceFirst(cancelled))
-                    if (preempted) return true
                     if (cycle.blocked()) {
                       yield* settle(
                         "blocked",
@@ -434,6 +434,7 @@ export namespace Goal {
                       yield* settle("paused", "Work failed. Review the conversation before resuming.")
                       return false
                     }
+                    if (preempted) return true
                     const report = cycle.report()
                     if (report && result.info.finish === "stop") {
                       yield* settle(
