@@ -334,8 +334,8 @@ export function buildReviewAnnotation(
         onBodyChange: (body) => {
           meta.text = body
         },
-        onSave: (body, selected) => handlers.addComment(meta.file, meta.side, meta.line, body, selected),
-        onSend: (body, selected) => handlers.sendComment(meta.file, meta.side, meta.line, body, selected),
+        onSave: (body, selected) => handlers.addComment(meta.file, meta.side, meta.line, body.trim(), selected),
+        onSend: (body, selected) => handlers.sendComment(meta.file, meta.side, meta.line, body.trim(), selected),
         onGithubSuccess: () => handlers.completeRemoteDraft?.(meta),
         onCancel: handlers.cancelDraft,
         onDestination: (value) => {
