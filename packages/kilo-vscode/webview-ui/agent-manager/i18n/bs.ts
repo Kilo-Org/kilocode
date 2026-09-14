@@ -310,6 +310,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Zastarjelo",
   "agentManager.pr.comment.sent": "Poslano",
   "agentManager.pr.comment.copy": "Kopiraj komentar",
+  "agentManager.pr.comment.copyLink": "Kopiraj vezu komentara",
   "agentManager.pr.comment.openOnGitHub": "Otvori na GitHub",
   "agentManager.pr.comment.showInDiff": "Prikaži u diffu",
   "agentManager.pr.comment.unplaced": "Komentari izvan trenutnog diffa",
