@@ -4334,7 +4334,7 @@ function case22_cloudSurfacePrFromCloudHistory() {
     assert.deepEqual(reviewers, ["nina", "omar"], "cloud-mobile reviewers come from cloud-repo history")
     assert.match(create.body.body, /ranked from `Kilo-Org\/cloud` git history over `apps\/mobile\/`/)
     assert.ok(create.body.body.includes("Kilo-Org/cloud"), "the PR body must name the cloud repo")
-    assert.ok(create.body.body.includes("DOCS_SYNC_CLOUD_TOKEN"), "the PR body must name the cloud token secret")
+    assert.ok(create.body.body.includes("CROSS_REPO_ACCESS_TOKEN"), "the PR body must name the cloud token secret")
     console.log(`  cloud-mobile PR reviewers: ${reviewers.join(", ")}`)
   } finally {
     stub.child.kill()
@@ -4363,7 +4363,7 @@ function case23_cloudHistoryUnreachableFallsBack() {
       "an unreachable cloud history must fall back to the fixed other pair",
     )
     assert.match(create.body.body, /fixed `other` reviewers/i, "the body must name the fallback")
-    assert.ok(create.body.body.includes("DOCS_SYNC_CLOUD_TOKEN"), "the body must name the required secret")
+    assert.ok(create.body.body.includes("CROSS_REPO_ACCESS_TOKEN"), "the body must name the required secret")
     assert.ok(create.body.body.includes("Kilo-Org/cloud"), "the body must name the cloud repo")
     console.log(`  unreachable cloud history -> reviewers: ${reviewers.join(", ")}`)
   } finally {

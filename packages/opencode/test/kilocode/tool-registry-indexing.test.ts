@@ -475,7 +475,11 @@ describe("kilocode tool registry indexing", () => {
       for (const client of ["cli", "vscode", "jetbrains", "desktop", "run", "acp"]) {
         process.env["KILO_CLIENT"] = client
         for (const enabled of [false, true]) {
-          const ids = KiloToolRegistry.extra(tools, { experimental: { shared_agent_board: enabled } }, flags)
+          const ids = KiloToolRegistry.extra(
+            tools,
+            { experimental: { shared_agent_board: enabled } },
+            { experimentalSharedAgentBoard: enabled },
+          )
             .map((tool) => tool.id)
             .filter((id) => id.startsWith("board_"))
           expect(ids).toEqual(enabled ? ["board_read", "board_post"] : [])
