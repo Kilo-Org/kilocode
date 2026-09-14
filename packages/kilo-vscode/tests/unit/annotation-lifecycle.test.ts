@@ -12,9 +12,13 @@ it("releases a wrapper that is never inserted", async () => {
   const lifecycle = createAnnotationLifecycle()
   const meta: AnnotationMeta = { type: "draft", comment: null, file: "never.ts", side: "additions", line: 1 }
   let released = 0
-  lifecycle.track(meta, document.createElement("div"), () => released++)
+  const disposed = Promise.withResolvers<void>()
+  lifecycle.track(meta, document.createElement("div"), () => {
+    released++
+    disposed.resolve()
+  })
   document.body.append(document.createElement("span"))
-  await window.happyDOM.waitUntilComplete()
+  await disposed.promise
   expect(released).toBe(1)
   lifecycle.clear()
   await window.happyDOM.close()
@@ -27,12 +31,17 @@ it("disposes detached and replaced annotation roots exactly once", async () => {
   const meta: AnnotationMeta = { type: "draft", comment: null, file: "test.ts", side: "additions", line: 1 }
   const host = document.createElement("div")
   let released = 0
-  lifecycle.track(meta, host, () => released++)
+  const disposed = Promise.withResolvers<void>()
+  lifecycle.track(meta, host, () => {
+    released++
+    disposed.resolve()
+  })
   document.body.append(host)
-  await window.happyDOM.waitUntilComplete()
+  // Flush the insertion observer without HappyDOM's timer-based completion wait.
+  await Promise.resolve()
   expect(released).toBe(0)
   host.remove()
-  await window.happyDOM.waitUntilComplete()
+  await disposed.promise
   expect(released).toBe(1)
   lifecycle.track(meta, host, () => released++)
   lifecycle.track(meta, document.createElement("div"), () => released++)
