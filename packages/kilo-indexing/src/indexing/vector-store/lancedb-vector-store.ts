@@ -622,8 +622,8 @@ export class LanceDBVectorStore implements IVectorStore {
       const table = await this.getTable()
       const pointCount = await table.countRows()
       return pointCount > 0
-    } catch (error: any) {
-      if (error?.message?.includes("does not exist")) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("does not exist")) {
         return false
       }
       log.error("Failed to check if collection has points", { error })

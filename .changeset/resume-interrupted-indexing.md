@@ -1,4 +1,4 @@
-﻿---
+---
 "@kilocode/kilo-indexing": minor
 "kilo-code": minor
 ---
