@@ -475,4 +475,24 @@ export const dict = {
   "agentManager.intro.guide": "Читати посібник",
   "agentManager.intro.dismiss": "Пропустити вступ",
   "agentManager.intro.reopen": "Як працює Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Теку видалено",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Теки немає, але гілка {{branch}} збереглася. Відновіть її, щоб продовжити роботу тут.",
+  "agentManager.worktree.health.absent-gone": "Теку й гілку видалено",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ні теки, ні гілки більше немає. Приберіть запис для порядку; сеанси залишаться в розділі «Локально».",
+  "agentManager.worktree.health.unregistered": "Не є git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Тека існує, але git більше не відслідковує її як worktree. Стан прочитати не вдається.",
+  "agentManager.worktree.health.unavailable": "Стан недоступний",
+  "agentManager.worktree.health.unavailableNote":
+    "Git або GitHub CLI не відповів вчасно. Опитування цього worktree припинено й буде повторено.",
+  "agentManager.worktree.restore": "Відновити worktree",
+  "agentManager.worktree.removeKeepSessions": "Видалити, зберігши сеанси",
+  "agentManager.orphans.title": "Залишені теки worktree",
+  "agentManager.orphans.summary": "{{count}} тек(и) у .kilo/worktrees не є git worktree.",
+  "agentManager.orphans.clean": "Очистити залишені теки",
+  "agentManager.orphans.confirm": "Видалити ці теки безповоротно? Git тут нічого не відслідковує.",
+  "agentManager.orphans.cancel": "Скасувати",
+  "agentManager.error.title": "Помилка Agent Manager",
 }

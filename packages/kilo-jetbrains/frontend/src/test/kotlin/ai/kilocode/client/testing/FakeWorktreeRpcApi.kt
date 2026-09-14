@@ -67,6 +67,8 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
     var beforeGhStatus: suspend () -> Unit = {}
+    /** Gate for holding a [stats] answer open, so a test can prove polls do not stack. */
+    var beforeStats: suspend () -> Unit = {}
     /** Gate for holding a [prStatus] answer open while the test changes state around it. */
     var beforePrStatus: suspend () -> Unit = {}
     var adoptResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
@@ -103,6 +105,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun stats(directory: String): WorktreeStatsListDto {
         assertNotEdt("stats")
         statsCalls.add(directory)
+        beforeStats()
         return statsResult
     }
 

@@ -334,15 +334,25 @@ export async function deleteLifecycleWorktree(
   return null
 }
 
-/** Remove a stale worktree entry from state without touching the filesystem. */
+/**
+ * Remove a stale worktree entry from state without touching the filesystem.
+ *
+ * With `keepSessions`, the worktree's conversations are moved to Local instead of being dropped with
+ * the row: the directory is unrecoverable, but the history is not, and losing it silently is worse
+ * than an extra row under Local.
+ */
 export async function removeStaleLifecycleWorktree(
   ctx: ProjectContext,
   host: LifecycleHost,
   worktreeId: string,
+  keepSessions = false,
 ): Promise<null> {
   const state = ctx.peekState()
   if (!state) return null
-  if (!ctx.stale.has(worktreeId)) {
+  // Either signal is proof enough: the presence probe saw it disappear, or the health reconcile
+  // classified it as something that cannot answer.
+  const unhealthy = ctx.report?.entries.some((entry) => entry.id === worktreeId && entry.health !== "ok") === true
+  if (!ctx.stale.has(worktreeId) && !unhealthy) {
     host.log(`Ignored stale removal for non-stale worktree ${worktreeId}`)
     return null
   }
@@ -376,12 +386,17 @@ export async function removeStaleLifecycleWorktree(
     }
   }
   host.forgetName(worktreeId)
+  const kept = keepSessions ? state.getSessions(worktreeId) : []
+  // Detach before removing the row: removeWorktree() deletes the sessions that still point at it.
+  for (const session of kept) state.moveSession(session.id, null)
   const orphaned = state.removeWorktree(worktreeId)
-  host.stopDiffs(worktree.path, orphaned)
-  for (const session of orphaned) host.sessions.clearDirectory(session.id)
+  host.stopDiffs(worktree.path, [...orphaned, ...kept])
+  for (const session of [...orphaned, ...kept]) host.sessions.clearDirectory(session.id)
+  for (const session of kept) routeProjectSession(host.sessions, ctx.id, session.id, ctx.root, ctx.generation)
   ctx.stale.delete(worktreeId)
   host.push()
-  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})`)
+  const suffix = kept.length > 0 ? `, kept ${kept.length} session(s) under Local` : ""
+  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})${suffix}`)
   return null
 }
 

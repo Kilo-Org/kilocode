@@ -459,4 +459,24 @@ export const dict = {
   "agentManager.intro.guide": "가이드 읽기",
   "agentManager.intro.dismiss": "소개 건너뛰기",
   "agentManager.intro.reopen": "Agent Manager 작동 방식",
+  "agentManager.worktree.health.absent-restorable": "폴더 삭제됨",
+  "agentManager.worktree.health.absent-restorableNote":
+    "폴더는 없지만 브랜치 {{branch}}는 남아 있습니다. 복원하면 계속 작업할 수 있습니다.",
+  "agentManager.worktree.health.absent-gone": "폴더와 브랜치 삭제됨",
+  "agentManager.worktree.health.absent-goneNote":
+    "폴더와 브랜치가 모두 없습니다. 항목을 제거해 정리하세요. 세션은 로컬에 보존됩니다.",
+  "agentManager.worktree.health.unregistered": "git worktree 아님",
+  "agentManager.worktree.health.unregisteredNote":
+    "폴더는 있지만 git이 더 이상 worktree로 추적하지 않아 상태를 읽을 수 없습니다.",
+  "agentManager.worktree.health.unavailable": "상태를 확인할 수 없음",
+  "agentManager.worktree.health.unavailableNote":
+    "Git 또는 GitHub CLI가 제때 응답하지 않았습니다. 이 worktree의 폴링을 일시 중지했으며 다시 시도합니다.",
+  "agentManager.worktree.restore": "worktree 복원",
+  "agentManager.worktree.removeKeepSessions": "제거하고 세션 유지",
+  "agentManager.orphans.title": "남은 worktree 폴더",
+  "agentManager.orphans.summary": ".kilo/worktrees 아래 폴더 {{count}}개가 git worktree가 아닙니다.",
+  "agentManager.orphans.clean": "남은 폴더 정리",
+  "agentManager.orphans.confirm": "이 폴더를 영구히 삭제할까요? git이 추적하는 항목은 없습니다.",
+  "agentManager.orphans.cancel": "취소",
+  "agentManager.error.title": "Agent Manager 오류",
 }

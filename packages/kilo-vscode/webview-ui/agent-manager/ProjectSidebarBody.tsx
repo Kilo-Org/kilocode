@@ -22,6 +22,7 @@ import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
+import { OrphanNotice } from "./OrphanNotice"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
@@ -304,7 +305,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           busy={props.busy(worktree.id)}
           activity={props.activityFor(worktree.id)}
           blocked={props.blocked(worktree.id)}
-          stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
+          stale={
+            state()?.staleWorktreeIds?.includes(worktree.id) === true ||
+            state()?.worktreeHealth?.[worktree.id] !== undefined
+          }
+          health={state()?.worktreeHealth?.[worktree.id]}
           stats={props.stats?.[worktree.id]}
           shortcut={values().shortcut}
           navHint={values().navHint}
@@ -342,6 +347,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
             selectAfterDelete(worktree.id)
           }}
+          onRemoveKeepSessions={() => {
+            post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id, keepSessions: true })
+            selectAfterDelete(worktree.id)
+          }}
+          onRestore={() => post({ type: "agentManager.restoreWorktree", worktreeId: worktree.id })}
           onUpdateBase={() =>
             updateBase(
               worktree.id,
@@ -499,6 +509,10 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               </DragOverlay>
             </DragDropProvider>
           </Show>
+          <OrphanNotice
+            paths={store.orphanDirectories()}
+            onClean={(paths) => post({ type: "agentManager.cleanOrphanDirectories", paths })}
+          />
         </div>
       </div>
     </div>

@@ -465,4 +465,24 @@ export const dict = {
   "agentManager.intro.guide": "Przeczytaj przewodnik",
   "agentManager.intro.dismiss": "Pomiń wprowadzenie",
   "agentManager.intro.reopen": "Jak działa Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Folder usunięty",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Folder zniknął, ale gałąź {{branch}} nadal istnieje. Przywróć go, aby dalej tu pracować.",
+  "agentManager.worktree.health.absent-gone": "Folder i gałąź usunięte",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ani folder, ani gałąź już nie istnieją. Usuń wpis, aby posprzątać; sesje pozostaną w sekcji Lokalne.",
+  "agentManager.worktree.health.unregistered": "To nie jest worktree gita",
+  "agentManager.worktree.health.unregisteredNote":
+    "Folder istnieje, ale git już nie śledzi go jako worktree. Nie można odczytać jego stanu.",
+  "agentManager.worktree.health.unavailable": "Stan niedostępny",
+  "agentManager.worktree.health.unavailableNote":
+    "Git lub GitHub CLI nie odpowiedział na czas. Odpytywanie tego worktree jest wstrzymane i zostanie ponowione.",
+  "agentManager.worktree.restore": "Przywróć worktree",
+  "agentManager.worktree.removeKeepSessions": "Usuń, zachowaj sesje",
+  "agentManager.orphans.title": "Pozostałe foldery worktree",
+  "agentManager.orphans.summary": "{{count}} folder(ów) w .kilo/worktrees nie jest worktree gita.",
+  "agentManager.orphans.clean": "Wyczyść pozostałe foldery",
+  "agentManager.orphans.confirm": "Trwale usunąć te foldery? Nic tutaj nie jest śledzone przez gita.",
+  "agentManager.orphans.cancel": "Anuluj",
+  "agentManager.error.title": "Błąd Agent Managera",
 }

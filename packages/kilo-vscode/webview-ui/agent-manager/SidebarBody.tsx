@@ -28,6 +28,7 @@ import { beginPromptMentionDrop, endPromptMentionDrop } from "../src/utils/promp
 import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
+import { OrphanNotice } from "./OrphanNotice"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
@@ -85,6 +86,14 @@ export interface SidebarBodyProps {
   busy: (id: string) => boolean
   blocked: (id: string) => boolean
   isStaleWorktree: (id: string) => boolean
+  /** Why an unhealthy worktree is unhealthy, when known. */
+  worktreeHealth?: (id: string) => "absent-restorable" | "absent-gone" | "unregistered" | "unavailable" | undefined
+  /** Leftover folders under `.kilo/worktrees/` that no worktree claims. */
+  orphanDirectories?: () => string[]
+  /** Restore a deleted worktree folder from its branch. */
+  onRestoreWorktree?: (id: string) => void
+  /** Drop the entry but move its sessions to Local. */
+  onRemoveStaleKeepSessions?: (id: string) => void
   shortcutMap: () => Map<string, number>
   worktreeStats: () => Record<string, WorktreeGitStats>
   prStatuses: () => Record<string, PRStatus | null>
@@ -358,7 +367,8 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 busy={props.busy(wt.id)}
                                 activity={props.activityFor(wt.id)}
                                 blocked={props.blocked(wt.id)}
-                                stale={props.isStaleWorktree(wt.id)}
+                                stale={props.isStaleWorktree(wt.id) || props.worktreeHealth?.(wt.id) !== undefined}
+                                health={props.worktreeHealth?.(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}
                                 navHint={navHint()}
@@ -395,6 +405,12 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 onCommitRename={() => commitRename(wt.id)}
                                 onCancelRename={cancelRename}
                                 onRemoveStale={() => props.confirmRemoveStaleWorktree(wt.id)}
+                                onRestore={props.onRestoreWorktree ? () => props.onRestoreWorktree?.(wt.id) : undefined}
+                                onRemoveKeepSessions={
+                                  props.onRemoveStaleKeepSessions
+                                    ? () => props.onRemoveStaleKeepSessions?.(wt.id)
+                                    : undefined
+                                }
                                 onUpdateBase={() =>
                                   updateBase(
                                     wt.id,
@@ -480,6 +496,10 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               </Show>
             </Show>
           </Show>
+          <OrphanNotice
+            paths={props.orphanDirectories?.() ?? []}
+            onClean={(paths) => vscode.postMessage({ type: "agentManager.cleanOrphanDirectories", paths })}
+          />
         </div>
       </div>
     </>

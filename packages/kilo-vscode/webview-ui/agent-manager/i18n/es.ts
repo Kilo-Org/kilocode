@@ -473,4 +473,24 @@ export const dict = {
   "agentManager.intro.guide": "Leer la guía",
   "agentManager.intro.dismiss": "Omitir introducción",
   "agentManager.intro.reopen": "Cómo funciona Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Carpeta eliminada",
+  "agentManager.worktree.health.absent-restorableNote":
+    "La carpeta no está, pero la rama {{branch}} sigue existiendo. Restáurala para seguir trabajando aquí.",
+  "agentManager.worktree.health.absent-gone": "Carpeta y rama eliminadas",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ni la carpeta ni la rama existen ya. Elimina la entrada para ordenar; las sesiones se conservan en Local.",
+  "agentManager.worktree.health.unregistered": "No es un worktree de git",
+  "agentManager.worktree.health.unregisteredNote":
+    "La carpeta existe, pero git ya no la rastrea como worktree. No se puede leer su estado.",
+  "agentManager.worktree.health.unavailable": "Estado no disponible",
+  "agentManager.worktree.health.unavailableNote":
+    "Git o GitHub CLI no respondió a tiempo. El sondeo de este worktree está en pausa y se reintentará.",
+  "agentManager.worktree.restore": "Restaurar worktree",
+  "agentManager.worktree.removeKeepSessions": "Eliminar y conservar sesiones",
+  "agentManager.orphans.title": "Carpetas de worktree sobrantes",
+  "agentManager.orphans.summary": "{{count}} carpeta(s) en .kilo/worktrees no son worktrees de git.",
+  "agentManager.orphans.clean": "Limpiar carpetas sobrantes",
+  "agentManager.orphans.confirm": "¿Eliminar estas carpetas permanentemente? Nada aquí está rastreado por git.",
+  "agentManager.orphans.cancel": "Cancelar",
+  "agentManager.error.title": "Error de Agent Manager",
 }

@@ -473,4 +473,24 @@ export const dict = {
   "agentManager.intro.guide": "Lees de handleiding",
   "agentManager.intro.dismiss": "Introductie overslaan",
   "agentManager.intro.reopen": "Hoe Agent Manager werkt",
+  "agentManager.worktree.health.absent-restorable": "Map verwijderd",
+  "agentManager.worktree.health.absent-restorableNote":
+    "De map is weg, maar branch {{branch}} bestaat nog. Herstel hem om hier verder te werken.",
+  "agentManager.worktree.health.absent-gone": "Map en branch verwijderd",
+  "agentManager.worktree.health.absent-goneNote":
+    "Noch de map noch de branch bestaat nog. Verwijder het item om op te ruimen; sessies blijven onder Lokaal.",
+  "agentManager.worktree.health.unregistered": "Geen git-worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "De map bestaat, maar git volgt hem niet meer als worktree. De status is niet te lezen.",
+  "agentManager.worktree.health.unavailable": "Status niet beschikbaar",
+  "agentManager.worktree.health.unavailableNote":
+    "Git of GitHub CLI antwoordde niet op tijd. Het pollen van deze worktree is gepauzeerd en wordt opnieuw geprobeerd.",
+  "agentManager.worktree.restore": "Worktree herstellen",
+  "agentManager.worktree.removeKeepSessions": "Verwijderen, sessies behouden",
+  "agentManager.orphans.title": "Achtergebleven worktree-mappen",
+  "agentManager.orphans.summary": "{{count}} map(pen) in .kilo/worktrees zijn geen git-worktrees.",
+  "agentManager.orphans.clean": "Achtergebleven mappen opruimen",
+  "agentManager.orphans.confirm": "Deze mappen definitief verwijderen? Niets hiervan wordt door git gevolgd.",
+  "agentManager.orphans.cancel": "Annuleren",
+  "agentManager.error.title": "Agent Manager-fout",
 }

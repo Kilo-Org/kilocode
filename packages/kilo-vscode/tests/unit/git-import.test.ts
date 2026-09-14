@@ -444,4 +444,40 @@ describe("classifyWorktreeError", () => {
     expect(classifyWorktreeError("Failed to create worktree: fatal: unknown error")).toBeUndefined()
     expect(classifyWorktreeError("something went wrong")).toBeUndefined()
   })
+
+  // A failed spawn reports ENOENT whether the binary or the working directory is missing, so
+  // "install git" must never be inferred from the message alone.
+  it("blames the missing directory, not git, when the cwd is gone", () => {
+    expect(classifyWorktreeError("Error: spawn git ENOENT", { cwd: "/gone", exists: () => false })).toBe(
+      "worktree_missing",
+    )
+  })
+
+  it("still blames git when the cwd exists", () => {
+    expect(classifyWorktreeError("Error: spawn git ENOENT", { cwd: "/repo", exists: () => true })).toBe("git_not_found")
+  })
+
+  it("blames git when the version probe itself failed", () => {
+    expect(
+      classifyWorktreeError("some unrelated failure", { cwd: "/repo", exists: () => true, probeFailed: true }),
+    ).toBe("git_not_found")
+  })
+
+  it("separates a broken worktree from a non-repo folder", () => {
+    expect(
+      classifyWorktreeError("fatal: not a git repository: /repo/.git/worktrees/hidden-sparrow", {
+        cwd: "/repo/.kilo/worktrees/hidden-sparrow",
+        exists: () => true,
+      }),
+    ).toBe("worktree_unregistered")
+    expect(classifyWorktreeError("fatal: not a git repository", { cwd: "/repo", exists: () => true })).toBe(
+      "not_git_repo",
+    )
+  })
+
+  it("reports a timeout as a timeout", () => {
+    expect(classifyWorktreeError("Git command timed out after 15000ms", { cwd: "/repo", exists: () => true })).toBe(
+      "git_timeout",
+    )
+  })
 })

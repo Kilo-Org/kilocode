@@ -467,4 +467,24 @@ export const dict = {
   "agentManager.intro.guide": "Læs guiden",
   "agentManager.intro.dismiss": "Spring introduktion over",
   "agentManager.intro.reopen": "Sådan fungerer Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Mappe slettet",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Mappen er væk, men branchen {{branch}} findes stadig. Gendan den for at arbejde videre her.",
+  "agentManager.worktree.health.absent-gone": "Mappe og branch slettet",
+  "agentManager.worktree.health.absent-goneNote":
+    "Hverken mappen eller branchen findes længere. Fjern posten for at rydde op; sessioner bevares under Lokal.",
+  "agentManager.worktree.health.unregistered": "Ikke et git-worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Mappen findes, men git sporer den ikke længere som worktree. Dens status kan ikke læses.",
+  "agentManager.worktree.health.unavailable": "Status utilgængelig",
+  "agentManager.worktree.health.unavailableNote":
+    "Git eller GitHub CLI svarede ikke i tid. Forespørgsler for dette worktree er sat på pause og prøves igen.",
+  "agentManager.worktree.restore": "Gendan worktree",
+  "agentManager.worktree.removeKeepSessions": "Fjern, behold sessioner",
+  "agentManager.orphans.title": "Efterladte worktree-mapper",
+  "agentManager.orphans.summary": "{{count}} mappe(r) under .kilo/worktrees er ikke git-worktrees.",
+  "agentManager.orphans.clean": "Ryd op i efterladte mapper",
+  "agentManager.orphans.confirm": "Slet disse mapper permanent? Intet her spores af git.",
+  "agentManager.orphans.cancel": "Annuller",
+  "agentManager.error.title": "Agent Manager-fejl",
 }

@@ -467,4 +467,24 @@ export const dict = {
   "agentManager.intro.guide": "راهنما را بخوانید",
   "agentManager.intro.dismiss": "رد کردن مقدمه",
   "agentManager.intro.reopen": "Agent Manager چگونه کار می‌کند",
+  "agentManager.worktree.health.absent-restorable": "پوشه حذف شده است",
+  "agentManager.worktree.health.absent-restorableNote":
+    "پوشه نیست، اما شاخه {{branch}} هنوز وجود دارد. آن را بازیابی کنید تا کار در اینجا ادامه یابد.",
+  "agentManager.worktree.health.absent-gone": "پوشه و شاخه حذف شده‌اند",
+  "agentManager.worktree.health.absent-goneNote":
+    "نه پوشه و نه شاخه دیگر وجود ندارند. برای مرتب‌سازی مدخل را حذف کنید؛ نشست‌ها زیر «محلی» نگه داشته می‌شوند.",
+  "agentManager.worktree.health.unregistered": "worktree گیت نیست",
+  "agentManager.worktree.health.unregisteredNote":
+    "پوشه وجود دارد، اما گیت دیگر آن را به‌عنوان worktree پیگیری نمی‌کند و وضعیتش خواندنی نیست.",
+  "agentManager.worktree.health.unavailable": "وضعیت در دسترس نیست",
+  "agentManager.worktree.health.unavailableNote":
+    "Git یا GitHub CLI به‌موقع پاسخ نداد. بررسی این worktree موقتاً متوقف شد و دوباره تلاش می‌شود.",
+  "agentManager.worktree.restore": "بازیابی worktree",
+  "agentManager.worktree.removeKeepSessions": "حذف با نگه‌داشتن نشست‌ها",
+  "agentManager.orphans.title": "پوشه‌های باقی‌مانده worktree",
+  "agentManager.orphans.summary": "‏{{count}} پوشه در .kilo/worktrees، worktree گیت نیستند.",
+  "agentManager.orphans.clean": "پاک‌سازی پوشه‌های باقی‌مانده",
+  "agentManager.orphans.confirm": "این پوشه‌ها برای همیشه حذف شوند؟ هیچ‌چیز اینجا توسط گیت پیگیری نمی‌شود.",
+  "agentManager.orphans.cancel": "لغو",
+  "agentManager.error.title": "خطای Agent Manager",
 }

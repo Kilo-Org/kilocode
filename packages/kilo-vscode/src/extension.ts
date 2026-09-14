@@ -620,6 +620,9 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTerminal", () => {
       agentManagerProvider.postMessage({ type: "action", action: "terminalNext" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.diagnostics", () => {
+      void agentManagerProvider.diagnose()
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.search", () => {
       agentManagerProvider.postMessage({ type: "action", action: "search" })
     }),

@@ -473,4 +473,25 @@ export const dict = {
   "agentManager.intro.guide": "Kılavuzu okuyun",
   "agentManager.intro.dismiss": "Tanıtımı atla",
   "agentManager.intro.reopen": "Agent Manager nasıl çalışır",
+  "agentManager.worktree.health.absent-restorable": "Klasör silindi",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Klasör yok, ancak {{branch}} dalı hâlâ duruyor. Buradan devam etmek için geri yükleyin.",
+  "agentManager.worktree.health.absent-gone": "Klasör ve dal silindi",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ne klasör ne de dal artık var. Düzen için kaydı kaldırın; oturumlar Yerel altında korunur.",
+  "agentManager.worktree.health.unregistered": "git worktree değil",
+  "agentManager.worktree.health.unregisteredNote":
+    "Klasör var, ancak git artık worktree olarak izlemiyor. Durumu okunamıyor.",
+  "agentManager.worktree.health.unavailable": "Durum kullanılamıyor",
+  "agentManager.worktree.health.unavailableNote":
+    "Git veya GitHub CLI zamanında yanıt vermedi. Bu worktree için sorgulama duraklatıldı ve yeniden denenecek.",
+  "agentManager.worktree.restore": "Worktree'yi geri yükle",
+  "agentManager.worktree.removeKeepSessions": "Kaldır, oturumları koru",
+  "agentManager.orphans.title": "Artakalan worktree klasörleri",
+  "agentManager.orphans.summary": ".kilo/worktrees altındaki {{count}} klasör git worktree değil.",
+  "agentManager.orphans.clean": "Artakalan klasörleri temizle",
+  "agentManager.orphans.confirm":
+    "Bu klasörler kalıcı olarak silinsin mi? Burada git tarafından izlenen hiçbir şey yok.",
+  "agentManager.orphans.cancel": "İptal",
+  "agentManager.error.title": "Agent Manager hatası",
 }

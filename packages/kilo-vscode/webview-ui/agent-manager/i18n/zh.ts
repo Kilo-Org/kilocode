@@ -450,4 +450,24 @@ export const dict = {
   "agentManager.intro.guide": "阅读指南",
   "agentManager.intro.dismiss": "跳过介绍",
   "agentManager.intro.reopen": "Agent Manager 的工作原理",
+  "agentManager.worktree.health.absent-restorable": "文件夹已删除",
+  "agentManager.worktree.health.absent-restorableNote":
+    "文件夹已不存在，但分支 {{branch}} 仍在。恢复后可继续在此工作。",
+  "agentManager.worktree.health.absent-gone": "文件夹和分支都已删除",
+  "agentManager.worktree.health.absent-goneNote":
+    "文件夹和分支都已不存在。可移除该条目进行整理；会话将保留在“本地”下。",
+  "agentManager.worktree.health.unregistered": "不是 git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "文件夹仍存在，但 git 已不再将其作为 worktree 跟踪，无法读取其状态。",
+  "agentManager.worktree.health.unavailable": "状态不可用",
+  "agentManager.worktree.health.unavailableNote":
+    "Git 或 GitHub CLI 未及时响应。已暂停该 worktree 的轮询，稍后会重试。",
+  "agentManager.worktree.restore": "恢复 worktree",
+  "agentManager.worktree.removeKeepSessions": "移除并保留会话",
+  "agentManager.orphans.title": "残留的 worktree 文件夹",
+  "agentManager.orphans.summary": ".kilo/worktrees 下有 {{count}} 个文件夹不是 git worktree。",
+  "agentManager.orphans.clean": "清理残留文件夹",
+  "agentManager.orphans.confirm": "永久删除这些文件夹？其中没有任何内容被 git 跟踪。",
+  "agentManager.orphans.cancel": "取消",
+  "agentManager.error.title": "Agent Manager 错误",
 }

@@ -467,4 +467,24 @@ export const dict = {
   "agentManager.intro.guide": "Читать руководство",
   "agentManager.intro.dismiss": "Пропустить введение",
   "agentManager.intro.reopen": "Как работает Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Папка удалена",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Папки нет, но ветка {{branch}} сохранилась. Восстановите её, чтобы продолжить работу здесь.",
+  "agentManager.worktree.health.absent-gone": "Папка и ветка удалены",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ни папки, ни ветки больше нет. Удалите запись для порядка; сессии сохранятся в разделе «Локально».",
+  "agentManager.worktree.health.unregistered": "Не git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Папка существует, но git больше не отслеживает её как worktree. Состояние прочитать нельзя.",
+  "agentManager.worktree.health.unavailable": "Состояние недоступно",
+  "agentManager.worktree.health.unavailableNote":
+    "Git или GitHub CLI не ответил вовремя. Опрос этого worktree приостановлен и будет повторён.",
+  "agentManager.worktree.restore": "Восстановить worktree",
+  "agentManager.worktree.removeKeepSessions": "Удалить, сохранив сессии",
+  "agentManager.orphans.title": "Оставшиеся папки worktree",
+  "agentManager.orphans.summary": "{{count}} папк(и) в .kilo/worktrees не являются git worktree.",
+  "agentManager.orphans.clean": "Очистить оставшиеся папки",
+  "agentManager.orphans.confirm": "Удалить эти папки безвозвратно? Git ничего здесь не отслеживает.",
+  "agentManager.orphans.cancel": "Отмена",
+  "agentManager.error.title": "Ошибка Agent Manager",
 }

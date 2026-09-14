@@ -1614,6 +1614,12 @@ const AgentManagerContent: Component = () => {
         })
       }
 
+      // Host-side failures used to be posted and silently dropped here, so a worktree action could
+      // fail with the only trace in an output channel the user never opens.
+      if (msg.type === "error" && typeof msg.message === "string" && msg.message) {
+        showToast({ variant: "error", title: t("agentManager.error.title"), description: msg.message })
+      }
+
       if (projectLive.apply(msg)) return
     })
 
@@ -2350,6 +2356,12 @@ const AgentManagerContent: Component = () => {
             busy={(id) => busyWorktrees().has(id)}
             blocked={activity.blocked}
             isStaleWorktree={(id) => staleWorktreeIds().has(id)}
+            worktreeHealth={(id) => registry.active().worktreeHealth()[id]}
+            orphanDirectories={() => registry.active().orphanDirectories()}
+            onRestoreWorktree={(id) => vscode.postMessage({ type: "agentManager.restoreWorktree", worktreeId: id })}
+            onRemoveStaleKeepSessions={(id) =>
+              vscode.postMessage({ type: "agentManager.removeStaleWorktree", worktreeId: id, keepSessions: true })
+            }
             shortcutMap={shortcutMap}
             worktreeStats={worktreeStats}
             prStatuses={prStatuses}

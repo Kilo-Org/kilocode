@@ -13,12 +13,14 @@ import kotlin.test.assertTrue
 class PrResolverTest {
     private val path = "/repo/.kilo/worktrees/feature-x"
     private val calls = mutableListOf<List<String>>()
+    /** Timeout budget each `gh` call was given, so the short probe budget stays verifiable. */
+    private val budgets = mutableListOf<Int>()
 
     /** The checkout the command in flight runs in, so a test can answer differently per repository. */
     private var dir = ""
 
     @Test
-    fun `resolves through branch config without falling back`() {
+    fun `resolves through the branch selector without falling back`() {
         val resolver = resolver(view = { pr(7, "OPEN") })
 
         val lookup = resolver.resolve(path, "feature/x", base = "main")
@@ -27,9 +29,11 @@ class PrResolverTest {
         assertEquals(7, pull.number)
         assertEquals(path, pull.path)
         assertEquals(GhState.OPEN, pull.state)
-        // The config-driven form answered, so the branch selector and the search never run. The review
-        // conversations follow, which no `--json` field can answer.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), graphql()), calls)
+        // Naming the branch is the first strategy — the selector-less form is the one that has been
+        // seen hanging — so nothing else runs but the review conversations, which no `--json` field
+        // can answer.
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()), calls)
+        assertEquals(listOf(GH_READ_TIMEOUT_MS, GH_READ_TIMEOUT_MS), budgets)
     }
 
     @Test
@@ -47,10 +51,7 @@ class PrResolverTest {
         // Without the retry this reads as "no PR here", and the row loses a PR it has always shown.
         assertEquals(7, assertNotNull(lookup.pr, "the scalar retry must still resolve the PR").number)
         assertEquals(GhAvailability.OK, lookup.availability)
-        assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS), graphql()),
-            calls,
-        )
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
     }
 
     @Test
@@ -109,10 +110,7 @@ class PrResolverTest {
 
         resolver.resolve(path, "feature/x", base = "main")
 
-        assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS), graphql()),
-            calls,
-        )
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
     }
 
     @Test
@@ -130,7 +128,7 @@ class PrResolverTest {
 
         // The downgrade latches, so the fallback costs one extra call in total rather than one per
         // checkout on every poll.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_FIELDS), graphql()), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
     }
 
     @Test
@@ -144,18 +142,22 @@ class PrResolverTest {
     }
 
     @Test
-    fun `falls back to the branch selector when config resolves nothing`() {
-        val resolver = resolver(view = { args -> if (args.contains("feature/x")) pr(8, "DRAFT") else missing() })
+    fun `falls back to branch config when the branch selector resolves nothing`() {
+        // A fork PR checked out with `gh pr checkout`: the branch name matches nothing, and only the
+        // selector-less form resolves it through `branch.<name>.merge`.
+        val resolver = resolver(view = { args -> if (args.contains("feature/x")) missing() else pr(8, "DRAFT") })
 
         val lookup = resolver.resolve(path, "feature/x", base = "main")
 
         assertEquals(8, assertNotNull(lookup.pr).number)
         assertEquals(GhState.DRAFT, lookup.pr?.state)
         assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()),
+            listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_RICH_FIELDS), graphql()),
             calls,
-            "the head search should not run once the branch selector answered",
+            "the head search should not run once branch config answered",
         )
+        // The hanging form runs on the short probe budget, not the ordinary read budget.
+        assertEquals(listOf(GH_READ_TIMEOUT_MS, GH_PROBE_TIMEOUT_MS, GH_READ_TIMEOUT_MS), budgets)
     }
 
     @Test
@@ -253,7 +255,7 @@ class PrResolverTest {
         resolver.resolve(path, "feature/x", base = "main")
 
         // The scalar form is refused just as readily, so the field-support fallback must not fire.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
     }
 
     @Test
@@ -280,7 +282,7 @@ class PrResolverTest {
             val pull = assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr)
 
             assertEquals(0, pull.comments.unresolved, "for: $state")
-            assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls, "for: $state")
+            assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls, "for: $state")
         }
     }
 
@@ -321,7 +323,7 @@ class PrResolverTest {
         assertEquals(GhAvailability.OK, first.availability, "a refusal is not a reason to hold every badge")
         assertEquals(7, assertNotNull(second.pr).number)
         // Latched, so a gh that cannot read threads costs one call in total rather than one per poll.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
     }
 
     @Test
@@ -372,7 +374,7 @@ class PrResolverTest {
         )
 
         assertEquals(7, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).number)
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
     }
 
     @Test
@@ -390,9 +392,10 @@ class PrResolverTest {
         list: (List<String>) -> CmdOut = { ok("[]") },
         api: (List<String>) -> CmdOut = { threads() },
     ): PrResolver = PrResolver(
-        gh = { at, args ->
+        gh = { at, args, ms ->
             dir = at.toString()
             calls.add(args)
+            budgets.add(ms)
             when {
                 args.firstOrNull() == "api" -> api(args)
                 args.getOrNull(1) == "list" -> list(args)

@@ -93,8 +93,11 @@ class KiloWorktreeRpcApiImpl(
         private const val PR_TTL = 90_000L
         // The rename+prune path returns long before this ever matters; it only bounds the fallback
         // `git worktree remove --force`, which recursively deletes the checkout synchronously and
-        // therefore needs far more headroom than the 30s default query timeout.
+        // therefore needs far more headroom than the default query timeout.
         private const val REMOVE_TIMEOUT_MS = 600_000
+        // Total git/gh processes this service will run at once for one repository. Each poll used to
+        // create its own Semaphore(4), so stats + dirty + PR polls could fan out three times that.
+        private const val PROCESS_BUDGET = 4
         // Above this, a caller waiting on the per-repo mutation lock is worth a log line — most waits
         // are a few ms and would just be noise.
         private const val LOCK_WAIT_LOG_THRESHOLD_MS = 200L
@@ -105,9 +108,11 @@ class KiloWorktreeRpcApiImpl(
         }
     }
 
+    /** Shared across every polling path in this service; see [parallel]. */
+    private val budget = Semaphore(PROCESS_BUDGET)
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
-    private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
+    private val resolver = PrResolver(gh = { dir, args, ms -> runGh(dir, args, ms) }, git = ::runGit)
     private val ghLock = Any()
     // Serializes the git-mutating operations (create/import/remove/rename/adopt/reorder/session-list)
     // for one repository, keyed by its main worktree's real path, so concurrent calls cannot interleave
@@ -122,21 +127,20 @@ class KiloWorktreeRpcApiImpl(
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
-        val res = runGit(base, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreeListDto()
-        val all = parseWorktreeList(res.stdout)
-        val items = managedWorktrees(all)
-        val alive = live(items.filter { it.main || Files.isDirectory(Path.of(it.path)) })
+        // Same reconcile the stats/dirty polls use, so the rows and their status can never disagree
+        // about which worktrees exist.
+        val reconciled = reconcile(base) ?: return@withContext WorktreeListDto()
+        val alive = reconciled.items
         val store = worktreeNameStore(alive)
         val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
         // Cheap and non-blocking: sweeps orphaned `.kilo-delete-*` directories left by an interrupted
         // delete (this plugin's or the VS Code extension's) every time the list is polled, so they do
         // not require a fresh remove() to be cleaned up.
-        all.firstOrNull { it.main }?.let {
+        alive.firstOrNull { it.main }?.let {
             trash?.sweep(Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize())
         }
-        WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
+        WorktreeListDto(orderWorktrees(named, state.worktreeOrder), orphans = reconciled.orphans)
     }
 
     override suspend fun open(directory: String): Boolean {
@@ -227,7 +231,12 @@ class KiloWorktreeRpcApiImpl(
      * `$GIT_DIR/worktrees` bookkeeping for a checkout it finds missing, never any files, and never a
      * locked worktree (the documented guard for worktrees on unmounted volumes).
      */
-    private fun sync(root: Path): List<WorktreeDto>? {
+    private fun sync(root: Path): List<WorktreeDto>? = reconcile(root)?.items
+
+    /** Managed worktrees of one repository, plus directories nothing claims. */
+    internal data class Reconciled(val items: List<WorktreeDto>, val orphans: List<String>)
+
+    private fun reconcile(root: Path): Reconciled? {
         if (!Files.isDirectory(root)) {
             LOG.info("worktree sync skipped, directory does not exist: $root")
             return null
@@ -236,16 +245,50 @@ class KiloWorktreeRpcApiImpl(
         if (!res.ok) return null
         val raw = parseWorktreeList(res.stdout)
         val stale = staleWorktrees(raw, trash)
-        val synced = if (stale.isEmpty()) managedWorktrees(raw) else {
+        val all = if (stale.isEmpty()) raw else {
             LOG.info("worktree sync pruning stale managed worktrees: ${stale.joinToString(", ") { it.path }}")
             val prune = runGit(root, "worktree", "prune", "-v")
             if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
             if (prune.ok && prune.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(prune.stdout)}")
             val again = runGit(root, "worktree", "list", "--porcelain")
             if (!again.ok) return null
-            managedWorktrees(parseWorktreeList(again.stdout))
+            parseWorktreeList(again.stdout)
         }
-        return live(synced.filter { Files.isDirectory(Path.of(it.path)) })
+        val items = live(managedWorktrees(all).filter { Files.isDirectory(Path.of(it.path)) })
+        return Reconciled(items, orphanDirs(all, main(all)))
+    }
+
+    private fun main(all: List<WorktreeDto>): Path? =
+        all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
+
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track.
+     *
+     * Reported, never removed: a leftover directory can still hold files that exist nowhere else, so
+     * deleting one is a user's decision. They are worth naming because they accumulate silently — an
+     * interrupted delete or a hand-removed `.git/worktrees` entry leaves one behind every time.
+     */
+    private fun orphanDirs(all: List<WorktreeDto>, base: Path?): List<String> {
+        val dir = base?.resolve(".kilo")?.resolve("worktrees")?.normalize() ?: return emptyList()
+        if (!Files.isDirectory(dir)) return emptyList()
+        val tracked = all.map { Path.of(it.path).normalize().toString() }.toSet()
+        val orphans = runCatching {
+            Files.list(dir).use { stream ->
+                stream.filter { Files.isDirectory(it) }
+                    .map { it.normalize() }
+                    .filter { it.fileName.toString().startsWith(".kilo-delete-").not() }
+                    .filter { it.toString() !in tracked }
+                    .map { it.toString() }
+                    .toList()
+            }
+        }.getOrElse { err ->
+            LOG.info("worktree orphan scan skipped dir=$dir reason=${err.message}")
+            emptyList()
+        }
+        if (orphans.isNotEmpty()) {
+            LOG.info("worktree orphan directories (not removed): ${orphans.joinToString(", ")}")
+        }
+        return orphans
     }
 
     override suspend fun ghStatus(directory: String, github: Boolean, maxAge: Long?): GhAvailability = withContext(Dispatchers.IO) {
@@ -498,6 +541,11 @@ class KiloWorktreeRpcApiImpl(
                     // fail anyway, so say why instead of leaving a half-made worktree behind.
                     GhAvailability.RATE_LIMITED -> return@lock CreateWorktreeResultDto(
                         error = "GitHub is rate limiting this token. Try again later.",
+                    )
+                    // Same reasoning as a spent budget: several gh calls follow, and a gh that just
+                    // failed to answer within its budget would strand the import part-way.
+                    GhAvailability.TIMEOUT -> return@lock CreateWorktreeResultDto(
+                        error = "GitHub CLI (gh) did not respond in time. Try again.",
                     )
                     GhAvailability.OK -> Unit
                 }
@@ -801,13 +849,15 @@ class KiloWorktreeRpcApiImpl(
 
     private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
 
-    private fun runGh(base: Path, args: List<String>): CmdOut {
+    private fun runGh(base: Path, args: List<String>, timeoutMs: Int = GH_READ_TIMEOUT_MS): CmdOut {
         return try {
             val cmd = GeneralCommandLine(listOf("gh") + args)
                 .withWorkDirectory(base.toFile())
                 .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
-            val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            if (out.isTimeout) LOG.warn("gh command timed out: dir=$base args=${args.joinToString(" ")} ms=30000")
+            val out = CapturingProcessHandler(cmd).runProcess(timeoutMs)
+            if (out.isTimeout) {
+                LOG.warn("gh command timed out: dir=$base args=${args.joinToString(" ")} ms=$timeoutMs")
+            }
             CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr, out.isTimeout)
         } catch (e: Exception) {
             CmdOut(-1, "", e.message ?: "gh failed")
@@ -828,9 +878,15 @@ class KiloWorktreeRpcApiImpl(
             text.contains("missing but already registered worktree", ignoreCase = true)
     }
 
+    /**
+     * Run [block] for every item, bounded by one service-wide process budget.
+     *
+     * The budget is shared across stats, dirty, and PR polling on purpose: those loops run on the
+     * same cadence, and a per-call semaphore let them multiply into a process storm where even
+     * `git --version` timed out.
+     */
     private suspend fun <T, R> parallel(items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
-        val sem = Semaphore(4)
-        items.map { item -> async { sem.withPermit { block(item) } } }.map { it.await() }
+        items.map { item -> async { budget.withPermit { block(item) } } }.map { it.await() }
     }
 
     /**
@@ -843,12 +899,16 @@ class KiloWorktreeRpcApiImpl(
         stats(item, fallback)
     }.getOrElse { err ->
         if (err is CancellationException) throw err
-        if (badDir(err.message.orEmpty())) {
+        val gone = badDir(err.message.orEmpty())
+        if (gone) {
             LOG.info("worktree poll skipped: op=stats path=${item.path} reason=gone")
         } else {
             LOG.warn("worktree poll failed: op=stats path=${item.path} message=${err.message}", err)
         }
-        WorktreeStatsDto(item.path)
+        // A directory that is gone has genuinely nothing to report; anything else is unknown, and
+        // zeros would read as "clean" in the UI.
+        if (gone) WorktreeStatsDto(item.path)
+        else WorktreeStatsDto(item.path, unavailable = true, reason = err.message.orEmpty())
     }
 
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
@@ -872,12 +932,14 @@ class KiloWorktreeRpcApiImpl(
         dirty(item)
     }.getOrElse { err ->
         if (err is CancellationException) throw err
-        if (badDir(err.message.orEmpty())) {
+        val gone = badDir(err.message.orEmpty())
+        if (gone) {
             LOG.info("worktree poll skipped: op=dirty path=${item.path} reason=gone")
         } else {
             LOG.warn("worktree poll failed: op=dirty path=${item.path} message=${err.message}", err)
         }
-        WorktreeDirtyDto(item.path)
+        if (gone) WorktreeDirtyDto(item.path)
+        else WorktreeDirtyDto(item.path, unavailable = true, reason = err.message.orEmpty())
     }
 
     private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
@@ -965,7 +1027,7 @@ class KiloWorktreeRpcApiImpl(
             return@synchronized GhAvailability.OK
         }
         val res = runGh(root, "auth", "status")
-        val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
+        val value = if (res.ok) GhAvailability.OK else classifyGhError(res)
         ghCache = Timed(System.currentTimeMillis(), value)
         LOG.info("gh probe result reason=$reason value=$value exit=${res.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(res.stderr)}")
         value
@@ -1016,6 +1078,17 @@ internal fun badDir(text: String): Boolean {
     val msg = text.lowercase()
     if (msg.contains("working directory") && (msg.contains("does not exist") || msg.contains("not a directory"))) return true
     return msg.contains("unable to read current working directory")
+}
+
+/**
+ * Classifies a failing `gh` command, using the timeout flag rather than guessing from text.
+ *
+ * A timed-out command has no stderr to classify, so text-only classification fell through to [OK] —
+ * which told the probe loop everything was fine and reset its backoff.
+ */
+internal fun classifyGhError(out: CmdOut): GhAvailability {
+    if (out.timeout) return GhAvailability.TIMEOUT
+    return classifyGhError(out.stderr.ifBlank { out.stdout })
 }
 
 internal fun classifyGhError(text: String): GhAvailability {

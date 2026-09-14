@@ -457,4 +457,24 @@ export const dict = {
   "agentManager.intro.guide": "اقرأ الدليل",
   "agentManager.intro.dismiss": "تخطي المقدمة",
   "agentManager.intro.reopen": "كيف يعمل Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "تم حذف المجلد",
+  "agentManager.worktree.health.absent-restorableNote":
+    "المجلد مفقود، لكن الفرع {{branch}} لا يزال موجودًا. استعده لمتابعة العمل هنا.",
+  "agentManager.worktree.health.absent-gone": "تم حذف المجلد والفرع",
+  "agentManager.worktree.health.absent-goneNote":
+    "لم يبقَ المجلد ولا الفرع. أزل العنصر للترتيب؛ وتُحفظ الجلسات ضمن «محلي».",
+  "agentManager.worktree.health.unregistered": "ليس worktree من git",
+  "agentManager.worktree.health.unregisteredNote":
+    "المجلد موجود، لكن git لم يعد يتتبعه كـ worktree، فلا يمكن قراءة حالته.",
+  "agentManager.worktree.health.unavailable": "الحالة غير متوفرة",
+  "agentManager.worktree.health.unavailableNote":
+    "لم يستجب Git أو GitHub CLI في الوقت المناسب. تم إيقاف الاستعلام لهذا الـ worktree مؤقتًا وسيُعاد المحاولة.",
+  "agentManager.worktree.restore": "استعادة الـ worktree",
+  "agentManager.worktree.removeKeepSessions": "إزالة مع الاحتفاظ بالجلسات",
+  "agentManager.orphans.title": "مجلدات worktree متبقية",
+  "agentManager.orphans.summary": "‏{{count}} مجلد ضمن .kilo/worktrees ليست worktrees من git.",
+  "agentManager.orphans.clean": "تنظيف المجلدات المتبقية",
+  "agentManager.orphans.confirm": "حذف هذه المجلدات نهائيًا؟ لا شيء هنا يتتبعه git.",
+  "agentManager.orphans.cancel": "إلغاء",
+  "agentManager.error.title": "خطأ في Agent Manager",
 }

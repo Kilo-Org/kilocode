@@ -637,7 +637,8 @@ describe("GitStatsPoller", () => {
     expect(presence[0]).toEqual({
       worktrees: [
         { worktreeId: "a", missing: false, branch: "branch-a" },
-        { worktreeId: "b", missing: true, branch: undefined },
+        // Directory never created, so the probe must report absence rather than a bare "missing".
+        { worktreeId: "b", missing: true, reason: "absent" },
       ],
       degraded: false,
     })

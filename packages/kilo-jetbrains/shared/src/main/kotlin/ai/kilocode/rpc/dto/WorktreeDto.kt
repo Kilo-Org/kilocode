@@ -15,7 +15,15 @@ data class WorktreeDto(
 )
 
 @Serializable
-data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
+data class WorktreeListDto(
+    val worktrees: List<WorktreeDto> = emptyList(),
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track — leftovers from interrupted
+     * deletes or hand-removed metadata. Reported so they can be surfaced and cleaned deliberately;
+     * nothing removes them automatically.
+     */
+    val orphans: List<String> = emptyList(),
+)
 
 @Serializable
 data class WorktreeStatsDto(
@@ -28,6 +36,15 @@ data class WorktreeStatsDto(
     val files: Int = 0,
     /** Resolved base ref the counts are relative to, e.g. `origin/main`. Empty when unresolved. */
     val base: String = "",
+    /**
+     * True when the counts could not be measured, so they mean "unknown" rather than "zero".
+     *
+     * Without this a timed-out or failed poll is indistinguishable from a clean worktree, and the UI
+     * quietly drops the badges it was showing a moment earlier.
+     */
+    val unavailable: Boolean = false,
+    /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
+    val reason: String = "",
 )
 
 @Serializable
@@ -47,6 +64,10 @@ data class WorktreeDirtyDto(
     val untracked: Int = 0,
     /** Commits ahead of `@{upstream}`. 0 when the branch has no upstream. */
     val unpushed: Int = 0,
+    /** True when the counts could not be measured; see [WorktreeStatsDto.unavailable]. */
+    val unavailable: Boolean = false,
+    /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
+    val reason: String = "",
 )
 
 @Serializable
@@ -136,7 +157,23 @@ data class WorktreePrDto(
  * its whole strategy ladder.
  */
 @Serializable
-enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING, RATE_LIMITED }
+enum class GhAvailability {
+    OK,
+    MISSING,
+    UNAUTH,
+    GIT_MISSING,
+    RATE_LIMITED,
+
+    /**
+     * `gh` ran but did not answer within its budget.
+     *
+     * Distinct from [OK] because a timeout used to be reported as success, which reset the probe's
+     * failure counter and defeated its own backoff — the loop kept spending a full timeout per poll
+     * on a command that never returns. Distinct from [MISSING] because `gh` is installed and may
+     * answer the next time.
+     */
+    TIMEOUT,
+}
 
 @Serializable
 data class WorktreePrListDto(

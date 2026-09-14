@@ -262,6 +262,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.agentManager.diagnostics",
+        "title": "Agent Manager: Show Worktree Diagnostics",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManager.search",
         "title": "Agent Manager: Search Worktrees and Sessions",
         "category": "Kilo Code"

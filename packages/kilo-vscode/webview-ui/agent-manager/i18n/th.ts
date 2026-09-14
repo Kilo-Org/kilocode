@@ -457,4 +457,24 @@ export const dict = {
   "agentManager.intro.guide": "อ่านคู่มือ",
   "agentManager.intro.dismiss": "ข้ามบทนำ",
   "agentManager.intro.reopen": "Agent Manager ทำงานอย่างไร",
+  "agentManager.worktree.health.absent-restorable": "โฟลเดอร์ถูกลบ",
+  "agentManager.worktree.health.absent-restorableNote":
+    "โฟลเดอร์หายไปแล้ว แต่แบรนช์ {{branch}} ยังอยู่ กู้คืนเพื่อทำงานต่อที่นี่",
+  "agentManager.worktree.health.absent-gone": "โฟลเดอร์และแบรนช์ถูกลบ",
+  "agentManager.worktree.health.absent-goneNote":
+    "ทั้งโฟลเดอร์และแบรนช์ไม่มีอยู่แล้ว ลบรายการเพื่อจัดระเบียบได้ เซสชันจะถูกเก็บไว้ใต้ Local",
+  "agentManager.worktree.health.unregistered": "ไม่ใช่ git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "โฟลเดอร์ยังอยู่ แต่ git ไม่ติดตามเป็น worktree อีกแล้ว จึงอ่านสถานะไม่ได้",
+  "agentManager.worktree.health.unavailable": "ไม่ทราบสถานะ",
+  "agentManager.worktree.health.unavailableNote":
+    "Git หรือ GitHub CLI ไม่ตอบกลับทันเวลา การตรวจสอบ worktree นี้ถูกหยุดชั่วคราวและจะลองใหม่",
+  "agentManager.worktree.restore": "กู้คืน worktree",
+  "agentManager.worktree.removeKeepSessions": "ลบแต่เก็บเซสชันไว้",
+  "agentManager.orphans.title": "โฟลเดอร์ worktree ที่ตกค้าง",
+  "agentManager.orphans.summary": "มี {{count}} โฟลเดอร์ใน .kilo/worktrees ที่ไม่ใช่ git worktree",
+  "agentManager.orphans.clean": "ล้างโฟลเดอร์ที่ตกค้าง",
+  "agentManager.orphans.confirm": "ลบโฟลเดอร์เหล่านี้อย่างถาวรหรือไม่? ไม่มีสิ่งใดที่ git ติดตามอยู่",
+  "agentManager.orphans.cancel": "ยกเลิก",
+  "agentManager.error.title": "ข้อผิดพลาด Agent Manager",
 }

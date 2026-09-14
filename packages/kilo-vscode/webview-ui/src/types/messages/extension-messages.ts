@@ -884,6 +884,10 @@ export interface AgentManagerStateMessage {
   sessions: ManagedSessionState[]
   sections?: SectionState[]
   staleWorktreeIds?: string[]
+  /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
+  worktreeHealth?: Record<string, "absent-restorable" | "absent-gone" | "unregistered" | "unavailable">
+  /** Directories under `.kilo/worktrees/` that no worktree claims. */
+  orphanDirectories?: string[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean

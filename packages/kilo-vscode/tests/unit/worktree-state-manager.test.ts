@@ -574,50 +574,9 @@ describe("WorktreeStateManager", () => {
     })
   })
 
-  describe("validate", () => {
-    it("removes worktrees whose directories do not exist and prunes their sessions", async () => {
-      const existing = path.join(root, "wt-exists")
-      fs.mkdirSync(existing, { recursive: true })
-
-      manager.addWorktree({ branch: "exists", path: existing, parentBranch: "main" })
-      const gone = manager.addWorktree({ branch: "gone", path: path.join(root, "wt-gone"), parentBranch: "main" })
-      manager.addSession("s1", gone.id)
-
-      await manager.validate(root)
-
-      expect(manager.getWorktrees()).toHaveLength(1)
-      expect(manager.getWorktrees()[0].branch).toBe("exists")
-      // Session removed along with its worktree
-      expect(manager.getSession("s1")).toBeUndefined()
-    })
-
-    it("preserves local sessions and prunes missing worktree references on validate", async () => {
-      const existing = path.join(root, "wt-exists")
-      fs.mkdirSync(existing, { recursive: true })
-
-      const wt = manager.addWorktree({ branch: "exists", path: existing, parentBranch: "main" })
-      manager.addSession("s1", wt.id)
-      manager.addSession("s2", null)
-      manager.addSession("s3", "missing")
-
-      await manager.validate(root)
-
-      expect(manager.getSession("s1")).toBeTruthy()
-      expect(manager.getSession("s2")?.worktreeId).toBeNull()
-      expect(manager.getSession("s3")).toBeUndefined()
-    })
-
-    it("resolves relative paths against root", async () => {
-      const relative = ".kilo/worktrees/test-branch"
-      const absolute = path.join(root, relative)
-      fs.mkdirSync(absolute, { recursive: true })
-
-      manager.addWorktree({ branch: "test", path: relative, parentBranch: "main" })
-      await manager.validate(root)
-
-      expect(manager.getWorktrees()).toHaveLength(1)
-    })
-  })
+  // Worktree-directory validation moved to worktree-reconcile.ts, which classifies rows instead of
+  // deleting them; see tests/unit/worktree-reconcile.test.ts. Session pruning for rows that are
+  // already gone stays covered by the load/apply tests above.
 
   describe("concurrent save serialization", () => {
     it("rapid mutations do not lose data after flush", async () => {

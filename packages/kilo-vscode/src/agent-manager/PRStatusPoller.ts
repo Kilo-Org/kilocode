@@ -4,7 +4,9 @@ import type { Worktree } from "./WorktreeStateManager"
 import type { PRMergeMethod, PRStatus, PRCheck, PRReviewer, PRTimelineItem } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
-import { classifyPRError } from "./git-import"
+import { classifyPRError, type PRErrorKind } from "./git-import"
+import { BUDGET, isTimeout } from "./command-budget"
+import { Quarantine } from "./quarantine"
 import type { Semaphore } from "./semaphore"
 import {
   parsePRResult,
@@ -37,6 +39,8 @@ interface PRStatusPollerOptions {
   semaphore?: Semaphore
   getBranch?: (worktree: Worktree) => Promise<string | undefined>
   getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
+  /** True for worktrees the health reconcile says cannot answer (absent, unregistered, unavailable). */
+  isUnhealthy?: (worktreeId: string) => boolean
 }
 
 interface RepoInfo {
@@ -79,6 +83,8 @@ export class PRStatusPoller {
   private readonly intervalMs: number
   private readonly semaphore: Semaphore | undefined
   private generation = 0
+  /** Per-worktree failure isolation, so one broken worktree cannot back off the whole loop. */
+  private readonly quarantine = new Quarantine()
 
   private stale(generation: number): boolean {
     return generation !== this.generation
@@ -160,7 +166,16 @@ export class PRStatusPoller {
     this.avatars.clear()
     this.resolvedAvatars.clear()
     this.lastFullSync = 0
+    this.quarantine.reset()
     this.clearRefreshTimers()
+  }
+
+  /** Worktrees currently skipped because they kept failing. Reported by the diagnostics command. */
+  paused(): string[] {
+    return this.options
+      .getWorktrees()
+      .map((wt) => wt.id)
+      .filter((id) => this.quarantine.blocked(id))
   }
 
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
@@ -169,6 +184,8 @@ export class PRStatusPoller {
     const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
     if (wt) this.prCache.delete(this.key(wt.branch, wt.path))
     this.lastHash.delete(worktreeId)
+    // An explicit refresh outranks a quarantine: the user asked for this one now.
+    this.quarantine.clear(worktreeId)
     if (!this.active) return
     const generation = this.generation
     void this.fetchOne(worktreeId, generation, true).catch(() => undefined)
@@ -307,8 +324,13 @@ export class PRStatusPoller {
       ? await settled(thunks, FULL_SYNC_CONCURRENCY)
       : await Promise.allSettled(thunks.map((fn) => fn()))
     if (this.stale(generation)) return
-    const ok = results.every((r) => r.status === "fulfilled")
-    if (ok) {
+    this.quarantine.retain(new Set(worktrees.map((wt) => wt.id)))
+    // Cycle-level backoff must reflect the loop's health, not one worktree's. A worktree that keeps
+    // failing is quarantined by handleError; counting it here would slow polling for every other
+    // worktree until the whole panel felt broken.
+    const quarantined = targets.filter((wt) => this.quarantine.blocked(wt.id)).length
+    const failed = results.filter((r) => r.status === "rejected").length
+    if (failed === 0 || failed <= quarantined) {
       this.failures = 0
       return
     }
@@ -378,6 +400,7 @@ export class PRStatusPoller {
         files: pr.files,
       }
 
+      this.quarantine.clear(worktreeId)
       const hash = `${worktreeId}:${branch ?? wt.branch}:${signature(status)}`
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
@@ -395,6 +418,7 @@ export class PRStatusPoller {
   }
 
   private empty(worktreeId: string, fallback: string, branch: string | undefined): void {
+    this.quarantine.clear(worktreeId)
     const hash = `${worktreeId}:${fallback}:none`
     if (this.lastHash.get(worktreeId) === hash) return
     this.lastHash.set(worktreeId, hash)
@@ -435,8 +459,15 @@ export class PRStatusPoller {
 
   private handleError(worktreeId: string, branch: string | undefined, cwd: string, err: unknown): void {
     const msg = err instanceof Error ? err.message : String(err)
-    const kind = existsSync(cwd) ? classifyPRError(msg) : "unknown"
-    this.options.log(`PR fetch failed for ${branch ?? "unknown"}:`, msg)
+    // A missing cwd or a timeout says nothing about gh itself, so neither may be reported as a
+    // missing gh install.
+    const kind: PRErrorKind = isTimeout(err) ? "gh_timeout" : existsSync(cwd) ? classifyPRError(msg) : "unknown"
+    this.options.log(`PR fetch failed for ${branch ?? "unknown"} (${kind}):`, msg)
+    if (this.quarantine.fail(worktreeId)) {
+      this.options.log(
+        `PR polling paused for ${branch ?? worktreeId} after ${this.quarantine.failures(worktreeId)} consecutive failures`,
+      )
+    }
     const key = kind === "gh_missing" ? "gh_missing" : kind === "gh_auth" ? "gh_auth" : "fetch_failed"
     if (kind === "gh_missing") this.ghAvailable = false
     const hash = `${worktreeId}:${branch ?? ""}:error:${key}`
@@ -449,6 +480,10 @@ export class PRStatusPoller {
     if (!this.options.getWorkspaceRoot()) return
     const worktree = this.options.getWorktrees().find((item) => item.id === worktreeId)
     if (!worktree || !existsSync(worktree.path)) return
+    // A directory that exists but is not a live worktree answers nothing useful; gh would run with a
+    // cwd that is not a repository and fail once per poll, forever.
+    if (this.options.isUnhealthy?.(worktreeId)) return
+    if (this.quarantine.blocked(worktreeId)) return
     return worktree
   }
 
@@ -473,37 +508,50 @@ export class PRStatusPoller {
   }
 
   private async fetchPRForBranch(branch: string, cwd: string): Promise<PRResult | null> {
-    // Strategy 1: bare `gh pr view` — resolves via the branch's tracking ref.
-    // Works for fork PRs checked out with `gh pr checkout` (tracking ref = refs/pull/N/head).
-    // Strategy 2: `gh pr view <branch>` — works for same-repo branches pushed to origin.
+    // Strategy 1: `gh pr view <branch>` — the branch is known for every Agent Manager worktree, and
+    // naming it keeps gh from resolving the current branch itself. The bare form has been observed
+    // hanging indefinitely in a worktree while the explicit form answers immediately, so it is no
+    // longer tried first.
+    // Strategy 2: bare `gh pr view` — still needed for fork PRs checked out with `gh pr checkout`,
+    // where the tracking ref (refs/pull/N/head) is what identifies the PR. Short budget: this is the
+    // form that hangs.
     // Strategy 3: `gh pr list --search "<sha>"` — last resort, finds PRs by HEAD commit SHA.
-    return (await this.ghPRView(cwd)) ?? (await this.ghPRView(cwd, branch)) ?? (await this.ghPRListBySHA(cwd))
+    return (
+      (await this.ghPRView(cwd, branch)) ??
+      (await this.ghPRView(cwd, undefined, BUDGET.probe)) ??
+      (await this.ghPRListBySHA(cwd))
+    )
   }
 
   /** Run `gh pr view [branch] --json ...` and parse the result, or return null. */
-  private async ghPRView(cwd: string, branch?: string): Promise<PRResult | null> {
+  private async ghPRView(cwd: string, branch?: string, timeout: number = BUDGET.gh): Promise<PRResult | null> {
     try {
       const args = ["pr", "view"]
       if (branch) args.push(branch)
-      return parsePRResult(await this.query(args, cwd))
+      return parsePRResult(await this.query(args, cwd, timeout))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes("no pull requests found") || msg.includes("Could not resolve")) return null
+      // A hanging lookup is not evidence that the PR does not exist; let the next strategy answer.
+      if (isTimeout(err)) {
+        this.options.log(`PR lookup timed out (${branch ?? "current branch"}), trying next strategy`)
+        return null
+      }
       throw err
     }
   }
 
-  private async query(args: string[], cwd: string): Promise<string> {
+  private async query(args: string[], cwd: string, timeout: number = BUDGET.gh): Promise<string> {
     if (this.rich) {
       try {
-        return (await this.gh([...args, "--json", PRStatusPoller.PR_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
+        return (await this.gh([...args, "--json", PRStatusPoller.PR_JSON_FIELDS], { cwd, timeout })).stdout
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         if (!/unknown.*field|does(?:n't| not) exist|not accessible|insufficient|forbidden/i.test(msg)) throw err
         this.rich = false
       }
     }
-    return (await this.gh([...args, "--json", PRStatusPoller.BASE_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
+    return (await this.gh([...args, "--json", PRStatusPoller.BASE_JSON_FIELDS], { cwd, timeout })).stdout
   }
 
   /** Search for PRs containing the current HEAD SHA. Finds PRs when branch name/tracking ref don't match. */

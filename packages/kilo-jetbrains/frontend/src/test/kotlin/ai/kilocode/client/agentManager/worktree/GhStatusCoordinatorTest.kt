@@ -110,6 +110,28 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test coordinator slows down for a gh that does not answer`() {
+        // A timeout used to be classified OK, which reset the failure count and kept the loop paying a
+        // full budget per poll for a command that never returns.
+        rpc.ghResult = GhAvailability.TIMEOUT
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(GhAvailability.TIMEOUT, service.current())
+        assertEquals(1, rpc.ghCalls.size)
+
+        // SLOW, not the 30s OK cadence.
+        timers.advanceBy(59_999)
+        drain()
+        assertEquals("a gh that timed out must not be re-probed on the ok cadence", 1, rpc.ghCalls.size)
+
+        rpc.ghResult = GhAvailability.OK
+        timers.advanceBy(1)
+        drain()
+        assertEquals(2, rpc.ghCalls.size)
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
     fun `test coordinator backs off on backend failure without reporting ok`() {
         rpc.ghResult = GhAvailability.UNAUTH
         val handle = edtWait { service.attach(project) }

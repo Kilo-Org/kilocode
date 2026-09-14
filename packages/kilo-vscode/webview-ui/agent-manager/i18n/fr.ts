@@ -473,4 +473,24 @@ export const dict = {
   "agentManager.intro.guide": "Lire le guide",
   "agentManager.intro.dismiss": "Ignorer l'introduction",
   "agentManager.intro.reopen": "Fonctionnement d'Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Dossier supprimé",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Le dossier a disparu, mais la branche {{branch}} existe toujours. Restaurez-le pour continuer à travailler ici.",
+  "agentManager.worktree.health.absent-gone": "Dossier et branche supprimés",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ni le dossier ni la branche n'existent plus. Supprimez l'entrée pour faire le ménage ; les sessions sont conservées dans Local.",
+  "agentManager.worktree.health.unregistered": "Pas un worktree git",
+  "agentManager.worktree.health.unregisteredNote":
+    "Le dossier existe, mais git ne le suit plus comme worktree. Son état est illisible.",
+  "agentManager.worktree.health.unavailable": "État indisponible",
+  "agentManager.worktree.health.unavailableNote":
+    "Git ou GitHub CLI n'a pas répondu à temps. L'interrogation de ce worktree est suspendue et sera réessayée.",
+  "agentManager.worktree.restore": "Restaurer le worktree",
+  "agentManager.worktree.removeKeepSessions": "Supprimer en gardant les sessions",
+  "agentManager.orphans.title": "Dossiers de worktree résiduels",
+  "agentManager.orphans.summary": "{{count}} dossier(s) sous .kilo/worktrees ne sont pas des worktrees git.",
+  "agentManager.orphans.clean": "Nettoyer les dossiers résiduels",
+  "agentManager.orphans.confirm": "Supprimer définitivement ces dossiers ? Rien ici n'est suivi par git.",
+  "agentManager.orphans.cancel": "Annuler",
+  "agentManager.error.title": "Erreur Agent Manager",
 }

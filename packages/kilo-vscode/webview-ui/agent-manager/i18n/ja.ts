@@ -467,4 +467,24 @@ export const dict = {
   "agentManager.intro.guide": "ガイドを読む",
   "agentManager.intro.dismiss": "イントロダクションをスキップ",
   "agentManager.intro.reopen": "Agent Manager の仕組み",
+  "agentManager.worktree.health.absent-restorable": "フォルダーが削除されています",
+  "agentManager.worktree.health.absent-restorableNote":
+    "フォルダーはありませんが、ブランチ {{branch}} は残っています。復元すればここで作業を続けられます。",
+  "agentManager.worktree.health.absent-gone": "フォルダーとブランチが削除されています",
+  "agentManager.worktree.health.absent-goneNote":
+    "フォルダーもブランチも存在しません。エントリを削除して整理できます。セッションは「ローカル」に保持されます。",
+  "agentManager.worktree.health.unregistered": "git worktree ではありません",
+  "agentManager.worktree.health.unregisteredNote":
+    "フォルダーは存在しますが、git が worktree として追跡していないため状態を読み取れません。",
+  "agentManager.worktree.health.unavailable": "状態を取得できません",
+  "agentManager.worktree.health.unavailableNote":
+    "Git または GitHub CLI が時間内に応答しませんでした。この worktree のポーリングを一時停止し、後で再試行します。",
+  "agentManager.worktree.restore": "worktree を復元",
+  "agentManager.worktree.removeKeepSessions": "削除してセッションを保持",
+  "agentManager.orphans.title": "残された worktree フォルダー",
+  "agentManager.orphans.summary": ".kilo/worktrees 配下の {{count}} 個のフォルダーは git worktree ではありません。",
+  "agentManager.orphans.clean": "残ったフォルダーを整理",
+  "agentManager.orphans.confirm": "これらのフォルダーを完全に削除しますか？ git が追跡しているものはありません。",
+  "agentManager.orphans.cancel": "キャンセル",
+  "agentManager.error.title": "Agent Manager エラー",
 }

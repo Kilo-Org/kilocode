@@ -68,6 +68,26 @@ export const dict = {
   "agentManager.worktree.stale": "Stale",
   "agentManager.worktree.staleTooltip": "Missing on disk or no longer tracked by git worktree",
   "agentManager.worktree.removeStale": "Remove stale worktree",
+  // Health states say what is actually wrong, and each one names the fix it allows.
+  "agentManager.worktree.health.absent-restorable": "Folder deleted",
+  "agentManager.worktree.health.absent-restorableNote":
+    "The folder is gone, but branch {{branch}} still exists. Restore it to keep working here.",
+  "agentManager.worktree.health.absent-gone": "Folder and branch deleted",
+  "agentManager.worktree.health.absent-goneNote":
+    "Neither the folder nor the branch exists anymore. Remove the entry to tidy up; sessions are kept under Local.",
+  "agentManager.worktree.health.unregistered": "Not a git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "The folder exists, but git no longer tracks it as a worktree. Its status cannot be read.",
+  "agentManager.worktree.health.unavailable": "Status unavailable",
+  "agentManager.worktree.health.unavailableNote":
+    "Git or GitHub CLI did not answer in time. Polling is paused for this worktree and will retry.",
+  "agentManager.worktree.restore": "Restore worktree",
+  "agentManager.worktree.removeKeepSessions": "Remove, keep sessions",
+  "agentManager.orphans.title": "Leftover worktree folders",
+  "agentManager.orphans.summary": "{{count}} folder(s) under .kilo/worktrees are not git worktrees.",
+  "agentManager.orphans.clean": "Clean up leftover folders",
+  "agentManager.orphans.confirm": "Delete these folders permanently? Nothing here is tracked by git.",
+  "agentManager.orphans.cancel": "Cancel",
   "agentManager.worktree.doubleClickRename": "Double-click to rename",
   "agentManager.worktree.versions": "{{count}} versions",
   "agentManager.worktree.advancedOptions": "Advanced worktree options",
@@ -128,6 +148,7 @@ export const dict = {
   "agentManager.terminal.openInVscode": "VS Code terminal",
   "agentManager.terminal.openInPanel": "Agent Manager panel",
   "agentManager.terminal.errorTitle": "Terminal error",
+  "agentManager.error.title": "Agent Manager error",
 
   "agentManager.setup.failed": "Worktree setup failed",
   "agentManager.setup.settingUp": "Setting up worktree",

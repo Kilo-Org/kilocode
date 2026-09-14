@@ -1,5 +1,9 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.diff.GIT_PROBE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_READ_TIMEOUT_MS
+import ai.kilocode.backend.diff.failure
+import ai.kilocode.backend.diff.gitBudget
 import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
@@ -64,6 +68,76 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `prStatus does not report git missing for a removed directory`() = runBlocking {
         assertEquals(GhAvailability.OK, api.prStatus(repo.resolve("missing").toString()).availability)
+    }
+
+    @Test
+    fun `git budgets separate cheap metadata from content reads`() {
+        // One 30s budget for everything let a wedged `git --version` hold a poll slot as long as a
+        // diff of a huge worktree legitimately needs.
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("--version")))
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("rev-parse", "HEAD")))
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("worktree", "list", "--porcelain")))
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("diff", "--numstat")))
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("show", "HEAD:file")))
+        assertTrue(GIT_PROBE_TIMEOUT_MS < GIT_READ_TIMEOUT_MS)
+    }
+
+    @Test
+    fun `a failed command says whether it timed out`() {
+        // `Git comparison failed (exit=-1):` with empty stderr is what a timeout used to look like.
+        val timedOut = CmdOut(-1, "", "", timeout = true).failure()
+        assertTrue(timedOut.contains("timed out"), "a timeout must say so: $timedOut")
+        assertFalse(timedOut.contains("exit=-1"), "an unexplained exit code is not a reason: $timedOut")
+
+        val failed = CmdOut(128, "", "fatal: not a git repository").failure()
+        assertTrue(failed.contains("exit=128"), failed)
+        assertTrue(failed.contains("not a git repository"), failed)
+
+        // An empty stderr still has to read as something.
+        assertTrue(CmdOut(1, "", "").failure().contains("no stderr output"))
+    }
+
+    @Test
+    fun `gh classification separates a timeout from a healthy gh`() {
+        // Reported as OK, a timeout reset the probe's failure counter and defeated its own backoff.
+        assertEquals(GhAvailability.TIMEOUT, classifyGhError(CmdOut(-1, "", "", timeout = true)))
+        assertEquals(GhAvailability.OK, classifyGhError(CmdOut(1, "", "no pull requests found")))
+        assertEquals(GhAvailability.MISSING, classifyGhError(CmdOut(-1, "", "Cannot run program \"gh\"")))
+        assertEquals(GhAvailability.UNAUTH, classifyGhError(CmdOut(1, "", "gh auth login required")))
+    }
+
+    @Test
+    fun `list reports leftover directories under the worktrees folder without removing them`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val leftover = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(leftover.resolve(".kilo-dev"))
+
+        val listed = api.list(repo.toString())
+
+        // Orphan paths are resolved the way git reports worktree paths (realpath), so they compare
+        // equal to the other DTOs' paths on a symlinked temp dir.
+        assertEquals(listOf(leftover.toRealPath().toString()), listed.orphans)
+        assertTrue(listed.worktrees.any { it.path == created.path }, "a live worktree is not an orphan")
+        // Reported, never deleted: a leftover directory can hold files that exist nowhere else.
+        assertTrue(Files.isDirectory(leftover.resolve(".kilo-dev")))
+    }
+
+    @Test
+    fun `list and the polls agree on which worktrees exist`() = runBlocking {
+        initRepo()
+        val kept = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("kept")).worktree)
+        val removed = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("gone")).worktree)
+        delete(Path.of(removed.path))
+
+        // list() used to reconcile differently from the stats/dirty polls, so a row could exist that
+        // nothing would ever report status for.
+        val listed = api.list(repo.toString()).worktrees.map { it.path }.toSet()
+        val dirty = api.dirty(repo.toString()).items.map { it.path }.toSet()
+
+        assertTrue(listed.contains(kept.path))
+        assertFalse(listed.contains(removed.path), "a directory that is gone must not be listed")
+        assertEquals(listed, dirty, "rows and polled paths must not disagree")
     }
 
     @Test
@@ -988,7 +1062,7 @@ class KiloWorktreeRpcApiImplTest {
      * unlike [dirty]'s working-tree comparison used below.
      */
     @Test
-    fun `dirty reports a neutral entry for a worktree whose index is corrupted instead of failing the whole call`() = runBlocking {
+    fun `dirty reports an unavailable entry for a worktree whose index is corrupted instead of failing the whole call`() = runBlocking {
         initRepo()
         val healthy = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("healthy")).worktree)
         val broken = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("broken")).worktree)
@@ -1003,8 +1077,13 @@ class KiloWorktreeRpcApiImplTest {
 
         val healthyItem = assertNotNull(dto.items.singleOrNull { it.path == healthy.path })
         assertEquals(1, healthyItem.files, "a healthy sibling must still be reported correctly")
+        assertFalse(healthyItem.unavailable, "a worktree that answered is not unavailable")
         val brokenItem = assertNotNull(dto.items.singleOrNull { it.path == broken.path })
-        assertEquals(WorktreeDirtyDto(broken.path), brokenItem, "a broken worktree gets a neutral entry, not an exception")
+        // Isolated (no exception escapes) but not silent: zeros alone would render as a clean worktree
+        // and quietly replace whatever the row was showing.
+        assertTrue(brokenItem.unavailable, "a failed measurement must not read as a clean worktree")
+        assertTrue(brokenItem.reason.isNotBlank(), "the failure reason belongs in the DTO")
+        assertEquals(WorktreeDirtyDto(broken.path, unavailable = true, reason = brokenItem.reason), brokenItem)
     }
 
     /** Overwrites [dir]'s own worktree index with garbage so `git diff`/`ls-files` fail well after

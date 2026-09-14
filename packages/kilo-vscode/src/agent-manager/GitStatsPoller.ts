@@ -34,6 +34,12 @@ export interface LocalStats {
 export interface WorktreePresence {
   worktreeId: string
   missing: boolean
+  /**
+   * Why the worktree is missing, so the UI can say something true. `absent` means the directory is
+   * gone; `unregistered` means it is still on disk but git no longer tracks it, which is a different
+   * problem with a different fix.
+   */
+  reason?: "absent" | "unregistered"
   /** Current branch from `git worktree list`, if available. */
   branch?: string
 }
@@ -59,6 +65,8 @@ interface GitStatsPollerOptions {
   semaphore?: Semaphore
   hiddenIntervalMs?: number
   dormantIntervalMs?: number
+  /** True for worktrees the health reconcile says cannot answer; they are skipped, not measured. */
+  isUnhealthy?: (worktreeId: string) => boolean
 }
 
 export class GitStatsPoller {
@@ -208,7 +216,7 @@ export class GitStatsPoller {
     const missing = new Set(
       presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
     )
-    const available = worktrees.filter((wt) => !missing.has(wt.id))
+    const available = worktrees.filter((wt) => !missing.has(wt.id) && this.options.isUnhealthy?.(wt.id) !== true)
     const ids = new Set(available.map((wt) => wt.id))
     for (const id of Object.keys(this.lastStats)) {
       if (!ids.has(id)) {
@@ -333,18 +341,7 @@ export class GitStatsPoller {
       return { worktrees: [], degraded: true }
     }
 
-    const worktreeStatuses = await Promise.all(
-      worktrees.map(async (wt) => {
-        const abs = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
-        const exists = await fs.promises.access(abs).then(
-          () => true,
-          () => false,
-        )
-        const branch = exists ? findTrackedBranch(tracked, abs) : undefined
-        const missing = !exists || branch === undefined
-        return { worktreeId: wt.id, missing, branch }
-      }),
-    )
+    const worktreeStatuses = await Promise.all(worktrees.map((wt) => this.presence(wt, root, tracked)))
 
     return { worktrees: worktreeStatuses, degraded: false }
   }
@@ -356,7 +353,9 @@ export class GitStatsPoller {
       () => false,
     )
     const branch = exists ? findTrackedBranch(paths, abs) : undefined
-    return { worktreeId: wt.id, missing: !exists || branch === undefined, branch }
+    if (!exists) return { worktreeId: wt.id, missing: true, reason: "absent" }
+    if (branch === undefined) return { worktreeId: wt.id, missing: true, reason: "unregistered" }
+    return { worktreeId: wt.id, missing: false, branch }
   }
 
   private async fetchLocalStats(generation = this.generation, refs?: RefSnapshot, refresh = false): Promise<void> {

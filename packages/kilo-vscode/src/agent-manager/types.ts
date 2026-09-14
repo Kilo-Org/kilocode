@@ -14,6 +14,7 @@ import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
+import type { WorktreeHealth } from "./worktree-reconcile"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
@@ -144,6 +145,10 @@ interface StateMessage {
   sessions: ManagedSession[]
   sections?: Section[]
   staleWorktreeIds?: string[]
+  /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
+  worktreeHealth?: Record<string, WorktreeHealth>
+  /** Directories under `.kilo/worktrees/` that no worktree claims. Never removed automatically. */
+  orphanDirectories?: string[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
@@ -610,6 +615,22 @@ interface RemoveStaleWorktreeIn {
   type: "agentManager.removeStaleWorktree"
   projectId?: string
   worktreeId: string
+  /** Move the worktree's sessions to Local instead of dropping them with the row. */
+  keepSessions?: boolean
+}
+
+/** Re-create a worktree directory that was deleted outside Agent Manager, from its branch. */
+interface RestoreWorktreeIn {
+  type: "agentManager.restoreWorktree"
+  projectId?: string
+  worktreeId: string
+}
+
+/** Delete directories under `.kilo/worktrees/` that no worktree claims. */
+interface CleanOrphanDirectoriesIn {
+  type: "agentManager.cleanOrphanDirectories"
+  projectId?: string
+  paths: string[]
 }
 
 interface PromoteSessionIn {
@@ -1177,6 +1198,8 @@ export type AgentManagerInMessage =
   | SetProjectExpandedIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
+  | RestoreWorktreeIn
+  | CleanOrphanDirectoriesIn
   | PromoteSessionIn
   | OpenLocallyIn
   | OpenSessionLocallyIn

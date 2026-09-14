@@ -151,10 +151,39 @@ internal class GitComparison private constructor(
     }
 }
 
-/** Default watchdog for a git command. Cheap queries only — a destructive delete needs its own, wider budget. */
-internal const val GIT_COMMAND_TIMEOUT_MS = 30_000
+/**
+ * Watchdog budgets for git commands.
+ *
+ * One budget for everything meant a wedged `git --version` and a diff of a huge worktree waited the
+ * same 30 seconds, and a poll cycle could hold several of those at once. Metadata queries get a
+ * short budget so a stuck process is noticed quickly; content reads get a longer one because they
+ * legitimately scale with the diff. Destructive commands keep their own, much wider budget.
+ */
+internal const val GIT_PROBE_TIMEOUT_MS = 5_000
+internal const val GIT_READ_TIMEOUT_MS = 15_000
 
-internal fun runGitCommand(dir: Path, args: List<String>, timeoutMs: Int = GIT_COMMAND_TIMEOUT_MS): CmdOut {
+/** Default watchdog for a git command. Cheap queries only — a destructive delete needs its own, wider budget. */
+internal const val GIT_COMMAND_TIMEOUT_MS = GIT_READ_TIMEOUT_MS
+
+/** Commands that only touch `.git` metadata and must answer almost immediately. */
+private val PROBES = setOf(
+    "--version",
+    "rev-parse",
+    "symbolic-ref",
+    "worktree",
+    "branch",
+    "config",
+    "remote",
+    "status",
+)
+
+/** Budget for `args`, by the kind of work the command performs. */
+internal fun gitBudget(args: List<String>): Int {
+    val head = args.firstOrNull() ?: return GIT_PROBE_TIMEOUT_MS
+    return if (head in PROBES) GIT_PROBE_TIMEOUT_MS else GIT_READ_TIMEOUT_MS
+}
+
+internal fun runGitCommand(dir: Path, args: List<String>, timeoutMs: Int = gitBudget(args)): CmdOut {
     return try {
         val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(dir.toFile())
             .withCharset(StandardCharsets.UTF_8).withEnvironment("LC_ALL", "C")
@@ -168,13 +197,22 @@ internal fun runGitCommand(dir: Path, args: List<String>, timeoutMs: Int = GIT_C
     } catch (err: ProcessCanceledException) {
         throw err
     } catch (err: Exception) {
+        // A launcher failure is not a timeout; keeping them apart is what lets callers report
+        // "git timed out" instead of an unexplained "exit=-1".
         CmdOut(-1, "", err.message ?: "git failed")
     }
 }
 
 private fun CmdOut.checked(): String {
-    check(ok) { "Git comparison failed (exit=$exit): ${stderr.trim()}" }
+    check(ok) { failure() }
     return stdout
+}
+
+/** Message that says what actually went wrong, including whether the watchdog fired. */
+internal fun CmdOut.failure(): String {
+    if (timeout) return "Git command timed out (no output within its budget)"
+    val detail = stderr.trim().ifEmpty { "no stderr output" }
+    return "Git comparison failed (exit=$exit): $detail"
 }
 
 internal fun capDiff(files: List<DiffFileDto>, cap: Int, fetch: (DiffFileDto, Int) -> DiffFileDto?): List<DiffFileDto> {

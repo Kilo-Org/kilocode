@@ -468,4 +468,24 @@ export const dict = {
   "agentManager.intro.guide": "Ler o guia",
   "agentManager.intro.dismiss": "Pular introdução",
   "agentManager.intro.reopen": "Como o Agent Manager funciona",
+  "agentManager.worktree.health.absent-restorable": "Pasta excluída",
+  "agentManager.worktree.health.absent-restorableNote":
+    "A pasta não existe mais, mas o branch {{branch}} continua lá. Restaure para continuar trabalhando aqui.",
+  "agentManager.worktree.health.absent-gone": "Pasta e branch excluídos",
+  "agentManager.worktree.health.absent-goneNote":
+    "Nem a pasta nem o branch existem mais. Remova a entrada para organizar; as sessões ficam em Local.",
+  "agentManager.worktree.health.unregistered": "Não é um worktree do git",
+  "agentManager.worktree.health.unregisteredNote":
+    "A pasta existe, mas o git não a rastreia mais como worktree. Não é possível ler o status.",
+  "agentManager.worktree.health.unavailable": "Status indisponível",
+  "agentManager.worktree.health.unavailableNote":
+    "O Git ou o GitHub CLI não respondeu em tempo. A consulta deste worktree está pausada e será repetida.",
+  "agentManager.worktree.restore": "Restaurar worktree",
+  "agentManager.worktree.removeKeepSessions": "Remover e manter sessões",
+  "agentManager.orphans.title": "Pastas de worktree remanescentes",
+  "agentManager.orphans.summary": "{{count}} pasta(s) em .kilo/worktrees não são worktrees do git.",
+  "agentManager.orphans.clean": "Limpar pastas remanescentes",
+  "agentManager.orphans.confirm": "Excluir estas pastas permanentemente? Nada aqui é rastreado pelo git.",
+  "agentManager.orphans.cancel": "Cancelar",
+  "agentManager.error.title": "Erro do Agent Manager",
 }
