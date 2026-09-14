@@ -130,6 +130,30 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test an RPC exception keeps every badge instead of clearing them`() {
+        // KiloWorktreeService.stats/dirty wrap the RPC in try/catch; a thrown exception must still
+        // report unavailable=true, not fall through to the DTO's default false, or a failed RPC would
+        // clear every badge exactly like a failed poll answering an empty list.
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        rpc.statsThrows = RuntimeException("backend unreachable")
+        rpc.dirtyThrows = RuntimeException("backend unreachable")
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
     fun `test a failed listing keeps every badge instead of clearing them`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)

@@ -63,6 +63,10 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val prAges = CopyOnWriteArrayList<Long?>()
     val statsCalls = CopyOnWriteArrayList<String>()
     val dirtyCalls = CopyOnWriteArrayList<String>()
+    /** When set, [stats] throws it instead of answering. */
+    var statsThrows: Exception? = null
+    /** When set, [dirty] throws it instead of answering. */
+    var dirtyThrows: Exception? = null
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
@@ -106,12 +110,14 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         assertNotEdt("stats")
         statsCalls.add(directory)
         beforeStats()
+        statsThrows?.let { throw it }
         return statsResult
     }
 
     override suspend fun dirty(directory: String): WorktreeDirtyListDto {
         assertNotEdt("dirty")
         dirtyCalls.add(directory)
+        dirtyThrows?.let { throw it }
         return dirtyResult
     }
 
