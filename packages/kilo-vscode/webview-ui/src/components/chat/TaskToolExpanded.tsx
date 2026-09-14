@@ -59,6 +59,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   )
 
   const running = createMemo(() => taskRunning(props.status))
+  // Background task cards stay collapsed: they must not auto-open or show the
+  // "Starting..." status, which would flicker the transcript as the child runs.
+  // The input carries `background` from the first part update; promoted tasks
+  // only gain the state metadata flag later.
+  const backgroundTask = createMemo(
+    () =>
+      props.input.background === true ||
+      ((props.partMetadata as Record<string, unknown> | undefined)?.background ??
+        (props.metadata as Record<string, unknown> | undefined)?.background) === true,
+  )
   const avatar = createMemo(() => {
     const id = childSessionId()
     return taskAvatarStatus(id, props.status, session.allStatusMap())
@@ -77,6 +87,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       { defer: true },
     ),
   )
+  // Auto-open only once the call is running: while "pending" the streamed
+  // input cannot yet tell a background task from a foreground one, and a
+  // background card must never open on its own.
+  const auto = () => props.status === "running" && !backgroundTask()
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
   // true never transitions, so this local signal must also seed itself from
@@ -86,10 +100,27 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     initialOpen({
       tool: props.tool,
       partID: props.partID,
-      defaultOpen: running(),
+      defaultOpen: auto(),
       forceOpen: props.forceOpen,
     }),
   )
+  // The open state is controlled so the card settles once the input arrives.
+  // A stored preference, a search match, or a manual toggle wins over it.
+  const [touched, setTouched] = createSignal(
+    !!props.forceOpen || initialOpen({ tool: props.tool, partID: props.partID }) !== undefined,
+  )
+  const change = (value: boolean) => {
+    setTouched(true)
+    setOpen(value)
+  }
+  createEffect(() => {
+    if (touched()) return
+    if (backgroundTask()) {
+      setOpen(false)
+      return
+    }
+    if (props.status === "running") setOpen(true)
+  })
 
   let synced: string | undefined
   createEffect(() => {
@@ -171,6 +202,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       sessionID: id,
       title: description(),
       parentSessionID: session.currentSessionID(),
+      background: backgroundTask(),
       worktree: !!worktree,
       post: vscode.postMessage,
     })
@@ -240,14 +272,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         tool={props.tool}
         partID={props.partID}
         trigger={trigger()}
-        defaultOpen={running()}
+        defaultOpen={auto()}
+        open={open()}
         forceOpen={props.forceOpen}
         defer
-        onOpenChange={setOpen}
+        onOpenChange={change}
       >
         <div ref={viewport} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={content} data-component="task-tools">
-            <Show when={running() && childToolCount() === 0}>
+            <Show when={running() && childToolCount() === 0 && !backgroundTask()}>
               <div data-slot="task-tool-item" data-state="starting">
                 <span data-slot="task-tool-title">{language.t("session.messages.taskStarting")}</span>
               </div>
