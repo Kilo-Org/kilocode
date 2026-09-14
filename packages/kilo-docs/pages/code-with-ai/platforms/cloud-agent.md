@@ -54,11 +54,17 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
 
 `kilo cloud` can start tasks, send follow-up prompts, and check task status and results. Repository, branch, model, mode, and organization are inferred from your local checkout and CLI defaults unless you pass the matching flags. Add `--stream` to `kilo cloud start` to print task events as JSONL until the task completes. See the [CLI reference](/docs/code-with-ai/platforms/cli-reference#kilo-cloud) for all commands and options.
 
+`kilo cloud start` and `kilo cloud send` accept exactly one prompt source. Pass the prompt with `--prompt "..."`, or pass `--prompt-stdin` to read it from standard input, which is useful for piping a file or another command's output:
+
+```bash
+cat task.md | kilo cloud start --prompt-stdin --repo Kilo-Org/kilocode
+```
+
 ## How Cloud Agents Work
 
 - Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, glab CLI, etc.).
 - Python is not included in the base image, but `apt` is available so you can install it or other packages as needed.
-- All Cloud Agent chats share a **single container instance**, while each session gets its own workspace directory.
+- All Cloud Agent chats share a **single container instance**. Each worktree has its own checkout directory, and chats in the same worktree share it.
 - When a session begins:
   1. Your repo is cloned
   2. A unique branch is created
@@ -74,6 +80,37 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
   - Spindown occurs after inactivity
   - Expect slightly longer setup after idle periods
   - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
+
+The chat header shows the status of the session's sandbox and when it was last refreshed, so you can check sandbox availability without starting new work.
+
+## Worktrees and chats
+
+Each Cloud Agent workspace is a **worktree**: a checkout of your repository on its own branch. A worktree can host more than one chat. Chats in the same worktree share its checkout, so edits from one chat are visible to the others, while each chat keeps its own conversation. Separate worktrees run independently.
+
+The sidebar groups your sessions by worktree. Open a worktree's menu to:
+
+- **New chat** — start another chat in the same worktree.
+- **Rename worktree** — give the worktree a recognizable name. A worktree without a custom name shows its repository and branch.
+- **Delete worktree** — remove the worktree and all of its chats.
+
+The workspace tab bar shows a tab for each open chat. Double-click a chat tab, or select it and press `F2`, to rename it. Closing a tab hides the chat without stopping it; reopen a closed chat from **Sessions** in the tab options menu.
+
+The chat header has a **Changes** button that shows how many files the session's worktree changed and the total lines added and removed. Select it to open the **Changes** drawer, which lists each changed file with its status. Switch between **Flat** (grouped by directory) and **Tree** layouts, and use **Refresh changes** to capture the current state. Kilo saves these summaries as the agent works, so the counts are available when you return to a session.
+
+### Workspace folders
+
+Group worktrees into collapsible, color-coded folders in the sidebar. Folders are private to your account and are not shared with other organization members.
+
+- Select **New folder** in the sidebar header and give the folder a name and color.
+- Drag a worktree onto a folder, or use **Move to folder** in its menu, to file it. Choose **Ungrouped** to remove it from a folder.
+- Open a folder's menu to rename it, change its color, move it up or down, or delete it. Deleting a folder returns its worktrees to **Ungrouped**.
+- Select a folder header to collapse or expand it. The count beside the name shows how many of the folder's worktrees are currently visible.
+
+### Viewing changed files
+
+Select a file in the **Changes** drawer to open it in a read-only workspace tab. The tab shows the saved diff by default; use **Show all lines** to expand the unchanged context and **Preview** to render Markdown. **Reload saved file** re-reads the latest saved revision without starting the workspace.
+
+Saved files are read-only snapshots captured from the worktree, not a live view of the checkout. A tab reports when a file has no saved content, is no longer listed in the latest saved changes, or has a capture that changed.
 
 ## Agent Environment Profiles
 

@@ -58,6 +58,7 @@ While the specifics change constantly, some principles stay consistent:
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
 - **Model precedence:** Session override → Last picked per agent → Per-agent config → Global config → [Auto Free](/docs/code-with-ai/agents/auto-model#tiers) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
 - The model selector remembers the last model you picked for each agent, so switching agents restores your previous choice. A manual pick always beats config settings.
+- When you're signed in to an organization, Kilo checks the selected model against the models your organization makes available. If that model is unavailable, it uses the organization's default model for the session instead of falling back to an unrelated public model. Automatic fallbacks don't overwrite your saved preference, so switching back to your personal account restores your choice.
 
 {% /tab %}
 {% tab label="CLI" %}
