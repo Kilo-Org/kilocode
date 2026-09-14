@@ -127,7 +127,7 @@ export async function computeSurfaceReviewers(
   try {
     if (cloudRepos.length > 0 && !cloudToken) {
       const err = new Error(
-        `a token with contents: read on ${cloudRepos.join(", ")} is required (repository secret DOCS_SYNC_CLOUD_TOKEN, exposed as CLOUD_REPO_TOKEN)`,
+        `a token with contents: read on ${cloudRepos.join(", ")} is required (repository secret CROSS_REPO_ACCESS_TOKEN, exposed as CLOUD_REPO_TOKEN)`,
       )
       err.code = "CLOUD_TOKEN_REQUIRED"
       throw err
@@ -196,7 +196,7 @@ export async function computeSurfaceReviewers(
         .map((r) => `@${r}`)
         .join(
           " and ",
-        )}; set repository secret DOCS_SYNC_CLOUD_TOKEN (exposed as CLOUD_REPO_TOKEN) with contents: read on ${cloudRepos.join(", ")}.`,
+        )}; set repository secret CROSS_REPO_ACCESS_TOKEN (exposed as CLOUD_REPO_TOKEN) with contents: read on ${cloudRepos.join(", ")}.`,
       sourcePrefixes: prefixes,
     }
   }
