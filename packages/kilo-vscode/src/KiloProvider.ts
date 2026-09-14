@@ -4767,7 +4767,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     ])
   }
 
-  /** Reload config, skills, agents, and commands from disk by rebooting the instance. */
+  /** Reload config, skills, agents, and commands from disk by rebooting the project's instances. */
   private async handleReload(): Promise<void> {
     if (!this.client) {
       console.warn("[Kilo New] handleReload: no client connection")
@@ -4783,7 +4783,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         cause && typeof cause === "object" && "status" in cause ? (cause as { status?: number }).status : undefined
       if (status === 409) {
         vscode.window.showWarningMessage(
-          "Cannot reload while a session is running. Wait for it to finish or abort it first.",
+          "Cannot reload while a session is running in this project. Wait for it to finish or abort it first.",
         )
         return
       }
@@ -4795,7 +4795,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.clearCommandsCache()
     if (!sameDirectory(dir, this.getWorkspaceDirectory())) {
       await this.reloadAfterAuthChange()
+      return
     }
+    await Promise.all([
+      this.fetchAndSendConfig(),
+      this.fetchAndSendAgents(),
+      this.fetchAndSendSkills(),
+      this.fetchAndSendCommands(),
+    ])
   }
 
   /** Public reload entry point for VS Code commands. */

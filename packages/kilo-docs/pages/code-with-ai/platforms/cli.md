@@ -133,7 +133,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/status` | - | View status |
 | `/themes` | - | Switch theme |
 | `/help` | - | Show help |
-| `/reload` | - | Reload config, skills, agents, and commands from disk |
+| `/reload` | - | Reload every instance of the project from disk (config, skills, agents, and commands) |
 | `/editor` | - | Open external editor |
 | `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
 | `/caffeinate` | `/caffenate` | Toggle Keep Awake: prevent system sleep while Kilo sessions run |
