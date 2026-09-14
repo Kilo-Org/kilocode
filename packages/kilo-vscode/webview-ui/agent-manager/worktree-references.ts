@@ -1,5 +1,5 @@
 import { createEffect, createMemo, type Accessor } from "solid-js"
-import type { SessionInfo } from "../src/types/messages"
+import type { SessionInfo, WorktreeState } from "../src/types/messages"
 import type { useVSCode } from "../src/context/vscode"
 import type { WorktreeReference } from "../src/hooks/file-mention-utils"
 import type { ProjectStore } from "./project/store"
@@ -49,6 +49,28 @@ export function worktreeReferences(
         (recency.get(a.path) ?? recent.length) - (recency.get(b.path) ?? recent.length) ||
         (activity.get(b.path) ?? 0) - (activity.get(a.path) ?? 0),
     )
+}
+
+/**
+ * Build the reference carried by a dragged worktree card. The sidebar already
+ * has the worktree state and its sessions, so the drop does not depend on the
+ * active project's mention list.
+ */
+export function worktreeDropReference(
+  worktree: WorktreeState,
+  name: string,
+  sessions: { id: string; title?: string }[],
+  disabled: boolean,
+): WorktreeReference {
+  return {
+    id: worktree.id,
+    name,
+    branch: worktree.branch,
+    path: worktree.path,
+    base: worktree.parentBranch,
+    sessions,
+    disabled,
+  }
 }
 
 export function createWorktreeReferences(
