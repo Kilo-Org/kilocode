@@ -183,6 +183,12 @@ import type {
   KilocodeDrainSessionResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeMarketplaceInstallErrors,
+  KilocodeMarketplaceInstallResponses,
+  KilocodeMarketplaceListErrors,
+  KilocodeMarketplaceListResponses,
+  KilocodeMarketplaceRemoveErrors,
+  KilocodeMarketplaceRemoveResponses,
   KilocodeMigrateDiscoverErrors,
   KilocodeMigrateDiscoverResponses,
   KilocodeMigrateSessionsErrors,
@@ -243,6 +249,8 @@ import type {
   LocationRef,
   LspStatusErrors,
   LspStatusResponses,
+  MarketplaceInstallItem,
+  MarketplaceItemRef,
   McpAddErrors,
   McpAddResponses,
   McpAuthAuthenticateErrors,
@@ -2603,9 +2611,9 @@ export class Instance extends HeyApiClient {
   }
 
   /**
-   * Reload instance
+   * Reload project
    *
-   * Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.
+   * Atomically dispose and reboot every loaded instance of the project, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if any session in the project is actively running.
    */
   public reload<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -7358,6 +7366,132 @@ export class Heap extends HeyApiClient {
   }
 }
 
+export class Marketplace extends HeyApiClient {
+  /**
+   * List marketplace items
+   *
+   * Fetch marketplace catalog items and detect the items installed for the routed workspace.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeMarketplaceListResponses,
+      KilocodeMarketplaceListErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/marketplace",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Install a marketplace item
+   *
+   * Install a marketplace MCP server, agent, or skill into project or global Kilo config.
+   */
+  public install<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      item: MarketplaceInstallItem
+      target?: "project" | "global"
+      parameters?: {
+        [key: string]: unknown
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "item" },
+            { in: "body", key: "target" },
+            { in: "body", key: "parameters" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMarketplaceInstallResponses,
+      KilocodeMarketplaceInstallErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/marketplace/install",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove a marketplace item
+   *
+   * Remove a marketplace MCP server, agent, or skill from project or global Kilo config.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      item: MarketplaceItemRef
+      scope: "project" | "global"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "item" },
+            { in: "body", key: "scope" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMarketplaceRemoveResponses,
+      KilocodeMarketplaceRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/marketplace/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Snapshot extends HeyApiClient {
   /**
    * Prepare a snapshot repository
@@ -8706,6 +8840,11 @@ export class Kilocode extends HeyApiClient {
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
+  }
+
+  private _marketplace?: Marketplace
+  get marketplace(): Marketplace {
+    return (this._marketplace ??= new Marketplace({ client: this.client }))
   }
 
   private _snapshot?: Snapshot

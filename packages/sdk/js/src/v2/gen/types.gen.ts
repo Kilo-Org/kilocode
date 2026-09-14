@@ -4157,6 +4157,172 @@ export type CommandFile = {
   hints: Array<string>
 }
 
+export type VscodeExtensionRef =
+  | string
+  | {
+      name: string
+      id: string
+    }
+
+export type MarketplaceSuggestFor = {
+  filename?: Array<string>
+  vscode_extension?: Array<VscodeExtensionRef>
+}
+
+export type McpParameter = {
+  name: string
+  key: string
+  placeholder?: string
+  optional?: boolean
+}
+
+export type McpInstallationMethod = {
+  name: string
+  content: string
+  parameters?: Array<McpParameter>
+  prerequisites?: Array<string>
+}
+
+export type McpMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "mcp"
+  url: string
+  content: string | Array<McpInstallationMethod>
+  parameters?: Array<McpParameter>
+}
+
+export type AgentMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "agent"
+  content: {
+    mode: "primary" | "subagent" | "all"
+    description: string
+    prompt: string
+    options?: {
+      [key: string]: unknown
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    requirements?: {
+      skills?: Array<string>
+      mcps?: Array<string>
+      vscode_extensions?: Array<{
+        name: string
+        id: string
+      }>
+    }
+  }
+}
+
+export type SkillMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "skill"
+  githubUrl: string
+  content: string
+  displayName: string
+  displayCategory: string
+}
+
+export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem
+
+export type MarketplaceInstalledMetadata = {
+  project: {
+    [key: string]: {
+      type: string
+    }
+  }
+  global: {
+    [key: string]: {
+      type: string
+    }
+  }
+}
+
+export type MarketplaceListResult = {
+  items: Array<MarketplaceItem>
+  installed: MarketplaceInstalledMetadata
+  errors?: Array<string>
+}
+
+export type McpInstallItem = {
+  type: "mcp"
+  id: string
+  content: string | Array<McpInstallationMethod>
+}
+
+export type AgentInstallItem = {
+  type: "agent"
+  id: string
+  content: {
+    mode: "primary" | "subagent" | "all"
+    description: string
+    prompt: string
+    options?: {
+      [key: string]: unknown
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    requirements?: {
+      skills?: Array<string>
+      mcps?: Array<string>
+      vscode_extensions?: Array<{
+        name: string
+        id: string
+      }>
+    }
+  }
+}
+
+export type SkillInstallItem = {
+  type: "skill"
+  id: string
+  content: string
+}
+
+export type MarketplaceInstallItem = McpInstallItem | AgentInstallItem | SkillInstallItem
+
+export type MarketplaceInstallResult = {
+  success: boolean
+  slug: string
+  error?: string
+  filePath?: string
+  line?: number
+}
+
+export type MarketplaceItemRef = {
+  id: string
+  type: "mcp" | "agent" | "skill"
+}
+
+export type MarketplaceRemoveResult = {
+  success: boolean
+  slug: string
+  error?: string
+}
+
 export type ProviderUsagePeriod = {
   unit: "hour" | "day" | "week" | "month"
   value: number
@@ -16867,6 +17033,101 @@ export type KilocodeRemoveAgentResponses = {
 }
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
+
+export type KilocodeMarketplaceListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace"
+}
+
+export type KilocodeMarketplaceListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceListError = KilocodeMarketplaceListErrors[keyof KilocodeMarketplaceListErrors]
+
+export type KilocodeMarketplaceListResponses = {
+  /**
+   * Marketplace catalog and installed metadata
+   */
+  200: MarketplaceListResult
+}
+
+export type KilocodeMarketplaceListResponse = KilocodeMarketplaceListResponses[keyof KilocodeMarketplaceListResponses]
+
+export type KilocodeMarketplaceInstallData = {
+  body?: {
+    item: MarketplaceInstallItem
+    target?: "project" | "global"
+    parameters?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/install"
+}
+
+export type KilocodeMarketplaceInstallErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceInstallError = KilocodeMarketplaceInstallErrors[keyof KilocodeMarketplaceInstallErrors]
+
+export type KilocodeMarketplaceInstallResponses = {
+  /**
+   * Marketplace install result
+   */
+  200: MarketplaceInstallResult
+}
+
+export type KilocodeMarketplaceInstallResponse =
+  KilocodeMarketplaceInstallResponses[keyof KilocodeMarketplaceInstallResponses]
+
+export type KilocodeMarketplaceRemoveData = {
+  body?: {
+    item: MarketplaceItemRef
+    scope: "project" | "global"
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/remove"
+}
+
+export type KilocodeMarketplaceRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceRemoveError = KilocodeMarketplaceRemoveErrors[keyof KilocodeMarketplaceRemoveErrors]
+
+export type KilocodeMarketplaceRemoveResponses = {
+  /**
+   * Marketplace removal result
+   */
+  200: MarketplaceRemoveResult
+}
+
+export type KilocodeMarketplaceRemoveResponse =
+  KilocodeMarketplaceRemoveResponses[keyof KilocodeMarketplaceRemoveResponses]
 
 export type KilocodeRemoveSnapshotData = {
   body?: {

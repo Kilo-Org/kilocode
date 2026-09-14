@@ -12955,8 +12955,8 @@
             }
           }
         },
-        "description": "Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.",
-        "summary": "Reload instance",
+        "description": "Atomically dispose and reboot every loaded instance of the project, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if any session in the project is actively running.",
+        "summary": "Reload project",
         "x-codeSamples": [
           {
             "lang": "js",
@@ -15527,6 +15527,211 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeAgent({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/marketplace": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.marketplace.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marketplace catalog and installed metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketplaceListResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Fetch marketplace catalog items and detect the items installed for the routed workspace.",
+        "summary": "List marketplace items",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.marketplace.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/marketplace/install": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.marketplace.install",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marketplace install result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketplaceInstallResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+        "summary": "Install a marketplace item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item": {
+                    "$ref": "#/components/schemas/MarketplaceInstallItem"
+                  },
+                  "target": {
+                    "type": "string",
+                    "enum": ["project", "global"]
+                  },
+                  "parameters": {
+                    "type": "object"
+                  }
+                },
+                "required": ["item"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.marketplace.install({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/marketplace/remove": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.marketplace.remove",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marketplace removal result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketplaceRemoveResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
+        "summary": "Remove a marketplace item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item": {
+                    "$ref": "#/components/schemas/MarketplaceItemRef"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"]
+                  }
+                },
+                "required": ["item", "scope"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.marketplace.remove({\n  ...\n})"
           }
         ]
       }
@@ -39595,6 +39800,551 @@
           }
         },
         "required": ["name", "builtin", "location", "editable", "hints"],
+        "additionalProperties": false
+      },
+      "VscodeExtensionRef": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "id"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "MarketplaceSuggestFor": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vscode_extension": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VscodeExtensionRef"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "McpParameter": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "optional": {
+            "type": "boolean"
+          }
+        },
+        "required": ["name", "key"],
+        "additionalProperties": false
+      },
+      "McpInstallationMethod": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpParameter"
+            }
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["name", "content"],
+        "additionalProperties": false
+      },
+      "McpMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp"]
+          },
+          "url": {
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/McpInstallationMethod"
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpParameter"
+            }
+          }
+        },
+        "required": ["id", "name", "description", "category", "type", "url", "content"],
+        "additionalProperties": false
+      },
+      "AgentMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["agent"]
+          },
+          "content": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["primary", "subagent", "all"]
+              },
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "permission": {
+                "type": "object"
+              },
+              "requirements": {
+                "type": "object",
+                "properties": {
+                  "skills": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "mcps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "vscode_extensions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "id"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": ["mode", "description", "prompt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "name", "description", "category", "type", "content"],
+        "additionalProperties": false
+      },
+      "SkillMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["skill"]
+          },
+          "githubUrl": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "displayCategory": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "category",
+          "type",
+          "githubUrl",
+          "content",
+          "displayName",
+          "displayCategory"
+        ],
+        "additionalProperties": false
+      },
+      "MarketplaceItem": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/McpMarketplaceItem"
+          },
+          {
+            "$ref": "#/components/schemas/AgentMarketplaceItem"
+          },
+          {
+            "$ref": "#/components/schemas/SkillMarketplaceItem"
+          }
+        ]
+      },
+      "MarketplaceInstalledMetadata": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            }
+          },
+          "global": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["project", "global"],
+        "additionalProperties": false
+      },
+      "MarketplaceListResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketplaceItem"
+            }
+          },
+          "installed": {
+            "$ref": "#/components/schemas/MarketplaceInstalledMetadata"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["items", "installed"],
+        "additionalProperties": false
+      },
+      "McpInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["mcp"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/McpInstallationMethod"
+                }
+              }
+            ]
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
+      "AgentInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["agent"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["primary", "subagent", "all"]
+              },
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "permission": {
+                "type": "object"
+              },
+              "requirements": {
+                "type": "object",
+                "properties": {
+                  "skills": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "mcps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "vscode_extensions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "id"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": ["mode", "description", "prompt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
+      "SkillInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["skill"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
+      "MarketplaceInstallItem": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/McpInstallItem"
+          },
+          {
+            "$ref": "#/components/schemas/AgentInstallItem"
+          },
+          {
+            "$ref": "#/components/schemas/SkillInstallItem"
+          }
+        ]
+      },
+      "MarketplaceInstallResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "filePath": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer"
+          }
+        },
+        "required": ["success", "slug"],
+        "additionalProperties": false
+      },
+      "MarketplaceItemRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp", "agent", "skill"]
+          }
+        },
+        "required": ["id", "type"],
+        "additionalProperties": false
+      },
+      "MarketplaceRemoveResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": ["success", "slug"],
         "additionalProperties": false
       },
       "ProviderUsagePeriod": {
