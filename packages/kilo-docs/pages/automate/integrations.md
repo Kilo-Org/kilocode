@@ -30,7 +30,7 @@ Before connecting:
 - For GitHub: You need permission to install GitHub Apps for the repositories you want Kilo to access.
 - For GitLab: You need **Maintainer** role (or higher) on the projects you want to connect.
 - For DoltHub: You need a DoltHub account to authorize the OAuth connection.
-- (Optional) If you're connecting an organization, you must be an admin or have app installation permissions.
+- For a Kilo organization, adding a GitHub integration requires the **Owner** or **Admin** role, in addition to permission to install the app on GitHub.
 
 ---
 
@@ -62,6 +62,10 @@ Once approved:
 - You'll return to the Kilo Integrations page.
 - GitHub will show a **Connected** status.
 - Your Kilo workspace can now access GitHub repositories securely.
+
+### 5. Choose the GitHub AI model
+
+Use **AI Model** in the GitHub integration panel to choose the model for replies to `@kilocode-bot` mentions on issues and pull requests. Personal accounts have one selector; organizations have one per connected installation. Changing an organization's model requires permission to manage organization billing.
 
 ---
 
@@ -161,15 +165,17 @@ Once your integrations are connected, the following features are enabled in Kilo
 - Use DoltHub alongside GitHub or GitLab when a workflow also needs repository access
 - Authorize Gas Town Wasteland to fork commons databases, push claims and evidence, and manage DoltHub PRs. Wasteland also supports an advanced API token option when OAuth is not available.
 
-### Upcoming:
+### Bitbucket
 
-- **Bitbucket Integration**
+Organization accounts can select Bitbucket repositories when starting [Cloud Agent sessions in the mobile app](/docs/code-with-ai/platforms/mobile). This option is not available for personal accounts.
 
 ---
 
 ## Managing or Removing the Integration
 
 ### GitHub
+
+An organization Owner or Admin can connect multiple GitHub organizations. Click **Add organization** and repeat the installation flow. Each installation has its own connection status, repository scope, selected repository list, and management actions. Personal accounts use a single GitHub connection.
 
 From the **Integrations** page, click "Manage on GitHub" to:
 

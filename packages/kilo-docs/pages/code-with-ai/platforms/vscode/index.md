@@ -31,6 +31,8 @@ Key features include:
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
 - **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
+- **[Notifications](/docs/getting-started/settings/notifications)** - Choose sounds, VS Code alerts, or OS notifications when a session needs attention
+- **[Keep Awake](/docs/getting-started/settings/keep-awake)** - Optionally prevent system sleep while agents work in a local VS Code window
 - **Transcript export:** Save complete local session transcripts as Markdown files
 - **Sub-Agent Viewer** — Read-only panels for viewing child agent sessions
 - **Legacy Migration** — Automatic migration wizard for VSCode extension settings
@@ -50,12 +52,22 @@ Each agent shows one of these states:
 
 An agent can also show **Needs input** when it is waiting for a permission decision or an answer to a question. Open the agent row to inspect its read-only transcript and handle the request in the child-agent view. In the sidebar and Kilo tab, the transcript opens in a read-only editor tab. In Agent Manager, it opens in the right-hand inspector.
 
-Use these controls in the expanded strip:
+Use these controls in the background-agent strip:
 
 - **Stop** cancels a running agent and its child session.
+- **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
 - **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
 - **Clear finished** hides all agents that are no longer running.
+- **Open all** opens all agents that have not been dismissed, including finished agents and those behind the overflow count.
 - **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
+
+Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed background results are available when you send the next message or use **Continue**.
+
+## Follow-up messages
+
+Send a message while Kilo is working to queue it for processing in order. To revise a queued message, clear the prompt input and click the message's edit icon. This removes it from the queue and restores its text, images, and file references to the input. Sending it again adds it to the end of the queue.
+
+After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
 
 ## Shared Settings
 

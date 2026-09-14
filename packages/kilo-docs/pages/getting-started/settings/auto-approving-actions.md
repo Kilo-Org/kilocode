@@ -63,14 +63,16 @@ When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt with
 
 | Option | Behavior |
 |---|---|
-| **Run** | Allow this specific invocation |
-| **Deny** | Block this specific invocation |
+| **Allow once** | Allow this specific invocation |
+| **Deny** | Open an optional feedback field before rejecting |
+
+After selecting **Deny**, explain what the agent should do differently, then choose **Reject** or press `Enter`. Leave the field empty to reject without feedback, or press `Esc` to return to the approval prompt. Feedback lets the agent revise its proposal; it does not approve any action or create an allow rule.
 
 Use the shield button in the prompt controls to toggle runtime auto-approve for permission prompts without opening Settings. When enabled, the shield is highlighted and pending permission prompts are approved automatically. The runtime state stays synced across the sidebar, open Kilo tabs, and Agent Manager session views.
 
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
-For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, or `prompt`. Prompting an existing managed session always requires an explicit `prompt` approval the first time, even when a broad Agent Manager allow rule already exists.
+For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, `prompt`, `stop`, `move`, or `answer`. Prompting, stopping, moving, or answering a managed session requires its own explicit capability approval the first time, even when a broad Agent Manager allow rule already exists.
 
 ## MCP Tool Permissions
 

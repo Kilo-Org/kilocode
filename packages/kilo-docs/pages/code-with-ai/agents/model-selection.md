@@ -11,10 +11,10 @@ Instead of maintaining a static list that's perpetually behind, we built somethi
 
 ## Model Routing and Configuration
 
-Kilo's IDE Extension and CLI configurations have four separate, independently configurable model slots:
+You can configure models separately for different tasks in the VS Code extension and kilo CLI:
 
 - **Main model** — the primary model your agent uses for coding tasks, chat, and reasoning. This is what you pick with the model selector, `/models`, or the `model` key in `kilo.jsonc`. See [How to Select and Switch Models](#how-to-select-and-switch-models) for the full precedence order and per-agent config.
-  - The main model is also used for context compaction/summarization and todo-list generation.
+  - The main model is also used for todo-list generation, and for context compaction when no compaction model is set.
 - **Small model** — a lightweight model used for session title generation, commit message generation, and prompt enhancement. Configured with the `small_model` key in `kilo.jsonc`, or the **Small Model** field on the **Settings → Models** tab.
   - If left unset, Kilo resolves it according to the following logic: 
     1. Find a small/cheap variant on your current provider (e.g. Haiku on Anthropic, Flash on Gemini).
@@ -23,6 +23,7 @@ Kilo's IDE Extension and CLI configurations have four separate, independently co
 - **Subagent model** — the default model for subagents launched by the `task` tool. Configured with the `subagent_model` key in `kilo.jsonc`, or the **Subagent Model** field on the **Settings → Models** tab.
   - If left unset, inherits whichever model the parent agent session is currently using.
 - **Autocomplete model** — the model used for inline code completions as you type. See [Autocomplete: Provider and Model](/docs/code-with-ai/features/autocomplete#provider-and-model) for how to configure it.
+- **Compaction model** - the model used to summarize context. Set `agent.compaction.model` in `kilo.jsonc`, or choose **Compaction model** under **Settings → Models**. If unset, compaction uses the current session's model. See [Context Condensing](/docs/customize/context/context-condensing#use-a-different-model-for-compaction).
 
 ### Configuring Local Usage
 
@@ -58,6 +59,8 @@ While the specifics change constantly, some principles stay consistent:
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
 - **Model precedence:** Session override → Last picked per agent → Per-agent config → Global config → [Auto Free](/docs/code-with-ai/agents/auto-model#tiers) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
 - The model selector remembers the last model you picked for each agent, so switching agents restores your previous choice. A manual pick always beats config settings.
+
+Model choices must be available through a connected provider. When signed in to an organization, if none of your configured choices is available, Kilo falls back to the organization's default Kilo model, then another available Kilo model, rather than an unrelated public model. This automatic fallback does not overwrite your saved preference.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -152,6 +155,12 @@ The Settings UI writes the same `agent.<name>.model` entry, so either method pro
 {% /tabs %}
 
 For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
+
+### Per-task model selection (experimental)
+
+Enable [Task Subagent Model Selection](/docs/getting-started/settings#task-subagent-model-selection) to request a different model, provider, or reasoning effort for an individual subagent task. It is off by default. Overrides require your explicit request; the agent does not choose a different model on its own based on task complexity, cost, or latency.
+
+Invalid selections fail instead of silently falling back. Resumed tasks keep their last model and reasoning effort unless you request an override.
 
 ## Selecting a Model or Agent via a Link (VS Code)
 

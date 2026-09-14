@@ -7,6 +7,8 @@ description: "Keep an agent working toward a single objective with the /goal com
 
 A session goal keeps one objective in focus across turns. The agent keeps working until it reports the goal complete or blocked, and you can pause, resume, or clear it at any time.
 
+Goals consume model credits as work continues. Review your [cost controls and usage safeguards](/docs/getting-started/cost-controls-and-usage-safeguards) before leaving a goal running.
+
 ## Starting a goal
 
 {% tabs %}
@@ -34,6 +36,11 @@ To treat a control word as the objective, separate it with `--`:
 The `--` delimiter sets the literal objective `pause` instead of pausing the current goal. The VS Code goal composer adds this delimiter for you.
 
 {% /tab %}
+{% tab label="Mobile" %}
+
+Select `/goal` in the composer, then enter and send your objective. You can also send `/goal <objective>` directly. The connected CLI must advertise goal support; otherwise the app asks you to upgrade instead of sending the command.
+
+{% /tab %}
 {% /tabs %}
 
 An objective can be up to 10,000 characters.
@@ -49,6 +56,8 @@ An objective can be up to 10,000 characters.
 | `/goal clear` | Remove the saved objective and report |
 
 The CLI and VS Code also show a goal control next to the composer. Select it to pause, resume, or clear the goal. When a goal is complete, the control label is **Restart goal** instead of **Resume**.
+
+On mobile, the goal section below the session header shows the objective, status, and reason when available. Tap it to **Edit**, **Pause** or **Resume**, or **Remove** the goal. These actions use the same goal commands listed above.
 
 ## Goal statuses
 

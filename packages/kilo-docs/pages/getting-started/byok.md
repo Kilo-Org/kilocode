@@ -24,6 +24,7 @@ Use your provider API key to route matching models through your account:
 
 - Anthropic
 - AWS Bedrock
+- Azure OpenAI
 - DeepSeek
 - Fireworks
 - Google AI Studio
@@ -67,7 +68,18 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 
 ### AWS Bedrock configuration
 
-AWS Bedrock requires credentials in a different format than other providers. Instead of a single API key, you must provide your AWS credentials as a JSON object:
+AWS Bedrock requires JSON credentials. Use one of these two formats; don't mix fields from both.
+
+**Bedrock API key:** Generate a key in the AWS Bedrock console and use a region where the key and model are available. Replace the key before it expires.
+
+```json
+{
+  "apiKey": "...",
+  "region": "us-east-1"
+}
+```
+
+**IAM credentials:**
 
 ```json
 {
@@ -87,6 +99,32 @@ Your IAM user or role must have the following permissions:
 
 - `bedrock:InvokeModel`
 - `bedrock:InvokeModelWithResponseStream`
+
+### Azure OpenAI configuration
+
+Select **Azure Foundry (experimental)** and enter JSON credentials. Use `resourceName` for the subdomain of your endpoint, such as `my-resource` from `my-resource.openai.azure.com`:
+
+```json
+{
+  "apiKey": "...",
+  "resourceName": "my-resource"
+}
+```
+
+If your deployment names differ from the gateway model IDs, add `modelMappings` to map each model to its Azure deployment:
+
+```json
+{
+  "apiKey": "...",
+  "resourceName": "my-resource",
+  "modelMappings": [
+    {
+      "gatewayModelSlug": "openai/gpt-5.4-nano",
+      "customModelId": "my-gpt-5-4-nano-deployment"
+    }
+  ]
+}
+```
 
 ## How Bring Your Own Key works
 
