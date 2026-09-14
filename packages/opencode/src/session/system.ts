@@ -9,6 +9,7 @@ import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_GPT from "./prompt/gpt.txt"
 import PROMPT_GPT55 from "./prompt/kilocode-gpt-5.5.txt" // kilocode_change
+import PROMPT_GPT6 from "./prompt/kilocode-gpt-6.txt" // kilocode_change
 import PROMPT_KIMI from "./prompt/kimi.txt"
 import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 import PROMPT_META from "./prompt/meta.txt"
@@ -69,6 +70,9 @@ export function provider(model: Provider.Model) {
 
   const kilo = prompt()
   if (kilo) return kilo
+  const id = model.api.id.split("/").at(-1)?.toLowerCase() ?? ""
+  const major = Number(id.match(/^gpt-(\d+)(?:\.\d+)?(?:-|$)/)?.at(1))
+  if (major >= 6 || id === "gpt-astra-latest") return [PROMPT_GPT6]
   // kilocode_change end
   if (model.api.id.includes("muse-spark")) return [PROMPT_META]
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
