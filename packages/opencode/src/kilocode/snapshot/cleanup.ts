@@ -1,11 +1,10 @@
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import { AppProcess } from "@opencode-ai/core/process"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Hash } from "@opencode-ai/core/util/hash"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
-import { ChildProcess } from "effect/unstable/process"
 import path from "path"
+import { Process } from "@/util/process"
 import { KiloSnapshotMaterialize } from "./materialize"
 import { KiloSnapshotPrepare } from "./prepare"
 
@@ -160,11 +159,10 @@ export namespace KiloSnapshotCleanup {
   // Git run from the project root resolves the shared refs itself, also for worktrees.
   const release = Effect.fnUntraced(function* (fs: FSUtil.Interface, directory: string, gitdir: string) {
     if (!(yield* inspect(fs, path.join(directory, ".git"))).exists) return
-    const app = yield* AppProcess.Service
-    const result = yield* app.run(
-      ChildProcess.make("git", ["update-ref", "-d", KiloSnapshotMaterialize.ref(gitdir)], { cwd: directory }),
+    const result = yield* Effect.promise(() =>
+      Process.run(["git", "update-ref", "-d", KiloSnapshotMaterialize.ref(gitdir)], { cwd: directory, nothrow: true }),
     )
-    if (result.exitCode !== 0)
+    if (result.code !== 0)
       log.warn("failed to release snapshot seed pin", { directory, stderr: result.stderr.toString() })
   })
 
