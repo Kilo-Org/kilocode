@@ -64,29 +64,36 @@ test("removing a prepared worktree that was never tracked releases only its seed
 
   await $`git worktree remove --force ${dir}`.cwd(source.path).quiet()
   await disposeAllInstances()
-  const removed = await Effect.runPromise(
-    Effect.gen(function* () {
-      const fs = yield* FSUtil.Service
-      const flock = yield* EffectFlock.Service
-      return yield* KiloSnapshotCleanup.remove({
-        root: path.join(Global.Path.data, "snapshot"),
-        project: ctx.project.id,
-        directory: source.path,
-        worktree: dir,
-        fs,
-        flock,
-      })
-    }).pipe(
-      Effect.provide(
-        LayerNode.compile(LayerNode.group([FSUtil.node, AppProcess.node, EffectFlock.node, CrossSpawnSpawner.node])),
+  const remove = () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const fs = yield* FSUtil.Service
+        const flock = yield* EffectFlock.Service
+        return yield* KiloSnapshotCleanup.remove({
+          root: path.join(Global.Path.data, "snapshot"),
+          project: ctx.project.id,
+          directory: source.path,
+          worktree: dir,
+          fs,
+          flock,
+        })
+      }).pipe(
+        Effect.provide(
+          LayerNode.compile(LayerNode.group([FSUtil.node, AppProcess.node, EffectFlock.node, CrossSpawnSpawner.node])),
+        ),
       ),
-    ),
-  )
-  expect(removed).toBe(true)
-  expect(existsSync(gitdir)).toBe(false)
+    )
   const format = "%(refname)"
-  const refs = (await $`git for-each-ref --format=${format} refs/kilo/materialize`.cwd(source.path).text()).trim()
-  expect(refs).toBe(other)
+  const pins = async () =>
+    (await $`git for-each-ref --format=${format} refs/kilo/materialize`.cwd(source.path).text()).trim()
+  expect(await remove()).toBe(true)
+  expect(existsSync(gitdir)).toBe(false)
+  expect(await pins()).toBe(other)
+
+  // A repository already removed by an interrupted earlier cleanup still releases its pin.
+  await $`git update-ref ${pin} ${hash}`.cwd(source.path).quiet()
+  expect(await remove()).toBe(true)
+  expect(await pins()).toBe(other)
 }, 30_000)
 
 test("prepares a routed worktree once without tracking, then tracks current content without reseeding", async () => {

@@ -237,9 +237,12 @@ export namespace KiloSnapshotCleanup {
         )
           return yield* Effect.fail(new Error("snapshot repository changed during cleanup"))
         yield* Effect.uninterruptible(input.fs.remove(quarantine, { recursive: true, force: true }))
-        yield* release(input.fs, directory, gitdir)
         return true
-      }),
+      }).pipe(
+        // Every success exit means the repository is gone, including one already removed by
+        // an earlier interrupted cleanup, so none of them may leave the seed pin behind.
+        Effect.tap(() => release(input.fs, directory, gitdir)),
+      ),
       `snapshot:${gitdir}`,
     )
   })
