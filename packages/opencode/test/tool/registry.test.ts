@@ -251,6 +251,18 @@ describe("tool.registry", () => {
     }),
   )
 
+  // kilocode_change start - the CLI can schedule and cancel its own future wakeups
+  it.instance("exposes the scheduled wakeup tools", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("schedule_wakeup")
+      expect(ids).toContain("cancel_wakeup")
+    }),
+  )
+  // kilocode_change end
+
   it.instance("does not expose execute unless code mode is enabled", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
