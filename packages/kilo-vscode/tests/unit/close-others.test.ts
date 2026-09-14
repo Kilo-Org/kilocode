@@ -19,6 +19,7 @@ function scene(ids: string[], opts: { active?: string; term?: string; keep?: str
   let termActive = opts.term
   let session = opts.active
   let pending: string | undefined
+  let reviewActive = false
   const remove = (id: string) => {
     const index = open.indexOf(id)
     if (index >= 0) open.splice(index, 1)
@@ -30,6 +31,7 @@ function scene(ids: string[], opts: { active?: string; term?: string; keep?: str
     activateTerminal: (id) => {
       calls.push(`activate:${id}`)
       termActive = id
+      reviewActive = false
     },
     deactivateTerminal: () => {
       calls.push("deactivate")
@@ -43,10 +45,19 @@ function scene(ids: string[], opts: { active?: string; term?: string; keep?: str
     },
     closeReview: () => {
       calls.push("closeReview")
+      reviewActive = false
       remove(REVIEW)
+    },
+    selectReviewTab: () => {
+      calls.push("selectReview")
+      termActive = undefined
+      session = undefined
+      pending = undefined
+      reviewActive = true
     },
     selectSessionTab: (id, isPendingTab) => {
       calls.push(`select:${id}:${isPendingTab}`)
+      reviewActive = false
       if (isPendingTab) {
         pending = id
         session = undefined
@@ -78,7 +89,12 @@ function scene(ids: string[], opts: { active?: string; term?: string; keep?: str
       pending = undefined
     },
   }
-  return { deps, calls, open, visible: () => termActive ?? session ?? pending }
+  return {
+    deps,
+    calls,
+    open,
+    visible: () => (reviewActive && open.includes(REVIEW) ? REVIEW : (termActive ?? session ?? pending)),
+  }
 }
 
 describe("agent manager close others", () => {
@@ -129,6 +145,16 @@ describe("agent manager close others", () => {
     expect(s.calls).toContain("closeReview")
     expect(s.open).toEqual(["ses:a"])
     expect(s.visible()).toBe("ses:a")
+  })
+
+  it("reveals a review target and never routes it through the session path", () => {
+    const s = scene(["ses:a", REVIEW, TERM_1], { active: "ses:a" })
+
+    closeOthers(REVIEW, s.deps)
+
+    expect(s.calls).toEqual(["deactivate", "selectReview", "sessionClose:ses:a", "closeTerminal:terminal:1"])
+    expect(s.open).toEqual([REVIEW])
+    expect(s.visible()).toBe(REVIEW)
   })
 
   it("closes a pending draft among the others", () => {

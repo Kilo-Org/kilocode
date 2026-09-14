@@ -8,6 +8,7 @@ import {
   openSessionTab,
   insertSessionTabAfter,
   pendingTabForCreated,
+  pruneClosed,
   reconcileTabs,
   reconcileTrackedTabs,
   replacePendingTab,
@@ -258,6 +259,25 @@ describe("tracked tab restore", () => {
     expect(
       restoreTrackedTabs(inventory(["s1", "s2", "s3"]), ["s1"], undefined, trackedPending, identity, new Set(["s2"])),
     ).toEqual(["s1", "s3"])
+  })
+
+  it("drops a closed id even when it is present in current and order", () => {
+    expect(
+      restoreTrackedTabs(
+        inventory(["s1", "s2"]),
+        ["s1", "s2"],
+        ["s1", "s2"],
+        trackedPending,
+        reorder,
+        new Set(["s2"]),
+      ),
+    ).toEqual(["s1"])
+  })
+
+  it("prunes suppressed ids the host no longer tracks", () => {
+    const closed = new Set(["s1", "s2"])
+    pruneClosed(closed, [{ id: "s1" }])
+    expect([...closed]).toEqual(["s1"])
   })
 })
 

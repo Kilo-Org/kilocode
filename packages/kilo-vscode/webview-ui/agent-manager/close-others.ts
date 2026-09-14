@@ -9,6 +9,7 @@ export interface CloseOthersDeps {
   deactivateTerminal: () => void
   closeTerminal: (id: string) => void
   closeReview: () => void
+  selectReviewTab: () => void
   selectSessionTab: (id: string, pending: boolean) => void
   sessionClose: (id: string) => void
 }
@@ -24,11 +25,11 @@ export interface CloseOthersDeps {
 export function closeOthers(target: string, deps: CloseOthersDeps) {
   const ids = [...deps.tabIds()]
   const terminal = isTerminalTabId(target)
+  const review = target === deps.REVIEW_TAB_ID
   if (terminal) deps.activateTerminal(target)
-  if (!terminal) {
-    deps.deactivateTerminal()
-    deps.selectSessionTab(target, deps.isPending(target))
-  }
+  if (!terminal) deps.deactivateTerminal()
+  if (review) deps.selectReviewTab()
+  if (!terminal && !review) deps.selectSessionTab(target, deps.isPending(target))
   for (const id of ids) {
     if (id === target) continue
     if (isTerminalTabId(id)) {
