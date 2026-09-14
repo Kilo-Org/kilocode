@@ -10,7 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { hasPopup, isTextControl } from "../../utils/focus"
+import { createHold, hasPopup, isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
@@ -623,6 +623,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  const hold = createHold({
+    target: () => textareaRef,
+    busy: () => hasPopup(),
+  })
+  window.addEventListener("focus", hold.reclaim)
+  onCleanup(() => window.removeEventListener("focus", hold.reclaim))
+
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
     const draft = text().trim()
@@ -1053,6 +1060,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "action" && message.action === "focusInput") {
       textareaRef?.focus()
+    }
+
+    if (message.type === "action" && message.action === "restoreInput") {
+      if (hasPopup()) return
+      const active = document.activeElement
+      if (active && active !== textareaRef && isTextControl(active)) return
+      textareaRef?.focus({ preventScroll: true })
     }
 
     if (message.type === "enhancePromptResult") {
@@ -1918,10 +1932,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onPaste={handlePaste}
             onClick={syncGhost}
             onFocus={() => {
+              hold.claim()
               syncGhost()
               props.onFocusChange?.(true)
             }}
             onBlur={() => {
+              hold.release()
               syncGhost()
               props.onFocusChange?.(false)
             }}
