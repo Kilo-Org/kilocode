@@ -245,6 +245,20 @@ describe("tracked tab restore", () => {
       "s2",
     ])
   })
+
+  it("never restores a local tab the user just closed while the host still lists it", () => {
+    // Close Others closed "s2"; an early host state push still lists it. The
+    // optimistic close must win, or the tab reappears and later pushes keep it.
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2"]), ["s1"], ["s1", "s2"], trackedPending, reorder, new Set(["s2"])),
+    ).toEqual(["s1"])
+  })
+
+  it("still restores other missing locals while a closed tab is suppressed", () => {
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2", "s3"]), ["s1"], undefined, trackedPending, identity, new Set(["s2"])),
+    ).toEqual(["s1", "s3"])
+  })
 })
 
 describe("tracked tab reconcile", () => {

@@ -165,8 +165,11 @@ export function restoreTrackedTabs(
   order: string[] | undefined,
   check: PendingTabCheck,
   apply: ApplyLocalTabOrder,
+  closed: ReadonlySet<string> = new Set(),
 ): string[] | undefined {
-  const locals = [...inventory.local]
+  // A close is optimistic in the webview: the host can still list the session
+  // in an intermediate state push. Never resurrect an id the user just closed.
+  const locals = inventory.local.filter((id) => !closed.has(id))
   const evict = (ids: string[]) =>
     ids.filter((id) => !inventory.external?.has(id) && !inventory.unresolved?.has(id) && !inventory.rejected?.has(id))
   const real = current.filter((id) => !check(id))

@@ -311,6 +311,10 @@ const AgentManagerContent: Component = () => {
   /** Remove a session ID from the local tab (no-op if absent). */
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
+  // Local sessions the user closed while a host state push can still list them.
+  // Kept until the host stops tracking the id so a stale push cannot resurrect
+  // the tab; see `restoreTrackedTabs` at the `agentManager.state` handler.
+  const closedLocals = new Set<string>()
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const sidebar = createSidebarCollapse(vscode, { initial: persisted?.sidebarCollapsed })
   const sidebarCollapsed = sidebar.collapsed
@@ -723,6 +727,7 @@ const AgentManagerContent: Component = () => {
     return id
   }
   const placeLocal = (id: string, pending: string | undefined, active: string | undefined) => {
+    closedLocals.delete(id)
     const existing = localSessionIDs().includes(id)
     const next = pending
       ? replacePendingTab({ ids: localSessionIDs(), active }, pending, id)
@@ -1188,12 +1193,17 @@ const AgentManagerContent: Component = () => {
       if (ms?.worktreeId) setSelection(ms.worktreeId)
     }
     // Restore local session IDs from persisted state (sessions with no worktreeId)
+    const tracked = trackedSessionInventory(state.sessions, session.sessions())
+    for (const id of closedLocals) {
+      if (!state.sessions.some((entry) => entry.id === id)) closedLocals.delete(id)
+    }
     const restored = restoreTrackedTabs(
-      trackedSessionInventory(state.sessions, session.sessions()),
+      tracked,
       localSessionIDs(),
       state.tabOrder?.[LOCAL],
       isPending,
       applyTabOrder,
+      closedLocals,
     )
     if (restored) setLocalSessionIDs(restored)
     if (switched === "switched" && needsLocalDraft(localSessionIDs(), terms.forSelection(nsKey(LOCAL)))) addPendingTab()
@@ -1999,6 +2009,7 @@ const AgentManagerContent: Component = () => {
     }
     forgetSessionFocus(sessionId)
     if (pending || localSet().has(sessionId)) {
+      if (!pending) closedLocals.add(sessionId)
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
     }
     if (pending) {
