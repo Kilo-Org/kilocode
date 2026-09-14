@@ -292,8 +292,14 @@ export class PRStatusPoller {
     }
 
     // Full syncs resolve every worktree in one GraphQL request (see pr/am-pr-seed.ts)
-    // so the per-worktree `fetchOne` calls below skip their own `gh` lookups.
-    const seeds: Seeds = full ? await seed(targets, this.host(generation)) : new Map()
+    // so the per-worktree `fetchOne` calls below skip their own `gh` lookups. A seed
+    // failure must never abort the sync; those worktrees just fall back to fetchOne.
+    const seeds: Seeds = full
+      ? await seed(targets, this.host(generation)).catch((err: unknown) => {
+          this.options.log("Batched PR lookup failed:", err instanceof Error ? err.message : String(err))
+          return new Map()
+        })
+      : new Map()
     if (this.stale(generation)) return
 
     const thunks = targets.map((wt) => () => this.fetchOne(wt.id, generation, undefined, seeds.get(wt.id)))

@@ -59,18 +59,27 @@ export async function seed(targets: Worktree[], host: SeedHost): Promise<Seeds> 
 async function collect(targets: Worktree[], host: SeedHost): Promise<Item[]> {
   const items: Item[] = []
   for (const wt of targets) {
-    if (!existsSync(wt.path)) continue
-    const branch = await host.branch(wt)
-    if (host.stale()) return items
-    if (!branch) continue
-    const head = await host.git(["rev-parse", "HEAD"], wt.path).then(
-      (out) => out.trim() || undefined,
-      () => undefined,
-    )
-    if (host.stale()) return items
-    items.push({ id: wt.id, branch, head, cwd: wt.path })
+    const item = await one(wt, host)
+    if (item) items.push(item)
   }
   return items
+}
+
+/** One worktree's batch item, or undefined when it cannot be resolved. */
+async function one(wt: Worktree, host: SeedHost): Promise<Item | undefined> {
+  if (!existsSync(wt.path)) return undefined
+  // A rejected branch lookup must not abort the sync for every other worktree.
+  const branch = await host.branch(wt).then(
+    (value) => value,
+    () => undefined,
+  )
+  if (host.stale() || !branch) return undefined
+  const head = await host.git(["rev-parse", "HEAD"], wt.path).then(
+    (out) => out.trim() || undefined,
+    () => undefined,
+  )
+  if (host.stale()) return undefined
+  return { id: wt.id, branch, head, cwd: wt.path }
 }
 
 async function chunk(

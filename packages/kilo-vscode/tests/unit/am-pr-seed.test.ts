@@ -67,4 +67,17 @@ describe("am-pr-seed", () => {
     const seeds = await seed([worktree("w1", "feature")], h)
     expect(seeds.size).toBe(0)
   })
+
+  it("skips a worktree whose branch lookup rejects instead of aborting the sync", async () => {
+    const h = host(() => ({
+      data: { repository: { b0: { nodes: [node(7)] }, b1: { nodes: [] } } },
+    }))
+    h.branch = async (wt) => {
+      if (wt.id === "w0") throw new Error("not a git repository")
+      return wt.branch
+    }
+    const seeds = await seed([worktree("w0", "broken"), worktree("w1", "feature")], h)
+    expect(seeds.get("w0")).toBeUndefined()
+    expect(seeds.get("w1")?.number).toBe(7)
+  })
 })
