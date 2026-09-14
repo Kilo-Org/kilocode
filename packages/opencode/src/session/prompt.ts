@@ -96,6 +96,7 @@ import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kil
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
+import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1450,15 +1451,10 @@ export const layer = Layer.effect(
     ) => Effect.Effect<SessionV1.WithParts, Image.Error> = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput, prior?: KiloSessionControl.Ticket) {
         const background = KiloSessionControl.background(input.parts)
-        if (!prior && input.parts.some((part) => part.type !== "text" || !part.synthetic)) {
-          yield* goals.pause(input.sessionID)
-        }
-        const ticket =
-          prior ??
-          (yield* control.begin(
-            input.sessionID,
-            input.noReply !== true && input.parts.some((part) => part.type !== "text" || !part.synthetic),
-          ))
+        // kilocode_change - a real user message takes priority over an active goal
+        // for its turn but must not pause the goal; the goal loop resumes after it.
+        const human = input.parts.some((part) => part.type !== "text" || !part.synthetic)
+        const ticket = prior ?? (yield* control.begin(input.sessionID, input.noReply !== true && human))
         // kilocode_change end
         const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
         yield* revert.cleanup(session)
@@ -1976,6 +1972,12 @@ export const layer = Layer.effect(
           // not a premature stop, so clients must not flash an interruption warning.
           if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
             closeReasons.set(sessionID, "superseded")
+            // kilocode_change - record which turn handed off so a goal loop that
+            // owns it can continue after the queued prompt instead of pausing.
+            // Only record while a goal is active, so plain sessions never
+            // accumulate markers.
+            const handoff = KiloSessionPromptQueue.active(sessionID)
+            if (handoff && GoalState.active(sessionID)) KiloSessionPromptQueue.markSuperseded(sessionID, handoff)
             return "break" as const
           }
           // kilocode_change end
