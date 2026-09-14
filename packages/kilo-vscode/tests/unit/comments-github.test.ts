@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { postAllGithub, resolveGithubContext, type CommentsGithub } from "../../webview-ui/diff-viewer/comments-github"
+import {
+  createCommentsGithub,
+  postAllGithub,
+  resolveGithubContext,
+  type CommentsGithub,
+} from "../../webview-ui/diff-viewer/comments-github"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import type { ReviewComment } from "../../webview-ui/diff-viewer/review-comments"
 
@@ -23,7 +28,6 @@ function comment(id: string, line: number): ReviewComment {
 
 function fake(handler: (comment: ReviewComment) => { success: boolean; error?: string }): CommentsGithub {
   return {
-    available: () => true,
     resolve: () => undefined,
     send: async (item) => handler(item),
   }
@@ -44,7 +48,6 @@ describe("resolveGithubContext", () => {
       prNumber: 7,
       prUrl: target.prUrl,
       snapshotId: "snap-1",
-      label: "GitHub #7",
       closed: false,
     })
   })
@@ -81,6 +84,33 @@ describe("resolveGithubContext", () => {
     expect(
       resolveGithubContext({ target, file: "src/file.ts", side: "additions", start: 2, end: 2, patch }),
     ).toBeUndefined()
+  })
+})
+
+describe("createCommentsGithub", () => {
+  function github(canPublish: boolean) {
+    return createCommentsGithub({
+      target: () => target,
+      snapshot: () => snapshot,
+      diffs: () => [],
+      post: () => {},
+      canPublish: () => canPublish,
+    })
+  }
+
+  it("resolves a context while publication is enabled", () => {
+    expect(github(true).resolve(comment("a", 2))).toEqual({
+      prNumber: 7,
+      prUrl: target.prUrl,
+      snapshotId: "snap-1",
+      closed: true,
+    })
+  })
+
+  it("refuses to resolve or send while publication is disabled", async () => {
+    const disabled = github(false)
+    expect(disabled.resolve(comment("a", 2))).toBeUndefined()
+    await expect(disabled.send(comment("a", 2))).resolves.toEqual({ success: false })
   })
 })
 
