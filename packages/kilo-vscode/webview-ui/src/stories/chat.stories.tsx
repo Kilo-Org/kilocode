@@ -1162,6 +1162,9 @@ const headerMessages: Message[] = [
     mode: "default",
     agent: "code",
     path: { cwd: "/project", root: "/project" },
+    // Real token counts, so the header renders its loaded state rather than the
+    // loading skeletons.
+    tokens: { input: 21_300, output: 58, reasoning: 1_200, cache: { read: 3_100, write: 0 } },
   },
 ]
 const headerParts: Record<string, Part[]> = {
@@ -1285,6 +1288,7 @@ export const TaskHeaderWithTodos: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       messages: () => headerMessages,
+      visibleMessages: () => headerMessages,
       currentSession: () => ({
         id: SESSION_ID,
         title: "Task: Can you use the update_todo_list tool to create a CLI interface implementation?",
@@ -1359,6 +1363,8 @@ export const TaskHeaderBackgroundAgents1280: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID }),
       messages: () => headerMessages,
+      visibleMessages: () => headerMessages,
+      getParts: (id: string) => headerParts[id] ?? [],
       currentSession: () => ({
         id: SESSION_ID,
         title: "Investigate request size limits",
@@ -1400,6 +1406,8 @@ export const TaskHeaderWithTodosAllDone: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
       messages: () => [{ id: "msg-001" }] as any[],
+      visibleMessages: () => headerMessages,
+      getParts: (id: string) => headerParts[id] ?? [],
       currentSession: () => ({
         id: SESSION_ID,
         title: "Writing poems about the team",

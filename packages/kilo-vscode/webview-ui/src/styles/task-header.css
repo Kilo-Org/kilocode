@@ -484,8 +484,10 @@
   padding: 0 8px;
 }
 
-/* Skeleton placeholders keep each graph row at its final height until the
-   real data arrives. Same pulse as the Agent Manager worktree skeletons. */
+/* Skeleton placeholders for the graph rows. Each row keeps its final height at
+   all times, so the header never changes height and the transcript never moves.
+   A skeleton is a loading state and only renders while a turn is running.
+   Same pulse as the Agent Manager worktree skeletons. */
 @keyframes task-header-skeleton-pulse {
   0%,
   100% {

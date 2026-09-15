@@ -288,25 +288,26 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         </div>
       </Show>
       {/* Expanded graph section: timeline + context bar + token breakdown.
-          While a turn is running the section stays mounted so each row holds
-          its final height and fills in place, instead of appearing one row at
-          a time and shifting the transcript. Skeletons are loading states
-          only: without a running turn the section falls back to its earlier
-          behavior of showing just the rows that have data. */}
-      <Show when={expanded() && (hasTimeline() || busy())}>
+          The section always reserves the height of all three rows, so the
+          header keeps one height as a turn streams and the transcript never
+          moves on a turn boundary. A row with no data shows a skeleton only
+          while a turn is running; otherwise it stays empty. */}
+      <Show when={expanded()}>
         <div data-component="task-header-graph">
           <Show
             when={hasTimeline()}
             fallback={
               <div class="task-header-skeleton-chart" aria-hidden="true">
-                <For each={[14, 22, 10, 18, 8]}>
-                  {(h, i) => (
-                    <div
-                      class="task-header-skeleton"
-                      style={{ height: `${h}px`, "animation-delay": `${i() * 80}ms` }}
-                    />
-                  )}
-                </For>
+                <Show when={busy()}>
+                  <For each={[14, 22, 10, 18, 8]}>
+                    {(h, i) => (
+                      <div
+                        class="task-header-skeleton"
+                        style={{ height: `${h}px`, "animation-delay": `${i() * 80}ms` }}
+                      />
+                    )}
+                  </For>
+                </Show>
               </div>
             }
           >
@@ -316,11 +317,13 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             <ContextProgress />
           </div>
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
-          <Show when={busy() && !tokens()}>
+          <Show when={!tokens()}>
             <div class="task-header-tokens" aria-hidden="true">
-              <div class="task-header-skeleton" style={{ width: "42px" }} />
-              <div class="task-header-skeleton" style={{ width: "36px" }} />
-              <div class="task-header-skeleton" style={{ width: "28px" }} />
+              <Show when={busy()}>
+                <div class="task-header-skeleton" style={{ width: "42px" }} />
+                <div class="task-header-skeleton" style={{ width: "36px" }} />
+                <div class="task-header-skeleton" style={{ width: "28px" }} />
+              </Show>
             </div>
           </Show>
         </div>

@@ -44,9 +44,10 @@ export const ContextProgress: Component = () => {
     return { used, reserved, available, limit: max, pctUsed, pctReserved, pctAvail, output }
   })
 
-  // The skeleton is only a loading state: it shows while a turn is running and
-  // the context is not resolvable yet. Without a context limit the row stays
-  // hidden, as it did before, instead of pulsing forever.
+  // The skeleton is a loading state, so it shows only while a turn is running
+  // and the context is not resolvable yet. The row itself is always rendered to
+  // keep the header height fixed. Without a context limit the row stays empty,
+  // as it did before, instead of pulsing forever.
   const pending = createMemo(() => session.status() === "busy" && limit() > 0 && !data())
 
   const tip = createMemo(() => {
@@ -62,13 +63,13 @@ export const ContextProgress: Component = () => {
     <Show
       when={data()}
       fallback={
-        <Show when={pending()}>
-          <div class="context-progress" aria-hidden="true">
+        <div class="context-progress" aria-hidden="true">
+          <Show when={pending()}>
             <div class="task-header-skeleton" style={{ width: "32px" }} />
             <div class="task-header-skeleton" style={{ flex: 1, height: "4px" }} />
             <div class="task-header-skeleton" style={{ width: "32px" }} />
-          </div>
-        </Show>
+          </Show>
+        </div>
       }
     >
       {(d) => (
