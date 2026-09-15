@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test"
 import {
   backgroundAgents,
+  backgroundChildren,
   backgroundJobAgents,
+  children,
   fitBackgroundAgents,
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
@@ -70,6 +72,51 @@ describe("fitBackgroundAgents", () => {
     expect(fitBackgroundAgents([100], 99, 50, 6)).toBe(0)
     expect(fitBackgroundAgents([], 100, 50, 6)).toBe(0)
     expect(fitBackgroundAgents([100, 120], 0, 50, 6)).toBe(0)
+  })
+})
+
+describe("backgroundChildren", () => {
+  it("collects only children spawned with the background flag", () => {
+    const tools = [
+      taskPart({ id: "part_1", child: "ses_a", background: true }),
+      taskPart({ id: "part_2", child: "ses_b", background: false }),
+      taskPart({ id: "part_3", child: "ses_c" }),
+    ]
+
+    expect([...backgroundChildren(tools)]).toEqual(["ses_a"])
+  })
+
+  it("reads the flag from either the state or the part metadata", () => {
+    const tools = [
+      taskPart({ id: "part_1", child: "ses_a", background: true }),
+      taskPart({ id: "part_2", child: "ses_b", background: true, onPart: true }),
+    ]
+
+    expect([...backgroundChildren(tools)].sort()).toEqual(["ses_a", "ses_b"])
+  })
+
+  it("ignores non-task tools and parts without a child session", () => {
+    const bash = { id: "part_3", type: "tool", tool: "bash", state: { status: "running", input: {} } } as ToolPart
+
+    expect([...backgroundChildren([bash, taskPart({ id: "part_4", background: true })])]).toEqual([])
+  })
+})
+
+describe("children", () => {
+  it("keeps background children while listing each task child once in spawn order", () => {
+    const tools = [
+      taskPart({ id: "part_1", child: "ses_a" }),
+      taskPart({ id: "part_2", child: "ses_b", background: true }),
+      taskPart({ id: "part_3", child: "ses_a" }),
+    ]
+
+    expect(children(tools)).toEqual(["ses_a", "ses_b"])
+  })
+
+  it("ignores non-task tools and parts without a child session", () => {
+    const bash = { id: "part_3", type: "tool", tool: "bash", state: { status: "running", input: {} } } as ToolPart
+
+    expect(children([bash, taskPart({ id: "part_4", background: true })])).toEqual([])
   })
 })
 

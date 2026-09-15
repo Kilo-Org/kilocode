@@ -221,6 +221,8 @@ import type {
   KilocodeSessionImportSessionResponses,
   KilocodeSessionModelUsageErrors,
   KilocodeSessionModelUsageResponses,
+  KilocodeSnapshotPrepareErrors,
+  KilocodeSnapshotPrepareResponses,
   KiloEditErrors,
   KiloEditResponses,
   KiloFimErrors,
@@ -7356,6 +7358,42 @@ export class Heap extends HeyApiClient {
   }
 }
 
+export class Snapshot extends HeyApiClient {
+  /**
+   * Prepare a snapshot repository
+   *
+   * Initialize and seed snapshots for the routed directory without creating a session or tracking ref.
+   */
+  public prepare<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeSnapshotPrepareResponses,
+      KilocodeSnapshotPrepareErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/snapshot/prepare",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class ProviderUsage extends HeyApiClient {
   /**
    * Get provider usage
@@ -8668,6 +8706,11 @@ export class Kilocode extends HeyApiClient {
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
+  }
+
+  private _snapshot?: Snapshot
+  get snapshot(): Snapshot {
+    return (this._snapshot ??= new Snapshot({ client: this.client }))
   }
 
   private _providerUsage?: ProviderUsage

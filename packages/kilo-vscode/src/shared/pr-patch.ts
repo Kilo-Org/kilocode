@@ -45,9 +45,12 @@ export function parsePatch(patch: string, totals?: { additions: unknown; deletio
 function hunks(patch: string, selection?: Range) {
   const lines = patch.split("\n")
   if (lines.at(-1) === "") lines.pop()
+  // Patches may include file headers (`diff --git`, `---`, `+++`) before the first hunk.
+  const start = lines.findIndex((line) => line.startsWith("@@"))
+  if (start < 0) return
   const result: Range[] = []
   const selected: string[] = []
-  let index = 0
+  let index = start
   let added = 0
   let removed = 0
   let left = 0
