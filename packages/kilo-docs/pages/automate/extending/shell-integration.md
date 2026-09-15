@@ -59,7 +59,7 @@ When using the Kilo Code VS Code extension with the Agent Manager, each agent se
 | Shortcut | Action |
 |---|---|
 | <kbd>Cmd</kbd>+<kbd>/</kbd> | Focus the session's terminal |
-| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agent mode |
+| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agents |
 
 ### Terminal Context Menu Actions
 
