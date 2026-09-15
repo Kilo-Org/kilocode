@@ -100,12 +100,14 @@ it.instance(
       const sessions = yield* Session.Service
       const session = yield* sessions.create({ title: "Role index" })
       yield* add(session.id, "user", { type: "text", text: "role-index-needle" })
-      expect((yield* run("role-index-needle")).results.map((item) => item.id)).toEqual([session.id])
+      // Create the indexes without preparing an indexed lookup, so the drop surfaces at prepare time.
+      expect((yield* run("role-index-absent")).results).toEqual([])
       const { db } = yield* Database.Service
       yield* db.run(sql`DROP INDEX recall_message_role_idx`).pipe(Effect.orDie)
       const result = yield* run("role-index-needle")
       expect(result.results.map((item) => item.id)).toEqual([session.id])
       expect(result.results[0]?.matches.map((item) => item.source)).toEqual(["user"])
+      expect((yield* run("role-index-needle")).results.map((item) => item.id)).toEqual([session.id])
     }),
   { git: true },
 )

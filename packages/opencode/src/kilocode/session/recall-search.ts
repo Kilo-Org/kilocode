@@ -1,6 +1,6 @@
 import path from "path"
 import { eq, inArray, sql } from "drizzle-orm"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { RecallPartIndex } from "@opencode-ai/core/kilocode/session/recall-part-index"
 import { RecallMessageIndex } from "@opencode-ai/core/kilocode/session/recall-message-index"
@@ -97,9 +97,15 @@ export namespace RecallSearch {
     FROM message ${indexed ? sql.raw(`INDEXED BY \`${RecallMessageIndex.name}\``) : sql.empty()}
     WHERE id IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`
 
+  // A missing index fails at prepare time, which the driver reports as a defect, so recover from the whole cause.
   const lookup = (db: Database.Interface["db"], ids: MessageID[], indexed: boolean) =>
     indexed
-      ? db.all<MessageRow>(messages(ids, true)).pipe(Effect.catch((error) => fallback(db, ids, error)))
+      ? db.all<MessageRow>(messages(ids, true)).pipe(
+          Effect.catchCauseIf(
+            (cause) => !Cause.hasInterruptsOnly(cause),
+            (cause) => fallback(db, ids, Cause.squash(cause)),
+          ),
+        )
       : db.all<MessageRow>(messages(ids, false))
 
   // A missing or mismatched role index degrades to non-covering lookups, so report it once per connection.
