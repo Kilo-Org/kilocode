@@ -349,6 +349,10 @@
   border-style: dashed;
 }
 
+.prompt-input-container--mention-drop {
+  border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
+}
+
 .prompt-input-wrapper {
   display: flex;
   gap: 8px;

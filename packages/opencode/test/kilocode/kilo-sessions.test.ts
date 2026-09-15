@@ -28,6 +28,7 @@ import { testEffect } from "../lib/effect"
 import { InstanceStore } from "../../src/project/instance-store"
 import { TestInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { RemoteProtocol } from "../../src/kilo-sessions/remote-protocol"
+import { MessageV2 } from "../../src/session/message-v2"
 
 const it = testEffect(AppNodeBuilder.build(CrossSpawnSpawner.node))
 const multi = testEffect(Layer.merge(AppNodeBuilder.build(CrossSpawnSpawner.node), testInstanceStoreLayer))
@@ -1324,6 +1325,55 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
     return ingestBodies.flatMap((b) => b.data).filter((d) => d.type === "session_pr_link")
   }
 
+  // Session-output PR detection lives in the KiloSessions event handlers, which
+  // are registered lazily by `init()` into the per-directory instance state.
+  // Keep that layer alive for the whole test through a managed runtime so the
+  // GlobalBus dispatcher is still installed when the test emits a part event;
+  // the caller disposes it in a `finally`.
+  async function initKiloSessions() {
+    const { ManagedRuntime } = await import("effect")
+    const runtime = ManagedRuntime.make(layer())
+    await runtime.runPromise(KiloSessions.Service.use((svc) => svc.init()))
+    return runtime
+  }
+
+  // The ingest queue is a module-level singleton with a ~1s debounce, so a
+  // session_pr_link queued by an earlier test can flush into this test's mock
+  // buffer after beforeEach resets it. Settle first, then drop those stale
+  // items so the assertions below count only this test's items.
+  async function clearStaleIngest() {
+    await new Promise((r) => setTimeout(r, 1200))
+    ingestBodies.length = 0
+  }
+
+  function emitPart(sessionID: string, part: unknown) {
+    GlobalBus.emit("event", {
+      directory: Instance.directory,
+      payload: {
+        id: `part-event-${Math.random().toString(36).slice(2)}`,
+        type: MessageV2.Event.PartUpdated.type,
+        properties: { sessionID, part, time: Date.now() },
+      },
+    })
+  }
+
+  function textPart(sessionID: string, id: string, text: string) {
+    return { id, sessionID, messageID: `msg-${id}`, type: "text", text }
+  }
+
+  function toolPart(sessionID: string, id: string, output: string) {
+    const time = { start: Date.now(), end: Date.now() }
+    return {
+      id,
+      sessionID,
+      messageID: `msg-${id}`,
+      type: "tool",
+      callID: `call-${id}`,
+      tool: "bash",
+      state: { status: "completed", input: {}, output, title: "gh pr create", metadata: {}, time },
+    }
+  }
+
   test("stored override advertises prLink and ingests the set triple", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
@@ -1486,5 +1536,105 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
     } finally {
       detect.mockRestore()
     }
+  }, 30000)
+
+  test("text part PR URL advertises prLink and enqueues one item", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, textPart(id, "p-text", "Opened https://github.com/o/r/pull/7 for this change"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const payload = await capturedGetSessions()()
+          const row = payload.sessions.find((s) => s.id === id)
+          expect(row?.prLink).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/7", prNumber: 7 })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const links = prLinkItems()
+          expect(links.length).toBe(1)
+          expect(links[0]!.data).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/7", prNumber: 7 })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("repeated identical URL enqueues no second item", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, textPart(id, "p-text-1", "PR: https://github.com/o/r/pull/8"))
+          await new Promise((r) => setTimeout(r, 200))
+          await capturedGetSessions()()
+          await new Promise((r) => setTimeout(r, 1200))
+          expect(prLinkItems().length).toBe(1)
+
+          // The same URL in later output is not a change: no second ingest item
+          // and the heartbeat still advertises the same link.
+          emitPart(id, textPart(id, "p-text-2", "PR: https://github.com/o/r/pull/8"))
+          await new Promise((r) => setTimeout(r, 200))
+          const payload = await capturedGetSessions()()
+          expect(payload.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "github",
+            prUrl: "https://github.com/o/r/pull/8",
+            prNumber: 8,
+          })
+          await new Promise((r) => setTimeout(r, 1200))
+          expect(prLinkItems().length).toBe(1)
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("completed tool part output PR URL advertises prLink and enqueues one item", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, toolPart(id, "p-tool", "https://github.com/o/r/pull/9\n"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const payload = await capturedGetSessions()()
+          const row = payload.sessions.find((s) => s.id === id)
+          expect(row?.prLink).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/9", prNumber: 9 })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const links = prLinkItems()
+          expect(links.length).toBe(1)
+          expect(links[0]!.data).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/9", prNumber: 9 })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
   }, 30000)
 })
