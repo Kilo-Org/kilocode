@@ -112,6 +112,9 @@ export interface SessionContextValue {
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
+  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
+  preferencesReady: Accessor<boolean>
+  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>

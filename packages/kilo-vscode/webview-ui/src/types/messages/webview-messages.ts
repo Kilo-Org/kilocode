@@ -1468,12 +1468,13 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Per-mode model selection persistence (webview → extension)
+// Explicit preferred and per-mode model selection persistence (webview → extension)
 export interface PersistModelSelectionRequest {
   type: "persistModelSelection"
   agent: string
   providerID: string
   modelID: string
+  variant?: string
 }
 
 export interface RequestModelSelectionsMessage {
