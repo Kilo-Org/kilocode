@@ -454,6 +454,143 @@
 
 ## [Unreleased]
 
+## [7.1.7-rc.1] - 2026-09-15
+
+### Added
+- feat(vscode): add task attention notifications by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/13771
+- feat(cli): make terminal links clickable by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13944
+- feat(vscode): add distinct subagent avatars by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13940
+- feat(cli): add /caffeinate command by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13927
+- feat(vscode): sync Agent Manager PR fixes with remote by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13951
+- feat(vscode): show PR conversation timeline by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13958
+- feat(agent-manager): show reviewer avatars in PR sidebar by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13952
+- feat(vscode): make working indicator scroll chat by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13965
+- feat(vscode): experimental CLAUDE code migration by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13929
+- feat(vscode): add PR merge readiness controls by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13953
+- feat(vscode): reference a model inline in the prompt with @ by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14006
+- feat(agent-manager): open notification Show in Agent Manager for its sessions by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/13932
+- feat(cli): enable shared agent board via experimental env flag by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14013
+- feat(vscode): move compaction model setting to Models tab by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14045
+- feat: support permission rejection feedback in CLI and VS Code by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14051
+- feat(agent-manager): drag sessions, worktrees, terminals, and documents into the prompt by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14102
+- feat(cli): reload the whole project from /reload by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14103
+- feat(vscode): post inline comments to GitHub pull requests by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14025
+- feat(agent-manager): pre-warm worktrees to speed up session creation by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14050
+- feat(docs-sync): open per-surface docs PRs, rank reviewers, and cover the cloud product surfaces by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14093
+- feat(cli): add scheduled wakeup and cancel tools by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14094
+- feat: enable the Kilo Swarm shared board by default by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14134
+- feat(vscode): add copy link action to PR comments by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14126
+- feat(agent-manager): pin project row with new worktree button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14146
+- feat(vscode): add reasoning display modes and headline setting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14144
+- feat(agent-manager): move add project to a fixed footer by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14149
+- feat(vscode): support a custom speech-to-text source by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14159
+- feat: make Kilo Swarm a top-level config setting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14160
+- feat(jetbrains): fold pasted blocks in the prompt input and transcript by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13889
+- feat(vscode): show chat message timestamps on hover by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14155
+- feat(vscode): show add-as-context selections as context cards by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14168
+- feat: move marketplace discovery and install into the CLI API by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12714
+
+### Fixed
+- fix(goal): remove credit wording by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13946
+- fix(kilo-console): reduce startup bundle size by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13925
+- fix(agent-manager): explain restricted workspaces by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13926
+- fix(goal): allow goals to replace running responses by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13942
+- fix(cli): prevent snapshot progress session hangs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13945
+- fix(remote): derive session repository metadata from the session directory by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13949
+- fix(vscode): unify icon button controls by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13948
+- fix(vscode): prevent clipped expanded PR comments by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13959
+- fix(cli): keep diagnostics edits responsive by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13960
+- fix(vscode): show board participants in message headers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13957
+- fix(vscode): smooth reasoning block transitions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13962
+- fix(vscode): align PR panel layout and header icon by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13950
+- fix(vscode): open subagents from board avatars by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13964
+- fix(agent-manager): open PR buttons in sidebar by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13966
+- fix(agent-manager): resolve pending board routes early by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13967
+- fix(vscode): restore speech button cursor by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13971
+- fix(vscode): resize Agent Manager worktree button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13973
+- fix(vscode): preserve plan opens across worktree switches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13970
+- fix(vscode): show PR push toggle state by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13975
+- fix(vscode): refine auto-merge split button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13976
+- fix(vscode): stabilize streaming reasoning layout by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13974
+- fix(vscode): stop tool reveal replay and settle encrypted reasoning by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13987
+- fix(cli): warn when board_post targets a stopped subagent by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13990
+- fix(vscode): align Agent Manager section header chevrons by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13991
+- fix(vscode): prevent duplicate permission prompts in Agent Manager by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13977
+- fix(vscode): remove redundant Experimental Claude Migration detail by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13995
+- fix(vscode): only feature recommended auto models by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13993
+- fix(vscode): render streamed text at frame cadence by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14002
+- fix(tui): submit and cancel custom answers in the question dialog by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14003
+- fix(vscode): animate subagent avatar from loading shimmer to identity by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14004
+- fix(vscode): speed up bash tool card rendering by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14007
+- fix(vscode,jetbrains): pause working timer while waiting for permission or question by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13936
+- fix(ci): stabilize visual regression runner and flaky PTY and TUI tests by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14047
+- fix(cli): only route auxiliary tasks to kilo-auto/small with kilo credentials by @maphew in https://github.com/Kilo-Org/kilocode/pull/13192
+- fix(vscode): keep the working indicator snug above the prompt by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14046
+- fix(review): format detailed findings as distinct sections by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14048
+- fix(cli): keep a session goal running when a message arrives by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14101
+- fix(vscode): prevent transcript handoff flicker by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14044
+- fix(vscode): keep background subagent cards collapsed and cap reasoning by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14104
+- fix(vscode): allow reapplying provider credentials after disconnect by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14105
+- fix(vscode): close @ mention menu on prose after a mention by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14106
+- fix(vscode): report failed mention drops and GitHub comment batches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14113
+- fix(opencode): link sessions to PRs without a timed gh pr view probe by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14075
+- fix(docs-sync): reuse CROSS_REPO_ACCESS_TOKEN for cloud reviewer ranking by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14123
+- fix(ci): install Go 1.26 for kilo-bench smoke tests by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14125
+- fix(ci): package VSIX with the current changelog by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14136
+- fix(agent-manager): do not inherit a merged PR on a reused branch name by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14145
+- fix(agent-manager): keep only the target tab on Close Others by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14127
+- fix(cli): speed up local recall searches and improve match ranking by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14148
+- fix(vscode): keep Agent Manager sidebar rendered when an icon changes registry by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14150
+- fix(vscode): stop clipping the working status label during a status swap by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14156
+- fix(vscode): stream visible subagent transcripts smoothly by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14158
+- fix(vscode): keep session header height stable while streaming by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14154
+- fix(ci): exclude flaky ai.google.dev links from link-checker by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14162
+- fix: keep Keep Awake active while a wakeup is scheduled by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14165
+- fix(cli): clear Keep Awake when a session with pending wakeups is deleted by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14169
+- fix(cli): stop looping on repeated malformed tool calls by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14163
+- fix: stop transcript jumps while subagent cards stream by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14166
+- fix: keep chat transcript text selections while the agent streams by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14164
+- fix(agent-manager): reload the PR diff when a review snapshot expires by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14183
+- fix(vscode): restore chat prompt focus after window reactivation by @mondalaci in https://github.com/Kilo-Org/kilocode/pull/14142
+- fix(vscode): match case-insensitive path casing in document previews by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14185
+- fix(agent-manager): report worktree problems accurately and recover from them by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14137
+
+### Changed
+- release(jetbrains): v7.1.6 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13930
+- Revert "feat(agent-manager): enable multiple projects by default (#13918)" by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13943
+- docs(agent-manager): document orchestration workflows by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13941
+- test(jetbrains): fix flaky worktree fork dedupe test by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13947
+- docs(kilo-docs): document Kilo Swarm board view and terminal removal by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13996
+- docs: document session goals by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13999
+- docs(kilo-docs): document task notifications and Keep Awake by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13997
+- docs(agent-manager): document PR review, merge, and push-fix workflow by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13998
+- perf(core): skip source project resolve when sessions move without changes by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14000
+- perf(ui): render read-only todo checkbox without Kobalte by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14005
+- perf(ui): defer diff parsing until tool cards expand by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14011
+- perf(ui): avoid building collapsed tool card content on mount by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14012
+- docs(kilo-docs): retire stale banners and show-and-tell links by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14057
+- refactor(vscode): extract task background detection helper by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14107
+- refactor(vscode): share worktree reference and background child helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14108
+- chore: remove completed planning notes by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14110
+- refactor(vscode): remove unused GitHub comment context members by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14109
+- refactor(vscode): dedupe diff viewer notice banner and PR state reset by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14111
+- test(vscode): cover background task card collapse by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14114
+- perf(agent-manager): batch PR status lookups into one GraphQL request per sync by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14116
+- perf(opencode): start the first worktree snapshot without re-hashing the checkout by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14115
+- chore(jetbrains): bump CLI pin to v7.6.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14027
+- docs(kilo-docs): consolidate older docs-sync rollovers by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/14135
+- chore(jetbrains): add shared run configs for VS Code extension scripts by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14138
+- docs(agent-manager): document prompt drops and PR comment destinations by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14122
+- docs(kilo-docs): document permission rejection feedback and project reload by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14121
+- docs(settings): document compaction model in Models settings by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14120
+- test(cli): stabilize issue 8656 stall test on Windows by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14152
+- test(opencode): fix flaky wait in snapshot materialization test by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14151
+- test(sdk-next): make embedded host isolation test deterministic by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14161
+- docs: auto-sync cloud-mobile with merged PRs (through 2026-09-14) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14132
+- docs: remove KiloClaw from the public docs site by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14066
+- chore(jetbrains): bump CLI pin to v7.7.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14184
+
+
 ## [7.1.6] - 2026-09-08
 
 ### Added
