@@ -112,15 +112,17 @@ async function persist(file: string, json: string) {
 
 export function createStallTransport(input: { state: string; answer?: string; command?: string }) {
   const state: StallState = { calls: 0, stalls: 0, recovered: 0 }
+  // The state file is test diagnostics, not provider protocol. Writes are
+  // serialized and best-effort, and the response never waits on them, so disk
+  // latency or a failed mirror can neither delay nor reject the simulated
+  // response. Every write stores the full current state, so a later write
+  // still lands anything an earlier failed one dropped. Tests poll the file.
   let pending = Promise.resolve()
   const save = () => {
     const json = JSON.stringify(state)
     pending = pending.then(() => persist(input.state, json)).catch((error) => {
-      // The state file is test diagnostics, not provider protocol. A failed
-      // mirror must not reject the simulated response and end the turn early.
       console.error("[stall-transport] state write failed", error)
     })
-    return pending
   }
 
   return async (_input: unknown, init?: { body?: unknown }) => {
@@ -128,23 +130,23 @@ export function createStallTransport(input: { state: string; answer?: string; co
     state.calls++
 
     if (body.includes("Generate a title")) {
-      await save()
+      save()
       return answer("Stall repro")
     }
 
     if (!body.includes('"role":"tool"')) {
-      await save()
+      save()
       return toolCall(input.command ?? "echo repro-8656")
     }
 
     if (state.stalls === 0) {
       state.stalls++
-      await save()
+      save()
       return stalling()
     }
 
     state.recovered++
-    await save()
+    save()
     return answer(input.answer ?? "recovered after the stall")
   }
 }
