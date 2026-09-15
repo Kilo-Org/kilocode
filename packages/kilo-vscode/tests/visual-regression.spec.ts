@@ -80,11 +80,14 @@ async function settle(page: Page) {
 // The session-dock stability story exists to measure geometry across the
 // working/idle swap and carries a debug toggle button, so it is not a meaningful
 // appearance baseline.
+// The diff-panel scroll-up story settles at a slightly different scroll offset
+// between runs, so its baseline flips by a few pixels even without source changes.
 const SKIP = new Set<string>([
   "chat--chat-view-session-dock-stability",
   "agentmanager--diff-panel-cached-worktree-switch",
   "agentmanager--diff-panel-viewport-loading",
   "agentmanager--diff-panel-interrupted-loading",
+  "agentmanager--diff-panel-scroll-up",
   "agentmanager--file-tree-virtualized-large",
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",

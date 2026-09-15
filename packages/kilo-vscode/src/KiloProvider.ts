@@ -51,7 +51,8 @@ import {
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
-import { createMarketplaceRemover, removeMcp } from "./kilo-provider/remove-config-item"
+import { removeMcp } from "./kilo-provider/remove-config-item"
+import { MarketplaceService } from "./services/marketplace"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
@@ -164,12 +165,20 @@ import { configFeatures, serverFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
+import { watchRestore } from "./kilo-provider/prompt-focus"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/project/route"
 import { indexingConsentStore, registeredProjects } from "./indexing-consent"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
 import { fetchSpeechToTextModels } from "./speech-to-text/catalog"
 import { SPEECH_TO_TEXT_MODELS } from "./speech-to-text/models"
+import {
+  hasCustomSource,
+  resolveSpeechToTextSource,
+  withGlobalSpeechToText,
+  type SpeechToTextConfig,
+  type SpeechToTextSource,
+} from "./speech-to-text/source"
 import { stopSessionProcesses } from "./kilo-provider/background-process"
 import { sandboxDefault, sandboxSessionMetadata } from "./shared/sandbox-session"
 import {
@@ -344,6 +353,22 @@ type ContextRequestMessage =
   | { type: "requestFilePicker"; requestId: string }
   | { type: "requestTerminalContext"; requestId: string; sessionID?: string; agentManagerContext?: string }
 
+const SPEECH_CONFIG_MESSAGES = new Set(["configLoaded", "configUpdated", "configUpdateFailed"])
+
+/**
+ * A project overlay must not enable or redirect custom voice input. The webview
+ * only sees the global speech-to-text values, matching what the host resolves.
+ */
+function withGlobalSpeechToTextMessage(message: unknown): unknown {
+  if (!message || typeof message !== "object") return message
+  const msg = message as { type?: unknown; config?: unknown; globalConfig?: unknown }
+  if (typeof msg.type !== "string" || !SPEECH_CONFIG_MESSAGES.has(msg.type)) return message
+  if (!msg.config || typeof msg.config !== "object") return message
+  const global =
+    msg.globalConfig && typeof msg.globalConfig === "object" ? (msg.globalConfig as SpeechToTextConfig) : undefined
+  return { ...msg, config: withGlobalSpeechToText(msg.config as SpeechToTextConfig, global) }
+}
+
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
@@ -467,8 +492,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
+  private view: vscode.WebviewView | undefined
+  private panel: vscode.WebviewPanel | undefined
+  private latch: ReturnType<typeof watchRestore> | undefined
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
-  private readonly marketplaceRemove = createMarketplaceRemover()
+  private readonly marketplace = new MarketplaceService()
 
   private ignoreController: FileIgnoreController | null = null
   private ignoreControllerDir: string | null = null
@@ -518,6 +546,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (this.connectionState === "connected") void this.fetchAndSendSandboxDefault()
     })
     TelemetryProxy.getInstance().setProvider(this)
+    this.latch = watchRestore({
+      focused: () => vscode.window.state.focused,
+      onChange: (listener) => vscode.window.onDidChangeWindowState(listener),
+      enabled: () => !this.opts.hideTopBar,
+      restore: (live) => {
+        if (!live) this.revealHost()
+        this.postMessage({ type: "action", action: "restoreInput" })
+      },
+    })
   }
 
   setRemoteService(service: RemoteStatusService): void {
@@ -699,9 +736,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private get removeConfigItemCtx() {
     return {
       connection: this.connectionService,
+      marketplace: this.marketplace,
       project: () => this.getProjectDirectory(this.currentSession?.id),
       directory: () => this.getWorkspaceDirectory(),
-      remove: this.marketplaceRemove,
       refresh: async () => {
         this.cachedAgentsMessage = null
         this.cachedConfigMessage = null
@@ -776,6 +813,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     _token: vscode.CancellationToken,
   ) {
     this.isWebviewReady = false
+    this.view = webviewView
+    this.panel = undefined
     this.webview = webviewView.webview
 
     webviewView.webview.options = {
@@ -808,6 +847,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public resolveWebviewPanel(panel: vscode.WebviewPanel): void {
     // WebviewPanel can be restored/reloaded; ensure we don't treat it as ready prematurely.
     this.isWebviewReady = false
+    this.panel = panel
+    this.view = undefined
     this.webview = panel.webview
 
     panel.webview.options = {
@@ -1109,6 +1150,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.updateTitle()
           },
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
+          speechToTextSource: () => this.speechToTextSource(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
           board: (msg) => this.handleBoardMessage(msg),
@@ -1295,7 +1337,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.sessionID,
             message.title,
             this.getWorkspaceDirectory(message.parentSessionID),
-            message.background === true,
           )
           break
         case "saveImage":
@@ -1647,6 +1688,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private handleWebviewFocusMessage(message: TypedWebviewMessage & { focused?: unknown; target?: unknown }): void {
+    if (message.type === "webviewFocusChanged") this.latch?.note(message.focused === true)
     if (message.type === "webviewFocusChanged" && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, message.focused === true)
     }
@@ -1663,7 +1705,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       message.target === "prompt" || message.target === "mainTerminal" || message.target === "sideTerminal"
         ? message.target
         : "other"
+    this.latch?.mark(target)
     this.setFocusTarget(target)
+  }
+
+  private revealHost(): void {
+    if (this.view?.visible) {
+      this.view.show()
+      return
+    }
+    if (this.panel?.visible) this.panel.reveal(this.panel.viewColumn)
   }
 
   private setFocusTarget(target: "prompt" | "mainTerminal" | "sideTerminal" | "other"): void {
@@ -3064,13 +3115,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(message)
   }
 
+  private speechToTextSource(): SpeechToTextSource | undefined {
+    // A project kilo.json must not enable or redirect voice input, so the custom
+    // source comes from the global layer only.
+    return resolveSpeechToTextSource(this.cachedGlobalConfig ?? undefined)
+  }
+
+  /** Monotonic stamp so the webview can discard stale or out-of-order catalogs. */
+  private speechToTextSeq = 0
+
   private async fetchAndSendSpeechToTextModels(): Promise<void> {
-    const result = await fetchSpeechToTextModels(this.connectionService, this.getWorkspaceDirectory())
-    if (!result.ok) {
-      this.postMessage({ type: "speechToTextModelsLoaded" as const, models: [...SPEECH_TO_TEXT_MODELS] })
+    const seq = ++this.speechToTextSeq
+    const source = this.speechToTextSource()
+    const kind = hasCustomSource(source) ? ("custom" as const) : ("gateway" as const)
+    const result = await fetchSpeechToTextModels(
+      this.connectionService,
+      this.getWorkspaceDirectory(),
+      undefined,
+      source,
+    )
+    // A newer fetch started while this one was in flight, so drop this result.
+    if (seq !== this.speechToTextSeq) return
+    if (result.ok) {
+      this.postMessage({
+        type: "speechToTextModelsLoaded" as const,
+        models: result.models,
+        source: kind,
+        epoch: this.instanceId,
+        seq,
+      })
       return
     }
-    this.postMessage({ type: "speechToTextModelsLoaded" as const, models: result.models })
+    // Gateway keeps its static fallback. A custom failure must not surface Gateway
+    // models, so it reports an empty catalog and uses the explicit model ID instead.
+    const models = kind === "gateway" ? [...SPEECH_TO_TEXT_MODELS] : []
+    this.postMessage({
+      type: "speechToTextModelsLoaded" as const,
+      models,
+      source: kind,
+      epoch: this.instanceId,
+      seq,
+    })
   }
 
   private handleBoardMessage(message: Record<string, unknown>): Promise<boolean> {
@@ -3644,6 +3729,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const bindings = this.bindingsFor(dir, snapshot.targets)
       const global = snapshot.targets.global.raw as Config
       const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
+      // Capture the previous source before cachedGlobalConfig moves, so a source
+      // change still triggers a catalog refresh.
+      const previousSpeech = this.speechToTextSource()
       this.cachedGlobalConfig = global
       this.cachedConfigMessage = {
         type: "configLoaded",
@@ -3663,9 +3751,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         settings: this.configSettings(),
         features,
       })
+      const currentSpeech = this.speechToTextSource()
+      // Re-discover the catalog only when the saved source changed, so a draft
+      // switch alone never fetches data for an unsaved source.
+      const refreshSpeech =
+        previousSpeech?.baseUrl !== currentSpeech?.baseUrl || previousSpeech?.apiKey !== currentSpeech?.apiKey
       await Promise.all([
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
         refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
+        refreshSpeech ? this.fetchAndSendSpeechToTextModels() : Promise.resolve(),
       ]).catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
     } catch (error) {
       this.postConfigFailure(error, completed, snapshot, dir)
@@ -3678,6 +3772,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const bindings = this.bindingsFor(dir, snapshot.targets)
     const globalConfig = (snapshot.targets?.global.raw ?? snapshot.globalConfig) as Config
     const projectConfig = bindings.project ? (snapshot.targets?.project.raw as Config) : undefined
+    const previousSpeech = this.speechToTextSource()
     this.cachedGlobalConfig = globalConfig ?? null
     this.cachedConfigMessage = {
       type: "configLoaded",
@@ -3699,6 +3794,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       settings: snapshot.settings,
       features: snapshot.features,
     })
+    // Every provider instance sees settings saved from another webview through the
+    // config-updated event, so refresh its catalog when the saved source changed.
+    const currentSpeech = this.speechToTextSource()
+    if (previousSpeech?.baseUrl !== currentSpeech?.baseUrl || previousSpeech?.apiKey !== currentSpeech?.apiKey) {
+      await this.fetchAndSendSpeechToTextModels()
+    }
   }
 
   private postConfigFailure(
@@ -5195,19 +5296,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {
+    const payload = withGlobalSpeechToTextMessage(message)
     if (!this.webview) {
       const type =
-        typeof message === "object" &&
-        message !== null &&
-        "type" in message &&
-        typeof (message as { type?: unknown }).type === "string"
-          ? (message as { type: string }).type
+        typeof payload === "object" &&
+        payload !== null &&
+        "type" in payload &&
+        typeof (payload as { type?: unknown }).type === "string"
+          ? (payload as { type: string }).type
           : "<unknown>"
       console.warn("[Kilo New] KiloProvider: ⚠️ postMessage dropped (no webview)", { type })
       return
     }
 
-    void this.webview.postMessage(message).then(undefined, (error) => {
+    void this.webview.postMessage(payload).then(undefined, (error) => {
       console.error("[Kilo New] KiloProvider: ❌ postMessage failed", error)
     })
   }
@@ -5700,6 +5802,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }
     this.setFocusTarget("other")
+    this.latch?.dispose()
+    this.latch = undefined
     this.unsubscribeRemote?.()
     this.streams.focus(undefined)
     this.connectionService.unregisterVisible(this.instanceId)
@@ -5728,6 +5832,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.pushFixesConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
+    this.marketplace.dispose()
     this.visibleTaskStreams.clear()
     this.streams.dispose()
     this.isWebviewReady = false

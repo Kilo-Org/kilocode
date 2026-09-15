@@ -70,16 +70,3 @@ export const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
     </DropdownMenu>
   </div>
 )
-
-export const ProjectActions: Component<WorktreeCreateProps & { onSettings: () => void }> = (props) => (
-  <div class="am-project-actions">
-    <WorktreeCreate {...props} />
-    <IconButton
-      icon="settings-gear"
-      size="small"
-      variant="ghost"
-      label={props.t("agentManager.worktree.settings")}
-      onClick={props.onSettings}
-    />
-  </div>
-)
