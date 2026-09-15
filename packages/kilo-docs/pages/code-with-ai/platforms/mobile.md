@@ -19,7 +19,7 @@ The mobile app lets you:
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
-- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's agent and model. Older CLI versions that do not support remote commands prompt you to upgrade.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
@@ -58,7 +58,7 @@ On Android, you can buy, restore, and change Kilo Pass tiers through Google Play
 {% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing active agent sessions" caption="Start coding tasks and resume active sessions from the mobile home screen." /%}
 
-{% image src="/docs/img/mobile-apps/new-session.webp" alt="Kilo Code mobile new session screen with coding mode selector" caption="Create a new Cloud Agent session and choose the right mode for the task." /%}
+{% image src="/docs/img/mobile-apps/new-session.webp" alt="Kilo Code mobile new session screen with coding agent selector" caption="Create a new Cloud Agent session and choose the right agent for the task." /%}
 
 {% image src="/docs/img/mobile-apps/session-chat.webp" alt="Kilo Code mobile session chat with an active coding task" caption="Review progress and continue coding conversations from the mobile app." /%}
 {% /imageGallery %}
@@ -74,13 +74,13 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **Cloud Agent** — the managed cloud environment (the default).
 - **A connected CLI instance**: a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
-Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. Use **Folder** to choose a child folder, including nested folders, before starting. If the CLI cannot list folders, the app explains this and starts in the launch directory instead. In organization context, the new session belongs to that organization.
+Remote sessions start with the agent and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. Use **Folder** to choose a child folder, including nested folders, before starting. If the CLI cannot list folders, the app explains this and starts in the launch directory instead. In organization context, the new session belongs to that organization.
 
 For Cloud Agent sessions, choose a repository from GitHub, GitLab, or, for organizations, Bitbucket. The picker groups repositories by provider and includes **Recently used**. Each provider has its own connection and error messages, so a problem with one does not hide the others.
 
 ## Continuing a finished session
 
-Open a finished session and tap **Continue** to copy its conversation into a new session. The form starts with the source repository, mode, model, and reasoning variant. Choose **Cloud Agent** or a connected CLI in **Run on**, then tap **Start**.
+Open a finished session and tap **Continue** to copy its conversation into a new session. The form starts with the source repository, agent, model, and reasoning variant. Choose **Cloud Agent** or a connected CLI in **Run on**, then tap **Start**.
 
 The CLI must support importing sessions. If it does not, the app explains why and disables **Start** rather than creating an empty session. An unavailable model or repository also prevents starting until you choose an available option.
 
