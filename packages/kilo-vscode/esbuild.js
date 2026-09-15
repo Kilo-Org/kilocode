@@ -15,24 +15,36 @@ const watch = process.argv.includes("--watch")
  * Cache transformed Solid JSX files in memory and on disk to avoid
  * re-parsing and re-transforming unchanged files across builds and webviews.
  *
- * Entries are keyed by file content, not by path or mtime, and live in the OS
- * temp dir so every git worktree of this repo shares one cache. A fresh
- * Agent Manager worktree therefore starts with a warm cache instead of
- * re-transforming every JSX file on its first build.
+ * Entries are content addressed and live in the OS temp dir, so every git
+ * worktree of this repo shares one cache and a fresh Agent Manager worktree
+ * starts warm instead of re-transforming every JSX file on its first build.
+ * A small per-worktree index maps a path to the entry recorded for it, so an
+ * unchanged file costs one stat instead of a read and a hash. See the notes
+ * on the index below.
  */
 const solidCacheDir = path.join(os.tmpdir(), `kilo-vscode-esbuild-solid-${process.getuid?.() ?? "user"}`)
 const solidMemCache = new Map()
 
 // Cache entries are read by the bundler, so they are only used when the
-// current user owns a directory that other users cannot write to. os.tmpdir()
-// is world writable on Linux, where another local user could pre-create this
-// path and poison entries. An untrusted directory falls back to memory only.
+// current user owns a directory that other users cannot write to, reached
+// without following a link. os.tmpdir() is world writable on Linux, where
+// another local user could pre-create this path, as a directory to poison or
+// as a symlink that redirects the chmod and the sweep into another
+// directory. An untrusted path falls back to memory only.
 const diskCache = (() => {
   try {
     fs.mkdirSync(solidCacheDir, { recursive: true, mode: 0o700 })
-    const st = fs.statSync(solidCacheDir)
+    // lstat, not stat: stat follows a symlink and would inspect the target.
+    const st = fs.lstatSync(solidCacheDir)
+    if (st.isSymbolicLink() || !st.isDirectory()) {
+      throw new Error("cache path is not a real directory")
+    }
     if (typeof process.getuid === "function" && st.uid !== process.getuid()) {
       throw new Error(`directory is owned by uid ${st.uid}`)
+    }
+    const temp = fs.realpathSync(os.tmpdir())
+    if (fs.realpathSync(solidCacheDir) !== path.join(temp, path.basename(solidCacheDir))) {
+      throw new Error("cache path escapes the temp dir")
     }
     // mkdir does not change the mode of an existing directory.
     if (process.platform !== "win32" && (st.mode & 0o077) !== 0) {
@@ -49,27 +61,85 @@ const diskCache = (() => {
 // by a build killed between writing and renaming, and entries old enough to
 // be considered superseded. Entries are content addressed and recomputed on
 // a miss, so removing them is always safe. One unreadable file must not
-// abort the sweep.
+// abort the sweep. This runs at most once a day: the directory is shared by
+// every worktree and retains entries for 30 days, so sweeping on every build
+// would charge every build for a directory that keeps growing.
 if (diskCache) {
-  const now = Date.now()
-  const age = { ".tmp": 60 * 60 * 1000, ".js": 30 * 24 * 60 * 60 * 1000 }
-  const sweep = (file) => {
-    const limit = age[path.extname(file)]
-    if (limit === undefined) return
-    const full = path.join(solidCacheDir, file)
+  const stamp = path.join(solidCacheDir, ".sweep")
+  const period = 24 * 60 * 60 * 1000
+  const due = (() => {
     try {
-      if (now - fs.statSync(full).mtimeMs > limit) fs.rmSync(full, { force: true })
+      return Date.now() - fs.statSync(stamp).mtimeMs > period
     } catch (err) {
-      console.warn("[esbuild] could not reclaim a solid cache file", full, err)
+      if (err.code !== "ENOENT") console.warn("[esbuild] could not read the sweep stamp", err)
+      return true
+    }
+  })()
+
+  if (due) {
+    const now = Date.now()
+    const age = { ".tmp": 60 * 60 * 1000, ".js": 30 * 24 * 60 * 60 * 1000, ".json": 30 * 24 * 60 * 60 * 1000 }
+    const sweep = (file) => {
+      const limit = age[path.extname(file)]
+      if (limit === undefined) return
+      const full = path.join(solidCacheDir, file)
+      try {
+        if (now - fs.statSync(full).mtimeMs > limit) fs.rmSync(full, { force: true })
+      } catch (err) {
+        console.warn("[esbuild] could not reclaim a solid cache file", full, err)
+      }
+    }
+
+    try {
+      fs.readdirSync(solidCacheDir).forEach(sweep)
+      fs.writeFileSync(stamp, "")
+    } catch (err) {
+      console.warn("[esbuild] could not sweep the solid cache directory", err)
     }
   }
+}
 
+// Deriving a content-addressed key needs the source text, but reading every
+// file on every build is wasteful. Remember the key recorded for a path while
+// its size and mtime are unchanged, the same trust a size-and-mtime cache
+// uses, and keep the index per worktree so worktrees never contend on it.
+// The entry a key points at is still content addressed, so sharing one cache
+// between worktrees stays exact.
+const indexPath = path.join(
+  solidCacheDir,
+  `index-${crypto.createHash("sha256").update(__dirname).digest("hex").slice(0, 16)}.json`,
+)
+const index = new Map()
+
+if (diskCache) {
   try {
-    fs.readdirSync(solidCacheDir).forEach(sweep)
+    const saved = JSON.parse(fs.readFileSync(indexPath, "utf8"))
+    for (const [file, value] of Object.entries(saved ?? {})) {
+      if (!value || typeof value !== "object") continue
+      if (typeof value.mtime !== "number" || typeof value.size !== "number") continue
+      if (typeof value.key !== "string") continue
+      index.set(file, { mtime: value.mtime, size: value.size, key: value.key })
+    }
   } catch (err) {
-    console.warn("[esbuild] could not read the solid cache directory", err)
+    if (err.code !== "ENOENT") console.warn("[esbuild] ignoring unusable solid cache index", err)
   }
 }
+
+// The index only records the files this build loaded, so paths that leave a
+// build drop out instead of accumulating.
+function saveIndex() {
+  if (!diskCache || index.size === 0) return
+  const tmp = `${indexPath}.${process.pid}.tmp`
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(Object.fromEntries(index)))
+    fs.renameSync(tmp, indexPath)
+  } catch (err) {
+    fs.rmSync(tmp, { force: true })
+    console.warn("[esbuild] could not save the solid cache index", err)
+  }
+}
+
+process.on("exit", saveIndex)
 
 // Version of a package as resolved from another package's directory, so the
 // cache key follows the transitive dependency that does the actual transform.
@@ -94,23 +164,33 @@ const buildScriptHash = crypto
   .digest("hex")
   .slice(0, 8)
 
+// Content key for one source file. The transform output depends only on the
+// file name (for the inline source map), the source text, and the toolchain.
+function key(source, file) {
+  const { name, ext } = path.parse(file)
+  return crypto
+    .createHash("sha256")
+    .update(name + ext)
+    .update("\0")
+    .update(source)
+    .update("\0")
+    .update(buildScriptHash)
+    .digest("hex")
+}
+
 const cachedSolidPlugin = {
   name: "esbuild:solid-cached",
   setup(build) {
     build.onLoad({ filter: /\.(t|j)sx$/ }, async (args) => {
-      const source = fs.readFileSync(args.path, "utf8")
-      const { name, ext } = path.parse(args.path)
-      const filename = name + ext
-      // The transform output depends only on the file name (for the inline
-      // source map), the source text, and the transform toolchain.
-      const cacheKey = crypto
-        .createHash("sha256")
-        .update(filename)
-        .update("\0")
-        .update(source)
-        .update("\0")
-        .update(buildScriptHash)
-        .digest("hex")
+      const st = fs.statSync(args.path)
+      const recorded = index.get(args.path)
+      const known = recorded !== undefined && recorded.mtime === st.mtimeMs && recorded.size === st.size
+      // Read the file only when its key is not already recorded, so an
+      // unchanged file costs one stat instead of a read and a hash.
+      const source = known ? undefined : fs.readFileSync(args.path, "utf8")
+      const cacheKey = known ? recorded.key : key(source, args.path)
+      if (!known) index.set(args.path, { mtime: st.mtimeMs, size: st.size, key: cacheKey })
+
       const memHit = solidMemCache.get(cacheKey)
       if (memHit) return { contents: memHit, loader: "js" }
 
@@ -126,12 +206,12 @@ const cachedSolidPlugin = {
         }
       }
 
-      const result = await core.transformAsync(source, {
+      const result = await core.transformAsync(source ?? fs.readFileSync(args.path, "utf8"), {
         presets: [
           [solid, {}],
           [ts, {}],
         ],
-        filename,
+        filename: path.basename(args.path),
         sourceMaps: "inline",
       })
 
