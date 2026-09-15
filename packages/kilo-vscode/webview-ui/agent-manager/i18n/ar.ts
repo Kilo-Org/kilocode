@@ -134,6 +134,12 @@ export const dict = {
     "يستخدم هذا المستودع Git LFS، ولكن لم يتم العثور على git-lfs. يرجى تثبيت Git LFS.",
   "agentManager.setup.error.no_commits":
     "هذا المستودع لا يحتوي على أي التزامات (commits) بعد. قم بإنشاء التزام أولي قبل استخدام مساحات العمل (worktrees).",
+  "agentManager.setup.error.worktree_missing":
+    "مجلد هذا الـ worktree لم يعد موجودًا. استعده من فرعه أو أزل الـ worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "git لم يعد يتتبع هذا المجلد كـ worktree. أزله وأنشئ worktree جديدًا.",
+  "agentManager.setup.error.git_timeout":
+    "لم يستجب Git في الوقت المناسب. تحقق من إمكانية الوصول إلى المستودع وحاول مرة أخرى.",
   "agentManager.shortcuts.title": "اختصارات لوحة المفاتيح",
   "agentManager.shortcuts.category.sidebar": "الشريط الجانبي",
   "agentManager.shortcuts.category.tabs": "علامات التبويب",
@@ -459,4 +465,27 @@ export const dict = {
   "agentManager.intro.guide": "اقرأ الدليل",
   "agentManager.intro.dismiss": "تخطي المقدمة",
   "agentManager.intro.reopen": "كيف يعمل Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "تم حذف المجلد",
+  "agentManager.worktree.health.absent-restorableNote":
+    "المجلد مفقود، لكن الفرع {{branch}} لا يزال موجودًا. استعده لمتابعة العمل هنا.",
+  "agentManager.worktree.health.absent-gone": "تم حذف المجلد والفرع",
+  "agentManager.worktree.health.absent-goneNote":
+    "لم يبقَ المجلد ولا الفرع. أزل العنصر للترتيب؛ وتُحفظ الجلسات ضمن «محلي».",
+  "agentManager.worktree.health.unregistered": "ليس worktree من git",
+  "agentManager.worktree.health.unregisteredNote":
+    "المجلد موجود، لكن git لم يعد يتتبعه كـ worktree، فلا يمكن قراءة حالته.",
+  "agentManager.worktree.health.unavailable": "الحالة غير متوفرة",
+  "agentManager.worktree.health.unavailableNote":
+    "لم يستجب Git أو GitHub CLI في الوقت المناسب. تم إيقاف الاستعلام لهذا الـ worktree مؤقتًا وسيُعاد المحاولة.",
+  "agentManager.worktree.restore": "استعادة الـ worktree",
+  "agentManager.worktree.removeKeepSessions": "إزالة مع الاحتفاظ بالجلسات",
+  "agentManager.orphans.title": "مجلدات worktree متبقية",
+  "agentManager.orphans.summary": "‏{{count}} مجلد ضمن .kilo/worktrees ليست worktrees من git.",
+  "agentManager.orphans.clean": "تنظيف المجلدات المتبقية",
+  "agentManager.orphans.confirm": "حذف هذه المجلدات نهائيًا؟ لا شيء هنا يتتبعه git.",
+  "agentManager.orphans.cancel": "إلغاء",
+  "agentManager.orphans.checkout": "يحتوي على نسخة عمل git",
+  "agentManager.orphans.confirmCheckout":
+    "حذف هذه المجلدات نهائيًا؟ ما زال {{count}} منها يحتوي على نسخة عمل git قد تتضمن تغييرات غير مُودعة.",
+  "agentManager.error.title": "خطأ في Agent Manager",
 }

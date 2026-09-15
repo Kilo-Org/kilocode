@@ -145,6 +145,12 @@ export const dict = {
     "Dieses Repository verwendet Git LFS, aber git-lfs wurde nicht gefunden. Bitte installieren Sie Git LFS.",
   "agentManager.setup.error.no_commits":
     "Dieses Repository hat noch keine Commits. Erstellen Sie einen initialen Commit, bevor Sie Worktrees verwenden.",
+  "agentManager.setup.error.worktree_missing":
+    "Der Ordner dieses Worktrees existiert nicht mehr. Stelle ihn aus seinem Branch wieder her oder entferne den Worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git verfolgt diesen Ordner nicht mehr als Worktree. Entferne ihn und erstelle einen neuen Worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git hat nicht rechtzeitig geantwortet. Prüfe, ob das Repository erreichbar ist, und versuche es erneut.",
   "agentManager.shortcuts.title": "Tastenkombinationen",
   "agentManager.shortcuts.category.sidebar": "Seitenleiste",
   "agentManager.shortcuts.category.tabs": "Tabs",
@@ -475,4 +481,27 @@ export const dict = {
   "agentManager.intro.guide": "Anleitung lesen",
   "agentManager.intro.dismiss": "Einführung überspringen",
   "agentManager.intro.reopen": "So funktioniert Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Ordner gelöscht",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Der Ordner fehlt, aber Branch {{branch}} existiert noch. Stelle ihn wieder her, um hier weiterzuarbeiten.",
+  "agentManager.worktree.health.absent-gone": "Ordner und Branch gelöscht",
+  "agentManager.worktree.health.absent-goneNote":
+    "Weder Ordner noch Branch existieren noch. Entferne den Eintrag zum Aufräumen; Sitzungen bleiben unter „Lokal“.",
+  "agentManager.worktree.health.unregistered": "Kein git-Worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Der Ordner existiert, aber git verfolgt ihn nicht mehr als Worktree. Sein Status ist nicht lesbar.",
+  "agentManager.worktree.health.unavailable": "Status nicht verfügbar",
+  "agentManager.worktree.health.unavailableNote":
+    "Git oder GitHub CLI hat nicht rechtzeitig geantwortet. Das Abfragen dieses Worktrees pausiert und wird wiederholt.",
+  "agentManager.worktree.restore": "Worktree wiederherstellen",
+  "agentManager.worktree.removeKeepSessions": "Entfernen, Sitzungen behalten",
+  "agentManager.orphans.title": "Übrig gebliebene Worktree-Ordner",
+  "agentManager.orphans.summary": "{{count}} Ordner unter .kilo/worktrees sind keine git-Worktrees.",
+  "agentManager.orphans.clean": "Übrige Ordner aufräumen",
+  "agentManager.orphans.confirm": "Diese Ordner endgültig löschen? Nichts davon wird von git verfolgt.",
+  "agentManager.orphans.cancel": "Abbrechen",
+  "agentManager.orphans.checkout": "enthält einen git-Checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Diese Ordner endgültig löschen? {{count}} enthalten noch einen git-Checkout mit möglicherweise nicht committeten Änderungen.",
+  "agentManager.error.title": "Agent-Manager-Fehler",
 }

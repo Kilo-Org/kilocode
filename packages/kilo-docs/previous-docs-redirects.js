@@ -265,7 +265,7 @@ module.exports = [
   },
   {
     source: "/docs/kiloclaw/tools",
-    destination: "/docs/kiloclaw/development-tools",
+    destination: "/docs/getting-started",
     basePath: false,
     permanent: true,
   },
@@ -1150,12 +1150,6 @@ module.exports = [
     permanent: true,
   },
   {
-    source: "/docs/automate/kiloclaw/:path*",
-    destination: "/docs/kiloclaw/:path*",
-    basePath: false,
-    permanent: true,
-  },
-  {
     source: "/docs/contributing/architecture/vercel-ai-gateway",
     destination: "/docs/contributing/features",
     basePath: false,
@@ -1169,38 +1163,56 @@ module.exports = [
   },
 
   // ============================================
-  // KILOCLAW
+  // KILOCLAW (removed from public docs)
   // ============================================
-  {
-    source: "/docs/kiloclaw/suggested-configuration",
-    destination: "/docs/kiloclaw/end-to-end",
-    basePath: false,
-    permanent: true,
-  },
-  {
-    source: "/docs/kiloclaw/control-ui",
-    destination: "/docs/kiloclaw/control-ui/overview",
-    basePath: false,
-    permanent: true,
-  },
-  {
-    source: "/docs/kiloclaw/pricing",
-    destination: "/docs/kiloclaw/faq/pricing",
-    basePath: false,
-    permanent: true,
-  },
-  {
-    source: "/docs/kiloclaw/troubleshooting",
-    destination: "/docs/kiloclaw/troubleshooting/common-questions",
-    basePath: false,
-    permanent: true,
-  },
-  {
-    source: "/docs/kiloclaw/version-pinning",
-    destination: "/docs/kiloclaw/control-ui/version-pinning",
-    basePath: false,
-    permanent: true,
-  },
+  ...[
+    "",
+    "/overview",
+    "/dashboard",
+    "/pre-installed-software",
+    "/end-to-end",
+    "/suggested-configuration",
+    "/control-ui",
+    "/control-ui/overview",
+    "/control-ui/changing-models",
+    "/control-ui/exec-approvals",
+    "/control-ui/version-pinning",
+    "/version-pinning",
+    "/chat-platforms",
+    "/chat-platforms/telegram",
+    "/chat-platforms/discord",
+    "/chat-platforms/slack",
+    "/development-tools",
+    "/development-tools/github",
+    "/development-tools/google",
+    "/development-tools/linear",
+    "/development-tools/composio",
+    "/tools",
+    "/tools/1password",
+    "/tools/brave-search",
+    "/tools/agentcard",
+    "/tools/other-tools",
+    "/triggers",
+    "/triggers/webhooks",
+    "/triggers/scheduled",
+    "/troubleshooting",
+    "/troubleshooting/common-questions",
+    "/troubleshooting/gateway-process",
+    "/troubleshooting/architecture",
+    "/troubleshooting/faq",
+    "/faq/general",
+    "/faq/pricing",
+    "/pricing",
+  ].flatMap((suffix) =>
+    ["/docs/kiloclaw", "/docs/automate/kiloclaw"]
+      .filter((prefix) => prefix !== "/docs/kiloclaw" || suffix !== "/tools")
+      .map((prefix) => ({
+        source: `${prefix}${suffix}`,
+        destination: "/docs/getting-started",
+        basePath: false,
+        permanent: true,
+      })),
+  ),
   {
     source: "/docs/code-with-ai/gastown/wasteland/troubleshooting",
     destination: "/docs/code-with-ai/gastown/wasteland",

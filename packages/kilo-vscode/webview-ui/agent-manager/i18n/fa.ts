@@ -141,6 +141,11 @@ export const dict = {
     "این مخزن از Git LFS استفاده می‌کند، اما git-lfs یافت نشد. لطفاً Git LFS را نصب کنید.",
   "agentManager.setup.error.no_commits":
     "این مخزن هنوز هیچ کامیتی ندارد. قبل از استفاده از Worktree، یک کامیت اولیه ایجاد کنید.",
+  "agentManager.setup.error.worktree_missing":
+    "پوشه این worktree دیگر وجود ندارد. آن را از شاخه‌اش بازیابی کنید یا worktree را حذف کنید.",
+  "agentManager.setup.error.worktree_unregistered":
+    "گیت دیگر این پوشه را به‌عنوان worktree پیگیری نمی‌کند. آن را حذف کنید و worktree جدیدی بسازید.",
+  "agentManager.setup.error.git_timeout": "Git به‌موقع پاسخ نداد. بررسی کنید که مخزن در دسترس است و دوباره تلاش کنید.",
   "agentManager.shortcuts.title": "میانبرهای صفحه‌کلید",
   "agentManager.shortcuts.category.sidebar": "نوار کناری",
   "agentManager.shortcuts.category.tabs": "تب‌ها",
@@ -469,4 +474,27 @@ export const dict = {
   "agentManager.intro.guide": "راهنما را بخوانید",
   "agentManager.intro.dismiss": "رد کردن مقدمه",
   "agentManager.intro.reopen": "Agent Manager چگونه کار می‌کند",
+  "agentManager.worktree.health.absent-restorable": "پوشه حذف شده است",
+  "agentManager.worktree.health.absent-restorableNote":
+    "پوشه نیست، اما شاخه {{branch}} هنوز وجود دارد. آن را بازیابی کنید تا کار در اینجا ادامه یابد.",
+  "agentManager.worktree.health.absent-gone": "پوشه و شاخه حذف شده‌اند",
+  "agentManager.worktree.health.absent-goneNote":
+    "نه پوشه و نه شاخه دیگر وجود ندارند. برای مرتب‌سازی مدخل را حذف کنید؛ نشست‌ها زیر «محلی» نگه داشته می‌شوند.",
+  "agentManager.worktree.health.unregistered": "worktree گیت نیست",
+  "agentManager.worktree.health.unregisteredNote":
+    "پوشه وجود دارد، اما گیت دیگر آن را به‌عنوان worktree پیگیری نمی‌کند و وضعیتش خواندنی نیست.",
+  "agentManager.worktree.health.unavailable": "وضعیت در دسترس نیست",
+  "agentManager.worktree.health.unavailableNote":
+    "Git یا GitHub CLI به‌موقع پاسخ نداد. بررسی این worktree موقتاً متوقف شد و دوباره تلاش می‌شود.",
+  "agentManager.worktree.restore": "بازیابی worktree",
+  "agentManager.worktree.removeKeepSessions": "حذف با نگه‌داشتن نشست‌ها",
+  "agentManager.orphans.title": "پوشه‌های باقی‌مانده worktree",
+  "agentManager.orphans.summary": "‏{{count}} پوشه در .kilo/worktrees، worktree گیت نیستند.",
+  "agentManager.orphans.clean": "پاک‌سازی پوشه‌های باقی‌مانده",
+  "agentManager.orphans.confirm": "این پوشه‌ها برای همیشه حذف شوند؟ هیچ‌چیز اینجا توسط گیت پیگیری نمی‌شود.",
+  "agentManager.orphans.cancel": "لغو",
+  "agentManager.orphans.checkout": "شامل یک checkout گیت است",
+  "agentManager.orphans.confirmCheckout":
+    "این پوشه‌ها برای همیشه حذف شوند؟ {{count}} پوشه هنوز شامل checkout گیت است که ممکن است تغییرات ثبت‌نشده داشته باشد.",
+  "agentManager.error.title": "خطای Agent Manager",
 }
