@@ -48,8 +48,24 @@ export class CaffeinationService {
       paths: () => connection.getKnownDirectories(),
       watching: () => this.watching(),
       load: async (dir) => {
-        const result = await connection.getClient().session.status({ directory: dir }, { throwOnError: true })
-        return result.data ?? {}
+        const client = connection.getClient()
+        const [status, wake] = await Promise.all([
+          client.session.status({ directory: dir }, { throwOnError: true }),
+          client.kilocode
+            .wakeups({ directory: dir }, { throwOnError: true })
+            .then((result) => {
+              const pending: Record<string, number> = {}
+              for (const item of result.data ?? []) pending[item.sessionID] = item.pending
+              return pending
+            })
+            .catch((error: unknown) => {
+              // Do not turn a transient failure into "no pending wakeups": the
+              // feed keeps the previous wake set and releases it on the next sync.
+              console.warn(`[Kilo New] Keep-awake wakeup refresh failed for ${dir}:`, error)
+              return undefined
+            }),
+        ])
+        return { status: status.data ?? {}, wake }
       },
       post: (busy) => {
         if (this.busy === busy) return

@@ -1,7 +1,9 @@
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { WakeupEvent } from "@opencode-ai/schema/kilocode/wakeup-event"
 import { Context, Effect, Fiber, Layer, Semaphore } from "effect"
 import { fireLayer, text as wakeupText } from "./resume"
 import * as schema from "./schema"
@@ -31,7 +33,9 @@ export namespace Wakeup {
   export interface Interface {
     readonly schedule: (input: Input) => Effect.Effect<Info, InvalidTime | PastTime | TooMany>
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
+    readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
     readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
+    readonly cancelSession: (sessionID: SessionID) => Effect.Effect<number>
     readonly adopt: (directory: string) => Effect.Effect<void>
   }
 
@@ -44,6 +48,7 @@ export namespace Wakeup {
     Effect.gen(function* () {
       const storage = yield* Storage.Service
       const fire = yield* Fire
+      const events = yield* EventV2Bridge.Service
       // Timers live in the service scope, so tearing the layer down stops them.
       const scope = yield* Effect.scope
       const timers = new Map<ID, Fiber.Fiber<void>>()
@@ -70,6 +75,15 @@ export namespace Wakeup {
       const read = (target: string[]) =>
         storage.read<Info>(target).pipe(Effect.catch(() => Effect.succeed(undefined)))
 
+      // Tell clients how many wakeups a session still holds, so Keep Awake stays
+      // active while one is pending. Best effort: a publish failure must not
+      // fail the scheduling operation.
+      const announce = (sessionID: SessionID) =>
+        Effect.gen(function* () {
+          const count = yield* list({ sessionID }).pipe(Effect.map((items) => items.length))
+          yield* events.publish(WakeupEvent.Pending, { sessionID, pending: count })
+        }).pipe(Effect.catchCause((cause) => Effect.logWarning("wakeup notify failed", { sessionID, cause })))
+
       const lookup = Effect.fnUntraced(function* (id: ID) {
         const known = entries.get(id)
         if (known) return known
@@ -94,6 +108,9 @@ export namespace Wakeup {
             // Drop the persistence before the resume: the model turn can be slow,
             // and a concurrent `adopt` that still sees the file would fire twice.
             yield* storage.remove(key(info)).pipe(Effect.ignore)
+            // Announce after persistence clears so a concurrent snapshot cannot
+            // report the fired wakeup as still pending.
+            yield* announce(info.sessionID)
             yield* fire
               .run(info, { inPlace })
               .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
@@ -123,6 +140,18 @@ export namespace Wakeup {
           .toSorted((a, b) => a.dueAt - b.dueAt || a.id.localeCompare(b.id))
       })
 
+      // Per-session pending counts for one directory, read from memory only.
+      // An instance bootstraps (and adopts) before its routes run, so `entries`
+      // is authoritative here and a per-request storage scan is unnecessary.
+      const pending = Effect.fn("Wakeup.pending")(function* (directory: string) {
+        const counts = new Map<SessionID, number>()
+        for (const info of entries.values()) {
+          if (info.directory !== directory) continue
+          counts.set(info.sessionID, (counts.get(info.sessionID) ?? 0) + 1)
+        }
+        return Array.from(counts, ([sessionID, count]) => ({ sessionID, pending: count }))
+      })
+
       const schedule = Effect.fn("Wakeup.schedule")(function* (input: Input) {
         return yield* gate.withPermits(1)(
           Effect.gen(function* () {
@@ -147,6 +176,7 @@ export namespace Wakeup {
             yield* storage.write(key(info), info).pipe(Effect.orDie)
             entries.set(info.id, info)
             yield* arm(info)
+            yield* announce(info.sessionID)
             return info
           }),
         )
@@ -162,7 +192,16 @@ export namespace Wakeup {
         }
         entries.delete(id)
         yield* storage.remove(key(info)).pipe(Effect.ignore)
+        yield* announce(info.sessionID)
         return info
+      })
+
+      // Called when a session is removed so its wakeups stop holding Keep Awake
+      // and can never resume a session that no longer exists.
+      const cancelSession = Effect.fn("Wakeup.cancelSession")(function* (sessionID: SessionID) {
+        const held = yield* list({ sessionID })
+        for (const info of held) yield* cancel(info.id)
+        return held.length
       })
 
       const adopt = Effect.fn("Wakeup.adopt")(function* (directory: string) {
@@ -176,16 +215,21 @@ export namespace Wakeup {
           // place; `provide` would await the in-flight load and deadlock.
           if (info.dueAt <= Date.now()) yield* fireNow(info, true)
           else yield* arm(info)
+          yield* announce(info.sessionID)
         }
       })
 
-      return Service.of({ schedule, list, cancel, adopt })
+      return Service.of({ schedule, list, pending, cancel, cancelSession, adopt })
     }),
   )
 
   export const defaultLayer = layer.pipe(Layer.provide(fireLayer))
 
-  export const node = LayerNode.make({ service: Service, layer: defaultLayer, deps: [Storage.node] })
+  export const node = LayerNode.make({
+    service: Service,
+    layer: defaultLayer,
+    deps: [Storage.node, EventV2Bridge.node],
+  })
 }
 
 export * from "./schema"

@@ -12955,8 +12955,8 @@
             }
           }
         },
-        "description": "Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.",
-        "summary": "Reload instance",
+        "description": "Atomically dispose and reboot every loaded instance of the project, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if any session in the project is actively running.",
+        "summary": "Reload project",
         "x-codeSamples": [
           {
             "lang": "js",
@@ -16776,6 +16776,76 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJob.promote({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/wakeups": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.wakeups",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending wakeups for the routed directory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "pending": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["sessionID", "pending"],
+                    "additionalProperties": false
+                  },
+                  "description": "Pending wakeups for the routed directory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the sessions that hold scheduled wakeups in the routed directory, with each session's pending count.",
+        "summary": "List pending wakeups",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.wakeups({\n  ...\n})"
           }
         ]
       }
@@ -26951,6 +27021,9 @@
             "$ref": "#/components/schemas/EventSessionDrainInterrupted1"
           },
           {
+            "$ref": "#/components/schemas/EventSessionWakeup1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
@@ -27303,6 +27376,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionDrainInterrupted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionWakeup"
           },
           {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
@@ -30422,6 +30498,9 @@
                 "$ref": "#/components/schemas/EventSessionDrainInterrupted"
               },
               {
+                "$ref": "#/components/schemas/EventSessionWakeup"
+              },
+              {
                 "type": "object",
                 "properties": {
                   "id": {
@@ -33527,6 +33606,36 @@
                       }
                     },
                     "required": ["sessionID"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.wakeup"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "pending": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["sessionID", "pending"],
                     "additionalProperties": false
                   }
                 },
@@ -41578,6 +41687,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionDrainInterrupted"
+          },
+          {
+            "$ref": "#/components/schemas/SessionWakeup"
           }
         ]
       },
@@ -46651,6 +46763,35 @@
               }
             },
             "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionWakeup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.wakeup"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["sessionID", "pending"],
             "additionalProperties": false
           }
         },
@@ -55713,6 +55854,58 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SessionWakeup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.wakeup"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["sessionID", "pending"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionV2Request": {
         "type": "object",
         "properties": {
@@ -58935,6 +59128,36 @@
               }
             },
             "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionWakeup1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.wakeup"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["sessionID", "pending"],
             "additionalProperties": false
           }
         },
