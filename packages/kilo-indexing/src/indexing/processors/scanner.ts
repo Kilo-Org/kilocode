@@ -110,6 +110,7 @@ export class DirectoryScanner implements IDirectoryScanner {
    */
   public cancel(): void {
     this._cancelled = true
+    void this.cacheManager.flush().catch((err) => log.error("failed to flush cache on cancel", { err }))
   }
 
   public get isCancelled(): boolean {
@@ -201,6 +202,43 @@ export class DirectoryScanner implements IDirectoryScanner {
     // Initialize block counter
     let totalBlockCount = 0
 
+    const fileBlocksRemaining = new Map<string, number>()
+    const fileHashes = new Map<string, string>()
+
+    let lastCheckpointFlush = 0
+    const CHECKPOINT_FLUSH_INTERVAL_MS = 5000
+
+    const onBatchCompleted = async (blocks: CodeBlock[]) => {
+      let updatedAny = false
+      const release = await mutex.acquire()
+      try {
+        for (const block of blocks) {
+          const remaining = (fileBlocksRemaining.get(block.file_path) ?? 1) - 1
+          fileBlocksRemaining.set(block.file_path, remaining)
+          if (remaining === 0) {
+            const hash = fileHashes.get(block.file_path)
+            if (hash) {
+              this.cacheManager.updateHash(block.file_path, hash)
+              updatedAny = true
+            }
+          }
+        }
+      } finally {
+        release()
+      }
+      if (updatedAny) {
+        const now = Date.now()
+        if (now - lastCheckpointFlush >= CHECKPOINT_FLUSH_INTERVAL_MS) {
+          lastCheckpointFlush = now
+          try {
+            await this.cacheManager.flush()
+          } catch (err) {
+            log.warn("failed to flush checkpoint cache", { err })
+          }
+        }
+      }
+    }
+
     const queueBatch = async (
       batchBlocks: CodeBlock[],
       batchTexts: string[],
@@ -226,6 +264,7 @@ export class DirectoryScanner implements IDirectoryScanner {
                 () => {
                   failed = true
                 },
+                onBatchCompleted,
               ),
             )
             activeBatchPromises.add(batchPromise)
@@ -310,6 +349,17 @@ export class DirectoryScanner implements IDirectoryScanner {
 
           // Process embeddings if configured
           if (this.embedder && this.vectorStore && blocks.length > 0) {
+            const validBlocks = blocks.filter((b) => b.content.trim().length > 0)
+            if (validBlocks.length > 0) {
+              const release = await mutex.acquire()
+              try {
+                fileBlocksRemaining.set(filePath, validBlocks.length)
+                fileHashes.set(filePath, currentFileHash)
+              } finally {
+                release()
+              }
+            }
+
             // Add to batch accumulators
             let addedBlocksFromFile = false
             let queued = false
@@ -533,6 +583,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     onError?: (error: Error) => void,
     onFilesIndexed?: (indexedCount: number) => void,
     onBatchFailed?: () => void,
+    onBatchCompleted?: (blocks: CodeBlock[]) => Promise<void> | void,
   ): Promise<void> {
     // Respect cooperative cancellation
     if (this._cancelled || batchBlocks.length === 0) return
@@ -642,6 +693,14 @@ export class DirectoryScanner implements IDirectoryScanner {
 
         success = true
         log.debug(`Successfully processed batch of ${batchBlocks.length} blocks after ${attempts} attempt(s)`)
+
+        if (onBatchCompleted) {
+          try {
+            await onBatchCompleted(batchBlocks)
+          } catch (checkpointError) {
+            log.warn("Failed to checkpoint batch completion", { checkpointError })
+          }
+        }
       } catch (error) {
         lastError = error as Error
         log.error(`Error processing batch (attempt ${attempts}) in workspace ${scanWorkspace}`, {
