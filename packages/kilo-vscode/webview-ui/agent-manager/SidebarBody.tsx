@@ -23,7 +23,9 @@ import { LOCAL, adjacentHint } from "./navigate"
 import { applyTabOrder, reorderTabs } from "./tab-order"
 import { buildTopLevelItems, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
 import { createWorktreeCompletion } from "./worktree-completion"
-import { sectionAwareDetector } from "./section-dnd"
+import { worktreeDropReference } from "./worktree-references"
+import { beginPromptMentionDrop, endPromptMentionDrop } from "../src/utils/prompt-mention-drop"
+import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
@@ -104,6 +106,9 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
   const vscode = useVSCode()
   const updateBase = useBaseUpdate()
   const localState = () => props.activityFor(null)
+  // Captured at worktree drag start so a release outside the sidebar, or a drop
+  // on the prompt, can undo a reorder applied while passing over sibling rows.
+  let origin: string[] | undefined
 
   return (
     <>
@@ -250,10 +255,31 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
 
                 const onWtDragStart = (event: DragEvent) => {
                   const id = event.draggable?.id
-                  if (typeof id === "string") props.setDraggingWorktree(id)
+                  if (typeof id === "string") {
+                    props.setDraggingWorktree(id)
+                    origin = props.sidebarWorktreeOrder()
+                    const wt = sorted().find((item) => item.id === id)
+                    if (wt) {
+                      beginPromptMentionDrop({
+                        kind: "worktree",
+                        worktree: worktreeDropReference(
+                          wt,
+                          props.worktreeLabel(wt),
+                          props
+                            .managedSessions()
+                            .filter((session) => session.worktreeId === wt.id)
+                            .map((session) => ({ id: session.id })),
+                          wt.id === props.selection() || props.isStaleWorktree(wt.id) || props.busy(wt.id),
+                        ),
+                      })
+                    }
+                  }
                   document.body.classList.add("am-wt-dragging-active")
                 }
                 const onWtDragOver = (event: DragEvent) => {
+                  // Once the card leaves the sidebar it is on its way to the
+                  // prompt, so stop reordering the list under it.
+                  if (outsideSidebar(event.draggable)) return
                   const from = event.draggable?.id
                   const to = event.droppable?.id
                   if (typeof from !== "string" || typeof to !== "string") return
@@ -267,10 +293,21 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                   })
                 }
                 const onWtDragEnd = (event: DragEvent) => {
+                  const handled = endPromptMentionDrop()
                   const from = event.draggable?.id
                   const to = event.droppable?.id
                   props.setDraggingWorktree(undefined)
                   document.body.classList.remove("am-wt-dragging-active")
+                  // A drop on the prompt inserts a mention. Do not also move the
+                  // worktree to whatever section happens to be under the pointer.
+                  // Both this path and an outside release undo the pass-over
+                  // reorder so the sidebar matches the persisted order.
+                  if (handled || outsideSidebar(event.draggable)) {
+                    if (origin) props.setSidebarWorktreeOrder(() => origin!)
+                    origin = undefined
+                    return
+                  }
+                  origin = undefined
                   if (typeof from === "string" && typeof to === "string" && secIds().has(to)) {
                     props.moveToSection([from], to)
                     return

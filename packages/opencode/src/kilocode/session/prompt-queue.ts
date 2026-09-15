@@ -34,6 +34,10 @@ export namespace KiloSessionPromptQueue {
   // own message is never in this list. Published via session.queue.changed so
   // remote clients can reconcile "Queued" badges.
   const waiting = new Map<SessionID, MessageID[]>()
+  // Message IDs whose turn handed off to a queued follow-up. The goal runner
+  // reads this to keep an active goal running after a user prompt preempts its
+  // continuation turn instead of settling the goal to paused.
+  const superseded = new Map<SessionID, Set<MessageID>>()
   let seq = 0
 
   /** @internal - test-only helper */
@@ -44,7 +48,8 @@ export namespace KiloSessionPromptQueue {
       dropped.has(sessionID) ||
       latest.has(sessionID) ||
       activeSince.has(sessionID) ||
-      waiting.has(sessionID)
+      waiting.has(sessionID) ||
+      superseded.has(sessionID)
     )
   }
 
@@ -86,6 +91,7 @@ export namespace KiloSessionPromptQueue {
         dropped.delete(sessionID)
         latest.delete(sessionID)
         activeSince.delete(sessionID)
+        superseded.delete(sessionID)
         // Cancel on an idle session still drops any
         // lingering waiting entry, then publishes an empty snapshot.
         publishIfChanged(sessionID, [])
@@ -96,6 +102,7 @@ export namespace KiloSessionPromptQueue {
       publishIfChanged(sessionID, [])
       versions.set(sessionID, version(sessionID) + 1)
       dropped.delete(sessionID)
+      superseded.delete(sessionID)
     })
   }
 
@@ -110,6 +117,26 @@ export namespace KiloSessionPromptQueue {
       dropped.set(sessionID, cancelled)
       return true
     })
+  }
+
+  // Record that the turn owning `target` handed off to a queued follow-up, so a
+  // caller that owns the turn (the goal runner) can resume instead of treating
+  // the handoff as a stop. Keyed by the turn's own message ID, so a later turn
+  // cannot overwrite it.
+  export function markSuperseded(sessionID: SessionID, target: MessageID) {
+    const set = superseded.get(sessionID) ?? new Set<MessageID>()
+    set.add(target)
+    superseded.set(sessionID, set)
+  }
+
+  // Read and clear the superseded markers for the session. Returns whether
+  // `target` was among them. Clearing the whole set bounds stale markers left
+  // by handoffs no owner consumed.
+  export function consumeSuperseded(sessionID: SessionID, target: MessageID) {
+    const set = superseded.get(sessionID)
+    if (!set) return false
+    superseded.delete(sessionID)
+    return set.has(target)
   }
 
   /**
@@ -252,6 +279,7 @@ export namespace KiloSessionPromptQueue {
           dropped.delete(sessionID)
           latest.delete(sessionID)
           activeSince.delete(sessionID)
+          superseded.delete(sessionID)
           // Last slot of the session finished cleanly;
           // drop any lingering waiting entry and clear internal state.
           waiting.delete(sessionID)
