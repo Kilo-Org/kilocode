@@ -22,7 +22,6 @@ interface ProjectsSectionProps {
   onSection: (id: string) => void
   onSettings: (id: string) => void
   count: (id: string) => number | undefined
-  loaded: (id: string) => boolean
   baseBranch: (id: string) => string
   tools?: JSX.Element
   body: (project: AgentProjectSnapshot) => JSX.Element
@@ -81,7 +80,6 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   <ProjectRowActions
                     branch={props.baseBranch(project().id)}
                     bindings={props.bindings}
-                    loaded={props.loaded(project().id)}
                     t={props.t}
                     pinned={project().pinned}
                     onCreate={() => props.onCreate(project().id)}

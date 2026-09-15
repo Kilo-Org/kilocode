@@ -245,7 +245,6 @@ export const ProjectList: Component<Props> = (props) => {
       onSection={(projectId) => newSection(projectId)}
       onSettings={(projectId) => vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId })}
       bindings={props.bindings}
-      loaded={(projectId) => props.states[projectId] !== undefined}
       baseBranch={(projectId) => props.states[projectId]?.defaultBaseBranch ?? props.local[projectId]?.branch ?? "main"}
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
