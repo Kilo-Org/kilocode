@@ -130,22 +130,14 @@ export function pastePlaceholder(text: string): string {
 }
 
 const PASTE_PLACEHOLDER = /^\[Pasted ~\d+ lines\]$/
+const PASTE_TOKEN = /\[Pasted ~\d+ lines\]/g
 
 /** Every placeholder occurrence in `text`, in order, with its range. */
 export function findPastePlaceholders(text: string): { start: number; end: number }[] {
-  const out: { start: number; end: number }[] = []
-  let index = text.indexOf("[Pasted ~")
-  while (index !== -1) {
-    const end = text.indexOf("]", index)
-    const candidate = end === -1 ? "" : text.slice(index, end + 1)
-    if (PASTE_PLACEHOLDER.test(candidate)) {
-      out.push({ start: index, end: end + 1 })
-      index = text.indexOf("[Pasted ~", end + 1)
-      continue
-    }
-    index = text.indexOf("[Pasted ~", index + 1)
-  }
-  return out
+  return Array.from(text.matchAll(PASTE_TOKEN), (match) => {
+    const start = match.index ?? 0
+    return { start, end: start + match[0].length }
+  })
 }
 
 function validPaste(text: string, paste: PasteRange): boolean {

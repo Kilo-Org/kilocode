@@ -1748,10 +1748,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     clearDraft(key, draft)
   }
 
-  const clearDraft = (
-    key: string,
-    value = key === draftKey() ? paste.plainText(text()).trim() : (drafts.get(key) ?? "").trim(),
-  ) => {
+  const clearDraft = (key: string, value?: string) => {
+    if (value === undefined) {
+      const active = key === draftKey()
+      const source = active ? text() : (drafts.get(key) ?? "")
+      const backing = active ? paste.pastes().map((item) => item.text) : (pasteDrafts.get(key) ?? [])
+      value = paste.plainTextFor(source, backing).trim()
+    }
     history.append(value)
     drafts.delete(key)
     reviewDrafts.delete(key)

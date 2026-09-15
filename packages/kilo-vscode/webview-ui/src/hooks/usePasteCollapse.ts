@@ -20,6 +20,8 @@ export interface PasteCollapse {
   segments: (text: string, paths: Set<string>) => PromptSegment[]
   /** The text with every collapsed block restored to its full content. */
   plainText: (text: string) => string
+  /** Restore collapsed blocks for arbitrary text paired with stored backing. */
+  plainTextFor: (text: string, texts: readonly string[]) => string
   /** Claim a large plain-text clipboard paste. Returns true when it was collapsed. */
   paste: (
     event: ClipboardEvent,
@@ -80,6 +82,10 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
     expected: string,
     setText: (value: string) => void,
   ) => {
+    // Mark the resulting text before the edit. execCommand raises an input event
+    // that runs the reconcile effect, and that effect must treat this text as
+    // already applied or it shifts the ranges a second time.
+    prev = expected
     textarea.focus()
     textarea.setSelectionRange(start, end)
     if (value.length > directLimit) {
@@ -98,7 +104,6 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
     setText(expected)
     // The caller knows the exact edited span, so shift by it instead of inferring
     // the span from a diff, which cannot tell two identical chips apart.
-    prev = expected
     setPastes(rebasePastes(pastes(), start, end, value.length))
   }
 
@@ -171,6 +176,21 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
     }
     prev = text
     setPastes(items)
+  }
+
+  const plainTextFor = (text: string, texts: readonly string[]) => {
+    const marks = findPastePlaceholders(text)
+    // A mismatch means the text was edited outside this control. Keep the text
+    // as-is rather than pair the wrong content with a chip.
+    if (marks.length !== texts.length) return text
+    const items: PasteRange[] = []
+    for (let index = 0; index < marks.length; index++) {
+      const full = texts[index]
+      if (!full) continue
+      const mark = marks[index]!
+      items.push({ id: index, start: mark.start, end: mark.end, text: full })
+    }
+    return expandPastes(text, items)
   }
 
   const backspace = (
@@ -257,6 +277,7 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
       return buildPromptSegments(text, paths, list)
     },
     plainText: (text) => expandPastes(text, pastes()),
+    plainTextFor,
     paste,
     expand,
     load,
