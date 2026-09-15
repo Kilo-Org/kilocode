@@ -41,7 +41,7 @@ export function useCaffeination() {
     })
   const refreshWakeups = () => {
     void sdk.client.kilocode
-      .wakeups({ workspace: project.workspace.current() })
+      .wakeups({ workspace: project.workspace.current() }, { throwOnError: true })
       .then((result) => {
         setWaking(new Set((result.data ?? []).filter((item) => item.pending > 0).map((item) => item.sessionID)))
       })
