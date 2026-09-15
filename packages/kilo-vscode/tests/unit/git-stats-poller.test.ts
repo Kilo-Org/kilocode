@@ -524,6 +524,78 @@ describe("GitStatsPoller", () => {
     expect(hasZeros).toBe(false)
   })
 
+  it("parks a worktree whose status keeps failing and keeps measuring the others", async () => {
+    // Without a per-worktree backoff, one unmeasurable worktree costs a full status plus diff fan-out
+    // on every tick for as long as the panel is open, on budgets this PR deliberately tightened.
+    const attempts: Record<string, number> = { broken: 0, healthy: 0 }
+    const logs: string[] = []
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [worktree("broken"), worktree("healthy")],
+      getWorkspaceRoot: () => undefined,
+      source: {
+        status: async (dir: string) => {
+          const id = dir.endsWith("broken") ? "broken" : "healthy"
+          attempts[id] = (attempts[id] ?? 0) + 1
+          if (id === "broken") throw new Error("index.lock exists")
+          return {
+            branch: "HEAD",
+            dirty: true,
+            head: `h${attempts[id]}`,
+            fingerprint: `f${attempts[id]}`,
+            untracked: [],
+          }
+        },
+        refs: async () => ({ oids: new Map(), upstreams: new Map() }),
+        diff: async () => ({ files: 1, additions: 1, deletions: 0 }),
+      },
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      log: (...args) => logs.push(args.map(String).join(" ")),
+      intervalMs: 5,
+      git: gitOps(async () => ""),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => (attempts.healthy ?? 0) >= 6, 2000)
+    poller.stop()
+
+    // QUARANTINE_THRESHOLD failures, then parked: the healthy worktree keeps its cadence.
+    expect(attempts.broken).toBe(3)
+    expect(attempts.healthy).toBeGreaterThanOrEqual(6)
+    expect(logs.some((line) => line.includes("Stats polling paused"))).toBe(true)
+  })
+
+  it("measures a parked worktree again on an explicit refresh", async () => {
+    // The backoff is for the poll loop. A user asking now outranks it, which is also why recovery
+    // actions need nothing from this poller.
+    let attempts = 0
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [worktree("broken")],
+      getWorkspaceRoot: () => undefined,
+      source: {
+        status: async () => {
+          attempts++
+          throw new Error("index.lock exists")
+        },
+        refs: async () => ({ oids: new Map(), upstreams: new Map() }),
+        diff: async () => ({ files: 0, additions: 0, deletions: 0 }),
+      },
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async () => ""),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => attempts >= 3, 2000)
+    const parked = attempts
+    await poller.snapshot(true)
+    poller.stop()
+
+    expect(attempts).toBeGreaterThan(parked)
+  })
+
   it("emits present worktree probes on the poll loop", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-presence-"))
     const wtPath = path.join(root, "wt-a")

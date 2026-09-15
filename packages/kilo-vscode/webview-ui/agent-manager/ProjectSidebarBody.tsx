@@ -510,7 +510,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             </DragDropProvider>
           </Show>
           <OrphanNotice
-            paths={store.orphanDirectories()}
+            orphans={store.orphanDirectories()}
             onClean={(paths) => post({ type: "agentManager.cleanOrphanDirectories", paths })}
           />
         </div>

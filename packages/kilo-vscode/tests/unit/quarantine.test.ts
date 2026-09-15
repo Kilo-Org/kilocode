@@ -57,6 +57,30 @@ describe("Quarantine", () => {
     expect(quarantineWindow(QUARANTINE_THRESHOLD + 50)).toBe(30 * 60_000)
   })
 
+  it("reports a quarantine without spending the retry it allows", () => {
+    // The diagnostics report reads this. A read that consumed the half-open probe would describe a
+    // state it just changed, and the next real poll would find nothing parked.
+    let now = 1_000
+    const q = new Quarantine(() => now)
+    for (let i = 0; i < QUARANTINE_THRESHOLD; i++) q.fail("wt1")
+    now += QUARANTINE_BASE + 1
+
+    expect(q.peek("wt1")).toBe(true)
+    expect(q.peek("wt1")).toBe(true)
+    // The poll gate still gets its one attempt, once.
+    expect(q.blocked("wt1")).toBe(false)
+    expect(q.peek("wt1")).toBe(false)
+  })
+
+  it("peeks false for a worktree that has failed but is not parked yet", () => {
+    const q = new Quarantine()
+
+    q.fail("wt1")
+
+    expect(q.peek("wt1")).toBe(false)
+    expect(q.failures("wt1")).toBe(1)
+  })
+
   it("drops worktrees that no longer exist", () => {
     const q = new Quarantine()
     for (let i = 0; i < QUARANTINE_THRESHOLD; i++) q.fail("gone")

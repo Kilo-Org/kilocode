@@ -489,5 +489,8 @@ export const dict = {
   "agentManager.orphans.clean": "Očisti zaostale foldere",
   "agentManager.orphans.confirm": "Trajno izbrisati ove foldere? Ništa ovdje git ne prati.",
   "agentManager.orphans.cancel": "Otkaži",
+  "agentManager.orphans.checkout": "sadrži git checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Trajno izbrisati ove foldere? {{count}} još sadrži git checkout koji može imati necommitane promjene.",
   "agentManager.error.title": "Greška Agent Managera",
 }

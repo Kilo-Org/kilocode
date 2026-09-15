@@ -498,5 +498,8 @@ export const dict = {
   "agentManager.orphans.clean": "Übrige Ordner aufräumen",
   "agentManager.orphans.confirm": "Diese Ordner endgültig löschen? Nichts davon wird von git verfolgt.",
   "agentManager.orphans.cancel": "Abbrechen",
+  "agentManager.orphans.checkout": "enthält einen git-Checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Diese Ordner endgültig löschen? {{count}} enthalten noch einen git-Checkout mit möglicherweise nicht committeten Änderungen.",
   "agentManager.error.title": "Agent-Manager-Fehler",
 }

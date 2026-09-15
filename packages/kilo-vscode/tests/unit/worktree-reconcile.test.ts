@@ -207,6 +207,72 @@ describe("reconcileWorktrees", () => {
     expect(await fs.readdir(broken)).toEqual([".git"])
   })
 
+  it("does not report a worktree that git registered during the pass", async () => {
+    // The pool creates slot checkouts under the same directory on a timer, so a registration can land
+    // after this pass took its snapshot. Reporting from the stale snapshot offers a live worktree for
+    // deletion, and the manager's fail-closed re-check then turns the offer into an error.
+    const h = await harness()
+    const logs: string[] = []
+    let listings = 0
+    const created: string[] = []
+
+    const report = await reconcileWorktrees({
+      root: h.root,
+      dir: h.manager.worktreesDir,
+      rows: () => [],
+      sessions: () => 0,
+      registered: async () => {
+        listings++
+        // First call: the snapshot the row pass uses, before the slot exists. Second call: the
+        // re-check, by which time git knows about it.
+        if (listings > 1) return h.manager.registeredPaths()
+        return new Set<string>()
+      },
+      dirs: async () => {
+        created.push(await worktree(h.root, "slot"))
+        return h.manager.worktreeDirs()
+      },
+      exists: async () => true,
+      branchExists: async () => true,
+      prune: async () => {},
+      drop: () => {
+        throw new Error("must not drop")
+      },
+      log: (msg) => logs.push(msg),
+    })
+
+    expect(created).toHaveLength(1)
+    expect(listings).toBe(2)
+    expect(report.orphans).toEqual([])
+  })
+
+  it("reports no orphans when the re-check cannot answer", async () => {
+    // An unanswerable listing is not evidence that nothing owns the directory.
+    const h = await harness()
+    const leftover = path.join(h.manager.worktreesDir, "leftover")
+    await fs.mkdir(leftover, { recursive: true })
+    const logs: string[] = []
+    let listings = 0
+
+    const report = await reconcileWorktrees({
+      root: h.root,
+      dir: h.manager.worktreesDir,
+      rows: () => [],
+      sessions: () => 0,
+      registered: async () => (++listings > 1 ? undefined : new Set<string>()),
+      dirs: () => h.manager.worktreeDirs(),
+      exists: async () => true,
+      branchExists: async () => true,
+      prune: async () => {},
+      drop: () => {},
+      log: (msg) => logs.push(msg),
+    })
+
+    expect(report.orphans).toEqual([])
+    expect(report.degraded).toBe(false)
+    expect(logs.join("\n")).toContain("could not re-check")
+  })
+
   it("does not count a live worktree as an orphan", async () => {
     const h = await harness()
     await worktree(h.root, "tracked-by-git-only")

@@ -493,5 +493,8 @@ export const dict = {
   "agentManager.orphans.clean": "Limpar pastas remanescentes",
   "agentManager.orphans.confirm": "Excluir estas pastas permanentemente? Nada aqui é rastreado pelo git.",
   "agentManager.orphans.cancel": "Cancelar",
+  "agentManager.orphans.checkout": "contém um checkout do git",
+  "agentManager.orphans.confirmCheckout":
+    "Excluir estas pastas permanentemente? {{count}} ainda contêm um checkout do git que pode ter alterações não commitadas.",
   "agentManager.error.title": "Erro do Agent Manager",
 }

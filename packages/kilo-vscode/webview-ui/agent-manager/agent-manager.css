@@ -929,6 +929,16 @@ html[data-theme="kilo-vscode"]
   text-align: left;
 }
 
+.am-orphan-notice-paths li[data-orphan-kind="broken"] {
+  color: var(--text-warning, #f59e0b);
+}
+
+.am-orphan-notice-kind {
+  margin-left: 4px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
 .am-orphan-notice-actions {
   display: flex;
   justify-content: flex-end;

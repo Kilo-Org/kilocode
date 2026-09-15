@@ -3,6 +3,7 @@ import * as path from "path"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import type { Semaphore } from "./semaphore"
+import { Quarantine } from "./quarantine"
 import { findTrackedBranch } from "./project/paths"
 import {
   GitStatsSnapshot,
@@ -85,6 +86,8 @@ export class GitStatsPoller {
   private readonly cache = new Map<string, CachedStats>()
   private localCache: CachedStats | undefined
   private skipWorktreeIds = new Set<string>()
+  /** Per-worktree backoff, so one unmeasurable worktree does not fan out git on every tick. */
+  private readonly quarantine = new Quarantine()
   private visible = true
   private generation = 0
   private cursor = 0
@@ -152,6 +155,7 @@ export class GitStatsPoller {
     this.cache.clear()
     this.localCache = undefined
     this.cursor = 0
+    this.quarantine.reset()
   }
 
   async snapshot(refresh = false): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }> {
@@ -218,13 +222,23 @@ export class GitStatsPoller {
     )
     const available = worktrees.filter((wt) => !missing.has(wt.id) && this.options.isUnhealthy?.(wt.id) !== true)
     const ids = new Set(available.map((wt) => wt.id))
+    this.quarantine.retain(ids)
     for (const id of Object.keys(this.lastStats)) {
       if (!ids.has(id)) {
         delete this.lastStats[id]
         this.cache.delete(id)
       }
     }
-    const candidates = includeSkipped ? available : available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
+    // A worktree whose status keeps failing is parked for a while. `unhealthy` covers the states the
+    // reconcile can name, but a status scan can also fail for reasons it cannot see — a locked index,
+    // a permission problem, an unmounted volume — and every one of those otherwise costs a full
+    // status plus diff fan-out on every tick, forever.
+    //
+    // `includeSkipped` is the explicit-refresh path, which measures a parked worktree anyway: a user
+    // asking now outranks the backoff, and it is also why recovery actions need nothing from here.
+    // An absent worktree is filtered out above before it can ever be parked.
+    const measurable = includeSkipped ? available : available.filter((wt) => !this.quarantine.blocked(wt.id))
+    const candidates = includeSkipped ? measurable : measurable.filter((wt) => !this.skipWorktreeIds.has(wt.id))
     const active = includeSkipped ? candidates : this.select(candidates)
     if (active.length === 0) {
       if (available.length > 0) return
@@ -268,9 +282,15 @@ export class GitStatsPoller {
             !refresh && baseOID && cached?.head === status.head && cached.baseOID === baseOID
               ? cached.ahead
               : await this.git.aheadBehind(wt.path, base)
+          this.quarantine.clear(wt.id)
           return { wt, base, baseOID, status, diff, ahead }
         } catch (err) {
           this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
+          if (this.quarantine.fail(wt.id)) {
+            this.options.log(
+              `Stats polling paused for ${wt.branch} after ${this.quarantine.failures(wt.id)} consecutive failures`,
+            )
+          }
           return { wt, prior: this.lastStats[wt.id] }
         }
       }),

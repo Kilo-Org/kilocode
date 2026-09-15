@@ -30,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
@@ -79,6 +80,10 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("worktree", "list", "--porcelain")))
         assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("diff", "--numstat")))
         assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("show", "HEAD:file")))
+        // A status scans the working tree, so its cost follows the checkout, not `.git`. On the probe
+        // budget a large or cold worktree reported unavailable for a measurement that would have
+        // succeeded — the failure these budgets exist to report, caused by the budget itself.
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("status", "--porcelain=v2")))
         assertTrue(GIT_PROBE_TIMEOUT_MS < GIT_READ_TIMEOUT_MS)
     }
 
@@ -290,6 +295,40 @@ class KiloWorktreeRpcApiImplTest {
         assertTrue(badDir("fatal: Unable to read current working directory: No such file or directory"))
         assertFalse(badDir("fatal: index file corrupt"))
         assertFalse(badDir("fatal: not a git repository (or any of the parent directories): .git"))
+    }
+
+    @Test
+    fun `a poll skips its prune while a mutation holds the repository lock`() {
+        // `git worktree prune` rewrites the same `$GIT_DIR/worktrees` bookkeeping create/import/remove
+        // are serialised on, and `git worktree add` registers a worktree before its checkout is
+        // written — so a poll that pruned mid-add would delete the metadata of a worktree being
+        // created. Polls take the lock only when it is free: never waiting behind a mutation budgeted
+        // in minutes, never pruning underneath one.
+        val mutex = Mutex()
+        var ran = 0
+
+        assertEquals(1, exclusive(mutex, "prune", "/repo") { ++ran })
+        assertEquals(1, ran, "a free lock must run the block")
+
+        assertTrue(mutex.tryLock(), "the helper must release the lock it took")
+        assertNull(exclusive(mutex, "prune", "/repo") { ++ran }, "a held lock must answer null, not wait")
+        assertEquals(1, ran, "the block must not run while a mutation holds the lock")
+        mutex.unlock()
+
+        assertEquals(2, exclusive(mutex, "prune", "/repo") { ++ran })
+    }
+
+    @Test
+    fun `a poll still prunes stale metadata once the mutation lock is free`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/prune")).worktree)
+        delete(Path.of(created.path))
+
+        // Nothing holds the lock here, so the opportunistic prune must actually happen — the skip is a
+        // deferral, not a new permanent behavior.
+        assertTrue(api.stats(repo.toString()).items.none { it.path == created.path })
+        val listed = output(repo, "worktree", "list", "--porcelain")
+        assertFalse(listed.contains(created.path), "a poll with a free lock should prune: $listed")
     }
 
     @Test

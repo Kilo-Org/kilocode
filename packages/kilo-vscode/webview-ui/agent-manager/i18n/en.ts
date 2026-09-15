@@ -88,6 +88,9 @@ export const dict = {
   "agentManager.orphans.clean": "Clean up leftover folders",
   "agentManager.orphans.confirm": "Delete these folders permanently? Nothing here is tracked by git.",
   "agentManager.orphans.cancel": "Cancel",
+  "agentManager.orphans.checkout": "contains a git checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Delete these folders permanently? {{count}} still contain a git checkout that may hold uncommitted work.",
   "agentManager.worktree.doubleClickRename": "Double-click to rename",
   "agentManager.worktree.versions": "{{count}} versions",
   "agentManager.worktree.advancedOptions": "Advanced worktree options",

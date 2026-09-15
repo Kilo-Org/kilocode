@@ -14,7 +14,7 @@ import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
-import type { WorktreeHealth } from "./worktree-reconcile"
+import type { OrphanDirectory, WorktreeHealth } from "./worktree-reconcile"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
@@ -148,7 +148,7 @@ interface StateMessage {
   /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
   worktreeHealth?: Record<string, WorktreeHealth>
   /** Directories under `.kilo/worktrees/` that no worktree claims. Never removed automatically. */
-  orphanDirectories?: string[]
+  orphanDirectories?: OrphanDirectory[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean

@@ -170,12 +170,16 @@ export class PRStatusPoller {
     this.clearRefreshTimers()
   }
 
-  /** Worktrees currently skipped because they kept failing. Reported by the diagnostics command. */
+  /**
+   * Worktrees currently skipped because they kept failing. Reported by the diagnostics command.
+   *
+   * Reads with `peek` so generating a report does not release the quarantines it is reporting.
+   */
   paused(): string[] {
     return this.options
       .getWorktrees()
       .map((wt) => wt.id)
-      .filter((id) => this.quarantine.blocked(id))
+      .filter((id) => this.quarantine.peek(id))
   }
 
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
@@ -333,7 +337,8 @@ export class PRStatusPoller {
     const failed = results.filter((r, i) => {
       if (r.status !== "rejected") return false
       const id = targets.at(i)?.id
-      return id === undefined || !this.quarantine.blocked(id)
+      // peek: this is accounting, not a poll, so it must not spend the retry an elapsed window allows.
+      return id === undefined || !this.quarantine.peek(id)
     }).length
     if (failed === 0) {
       this.failures = 0
@@ -346,9 +351,15 @@ export class PRStatusPoller {
   private host(generation: number): SeedHost {
     return {
       branch: (wt) => (this.options.getBranch ? this.options.getBranch(wt) : Promise.resolve(wt.branch)),
-      git: (args, cwd) => this.shell("git", args, { cwd, timeout: 5_000 }).then((r) => r.stdout),
-      gh: (args, cwd) => this.gh(args, { cwd, timeout: 20_000 }).then((r) => r.stdout),
+      // The same budgets the per-worktree ladder runs on. A batch is one request for up to CHUNK
+      // worktrees, so a wider budget here would only mean a longer stall before the fallback runs.
+      git: (args, cwd) => this.shell("git", args, { cwd, timeout: BUDGET.probe }).then((r) => r.stdout),
+      gh: (args, cwd) => this.gh(args, { cwd, timeout: BUDGET.gh }).then((r) => r.stdout),
       repo: (cwd) => this.getRepoInfo(cwd),
+      // peek, not blocked: a worktree that is parked must stay out of the batch without spending the
+      // single retry its elapsed window allows — that retry belongs to the per-worktree path, which
+      // can attribute what happens to the worktree it polled.
+      skip: (id) => this.options.isUnhealthy?.(id) === true || this.quarantine.peek(id),
       rich: () => this.rich,
       degrade: () => {
         this.rich = false

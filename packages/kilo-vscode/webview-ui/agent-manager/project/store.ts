@@ -19,6 +19,9 @@ export interface WorktreeBusyState {
 /** Why a worktree cannot be polled, as classified by the extension's health reconcile. */
 export type WorktreeHealthState = NonNullable<AgentManagerStateMessage["worktreeHealth"]>[string]
 
+/** A directory under `.kilo/worktrees/` that no worktree claims, and whether it still holds a checkout. */
+export type OrphanDirectory = NonNullable<AgentManagerStateMessage["orphanDirectories"]>[number]
+
 /** Local session tab ids owned by one project. */
 export function createStoreTabs(initial: string[] = []) {
   const [ids, setIds] = createSignal<string[]>(initial)
@@ -67,7 +70,7 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
   const [sections, setSections] = field<SectionState[]>([])
   const [staleWorktreeIds, setStaleWorktreeIds] = field<Set<string>>(new Set())
   const [worktreeHealth, setWorktreeHealth] = field<Record<string, WorktreeHealthState>>({})
-  const [orphanDirectories, setOrphanDirectories] = field<string[]>([])
+  const [orphanDirectories, setOrphanDirectories] = field<OrphanDirectory[]>([])
   const [tabOrder, setTabOrder] = field<Record<string, string[]>>({})
   const [worktreeOrder, setWorktreeOrder] = field<string[]>([])
   const [sessionsCollapsed, setSessionsCollapsed] = field<boolean | undefined>(undefined)

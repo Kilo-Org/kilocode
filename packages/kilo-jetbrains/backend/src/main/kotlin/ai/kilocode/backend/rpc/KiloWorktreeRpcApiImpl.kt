@@ -248,12 +248,21 @@ class KiloWorktreeRpcApiImpl(
         val stale = staleWorktrees(raw, trash)
         val all = if (stale.isEmpty()) raw else {
             LOG.info("worktree sync pruning stale managed worktrees: ${stale.joinToString(", ") { it.path }}")
-            val prune = runGit(root, "worktree", "prune", "-v")
-            if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
-            if (prune.ok && prune.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(prune.stdout)}")
-            val again = runGit(root, "worktree", "list", "--porcelain")
-            if (!again.ok) return null
-            parseWorktreeList(again.stdout)
+            // Pruning rewrites the same `$GIT_DIR/worktrees` bookkeeping create/import/remove/rename
+            // are serialised on, and `git worktree add` registers a worktree before it has finished
+            // writing the checkout — so a poll that pruned mid-add would delete the metadata of a
+            // worktree being created. The most frequent caller in the backend must not be the one
+            // path that skips that mutex.
+            val pruned = exclusive(main(raw), "prune") { prune(root) }
+            // Not pruning is harmless: the entry is still stale on the next poll, and this pass
+            // simply reports what git reported. Waiting for the mutation instead would park every
+            // status poll behind a `git worktree add` on a large repository.
+            if (pruned == null) raw
+            else {
+                val again = runGit(root, "worktree", "list", "--porcelain")
+                if (!again.ok) return null
+                parseWorktreeList(again.stdout)
+            }
         }
         val items = live(managedWorktrees(all).filter { Files.isDirectory(Path.of(it.path)) })
         return Reconciled(items, orphanDirs(all, main(all)))
@@ -261,6 +270,25 @@ class KiloWorktreeRpcApiImpl(
 
     private fun main(all: List<WorktreeDto>): Path? =
         all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
+
+    /** `git worktree prune`, on the write budget it shares with the other worktree-writing commands. */
+    private fun prune(root: Path): Boolean {
+        val res = runGit(root, listOf("worktree", "prune", "-v"), GIT_WRITE_TIMEOUT_MS)
+        if (!res.ok) LOG.warn("worktree prune during sync failed: exit=${res.exit} stderr=${snippet(res.stderr)}")
+        if (res.ok && res.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(res.stdout)}")
+        return res.ok
+    }
+
+    /**
+     * Runs [block] holding this repository's mutation lock, or answers null when a mutation holds it.
+     *
+     * Keyed exactly like [lock], so a poll and a mutation on the same repository contend on the same
+     * mutex. A null [main] means git did not name a main working tree, and a prune needs one.
+     */
+    private fun <T> exclusive(main: Path?, op: String, block: () -> T): T? {
+        val key = (main ?: return null).toString()
+        return exclusive(locks.computeIfAbsent(key) { Mutex() }, op, key, block)
+    }
 
     /**
      * Directories under `.kilo/worktrees/` that git does not track.
@@ -1089,6 +1117,26 @@ internal fun badDir(text: String): Boolean {
     val msg = text.lowercase()
     if (msg.contains("working directory") && (msg.contains("does not exist") || msg.contains("not a directory"))) return true
     return msg.contains("unable to read current working directory")
+}
+
+/**
+ * Runs [block] holding [mutex], or answers null without waiting when something else holds it.
+ *
+ * The suspending per-repository lock cannot be used from a polling path: a poll that waited would
+ * queue behind mutations budgeted in minutes, and it is reached from plain functions. [Mutex.tryLock]
+ * gives the mutual exclusion without the wait, and callers treat a refusal as "not this pass" —
+ * correct for work that is only ever opportunistic, like pruning stale worktree metadata.
+ */
+internal fun <T> exclusive(mutex: Mutex, op: String, path: String, block: () -> T): T? {
+    if (!mutex.tryLock()) {
+        KiloWorktreeRpcApiImpl.LOG.info("worktree poll skipped: op=$op path=$path reason=mutating")
+        return null
+    }
+    return try {
+        block()
+    } finally {
+        mutex.unlock()
+    }
 }
 
 /**

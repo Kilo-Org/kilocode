@@ -18,6 +18,14 @@ export interface RecoveryHost {
   log: (...args: unknown[]) => void
   /** Re-run the health reconcile after a successful recovery. */
   reconcile: (ctx: ProjectContext) => Promise<WorktreeHealthReport | undefined>
+  /**
+   * Drop the polling backoff a worktree earned while it was broken, and poll it now.
+   *
+   * A restore fixes the cause, but the failures are already on record: without this the worktree the
+   * user just repaired can sit parked for the rest of a quarantine window — up to half an hour of
+   * badges that do not move, which is the symptom the recovery action was clicked to end.
+   */
+  refresh: (worktreeId: string) => void
 }
 
 export type RecoveryMessage =
@@ -51,6 +59,7 @@ export async function restoreWorktree(ctx: ProjectContext, host: RecoveryHost, w
   }
   ctx.stale.delete(worktreeId)
   await host.reconcile(ctx)
+  host.refresh(worktreeId)
   host.push()
   host.log(`Restored worktree ${worktreeId} (${worktree.branch})`)
 }

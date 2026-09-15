@@ -8,20 +8,30 @@ function report(overrides: Partial<WorktreeHealthReport> = {}): WorktreeHealthRe
 }
 
 describe("healthPayload", () => {
-  it("sends only unhealthy worktrees plus the orphan paths", () => {
+  it("sends only unhealthy worktrees plus the orphan directories and their kind", () => {
     const payload = healthPayload(
       report({
         entries: [
           { id: "a", path: "/a", branch: "a", health: "ok", sessions: 0 },
           { id: "b", path: "/b", branch: "b", health: "absent-restorable", sessions: 1 },
         ],
-        orphans: [{ path: "/o", kind: "leftover" }],
+        orphans: [
+          { path: "/o", kind: "leftover" },
+          { path: "/b", kind: "broken" },
+        ],
       }),
       [{ id: "a" }, { id: "b" }],
     )
 
-    // Paths, not a count: the confirmation dialog has to name what it would delete.
-    expect(payload).toEqual({ worktreeHealth: { b: "absent-restorable" }, orphanDirectories: ["/o"] })
+    // Paths, not a count: the confirmation dialog has to name what it would delete. The kind travels
+    // with them because only a `leftover` is safe to describe as untracked by git.
+    expect(payload).toEqual({
+      worktreeHealth: { b: "absent-restorable" },
+      orphanDirectories: [
+        { path: "/o", kind: "leftover" },
+        { path: "/b", kind: "broken" },
+      ],
+    })
   })
 
   it("drops worktrees that are no longer in state", () => {

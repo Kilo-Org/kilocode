@@ -1,5 +1,4 @@
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
-import { lstat } from "node:fs/promises"
 import { getErrorMessage } from "../kilo-provider-utils"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"
@@ -375,17 +374,12 @@ export async function removeStaleLifecycleWorktree(
     const releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
     releasePtyCleanup()
   } catch (error) {
-    host.log(`Failed to remove stale worktree PTYs: ${error}`)
-    // A deleted directory may no longer be reachable through the backend.
-    // Only bypass cleanup when the path is missing, not when access is denied.
-    const missing = await lstat(worktree.path).then(
-      () => false,
-      (err: NodeJS.ErrnoException) => err.code === "ENOENT",
-    )
-    if (!missing) {
-      host.post({ type: "error", message: "Failed to stop terminals before removing the stale worktree" })
-      return null
-    }
+    // Nothing on this path deletes files, so a terminal that cannot be stopped is not a reason to
+    // refuse. Refusing was a dead end: for an `unregistered` worktree the directory still exists, so
+    // dropping the row is the only action the UI offers, and it failed with a message about terminals
+    // — a problem the user cannot act on, reported instead of the one they asked to fix. The terminal
+    // keeps running against a directory that is still there; the row is what they asked to remove.
+    host.log(`Removing stale worktree ${worktreeId} without backend terminal cleanup: ${error}`)
   }
   host.forgetName(worktreeId)
   const kept = keepSessions ? state.getSessions(worktreeId) : []

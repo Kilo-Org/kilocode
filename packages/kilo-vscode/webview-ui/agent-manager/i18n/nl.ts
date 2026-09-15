@@ -498,5 +498,8 @@ export const dict = {
   "agentManager.orphans.clean": "Achtergebleven mappen opruimen",
   "agentManager.orphans.confirm": "Deze mappen definitief verwijderen? Niets hiervan wordt door git gevolgd.",
   "agentManager.orphans.cancel": "Annuleren",
+  "agentManager.orphans.checkout": "bevat een git-checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Deze mappen permanent verwijderen? {{count}} bevatten nog een git-checkout die niet-gecommitte wijzigingen kan hebben.",
   "agentManager.error.title": "Agent Manager-fout",
 }

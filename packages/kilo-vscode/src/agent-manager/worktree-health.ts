@@ -8,13 +8,13 @@
  * No vscode imports — the provider owns the plumbing, this owns the policy.
  */
 
-import type { WorktreeHealth, WorktreeHealthReport } from "./worktree-reconcile"
+import type { OrphanDirectory, WorktreeHealth, WorktreeHealthReport } from "./worktree-reconcile"
 
 /** Health of every worktree still present in state, plus any orphaned directories. */
 export function healthPayload(
   report: WorktreeHealthReport | undefined,
   worktrees: { id: string }[],
-): { worktreeHealth?: Record<string, WorktreeHealth>; orphanDirectories?: string[] } {
+): { worktreeHealth?: Record<string, WorktreeHealth>; orphanDirectories?: OrphanDirectory[] } {
   if (!report) return {}
   const ids = new Set(worktrees.map((wt) => wt.id))
   const health: Record<string, WorktreeHealth> = {}
@@ -24,8 +24,10 @@ export function healthPayload(
     health[entry.id] = entry.health
   }
   // Paths, not just a count: the confirmation dialog has to show exactly what will be deleted, and
-  // the host re-validates every path against the current orphan set before removing anything.
-  return { worktreeHealth: health, orphanDirectories: report.orphans.map((orphan) => orphan.path) }
+  // the host re-validates every path against the current orphan set before removing anything. The
+  // kind travels with them because "nothing here is tracked by git" is only true for a `leftover`: a
+  // `broken` orphan still holds a checkout, and its files can exist nowhere else.
+  return { worktreeHealth: health, orphanDirectories: report.orphans }
 }
 
 /**

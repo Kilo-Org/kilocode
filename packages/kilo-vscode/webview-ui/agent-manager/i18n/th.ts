@@ -481,5 +481,8 @@ export const dict = {
   "agentManager.orphans.clean": "ล้างโฟลเดอร์ที่ตกค้าง",
   "agentManager.orphans.confirm": "ลบโฟลเดอร์เหล่านี้อย่างถาวรหรือไม่? ไม่มีสิ่งใดที่ git ติดตามอยู่",
   "agentManager.orphans.cancel": "ยกเลิก",
+  "agentManager.orphans.checkout": "มี git checkout อยู่",
+  "agentManager.orphans.confirmCheckout":
+    "ลบโฟลเดอร์เหล่านี้อย่างถาวรหรือไม่? {{count}} รายการยังมี git checkout ที่อาจมีการแก้ไขที่ยังไม่ได้คอมมิต",
   "agentManager.error.title": "ข้อผิดพลาด Agent Manager",
 }

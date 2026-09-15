@@ -490,5 +490,8 @@ export const dict = {
   "agentManager.orphans.clean": "Wyczyść pozostałe foldery",
   "agentManager.orphans.confirm": "Trwale usunąć te foldery? Nic tutaj nie jest śledzone przez gita.",
   "agentManager.orphans.cancel": "Anuluj",
+  "agentManager.orphans.checkout": "zawiera checkout git",
+  "agentManager.orphans.confirmCheckout":
+    "Trwale usunąć te foldery? {{count}} nadal zawiera checkout git, w którym mogą być niezatwierdzone zmiany.",
   "agentManager.error.title": "Błąd Agent Managera",
 }

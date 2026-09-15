@@ -491,5 +491,8 @@ export const dict = {
   "agentManager.orphans.clean": "Ryd op i efterladte mapper",
   "agentManager.orphans.confirm": "Slet disse mapper permanent? Intet her spores af git.",
   "agentManager.orphans.cancel": "Annuller",
+  "agentManager.orphans.checkout": "indeholder et git-checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Slet disse mapper permanent? {{count}} indeholder stadig et git-checkout, der kan have ikke-committede ændringer.",
   "agentManager.error.title": "Agent Manager-fejl",
 }

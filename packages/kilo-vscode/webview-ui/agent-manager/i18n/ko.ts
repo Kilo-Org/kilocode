@@ -484,5 +484,8 @@ export const dict = {
   "agentManager.orphans.clean": "남은 폴더 정리",
   "agentManager.orphans.confirm": "이 폴더를 영구히 삭제할까요? git이 추적하는 항목은 없습니다.",
   "agentManager.orphans.cancel": "취소",
+  "agentManager.orphans.checkout": "git 체크아웃이 남아 있음",
+  "agentManager.orphans.confirmCheckout":
+    "이 폴더를 영구적으로 삭제할까요? {{count}}개에 아직 git 체크아웃이 남아 있어 커밋되지 않은 변경이 있을 수 있습니다.",
   "agentManager.error.title": "Agent Manager 오류",
 }

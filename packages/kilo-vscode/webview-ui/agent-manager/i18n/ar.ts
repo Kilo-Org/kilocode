@@ -482,5 +482,8 @@ export const dict = {
   "agentManager.orphans.clean": "تنظيف المجلدات المتبقية",
   "agentManager.orphans.confirm": "حذف هذه المجلدات نهائيًا؟ لا شيء هنا يتتبعه git.",
   "agentManager.orphans.cancel": "إلغاء",
+  "agentManager.orphans.checkout": "يحتوي على نسخة عمل git",
+  "agentManager.orphans.confirmCheckout":
+    "حذف هذه المجلدات نهائيًا؟ ما زال {{count}} منها يحتوي على نسخة عمل git قد تتضمن تغييرات غير مُودعة.",
   "agentManager.error.title": "خطأ في Agent Manager",
 }

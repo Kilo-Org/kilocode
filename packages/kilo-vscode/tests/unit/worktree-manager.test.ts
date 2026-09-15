@@ -13,6 +13,7 @@ import {
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import type { PRInfo } from "../../src/agent-manager/git-import"
+import { BUDGET } from "../../src/agent-manager/command-budget"
 import simpleGit from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -1019,6 +1020,29 @@ describe("WorktreeManager.restoreWorktree", () => {
     const wt = await mgr.createWorktree({ prompt: "occupied" })
 
     await expect(mgr.restoreWorktree(wt.path, wt.branch)).rejects.toThrow(/already exists/)
+  })
+})
+
+describe("WorktreeManager.createFromPR", () => {
+  it("reports a timed-out gh lookup as a timeout, not as an unexplained failure", async () => {
+    // The import path a user reaches by pasting a PR url ran gh on a 30s budget and classified the
+    // failure from text a killed process never produces, so a hang read as "Failed to fetch PR info".
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const internal = manager as unknown as { gh: (args: string[], timeout?: number) => Promise<string> }
+    const budgets: (number | undefined)[] = []
+    internal.gh = async (_args, timeout) => {
+      budgets.push(timeout)
+      throw Object.assign(new Error("Command failed: gh pr view 1"), { killed: true, signal: "SIGTERM" })
+    }
+
+    const failure = await manager.createFromPR("https://github.com/org/repo/pull/1").then(
+      () => undefined,
+      (err: unknown) => (err instanceof Error ? err.message : String(err)),
+    )
+
+    expect(failure).toBe("GitHub CLI (gh) did not respond in time. Try again.")
+    expect(budgets).toEqual([BUDGET.gh])
   })
 })
 

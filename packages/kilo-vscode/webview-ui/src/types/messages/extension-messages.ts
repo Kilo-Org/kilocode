@@ -886,8 +886,13 @@ export interface AgentManagerStateMessage {
   staleWorktreeIds?: string[]
   /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
   worktreeHealth?: Record<string, "absent-restorable" | "absent-gone" | "unregistered" | "unavailable">
-  /** Directories under `.kilo/worktrees/` that no worktree claims. */
-  orphanDirectories?: string[]
+  /**
+   * Directories under `.kilo/worktrees/` that no worktree claims.
+   *
+   * `broken` still holds a git checkout, so it can contain work that exists nowhere else; `leftover`
+   * is a bare directory. The notice says which, because the two do not deserve the same warning.
+   */
+  orphanDirectories?: { path: string; kind: "broken" | "leftover" }[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean

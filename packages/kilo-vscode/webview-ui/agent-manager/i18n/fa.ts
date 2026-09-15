@@ -491,5 +491,8 @@ export const dict = {
   "agentManager.orphans.clean": "پاک‌سازی پوشه‌های باقی‌مانده",
   "agentManager.orphans.confirm": "این پوشه‌ها برای همیشه حذف شوند؟ هیچ‌چیز اینجا توسط گیت پیگیری نمی‌شود.",
   "agentManager.orphans.cancel": "لغو",
+  "agentManager.orphans.checkout": "شامل یک checkout گیت است",
+  "agentManager.orphans.confirmCheckout":
+    "این پوشه‌ها برای همیشه حذف شوند؟ {{count}} پوشه هنوز شامل checkout گیت است که ممکن است تغییرات ثبت‌نشده داشته باشد.",
   "agentManager.error.title": "خطای Agent Manager",
 }

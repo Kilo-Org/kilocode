@@ -499,5 +499,8 @@ export const dict = {
   "agentManager.orphans.confirm":
     "Bu klasörler kalıcı olarak silinsin mi? Burada git tarafından izlenen hiçbir şey yok.",
   "agentManager.orphans.cancel": "İptal",
+  "agentManager.orphans.checkout": "bir git checkout içeriyor",
+  "agentManager.orphans.confirmCheckout":
+    "Bu klasörler kalıcı olarak silinsin mi? {{count}} tanesi hâlâ commit edilmemiş değişiklikler içerebilecek bir git checkout barındırıyor.",
   "agentManager.error.title": "Agent Manager hatası",
 }

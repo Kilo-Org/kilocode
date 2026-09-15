@@ -15,7 +15,7 @@ import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
-import { BUDGET } from "./command-budget"
+import { BUDGET, isTimeout } from "./command-budget"
 import { WorktreePool, type PoolStart } from "./worktree-pool"
 import {
   parsePRUrl,
@@ -565,15 +565,18 @@ export class WorktreeManager {
     if (!fs.existsSync(worktreePath)) return worktreePath
     if (!branch) throw new Error(`Worktree path already exists: ${worktreePath}`)
     const entries = parseWorktreeList(await this.git.raw(["worktree", "list", "--porcelain"]))
-    const canonical = normalizePath(await fs.promises.realpath(worktreePath))
-    const entry = entries.find((entry) => normalizePath(entry.path) === canonical)
+    // pathKey, not a lexical compare: git reports realpaths, and on a case-insensitive filesystem a
+    // registration only differing in case would read as "this path is free" — then `worktree add`
+    // fails on a directory this function was called to make usable.
+    const registered = new Set(entries.map((entry) => pathKey(entry.path)))
+    const canonical = pathKey(worktreePath)
+    const entry = entries.find((entry) => pathKey(entry.path) === canonical)
     if (entry && (entry.branch !== branch || entry.detached || entry.bare)) {
       // A literal branch can match another ref's hashed directory name.
       const parent = await fs.promises.realpath(path.dirname(worktreePath))
       for (let suffix = 2; ; suffix++) {
         const candidate = `${worktreePath}-${suffix}`
-        const canonical = normalizePath(path.join(parent, path.basename(candidate)))
-        if (!fs.existsSync(candidate) && !entries.some((entry) => normalizePath(entry.path) === canonical)) {
+        if (!fs.existsSync(candidate) && !registered.has(pathKey(path.join(parent, path.basename(candidate))))) {
           return candidate
         }
       }
@@ -1455,11 +1458,15 @@ export class WorktreeManager {
           "--json",
           "headRefName,baseRefName,headRepositoryOwner,isCrossRepository,title",
         ],
-        30000,
+        BUDGET.gh,
       )
       return JSON.parse(json) as PRInfo
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      // A killed process flushes no message classifyPRError can read, so without this a `gh` that
+      // hung is reported as an unexplained import failure — the same defect the poller's ladder was
+      // fixed for, on the path a user hits by pasting a PR url.
+      if (isTimeout(error)) throw new Error("GitHub CLI (gh) did not respond in time. Try again.")
       const kind = classifyPRError(msg)
       if (kind === "not_found") throw new Error(`PR #${parsed.number} not found in ${parsed.owner}/${parsed.repo}`)
       if (kind === "gh_missing")

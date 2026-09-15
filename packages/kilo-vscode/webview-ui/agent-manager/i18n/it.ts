@@ -504,5 +504,8 @@ export const dict = {
   "agentManager.orphans.clean": "Pulisci le cartelle rimaste",
   "agentManager.orphans.confirm": "Eliminare definitivamente queste cartelle? Nulla qui è tracciato da git.",
   "agentManager.orphans.cancel": "Annulla",
+  "agentManager.orphans.checkout": "contiene un checkout git",
+  "agentManager.orphans.confirmCheckout":
+    "Eliminare definitivamente queste cartelle? {{count}} contengono ancora un checkout git che potrebbe avere modifiche non committate.",
   "agentManager.error.title": "Errore di Agent Manager",
 }

@@ -1176,6 +1176,7 @@ export class AgentManagerProvider implements Disposable {
       push: () => this.pushState(),
       log: (...args) => this.log(...args),
       reconcile: (ctx) => reconcileProject(ctx, (...args: unknown[]) => this.log(...args)),
+      refresh: (worktreeId) => this.prBridge.poller.refresh(worktreeId, true),
     })
   }
 

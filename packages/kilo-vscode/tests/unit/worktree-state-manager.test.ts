@@ -43,6 +43,22 @@ describe("WorktreeStateManager", () => {
       expect(manager.findWorktreeByPath("/tmp/c")).toBeUndefined()
     })
 
+    it("finds worktree through a symlinked parent and a case variant", () => {
+      // Callers pass paths from git, from the backend, and from VS Code, which do not agree on either:
+      // on macOS /tmp is a symlink to /private/tmp, and the filesystem is case-insensitive. A lexical
+      // compare misses both, and the answer decides which worktree a session or tool call belongs to.
+      const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "am-state-path-")))
+      const nested = path.join(real, "Feature-Dir")
+      fs.mkdirSync(nested)
+      const wt = manager.addWorktree({ branch: "feature", path: nested, parentBranch: "main" })
+
+      expect(manager.findWorktreeByPath(nested)?.id).toBe(wt.id)
+      expect(manager.findWorktreeByPath(path.join(real, "feature-dir"))?.id).toBe(
+        process.platform === "darwin" || process.platform === "win32" ? wt.id : undefined,
+      )
+      fs.rmSync(real, { recursive: true, force: true })
+    })
+
     it("removes worktree and deletes its sessions", () => {
       const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
       manager.addSession("s1", wt.id)

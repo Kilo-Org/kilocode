@@ -29,6 +29,7 @@ import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
 import { OrphanNotice } from "./OrphanNotice"
+import type { OrphanDirectory } from "./project/store"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem, actionable } from "./WorktreeItem"
@@ -89,7 +90,7 @@ export interface SidebarBodyProps {
   /** Why an unhealthy worktree is unhealthy, when known. */
   worktreeHealth?: (id: string) => "absent-restorable" | "absent-gone" | "unregistered" | "unavailable" | undefined
   /** Leftover folders under `.kilo/worktrees/` that no worktree claims. */
-  orphanDirectories?: () => string[]
+  orphanDirectories?: () => OrphanDirectory[]
   /** Restore a deleted worktree folder from its branch. */
   onRestoreWorktree?: (id: string) => void
   /** Drop the entry but move its sessions to Local. */
@@ -497,7 +498,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
             </Show>
           </Show>
           <OrphanNotice
-            paths={props.orphanDirectories?.() ?? []}
+            orphans={props.orphanDirectories?.() ?? []}
             onClean={(paths) => vscode.postMessage({ type: "agentManager.cleanOrphanDirectories", paths })}
           />
         </div>

@@ -136,11 +136,26 @@ export async function reconcileWorktrees(deps: ReconcileDeps): Promise<WorktreeH
     dropped.push(entry.id)
   }
 
-  const orphans: OrphanDirectory[] = []
+  const candidates: string[] = []
   for (const name of await deps.dirs()) {
     const abs = path.join(deps.dir, name)
     const key = pathKey(abs)
     if (claimed.has(key) || registered.has(key)) continue
+    candidates.push(abs)
+  }
+
+  // The registration snapshot is older than the directory listing by every await above, and
+  // `.kilo/worktrees/` is written by more than this reconcile: the worktree pool creates and removes
+  // slot checkouts on a timer, and a create can land mid-pass. A directory that git registered in
+  // the meantime is not an orphan, so candidates are checked against a fresh listing rather than
+  // reported from a stale one — otherwise a slot the pool just built is offered for deletion, and
+  // the fail-closed re-check in removeOrphanDirectory turns that offer into an error.
+  const orphans: OrphanDirectory[] = []
+  const current = candidates.length > 0 ? await deps.registered() : registered
+  if (!current) deps.log("worktree health: could not re-check git worktrees, reporting no orphans")
+  for (const abs of candidates) {
+    // An unanswerable re-check is not evidence that nothing owns the directory.
+    if (!current || current.has(pathKey(abs))) continue
     const kind = (await deps.exists(path.join(abs, ".git"))) ? "broken" : "leftover"
     orphans.push({ path: abs, kind })
   }

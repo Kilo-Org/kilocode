@@ -492,5 +492,8 @@ export const dict = {
   "agentManager.orphans.clean": "Очистить оставшиеся папки",
   "agentManager.orphans.confirm": "Удалить эти папки безвозвратно? Git ничего здесь не отслеживает.",
   "agentManager.orphans.cancel": "Отмена",
+  "agentManager.orphans.checkout": "содержит рабочую копию git",
+  "agentManager.orphans.confirmCheckout":
+    "Удалить эти папки безвозвратно? {{count}} всё ещё содержат рабочую копию git с возможными незакоммиченными изменениями.",
   "agentManager.error.title": "Ошибка Agent Manager",
 }

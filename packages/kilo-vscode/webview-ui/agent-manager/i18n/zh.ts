@@ -473,5 +473,7 @@ export const dict = {
   "agentManager.orphans.clean": "清理残留文件夹",
   "agentManager.orphans.confirm": "永久删除这些文件夹？其中没有任何内容被 git 跟踪。",
   "agentManager.orphans.cancel": "取消",
+  "agentManager.orphans.checkout": "仍包含 git 检出",
+  "agentManager.orphans.confirmCheckout": "永久删除这些文件夹？其中 {{count}} 个仍包含 git 检出，可能有未提交的更改。",
   "agentManager.error.title": "Agent Manager 错误",
 }

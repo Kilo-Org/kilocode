@@ -500,5 +500,8 @@ export const dict = {
   "agentManager.orphans.clean": "Очистити залишені теки",
   "agentManager.orphans.confirm": "Видалити ці теки безповоротно? Git тут нічого не відслідковує.",
   "agentManager.orphans.cancel": "Скасувати",
+  "agentManager.orphans.checkout": "містить робочу копію git",
+  "agentManager.orphans.confirmCheckout":
+    "Видалити ці теки безповоротно? {{count}} усе ще містять робочу копію git із можливими незакоміченими змінами.",
   "agentManager.error.title": "Помилка Agent Manager",
 }

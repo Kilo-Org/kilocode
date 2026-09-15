@@ -175,7 +175,14 @@ internal const val GIT_COMMAND_TIMEOUT_MS = GIT_READ_TIMEOUT_MS
  */
 internal const val GIT_WRITE_TIMEOUT_MS = 180_000
 
-/** Commands that only touch `.git` metadata and must answer almost immediately. */
+/**
+ * Commands that only touch `.git` metadata and must answer almost immediately.
+ *
+ * `status` is deliberately absent: it scans the working tree, so its cost scales with the checkout,
+ * not with `.git`. On a large or cold worktree the probe budget turns a measurement that would have
+ * succeeded into an unavailable row — a self-inflicted version of the failure the budgets exist to
+ * report. `worktree` covers the `list` query; the writing forms pass [GIT_WRITE_TIMEOUT_MS].
+ */
 private val PROBES = setOf(
     "--version",
     "rev-parse",
@@ -184,7 +191,6 @@ private val PROBES = setOf(
     "branch",
     "config",
     "remote",
-    "status",
 )
 
 /** Budget for `args`, by the kind of work the command performs. */

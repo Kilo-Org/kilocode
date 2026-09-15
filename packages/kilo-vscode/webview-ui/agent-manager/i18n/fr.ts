@@ -498,5 +498,8 @@ export const dict = {
   "agentManager.orphans.clean": "Nettoyer les dossiers résiduels",
   "agentManager.orphans.confirm": "Supprimer définitivement ces dossiers ? Rien ici n'est suivi par git.",
   "agentManager.orphans.cancel": "Annuler",
+  "agentManager.orphans.checkout": "contient un checkout git",
+  "agentManager.orphans.confirmCheckout":
+    "Supprimer définitivement ces dossiers ? {{count}} contiennent encore un checkout git pouvant avoir des modifications non commitées.",
   "agentManager.error.title": "Erreur Agent Manager",
 }

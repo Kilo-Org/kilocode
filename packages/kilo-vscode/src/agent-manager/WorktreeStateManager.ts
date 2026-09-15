@@ -11,7 +11,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import { normalizePath } from "./git-import"
+import { pathKey } from "./project/paths"
 import type { SidebarTarget } from "./project/route"
 
 /** Accept a persisted sidebar target only when its shape matches a known kind. */
@@ -156,11 +156,17 @@ export class WorktreeStateManager {
     return this.worktrees.get(id)
   }
 
-  /** Find worktree by its filesystem path. */
+  /**
+   * Find worktree by its filesystem path.
+   *
+   * Compares with `pathKey`, so a symlinked parent (`/tmp` -> `/private/tmp` on macOS) or a case
+   * variant still finds the row. A lexical compare misses both, and every caller uses the answer to
+   * decide which worktree a session, a terminal, or a tool call belongs to.
+   */
   findWorktreeByPath(wtPath: string): Worktree | undefined {
-    const target = normalizePath(wtPath)
+    const target = pathKey(wtPath)
     for (const wt of this.worktrees.values()) {
-      if (normalizePath(wt.path) === target) return wt
+      if (pathKey(wt.path) === target) return wt
     }
     return undefined
   }

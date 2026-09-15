@@ -492,5 +492,8 @@ export const dict = {
   "agentManager.orphans.clean": "残ったフォルダーを整理",
   "agentManager.orphans.confirm": "これらのフォルダーを完全に削除しますか？ git が追跡しているものはありません。",
   "agentManager.orphans.cancel": "キャンセル",
+  "agentManager.orphans.checkout": "git チェックアウトが残っています",
+  "agentManager.orphans.confirmCheckout":
+    "これらのフォルダーを完全に削除しますか？{{count}} 個には git チェックアウトが残っており、コミットされていない変更がある可能性があります。",
   "agentManager.error.title": "Agent Manager エラー",
 }
