@@ -45,19 +45,29 @@ const diskCache = (() => {
   }
 })()
 
-// Reclaim temp files left behind by a build that was killed between writing
-// and renaming. Only files old enough that no running build can still own
-// them are removed.
+// Reclaim disk cache files that are no longer useful: temp files left behind
+// by a build killed between writing and renaming, and entries old enough to
+// be considered superseded. Entries are content addressed and recomputed on
+// a miss, so removing them is always safe. One unreadable file must not
+// abort the sweep.
 if (diskCache) {
-  const cutoff = Date.now() - 60 * 60 * 1000
-  try {
-    for (const file of fs.readdirSync(solidCacheDir)) {
-      if (!file.endsWith(".tmp")) continue
-      const orphan = path.join(solidCacheDir, file)
-      if (fs.statSync(orphan).mtimeMs < cutoff) fs.rmSync(orphan, { force: true })
+  const now = Date.now()
+  const age = { ".tmp": 60 * 60 * 1000, ".js": 30 * 24 * 60 * 60 * 1000 }
+  const sweep = (file) => {
+    const limit = age[path.extname(file)]
+    if (limit === undefined) return
+    const full = path.join(solidCacheDir, file)
+    try {
+      if (now - fs.statSync(full).mtimeMs > limit) fs.rmSync(full, { force: true })
+    } catch (err) {
+      console.warn("[esbuild] could not reclaim a solid cache file", full, err)
     }
+  }
+
+  try {
+    fs.readdirSync(solidCacheDir).forEach(sweep)
   } catch (err) {
-    console.warn("[esbuild] could not reclaim orphaned solid cache temp files", err)
+    console.warn("[esbuild] could not read the solid cache directory", err)
   }
 }
 
