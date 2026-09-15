@@ -223,6 +223,8 @@ import type {
   KilocodeSessionModelUsageResponses,
   KilocodeSnapshotPrepareErrors,
   KilocodeSnapshotPrepareResponses,
+  KilocodeWakeupsErrors,
+  KilocodeWakeupsResponses,
   KiloEditErrors,
   KiloEditResponses,
   KiloFimErrors,
@@ -8698,6 +8700,36 @@ export class Kilocode extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/background-jobs",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List pending wakeups
+   *
+   * List the sessions that hold scheduled wakeups in the routed directory, with each session's pending count.
+   */
+  public wakeups<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KilocodeWakeupsResponses, KilocodeWakeupsErrors, ThrowOnError>({
+      url: "/kilocode/wakeups",
       ...options,
       ...params,
     })

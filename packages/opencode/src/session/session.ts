@@ -738,6 +738,17 @@ export const layer: Layer.Layer<
                   () => {},
                 ),
               )
+              // kilocode_change - stop a removed session's wakeups holding Keep Awake
+              yield* Effect.tryPromise(() =>
+                Promise.all([import("@/effect/app-runtime"), import("@/kilocode/wakeup")]).then(([app, wake]) =>
+                  app.AppRuntime.runPromise(wake.Wakeup.Service.use((svc) => svc.cancelSession(sessionID))),
+                ),
+              ).pipe(
+                Effect.catchCause((cause) =>
+                  Effect.logWarning("wakeup cancel on session remove failed", { sessionID, cause }),
+                ),
+                Effect.forkDetach,
+              )
             }
             // kilocode_change - migrated from legacy sync.run/sync.remove to EventV2 (events.publish/remove)
             yield* events.publish(SessionV1.Event.Deleted, { sessionID, info: session })
