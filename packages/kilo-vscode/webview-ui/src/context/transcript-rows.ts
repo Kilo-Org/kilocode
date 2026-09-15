@@ -142,16 +142,17 @@ function turnTiming(turn: MessageTurn) {
 }
 
 /**
- * The row whose action row carries the copy button. Turn timing renders inside
- * that action row, so it must attach here rather than to the turn's last row:
- * the copy part can sit in an earlier chunk, and a tool-only or empty trailing
- * message has no action row at all.
+ * Attach turn timing to the row whose action row carries the copy button,
+ * because that is where it renders rather than on the turn's last row: the
+ * copy part can sit in an earlier chunk, and a tool-only or empty trailing
+ * message has no action row at all. Only the current turn's assistant rows are
+ * scanned, and the lookup is skipped when there is no timing to show, so the
+ * per-part streaming path stays cheap.
  */
-function copyOwner(rows: TranscriptRow[], copied?: string) {
-  if (!copied) return undefined
-  return rows.find(
-    (row): row is TranscriptAssistantRow => row.type === "assistant" && row.parts.some((part) => part.id === copied),
-  )
+function attachTiming(rows: TranscriptAssistantRow[], copied: string | undefined, timing: TurnTiming | undefined) {
+  if (!timing || !copied) return
+  const owner = rows.find((row) => row.parts.some((part) => part.id === copied))
+  if (owner) owner.timing = timing
 }
 
 function content(parts: Part[]) {
@@ -211,6 +212,7 @@ export function transcriptRows(
       })
     }
 
+    const assistant: TranscriptAssistantRow[] = []
     for (const msg of turn.assistant) {
       const visible = parts(msg.id)
       if (visible.length === 0) {
@@ -226,20 +228,20 @@ export function transcriptRows(
       }
       for (let start = 0; start < visible.length; start += size) {
         const chunk = visible.slice(start, start + size)
-        rows.push({
+        const row: TranscriptAssistantRow = {
           ...meta,
           type: "assistant",
           key: `${turn.id}:assistant:${msg.id}:${chunk[0]!.id}`,
           message: msg,
           parts: chunk,
           copy: copied,
-        })
+        }
+        assistant.push(row)
+        rows.push(row)
       }
     }
 
-    const timing = turnTiming(turn)
-    const owner = copyOwner(rows, copied)
-    if (owner && timing) owner.timing = timing
+    attachTiming(assistant, copied, turnTiming(turn))
 
     const changes = diffs(turn.user)
     if (changes.length > 0) {
