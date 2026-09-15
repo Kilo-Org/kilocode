@@ -1162,6 +1162,9 @@ const headerMessages: Message[] = [
     mode: "default",
     agent: "code",
     path: { cwd: "/project", root: "/project" },
+    // Real token counts, so the header renders its loaded state rather than the
+    // loading skeletons.
+    tokens: { input: 21_300, output: 58, reasoning: 1_200, cache: { read: 3_100, write: 0 } },
   },
 ]
 const headerParts: Record<string, Part[]> = {
@@ -1285,6 +1288,7 @@ export const TaskHeaderWithTodos: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       messages: () => headerMessages,
+      visibleMessages: () => headerMessages,
       currentSession: () => ({
         id: SESSION_ID,
         title: "Task: Can you use the update_todo_list tool to create a CLI interface implementation?",
@@ -1295,6 +1299,41 @@ export const TaskHeaderWithTodos: Story = {
       getParts: (id: string) => headerParts[id] ?? [],
       contextUsage: () => ({ tokens: 34300, percentage: 17 }),
       costBreakdown: () => [{ label: "Session", cost: 0.64 }],
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TaskHeaderSkeleton: Story = {
+  name: "TaskHeader — loading, first turn",
+  render: () => {
+    const message: Message = {
+      id: headerUserID,
+      sessionID: SESSION_ID,
+      role: "user",
+      content: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+      createdAt: new Date(headerNow).toISOString(),
+      time: { created: headerNow },
+    }
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => [message],
+      visibleMessages: () => [message],
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+        createdAt: new Date(headerNow).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getParts: () => [],
     }
     return (
       <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
@@ -1324,6 +1363,8 @@ export const TaskHeaderBackgroundAgents1280: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID }),
       messages: () => headerMessages,
+      visibleMessages: () => headerMessages,
+      getParts: (id: string) => headerParts[id] ?? [],
       currentSession: () => ({
         id: SESSION_ID,
         title: "Investigate request size limits",
@@ -1365,6 +1406,8 @@ export const TaskHeaderWithTodosAllDone: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
       messages: () => [{ id: "msg-001" }] as any[],
+      visibleMessages: () => headerMessages,
+      getParts: (id: string) => headerParts[id] ?? [],
       currentSession: () => ({
         id: SESSION_ID,
         title: "Writing poems about the team",
@@ -1634,7 +1677,7 @@ function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
 export const BoardClosed: Story = {
   name: "Board, header button",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} />
     </StoryProviders>
   ),
@@ -1643,7 +1686,7 @@ export const BoardClosed: Story = {
 export const BoardEmpty: Story = {
   name: "Board, hidden when empty",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={{ ...swarm, messages: [] }} />
     </StoryProviders>
   ),
@@ -1652,7 +1695,7 @@ export const BoardEmpty: Story = {
 export const BoardOpen: Story = {
   name: "Board, messages",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} open />
     </StoryProviders>
   ),

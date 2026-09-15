@@ -61,7 +61,7 @@ export namespace BoardContext {
         const cfg = yield* config.get()
         if (
           !BoardEnabled.resolve({
-            config: cfg.experimental?.shared_agent_board,
+            config: cfg.shared_agent_board,
             flag: flags.experimentalSharedAgentBoard,
           })
         ) {
