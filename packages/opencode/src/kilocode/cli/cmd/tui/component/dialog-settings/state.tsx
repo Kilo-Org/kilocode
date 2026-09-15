@@ -28,6 +28,7 @@ export type SettingsState = {
   field: (key: string, scope: Scope) => unknown
   meta: (key: string, scope: Scope) => string | undefined
   tui: (key: keyof TuiConfigGetResponse) => unknown
+  currentScopeList: (scope: Scope) => unknown[]
   updateField: (scope: Scope, key: string, value: unknown, label: string) => Promise<boolean>
   unsetField: (scope: Scope, key: string, label: string) => Promise<boolean>
   updateTui: (scope: Scope, patch: TuiPatch, label: string) => Promise<boolean>
@@ -323,6 +324,7 @@ export function createSettings(): SettingsState {
     field,
     meta,
     tui,
+    currentScopeList,
     updateField,
     unsetField,
     updateTui,

@@ -64,7 +64,13 @@ export function DisabledProvidersView(props: { ctx: SettingsState; scope: Scope;
           if (ok) props.back()
           return
         }
-        if (props.ctx.isHiddenInOtherScope(option.value, props.scope)) {
+        // The Disabled providers list comes from the effective (merged) config,
+        // so an id can be present even when it only lives in the other scope.
+        // Only show the both-scopes confirmation when the id is in both — the
+        // pure cross-scope case falls through and enableProvider surfaces the
+        // "switch scope" toast instead of the misleading confirm copy.
+        const inCurrent = props.ctx.currentScopeList(props.scope).includes(option.value)
+        if (inCurrent && props.ctx.isHiddenInOtherScope(option.value, props.scope)) {
           setConfirming({ id: option.value, title: option.title })
           return
         }

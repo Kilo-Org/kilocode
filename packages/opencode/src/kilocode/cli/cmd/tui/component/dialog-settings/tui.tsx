@@ -25,19 +25,22 @@ export function MainView(props: {
   const theme = themes.theme
 
   const options = createMemo<DialogSelectOption<string>[]>(() => {
+    const connected = new Set(sync.data.provider_next.connected)
+    const failed = new Set(sync.data.provider_next.failed)
     const providers = sync.data.provider_next.all
-      .filter((item) => sync.data.provider_next.connected.includes(item.id))
+      .filter((item) => connected.has(item.id) || failed.has(item.id))
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((provider) => ({
-        title: provider.name,
-        description: providerDescription(provider.id, provider.source, sync.data.provider_next.failed),
-        category: "Providers",
-        footer: sync.data.provider_next.failed.includes(provider.id) ? "needs attention" : "connected",
-        value: `provider:${provider.id}`,
-        gutter: () => (
-          <text fg={sync.data.provider_next.failed.includes(provider.id) ? theme.error : theme.success}>●</text>
-        ),
-      }))
+      .map((provider) => {
+        const needsAttention = failed.has(provider.id)
+        return {
+          title: provider.name,
+          description: providerDescription(provider.id, provider.source, sync.data.provider_next.failed),
+          category: "Providers",
+          footer: needsAttention ? "needs attention" : "connected",
+          value: `provider:${provider.id}`,
+          gutter: () => <text fg={needsAttention ? theme.error : theme.success}>●</text>,
+        }
+      })
 
     const pluginCount = Array.isArray(props.ctx.tui("plugin")) ? (props.ctx.tui("plugin") as unknown[]).length : 0
     const disabledProvidersFooter = props.ctx.store.disabledProviders.length
@@ -134,15 +137,15 @@ export function MainView(props: {
         on(props.ctx.tui("vim"), false),
       ),
       setting(
-        "Animations",
-        "Play fade and motion effects in the prompt.",
+        "Animations (global)",
+        "Play fade and motion effects in the prompt. Always saves to your global config.",
         "Interaction",
         "animations",
         on(kv.get("animations_enabled", true), true),
       ),
       setting(
-        "Long paste summary",
-        "Collapse long pastes into a one-line summary before sending.",
+        "Long paste summary (global)",
+        "Collapse long pastes into a one-line summary before sending. Always saves to your global config.",
         "Interaction",
         "paste_summary",
         on(
@@ -151,8 +154,8 @@ export function MainView(props: {
         ),
       ),
       setting(
-        "Wrap diffs",
-        "Wrap long diff lines to fit the terminal width.",
+        "Wrap diffs (global)",
+        "Wrap long diff lines to fit the terminal width. Always saves to your global config.",
         "Interaction",
         "diff_wrap",
         on(kv.get("diff_wrap_mode", "word") === "word", true),

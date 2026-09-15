@@ -125,4 +125,31 @@ describe("disabled-providers HttpApi", () => {
       },
     },
   )
+
+  it.instance(
+    "does not duplicate a provider that is both built-in and redeclared under provider",
+    Effect.gen(function* () {
+      const directory = (yield* TestInstance).directory
+      const headers = { "x-kilo-directory": directory }
+
+      const response = yield* request("/provider/disabled", { headers })
+
+      expect(response.status).toBe(200)
+      const body = yield* response.json
+      const ids = providerIDs(body)
+      const occurrences = ids.filter((id) => id === "anthropic").length
+      expect(occurrences).toBe(1)
+    }),
+    {
+      ...projectOptions,
+      config: {
+        formatter: false,
+        lsp: false,
+        disabled_providers: ["anthropic"],
+        provider: {
+          anthropic: { name: "Anthropic Override", npm: "@ai-sdk/anthropic", models: {} },
+        },
+      },
+    },
+  )
 })

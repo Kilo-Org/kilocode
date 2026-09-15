@@ -127,6 +127,12 @@ export function ProviderView(props: {
           props.back()
           return
         }
+        if (option.value === "info") {
+          // Managed providers carry their credential information in the row
+          // description. Make the explicit no-op selectable so the row reads
+          // as informational rather than as an action that silently failed.
+          return
+        }
         if (option.value === "disconnect") {
           setConfirm("disconnect")
           return
