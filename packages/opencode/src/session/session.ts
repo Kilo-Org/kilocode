@@ -24,7 +24,6 @@ import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { MessageV2 } from "./message-v2"
 import type { InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
-import { InstanceRef } from "@/effect/instance-ref" // kilocode_change - tag wakeup events with the removed session's directory
 import { Snapshot } from "@/snapshot"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { WorkspaceV2 } from "@opencode-ai/core/workspace"
@@ -719,9 +718,6 @@ export const layer: Layer.Layer<
           Effect.as(true),
           Effect.catchCause(() => Effect.succeed(false)),
         )
-        // kilocode_change start
-        const inst = yield* InstanceState.context.pipe(Effect.catchCause(() => Effect.succeed(undefined)))
-        // kilocode_change end
 
         if (hasInstance) yield* cancelBackgroundJobs(background, sessionID)
         const kids = yield* children(sessionID)
@@ -743,20 +739,7 @@ export const layer: Layer.Layer<
                 ),
               )
               // kilocode_change - stop a removed session's wakeups holding Keep Awake
-              yield* Effect.tryPromise(() =>
-                Promise.all([import("@/effect/app-runtime"), import("@/kilocode/wakeup")]).then(([app, wake]) =>
-                  app.AppRuntime.runPromise(
-                    wake.Wakeup.Service.use((svc) => svc.cancelSession(sessionID)).pipe(
-                      Effect.provideService(InstanceRef, inst),
-                    ),
-                  ),
-                ),
-              ).pipe(
-                Effect.catchCause((cause) =>
-                  Effect.logWarning("wakeup cancel on session remove failed", { sessionID, cause }),
-                ),
-                Effect.forkDetach,
-              )
+              yield* KiloSession.cancelWakeups(sessionID)
             }
             // kilocode_change - migrated from legacy sync.run/sync.remove to EventV2 (events.publish/remove)
             yield* events.publish(SessionV1.Event.Deleted, { sessionID, info: session })
