@@ -31,6 +31,7 @@ import {
   taskBackground,
   taskResult,
   taskRunning,
+  taskStoredOpen,
   taskVisible,
 } from "./task-tool-state"
 
@@ -120,23 +121,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     setTouched(true)
     setOpen(value)
   }
-  // Persist the auto-open so the card survives a remount. Once the task
+  // Persist the open state so the card survives a remount. Once the task
   // completes `auto()` is false, so a card handed from the live tail to the
   // virtualizer would otherwise remount collapsed and shrink the transcript
   // by its full height in one frame.
   createEffect(() => {
-    if (touched()) return
-    if (auto()) {
-      setOpen(true)
-      rememberOpen({ tool: props.tool, partID: props.partID }, true)
-      return
-    }
-    // A promoted background task collapses here, so record that too: a remount
-    // must not read the earlier `true` and expand a card that has to stay shut.
-    if (backgroundTask()) {
-      setOpen(false)
-      rememberOpen({ tool: props.tool, partID: props.partID }, false)
-    }
+    const next = taskStoredOpen(auto(), backgroundTask(), touched())
+    if (next === undefined) return
+    setOpen(next)
+    rememberOpen({ tool: props.tool, partID: props.partID }, next)
   })
 
   let synced: string | undefined

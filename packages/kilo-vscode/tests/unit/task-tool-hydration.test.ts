@@ -5,12 +5,12 @@ import {
   toolOpenKey,
   writeToolOpen,
 } from "../../../kilo-ui/src/components/tool-open-state"
-import { rememberOpen } from "../../../kilo-ui/src/components/basic-tool"
 import {
   taskAutoOpen,
   taskBackground,
   taskResult,
   taskRunning,
+  taskStoredOpen,
   taskVisible,
 } from "../../webview-ui/src/components/chat/task-tool-state"
 
@@ -54,19 +54,31 @@ describe("completed task hydration", () => {
   it("keeps an auto-opened card open when it remounts after completion", () => {
     // The running card auto-opens and persists that decision.
     expect(taskAutoOpen("running", false)).toBe(true)
-    rememberOpen({ tool: "task", partID: "part-live" }, true)
-    // Handed to the virtualizer once completed: the remount must not collapse it.
+    const next = taskStoredOpen(taskAutoOpen("running", false), false, false)
+    expect(next).toBe(true)
     const key = toolOpenKey({ tool: "task", partID: "part-live" })
+    if (next !== undefined) writeToolOpen(key, next)
+    // Handed to the virtualizer once completed: the remount must not collapse it.
     expect(readToolOpen(key, taskAutoOpen("completed", false))).toBe(true)
   })
 
-  it("keeps a promoted background card collapsed when it remounts", () => {
+  it("stays collapsed when a promoted background card remounts", () => {
     // A foreground card auto-opens, then is promoted to background and collapses.
-    rememberOpen({ tool: "task", partID: "part-promoted" }, true)
-    rememberOpen({ tool: "task", partID: "part-promoted" }, false)
+    writeToolOpen(toolOpenKey({ tool: "task", partID: "part-promoted" }), true)
+    const next = taskStoredOpen(false, true, false)
+    expect(next).toBe(false)
     const key = toolOpenKey({ tool: "task", partID: "part-promoted" })
+    if (next !== undefined) writeToolOpen(key, next)
     // The stored false wins over an open fallback, so the remount stays shut.
     expect(readToolOpen(key, true)).toBe(false)
+  })
+
+  it("leaves a user-controlled or settled card alone", () => {
+    // A manual toggle or search match owns the state.
+    expect(taskStoredOpen(true, false, true)).toBeUndefined()
+    expect(taskStoredOpen(false, true, true)).toBeUndefined()
+    // A settled foreground card has nothing to store, so its state stands.
+    expect(taskStoredOpen(false, false, false)).toBeUndefined()
   })
 
   it("hydrates and streams a child only while expanded", () => {
