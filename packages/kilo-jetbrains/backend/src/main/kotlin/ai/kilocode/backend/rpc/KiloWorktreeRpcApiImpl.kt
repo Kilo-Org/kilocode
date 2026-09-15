@@ -1124,7 +1124,14 @@ class KiloWorktreeRpcApiImpl(
     internal fun fetchReason(res: CmdOut, branch: String): String {
         if (res.timeout) return "Fetching the pull request timed out. Check your connection and try again."
         if (refConflict(res)) {
-            return "Another branch named \"${conflictBranch(res, branch)}\" blocks \"$branch\". " +
+            // Only the summary form of the conflict is guaranteed; when git named the blocking ref,
+            // say which branch to deal with rather than leaving the user to find it.
+            val blocking = conflictBranch(res)
+            if (blocking == null || blocking == branch) {
+                return "Another branch name blocks \"$branch\". " +
+                    "Delete or rename the conflicting branch, then import again."
+            }
+            return "Another branch named \"$blocking\" blocks \"$branch\". " +
                 "Delete or rename that branch, then import again."
         }
         if (res.stderr.contains("find remote ref")) {
@@ -1135,12 +1142,13 @@ class KiloWorktreeRpcApiImpl(
     }
 
     /**
-     * The ref git reported as blocking the fetch, trimmed to a branch-like name. Both namespaces
-     * appear here: the tracking fetches collide under `refs/remotes/origin/`, while the cross-repo
-     * pull-ref fetch and the closing `branch --force` write `refs/heads/`.
+     * The ref git reported as blocking the fetch, trimmed to a branch-like name, or null when git
+     * printed only the summary form. Both namespaces appear here: the tracking fetches collide under
+     * `refs/remotes/origin/`, while the cross-repo pull-ref fetch and the closing `branch --force`
+     * write `refs/heads/`.
      */
-    private fun conflictBranch(res: CmdOut, fallback: String): String {
-        val match = Regex("'([^']+)' exists; cannot create").find(res.stderr) ?: return fallback
+    private fun conflictBranch(res: CmdOut): String? {
+        val match = Regex("'([^']+)' exists; cannot create").find(res.stderr) ?: return null
         return match.groupValues[1].removePrefix("refs/remotes/origin/").removePrefix("refs/heads/")
     }
 
@@ -1358,13 +1366,20 @@ internal fun prBranchName(head: PrHead, number: Int): String {
 }
 
 /**
- * Both directions of git's ref directory/file conflict, e.g.:
+ * Git's ref directory/file conflict: a branch deleted upstream leaves a stale remote-tracking ref
+ * that occupies the path a nested head needs (`origin/docs/auto-sync` vs
+ * `origin/docs/auto-sync/jetbrains`).
+ *
+ * Two forms are matched because git does not always print both. The detail line names the blocking
+ * ref, in either direction:
  *   'refs/remotes/origin/a' exists; cannot create 'refs/remotes/origin/a/b'
  *   cannot lock ref 'refs/remotes/origin/a': 'refs/remotes/origin/a/b' exists; cannot create 'refs/remotes/origin/a'
- * A branch deleted upstream leaves a stale remote-tracking ref behind that occupies the path a
- * nested head needs (e.g. `origin/docs/auto-sync` vs `origin/docs/auto-sync/jetbrains`).
+ * Some builds emit only the summary `fetch` writes for this specific failure — the one naming
+ * `git remote prune` as the fix. Matching the detail line alone made the recovery depend on the git
+ * build: it is absent on the Linux CI image, where the fetch reported nothing but that summary.
  */
-internal fun refConflict(out: CmdOut): Boolean = out.stderr.contains("exists; cannot create")
+internal fun refConflict(out: CmdOut): Boolean =
+    out.stderr.contains("exists; cannot create") || out.stderr.contains("old, conflicting branches")
 
 /**
  * Fetches the PR head into [branch] and records which PR it belongs to, mirroring `gh pr checkout`:

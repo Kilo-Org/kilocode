@@ -377,10 +377,25 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("main", "feature/x", "release/1.0"), controller.branches)
     }
 
+    fun `test the controller resolves the origin repo slug without a reload`() {
+        rpc.originSlug = "Kilo-Org/kilocode"
+
+        val controller = controller()
+        flush()
+
+        // The New Worktree dialog can open before any reload runs, so construction alone has to arm
+        // the cross-repo check.
+        assertEquals("Kilo-Org/kilocode", controller.origin)
+    }
+
     fun `test reload caches the origin repo slug`() {
         rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        rpc.originSlug = "Kilo-Org/kilocode"
         val controller = controller()
+        // Let the construction-time lookup settle while there is no slug to find, so the assertion
+        // below can only be satisfied by reload() assigning it.
+        flush()
+        assertNull(controller.origin)
+        rpc.originSlug = "Kilo-Org/kilocode"
 
         controller.reload()
         flush()

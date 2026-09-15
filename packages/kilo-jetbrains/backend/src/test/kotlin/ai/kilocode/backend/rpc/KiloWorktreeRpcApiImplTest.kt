@@ -208,6 +208,40 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `refConflict matches the summary form some git builds report on its own`() {
+        // Verbatim stderr from the Linux CI image, where the fetch printed no "exists; cannot create"
+        // detail line at all. Matching only that line made the prune recovery platform-dependent.
+        val summaryOnly = CmdOut(
+            1,
+            "",
+            "From /tmp/kilo-origin123\n" +
+                " * [new ref]         refs/pull/7/head -> origin/docs/auto-sync/jetbrains\n" +
+                "error: some local refs could not be updated; try running\n" +
+                " 'git remote prune origin' to remove any old, conflicting branches\n",
+        )
+        val detail = CmdOut(
+            1,
+            "",
+            "error: 'refs/remotes/origin/docs/auto-sync' exists; cannot create 'refs/remotes/origin/docs/auto-sync/jetbrains'",
+        )
+
+        assertTrue(refConflict(summaryOnly), "the prune advice alone identifies the conflict")
+        assertTrue(refConflict(detail))
+        assertFalse(refConflict(CmdOut(1, "", "fatal: unable to access remote: Could not resolve host")))
+    }
+
+    @Test
+    fun `fetchReason falls back to unnamed wording when git did not name the blocking ref`() {
+        val summaryOnly = CmdOut(1, "", "error: some local refs could not be updated; try running\n 'git remote prune origin' to remove any old, conflicting branches")
+
+        val text = api.fetchReason(summaryOnly, "docs/auto-sync/jetbrains")
+
+        // Naming the imported branch as its own blocker would read as nonsense.
+        assertFalse(text.contains("named"), text)
+        assertTrue(text.contains("blocks \"docs/auto-sync/jetbrains\""), text)
+    }
+
+    @Test
     fun `fetchReason names a blocking local branch without its ref namespace`() {
         // The cross-repo pull-ref fetch and the closing `branch --force` both write refs/heads/, so
         // a conflict there must read as a branch name too, not as the raw ref path.
@@ -1264,6 +1298,9 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode"))
         assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode/"))
         assertEquals("Kilo-Org/kilocode", parseRepoSlug("ssh://git@github.com:22/Kilo-Org/kilocode.git"))
+        // A subdomain is still GitHub. Returning null here would read as "cannot tell" and disable
+        // the cross-repo guard for that checkout entirely.
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://www.github.com/Kilo-Org/kilocode.git"))
         assertNull(parseRepoSlug("https://gitlab.com/Kilo-Org/kilocode.git"))
         // A host that merely ends in github.com is a different server, so the guard must skip it
         // rather than compare this checkout against a slug it never published.
@@ -1276,6 +1313,7 @@ class KiloWorktreeRpcApiImplTest {
     fun `parsePrUrl requires a github host boundary`() {
         assertNull(parsePrUrl("https://notgithub.com/Kilo-Org/kilocode/pull/7"))
         assertEquals(7, parsePrUrl("ssh://git@github.com:22/Kilo-Org/kilocode/pull/7")?.number)
+        assertEquals(7, parsePrUrl("https://www.github.com/Kilo-Org/kilocode/pull/7")?.number)
     }
 
     @Test
