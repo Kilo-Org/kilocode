@@ -341,7 +341,9 @@ describe("Expanded tool motion and typography (source)", () => {
 
   it("renders the headline mode as a header-only block that opens on demand", () => {
     expect(reasoning).toContain(`data-headline={headline() ? "" : undefined}`)
-    expect(reasoning).toContain(`const mode = () => (props.reasoningCapped ? "preview" : (props.reasoningDisplay ?? "expanded"))`)
+    expect(reasoning).toContain(
+      `const mode = () => (props.reasoningCapped ? "preview" : (props.reasoningDisplay ?? "expanded"))`,
+    )
     expect(reasoning).toContain(`const headline = () => !props.reasoningCapped && mode() === "headline"`)
     expect(reasoning).toContain("const trackable = () => capped() || headline()")
     expect(reasoning).toContain(`if (headline() && !open()) return reasoningSummary(view().body)`)
