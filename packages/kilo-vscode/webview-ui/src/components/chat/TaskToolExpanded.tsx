@@ -109,12 +109,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   )
   // The open state is controlled so the card settles once the input arrives.
   // A stored preference, a search match, or a manual toggle wins over it.
-  // A stored open state means this card was mounted before (virtualizer
-  // handoff, session switch). Mount its body synchronously then: a deferred
-  // body paints one frame at header height, and the shorter transcript pulls
-  // the pinned scroll position up before the body lands.
-  const remount = initialOpen({ tool: props.tool, partID: props.partID }) !== undefined
-  const [touched, setTouched] = createSignal(!!props.forceOpen || remount)
+  // A stored open state means this card was mounted before while open
+  // (virtualizer handoff, session switch). Mount its body synchronously then: a
+  // deferred body paints one frame at header height, and the shorter transcript
+  // pulls the pinned scroll position up before the body lands. A stored closed
+  // state keeps the deferred mount so a collapsed body is not built.
+  const stored = initialOpen({ tool: props.tool, partID: props.partID })
+  const [touched, setTouched] = createSignal(!!props.forceOpen || stored !== undefined)
   const change = (value: boolean) => {
     setTouched(true)
     setOpen(value)
@@ -130,7 +131,12 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       rememberOpen({ tool: props.tool, partID: props.partID }, true)
       return
     }
-    if (backgroundTask()) setOpen(false)
+    // A promoted background task collapses here, so record that too: a remount
+    // must not read the earlier `true` and expand a card that has to stay shut.
+    if (backgroundTask()) {
+      setOpen(false)
+      rememberOpen({ tool: props.tool, partID: props.partID }, false)
+    }
   })
 
   let synced: string | undefined
@@ -285,7 +291,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         defaultOpen={auto()}
         open={open()}
         forceOpen={props.forceOpen}
-        defer={!remount}
+        defer={stored !== true}
         onOpenChange={change}
       >
         <div ref={viewport} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>

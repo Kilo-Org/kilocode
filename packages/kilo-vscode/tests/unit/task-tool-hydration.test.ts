@@ -5,6 +5,7 @@ import {
   toolOpenKey,
   writeToolOpen,
 } from "../../../kilo-ui/src/components/tool-open-state"
+import { rememberOpen } from "../../../kilo-ui/src/components/basic-tool"
 import {
   taskAutoOpen,
   taskBackground,
@@ -51,12 +52,21 @@ describe("completed task hydration", () => {
   })
 
   it("keeps an auto-opened card open when it remounts after completion", () => {
-    const key = toolOpenKey({ tool: "task", partID: "part-live" })
     // The running card auto-opens and persists that decision.
     expect(taskAutoOpen("running", false)).toBe(true)
-    writeToolOpen(key, true)
+    rememberOpen({ tool: "task", partID: "part-live" }, true)
     // Handed to the virtualizer once completed: the remount must not collapse it.
+    const key = toolOpenKey({ tool: "task", partID: "part-live" })
     expect(readToolOpen(key, taskAutoOpen("completed", false))).toBe(true)
+  })
+
+  it("keeps a promoted background card collapsed when it remounts", () => {
+    // A foreground card auto-opens, then is promoted to background and collapses.
+    rememberOpen({ tool: "task", partID: "part-promoted" }, true)
+    rememberOpen({ tool: "task", partID: "part-promoted" }, false)
+    const key = toolOpenKey({ tool: "task", partID: "part-promoted" })
+    // The stored false wins over an open fallback, so the remount stays shut.
+    expect(readToolOpen(key, true)).toBe(false)
   })
 
   it("hydrates and streams a child only while expanded", () => {
