@@ -197,15 +197,7 @@ function askEditGuard() {
 // `agent.<name>.permission`, which merges after patchAgents in agent.ts.
 // Exported so KiloTask.inherited carries the same set into delegated sessions; a tool
 // guarded here but not there would be reachable again through a subagent.
-export const guarded = [
-  "bash",
-  "task",
-  "notebook_edit",
-  "notebook_execute",
-  "write",
-  "agent_manager",
-  "repo_clone",
-]
+export const guarded = ["bash", "task", "notebook_edit", "notebook_execute", "write", "agent_manager", "repo_clone"]
 
 // Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules
 // in the guards, so they are denied there instead.
@@ -365,7 +357,7 @@ export interface KiloData {
 export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">): KiloData {
   const mcpRules = getMcpRules(cfg)
   const enabled = BoardEnabled.resolve({
-    config: cfg.experimental?.shared_agent_board,
+    config: cfg.shared_agent_board,
     flag: flags.experimentalSharedAgentBoard,
   })
   const defaultsPatch = Permission.fromConfig({
@@ -390,7 +382,7 @@ export function cacheKey(cfg: Config.Info) {
     mode: cfg.mode,
     permission: cfg.permission,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
-    shared_agent_board: cfg.experimental?.shared_agent_board,
+    shared_agent_board: cfg.shared_agent_board,
     references: cfg.references,
     reference: cfg.reference,
   })

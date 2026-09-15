@@ -34636,6 +34636,9 @@
             "type": "string",
             "enum": ["expanded", "preview", "headline"]
           },
+          "shared_agent_board": {
+            "type": "boolean"
+          },
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },
@@ -35052,9 +35055,6 @@
                 "type": "string"
               },
               "openTelemetry": {
-                "type": "boolean"
-              },
-              "shared_agent_board": {
                 "type": "boolean"
               },
               "primary_tools": {

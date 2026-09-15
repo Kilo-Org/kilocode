@@ -113,6 +113,9 @@ export const Info = Schema.Struct({
   reasoning_display: Schema.optional(Schema.Literals(["expanded", "preview", "headline"])).annotate({
     description: "Controls how reasoning blocks are displayed in the VS Code chat UI",
   }),
+  shared_agent_board: Schema.optional(Schema.Boolean).annotate({
+    description: "Share a board between a main session and its task subagents, including nested subagents",
+  }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
   console: Schema.optional(
     Schema.Struct({
@@ -323,9 +326,6 @@ export const Info = Schema.Struct({
       }),
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({
         description: "Enable telemetry. Set to false to opt-out.",
-      }),
-      shared_agent_board: Schema.optional(Schema.Boolean).annotate({
-        description: "Share discoveries between the main agent and subagents within one session",
       }),
       // kilocode_change end
       primary_tools: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({

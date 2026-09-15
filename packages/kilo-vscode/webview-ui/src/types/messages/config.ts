@@ -51,7 +51,6 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
-  shared_agent_board?: boolean
   image_generation_model?: string
   task_model_selection?: boolean
   native_notebook_tools?: boolean
@@ -169,6 +168,7 @@ export interface Config {
   web_search?: boolean
   auto_collapse_reasoning?: boolean
   reasoning_display?: ReasoningDisplay
+  shared_agent_board?: boolean
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig
   indexing?: IndexingConfig
