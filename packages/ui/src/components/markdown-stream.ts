@@ -113,6 +113,7 @@ export function project(previous: Projection | undefined, text: string, live: bo
     }
   }
   // kilocode_change end
+  // kilocode_change: the !live case is handled by the block above
   if (!previous || !text.startsWith(previous.text)) return { text, blocks: stream(text, live) }
   const tail = previous.blocks.at(-1)
   const suffix = text.slice(previous.text.length)
