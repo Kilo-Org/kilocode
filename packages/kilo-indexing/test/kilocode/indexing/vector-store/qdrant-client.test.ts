@@ -1871,6 +1871,12 @@ describe("QdrantVectorStore", () => {
 
         await expect(vectorStore.hasPoints()).rejects.toThrow("network failure")
       })
+
+      test("should propagate error when getCollection fails with non-404 error", async () => {
+        mockGetCollection.mockRejectedValue(new Error("transient network failure"))
+
+        await expect(vectorStore.hasPoints()).rejects.toThrow("transient network failure")
+      })
     })
   })
 })

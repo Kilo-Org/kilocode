@@ -163,6 +163,33 @@ export class QdrantVectorStore implements IVectorStore {
     }
   }
 
+  private isCollectionNotFoundError(error: unknown): boolean {
+    if (!error) return false
+    if (typeof error === "object") {
+      const err = error as Record<string, unknown>
+      if (err.status === 404) return true
+      if (
+        typeof err.response === "object" &&
+        err.response !== null &&
+        (err.response as Record<string, unknown>).status === 404
+      ) {
+        return true
+      }
+      if (typeof err.message === "string") {
+        const msg = err.message.toLowerCase()
+        if (
+          msg.includes("not found") ||
+          msg.includes("doesn't exist") ||
+          msg.includes("does not exist") ||
+          msg.includes("404")
+        ) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
   private metadataId(): string {
     return METADATA_ID
   }
@@ -716,8 +743,19 @@ export class QdrantVectorStore implements IVectorStore {
 
   async hasPoints(): Promise<boolean> {
     try {
-      const exists = await this.collectionExists()
-      if (!exists) {
+      let collectionInfo: Schemas["CollectionInfo"]
+      try {
+        collectionInfo = await this.client.getCollection(this.collectionName)
+      } catch (error: unknown) {
+        if (this.isCollectionNotFoundError(error)) {
+          return false
+        }
+        log.error("Failed to check collection info in hasPoints", { error })
+        throw error
+      }
+
+      const pointsCount = collectionInfo.points_count ?? 0
+      if (pointsCount === 0) {
         return false
       }
 
@@ -738,11 +776,6 @@ export class QdrantVectorStore implements IVectorStore {
         return (result.count ?? 0) > 0
       }
 
-      const collectionInfo = await this.client.getCollection(this.collectionName)
-      const pointsCount = collectionInfo.points_count ?? 0
-      if (pointsCount === 0) {
-        return false
-      }
       const metadata = await this.getMetadataPayload()
       return metadata ? pointsCount > 1 : pointsCount > 0
     } catch (error) {
