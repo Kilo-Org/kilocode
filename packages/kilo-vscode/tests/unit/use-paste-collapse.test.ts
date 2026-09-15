@@ -1,8 +1,12 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
+import { pastePlaceholder } from "../../webview-ui/src/components/chat/prompt-input-utils"
 import { usePasteCollapse } from "../../webview-ui/src/hooks/usePasteCollapse"
 
-const chip = "[Pasted ~5 lines]"
+const block = (tag: string) => Array.from({ length: 15 }, (_, index) => `${tag}${index}`).join("\n")
+const first = block("a")
+const second = block("b")
+const chip = pastePlaceholder(first)
 
 type Field = { value: string; selectionStart: number; selectionEnd: number }
 
@@ -42,9 +46,6 @@ function setup() {
   }))
   return root
 }
-
-const first = "a\nb\nc\nd\ne"
-const second = "f\ng\nh\ni\nj"
 
 describe("usePasteCollapse", () => {
   it("leaves the caret after the inserted chip instead of inside the following text", () => {

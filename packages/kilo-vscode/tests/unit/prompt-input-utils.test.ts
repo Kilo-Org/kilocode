@@ -380,11 +380,11 @@ describe("paste collapse thresholds", () => {
     expect(promptLineCount("a\nb\nc\nd\ne")).toBe(5)
   })
 
-  it("collapses at five lines or more than 800 characters", () => {
-    expect(isCollapsiblePaste("a\nb\nc\nd\ne")).toBe(true)
-    expect(isCollapsiblePaste("a".repeat(801))).toBe(true)
-    expect(isCollapsiblePaste("a\nb\nc\nd")).toBe(false)
-    expect(isCollapsiblePaste("a".repeat(800))).toBe(false)
+  it("collapses at fifteen lines or more than 4000 characters", () => {
+    expect(isCollapsiblePaste("a\nb\nc\nd\ne")).toBe(false)
+    expect(isCollapsiblePaste(Array.from({ length: 15 }, () => "a").join("\n"))).toBe(true)
+    expect(isCollapsiblePaste("a".repeat(4001))).toBe(true)
+    expect(isCollapsiblePaste("a".repeat(4000))).toBe(false)
   })
 
   it("builds the canonical placeholder", () => {

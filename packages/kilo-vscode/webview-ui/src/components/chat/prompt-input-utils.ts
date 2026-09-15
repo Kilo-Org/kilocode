@@ -108,11 +108,16 @@ export function promptLineCount(text: string): number {
 
 /**
  * Whether a pasted block collapses into a `[Pasted ~N lines]` placeholder.
- * Thresholds match the CLI and the JetBrains plugin: five lines or more, or
- * more than 800 characters.
+ *
+ * The VS Code composer has more room than the CLI, so these thresholds are
+ * higher than the CLI's five lines or 800 characters. Fifteen lines is just
+ * past the ~11 lines the 200px composer shows before scrolling, and 4000
+ * characters still catches a single enormous line that would otherwise wrap
+ * into a wall of text. The line rule catches tall pastes of short lines that a
+ * character count alone would miss.
  */
 export function isCollapsiblePaste(text: string): boolean {
-  return promptLineCount(text) >= 5 || text.length > 800
+  return promptLineCount(text) >= 15 || text.length > 4000
 }
 
 /**
