@@ -777,7 +777,7 @@ describe("code context pill contract", () => {
     // A context-only prompt must not take the server slash-command branch, which
     // sends the raw args and drops the composed message.
     expect(source).toContain("if (matched && !hasStructuredInput(data, browserData))")
-    expect(source).toContain("contexts().length > 0")
+    expect(source).toContain("data != null || browser != null || contexts().length > 0")
   })
 
   it("persists and clears code context with the rest of the draft", () => {
