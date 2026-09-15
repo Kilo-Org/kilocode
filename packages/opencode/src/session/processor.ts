@@ -315,12 +315,11 @@ const layer = Layer.effect(
           // kilocode_change end
           ctx.blocked = ctx.shouldBreak
         }
-        // kilocode_change start - abort after repeated identical malformed tool calls instead of retrying forever (#14143)
+        // kilocode_change start - abort after repeated malformed tool calls instead of retrying forever (#14143)
         // The streak lives per user turn because each model step creates a new processor.
-        const tripped = KiloSessionProcessor.malformedToolGuard.inspect(ctx.assistantMessage.parentID, error)
-        if (tripped && !ctx.assistantMessage.error) {
+        const stopped = KiloSessionProcessor.malformedToolGuard.inspect(ctx.assistantMessage.parentID, error)
+        if (stopped && !ctx.assistantMessage.error) {
           ctx.blocked = true
-          const stopped = new MessageV2.APIError({ message: tripped.message, isRetryable: false }).toObject()
           ctx.assistantMessage.error = stopped
           yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error: stopped })
         }

@@ -134,7 +134,7 @@ const it = testEffect(env)
 
 const detail = '["filePath"]: is missing and is required'
 
-function invalid(index: number): Event[] {
+function invalid(index: number, message = detail): Event[] {
   const id = `call-${index}`
   return [
     LLMEvent.toolInputStart({ id, name: "edit" }),
@@ -143,7 +143,7 @@ function invalid(index: number): Event[] {
       id,
       name: "edit",
       message: "invalid arguments",
-      error: new InvalidArgumentsError({ tool: "edit", detail }),
+      error: new InvalidArgumentsError({ tool: "edit", detail: message }),
     }),
   ]
 }
@@ -238,8 +238,23 @@ describe("session processor invalid-argument circuit breaker", () => {
         expect(last.result).toBe("stop")
         expect(last.message.error?.name).toBe("APIError")
         if (last.message.error?.name !== "APIError") return
-        expect(last.message.error.data.message).toContain("identical invalid-argument failures")
+        expect(last.message.error.data.message).toContain("consecutive invalid-argument failures")
         expect(last.message.error.data.isRetryable).toBe(false)
+      }),
+    ),
+  )
+
+  it.effect("aborts when the same tool alternates malformed details", () =>
+    provideTmpdirProject((dir) =>
+      Effect.gen(function* () {
+        const state = yield* turn(dir)
+        yield* run(state, step(0, ...invalid(1, '["filePath"]: is missing and is required')))
+        yield* run(state, step(1, ...invalid(2, '["oldString"]: is missing and is required')))
+        const last = yield* run(state, step(2, ...invalid(3, '["newString"]: is missing and is required')))
+        expect(last.result).toBe("stop")
+        expect(last.message.error?.name).toBe("APIError")
+        if (last.message.error?.name !== "APIError") return
+        expect(last.message.error.data.message).toContain("consecutive invalid-argument failures")
       }),
     ),
   )

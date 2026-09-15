@@ -240,30 +240,35 @@ export namespace KiloSessionProcessor {
   }
 
   /**
-   * Consecutive identical invalid-argument failures allowed before the turn is
-   * aborted. A model that keeps re-issuing the same malformed call never makes
+   * Consecutive invalid-argument failures allowed for one tool before the turn
+   * is aborted. A model that keeps re-issuing malformed calls never makes
    * progress, so retrying it again only burns tokens (#14143).
    */
   export const REPEATED_TOOL_FAILURE_LIMIT = 3
 
-  export function repeatedToolFailure(tool: string) {
-    return `Stopped after ${REPEATED_TOOL_FAILURE_LIMIT} identical invalid-argument failures for the "${tool}" tool. The same malformed call kept repeating, so the turn was aborted to avoid burning tokens.`
-  }
-
   /**
    * Per-turn failure streaks. A turn spans several `SessionProcessor.create`
    * calls (one per model step), so the streak is keyed by the parent user
-   * message rather than held in the processor instance. The map is small: each
-   * entry clears on a completed tool call or when it trips.
+   * message rather than held in the processor instance. Entries clear on a
+   * completed tool call, a non-validation failure, or when they trip. A turn
+   * that ends without any of those leaves its entry for the 64-entry cache
+   * bound to evict; entries are small and the map is never unbounded.
    */
-  const malformed = new Map<string, { last?: string; count: number }>()
+  const malformed = new Map<string, { tool?: string; count: number }>()
+
+  export function malformedToolFailure(tool: string) {
+    return new MessageV2.APIError({
+      message: `Stopped after ${REPEATED_TOOL_FAILURE_LIMIT} consecutive invalid-argument failures for the "${tool}" tool. The model kept re-issuing malformed input, so the turn was aborted to avoid burning tokens.`,
+      isRetryable: false,
+    }).toObject()
+  }
 
   /**
-   * Circuit breaker for repeated malformed tool calls. `inspect` returns the
-   * abort message only when the same tool fails validation with the same detail
-   * `REPEATED_TOOL_FAILURE_LIMIT` times in a row. Any other tool failure or a
-   * completed tool call clears the streak, so unrelated errors and progress
-   * cannot trip it. Call `reset` when a tool call completes.
+   * Circuit breaker for stuck tool validation. `inspect` returns a ready abort
+   * error once the same tool fails validation `REPEATED_TOOL_FAILURE_LIMIT`
+   * times in a row, even when the malformed details differ. Any other tool
+   * failure or a completed tool call clears the streak, so unrelated errors and
+   * progress cannot trip it. Call `reset` when a tool call completes.
    */
   export const malformedToolGuard = {
     inspect(key: string, error: unknown) {
@@ -272,9 +277,8 @@ export namespace KiloSessionProcessor {
         return undefined
       }
       const state = malformed.get(key) ?? { count: 0 }
-      const signature = `${error.tool}\u0000${error.detail}`
-      state.count = state.last === signature ? state.count + 1 : 1
-      state.last = signature
+      state.count = state.tool === error.tool ? state.count + 1 : 1
+      state.tool = error.tool
       if (state.count < REPEATED_TOOL_FAILURE_LIMIT) {
         if (malformed.size >= 64 && !malformed.has(key)) {
           const oldest = malformed.keys().next()
@@ -284,7 +288,7 @@ export namespace KiloSessionProcessor {
         return undefined
       }
       malformed.delete(key)
-      return { message: repeatedToolFailure(error.tool) }
+      return malformedToolFailure(error.tool)
     },
     reset(key: string) {
       malformed.delete(key)
