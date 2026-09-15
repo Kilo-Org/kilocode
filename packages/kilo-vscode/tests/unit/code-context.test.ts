@@ -91,24 +91,37 @@ describe("code context feedback composition", () => {
   const browserPrefix = formatBrowserFeedback(browser.references)
   const codeContext = formatCodeContexts([context()])
   const draft = "Please review"
+  const push =
+    "When the changes pass local checks, commit them and push to this branch so the pull request updates. Do not force-push."
 
   // Code context is not feedback metadata, so it must follow the review and
   // browser sections. Leading with it makes parseFeedback return undefined and
   // the host can no longer rebuild the review and browser cards.
   it("keeps review metadata parseable with a selection attached", () => {
-    const content = [reviewPrefix, codeContext, draft].filter(Boolean).join("\n\n")
+    const content = [reviewPrefix, push, codeContext, draft].filter(Boolean).join("\n\n")
     expect(partFeedback({ kilo: { review } }, content)).toMatchObject({
       review,
-      body: `${codeContext}\n\n${draft}`,
+      body: `${push}\n\n${codeContext}\n\n${draft}`,
     })
   })
 
-  it("keeps review and browser metadata parseable with a selection attached", () => {
-    const content = [reviewPrefix, browserPrefix, codeContext, draft].filter(Boolean).join("\n\n")
+  // The parsers strip the review prefix first, then require the browser prefix
+  // at the start of the remaining body, so review, browser, and push must stay
+  // adjacent even when a push instruction is present.
+  it("keeps review and browser metadata parseable when a push instruction is present", () => {
+    const content = [reviewPrefix, browserPrefix, push, codeContext, draft].filter(Boolean).join("\n\n")
     expect(partFeedback({ kilo: { review, browserFeedback: browser } }, content)).toMatchObject({
       review,
       browserFeedback: browser,
-      body: `${codeContext}\n\n${draft}`,
+      body: `${push}\n\n${codeContext}\n\n${draft}`,
+    })
+  })
+
+  it("keeps browser metadata parseable without review metadata", () => {
+    const content = [browserPrefix, push, codeContext, draft].filter(Boolean).join("\n\n")
+    expect(partFeedback({ kilo: { browserFeedback: browser } }, content)).toMatchObject({
+      browserFeedback: browser,
+      body: `${push}\n\n${codeContext}\n\n${draft}`,
     })
   })
 })

@@ -1584,7 +1584,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const browserData = browserFeedbackData(browsers())
     const browserText = browserData ? formatBrowserFeedback(browserData.references) : ""
     const contextText = formatCodeContexts(contexts())
-    const message = [review, push, browserText, contextText, draft].filter(Boolean).join("\n\n")
+    const message = [review, browserText, push, contextText, draft].filter(Boolean).join("\n\n")
     if (canSendContinue()) {
       session.resume()
       return
