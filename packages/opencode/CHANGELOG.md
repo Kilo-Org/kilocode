@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.7.1
+
+### Minor Changes
+
+- [#14148](https://github.com/Kilo-Org/kilocode/pull/14148) [`02e92bc`](https://github.com/Kilo-Org/kilocode/commit/02e92bcc6d9fe8f24b8b1226df7f4f381514f786) - Speed up local session recall for common search terms across large conversation histories, rank whole-word matches above matches inside longer words, return flagged partial matches when no session contains every term, and match small typos against session titles.
+
 ## 7.7.0
 
 ### Minor Changes
