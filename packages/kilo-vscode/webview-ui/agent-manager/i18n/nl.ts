@@ -57,7 +57,6 @@ export const dict = {
   "agentManager.project.add": "Project toevoegen",
   "agentManager.project.remove": "Verwijderen uit Agent Manager",
   "agentManager.project.missing": "Repository niet gevonden",
-  "agentManager.project.more": "Meer projectacties",
   "agentManager.project.settings": "Projectinstellingen",
   "agentManager.project.restricted":
     "Je huidige VS Code-werkruimte is je thuismap of de hoofdmap van het bestandssysteem. Open een specifieke projectmap in VS Code om Agent Manager te gebruiken.",

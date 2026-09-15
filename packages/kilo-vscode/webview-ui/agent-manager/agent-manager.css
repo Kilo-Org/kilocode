@@ -2948,10 +2948,6 @@ body.am-wt-dragging-active * {
   gap: 2px;
 }
 
-.am-project-menu {
-  min-width: 180px;
-}
-
 /* Fixed-width slot so menu items with and without a check mark align. */
 .am-menu-check {
   display: flex;

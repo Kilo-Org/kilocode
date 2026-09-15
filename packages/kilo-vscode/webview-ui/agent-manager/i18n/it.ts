@@ -58,7 +58,6 @@ export const dict = {
   "agentManager.project.add": "Aggiungi progetto",
   "agentManager.project.remove": "Rimuovi da Agent Manager",
   "agentManager.project.missing": "Repository non trovata",
-  "agentManager.project.more": "Altre azioni del progetto",
   "agentManager.project.settings": "Impostazioni progetto",
   "agentManager.project.restricted":
     "L'area di lavoro VS Code corrente è la cartella home o la radice del file system. Apri una cartella di progetto specifica in VS Code per usare Agent Manager.",

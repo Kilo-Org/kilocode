@@ -54,7 +54,6 @@ export const dict = {
   "agentManager.project.add": "Tilføj projekt",
   "agentManager.project.remove": "Fjern fra Agent Manager",
   "agentManager.project.missing": "Repository ikke fundet",
-  "agentManager.project.more": "Flere projekthandlinger",
   "agentManager.project.settings": "Projektindstillinger",
   "agentManager.project.restricted":
     "Dit aktuelle VS Code-arbejdsområde er din hjemmemappe eller filsystemets rod. Åbn en specifik projektmappe i VS Code for at bruge Agent Manager.",

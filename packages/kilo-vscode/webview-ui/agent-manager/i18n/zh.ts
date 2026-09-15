@@ -52,7 +52,6 @@ export const dict = {
   "agentManager.project.add": "添加项目",
   "agentManager.project.remove": "从 Agent Manager 移除",
   "agentManager.project.missing": "未找到仓库",
-  "agentManager.project.more": "更多项目操作",
   "agentManager.project.settings": "项目设置",
   "agentManager.project.restricted":
     "您当前的 VS Code 工作区是主文件夹或文件系统根目录。请在 VS Code 中打开特定项目文件夹以使用 Agent Manager。",

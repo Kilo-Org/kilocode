@@ -22,7 +22,6 @@ import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
-import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
@@ -391,10 +390,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       </button>
 
       <div class="am-section">
-        <SidebarSectionHeader
-          class="am-section-header"
-          label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
-        />
         <div class="am-worktree-list">
           <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider

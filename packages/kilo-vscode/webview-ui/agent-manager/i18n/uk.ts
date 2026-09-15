@@ -58,7 +58,6 @@ export const dict = {
   "agentManager.project.add": "Додати проєкт",
   "agentManager.project.remove": "Видалити з Agent Manager",
   "agentManager.project.missing": "Репозиторій не знайдено",
-  "agentManager.project.more": "Більше дій проєкту",
   "agentManager.project.settings": "Налаштування проєкту",
   "agentManager.project.restricted":
     "Поточна робоча область VS Code є домашньою папкою або коренем файлової системи. Відкрийте певну папку проєкту у VS Code, щоб використовувати Agent Manager.",

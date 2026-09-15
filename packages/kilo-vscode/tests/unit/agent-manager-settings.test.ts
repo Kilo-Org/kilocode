@@ -14,7 +14,7 @@ describe("Agent Manager settings navigation", () => {
   const branchDialog = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectBranchDialog.tsx"), "utf8")
 
   it("opens the project settings tab with the owning project id", () => {
-    expect(actions).toContain("onSelect={props.onSettings}")
+    expect(actions).toContain("onClick={props.onSettings}")
     expect(list).toContain('tab: "agentManager"')
     expect(list).toContain("projectId")
   })

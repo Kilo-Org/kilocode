@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.project.add": "افزودن پروژه",
   "agentManager.project.remove": "حذف از Agent Manager",
   "agentManager.project.missing": "مخزن یافت نشد",
-  "agentManager.project.more": "اقدامات بیشتر پروژه",
   "agentManager.project.settings": "تنظیمات پروژه",
   "agentManager.project.restricted":
     "فضای کاری فعلی VS Code شما پوشه اصلی یا ریشه سیستم فایل است. برای استفاده از Agent Manager، یک پوشه پروژه مشخص را در VS Code باز کنید.",

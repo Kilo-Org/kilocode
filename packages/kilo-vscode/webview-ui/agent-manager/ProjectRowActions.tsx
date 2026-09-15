@@ -1,8 +1,6 @@
 /** @jsxImportSource solid-js */
 
 import { Show, type Component } from "solid-js"
-import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
-import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { WorktreeCreate, type WorktreeCreateProps } from "./ProjectActions"
 
@@ -14,9 +12,9 @@ interface Props extends WorktreeCreateProps {
 }
 
 /**
- * Sticky project row actions: the new-worktree split control plus an overflow
- * menu for the low-frequency project actions. Clicks stay off the row toggle so
- * the plus opens the dialog without expanding a collapsed project.
+ * Project row actions: the new-worktree split control plus the individual
+ * project actions. Clicks stay off the row toggle so the plus opens the dialog
+ * without expanding a collapsed project.
  */
 export const ProjectRowActions: Component<Props> = (props) => (
   <div class="am-project-actions-row" onClick={(event) => event.stopPropagation()}>
@@ -29,33 +27,28 @@ export const ProjectRowActions: Component<Props> = (props) => (
       onNew={props.onNew}
       onSection={props.onSection}
     />
-    <DropdownMenu gutter={4} placement="bottom-end">
-      <DropdownMenu.Trigger
-        as={IconButton}
-        icon="dot-grid"
+    <IconButton
+      icon="history"
+      size="small"
+      variant="ghost"
+      label={props.t("session.showHistory")}
+      onClick={props.onHistory}
+    />
+    <IconButton
+      icon="settings-gear"
+      size="small"
+      variant="ghost"
+      label={props.t("agentManager.project.settings")}
+      onClick={props.onSettings}
+    />
+    <Show when={!props.pinned}>
+      <IconButton
+        icon="close-small"
         size="small"
         variant="ghost"
-        aria-label={props.t("agentManager.project.more")}
+        label={props.t("agentManager.project.remove")}
+        onClick={props.onRemove}
       />
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content class="am-project-menu">
-          <DropdownMenu.Item onSelect={props.onHistory}>
-            <Icon name="history" size="small" />
-            <DropdownMenu.ItemLabel>{props.t("session.showHistory")}</DropdownMenu.ItemLabel>
-          </DropdownMenu.Item>
-          <DropdownMenu.Item onSelect={props.onSettings}>
-            <Icon name="settings-gear" size="small" />
-            <DropdownMenu.ItemLabel>{props.t("agentManager.project.settings")}</DropdownMenu.ItemLabel>
-          </DropdownMenu.Item>
-          <Show when={!props.pinned}>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item onSelect={props.onRemove}>
-              <Icon name="close-small" size="small" />
-              <DropdownMenu.ItemLabel>{props.t("agentManager.project.remove")}</DropdownMenu.ItemLabel>
-            </DropdownMenu.Item>
-          </Show>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu>
+    </Show>
   </div>
 )
