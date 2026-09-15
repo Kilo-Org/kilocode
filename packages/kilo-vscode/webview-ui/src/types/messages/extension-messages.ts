@@ -20,7 +20,7 @@ import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
 import type { CodeContext } from "../../../../src/shared/code-context"
-import type { PRMergeResult } from "../../../../src/shared/pr-comment-actions"
+import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
@@ -1732,6 +1732,7 @@ export type ExtensionMessage =
   | AgentManagerPRErrorMessage
   | AgentManagerCommentReactionResultMessage
   | PRMergeResult
+  | PRReviewResult
   | AgentManagerTerminalCreatedMessage
   | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage
