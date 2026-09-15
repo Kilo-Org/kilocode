@@ -459,12 +459,6 @@
 ### Added
 
 - Fold and unfold large pasted text blocks directly from the prompt input and transcript.
-- Add a `/caffeinate` command to keep sessions awake during long-running work.
-- Add scheduled wakeup and cancel tools for time-delayed follow-ups.
-- Reload the entire project from `/reload`.
-- Support giving feedback when rejecting a permission request.
-- Enable the shared Kilo Swarm board by default, and make it a top-level config setting.
-- Make terminal links in output clickable.
 
 ### Fixed
 
@@ -483,7 +477,6 @@
 
 ### Changed
 
-- Move marketplace discovery and install into the CLI API.
 - Speed up the first worktree snapshot by skipping unnecessary re-hashing of the checkout.
 - Skip resolving the source project when moving sessions without changes, for faster session moves.
 - Bump the bundled CLI to v7.7.2.
