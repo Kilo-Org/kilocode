@@ -322,6 +322,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Застарілий",
   "agentManager.pr.comment.sent": "Надіслано",
   "agentManager.pr.comment.copy": "Копіювати коментар",
+  "agentManager.pr.comment.copyLink": "Копіювати посилання на коментар",
   "agentManager.pr.comment.openOnGitHub": "Відкрити на GitHub",
   "agentManager.pr.comment.showInDiff": "Показати в diff",
   "agentManager.pr.comment.unplaced": "Коментарі поза поточним diff",

@@ -305,6 +305,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "ล้าสมัย",
   "agentManager.pr.comment.sent": "ส่งแล้ว",
   "agentManager.pr.comment.copy": "คัดลอกความคิดเห็น",
+  "agentManager.pr.comment.copyLink": "คัดลอกลิงก์ความคิดเห็น",
   "agentManager.pr.comment.openOnGitHub": "เปิดบน GitHub",
   "agentManager.pr.comment.showInDiff": "แสดงใน diff",
   "agentManager.pr.comment.unplaced": "ความคิดเห็นนอก diff ปัจจุบัน",

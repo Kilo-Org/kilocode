@@ -311,6 +311,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Forældet",
   "agentManager.pr.comment.sent": "Sendt",
   "agentManager.pr.comment.copy": "Kopiér kommentar",
+  "agentManager.pr.comment.copyLink": "Kopiér kommentarlink",
   "agentManager.pr.comment.openOnGitHub": "Åbn på GitHub",
   "agentManager.pr.comment.showInDiff": "Vis i diff",
   "agentManager.pr.comment.unplaced": "Kommentarer uden for den aktuelle diff",

@@ -319,6 +319,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Güncel değil",
   "agentManager.pr.comment.sent": "Gönderildi",
   "agentManager.pr.comment.copy": "Yorumu kopyala",
+  "agentManager.pr.comment.copyLink": "Yorum bağlantısını kopyala",
   "agentManager.pr.comment.openOnGitHub": "GitHub'da aç",
   "agentManager.pr.comment.showInDiff": "diff'te göster",
   "agentManager.pr.comment.unplaced": "Geçerli diff dışındaki yorumlar",
