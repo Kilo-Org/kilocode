@@ -848,7 +848,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Habilidades",
 
   "settings.browser.description":
-    "Quando ativado, o agente de IA pode interagir com páginas da web — navegar, clicar, digitar e capturar telas. Uma janela do Chrome será aberta para que você possa acompanhar o trabalho do agente.",
+    "Configure a automação de navegador integrada com tecnologia Playwright. O Kilo pode navegar, interagir e capturar telas de páginas da web nas suas sessões.",
   "settings.browser.enable.title": "Ativar Automação do Navegador",
   "settings.browser.enable.description": "Registrar o servidor Playwright MCP no backend CLI.",
   "settings.browser.systemChrome.title": "Usar Chrome do Sistema",
@@ -1368,5 +1368,11 @@ export const dict = {
   "chat.search.close": "Fechar pesquisa",
   "chat.search.invalidRegex": "Expressão regular inválida",
   "chat.search.noResults": "Nenhum resultado",
+  "settings.experimental.browserAutomation.title": "Navegador Integrado",
+  "settings.experimental.browserAutomation.description":
+    "Mostre pré-visualizações de aplicativos locais no Agent Manager e exponha a ferramenta browser_open para sessões do Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome do Sistema",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Use o Google Chrome instalado para o Navegador Integrado. Desative apenas quando um navegador Playwright Chromium compatível já estiver instalado.",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
 }

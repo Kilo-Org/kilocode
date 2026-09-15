@@ -430,7 +430,7 @@ export const dict = {
     "Kilo ajanları için bilgisayarı uyanık tutma modu etkin; devre dışı bırakmak için tıklayın",
   "agentManager.caffeination.active": "Kilo ajanları çalışırken bilgisayar uyanık tutuluyor",
   "agentManager.caffeination.unavailable": "Bilgisayarı uyanık tutma modu bu platformda kullanılamıyor",
-  "agentManager.browser.title": "Tarayıcı",
+  "agentManager.browser.title": "Entegre Tarayıcı",
   "agentManager.browser.url": "Yerel uygulama URL'si",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Aç",
@@ -439,7 +439,8 @@ export const dict = {
   "agentManager.browser.inspect": "Öğeyi seç",
   "agentManager.browser.devtoolsTitle": "Geliştirici araçları",
   "agentManager.browser.empty": "Burada önizlemek için yerel bir uygulama açın.",
-  "agentManager.browser.noSession": "Önce bir Agent Manager oturumu seçin.",
+  "agentManager.browser.noSession":
+    "Yerel bir uygulamada gezinmek için Agent Manager'da bir oturum başlatın veya seçin.",
   "agentManager.browser.screenshotAlt": "Geçerli tarayıcı sayfası",
   "agentManager.browser.errors": "Tarayıcı sorunları: {{count}}",
   "agentManager.browser.diagnostics": "Tarayıcı tanılaması",

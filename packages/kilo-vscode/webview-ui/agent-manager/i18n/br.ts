@@ -425,7 +425,7 @@ export const dict = {
   "agentManager.caffeination.active": "Mantendo o computador acordado enquanto os agentes Kilo trabalham",
   "agentManager.caffeination.unavailable":
     "O modo de manter o computador acordado não está disponível nesta plataforma",
-  "agentManager.browser.title": "Navegador",
+  "agentManager.browser.title": "Navegador Integrado",
   "agentManager.browser.url": "URL da aplicação local",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Abrir",
@@ -434,7 +434,8 @@ export const dict = {
   "agentManager.browser.refresh": "Atualizar navegador",
   "agentManager.browser.close": "Fechar navegador",
   "agentManager.browser.empty": "Abra uma aplicação local para visualizá-la aqui.",
-  "agentManager.browser.noSession": "Selecione primeiro uma sessão do Agent Manager.",
+  "agentManager.browser.noSession":
+    "Inicie ou selecione uma sessão no Agent Manager para navegar em um aplicativo local.",
   "agentManager.browser.screenshotAlt": "Página atual do navegador",
   "agentManager.browser.errors": "Problemas do navegador: {{count}}",
   "agentManager.browser.diagnostics": "Diagnóstico do navegador",

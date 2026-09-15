@@ -772,7 +772,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "啟用後，AI Agent 可以與網頁互動，可導覽、點選、輸入並擷取螢幕截圖。Chrome 視窗將開啟，方便觀察 Agent 的工作。",
+    "設定由 Playwright 提供支援的內建瀏覽器自動化。Kilo 可以在你的工作階段中瀏覽網頁、與網頁互動，並擷取螢幕截圖。",
   "settings.browser.enable.title": "啟用瀏覽器自動化",
   "settings.browser.enable.description": "將 Playwright MCP 伺服器註冊到 CLI 後端。",
   "settings.browser.systemChrome.title": "使用系統 Chrome",
@@ -1284,5 +1284,11 @@ export const dict = {
   "chat.search.close": "關閉搜尋",
   "chat.search.invalidRegex": "規則運算式無效",
   "chat.search.noResults": "無結果",
+  "settings.experimental.browserAutomation.title": "整合瀏覽器",
+  "settings.experimental.browserAutomation.description":
+    "在 Agent Manager 中顯示本機應用程式預覽，並向 Agent Manager 工作階段公開 browser_open 工具。",
+  "settings.experimental.browserAutomation.systemChrome.title": "使用系統 Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "為整合瀏覽器使用已安裝的 Google Chrome。僅在已安裝相容的 Playwright Chromium 瀏覽器時才停用。",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
 } satisfies Partial<Record<Keys, string>>
