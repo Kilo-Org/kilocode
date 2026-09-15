@@ -320,6 +320,7 @@ const live: Layer.Layer<
           }),
           // kilocode_change end
           providerOptions: prepared.params.options,
+          messageTransformOptions: prepared.messageTransformOptions, // kilocode_change
           headers: prepared.headers,
           abort: input.abort,
         })
