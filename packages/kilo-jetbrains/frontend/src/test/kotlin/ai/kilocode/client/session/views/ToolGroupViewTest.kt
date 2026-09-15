@@ -120,6 +120,34 @@ class ToolGroupViewTest : BasePlatformTestCase() {
         assertEquals(KiloBundle.message("session.group.tools.running.failed", 2, 1), group.caption())
     }
 
+    // collapse() keeps the cached body instance, so gating child construction on "is there a body"
+    // would let rebuild() attach every child while the group is collapsed. Containment is the honest
+    // gate. This drives ToolGroupView.rebuild() directly because that is the seam the bug lived in.
+    fun `test rebuild on a collapsed group attaches nothing`() {
+        val group = group(ToolGroupKind.MERGED, tool("a", "read"), tool("b", "read"))
+        group.expand()
+        assertEquals(2, group.attachedCount())
+        assertEquals(listOf("a", "b"), built)
+        group.collapse()
+
+        group.rebuild()
+
+        assertFalse(group.isExpanded())
+        assertEquals(0, group.attachedCount())
+        assertEquals("no child may be rebuilt while collapsed", listOf("a", "b"), built)
+    }
+
+    fun `test rebuild on an expanded group refreshes its children`() {
+        val group = group(ToolGroupKind.MERGED, tool("a", "read"), tool("b", "read"))
+        group.expand()
+        val first = group.attachedView("a")
+
+        group.rebuild()
+
+        assertEquals(2, group.attachedCount())
+        assertSame("retained instances survive a rebuild", first, group.attachedView("a"))
+    }
+
     fun `test collapsed group offers no hover preview`() {
         val group = group(ToolGroupKind.MERGED, tool("a", "read"), tool("b", "read"))
         assertNull("building a preview would build the children the group avoids", group.headerPopup())

@@ -238,9 +238,10 @@ class MessageViewCompactTest : BasePlatformTestCase() {
         assertEquals(listOf("t1", "t2"), group.ids())
     }
 
-    // rebuild() runs whenever a grouped child needs a fresh renderer. Gated on the cached body it
-    // would build every child of a collapsed group, since collapse() keeps the body instance.
-    fun `test replacing a child in a collapsed group builds nothing`() {
+    // The containment gate on child construction is pinned by ToolGroupViewTest, which drives
+    // rebuild() directly. This covers the streaming path: a state change routed into a group the user
+    // has collapsed again must update the summary without resurrecting the children.
+    fun `test streaming into a collapsed group builds nothing`() {
         val view = assistant()
         add(view, tool("t1", "read"), tool("t2", "read"))
         val group = single(view)
@@ -254,6 +255,48 @@ class MessageViewCompactTest : BasePlatformTestCase() {
 
         assertFalse(group.isExpanded())
         assertEquals("a collapsed group must not build children", 0, group.attachedCount())
+    }
+
+    fun `test removing the head of a run keeps its group card`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("t2", "read"), tool("t3", "read"))
+        val group = single(view)
+        group.expand()
+
+        view.removePart("t1")
+
+        assertSame("identity must survive losing the head", group, single(view))
+        assertTrue(group.isExpanded())
+        assertEquals(listOf("t2", "t3"), group.ids())
+    }
+
+    /**
+     * Two runs merge when the part between them is removed. The absorbed tools have to stay routed to
+     * the surviving group: the teardown of the now-redundant segment must not clear ownership the
+     * reconcile just established, or their later updates reach neither group and the summary freezes
+     * while they are still running.
+     */
+    fun `test merging two runs keeps the absorbed tools routed`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("t2", "read"))
+        add(view, text("p1", "prose"))
+        add(view, tool("t3", "read"), tool("t4", "read"))
+        assertEquals(2, view.groupViews().size)
+
+        view.removePart("p1")
+
+        val group = single(view)
+        assertEquals(listOf("t1", "t2", "t3", "t4"), group.ids())
+
+        val failing = tools.getValue("t4")
+        failing.state = ToolExecState.ERROR
+        view.upsertPart(failing)
+
+        assertEquals(
+            "an absorbed tool's failure still has to reach the header",
+            KiloBundle.message("session.group.tools.running.failed", 4, 1),
+            group.caption(),
+        )
     }
 
     fun `test tools with dedicated cards never group and break the run`() {

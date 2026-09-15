@@ -443,16 +443,26 @@ class MessageView(
      * compares unequal. Without this the planner would dispose the card and build a fresh one, which
      * starts collapsed — snapping the group shut under a user who had just expanded it, on every
      * tool that joins the run.
+     *
+     * Identity follows any surviving member rather than the run's first tool, so removing the head of
+     * a run re-keys the card instead of rebuilding it.
      */
     @RequiresEdt
     private fun reconcileGroup(old: Segment, fresh: Segment): Boolean {
         if (old !is Segment.Grouped || fresh !is Segment.Grouped) return false
-        if (old.kind != fresh.kind || groupId(old) != groupId(fresh)) return false
-        val group = groups[groupId(fresh)] ?: return false
+        if (old.kind != fresh.kind) return false
+        val group = groups[groupId(old)] ?: return false
         val ids = fresh.ids.toSet()
+        if (old.ids.none { it in ids }) return false
         old.ids.filterNot { it in ids }.forEach { owner.remove(it) }
         fresh.ids.forEach { owner[it] = group }
         group.reconcile(fresh.ids) { known[it] as? Tool }
+        val id = groupId(fresh)
+        if (id != group.contentId) {
+            groups.remove(group.contentId)
+            group.rekey(id)
+            groups[id] = group
+        }
         return true
     }
 
@@ -464,7 +474,11 @@ class MessageView(
             is Segment.Grouped -> {
                 val group = groups.remove(groupId(segment)) ?: return
                 group.release()
-                segment.ids.forEach { owner.remove(it) }
+                // Surrender only ids this group still owns. When two runs merge — the part between them
+                // was removed — an earlier reconcile in this same pass already handed its ids to the
+                // absorbing group, and clearing them here would leave those tools unrouted: their
+                // updates would reach neither group, freezing the summary while they still run.
+                segment.ids.forEach { if (owner[it] === group) owner.remove(it) }
                 remove(group)
                 Disposer.dispose(group)
             }

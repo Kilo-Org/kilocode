@@ -33,7 +33,7 @@ import java.awt.Insets
  * compact mode stays compact while the turn streams.
  */
 class ToolGroupView private constructor(
-    override val contentId: String,
+    id: String,
     val kind: ToolGroupKind,
     private val make: (String) -> PartView?,
     private val parts: Parts,
@@ -44,6 +44,14 @@ class ToolGroupView private constructor(
         kind: ToolGroupKind,
         make: (String) -> PartView?,
     ) : this(contentId, kind, make, Parts())
+
+    /**
+     * Synthetic id, derived by the owner from the run's first tool. Mutable because a run can lose its
+     * head: re-keying is what lets the card keep its identity — and the user's expansion — instead of
+     * being torn down and rebuilt collapsed.
+     */
+    override var contentId: String = id
+        private set
 
     private val states = LinkedHashMap<String, ToolExecState>()
     private val attached = LinkedHashMap<String, PartView>()
@@ -99,6 +107,12 @@ class ToolGroupView private constructor(
     @RequiresEdt
     fun rebuild() {
         syncChildren()
+    }
+
+    /** Adopt a new synthetic id after the run lost the tool the old one was derived from. */
+    @RequiresEdt
+    fun rekey(id: String) {
+        contentId = id
     }
 
     /**
