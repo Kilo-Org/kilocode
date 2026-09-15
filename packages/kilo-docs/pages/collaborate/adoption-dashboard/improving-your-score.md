@@ -61,8 +61,8 @@ Depth increases when AI touches multiple stages of the same task. Each handoff r
 
 **Action:** Adopt the "chain" workflow pattern:
 
-1. **Plan** — Use Architect mode to design a feature
-2. **Build** — Use Code mode to implement it
+1. **Plan** — Use the Plan agent to design a feature
+2. **Build** — Use the Code agent to implement it
 3. **Review** — Use Code Reviews to critique it
 
 {% callout type="tip" %}
@@ -96,14 +96,14 @@ Generated code that never runs is hard to trust. Teams that can verify AI output
 
 ### Introduce Specialist Agents
 
-Most teams start with Code mode and stop there. But Kilo's other modes unlock additional value.
+Most teams start with the Code agent and stop there. But Kilo's other agents unlock additional value.
 
-**Action:** Introduce your team to specialized modes:
+**Action:** Introduce your team to specialized agents:
 
-| Mode | Use Case |
+| Agent | Use Case |
 |---|---|
 | **Orchestrator** | Delegate and execute subtasks over long-horizon projects |
-| **Architect** | Design and plan before implementation |
+| **Plan** | Design and plan before implementation |
 | **Debug** | Systematic error diagnosis |
 | **Ask** | Quick questions and explanations |
 
@@ -130,7 +130,7 @@ Other ways to spread usage:
 
 - Daily stand-up preparation with AI
 - End-of-day documentation or commit messages
-- Mid-week design reviews using Architect mode
+- Mid-week design reviews using the Plan agent
 
 ---
 
