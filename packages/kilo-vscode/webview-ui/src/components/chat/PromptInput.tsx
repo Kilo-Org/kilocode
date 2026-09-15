@@ -739,6 +739,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     reviewComments().length > 0 ||
     browsers().length > 0 ||
     contexts().length > 0
+  // Review, browser, and code context all need the composed message instead of
+  // the server slash-command branch, which sends the raw args only.
+  const hasStructuredInput = (data: unknown, browser: unknown) =>
+    data != null || browser != null || contexts().length > 0
   const sendReady = () => !isDisabled() && goalReady() && !terminal.pending() && !git.pending() && !props.blocked?.()
   const canContinue = () => !goal.active() && speech.state() === "idle" && !hasInput() && session.canResume()
   const goalReady = () => !goal.pending() && (!goal.active() || (!enhancing() && !imageAttach.pending()))
@@ -1530,11 +1534,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setMemoryText(memory)
       clearReviewComments()
       clear()
+      clearContexts()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
+      contextDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
@@ -1555,11 +1561,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setText("")
       clearReviewComments()
       clear()
+      clearContexts()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
+      contextDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
@@ -1646,7 +1654,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     // Server-side slash command (cmdMatch/matched already computed above)
-    if (matched && !data && !browserData) {
+    if (matched && !hasStructuredInput(data, browserData)) {
       const args = draft.slice(cmdMatch![0].length).trim()
       const accepted = session.sendCommand(
         matched.name,
@@ -1741,7 +1749,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         />
       </Show>
       <Show when={contexts().length > 0}>
-        <CodeContextChips contexts={contexts()} sessionID={sid()} onRemove={removeContext} onClear={clearContexts} />
+        <CodeContextChips
+          contexts={contexts()}
+          sessionID={sid()}
+          onRemove={removeContext}
+          onClear={() => {
+            if (!readonly()) clearContexts()
+          }}
+        />
       </Show>
       <Show when={reviewComments().length > 0}>
         <ReviewComments

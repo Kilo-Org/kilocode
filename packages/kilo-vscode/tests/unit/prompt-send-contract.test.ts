@@ -760,23 +760,31 @@ describe("code context pill contract", () => {
   it("reuses the review attachment shell for collapse and large lists", () => {
     const more = readFile(path.join(ROOT, "webview-ui/src/components/chat/PromptShowMore.tsx"))
     expect(chips).toContain("prompt-review-comments-toggle")
-    expect(chips).toContain("prompt-review-row")
+    expect(chips).toContain("prompt-review-row-main")
+    expect(chips).toContain("prompt-review-row-snippet")
     expect(chips).toContain("prompt-review-list--scroll")
     expect(chips).toContain("PromptShowMore")
     expect(more).toContain("agentManager.review.showMore")
     expect(chips).toContain("agentManager.review.clearAll")
     expect(chips).toContain("ui.promptInput.context")
-    expect(source).toContain("onClear={clearContexts}")
+    // Clear all must respect the locked prompt, like the review and browser clear handlers.
+    expect(source).toContain("if (!readonly()) clearContexts()")
   })
 
   it("includes code context content only when the user sends the prompt", () => {
     expect(source).toContain("formatCodeContexts(contexts())")
     expect(source).not.toContain("setText(formatCodeContexts")
+    // A context-only prompt must not take the server slash-command branch, which
+    // sends the raw args and drops the composed message.
+    expect(source).toContain("if (matched && !hasStructuredInput(data, browserData))")
+    expect(source).toContain("contexts().length > 0")
   })
 
   it("persists and clears code context with the rest of the draft", () => {
     expect(source).toContain("setContexts(contextDrafts.get(key) ?? [])")
-    expect(source).toContain("contextDrafts.delete(key)")
+    expect(source).toContain("references.delete(key)\n    contextDrafts.delete(key)")
     expect(source).toContain("setContexts(codeContexts)")
+    // The memory command and client-side slash resets also drop the contexts.
+    expect((source.match(/contextDrafts\.delete\(draftKey\(\)\)/g) ?? []).length).toBeGreaterThanOrEqual(2)
   })
 })
