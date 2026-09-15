@@ -343,56 +343,54 @@ describe("parsePRResult", () => {
 describe("related", () => {
   const head = "b".repeat(40)
   const merge = "c".repeat(40)
-  const local = "d".repeat(40)
   const base = { number: 1, title: "", body: "", url: "", review: null, additions: 0, deletions: 0, files: 0 } as const
 
-  /** A git stub whose HEAD is `at` and whose history contains `ancestors`. */
-  function repo(at: string, ancestors: string[]) {
+  /** A git stub whose HEAD history contains exactly `ancestors`. */
+  function repo(ancestors: string[]) {
     const calls: string[][] = []
     const git = async (args: string[]) => {
       calls.push(args)
-      if (args[0] === "rev-parse") return `${at}\n`
-      if (ancestors.includes(args[2]!) || args[2] === at) return ""
-      throw new Error("exit 1")
+      if (ancestors.includes(args[2]!)) return ""
+      throw new Error("not an ancestor")
     }
     return { git, calls }
   }
 
   it("keeps open and draft PRs without touching git", async () => {
-    const { git, calls } = repo(local, [])
+    const { git, calls } = repo([])
     expect(await related({ ...base, state: "open", headRefOid: head }, git)).toBe(true)
     expect(await related({ ...base, state: "draft", headRefOid: head }, git)).toBe(true)
     expect(calls).toEqual([])
   })
 
   it("keeps a merged PR whose head is the local HEAD", async () => {
-    const { git } = repo(head, [merge])
+    const { git } = repo([head])
     expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(true)
   })
 
   it("keeps a merged PR with local commits on top of its head", async () => {
-    const { git } = repo(local, [head])
+    const { git } = repo([head])
     expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(true)
   })
 
   it("drops a squash-merged PR that a recreated branch name inherited", async () => {
-    // The old PR head is not in the new branch's history.
-    const { git } = repo(local, [merge])
+    // The old PR head is not in the new branch's history, only the base merge is.
+    const { git } = repo([merge])
     expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
   })
 
   it("drops a merge-commit PR that a branch created from the base after the merge inherited", async () => {
-    const { git } = repo(local, [head, merge])
+    const { git } = repo([head, merge])
     expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
   })
 
   it("keeps a closed PR only when its head is in the local history", async () => {
-    expect(await related({ ...base, state: "closed", headRefOid: head }, repo(local, [head]).git)).toBe(true)
-    expect(await related({ ...base, state: "closed", headRefOid: head }, repo(local, []).git)).toBe(false)
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo([head]).git)).toBe(true)
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo([]).git)).toBe(false)
   })
 
   it("keeps a merged PR without a head SHA", async () => {
-    expect(await related({ ...base, state: "merged" }, repo(local, []).git)).toBe(true)
+    expect(await related({ ...base, state: "merged" }, repo([]).git)).toBe(true)
   })
 })
 

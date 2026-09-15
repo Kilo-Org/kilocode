@@ -461,9 +461,13 @@ export function signature(pr: PRStatus): string {
  * Whether a merged or closed PR belongs to this checkout. gh's finder (and the
  * batched lookup that mirrors it) returns the newest merged or closed PR of a
  * branch name, so a branch recreated with the name of an old PR branch
- * inherits that PR. Keep the PR only when its head is the local HEAD, or is
- * reachable from HEAD while the merge into the base branch is not (a branch
- * created from the base after the merge contains both).
+ * inherits that PR. Keep the PR when its head is reachable from HEAD and the
+ * merge into the base is not: a recreated branch contains neither, and a branch
+ * created from the base after the merge contains both.
+ *
+ * `merge-base --is-ancestor` is reflexive, so a worktree sitting on the PR head
+ * is covered without reading HEAD. A commit that git cannot resolve is absent
+ * from the local object store, so it cannot be in HEAD's history either.
  */
 export async function related(pr: PRResult, git: (args: string[]) => Promise<string>): Promise<boolean> {
   if (pr.state === "open" || pr.state === "draft" || !pr.headRefOid) return true
@@ -472,11 +476,6 @@ export async function related(pr: PRResult, git: (args: string[]) => Promise<str
       () => true,
       () => false,
     )
-  const head = await git(["rev-parse", "HEAD"]).then(
-    (out) => out.trim(),
-    () => "",
-  )
-  if (head === pr.headRefOid) return true
   if (!(await contains(pr.headRefOid))) return false
   return pr.mergeCommit === undefined || !(await contains(pr.mergeCommit))
 }
