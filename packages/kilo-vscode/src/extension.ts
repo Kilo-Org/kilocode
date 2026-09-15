@@ -22,6 +22,7 @@ import { CaffeinationService } from "./services/caffeination"
 import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
 import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
+import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -66,13 +67,7 @@ export async function activate(context: vscode.ExtensionContext) {
     log: (...args) => console.warn("[Kilo New] BrowserBroker:", ...args),
     enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
     trusted: () => vscode.workspace.isTrusted,
-    useSystemChrome: () => {
-      const browser = vscode.workspace.getConfiguration("kilo-code.new.agentManager.browser")
-      const chosen = browser.inspect<boolean>("useSystemChrome")?.globalValue
-      if (chosen !== undefined) return chosen
-      // Fall back to the pre-rename key so existing preferences keep applying.
-      return vscode.workspace.getConfiguration("kilo-code.new.browserAutomation").get("useSystemChrome", true)
-    },
+    useSystemChrome: () => integratedBrowserUseSystemChrome(),
   })
 
   // Create shared connection service (one server for all webviews)
