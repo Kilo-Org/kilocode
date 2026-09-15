@@ -51,16 +51,24 @@ export default function Custom404() {
           <div className="message-section">
             <h1 className="message-title">Page not found</h1>
             {subtitle && <p className="message-subtitle">{subtitle}</p>}
+            <p className="message-subtitle">
+              The page you requested does not exist or has been moved. Browse the{" "}
+              <a href="/docs">documentation index</a> or fetch the{" "}
+              <a href="/docs/llms.txt">llms.txt</a> for a full page listing.
+            </p>
           </div>
 
           {/* Actions */}
           <div className="actions">
-            <Link href="/" className="btn btn-primary">
+            <Link href="/docs" className="btn btn-primary">
               Return to Documentation
             </Link>
-            <Link href="/getting-started" className="btn btn-secondary">
+            <Link href="/docs/getting-started" className="btn btn-secondary">
               Getting Started
             </Link>
+            <a href="/docs/llms.txt" className="btn btn-secondary">
+              llms.txt Index
+            </a>
           </div>
         </div>
 

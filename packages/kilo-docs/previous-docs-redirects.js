@@ -30,6 +30,30 @@ module.exports = [
     permanent: true,
   },
   {
+    source: "/docs/advanced-config/rules",
+    destination: "/docs/customize/custom-rules",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/advanced-config/:path*",
+    destination: "/docs/customize/:path*",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/features/configuration",
+    destination: "/docs/getting-started/settings",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/features/configuration/:path*",
+    destination: "/docs/getting-started/settings/:path*",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/code-with-ai/features/fast-edits",
     destination: "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/code-with-ai/features/fast-edits.md",
     basePath: false,
