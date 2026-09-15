@@ -1,5 +1,17 @@
 # @kilocode/cli
 
+## 7.7.2
+
+### Minor Changes
+
+- [#12714](https://github.com/Kilo-Org/kilocode/pull/12714) [`23ecd42`](https://github.com/Kilo-Org/kilocode/commit/23ecd42c80f916789ebf673d636b7e164e204df5) - Move marketplace catalog, installation, removal, and installed-item detection into the CLI backend so editor clients use the shared marketplace API.
+
+### Patch Changes
+
+- [#14163](https://github.com/Kilo-Org/kilocode/pull/14163) [`1df6993`](https://github.com/Kilo-Org/kilocode/commit/1df69932660a7b30b7a5521b3a40b3dc0e91de0f) - Stop looping on repeated malformed tool calls. A turn now aborts with an error after three identical invalid-argument failures instead of retrying the same broken tool call indefinitely.
+
+- [#14160](https://github.com/Kilo-Org/kilocode/pull/14160) [`1c33649`](https://github.com/Kilo-Org/kilocode/commit/1c33649f94720708ed9c5beff2af3a1bf35dac1c) - Move the Kilo Swarm setting out of Experimental to Agent Behaviour. The setting stays enabled by default and is now controlled by the top-level `shared_agent_board` key. The `experimental.shared_agent_board` key is no longer read, and a warning is logged when it is still present.
+
 ## 7.7.1
 
 ### Minor Changes
