@@ -273,6 +273,7 @@ export const dict = {
   "ui.permission.reject": "拒否",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
   "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
+  "ui.permission.reason": "理由:",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
   "ui.permission.rule.addToAllowed": "許可リストに追加",

@@ -281,6 +281,7 @@ export const dict = {
   "ui.permission.reject": "Ablehnen",
   "ui.permission.feedbackPlaceholder": "Teile Kilo mit, was es anders machen soll",
   "ui.permission.feedbackHint": "Enter zum Ablehnen, Esc zum Abbrechen",
+  "ui.permission.reason": "Grund:",
   "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",
   "ui.permission.doomLoop.rule": "{{tool}}-Aufrufe fortsetzen",
   "ui.permission.rule.addToAllowed": "Zur Erlaubt-Liste hinzufügen",

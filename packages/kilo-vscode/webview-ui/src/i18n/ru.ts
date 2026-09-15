@@ -271,6 +271,7 @@ export const dict = {
   "ui.permission.reject": "Отклонить",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
   "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
+  "ui.permission.reason": "Причина:",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
   "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",

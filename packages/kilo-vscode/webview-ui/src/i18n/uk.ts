@@ -275,6 +275,7 @@ export const dict = {
   "ui.permission.reject": "Відхилити",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
   "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
+  "ui.permission.reason": "Причина:",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
   "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",

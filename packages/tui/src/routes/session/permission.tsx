@@ -470,6 +470,19 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
           }
 
           const current = info()
+          // kilocode_change start - show task context for ordinary read and command approvals
+          const reason = () => {
+            if (!["read", "external_directory", "bash"].includes(props.request.permission)) return undefined
+            if (props.request.metadata?.skillShell === true) return undefined
+            if (props.request.metadata?.backgroundProcess === true) return undefined
+            const data = input()
+            const value =
+              props.request.permission === "bash" && typeof data.description === "string" && data.description
+                ? data.description
+                : props.request.metadata?.description
+            return typeof value === "string" ? value.trim() : undefined
+          }
+          // kilocode_change end
 
           const header = () => (
             <box flexDirection="column" gap={0}>
@@ -510,7 +523,22 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             <Prompt
               title="Permission required"
               header={header()}
-              body={current.body}
+              /* kilocode_change start */
+              body={
+                <Show when={reason()} fallback={current.body}>
+                  {(value) => (
+                    <box flexDirection="column" gap={1}>
+                      <box paddingLeft={1}>
+                        <text fg={theme.text}>
+                          Reason: <i>{value()}</i>
+                        </text>
+                      </box>
+                      {current.body}
+                    </box>
+                  )}
+                </Show>
+              }
+              /* kilocode_change end */
               /* kilocode_change */ options={options}
               escapeKey="reject"
               onInterrupt={interrupt} // kilocode_change
