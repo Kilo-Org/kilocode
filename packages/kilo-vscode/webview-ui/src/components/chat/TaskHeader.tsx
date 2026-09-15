@@ -288,9 +288,12 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         </div>
       </Show>
       {/* Expanded graph section: timeline + context bar + token breakdown.
-          Every row keeps a fixed height and renders a placeholder until its
-          data arrives, so the header does not jump while a turn streams. */}
-      <Show when={expanded()}>
+          While a turn is running the section stays mounted so each row holds
+          its final height and fills in place, instead of appearing one row at
+          a time and shifting the transcript. Skeletons are loading states
+          only: without a running turn the section falls back to its earlier
+          behavior of showing just the rows that have data. */}
+      <Show when={expanded() && (hasTimeline() || busy())}>
         <div data-component="task-header-graph">
           <Show
             when={hasTimeline()}
@@ -312,17 +315,13 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
-          <Show
-            when={tokens()}
-            fallback={
-              <div class="task-header-tokens" aria-hidden="true">
-                <div class="task-header-skeleton" style={{ width: "42px" }} />
-                <div class="task-header-skeleton" style={{ width: "36px" }} />
-                <div class="task-header-skeleton" style={{ width: "28px" }} />
-              </div>
-            }
-          >
-            {(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}
+          <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
+          <Show when={busy() && !tokens()}>
+            <div class="task-header-tokens" aria-hidden="true">
+              <div class="task-header-skeleton" style={{ width: "42px" }} />
+              <div class="task-header-skeleton" style={{ width: "36px" }} />
+              <div class="task-header-skeleton" style={{ width: "28px" }} />
+            </div>
           </Show>
         </div>
       </Show>

@@ -1308,6 +1308,41 @@ export const TaskHeaderWithTodos: Story = {
   },
 }
 
+export const TaskHeaderSkeleton: Story = {
+  name: "TaskHeader — loading, first turn",
+  render: () => {
+    const message: Message = {
+      id: headerUserID,
+      sessionID: SESSION_ID,
+      role: "user",
+      content: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+      createdAt: new Date(headerNow).toISOString(),
+      time: { created: headerNow },
+    }
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => [message],
+      visibleMessages: () => [message],
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+        createdAt: new Date(headerNow).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getParts: () => [],
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 export const TaskHeaderBackgroundAgents1280: Story = {
   name: "TaskHeader background agents, wide",
   args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
