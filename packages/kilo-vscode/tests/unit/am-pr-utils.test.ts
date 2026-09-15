@@ -401,7 +401,7 @@ describe("related", () => {
   it("matches a real repository for the reflexive, ancestor, and merge cases", async () => {
     const dir = mkdtempSync(join(tmpdir(), "kilo-related-"))
     const run = (args: string[]) =>
-      execFileSync("git", args, { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+      execFileSync("git", args, { cwd: dir, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"] })
     try {
       run(["init", "-q"])
       run(["config", "user.email", "test@example.com"])
