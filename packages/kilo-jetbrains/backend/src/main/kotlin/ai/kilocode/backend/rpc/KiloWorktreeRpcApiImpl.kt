@@ -10,6 +10,7 @@ import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.BranchStatusDto
@@ -575,14 +576,21 @@ class KiloWorktreeRpcApiImpl(
             // origin happens to have a PR sharing that number, silently imports the wrong PR. Catch it
             // before spawning `gh` at all. A null origin (no remote, non-GitHub remote, GitHub
             // Enterprise) skips the guard rather than blocking an import we cannot verify.
+            //
+            // The comparison is by remote URL, so an origin left stale by a GitHub rename or transfer
+            // reads as foreign even though it still reaches the same repository through GitHub's
+            // redirect. Resolving the canonical name needs a network round trip on every import to
+            // repair one stale remote, so the message names the remote as the other possible cause
+            // instead.
             val slug = "${ref.owner}/${ref.repo}"
             val remote = runGit(base, "remote", "get-url", "origin")
             val origin = if (remote.ok) parseRepoSlug(remote.stdout) else null
-            if (origin != null && !slug.equals(origin, ignoreCase = true)) {
+            if (foreignPr(slug, origin)) {
                 LOG.warn("pr import rejected: url=$url pr=$slug origin=$origin")
                 return@withContext CreateWorktreeResultDto(
-                    error = "This pull request belongs to $slug, but this project is $origin. " +
-                        "Open a project on $slug to import the pull request there.",
+                    error = "This pull request belongs to $slug, but this project's origin is $origin. " +
+                        "Open a project on $slug to import it there, or update this project's origin " +
+                        "remote if it is out of date.",
                 )
             }
             lock(base, "import") {
@@ -1126,10 +1134,14 @@ class KiloWorktreeRpcApiImpl(
         return if (text.isBlank()) "Couldn't check out the pull request branch." else "Couldn't check out the pull request branch: $text"
     }
 
-    /** The remote-tracking ref git reported as blocking the fetch, trimmed to a branch-like name. */
+    /**
+     * The ref git reported as blocking the fetch, trimmed to a branch-like name. Both namespaces
+     * appear here: the tracking fetches collide under `refs/remotes/origin/`, while the cross-repo
+     * pull-ref fetch and the closing `branch --force` write `refs/heads/`.
+     */
     private fun conflictBranch(res: CmdOut, fallback: String): String {
         val match = Regex("'([^']+)' exists; cannot create").find(res.stderr) ?: return fallback
-        return match.groupValues[1].removePrefix("refs/remotes/origin/")
+        return match.groupValues[1].removePrefix("refs/remotes/origin/").removePrefix("refs/heads/")
     }
 
 }

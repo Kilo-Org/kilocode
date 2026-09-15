@@ -7,6 +7,7 @@ import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.failure
 import ai.kilocode.backend.diff.gitBudget
 import ai.kilocode.backend.worktree.WorktreeTrash
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
@@ -204,6 +205,22 @@ class KiloWorktreeRpcApiImplTest {
 
         val unknown = CmdOut(1, "", "fatal: something unexpected happened")
         assertTrue(api.fetchReason(unknown, "feature/x").contains("something unexpected happened"))
+    }
+
+    @Test
+    fun `fetchReason names a blocking local branch without its ref namespace`() {
+        // The cross-repo pull-ref fetch and the closing `branch --force` both write refs/heads/, so
+        // a conflict there must read as a branch name too, not as the raw ref path.
+        val local = CmdOut(
+            1,
+            "",
+            "error: 'refs/heads/alice/feature' exists; cannot create 'refs/heads/alice/feature/login'",
+        )
+
+        val text = api.fetchReason(local, "alice/feature/login")
+
+        assertTrue(text.contains("\"alice/feature\""), text)
+        assertFalse(text.contains("refs/heads"), text)
     }
 
     @Test
@@ -1020,15 +1037,12 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `importPr does not reject a matching repository slug that differs only in case`() = runBlocking {
-        initRepo()
-        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
-
-        val result = api.importPr(repo.toString(), "https://github.com/kilo-org/KiloCode/pull/7")
-
-        // The cross-repo guard must not fire for a case-only difference; whatever failure follows
-        // (e.g. gh unavailable in the test environment) is unrelated to this guard.
-        assertFalse(result.error.orEmpty().contains("belongs to"), result.error ?: "")
+    fun `foreignPr ignores slug case and an unknown origin`() {
+        // Driving this through importPr would fall past the guard into gh and `git fetch`, making the
+        // assertion depend on the machine's network and credentials rather than on the comparison.
+        assertFalse(foreignPr("kilo-org/KiloCode", "Kilo-Org/kilocode"), "GitHub slugs are case-insensitive")
+        assertFalse(foreignPr("other/repo", null), "an unknown origin is not evidence of a mismatch")
+        assertTrue(foreignPr("other/repo", "Kilo-Org/kilocode"))
     }
 
     @Test
@@ -1249,8 +1263,19 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode.git"))
         assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode"))
         assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode/"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("ssh://git@github.com:22/Kilo-Org/kilocode.git"))
         assertNull(parseRepoSlug("https://gitlab.com/Kilo-Org/kilocode.git"))
+        // A host that merely ends in github.com is a different server, so the guard must skip it
+        // rather than compare this checkout against a slug it never published.
+        assertNull(parseRepoSlug("https://notgithub.com/Kilo-Org/kilocode.git"))
+        assertNull(parseRepoSlug("/tmp/local-origin"))
         assertNull(parseRepoSlug("not a url"))
+    }
+
+    @Test
+    fun `parsePrUrl requires a github host boundary`() {
+        assertNull(parsePrUrl("https://notgithub.com/Kilo-Org/kilocode/pull/7"))
+        assertEquals(7, parsePrUrl("ssh://git@github.com:22/Kilo-Org/kilocode/pull/7")?.number)
     }
 
     @Test

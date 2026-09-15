@@ -2,8 +2,12 @@ package ai.kilocode.rpc
 
 data class PrRef(val owner: String, val repo: String, val number: Int)
 
-private val PR_URL = Regex("github\\.com[/:]([^/]+)/([^/]+?)(?:\\.git)?/pull/(\\d+)")
-private val REPO_URL = Regex("github\\.com[/:]([^/]+)/([^/]+?)(?:\\.git)?/*$")
+// `github.com` has to start the string or sit on a scheme/userinfo boundary, so a host that merely
+// ends in it — `notgithub.com` — is not read as GitHub. The optional port covers `ssh://…:22/` URLs.
+private const val HOST = "(?:^|//|@)github\\.com(?::\\d+)?[/:]"
+
+private val PR_URL = Regex("$HOST([^/]+)/([^/]+?)(?:\\.git)?/pull/(\\d+)")
+private val REPO_URL = Regex("$HOST([^/]+)/([^/]+?)(?:\\.git)?/*$")
 
 /** Parses `https://github.com/<owner>/<repo>/pull/<n>` (and ssh-style hosts) into its parts. */
 fun parsePrUrl(url: String): PrRef? {
@@ -17,3 +21,11 @@ fun parseRepoSlug(url: String): String? {
     val match = REPO_URL.find(url.trim()) ?: return null
     return "${match.groupValues[1]}/${match.groupValues[2]}"
 }
+
+/**
+ * True when [slug] names a repository other than [origin]. GitHub owner/repo names are
+ * case-insensitive, and an unknown [origin] — no remote, or one this parser does not read as
+ * GitHub — is not evidence of a mismatch, so neither is reported as foreign.
+ */
+fun foreignPr(slug: String, origin: String?): Boolean =
+    origin != null && !slug.equals(origin, ignoreCase = true)

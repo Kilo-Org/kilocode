@@ -19,6 +19,7 @@ import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -343,8 +344,8 @@ internal class NewWorktreeDialog(
             return
         }
         val slug = "${ref.owner}/${ref.repo}"
-        if (origin != null && !slug.equals(origin, ignoreCase = true)) {
-            setErrorText(KiloBundle.message("worktree.import.pr.foreign", slug, origin), url)
+        if (foreignPr(slug, origin)) {
+            setErrorText(KiloBundle.message("worktree.import.pr.foreign", slug, origin.orEmpty()), url)
             url.requestFocusInWindow()
             url.selectAll()
             return

@@ -65,6 +65,14 @@ class WorktreeController(
     private var kinds: Map<String, SessionActivityKind> = emptyMap()
 
     init {
+        // The New Worktree dialog rejects a pull request from another repository using [origin], and
+        // it can open before any reload has run — the chat dock and worktree editor actions call
+        // configure() directly, and only selecting the Agent Manager tab triggers a reload. Resolve
+        // it here so the check is armed on every entry path, not just the tab one.
+        cs.launch {
+            val info = service.listBranches(directory)
+            edt { origin = info.origin }
+        }
         cs.launch {
             activity.collect { snap ->
                 edt {
