@@ -5,7 +5,9 @@ import {
   expandPastes,
   findPastePlaceholders,
   isCollapsiblePaste,
+  pasteInsertion,
   pastePlaceholder,
+  rebasePastes,
   shiftPastes,
   type PasteRange,
   type PromptSegment,
@@ -84,7 +86,10 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
     }
     if (textarea.value !== expected) textarea.value = expected
     setText(expected)
-    reconcile(expected)
+    // The caller knows the exact edited span, so shift by it instead of inferring
+    // the span from a diff, which cannot tell two identical chips apart.
+    prev = expected
+    setPastes(rebasePastes(pastes(), start, end, value.length))
   }
 
   const paste = (
@@ -109,20 +114,13 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
     const start = textarea.selectionStart ?? current.length
     const end = textarea.selectionEnd ?? start
     const placeholder = pastePlaceholder(text)
-    const before = current.slice(0, start)
-    const afterText = current.slice(end)
-    const prefix = before.length > 0 && !/\s$/.test(before) ? " " : ""
-    const suffix = afterText.length > 0 && !/^\s/.test(afterText) ? " " : ""
-    const inserted = `${prefix}${placeholder}${suffix}`
-    const expected = `${before}${inserted}${afterText}`
-    const rangeStart = before.length + prefix.length
+    const insertion = pasteInsertion(current, start, end, placeholder)
 
-    write(textarea, start, end, inserted, expected, setText)
-    // reconcile() has already moved the older ranges; append the new block.
-    const entry: PasteRange = { id: ++counter, start: rangeStart, end: rangeStart + placeholder.length, text }
+    write(textarea, start, end, insertion.inserted, insertion.text, setText)
+    // write() has already moved the older ranges; append the new block.
+    const entry: PasteRange = { id: ++counter, start: insertion.start, end: insertion.end, text }
     setPastes([...pastes(), entry].sort((a, b) => a.start - b.start))
-    const caret = rangeStart + inserted.length
-    textarea.setSelectionRange(caret, caret)
+    textarea.setSelectionRange(insertion.caret, insertion.caret)
     after?.()
     return true
   }
@@ -138,8 +136,8 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
     const current = textarea.value
     if (entry.end > current.length) return false
     const expected = current.slice(0, entry.start) + entry.text + current.slice(entry.end)
-    // write() reconciles against the edit, which drops this block and shifts the
-    // blocks after it, so the remaining ranges are already correct here.
+    // write() rebases against this exact edit, which drops this block and shifts
+    // the blocks after it, so the remaining ranges are already correct here.
     write(textarea, entry.start, entry.end, entry.text, expected, setText)
     const caret = entry.start + entry.text.length
     textarea.setSelectionRange(caret, caret)

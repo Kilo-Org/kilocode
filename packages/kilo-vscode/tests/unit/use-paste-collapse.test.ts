@@ -1,0 +1,99 @@
+import { describe, expect, it } from "bun:test"
+import { createRoot, createSignal } from "solid-js"
+import { usePasteCollapse } from "../../webview-ui/src/hooks/usePasteCollapse"
+
+const chip = "[Pasted ~5 lines]"
+
+type Field = { value: string; selectionStart: number; selectionEnd: number }
+
+function field(value: string, caret = value.length) {
+  const el = {
+    value,
+    selectionStart: caret,
+    selectionEnd: caret,
+    focus() {},
+    setSelectionRange(start: number, end: number) {
+      el.selectionStart = start
+      el.selectionEnd = end
+    },
+  }
+  return el as unknown as Field & HTMLTextAreaElement
+}
+
+function clipboard(text: string) {
+  return {
+    defaultPrevented: false,
+    preventDefault() {},
+    clipboardData: { items: [], types: ["text/plain"], getData: () => text },
+  } as unknown as ClipboardEvent
+}
+
+function keydown(key: string) {
+  return { key, isComposing: false, preventDefault() {} } as unknown as KeyboardEvent
+}
+
+function setup() {
+  const [text, setText] = createSignal("")
+  const root = createRoot((dispose) => ({
+    dispose,
+    paste: usePasteCollapse({ enabled: () => true, text }),
+    text,
+    setText,
+  }))
+  return root
+}
+
+const first = "a\nb\nc\nd\ne"
+const second = "f\ng\nh\ni\nj"
+
+describe("usePasteCollapse", () => {
+  it("leaves the caret after the inserted chip instead of inside the following text", () => {
+    const ctx = setup()
+    const el = field("helloworld", 5)
+
+    ctx.paste.paste(clipboard(first), el, ctx.setText)
+
+    expect(el.value).toBe(`hello ${chip} world`)
+    expect(el.value.slice(el.selectionStart)).toBe("world")
+    expect(el.selectionStart).toBe(el.selectionEnd)
+    ctx.dispose()
+  })
+
+  it("keeps the surviving backing when the first of two identical chips is backspaced", () => {
+    const ctx = setup()
+    const el = field("")
+
+    ctx.paste.paste(clipboard(first), el, ctx.setText)
+    el.setSelectionRange(el.value.length, el.value.length)
+    ctx.paste.paste(clipboard(second), el, ctx.setText)
+
+    expect(ctx.text()).toBe(`${chip} ${chip}`)
+    expect(ctx.paste.pastes().map((item) => item.text)).toEqual([first, second])
+
+    el.setSelectionRange(chip.length, chip.length)
+    const removed = ctx.paste.backspace(keydown("Backspace"), el, ctx.setText)
+
+    expect(removed).toBe(true)
+    expect(el.value).toBe(chip)
+    expect(ctx.paste.plainText(el.value)).toBe(second)
+    ctx.dispose()
+  })
+
+  it("restores the right backing when a chip is expanded after an earlier chip was removed", () => {
+    const ctx = setup()
+    const el = field("")
+
+    ctx.paste.paste(clipboard(first), el, ctx.setText)
+    el.setSelectionRange(el.value.length, el.value.length)
+    ctx.paste.paste(clipboard(second), el, ctx.setText)
+
+    el.setSelectionRange(chip.length, chip.length)
+    ctx.paste.backspace(keydown("Backspace"), el, ctx.setText)
+
+    const [only] = ctx.paste.pastes()
+    const expanded = ctx.paste.expand(only!.id, el, ctx.setText)
+    expect(expanded).toBe(true)
+    expect(el.value).toBe(second)
+    ctx.dispose()
+  })
+})

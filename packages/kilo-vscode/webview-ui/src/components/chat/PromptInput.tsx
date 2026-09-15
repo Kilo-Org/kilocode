@@ -1536,6 +1536,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
+      pasteDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       return
     }
@@ -1561,6 +1562,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
+      pasteDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       matched.action()
       return
@@ -1679,7 +1681,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     clearDraft(key, draft)
   }
 
-  const clearDraft = (key: string, value = key === draftKey() ? text().trim() : (drafts.get(key) ?? "").trim()) => {
+  const clearDraft = (
+    key: string,
+    value = key === draftKey() ? paste.plainText(text()).trim() : (drafts.get(key) ?? "").trim(),
+  ) => {
     history.append(value)
     drafts.delete(key)
     reviewDrafts.delete(key)
@@ -1687,6 +1692,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageDrafts.delete(key)
     mentionDrafts.delete(key)
     scrollDrafts.delete(key)
+    pasteDrafts.delete(key)
     if (draftKey() !== key) return
 
     history.reset()
@@ -1934,6 +1940,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       class="prompt-input-paste"
                       title={language.t("prompt.paste.expand")}
                       onClick={(e) => {
+                        if (readonly()) return
                         if (!textareaRef) return
                         e.preventDefault()
                         e.stopPropagation()

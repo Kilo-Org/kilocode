@@ -187,6 +187,52 @@ export function shiftPastes(pastes: readonly PasteRange[], prev: string, next: s
   return out
 }
 
+/**
+ * Move paste ranges across an edit the caller already knows exactly: it replaces
+ * `[start, end)` with `length` characters of new text. Unlike `shiftPastes`,
+ * which infers the edited span from two text versions, this uses the real span,
+ * so two identical placeholders cannot be confused with one another.
+ */
+export function rebasePastes(pastes: readonly PasteRange[], start: number, end: number, length: number): PasteRange[] {
+  const delta = length - (end - start)
+  const out: PasteRange[] = []
+  for (const paste of pastes) {
+    if (paste.end <= start) {
+      out.push(paste)
+      continue
+    }
+    if (paste.start >= end) out.push({ ...paste, start: paste.start + delta, end: paste.end + delta })
+  }
+  return out
+}
+
+/**
+ * Build the text for a collapsed paste inserted at `[start, end)` together with
+ * the chip range and the caret it should leave behind. The placeholder gains a
+ * separating space on either side when the neighbouring text needs one, so the
+ * chip range excludes those spaces while the caret lands after all of them.
+ */
+export function pasteInsertion(
+  text: string,
+  start: number,
+  end: number,
+  placeholder: string,
+): { text: string; inserted: string; start: number; end: number; caret: number } {
+  const before = text.slice(0, start)
+  const after = text.slice(end)
+  const prefix = before.length > 0 && !/\s$/.test(before) ? " " : ""
+  const suffix = after.length > 0 && !/^\s/.test(after) ? " " : ""
+  const inserted = `${prefix}${placeholder}${suffix}`
+  const rangeStart = before.length + prefix.length
+  return {
+    text: `${before}${inserted}${after}`,
+    inserted,
+    start: rangeStart,
+    end: rangeStart + placeholder.length,
+    caret: before.length + inserted.length,
+  }
+}
+
 /** Replace every collapsed block in `text` with its full backing text. */
 export function expandPastes(text: string, pastes: readonly PasteRange[]): string {
   let result = text

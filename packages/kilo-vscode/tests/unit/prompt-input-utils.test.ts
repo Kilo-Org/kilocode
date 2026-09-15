@@ -19,6 +19,8 @@ import {
   pastePlaceholder,
   findPastePlaceholders,
   shiftPastes,
+  rebasePastes,
+  pasteInsertion,
   expandPastes,
   textDiff,
   type PasteRange,
@@ -474,6 +476,77 @@ describe("shiftPastes", () => {
     expect(moved.map((item) => item.text)).toEqual(["one", "two"])
     expect(moved[0]?.start).toBe(0)
     expect(moved[1]?.start).toBe(second + 3)
+  })
+})
+
+describe("rebasePastes", () => {
+  const token = (lines: number) => `[Pasted ~${lines} lines]`
+  const chip = (id: number, start: number, text: string, lines = 5): PasteRange => {
+    const mark = token(lines)
+    return { id, start, end: start + mark.length, text }
+  }
+
+  it("keeps the second backing when the first of two identical chips is deleted", () => {
+    const mark = token(5)
+    const pastes = [chip(1, 0, "first"), chip(2, mark.length + 1, "second")]
+    const moved = rebasePastes(pastes, 0, mark.length + 1, 0)
+    expect(moved.map((item) => item.text)).toEqual(["second"])
+    expect(moved[0]).toEqual(chip(2, 0, "second"))
+  })
+
+  it("keeps the survivor backing when a differently sized chip precedes it", () => {
+    const mark = token(5)
+    const big = token(10)
+    const pastes = [chip(1, 0, "first"), chip(2, mark.length + 1, "second", 10)]
+    const moved = rebasePastes(pastes, 0, mark.length + 1, 0)
+    expect(moved.map((item) => item.text)).toEqual(["second"])
+    expect(moved[0]).toEqual(chip(2, 0, "second", 10))
+    expect(moved[0]?.end).toBe(big.length)
+  })
+
+  it("shifts a chip that sits after the edit", () => {
+    const moved = rebasePastes([chip(1, 5, "body")], 0, 0, 4)
+    expect(moved).toEqual([chip(1, 9, "body")])
+  })
+
+  it("keeps a chip that ends at the edit boundary", () => {
+    const mark = token(5)
+    const moved = rebasePastes([chip(1, 0, "body")], mark.length, mark.length, 3)
+    expect(moved).toEqual([chip(1, 0, "body")])
+  })
+
+  it("drops a chip the edit overlaps", () => {
+    const mark = token(5)
+    expect(rebasePastes([chip(1, 0, "body")], 0, mark.length, 0)).toEqual([])
+  })
+})
+
+describe("pasteInsertion", () => {
+  const mark = "[Pasted ~5 lines]"
+
+  it("lands the caret after the separator spaces, not inside the following text", () => {
+    const result = pasteInsertion("helloworld", 5, 5, mark)
+    expect(result.text).toBe(`hello ${mark} world`)
+    expect(result.caret).toBe(`hello ${mark} `.length)
+    expect(result.text.slice(result.caret)).toBe("world")
+  })
+
+  it("wraps the chip range around the placeholder only", () => {
+    const result = pasteInsertion("helloworld", 5, 5, mark)
+    expect(result.text.slice(result.start, result.end)).toBe(mark)
+  })
+
+  it("omits the prefix space when the text before already ends in whitespace", () => {
+    const result = pasteInsertion("hello world", 6, 6, mark)
+    expect(result.text).toBe(`hello ${mark} world`)
+    expect(result.start).toBe(6)
+    expect(result.text.slice(result.start, result.end)).toBe(mark)
+  })
+
+  it("replaces a selection with the chip", () => {
+    const result = pasteInsertion("hello world", 5, 6, mark)
+    expect(result.text).toBe(`hello ${mark} world`)
+    expect(result.text.slice(result.start, result.end)).toBe(mark)
   })
 })
 
