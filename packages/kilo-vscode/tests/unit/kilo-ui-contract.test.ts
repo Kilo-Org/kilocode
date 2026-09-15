@@ -351,7 +351,8 @@ describe("Expanded tool motion and typography (source)", () => {
 
   it("derives the open state through reasoningOpenState and re-derives when the mode resolves", () => {
     expect(reasoning).toContain("reasoningOpenState(")
-    expect(reasoning).toContain("const [open, setOpen] = createSignal(derive())")
+    expect(reasoning).toContain("const seed = () => derive() || !!props.forceOpen")
+    expect(reasoning).toContain("const [open, setOpen] = createSignal(seed())")
     expect(reasoning).toContain("if (userOpened.has(id) || userCollapsed.has(id)) return")
     expect(reasoning).toContain("setOpen(derive())")
   })

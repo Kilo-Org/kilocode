@@ -90,7 +90,7 @@ Reasoning blocks show the agent's thinking. Choose a mode for **Reasoning Blocks
 ```
 
 - `expanded`: The full reasoning text stays open.
-- `preview`: A short scrolling preview shows while the agent is writing, then the block collapses.
+- `preview`: A short scrolling preview shows while the agent is writing and stays compact after it finishes. Blocks from earlier sessions start collapsed.
 - `headline`: Only the header and streaming indicator show until you open the block.
 
 Valid values are `expanded`, `preview`, and `headline`. The default is `expanded`.

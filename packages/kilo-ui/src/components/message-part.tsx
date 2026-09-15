@@ -1906,7 +1906,8 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
       userOpened: userOpened.has(id),
       userCollapsed: userCollapsed.has(id),
     })
-  const [open, setOpen] = createSignal(derive())
+  const seed = () => derive() || !!props.forceOpen
+  const [open, setOpen] = createSignal(seed())
   // Mount-time value for the inline content styles and lazy body mount, before
   // the re-derive effect can run. useCollapsible owns later transitions.
   const start = open()
@@ -1950,13 +1951,13 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   // does for tool calls. Recorded into userOpened/userCollapsed the same way
   // a manual open would be, so it stays open across remounts/re-renders.
   createEffect(() => {
-    if (!props.forceOpen || open()) return
+    if (!props.forceOpen) return
     userCollapsed.delete(id)
     if (trackable()) {
       rememberReasoningState(userOpened, id)
       setManual(true)
     }
-    setOpen(true)
+    if (!open()) setOpen(true)
   })
 
   // Auto-scroll the content container while streaming.
@@ -1969,6 +1970,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   let ref: HTMLDivElement | undefined
   let body: HTMLDivElement | undefined
   let scrolled = false
+  let last = 0
   let follow: number | undefined
 
   const stop = () => {
@@ -1995,7 +1997,10 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   const onScroll = (e: Event) => {
     const el = e.currentTarget as HTMLDivElement
-    if (el.scrollHeight - el.clientHeight - el.scrollTop < 10) scrolled = false
+    const top = el.scrollTop
+    if (el.scrollHeight - el.clientHeight - top < 10) scrolled = false
+    else if (top < last - 1) scrolled = true
+    last = top
   }
 
   const onWheel = (e: WheelEvent) => {
