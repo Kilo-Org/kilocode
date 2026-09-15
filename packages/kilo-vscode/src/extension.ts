@@ -22,7 +22,10 @@ import { CaffeinationService } from "./services/caffeination"
 import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
 import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
-import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
+import {
+  integratedBrowserUseSystemChrome,
+  migrateIntegratedBrowserUseSystemChrome,
+} from "./services/browser-automation/chrome-setting"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -62,6 +65,10 @@ export async function activate(context: vscode.ExtensionContext) {
   void vscode.commands.executeCommand("setContext", "kilo-code.new.isCursor", isCursorHost())
 
   const telemetry = TelemetryProxy.getInstance()
+
+  await migrateIntegratedBrowserUseSystemChrome().catch((error: unknown) =>
+    console.warn("[Kilo New] Integrated Browser Chrome preference migration failed:", error),
+  )
 
   const browserBroker = new BrowserBroker({
     log: (...args) => console.warn("[Kilo New] BrowserBroker:", ...args),
