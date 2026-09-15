@@ -246,7 +246,6 @@ const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
   const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
-  const [subAgentCapped, setSubAgentCapped] = createSignal(false)
   const [migration, setMigration] = createSignal(false)
   const session = useSession()
   const tabs = useLocalTabs()
@@ -349,7 +348,6 @@ const AppContent: Component = () => {
       handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
-        setSubAgentCapped(message.background === true)
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
       }
@@ -444,7 +442,7 @@ const AppContent: Component = () => {
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>
-              <ChatView readonly reasoningCapped={subAgentCapped()} />
+              <ChatView readonly />
             </Match>
           </Switch>
         }

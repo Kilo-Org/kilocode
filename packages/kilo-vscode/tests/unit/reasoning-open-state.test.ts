@@ -3,7 +3,6 @@ import { reasoningOpenState, type ReasoningOpenInput } from "../../../kilo-ui/sr
 
 function state(input: Partial<ReasoningOpenInput>): ReasoningOpenInput {
   return {
-    capped: false,
     mode: "expanded",
     streamed: false,
     userOpened: false,
@@ -29,17 +28,9 @@ describe("reasoningOpenState", () => {
     expect(reasoningOpenState(state({ mode: "expanded", userCollapsed: true }))).toBe(false)
   })
 
-  it("keeps capped background transcripts open in every mode unless collapsed", () => {
-    expect(reasoningOpenState(state({ capped: true, mode: "headline" }))).toBe(true)
-    expect(reasoningOpenState(state({ capped: true, mode: "preview" }))).toBe(true)
-    expect(reasoningOpenState(state({ capped: true, mode: "expanded" }))).toBe(true)
-    expect(reasoningOpenState(state({ capped: true, mode: "preview", userCollapsed: true }))).toBe(false)
-  })
-
-  it("lets userCollapsed win over capped and over every mode", () => {
+  it("lets userCollapsed win over every mode", () => {
     for (const mode of ["expanded", "preview", "headline"] as const) {
       expect(reasoningOpenState(state({ mode, userCollapsed: true }))).toBe(false)
-      expect(reasoningOpenState(state({ capped: true, mode, userCollapsed: true }))).toBe(false)
     }
   })
 
@@ -47,7 +38,7 @@ describe("reasoningOpenState", () => {
     // The part mounts before configLoaded, so the resolved mode starts at the
     // expanded default; the same part state resolves to headline once config
     // arrives and the block must not stay open.
-    const part = { capped: false, streamed: false, userOpened: false, userCollapsed: false }
+    const part = { streamed: false, userOpened: false, userCollapsed: false }
     expect(reasoningOpenState({ ...part, mode: "expanded" })).toBe(true)
     expect(reasoningOpenState({ ...part, mode: "headline" })).toBe(false)
   })

@@ -117,8 +117,6 @@ interface AssistantMessageProps {
   highlight?: () => TimelineHighlight | undefined
   readonly?: boolean
   interactivePrompts?: boolean
-  /** Show reasoning as a compact capped preview (background subagent transcripts). */
-  reasoningCapped?: boolean
 }
 
 type ToolStateProps = {
@@ -366,7 +364,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       forceOpen={forceOpen()}
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningDisplay={display.reasoningDisplay()}
-                                      reasoningCapped={props.reasoningCapped}
                                       settled={settled()}
                                       feedback={props.feedback}
                                       throughput={throughputEl()}

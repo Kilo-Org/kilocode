@@ -166,9 +166,6 @@ export interface MessagePartProps {
   /** How reasoning blocks render: expanded (open body), preview (capped
    * scrolling viewport), or headline (header only until opened). */
   reasoningDisplay?: ReasoningDisplay
-  /** Show reasoning as a capped preview that starts open and never auto-expands
-   * while streaming. Used for background subagent transcripts. */
-  reasoningCapped?: boolean
   /** True when the stream has moved past this reasoning part. Encrypted
    * reasoning items hold every summary's `time.end` until the whole item
    * finishes, so the caller settles finished summaries from the part order. */
@@ -1088,7 +1085,6 @@ export function Part(props: MessagePartProps) {
         forceOpen={props.forceOpen}
         forceOpenFile={props.forceOpenFile}
         reasoningDisplay={props.reasoningDisplay}
-        reasoningCapped={props.reasoningCapped}
         settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
@@ -1892,15 +1888,13 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   // Three display modes. Preview streams open in a capped viewport, historical
   // blocks collapse. Headline shows only the header until the user opens it.
-  // Expanded opens the full body unless the user collapsed it. Background
-  // transcripts are always capped so they stay compact.
-  const mode = () => (props.reasoningCapped ? "preview" : (props.reasoningDisplay ?? "expanded"))
-  const capped = () => props.reasoningCapped || mode() === "preview"
-  const headline = () => !props.reasoningCapped && mode() === "headline"
+  // Expanded opens the full body unless the user collapsed it.
+  const mode = () => props.reasoningDisplay ?? "expanded"
+  const capped = () => mode() === "preview"
+  const headline = () => mode() === "headline"
   const trackable = () => capped() || headline()
   const derive = () =>
     reasoningOpenState({
-      capped: props.reasoningCapped ?? false,
       mode: mode(),
       streamed: streamed.has(id),
       userOpened: userOpened.has(id),
