@@ -306,6 +306,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "قديم",
   "agentManager.pr.comment.sent": "تم الإرسال",
   "agentManager.pr.comment.copy": "نسخ التعليق",
+  "agentManager.pr.comment.copyLink": "نسخ رابط التعليق",
   "agentManager.pr.comment.openOnGitHub": "فتح على GitHub",
   "agentManager.pr.comment.showInDiff": "إظهار في الفرق",
   "agentManager.pr.comment.unplaced": "التعليقات خارج الفرق الحالي",

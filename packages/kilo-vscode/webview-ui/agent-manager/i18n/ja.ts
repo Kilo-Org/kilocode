@@ -311,6 +311,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "古い",
   "agentManager.pr.comment.sent": "送信済み",
   "agentManager.pr.comment.copy": "コメントをコピー",
+  "agentManager.pr.comment.copyLink": "コメントのリンクをコピー",
   "agentManager.pr.comment.openOnGitHub": "GitHubで開く",
   "agentManager.pr.comment.showInDiff": "差分で表示",
   "agentManager.pr.comment.unplaced": "現在の差分にないコメント",
