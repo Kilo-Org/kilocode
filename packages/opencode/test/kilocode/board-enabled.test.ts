@@ -15,16 +15,21 @@ const resolve = (config: boolean | undefined, input: Record<string, unknown>) =>
   }).pipe(Effect.provide(fromEnv(input)))
 
 describe("shared agent board enablement", () => {
+  it.effect("is enabled by default", () =>
+    Effect.gen(function* () {
+      expect(yield* resolve(undefined, {})).toBe(true)
+    }),
+  )
+
   it.effect("enables when the config key is true", () =>
     Effect.gen(function* () {
       expect(yield* resolve(true, {})).toBe(true)
     }),
   )
 
-  it.effect("stays disabled when config is false and the env flag is unset", () =>
+  it.effect("disables when the config key is false", () =>
     Effect.gen(function* () {
       expect(yield* resolve(false, {})).toBe(false)
-      expect(yield* resolve(undefined, {})).toBe(false)
     }),
   )
 
@@ -34,32 +39,33 @@ describe("shared agent board enablement", () => {
     }),
   )
 
-  it.effect("stays disabled when the specific env flag is false", () =>
+  it.effect("disables when the specific env flag is false", () =>
     Effect.gen(function* () {
       expect(yield* resolve(undefined, { KILO_EXPERIMENTAL_SHARED_AGENT_BOARD: "false" })).toBe(false)
     }),
   )
 
-  it.effect("enables when the KILO_EXPERIMENTAL umbrella is true", () =>
+  it.effect("lets the env opt-out win over an explicit config enable", () =>
+    Effect.gen(function* () {
+      expect(yield* resolve(true, { KILO_EXPERIMENTAL_SHARED_AGENT_BOARD: "false" })).toBe(false)
+    }),
+  )
+
+  it.effect("lets the config opt-out win over the specific env enable", () =>
+    Effect.gen(function* () {
+      expect(yield* resolve(false, { KILO_EXPERIMENTAL_SHARED_AGENT_BOARD: "true" })).toBe(false)
+    }),
+  )
+
+  it.effect("stays enabled when the KILO_EXPERIMENTAL umbrella is true", () =>
     Effect.gen(function* () {
       expect(yield* resolve(undefined, { KILO_EXPERIMENTAL: "true" })).toBe(true)
     }),
   )
 
-  it.effect("lets the specific flag override the umbrella", () =>
+  it.effect("stays enabled when the KILO_EXPERIMENTAL umbrella is false", () =>
     Effect.gen(function* () {
-      expect(
-        yield* resolve(undefined, {
-          KILO_EXPERIMENTAL: "true",
-          KILO_EXPERIMENTAL_SHARED_AGENT_BOARD: "false",
-        }),
-      ).toBe(false)
-    }),
-  )
-
-  it.effect("keeps the env path enabled when config is explicitly false", () =>
-    Effect.gen(function* () {
-      expect(yield* resolve(false, { KILO_EXPERIMENTAL_SHARED_AGENT_BOARD: "true" })).toBe(true)
+      expect(yield* resolve(undefined, { KILO_EXPERIMENTAL: "false" })).toBe(true)
     }),
   )
 })
