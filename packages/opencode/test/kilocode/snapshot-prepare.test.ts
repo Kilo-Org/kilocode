@@ -283,11 +283,16 @@ it.live(
 
         const hash = yield* snapshot.track().pipe(provideInstance(dir))
         expect(hash).toBeTruthy()
-        // Materialization removes the alternate then the staging directory, so wait for both.
+        // Materialization releases the source pin, then removes the alternate and the staging
+        // directory. The connectivity check renames the alternate away and back before that,
+        // so checking the files alone can observe a window where neither name exists yet.
+        // Waiting for the pin release as well makes the poll independent of that window.
         const wait = pollWithTimeout(
-          Effect.sync(() =>
-            !existsSync(alt) && !existsSync(`${alt}.materializing`) && !existsSync(staging) ? true : undefined,
-          ),
+          Effect.gen(function* () {
+            if (existsSync(alt) || existsSync(`${alt}.materializing`) || existsSync(staging)) return
+            if ((yield* git(["for-each-ref", ref])).trim()) return
+            return true
+          }),
           "snapshot materialization did not finish",
           "5 seconds",
         )
@@ -310,6 +315,59 @@ it.live(
         expect((yield* git(["--git-dir", gitdir, "for-each-ref", "refs/kilo/snapshots"])).trim()).not.toBe("")
         expect((yield* git(["for-each-ref", ref])).trim()).toBe("")
       }).pipe(provideInstance(dir))
+    }),
+  30_000,
+)
+
+it.live(
+  "materialization waits for a quiet snapshot repository and restarts the wait on every snapshot",
+  () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({
+        git: true,
+        init: (dir) =>
+          Effect.promise(async () => {
+            await Bun.write(path.join(dir, "note.txt"), "committed\n")
+            await $`git add .`.cwd(dir).quiet()
+            await $`git commit -m baseline`.cwd(dir).quiet()
+          }),
+      })
+      const previous = process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"]
+      process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"] = "1500"
+      yield* Effect.gen(function* () {
+        const snapshot = yield* Snapshot.Service
+        const ctx = yield* InstanceState.context
+        const gitdir = path.join(Global.Path.data, "snapshot", ctx.project.id, Hash.fast(ctx.worktree))
+        const alt = path.join(gitdir, "objects", "info", "alternates")
+        const first = yield* snapshot.track()
+        expect(first).toBeTruthy()
+        // Snapshot operations during the quiet period are not blocked behind the repack.
+        yield* Effect.sleep("1 second")
+        expect(existsSync(alt)).toBe(true)
+        yield* Effect.promise(() => Bun.write(path.join(dir, "note.txt"), "changed\n"))
+        const second = yield* snapshot.track()
+        expect(second).toBeTruthy()
+        expect(second).not.toBe(first)
+        // The second snapshot restarted the quiet period, so nothing has been repacked yet.
+        yield* Effect.sleep("1 second")
+        expect(existsSync(alt)).toBe(true)
+        yield* pollWithTimeout(
+          Effect.sync(() => (!existsSync(alt) && !existsSync(`${alt}.materializing`) ? true : undefined)),
+          "snapshot materialization did not run after the quiet period",
+          "10 seconds",
+        )
+        expect(
+          (yield* Effect.promise(() => $`git --git-dir=${gitdir} cat-file -e ${second}^{tree}`.nothrow())).exitCode,
+        ).toBe(0)
+      }).pipe(
+        provideInstance(dir),
+        Effect.ensuring(
+          Effect.sync(() => {
+            if (previous === undefined) delete process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"]
+            if (previous !== undefined) process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"] = previous
+          }),
+        ),
+      )
     }),
   30_000,
 )

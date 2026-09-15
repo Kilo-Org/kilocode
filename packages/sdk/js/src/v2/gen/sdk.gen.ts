@@ -2603,9 +2603,9 @@ export class Instance extends HeyApiClient {
   }
 
   /**
-   * Reload instance
+   * Reload project
    *
-   * Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.
+   * Atomically dispose and reboot every loaded instance of the project, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if any session in the project is actively running.
    */
   public reload<ThrowOnError extends boolean = false>(
     parameters?: {

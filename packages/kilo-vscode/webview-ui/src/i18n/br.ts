@@ -1177,9 +1177,12 @@ export const dict = {
   "settings.display.fontSize.title": "Tamanho da fonte",
   "settings.display.fontSize.description":
     "Ajuste o tamanho da fonte da webview UI do Kilo independentemente do VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Recolher raciocínio automaticamente",
-  "settings.display.reasoningAutoCollapse.description":
-    "Recolhe os blocos de raciocínio depois que o agente termina de escrevê-los. Deixe desativado para manter o raciocínio expandido, a menos que você o recolha manualmente.",
+  "settings.display.reasoningDisplay.title": "Blocos de raciocínio",
+  "settings.display.reasoningDisplay.description":
+    "Escolha como os blocos de raciocínio começam. Expandidos mostra o texto completo, Prévia o limita a uma prévia curta com rolagem, e Manchete mostra apenas o título e o indicador de streaming até você abri-lo.",
+  "settings.display.reasoningDisplay.expanded": "Expandidos",
+  "settings.display.reasoningDisplay.preview": "Prévia",
+  "settings.display.reasoningDisplay.headline": "Manchete",
   "settings.display.shiftTabCycle.title": "Alternar o esforço de raciocínio com Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pressione Shift+Tab em um campo de entrada de prompt para alternar para o próximo nível de esforço de raciocínio. Desative para manter Shift+Tab para navegação de foco pelo teclado.",

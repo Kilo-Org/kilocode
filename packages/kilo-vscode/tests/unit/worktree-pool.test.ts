@@ -36,8 +36,10 @@ async function createTempRepo(): Promise<string> {
   return dir
 }
 
-function createManager(root: string, poolSize = 1): WorktreeManager {
-  return new WorktreeManager(root, () => undefined, undefined, undefined, poolSize)
+function createManager(root: string, poolSize = 1, rewarmDelay = 0): WorktreeManager {
+  const manager = new WorktreeManager(root, () => undefined, undefined, undefined, poolSize)
+  manager.rewarmDelay = rewarmDelay
+  return manager
 }
 
 async function pooledSlots(root: string): Promise<string[]> {
@@ -111,6 +113,22 @@ describe("WorktreeManager pool claim", () => {
 
     // A replacement slot is warmed after the claim, off the click path.
     const next = await waitForPooledSlot(root)
+    expect(next).not.toBe(slot)
+  })
+
+  it("delays the replacement warm-up so it does not compete with the new session", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root, 1, 1500)
+
+    manager.warmPool()
+    const slot = await waitForPooledSlot(root)
+    const result = await manager.createWorktree({})
+    expect(await fs.realpath(result.path)).toBe(await fs.realpath(slot))
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect((await pooledSlots(root)).filter((dir) => dir !== slot)).toEqual([])
+
+    const next = await waitForPooledSlot(root, 10000)
     expect(next).not.toBe(slot)
   })
 

@@ -40,8 +40,6 @@ interface ChatViewProps {
   onForkMessage?: (sessionId: string, messageId: string) => void
   onForkSession?: (sessionId: string) => void
   readonly?: boolean
-  /** Show reasoning as a compact capped preview (background subagent transcripts). */
-  reasoningCapped?: boolean
   /** Whether this chat owns actionable prompt controls. Defaults to true. */
   interactivePrompts?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
@@ -402,7 +400,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 questions={standaloneQuestions}
                 suggestions={standaloneSuggestions}
                 readonly={props.readonly}
-                reasoningCapped={props.reasoningCapped}
                 interactivePrompts={ownsPrompts()}
                 emptyState={props.emptyState}
                 introduction={props.introduction}

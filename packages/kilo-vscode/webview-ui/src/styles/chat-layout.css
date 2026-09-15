@@ -411,6 +411,9 @@
     opacity: 0;
     filter: blur(1.5px);
     transform: translateY(-0.45em);
+    /* Held by the `both` fill: the copy stays mounted until the width lock is
+       released, and this keeps it from being painted for that remainder. */
+    visibility: hidden;
   }
 }
 

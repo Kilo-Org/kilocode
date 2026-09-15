@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import type { WebviewMessage } from "../../webview-ui/src/types/messages"
 import { harness } from "./comment-harness"
 
-const { root, wait, mount, node } = await harness<WebviewMessage>()
+const { root, wait, mount, node, messages } = await harness<WebviewMessage>()
 const { PRConversation } = await import("../../webview-ui/agent-manager/pr/PRConversation")
 
 const opened: string[] = []
@@ -66,6 +66,7 @@ const dispose = mount(() => (
         author: "bob",
         body: "Please update the docs",
         createdAt: Date.now() - 20_000,
+        url: "https://github.com/example/repo/pull/42#issuecomment-1",
       },
     ]}
     onOpenUrl={(url) => opened.push(url)}
@@ -93,4 +94,13 @@ sha.click()
 assert.deepEqual(opened, ["https://github.com/example/repo/commit/aaaaaaa"])
 const timelineComment = node('[data-thread-id="IC1"]')
 assert.ok(timelineComment.querySelector('.am-pr-comment-actions [data-variant="primary"]'))
+const copyLink = timelineComment.querySelector<HTMLButtonElement>('button[aria-label="Copy comment link"]')
+assert.ok(copyLink, "copy link control is rendered")
+copyLink.click()
+await wait()
+const copies = messages.filter(
+  (message): message is Extract<WebviewMessage, { type: "agentManager.copyToClipboard" }> =>
+    message.type === "agentManager.copyToClipboard",
+)
+assert.equal(copies.at(-1)?.text, "https://github.com/example/repo/pull/42#issuecomment-1")
 dispose()

@@ -79,15 +79,39 @@ You can also enable it in `kilo.jsonc`:
 }
 ```
 
-### Reasoning Blocks
+### Compaction Model
 
-Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
+Choose the model used for automatic and manual compaction under **Models** > **Compaction Model**. Leave it unset to use the chat model. The Compaction section in **Settings → Context** links to this selector.
+
+This stores `agent.compaction.model` in `kilo.jsonc`:
 
 ```json
 {
-  "auto_collapse_reasoning": true
+  "agent": {
+    "compaction": {
+      "model": "anthropic/claude-haiku-4-5"
+    }
+  }
 }
 ```
+
+### Reasoning Blocks
+
+Reasoning blocks show the agent's thinking. Choose a mode for **Reasoning Blocks** in the Display tab, or set `reasoning_display` in `kilo.jsonc`:
+
+```json
+{
+  "reasoning_display": "preview"
+}
+```
+
+- `expanded`: The full reasoning text stays open.
+- `preview`: A short scrolling preview shows while the agent is writing and stays compact after it finishes. Blocks from earlier sessions start collapsed.
+- `headline`: Only the header and streaming indicator show until you open the block.
+
+Valid values are `expanded`, `preview`, and `headline`. The default is `expanded`.
+
+Older configs that set `auto_collapse_reasoning: true` map to `preview`. That boolean is deprecated, so use `reasoning_display` instead.
 
 ### Terminal Command Blocks
 
@@ -186,7 +210,8 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
-- **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
+- **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
+- **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -218,7 +243,7 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
 
-Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
+Kilo Swarm is on by default. Turn it off in the VS Code **Agent Behaviour** settings, or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
 
 Use it when agents can benefit from discoveries during work:
 
@@ -232,3 +257,21 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
 When a main session has board messages, open the **Board** icon in its task header to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+
+### Task subagent model selection
+
+Enable **Task Subagent Model Selection** in **Settings → Experimental**, or set `experimental.task_model_selection` to `true` in `kilo.jsonc`. It is off by default.
+
+This lets you explicitly request a different model, provider, or reasoning effort for an individual subagent task. The agent keeps normal defaults unless you request an override; it does not select models autonomously for cost or complexity. See [Per-task model selection](/docs/code-with-ai/agents/model-selection#per-task-model-selection-experimental).
+
+### Claude Code migration
+
+Enable **Claude Code Migration** in **Settings → Experimental** to import supported global Claude Code configuration on the next backend start. It is off by default and runs once, with no automatic retry.
+
+The migration imports:
+
+- Global instructions from `~/.claude/CLAUDE.md` into Kilo's global `AGENTS.md`.
+- Standalone skills from `~/.claude/skills/` that contain only a `SKILL.md`.
+- Top-level MCP server definitions from `~/.claude.json`, disabled until you enable them.
+
+Existing Kilo content takes precedence; conflicts and unsupported items are skipped. Your original Claude files are not changed or deleted. After the attempt, Kilo stops loading global Claude instructions and skills as a fallback, but project-level compatibility such as a repository's `CLAUDE.md` is unaffected. A notification reports the outcome and points to a receipt with imported, skipped, and failed items.
