@@ -52,6 +52,8 @@ export const dict = {
   "agentManager.project.add": "新增專案",
   "agentManager.project.remove": "從 Agent Manager 移除",
   "agentManager.project.missing": "找不到儲存庫",
+  "agentManager.project.more": "更多專案操作",
+  "agentManager.project.settings": "專案設定",
   "agentManager.project.restricted":
     "您目前的 VS Code 工作區是主資料夾或檔案系統根目錄。請在 VS Code 中開啟特定專案資料夾以使用 Agent Manager。",
   "agentManager.notGitRepo": "不是 git 儲存庫",

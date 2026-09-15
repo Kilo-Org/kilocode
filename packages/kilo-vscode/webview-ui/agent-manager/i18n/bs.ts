@@ -54,6 +54,8 @@ export const dict = {
   "agentManager.project.add": "Dodaj projekat",
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
   "agentManager.project.missing": "Repozitorij nije pronađen",
+  "agentManager.project.more": "Više radnji projekta",
+  "agentManager.project.settings": "Postavke projekta",
   "agentManager.project.restricted":
     "Vaš trenutni VS Code radni prostor je vaša početna fascikla ili korijen sistema datoteka. Otvorite određenu projektnu fasciklu u VS Code-u da koristite Agent Manager.",
   "agentManager.notGitRepo": "Nije git repozitorij",

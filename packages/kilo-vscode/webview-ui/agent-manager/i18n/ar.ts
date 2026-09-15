@@ -53,6 +53,8 @@ export const dict = {
   "agentManager.project.add": "إضافة مشروع",
   "agentManager.project.remove": "إزالة من Agent Manager",
   "agentManager.project.missing": "المستودع غير موجود",
+  "agentManager.project.more": "المزيد من إجراءات المشروع",
+  "agentManager.project.settings": "إعدادات المشروع",
   "agentManager.project.restricted":
     "مساحة عمل VS Code الحالية هي مجلدك الرئيسي أو جذر نظام الملفات. افتح مجلد مشروع محدد في VS Code لاستخدام Agent Manager.",
   "agentManager.notGitRepo": "ليس مستودع git",
