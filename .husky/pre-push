@@ -2,6 +2,9 @@
 set -e
 # Check if bun version matches package.json
 # keep in sync with packages/script/src/index.ts semver qualifier
+# kilocode_change start - allow constrained environments to skip the hard bun gate
+if [ "$KILO_SKIP_BUN_VERSION_CHECK" != "1" ]; then
+# kilocode_change end
 bun -e '
 import { semver } from "bun";
 const pkg = await Bun.file("package.json").json();
@@ -17,6 +20,8 @@ if (process.versions.bun !== expectedBunVersion) {
   console.warn(`Warning: Bun version ${process.versions.bun} differs from expected ${expectedBunVersion}`);
 }
 '
+# kilocode_change
+fi
 
 # kilocode_change start
 jetbrains=0
@@ -43,7 +48,11 @@ done
 bun typecheck --filter='!@kilocode/kilo-jetbrains'
 
 if [ "$jetbrains" -eq 1 ]; then
-  bun typecheck --filter='@kilocode/kilo-jetbrains'
+  if { [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; } || command -v java >/dev/null 2>&1; then
+    bun typecheck --filter='@kilocode/kilo-jetbrains'
+  else
+    echo "Warning: Skipping JetBrains typecheck (Java not found; install a JDK 21 or set JAVA_HOME)"
+  fi
 else
   echo "Skipping JetBrains typecheck (no relevant changes)"
 fi
