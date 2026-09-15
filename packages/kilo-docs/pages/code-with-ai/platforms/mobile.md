@@ -21,9 +21,13 @@ The mobile app lets you:
 - Send follow-up messages while a session is still running — they are queued and processed in order.
 - Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
+- Exit a connected remote session with `/exit` or its alias `/quit`. Kilo asks you to confirm first, and a failed exit keeps a **Try again** row so you can retry after a dropped connection. The command is hidden when the connected CLI cannot exit sessions.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
+- Track a session's goal in the session header, and start a goal with `/goal`.
+- Approve one session's permission asks with the **Auto-approve** row in its context sheet.
+- Collapse runs of consecutive tool calls with the **Condense tool calls** setting.
 
 ## Finding sessions
 
@@ -90,11 +94,58 @@ The composer stays editable while the agent is working, so you don't have to wai
 
 A queued message shows a subtle **Queued** badge on its bubble. The badge clears when the message starts processing or when the queue drains or is cancelled. Queueing works for Cloud Agent sessions and for remote sessions on a connected `kilo remote` CLI instance.
 
+## Auto-approve for one session
+
+A session's **Context usage** sheet opens with an **Auto-approve** row at the top. Turn it on to approve that session's permission asks without a prompt, skip the permission card, and resolve an ask that is already waiting. Turn it off and the next permission ask shows its card again.
+
+The row shows **On**, **Off**, or **Unavailable**, and warns that tools run without a prompt while it is on. Read-only sessions show the row disabled with the reason. The setting applies to one session only, so other sessions keep prompting. Clarification questions always show their card and are never auto-answered.
+
+Auto-approve is kept in memory for the session and never changes your global auto-approve configuration. Signing out or switching accounts turns it off for every session.
+
+## Condensing tool calls
+
+Turn on **Condense tool calls** in **Settings > General** to collapse a run of consecutive tool calls into one row. The row reads `<n> items; <last call label>` and updates in place as calls stream in, showing the growing count and the last call's status. A message, thinking block, question, or other non-tool item ends the run, so the next tool calls start a new row.
+
+Tapping the condensed row opens a **Tool calls** sheet that lists every call of the run in order. Each row keeps the same one-line label and status as the session page; tapping it opens that call's tool details.
+
+The setting is off by default and stays on after an app restart. A lone tool call stays a normal row, and with the setting off the session page is unchanged. A tool call whose input cannot be read shows "Failed to render content" inline instead of breaking the session page.
+
+## Hiding thinking details
+
+Turn on **Hide thinking details** in **Settings > Preferences > General** to remove the agent's thinking rows, collapsed thinking items, and thinking text from the session page. It is off by default, is remembered across app relaunches, and applies to streaming and loaded sessions, including inside an opened subagent sheet.
+
+Status labels still work while thinking is hidden: the composer spinner and a subagent sheet's footer read **Thinking** while reasoning streams, and a running subagent's task card shows **Thinking** instead of a stale activity. On a cold start with the setting on, Kilo draws no thinking row before the saved preference loads. A subagent sheet whose only message is reasoning shows no empty row.
+
 ## Voice input
 
 Use the microphone in the composer to dictate a prompt. By default, the app uses your operating system's speech recognizer. To transcribe through your Kilo account instead, turn on **Gateway transcription** in **Preferences** and choose a transcription model. Your model choice is remembered across launches.
 
+In gateway mode, the transcribed text appears in short segments while you speak instead of only after you stop. If a gateway upload fails mid-dictation, the error appears beside the field and the text already transcribed is kept. Dictation stops with an error if the saved transcription model cannot be read.
+
 The selected engine handles the whole dictation; the app does not fall back to the other engine. Tap the microphone to cancel an in-progress transcription.
+
+### Voice input language
+
+The voice settings in **Preferences** include a **Language** row that shows **Automatic** or the chosen language. The picker in device mode lists the languages your device supports, and the picker in gateway mode lists the languages the app supports. Both include an **Automatic** row and a search box that matches language names without accents.
+
+### Testing voice input
+
+Voice settings include a **Test voice input** text area. Speak to append recognized speech live, use the microphone button to start or stop, and **Clear** to empty the field.
+
+## Session goals
+
+Sessions that report a goal show a fixed goal section under the session header. The section shows the goal status and objective, plus the reason supplied by the CLI when there is one.
+
+| Status | Meaning |
+|---|---|
+| Active | The agent is working toward the objective. This state is visually emphasized. |
+| Paused | The objective is saved but not running. |
+| Complete | The agent reported the goal met. |
+| Blocked | A request was rejected or execution was blocked. |
+
+A session without a goal renders no section. Tap the section to **Edit**, **Pause** an active goal or **Resume** otherwise, or **Remove** the goal. Editing sends `/goal <objective>`; the other actions forward `/goal pause`, `/goal resume`, and `/goal clear`.
+
+Selecting `/goal` with no argument starts goal compose mode, and the next send forwards `/goal <objective>`. A session whose catalog does not advertise `goal` shows an upgrade message instead of sending chat. See [Session Goals](/docs/code-with-ai/agents/goals) for the full command behavior.
 
 ## Attachments in remote sessions
 

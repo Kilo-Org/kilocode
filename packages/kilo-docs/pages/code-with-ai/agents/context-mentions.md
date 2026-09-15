@@ -47,14 +47,20 @@ Choose **Model** to insert an inline `@provider/model` reference. Use it to requ
 
 ### Drag and Drop
 
-You can also add file mentions by dragging and dropping:
+You can also add mentions by dragging and dropping:
 
 | Source | How | Result |
 |---|---|---|
 | **Explorer / Editor tabs** | Drag a file or folder from VS Code's Explorer or an editor tab into the chat input | Inserts an `@/relative/path` mention |
 | **Multiple files** | Drag several files at once | Inserts space-separated `@` mentions |
 | **Agent Manager diff headers** | Drag a file header from the Agent Manager's diff panel into chat | Inserts an `@file` mention |
+| **Agent Manager session tabs** | Drag a session tab from the Agent Manager onto the chat input | Inserts a session mention; sending adds that chat's history as context |
+| **Agent Manager worktree cards** | Drag a worktree card from the Agent Manager sidebar onto the chat input | Inserts a worktree mention with its path, branch, and session metadata |
+| **Agent Manager terminal tabs** | Drag a terminal tab from the Agent Manager onto the chat input | Inserts a `@terminal` mention |
+| **Agent Manager document tabs** | Drag an open document tab from the Agent Manager's Documents inspector onto the chat input | Inserts an `@file` mention |
 | **Images** | Hold **Shift** while dragging an image file from your OS file manager into the chat input | Attaches the image |
+
+While you drag a session, worktree, terminal, or document onto the chat input, the input highlights to show it will accept the drop. The inserted mention ends with a trailing space so you can keep typing.
 
 {% callout type="info" %}
 VS Code requires holding **Shift** when dragging files from outside the editor (e.g. Finder or Windows Explorer) into a webview. This applies to image drops — file drops from within VS Code (Explorer, editor tabs) work without Shift.

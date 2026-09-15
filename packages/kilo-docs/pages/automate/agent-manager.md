@@ -112,6 +112,12 @@ The same settings tab has two application-wide controls:
 
 Use **Save** to apply these settings.
 
+### Worktree pre-warming
+
+**Pre-warm worktrees** is an application-wide setting that is on by default. While it is on, Kilo prepares one ready worktree in the background for each open project, so a new Agent Manager session can claim it with a cheap ref update instead of running a full checkout. This makes session creation noticeably faster on large repositories; small repositories behave the same as before.
+
+Pre-warming uses the disk space of one extra checkout per open project. Turn it off in the same **Agent Manager** settings tab (`kilo-code.new.agentManager.worktreePool`) to create worktrees only on demand. Turning it off stops preparation and removes idle prepared worktrees. When no prepared worktree is available, Kilo falls back to the normal creation path, so creation still works.
+
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
@@ -491,7 +497,11 @@ Files marked `linguist-generated` in the repository's `.gitattributes` start col
 
 ### Sending review comments
 
-Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
+Add comments in the diff panel or in the rendered view of a Markdown document. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to save a comment as a local draft, or `Enter` to send it to Kilo for a fix.
+
+When the selected worktree has a publishable pull request, the composer's primary action becomes a split button. The left side sends to Kilo, and the chevron on the right switches the destination between **Send to Kilo** and **Send to GitHub #<number>**. Publishing to GitHub always needs an explicit click, and the comment is validated against the current pull request revision before it is posted. A closed pull request disables the GitHub destination.
+
+The review toolbar shows **Send all to chat (N)** and, when a publishable pull request is available, **Send N to GitHub #<number>**. Only the chat action carries the keyboard shortcut. If an Agent Manager terminal is active, the chat action sends the comments to that terminal instead. GitHub posting stops on the first failure, so the failed comment and the ones after it stay for a retry.
 
 After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
 

@@ -657,6 +657,23 @@ kilo --continue
 - Cannot be used with a prompt argument
 - Only works when there's at least one previous session in the workspace
 
+## Scheduled Wakeups
+
+The agent can schedule a wakeup so its session resumes later with a prompt it sets. Two tools drive this:
+
+- `schedule_wakeup` schedules a wakeup for the current session. It takes a `prompt` to resume with, exactly one of a relative `delay` (for example `30s`, `5m`, `2h`, or `1d`) or an absolute ISO-8601 `when`, and an optional `reason` that labels the wakeup.
+- `cancel_wakeup` lists the wakeups pending for the session, or cancels one by its id.
+
+Limits and behavior:
+
+- A session holds at most **10** pending wakeups.
+- A `delay` under **10 seconds** is raised to 10 seconds, and a time beyond **7 days** is pulled back to 7 days. An absolute `when` fires as given, and a past time is rejected.
+- Wakeups are stored, so they survive the process and are re-armed when the project is opened again. An overdue wakeup fires on start.
+- A wakeup that fires while the session is paused is logged as unresumable instead of disappearing silently.
+- On wake, the model receives its scheduled prompt marked `[scheduled wakeup]`, with a note that no user is present.
+
+Scheduled wakeups are available in the CLI and the VS Code extension.
+
 ## Remote Connections
 
 Remote Connections let you access your local CLI sessions from the Cloud Agents web interface. Requires [Kilo Gateway](/docs/gateway) connection.
