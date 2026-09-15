@@ -94,7 +94,8 @@ export function project(previous: Projection | undefined, text: string, live: bo
   // kilocode_change start: keep the streamed block layout when a stream ends so
   // the finished message does not rebuild every paragraph and drop a selection.
   // Mirror session-ui's settle path: re-derive the layout when more text
-  // arrived, and mark an unterminated code block complete.
+  // arrived, and mark an unterminated code block complete. This returns for
+  // every !live input, so the upstream guard below keeps its original shape.
   if (!live) {
     const current =
       previous?.text === text
@@ -113,8 +114,7 @@ export function project(previous: Projection | undefined, text: string, live: bo
     }
   }
   // kilocode_change end
-  // kilocode_change: the !live case is handled by the block above
-  if (!previous || !text.startsWith(previous.text)) return { text, blocks: stream(text, live) }
+  if (!live || !previous || !text.startsWith(previous.text)) return { text, blocks: stream(text, live) }
   const tail = previous.blocks.at(-1)
   const suffix = text.slice(previous.text.length)
   if (!suffix || tail?.mode !== "code" || tail.complete || closesFence(tail.raw, suffix))
