@@ -29,10 +29,15 @@ class FakeElement {
   hovered = false
   control = false
   dir = ""
+  root: unknown = null
   rect = { left: 0, top: 0, right: 100, bottom: 100 }
   ownerDocument!: FakeDocument
   private children = new Set<FakeElement>()
   private listeners = new Map<string, Listener[]>()
+
+  getRootNode(): unknown {
+    return this.root ?? this.ownerDocument
+  }
 
   closest(selector: string) {
     return this.control && selector === "button, input, textarea, select" ? this : null
@@ -893,6 +898,69 @@ describe("createAutoScroll non-scrollable layouts", () => {
       ctx.doc.fire("mousedown", new FakeMouseEvent(child) as unknown as Event)
       ctx.doc.fire("mousemove", new FakeMouseEvent(child) as unknown as Event)
       ctx.doc.fire("mouseup", new FakeMouseEvent(child) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(800)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
+      ctx.dispose()
+    }
+  })
+
+  test("pauses auto-follow after a touch drag that selects transcript text", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const child = new FakeElement()
+    ctx.el.append(child)
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({
+      isCollapsed: false,
+      rangeCount: 1,
+      getRangeAt: () => ({ startContainer: child, endContainer: child }),
+    })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("pointerdown", new FakePointerEvent(1, child) as unknown as Event)
+      ctx.doc.fire("touchstart", new FakeTouchEvent(child) as unknown as Event)
+      ctx.doc.fire("touchend", new FakeTouchEvent(child) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(800)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
+      ctx.dispose()
+    }
+  })
+
+  test("pauses auto-follow after a drag that selects inside a shadow root", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const host = new FakeElement()
+    ctx.el.append(host)
+    const inner = new FakeElement()
+    inner.root = { host }
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({
+      isCollapsed: false,
+      rangeCount: 1,
+      getRangeAt: () => ({ startContainer: inner, endContainer: inner }),
+    })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("mousedown", new FakeMouseEvent(host) as unknown as Event)
+      ctx.doc.fire("mouseup", new FakeMouseEvent(host) as unknown as Event)
       expect(ctx.scroll.userScrolled()).toBe(true)
 
       now = 1000

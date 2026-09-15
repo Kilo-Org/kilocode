@@ -188,8 +188,19 @@ describe("markdown stream", () => {
       { raw: "two\n\n", src: "two\n\n", mode: "full" },
       { raw: "three", src: "three", mode: "full" },
     ])
-    expect(project(done, `${done.text} more`, false).blocks.length).toBe(1)
+    // Later updates that extend the settled text keep the layout too.
+    expect(project(done, `${done.text} more`, false).blocks.length).toBe(3)
+    // A message rendered for the first time still uses a single block.
     expect(project(undefined, "one\n\ntwo", false).blocks.length).toBe(1)
+  })
+
+  test("completes an unterminated code block when the stream ends", () => {
+    const live = project(undefined, "prose\n\n```ts\nconst one = 1\n", true)
+    const done = project(live, live.text, false)
+
+    expect(live.blocks.at(-1)).toMatchObject({ mode: "code", language: "ts" })
+    expect(live.blocks.at(-1)?.complete).toBeUndefined()
+    expect(done.blocks.at(-1)).toMatchObject({ mode: "code", language: "ts", complete: true })
   })
 
   test("keeps the block layout when the final delta arrives with the stream end", () => {

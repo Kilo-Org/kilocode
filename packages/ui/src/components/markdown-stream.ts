@@ -93,15 +93,27 @@ export function canReusePendingBlock(current: Pick<Block, "mode" | "raw"> | unde
 export function project(previous: Projection | undefined, text: string, live: boolean): Projection {
   // kilocode_change start: keep the streamed block layout when a stream ends so
   // the finished message does not rebuild every paragraph and drop a selection.
-  if (!live && previous && text.startsWith(previous.text) && previous.blocks.some((block) => block.mode !== "full"))
+  // Mirror session-ui's settle path: re-derive the layout when more text
+  // arrived, and mark an unterminated code block complete.
+  if (!live) {
+    const current =
+      previous?.text === text
+        ? previous
+        : previous && text.startsWith(previous.text)
+          ? project(previous, text, true)
+          : undefined
+    if (!current) return { text, blocks: stream(text, false) }
     return {
       text,
-      blocks: stream(text, true).map((block) =>
-        block.mode === "live" ? { raw: block.raw, src: block.raw, mode: "full" as const } : block,
-      ),
+      blocks: current.blocks.map((block) => {
+        if (block.mode === "live") return { raw: block.raw, src: block.raw, mode: "full" as const }
+        if (block.mode === "code" && !block.complete) return { ...block, complete: true }
+        return block
+      }),
     }
+  }
   // kilocode_change end
-  if (!live || !previous || !text.startsWith(previous.text)) return { text, blocks: stream(text, live) }
+  if (!previous || !text.startsWith(previous.text)) return { text, blocks: stream(text, live) }
   const tail = previous.blocks.at(-1)
   const suffix = text.slice(previous.text.length)
   if (!suffix || tail?.mode !== "code" || tail.complete || closesFence(tail.raw, suffix))

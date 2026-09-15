@@ -91,12 +91,25 @@ export const createUserActivity = (options: UserActivityOptions) => {
   // A drag that selects text never scrolls, so nothing pauses auto-follow and
   // the next content update snaps the view to the bottom and unmounts the
   // rows that hold the selection. Report a finished selection gesture.
+  // Diffs render inside a shadow root, so walk host boundaries instead of
+  // relying on light-DOM containment.
+  const inside = (node: Node | null) => {
+    if (!node || !scroll) return false
+    let current: Node | null = node
+    while (current) {
+      if (scroll.contains(current)) return true
+      const root: Node | undefined = typeof current.getRootNode === "function" ? current.getRootNode() : undefined
+      current = root && "host" in root ? (root as ShadowRoot).host : null
+    }
+    return false
+  }
+
   const selected = () => {
     if (!doc || !scroll || typeof doc.getSelection !== "function") return false
     const selection = doc.getSelection()
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) return false
     const range = selection.getRangeAt(0)
-    return scroll.contains(range.startContainer) || scroll.contains(range.endContainer)
+    return inside(range.startContainer) || inside(range.endContainer)
   }
 
   const end = (event: Event, kind: Kind) => {
@@ -104,7 +117,7 @@ export const createUserActivity = (options: UserActivityOptions) => {
     mark()
     gesture = undefined
     gestures.delete(doc)
-    if (kind !== "touch" && selected()) options.onSelect?.()
+    if (selected()) options.onSelect?.()
   }
 
   const clear = () => {
