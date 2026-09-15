@@ -1297,6 +1297,27 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   onCleanup(() => save(session.currentSessionID()))
 
+  // The virtualizer and the live tail render the same row props. Keep one
+  // definition so the two paths cannot drift.
+  const Row: Component<{ row: TranscriptRow; index?: number }> = (entry) => (
+    <TranscriptRowView
+      row={entry.row}
+      index={entry.index}
+      onSelectSession={props.onSelectSession}
+      isSessionOpen={props.isSessionOpen}
+      onForkMessage={props.onForkMessage}
+      onEditMessage={props.onEditMessage}
+      queuedDisabled={props.queuedDisabled}
+      editDisabled={props.editDisabled}
+      highlight={highlight}
+      activeSearch={activeKey() === entry.row.key}
+      activeSearchPartID={activeKey() === entry.row.key ? activeMatch()?.partId : undefined}
+      activeSearchPartFile={activeKey() === entry.row.key ? activeMatch()?.partFile : undefined}
+      readonly={props.readonly}
+      interactivePrompts={props.interactivePrompts}
+    />
+  )
+
   return (
     <div class="message-list-container" classList={{ "am-intro-layout": introduction() }}>
       <Show when={props.announce === false}>
@@ -1374,45 +1395,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     bufferSize={520}
                     itemSize={260}
                   >
-                    {(key, index) => (
-                      <TranscriptRowView
-                        row={virtual().get(key)!}
-                        index={index()}
-                        onSelectSession={props.onSelectSession}
-                        isSessionOpen={props.isSessionOpen}
-                        onForkMessage={props.onForkMessage}
-                        onEditMessage={props.onEditMessage}
-                        queuedDisabled={props.queuedDisabled}
-                        editDisabled={props.editDisabled}
-                        highlight={highlight}
-                        activeSearch={activeKey() === key}
-                        activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
-                        activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
-                        readonly={props.readonly}
-                        interactivePrompts={props.interactivePrompts}
-                      />
-                    )}
+                    {(key, index) => <Row row={virtual().get(key)!} index={index()} />}
                   </Virtualizer>
                 </Show>
-                <For each={tail()}>
-                  {(key) => (
-                    <TranscriptRowView
-                      row={lookup().get(key)!}
-                      onSelectSession={props.onSelectSession}
-                      isSessionOpen={props.isSessionOpen}
-                      onForkMessage={props.onForkMessage}
-                      onEditMessage={props.onEditMessage}
-                      queuedDisabled={props.queuedDisabled}
-                      editDisabled={props.editDisabled}
-                      highlight={highlight}
-                      activeSearch={activeKey() === key}
-                      activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
-                      activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
-                      readonly={props.readonly}
-                      interactivePrompts={props.interactivePrompts}
-                    />
-                  )}
-                </For>
+                <For each={tail()}>{(key) => <Row row={lookup().get(key)!} />}</For>
               </div>
             </Show>
             <Show when={revert()}>
