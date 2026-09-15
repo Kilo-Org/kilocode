@@ -1,5 +1,11 @@
 import { afterAll, describe, expect, it } from "bun:test"
-import { hasCustomSource, resolveSpeechToTextSource, sourceHeaders, sourceUrl } from "../../src/speech-to-text/source"
+import {
+  hasCustomSource,
+  resolveSpeechToTextSource,
+  sourceHeaders,
+  sourceUrl,
+  withGlobalSpeechToText,
+} from "../../src/speech-to-text/source"
 import { fetchSpeechToTextModels, parseCustomCatalog } from "../../src/speech-to-text/catalog"
 import { transcribeSpeech } from "../../src/speech-to-text/transcribe"
 import type { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
@@ -123,5 +129,51 @@ describe("speech-to-text custom source", () => {
     expect(hasCustomSpeechToTextSource(cfg)).toBe(true)
     expect(canUseSpeechToText(cfg, {})).toBe(true)
     expect(selectedSpeechToTextModel(cfg)).toBe("my-local-whisper")
+  })
+})
+
+describe("speech-to-text global-only config", () => {
+  it("resolves the custom source from the global layer only", () => {
+    const global = {
+      experimental: { speech_to_text_base_url: "https://global.test/v1/", speech_to_text_api_key: " global-key " },
+    }
+    const effective = withGlobalSpeechToText(
+      {
+        model: "chat-model",
+        experimental: {
+          speech_to_text_base_url: "https://project.test/v1",
+          speech_to_text_api_key: "project-key",
+          speech_to_text_model: "project-model",
+        },
+      },
+      global,
+    )
+
+    expect(effective.model).toBe("chat-model")
+    expect(resolveSpeechToTextSource(effective)).toEqual({ baseUrl: "https://global.test/v1", apiKey: "global-key" })
+  })
+
+  it("drops project speech-to-text keys when the global layer has none", () => {
+    const effective = withGlobalSpeechToText({
+      experimental: {
+        speech_to_text_base_url: "https://project.test/v1",
+        speech_to_text_api_key: "project-key",
+        speech_to_text_model: "project-model",
+      },
+    })
+
+    expect(effective.experimental?.speech_to_text_base_url).toBeUndefined()
+    expect(effective.experimental?.speech_to_text_api_key).toBeUndefined()
+    expect(effective.experimental?.speech_to_text_model).toBeUndefined()
+    expect(resolveSpeechToTextSource(effective)).toBeUndefined()
+  })
+
+  it("preserves the global source and unrelated experimental keys", () => {
+    const global = { experimental: { speech_to_text_base_url: "https://global.test/v1", speech_to_text_model: "m" } }
+    const effective = withGlobalSpeechToText({ experimental: { batch_tool: true } }, global)
+
+    expect(effective.experimental?.batch_tool).toBe(true)
+    expect(effective.experimental?.speech_to_text_model).toBe("m")
+    expect(resolveSpeechToTextSource(effective)).toEqual({ baseUrl: "https://global.test/v1" })
   })
 })
