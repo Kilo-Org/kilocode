@@ -146,6 +146,12 @@ export const dict = {
     "Questa repository usa Git LFS, ma git-lfs non è stato trovato. Installa Git LFS.",
   "agentManager.setup.error.no_commits":
     "Questa repository non ha ancora commit. Crea un commit iniziale prima di usare i worktree.",
+  "agentManager.setup.error.worktree_missing":
+    "La cartella di questo worktree non esiste più. Ripristinala dal suo branch o rimuovi il worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git non traccia più questa cartella come worktree. Rimuovila e crea un nuovo worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git non ha risposto in tempo. Verifica che il repository sia raggiungibile e riprova.",
   "agentManager.shortcuts.title": "Scorciatoie da tastiera",
   "agentManager.shortcuts.category.sidebar": "Barra laterale",
   "agentManager.shortcuts.category.tabs": "Schede",
@@ -481,4 +487,27 @@ export const dict = {
   "agentManager.intro.guide": "Leggi la guida",
   "agentManager.intro.dismiss": "Salta introduzione",
   "agentManager.intro.reopen": "Come funziona Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Cartella eliminata",
+  "agentManager.worktree.health.absent-restorableNote":
+    "La cartella non c'è più, ma il branch {{branch}} esiste ancora. Ripristinala per continuare a lavorare qui.",
+  "agentManager.worktree.health.absent-gone": "Cartella e branch eliminati",
+  "agentManager.worktree.health.absent-goneNote":
+    "Né la cartella né il branch esistono più. Rimuovi la voce per fare ordine; le sessioni restano sotto Locale.",
+  "agentManager.worktree.health.unregistered": "Non è un worktree git",
+  "agentManager.worktree.health.unregisteredNote":
+    "La cartella esiste, ma git non la traccia più come worktree. Lo stato non è leggibile.",
+  "agentManager.worktree.health.unavailable": "Stato non disponibile",
+  "agentManager.worktree.health.unavailableNote":
+    "Git o GitHub CLI non ha risposto in tempo. Il polling di questo worktree è in pausa e verrà ritentato.",
+  "agentManager.worktree.restore": "Ripristina worktree",
+  "agentManager.worktree.removeKeepSessions": "Rimuovi, mantieni le sessioni",
+  "agentManager.orphans.title": "Cartelle di worktree rimaste",
+  "agentManager.orphans.summary": "{{count}} cartella(e) in .kilo/worktrees non sono worktree git.",
+  "agentManager.orphans.clean": "Pulisci le cartelle rimaste",
+  "agentManager.orphans.confirm": "Eliminare definitivamente queste cartelle? Nulla qui è tracciato da git.",
+  "agentManager.orphans.cancel": "Annulla",
+  "agentManager.orphans.checkout": "contiene un checkout git",
+  "agentManager.orphans.confirmCheckout":
+    "Eliminare definitivamente queste cartelle? {{count}} contengono ancora un checkout git che potrebbe avere modifiche non committate.",
+  "agentManager.error.title": "Errore di Agent Manager",
 }

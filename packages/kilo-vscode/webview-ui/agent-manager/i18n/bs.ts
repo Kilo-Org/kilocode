@@ -137,6 +137,12 @@ export const dict = {
     "Ovaj repozitorijum koristi Git LFS, ali git-lfs nije pronađen. Molimo instalirajte Git LFS.",
   "agentManager.setup.error.no_commits":
     "Ovaj repozitorijum još uvek nema commit-ova. Napravite početni commit pre korišćenja worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Folder ovog worktreeja više ne postoji. Vrati ga iz njegove grane ili ukloni worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git više ne prati ovaj folder kao worktree. Ukloni ga i napravi novi worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git nije odgovorio na vrijeme. Provjeri je li repozitorij dostupan i pokušaj ponovo.",
   "agentManager.shortcuts.title": "Prečice na tastaturi",
   "agentManager.shortcuts.category.sidebar": "Bočna traka",
   "agentManager.shortcuts.category.tabs": "Kartice",
@@ -466,4 +472,27 @@ export const dict = {
   "agentManager.intro.guide": "Pročitajte vodič",
   "agentManager.intro.dismiss": "Preskoči uvod",
   "agentManager.intro.reopen": "Kako radi Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Folder izbrisan",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Folder je nestao, ali grana {{branch}} još postoji. Vrati ga da nastaviš rad ovdje.",
+  "agentManager.worktree.health.absent-gone": "Folder i grana izbrisani",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ni folder ni grana više ne postoje. Ukloni unos radi urednosti; sesije se čuvaju pod Lokalno.",
+  "agentManager.worktree.health.unregistered": "Nije git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Folder postoji, ali ga git više ne prati kao worktree. Status se ne može pročitati.",
+  "agentManager.worktree.health.unavailable": "Status nedostupan",
+  "agentManager.worktree.health.unavailableNote":
+    "Git ili GitHub CLI nije odgovorio na vrijeme. Provjera ovog worktreeja je pauzirana i biće ponovljena.",
+  "agentManager.worktree.restore": "Vrati worktree",
+  "agentManager.worktree.removeKeepSessions": "Ukloni, zadrži sesije",
+  "agentManager.orphans.title": "Zaostali worktree folderi",
+  "agentManager.orphans.summary": "{{count}} folder(a) u .kilo/worktrees nisu git worktreeji.",
+  "agentManager.orphans.clean": "Očisti zaostale foldere",
+  "agentManager.orphans.confirm": "Trajno izbrisati ove foldere? Ništa ovdje git ne prati.",
+  "agentManager.orphans.cancel": "Otkaži",
+  "agentManager.orphans.checkout": "sadrži git checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Trajno izbrisati ove foldere? {{count}} još sadrži git checkout koji može imati necommitane promjene.",
+  "agentManager.error.title": "Greška Agent Managera",
 }

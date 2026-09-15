@@ -131,6 +131,10 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "打开一个包含 git 存储库的文件夹以使用 worktrees。",
   "agentManager.setup.error.lfs_missing": "此存储库使用 Git LFS，但找不到 git-lfs。请安装 Git LFS。",
   "agentManager.setup.error.no_commits": "此存储库尚无提交。在使用 worktrees 之前，请创建一个初始提交。",
+  "agentManager.setup.error.worktree_missing": "该 worktree 的文件夹已不存在。可从其分支恢复，或移除该 worktree。",
+  "agentManager.setup.error.worktree_unregistered":
+    "git 已不再将该文件夹作为 worktree 跟踪。请移除后新建一个 worktree。",
+  "agentManager.setup.error.git_timeout": "Git 未及时响应。请确认仓库可访问后重试。",
   "agentManager.shortcuts.title": "键盘快捷键",
   "agentManager.shortcuts.category.sidebar": "侧边栏",
   "agentManager.shortcuts.category.tabs": "标签页",
@@ -452,4 +456,26 @@ export const dict = {
   "agentManager.intro.guide": "阅读指南",
   "agentManager.intro.dismiss": "跳过介绍",
   "agentManager.intro.reopen": "Agent Manager 的工作原理",
+  "agentManager.worktree.health.absent-restorable": "文件夹已删除",
+  "agentManager.worktree.health.absent-restorableNote":
+    "文件夹已不存在，但分支 {{branch}} 仍在。恢复后可继续在此工作。",
+  "agentManager.worktree.health.absent-gone": "文件夹和分支都已删除",
+  "agentManager.worktree.health.absent-goneNote":
+    "文件夹和分支都已不存在。可移除该条目进行整理；会话将保留在“本地”下。",
+  "agentManager.worktree.health.unregistered": "不是 git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "文件夹仍存在，但 git 已不再将其作为 worktree 跟踪，无法读取其状态。",
+  "agentManager.worktree.health.unavailable": "状态不可用",
+  "agentManager.worktree.health.unavailableNote":
+    "Git 或 GitHub CLI 未及时响应。已暂停该 worktree 的轮询，稍后会重试。",
+  "agentManager.worktree.restore": "恢复 worktree",
+  "agentManager.worktree.removeKeepSessions": "移除并保留会话",
+  "agentManager.orphans.title": "残留的 worktree 文件夹",
+  "agentManager.orphans.summary": ".kilo/worktrees 下有 {{count}} 个文件夹不是 git worktree。",
+  "agentManager.orphans.clean": "清理残留文件夹",
+  "agentManager.orphans.confirm": "永久删除这些文件夹？其中没有任何内容被 git 跟踪。",
+  "agentManager.orphans.cancel": "取消",
+  "agentManager.orphans.checkout": "仍包含 git 检出",
+  "agentManager.orphans.confirmCheckout": "永久删除这些文件夹？其中 {{count}} 个仍包含 git 检出，可能有未提交的更改。",
+  "agentManager.error.title": "Agent Manager 错误",
 }

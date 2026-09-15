@@ -321,7 +321,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         update(action, event)
 
         assertTrue(event.presentation.isEnabledAndVisible)
-        assertEquals("Open Worktree Setup", event.presentation.text)
+        assertEquals("Show Worktree Setup", event.presentation.text)
         assertEquals(0, rpc.setupScriptTargetCalls.size)
     }
 
@@ -352,8 +352,8 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         update(action, event)
 
         assertTrue(event.presentation.isEnabledAndVisible)
-        // No cached target yet: defaults to the "Open" wording, same as a resolved existing script.
-        assertEquals("Open Worktree Setup", event.presentation.text)
+        // No cached target yet: defaults to the "Show" wording, same as a resolved existing script.
+        assertEquals("Show Worktree Setup", event.presentation.text)
         await(call)
         assertEquals(1, rpc.setupScriptTargetCalls.size)
 

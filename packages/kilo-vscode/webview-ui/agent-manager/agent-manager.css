@@ -919,9 +919,74 @@ html[data-theme="kilo-vscode"]
   color: currentColor;
 }
 
+/* "Health could not be determined" is not a warning: nothing is known to be wrong yet. */
+.am-worktree-stale-badge[data-health="unavailable"],
+.am-worktree-item-active .am-worktree-stale-badge[data-health="unavailable"] {
+  color: var(--text-weak);
+}
+
 .am-tooltip-wrap {
   max-width: 240px;
   white-space: normal;
+}
+
+/* Leftover worktree folders: informational until the user asks for the cleanup. */
+.am-orphan-notice {
+  margin: 6px 8px 2px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in oklab, var(--text-warning, #f59e0b) 35%, transparent);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--text-warning, #f59e0b) 8%, transparent);
+  font-size: var(--font-size-small);
+}
+
+.am-orphan-notice-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-warning, #f59e0b);
+}
+
+.am-orphan-notice-title {
+  font-weight: 600;
+}
+
+.am-orphan-notice-body {
+  margin-top: 2px;
+  color: var(--text-muted, inherit);
+}
+
+.am-orphan-notice-paths {
+  margin: 4px 0 0;
+  padding-left: 14px;
+  max-height: 88px;
+  overflow-y: auto;
+  color: var(--text-muted, inherit);
+}
+
+.am-orphan-notice-paths li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+.am-orphan-notice-paths li[data-orphan-kind="broken"] {
+  color: var(--text-warning, #f59e0b);
+}
+
+.am-orphan-notice-kind {
+  margin-left: 4px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.am-orphan-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .am-worktree-spinner {
@@ -3695,6 +3760,10 @@ body.am-wt-dragging-active * {
   gap: 6px;
   color: var(--text-warning, #f59e0b);
   font-weight: 600;
+}
+
+.am-hover-card-stale-pill[data-health="unavailable"] {
+  color: var(--text-weak);
 }
 
 .am-hover-card-note {
