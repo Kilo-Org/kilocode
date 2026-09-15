@@ -1371,7 +1371,7 @@ export const dict = {
   "settings.experimental.browserAutomation.title": "Navegador Integrado",
   "settings.experimental.browserAutomation.description":
     "Mostre pré-visualizações de aplicativos locais no Agent Manager e exponha a ferramenta browser_open para sessões do Agent Manager.",
-  "settings.experimental.browserAutomation.systemChrome.title": "Usar o Chrome do sistema",
+  "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome do Sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use o Google Chrome instalado para o Navegador Integrado. Desative apenas quando um navegador Playwright Chromium compatível já estiver instalado.",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",

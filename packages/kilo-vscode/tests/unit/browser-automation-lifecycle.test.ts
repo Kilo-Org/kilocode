@@ -11,6 +11,7 @@ describe("Playwright MCP lifecycle", () => {
   const listeners = new Set<() => Promise<void>>()
   const events = new Set<Parameters<KiloConnectionService["onEvent"]>[0]>()
   let service: BrowserAutomationService
+  let connection: KiloConnectionService
   let enabled: boolean
   let connected: boolean
   let failed: boolean
@@ -78,7 +79,7 @@ describe("Playwright MCP lifecycle", () => {
         },
       },
     } as unknown as KiloClient
-    service = new BrowserAutomationService({
+    connection = {
       onEvent: (listener: Parameters<KiloConnectionService["onEvent"]>[0]) => {
         events.add(listener)
         return () => events.delete(listener)
@@ -87,7 +88,8 @@ describe("Playwright MCP lifecycle", () => {
         if (!connected) throw new Error("Disconnected")
         return client
       },
-    } as KiloConnectionService)
+    } as KiloConnectionService
+    service = new BrowserAutomationService(connection)
   })
 
   afterEach(() => {
@@ -123,6 +125,20 @@ describe("Playwright MCP lifecycle", () => {
     await Promise.all([registration, prompt])
     expect(sent).toBe(true)
     expect(additions).toEqual(["/repo"])
+  })
+
+  test("prompt readiness gives up after the wait instead of stalling on startup", async () => {
+    const gate = Promise.withResolvers<void>()
+    pending = gate.promise
+    service.dispose()
+    service = new BrowserAutomationService(connection, 5)
+    const registration = service.syncWithSettings()
+    await started.promise
+    await service.ready("/repo")
+    expect(active.size).toBe(0)
+    gate.resolve()
+    await registration
+    expect(active.has("/repo")).toBe(true)
   })
 
   test("prompt readiness repairs lost registration before the disposal event arrives", async () => {

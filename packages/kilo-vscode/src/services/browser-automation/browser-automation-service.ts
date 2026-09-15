@@ -21,7 +21,10 @@ export class BrowserAutomationService implements vscode.Disposable {
   private disposed = false
   private state: BrowserAutomationState = "disabled"
 
-  constructor(private readonly connectionService: KiloConnectionService) {
+  constructor(
+    private readonly connectionService: KiloConnectionService,
+    private readonly wait = 15_000,
+  ) {
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (!event.affectsConfiguration("kilo-code.new.browserAutomation")) return
@@ -63,7 +66,7 @@ export class BrowserAutomationService implements vscode.Disposable {
   }
 
   ready(directory: string): Promise<void> {
-    return this.enqueue(async () => {
+    const task = this.enqueue(async () => {
       if (this.disposed || !this.enabled() || !vscode.workspace.isTrusted) return
       const dir = this.directories().find((dir) => samePath(canonicalizePath(dir), canonicalizePath(directory)))
       if (!dir) return
@@ -81,6 +84,33 @@ export class BrowserAutomationService implements vscode.Disposable {
       await this.register([dir])
       if (this.enabled() && !this.registered.has(dir)) throw BrowserAutomationService.failure()
     })
+    return BrowserAutomationService.bounded(task, this.wait)
+  }
+
+  /**
+   * Cap how long a prompt waits for Playwright MCP. A cold `npx` start can hold
+   * the shared queue for up to the MCP timeout, and a prompt should not stall
+   * that long; its tools arrive on a later turn instead.
+   */
+  private static async bounded(task: Promise<void>, wait: number): Promise<void> {
+    const limit = Promise.withResolvers<"timeout">()
+    const timer = setTimeout(() => limit.resolve("timeout"), wait)
+    const outcome = task.then(
+      () => undefined,
+      (error) => {
+        console.warn("[Kilo New] BrowserAutomationService: readiness failed:", error)
+        return { error }
+      },
+    )
+    void outcome.then(() => clearTimeout(timer))
+    const result = await Promise.race([outcome, limit.promise])
+    if (result === "timeout") {
+      console.warn(
+        "[Kilo New] BrowserAutomationService: readiness timed out, submitting without waiting for Playwright MCP",
+      )
+      return
+    }
+    if (result) throw result.error
   }
 
   private static failure(detail?: string): Error {

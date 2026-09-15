@@ -1353,7 +1353,7 @@ export const dict = {
   "settings.experimental.browserAutomation.title": "Integrert nettleser",
   "settings.experimental.browserAutomation.description":
     "Vis forhåndsvisninger av lokale applikasjoner i Agent Manager, og gjør verktøyet browser_open tilgjengelig for Agent Manager-økter.",
-  "settings.experimental.browserAutomation.systemChrome.title": "Bruk systemets Chrome",
+  "settings.experimental.browserAutomation.systemChrome.title": "Bruk system-Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",

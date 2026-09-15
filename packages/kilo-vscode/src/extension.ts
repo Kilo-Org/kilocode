@@ -66,8 +66,13 @@ export async function activate(context: vscode.ExtensionContext) {
     log: (...args) => console.warn("[Kilo New] BrowserBroker:", ...args),
     enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
     trusted: () => vscode.workspace.isTrusted,
-    useSystemChrome: () =>
-      vscode.workspace.getConfiguration("kilo-code.new.agentManager.browser").get("useSystemChrome", true),
+    useSystemChrome: () => {
+      const browser = vscode.workspace.getConfiguration("kilo-code.new.agentManager.browser")
+      const chosen = browser.inspect<boolean>("useSystemChrome")?.globalValue
+      if (chosen !== undefined) return chosen
+      // Fall back to the pre-rename key so existing preferences keep applying.
+      return vscode.workspace.getConfiguration("kilo-code.new.browserAutomation").get("useSystemChrome", true)
+    },
   })
 
   // Create shared connection service (one server for all webviews)

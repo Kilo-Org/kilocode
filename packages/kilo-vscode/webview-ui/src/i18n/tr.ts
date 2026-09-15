@@ -1371,7 +1371,7 @@ export const dict = {
   "settings.experimental.browserAutomation.title": "Entegre Tarayıcı",
   "settings.experimental.browserAutomation.description":
     "Agent Manager'da yerel uygulama önizlemelerini gösterin ve browser_open aracını Agent Manager oturumlarına sunun.",
-  "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu kullan",
+  "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",

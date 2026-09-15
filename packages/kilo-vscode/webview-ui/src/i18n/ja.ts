@@ -1348,7 +1348,7 @@ export const dict = {
   "settings.experimental.browserAutomation.title": "統合ブラウザー",
   "settings.experimental.browserAutomation.description":
     "Agent Manager でローカルアプリケーションのプレビューを表示し、browser_open ツールを Agent Manager セッションに公開します。",
-  "settings.experimental.browserAutomation.systemChrome.title": "システムの Chrome を使用",
+  "settings.experimental.browserAutomation.systemChrome.title": "システムChromeを使用",
   "settings.experimental.browserAutomation.systemChrome.description":
     "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",

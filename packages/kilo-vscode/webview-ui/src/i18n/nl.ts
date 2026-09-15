@@ -1384,7 +1384,7 @@ export const dict = {
   "settings.experimental.browserAutomation.title": "Geïntegreerde browser",
   "settings.experimental.browserAutomation.description":
     "Toon voorbeelden van lokale applicaties in Agent Manager en stel de tool browser_open beschikbaar aan Agent Manager-sessies.",
-  "settings.experimental.browserAutomation.systemChrome.title": "Systeem-Chrome gebruiken",
+  "settings.experimental.browserAutomation.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
