@@ -1616,30 +1616,34 @@ describe("KiloProvider.handleLoadMessages / slim payload", () => {
     expect(client.prompted).toHaveLength(1)
   })
 
-  it("waits for browser tool readiness for Agent Manager prompts too", async () => {
+  it("waits for browser tool readiness for Agent Manager worktree prompts too", async () => {
     const client = createClient()
     const { internal, connection } = makeProvider(client)
-    internal.currentSession = mkSession()
     internal.gatherEditorContext = async () => ({})
-    const dirs: string[] = []
+    const order: string[] = []
     connection.prepareTools = async (dir) => {
-      dirs.push(dir)
+      order.push(`prepare:${dir}`)
+    }
+    client.session.promptAsync = async (params: Record<string, unknown>) => {
+      order.push(`prompt:${String(params.directory)}`)
+      return { data: undefined }
     }
     await internal.handleSendMessage(
       "browser test",
       "m1",
-      "s1",
+      undefined,
+      "draft-1",
       undefined,
       undefined,
       undefined,
       undefined,
       undefined,
       undefined,
-      undefined,
-      "am-context",
+      "worktree-ctx",
+      "/worktree",
     )
-    expect(dirs).toEqual(["/repo"])
-    expect(client.prompted).toHaveLength(1)
+    expect(client.created).toEqual([expect.objectContaining({ directory: "/worktree" })])
+    expect(order).toEqual(["prepare:/worktree", "prompt:/worktree"])
   })
 
   it("reports a browser readiness failure instead of submitting without tools", async () => {

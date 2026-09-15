@@ -417,7 +417,7 @@ export const dict = {
   "agentManager.caffeination.active": "Holder computeren vågen, mens Kilo-agenterne arbejder",
   "agentManager.caffeination.unavailable":
     "Tilstanden til at holde computeren vågen er ikke tilgængelig på denne platform",
-  "agentManager.browser.title": "Browser",
+  "agentManager.browser.title": "Integreret browser",
   "agentManager.browser.url": "URL til lokal applikation",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Åbn",
@@ -426,7 +426,7 @@ export const dict = {
   "agentManager.browser.refresh": "Opdater browser",
   "agentManager.browser.close": "Luk browser",
   "agentManager.browser.empty": "Åbn en lokal applikation for at få vist en forhåndsvisning her.",
-  "agentManager.browser.noSession": "Vælg først en session i Agent Manager.",
+  "agentManager.browser.noSession": "Start eller vælg en session i Agent Manager for at gennemse en lokal applikation.",
   "agentManager.browser.screenshotAlt": "Aktuel browserside",
   "agentManager.browser.errors": "Browserproblemer: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnostik",

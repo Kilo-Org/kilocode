@@ -404,7 +404,7 @@ export const dict = {
   "agentManager.caffeination.active": "Kilo 代理工作期间保持电脑唤醒",
   "agentManager.caffeination.unavailable": "此平台不支持保持唤醒模式",
 
-  "agentManager.browser.title": "浏览器",
+  "agentManager.browser.title": "集成浏览器",
   "agentManager.browser.url": "本地应用 URL",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "打开",
@@ -413,7 +413,7 @@ export const dict = {
   "agentManager.browser.inspect": "选择元素",
   "agentManager.browser.devtoolsTitle": "开发者工具",
   "agentManager.browser.empty": "打开本地应用以在此处预览。",
-  "agentManager.browser.noSession": "请先选择 Agent Manager 会话。",
+  "agentManager.browser.noSession": "请在 Agent Manager 中启动或选择会话以浏览本地应用。",
   "agentManager.browser.screenshotAlt": "当前浏览器页面",
   "agentManager.browser.errors": "浏览器问题：{{count}}",
   "agentManager.browser.diagnostics": "浏览器诊断",

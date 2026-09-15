@@ -423,7 +423,7 @@ export const dict = {
   "agentManager.caffeination.active": "Computer wordt wakker gehouden terwijl Kilo-agents werken",
   "agentManager.caffeination.unavailable":
     "De modus om de computer wakker te houden is niet beschikbaar op dit platform",
-  "agentManager.browser.title": "Browser",
+  "agentManager.browser.title": "Geïntegreerde browser",
   "agentManager.browser.url": "URL van lokale applicatie",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Openen",
@@ -432,7 +432,8 @@ export const dict = {
   "agentManager.browser.refresh": "Browser vernieuwen",
   "agentManager.browser.close": "Browser sluiten",
   "agentManager.browser.empty": "Open een lokale applicatie om deze hier te bekijken.",
-  "agentManager.browser.noSession": "Selecteer eerst een sessie in Agent Manager.",
+  "agentManager.browser.noSession":
+    "Start of selecteer een sessie in Agent Manager om een lokale applicatie te bekijken.",
   "agentManager.browser.screenshotAlt": "Huidige browserpagina",
   "agentManager.browser.errors": "Browserproblemen: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnostiek",

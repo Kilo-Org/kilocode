@@ -49,6 +49,22 @@ describe("Agent Manager panel ownership", () => {
     })
   })
 
+  it("does not let a closed draft browser hide a worktree panel after the session ends", () => {
+    createRoot((dispose) => {
+      const [current, session] = createSignal<string>()
+      const panels = createSidePanel({ project: () => "project", selection: () => "local", current })
+      panels.open(SidePanel.Browser)
+      panels.close()
+      expect(panels.panel()).toBeNull()
+      session("real-session")
+      panels.open(SidePanel.Diff)
+      expect(panels.panel()).toBe(SidePanel.Diff)
+      session(undefined)
+      expect(panels.panel()).toBe(SidePanel.Diff)
+      dispose()
+    })
+  })
+
   it("still requires a real session for other session-owned panels", () => {
     createRoot((dispose) => {
       const panels = createSidePanel({ project: () => "project", selection: () => "local", current: () => undefined })

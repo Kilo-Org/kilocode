@@ -421,7 +421,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Wachhaltemodus für Kilo-Agenten aktiviert; zum Deaktivieren klicken",
   "agentManager.caffeination.active": "Computer wird wach gehalten, während Kilo-Agenten arbeiten",
   "agentManager.caffeination.unavailable": "Der Wachhaltemodus ist auf dieser Plattform nicht verfügbar",
-  "agentManager.browser.title": "Browser",
+  "agentManager.browser.title": "Integrierter Browser",
   "agentManager.browser.url": "URL der lokalen Anwendung",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Öffnen",
@@ -430,7 +430,8 @@ export const dict = {
   "agentManager.browser.refresh": "Browser aktualisieren",
   "agentManager.browser.close": "Browser schließen",
   "agentManager.browser.empty": "Öffnen Sie eine lokale Anwendung, um sie hier in der Vorschau anzuzeigen.",
-  "agentManager.browser.noSession": "Wählen Sie zuerst eine Sitzung im Agent Manager aus.",
+  "agentManager.browser.noSession":
+    "Starten oder wählen Sie eine Sitzung im Agent Manager, um eine lokale Anwendung zu öffnen.",
   "agentManager.browser.screenshotAlt": "Aktuelle Browserseite",
   "agentManager.browser.errors": "Browserprobleme: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnose",

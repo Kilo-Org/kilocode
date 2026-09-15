@@ -4255,13 +4255,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       await this.checkpoints.get(sid)
+      // Wait for Playwright MCP before the prompt so its tools are advertised.
+      // Kept outside withRetry so retryable prompt errors keep their backoff.
+      // The Integrated Browser does not use Playwright and is not affected.
+      await this.connectionService.prepareTools(dir)
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Message request", () =>
         this.withRetry(
-          async () => {
-            // Wait for Playwright MCP before the prompt so its tools are advertised.
-            // The Integrated Browser does not use Playwright and is not affected.
-            await this.connectionService.prepareTools(dir)
-            return this.client!.session.promptAsync({
+          () =>
+            this.client!.session.promptAsync({
               sessionID: sid,
               directory: dir,
               messageID,
@@ -4271,8 +4272,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               variant,
               editorContext,
               snapshotInitialization: this.opts.snapshotInitialization,
-            })
-          },
+            }),
           sid,
           messageID,
         ),
@@ -4345,10 +4345,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         source: f.source,
       }))
 
-      if (!control) await this.checkpoints.get(sid)
-      const send = async () => {
-        if (!control) await this.connectionService.prepareTools(dir)
-        return this.client!.session.command({
+      if (!control) {
+        await this.checkpoints.get(sid)
+        await this.connectionService.prepareTools(dir)
+      }
+      const send = () =>
+        this.client!.session.command({
           sessionID: sid,
           directory: dir,
           command,
@@ -4360,7 +4362,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           parts,
           snapshotInitialization: this.opts.snapshotInitialization,
         })
-      }
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", async () => {
         if (command !== "goal") return this.withRetry(send, sid, messageID)
         const result = await send()

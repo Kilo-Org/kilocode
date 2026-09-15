@@ -414,7 +414,7 @@ export const dict = {
     "Režim održavanja računara budnim je uključen za Kilo agente; kliknite da ga isključite",
   "agentManager.caffeination.active": "Računar se održava budnim dok Kilo agenti rade",
   "agentManager.caffeination.unavailable": "Režim održavanja računara budnim nije dostupan na ovoj platformi",
-  "agentManager.browser.title": "Preglednik",
+  "agentManager.browser.title": "Integrirani preglednik",
   "agentManager.browser.url": "URL lokalne aplikacije",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Otvori",
@@ -423,7 +423,8 @@ export const dict = {
   "agentManager.browser.refresh": "Osvježi preglednik",
   "agentManager.browser.close": "Zatvori preglednik",
   "agentManager.browser.empty": "Otvorite lokalnu aplikaciju da biste je ovdje pregledali.",
-  "agentManager.browser.noSession": "Najprije odaberite sesiju aplikacije Agent Manager.",
+  "agentManager.browser.noSession":
+    "Pokrenite ili odaberite sesiju u Agent Manageru da biste pregledali lokalnu aplikaciju.",
   "agentManager.browser.screenshotAlt": "Trenutna stranica preglednika",
   "agentManager.browser.errors": "Problemi preglednika: {{count}}",
   "agentManager.browser.diagnostics": "Dijagnostika preglednika",

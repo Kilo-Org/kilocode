@@ -50,7 +50,9 @@ export function createSidePanel(opts: {
     const value = selected()
     if (!value || (expected && value !== expected)) return
     if (ownership[value] === "session") {
-      setSessions((prev) => ({ ...prev, [owner()]: null }))
+      // A draft has no worktree panel to mask, so drop its entry instead of
+      // storing an authoritative null that would hide later worktree panels.
+      setSessions((prev) => ({ ...prev, [owner()]: session() ? null : undefined }))
       return
     }
     setWorktrees((prev) => ({ ...prev, [worktree()]: null }))

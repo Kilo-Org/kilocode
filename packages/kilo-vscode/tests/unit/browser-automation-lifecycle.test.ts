@@ -187,6 +187,7 @@ describe("Playwright MCP lifecycle", () => {
 
   test("ignores disposal for unrelated Agent Manager directories", async () => {
     await service.syncWithSettings()
+    expect(events.size).toBe(1)
     await invalidate("/worktree")
     expect(additions).toEqual(["/repo"])
     expect(removals).toEqual([])
@@ -211,10 +212,15 @@ describe("Playwright MCP lifecycle", () => {
   test("does not restore a disposed registration when disabled", async () => {
     await service.syncWithSettings()
     enabled = false
+    expect(events.size).toBe(1)
     await invalidate("/repo")
     expect(additions).toEqual(["/repo"])
     expect(removals).toEqual([])
     expect(active.size).toBe(0)
+    // The handler ran: it dropped the directory, so a reconcile registers it again.
+    enabled = true
+    await Promise.all([...listeners].map((listener) => listener()))
+    expect(additions).toEqual(["/repo", "/repo"])
   })
 
   test("queues disposal behind an in-flight registration", async () => {
