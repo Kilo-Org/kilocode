@@ -1,6 +1,7 @@
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { type SpeechToTextModelDef } from "./models"
+import { hasCustomSource, sourceHeaders, sourceUrl, type SpeechToTextSource } from "./source"
 
 const PATH = "/kilo/models/transcriptions"
 
@@ -15,7 +16,10 @@ export async function fetchSpeechToTextModels(
   connection: KiloConnectionService,
   dir: string,
   signal?: AbortSignal,
+  source?: SpeechToTextSource,
 ): Promise<SpeechToTextCatalogResult> {
+  if (hasCustomSource(source)) return await fetchCustomModels(source, signal)
+
   const cfg = connection.getServerConfig()
   if (!cfg) return fail("Not connected to the Kilo backend")
 
@@ -33,6 +37,46 @@ export async function fetchSpeechToTextModels(
   } catch (err) {
     return fail(getErrorMessage(err))
   }
+}
+
+async function fetchCustomModels(source: SpeechToTextSource, signal?: AbortSignal): Promise<SpeechToTextCatalogResult> {
+  try {
+    const res = await fetch(sourceUrl(source, "models"), { signal, headers: sourceHeaders(source) })
+    if (!res.ok) return fail(`Failed to fetch speech-to-text models from ${source.baseUrl} (HTTP ${res.status})`)
+
+    const models = parseCustomCatalog(await res.json(), source.baseUrl)
+    if (!models) return fail(`Invalid speech-to-text model catalog from ${source.baseUrl}`)
+    return { ok: true, models }
+  } catch (err) {
+    return fail(getErrorMessage(err))
+  }
+}
+
+export function parseCustomCatalog(body: unknown, origin: string): SpeechToTextModelDef[] | undefined {
+  const list = Array.isArray(body) ? body : data(body)
+  if (!list) return undefined
+
+  const provider = label(origin)
+  const models = list.filter(hasId).map((model) => ({
+    id: model.id,
+    label: typeof model.name === "string" && model.name ? model.name : model.id,
+    provider,
+  }))
+  return models.length > 0 ? models : undefined
+}
+
+function data(body: unknown): unknown[] | undefined {
+  const list = (body as { data?: unknown } | null)?.data
+  return Array.isArray(list) ? list : undefined
+}
+
+function label(origin: string): string {
+  const match = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(origin)
+  return match?.[1] ?? origin ?? "Custom"
+}
+
+function hasId(value: unknown): value is { id: string; name?: unknown } {
+  return !!value && typeof value === "object" && typeof (value as Record<string, unknown>).id === "string"
 }
 
 function fail(error: string): SpeechToTextCatalogResult {

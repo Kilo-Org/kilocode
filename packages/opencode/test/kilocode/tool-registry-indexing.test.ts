@@ -477,7 +477,7 @@ describe("kilocode tool registry indexing", () => {
         for (const enabled of [false, true]) {
           const ids = KiloToolRegistry.extra(
             tools,
-            { experimental: { shared_agent_board: enabled } },
+            { shared_agent_board: enabled },
             { experimentalSharedAgentBoard: enabled },
           )
             .map((tool) => tool.id)
@@ -529,7 +529,9 @@ describe("kilocode tool registry indexing", () => {
       Wakeup.Service.of({
         schedule: () => Effect.die(new Error("wakeup schedule is not used by this test")),
         list: () => Effect.succeed([]),
+        pending: () => Effect.succeed([]),
         cancel: () => Effect.succeed(undefined),
+        cancelSession: () => Effect.succeed(0),
         adopt: () => Effect.void,
       }),
     )

@@ -705,6 +705,20 @@ export const kiloScenarios: Scenario[] = [
       }
     }),
   http.protected
+    .get("/kilocode/wakeups", "kilocode.wakeups")
+    .at((ctx) => ({
+      path: "/kilocode/wakeups",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      array(body)
+      for (const item of body) {
+        object(item)
+        check(typeof item.sessionID === "string", "wakeup should include a session id")
+        check(typeof item.pending === "number" && item.pending > 0, "wakeup should include a positive pending count")
+      }
+    }),
+  http.protected
     .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")
     .at((ctx) => ({
       path: route("/kilocode/background-jobs/{jobID}/cancel", { jobID: "job_httpapi_missing" }),

@@ -33,6 +33,7 @@ import {
 import { BoardStore } from "@/kilocode/board/store"
 import { CommandFiles } from "@/kilocode/command-files"
 import { Token } from "@opencode-ai/schema/kilocode/session-drain"
+import { PendingInfo as WakeupPending } from "@opencode-ai/schema/kilocode/wakeup-event"
 
 const root = "/kilocode"
 const Scope = Schema.Literals(["global", "project"])
@@ -116,6 +117,7 @@ export const KilocodePaths = {
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
   backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
+  wakeups: `${root}/wakeups`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -397,6 +399,17 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.backgroundJob.promote",
             summary: "Promote background job",
             description: "Continue one foreground subagent in the background.",
+          }),
+        ),
+        HttpApiEndpoint.get("wakeups", KilocodePaths.wakeups, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(WakeupPending), "Pending wakeups for the routed directory"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.wakeups",
+            summary: "List pending wakeups",
+            description:
+              "List the sessions that hold scheduled wakeups in the routed directory, with each session's pending count.",
           }),
         ),
       )

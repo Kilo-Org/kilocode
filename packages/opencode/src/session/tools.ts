@@ -79,7 +79,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
   const notify = BoardEnabled.resolve({
-    config: cfg.experimental?.shared_agent_board,
+    config: cfg.shared_agent_board,
     flag: flags.experimentalSharedAgentBoard,
   })
     ? input.notify

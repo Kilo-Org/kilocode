@@ -1562,8 +1562,23 @@ try {
     assert.equal(value.currentSessionID(), "root")
   }
   assert.equal(loads().length, 3)
+  const marks = () =>
+    sent
+      .slice(start)
+      .filter(
+        (message) => message.type === "streamSessionVisible" && String(message.sessionID).startsWith("inspector-"),
+      )
+      .map((message) => [message.sessionID, message.visible])
+  assert.deepEqual(marks(), [
+    ["inspector-child", true],
+    ["inspector-child", false],
+    ["inspector-sibling", true],
+    ["inspector-sibling", false],
+    ["inspector-child", true],
+  ])
   setInspector(false)
   await settle()
+  assert.deepEqual(marks().at(-1), ["inspector-child", false])
 
   const family = createRoot((dispose) => {
     const state = { reads: 0 }

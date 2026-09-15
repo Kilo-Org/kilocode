@@ -219,7 +219,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
-  "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
+  "speechToText.tooltip.start": "开始语音输入",
   "speechToText.tooltip.shortcut": "点击或按下 Cmd/Ctrl+K 开始或停止录音；说话时按住，松开后即可转录并提交。",
   "speechToText.tooltip.starting": "正在启动麦克风... 请稍后再说。",
   "speechToText.tooltip.stop": "停止捕获音频",
@@ -863,15 +863,25 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "让主会话与负责其任务的子智能体共享看板，包括嵌套的子智能体。用于并行尝试解决方案或开展相互补充的工作，而不是用于每一项任务。",
   "settings.experimental.imageGenerationModel.title": "图像模型",
   "settings.experimental.imageGenerationModel.description": "图像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "默认 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription": "发送到自定义转录端点的模型 ID，例如 whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "语音转文本基础 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "使用兼容 OpenAI 的转录 API 代替 Kilo Gateway。模型从 /models 读取，音频发送到 /audio/transcriptions。留空则使用 Kilo Gateway。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "语音转文本 API 密钥",
+  "settings.models.speechToTextApiKey.description":
+    "发送到自定义转录基础 URL 的 Bearer 令牌。保存在你的 Kilo 配置文件中。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "启用并登录 Kilo 提供商以使用 Speech to Text。Speech to Text 目前仅支持通过 Kilo Gateway 使用。",
+    "启用并登录 Kilo 提供商以使用 Speech to Text，或在下方设置自定义转录基础 URL。",
   "settings.models.speechToTextModel.title": "语音转文本模型",
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
@@ -1101,9 +1111,12 @@ export const dict = {
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.fontSize.title": "字体大小",
   "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
-  "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
-  "settings.display.reasoningAutoCollapse.description":
-    "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",
+  "settings.display.reasoningDisplay.title": "推理块",
+  "settings.display.reasoningDisplay.description":
+    "选择推理块的起始显示方式。展开会显示完整文本，预览会将其限制为简短的可滚动预览，标题仅显示标题和流式指示器，直到你打开它。",
+  "settings.display.reasoningDisplay.expanded": "展开",
+  "settings.display.reasoningDisplay.preview": "预览",
+  "settings.display.reasoningDisplay.headline": "标题",
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切换推理强度",
   "settings.display.shiftTabCycle.description":
     "在提示输入框中按 Shift+Tab 可切换到下一个推理强度等级。禁用此选项可将 Shift+Tab 用于键盘焦点导航。",

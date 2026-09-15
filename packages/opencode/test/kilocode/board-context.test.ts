@@ -42,7 +42,7 @@ const it = testEffect(
     ]),
   ),
 )
-const options = { config: { experimental: { shared_agent_board: true }, snapshot: false } }
+const options = { config: { shared_agent_board: true, snapshot: false } }
 const agent = { name: "code", permission: Permission.fromConfig({ board_read: "allow" }) }
 const output = { title: "Read file", output: "Original tool output", metadata: { original: true } }
 const model: Provider.Model = {
@@ -385,7 +385,7 @@ describe("shared board notifications", () => {
           expect(yield* notify("read", output)).toBe(output)
           expect(cache.cursor).toBe(0)
         }),
-      { config: { experimental: { shared_agent_board: false } } },
+      { config: { shared_agent_board: false } },
     ),
   )
 
