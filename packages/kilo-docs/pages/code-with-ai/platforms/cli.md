@@ -61,7 +61,7 @@ Or use npm:
 
 - **Plan and execute code changes without leaving your terminal.** Use your command line to make edits to your project without opening your IDE.
 - **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With Kilo, you can switch models without booting up another tool.
-- **Choose the right mode for the task in your workflow.** Select between Architect, Ask, Debug, Orchestrator, or custom agent modes.
+- **Choose the right agent for the task in your workflow.** Select between Code, Plan, Ask, Debug, or custom agents.
 - **Automate tasks.** Get AI assistance writing shell scripts for tasks like renaming all of the files in a folder or transforming sizes for a set of images.
 - **Extend capabilities with skills.** Add domain expertise and repeatable workflows through [Agent Skills](#skills).
 
@@ -370,7 +370,7 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 }
 ```
 
-In Ask and Plan modes, `external_directory` allow rules can still permit reads outside the workspace. They do not enable writes or mutating commands that those modes deny, and explicit `external_directory` deny rules still win.
+In the Ask and Plan agents, `external_directory` allow rules can still permit reads outside the workspace. They do not enable writes or mutating commands that those agents deny, and explicit `external_directory` deny rules still win.
 
 **Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
 
