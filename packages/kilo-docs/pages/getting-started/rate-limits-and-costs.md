@@ -44,10 +44,10 @@ Open the model selector dropdown in the Kilo Code chat interface and choose the 
 - **Break down large tasks.** Smaller, focused sub-tasks are cheaper per-turn and easier for the model to answer precisely.
 - **Use custom instructions.** Encode recurring guidance in your custom instructions once, instead of repeating it in every prompt.
 
-### Use modes appropriately
+### Use agents appropriately {% #use-modes-appropriately %}
 
 - **Architect mode** cannot modify code, making it a safe and cost-effective choice for analysing a codebase without risking unintended changes.
-- **Debug mode** is optimized for diagnosis — use it when tracking down a specific problem rather than for general exploration.
+- **Debug agent** is optimized for diagnosis — use it when tracking down a specific problem rather than for general exploration.
 
 ### Context condensing
 
@@ -55,7 +55,7 @@ When a conversation grows long, use `/compact` (also searchable as `smol` or `co
 
 ### Max tokens for thinking models
 
-Every token you allocate to model output reduces how much conversation history can remain in the window. Consider keeping Code mode at 16k max output tokens or below, and raising the limit only in Architect or Debug modes where extended reasoning is genuinely useful.
+Every token you allocate to model output reduces how much conversation history can remain in the window. Consider keeping the Code agent at 16k max output tokens or below, and raising the limit only in the Plan or Debug agents where extended reasoning is genuinely useful.
 
 ### Disable unused MCP servers
 
