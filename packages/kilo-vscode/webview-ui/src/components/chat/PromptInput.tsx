@@ -654,7 +654,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const hold = createHold({
     target: () => textareaRef,
-    busy: () => hasPopup(),
+    busy: () => hasPopup() || hasTextSelection(),
+    drop: () => vscode.postMessage({ type: "promptFocusChanged", focused: false }),
   })
   window.addEventListener("focus", hold.reclaim)
   onCleanup(() => window.removeEventListener("focus", hold.reclaim))
@@ -1130,7 +1131,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "action" && message.action === "restoreInput") {
-      if (hasPopup()) return
+      if (!hold.held() || hasPopup() || hasTextSelection()) return
       const active = document.activeElement
       if (active && active !== textareaRef && isTextControl(active)) return
       textareaRef?.focus({ preventScroll: true })
@@ -2017,6 +2018,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onClick={syncGhost}
             onFocus={() => {
               hold.claim()
+              vscode.postMessage({ type: "promptFocusChanged", focused: true })
               syncGhost()
               props.onFocusChange?.(true)
             }}
