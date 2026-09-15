@@ -1270,7 +1270,7 @@
   "scripts": {
     "prepare:cli-binary": "bun script/local-bin.ts",
     "prepare:sdk": "bun script/prepare-sdk.ts",
-    "build:launch": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check:production",
+    "build:launch": "bun run prepare:sdk && bun run --parallel prepare:cli-binary build:check:production",
     "compile": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check",
     "watch": "bun run prepare:sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
