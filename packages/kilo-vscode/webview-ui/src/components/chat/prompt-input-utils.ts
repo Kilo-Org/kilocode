@@ -86,6 +86,143 @@ export function atEnd(start: number, end: number, len: number): boolean {
   return start === end && end === len
 }
 
+/** A collapsed paste: the full text lives here, the input only carries the placeholder. */
+export type PasteRange = {
+  id: number
+  start: number
+  end: number
+  text: string
+}
+
+export type PromptSegment = {
+  text: string
+  kind: "plain" | "mention" | "paste"
+  /** Paste id for a collapsed block, so a click can find its backing text. */
+  paste?: number
+}
+
+/** Number of lines a pasted block occupies, matching the CLI's newline count plus one. */
+export function promptLineCount(text: string): number {
+  return (text.match(/\n/g)?.length ?? 0) + 1
+}
+
+/**
+ * Whether a pasted block collapses into a `[Pasted ~N lines]` placeholder.
+ * Thresholds match the CLI and the JetBrains plugin: five lines or more, or
+ * more than 800 characters.
+ */
+export function isCollapsiblePaste(text: string): boolean {
+  return promptLineCount(text) >= 5 || text.length > 800
+}
+
+/**
+ * The placeholder shown for a collapsed paste. Kept as a stable English token so
+ * every client renders and can rediscover the same block; it is literal text the
+ * user could have typed, so anything without backing text is sent unchanged.
+ */
+export function pastePlaceholder(text: string): string {
+  return `[Pasted ~${promptLineCount(text)} lines]`
+}
+
+const PASTE_PLACEHOLDER = /^\[Pasted ~\d+ lines\]$/
+
+/** Every placeholder occurrence in `text`, in order, with its range. */
+export function findPastePlaceholders(text: string): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = []
+  let index = text.indexOf("[Pasted ~")
+  while (index !== -1) {
+    const end = text.indexOf("]", index)
+    const candidate = end === -1 ? "" : text.slice(index, end + 1)
+    if (PASTE_PLACEHOLDER.test(candidate)) {
+      out.push({ start: index, end: end + 1 })
+      index = text.indexOf("[Pasted ~", end + 1)
+      continue
+    }
+    index = text.indexOf("[Pasted ~", index + 1)
+  }
+  return out
+}
+
+function validPaste(text: string, paste: PasteRange): boolean {
+  if (paste.start < 0 || paste.end > text.length || paste.start >= paste.end) return false
+  return PASTE_PLACEHOLDER.test(text.slice(paste.start, paste.end))
+}
+
+/** The single edited span between two versions of the same text. */
+export function textDiff(prev: string, next: string): { start: number; oldEnd: number; newEnd: number; delta: number } {
+  let start = 0
+  const min = Math.min(prev.length, next.length)
+  while (start < min && prev.charCodeAt(start) === next.charCodeAt(start)) start++
+  let oldEnd = prev.length
+  let newEnd = next.length
+  while (oldEnd > start && newEnd > start && prev.charCodeAt(oldEnd - 1) === next.charCodeAt(newEnd - 1)) {
+    oldEnd--
+    newEnd--
+  }
+  return { start, oldEnd, newEnd, delta: newEnd - oldEnd }
+}
+
+/**
+ * Move paste ranges across an edit. A block the edit only repositions keeps its
+ * backing text; a range the edit touches is dropped, because the placeholder it
+ * pointed at no longer exists. Ranges that no longer spell a placeholder are
+ * dropped too, so native undo or a programmatic rewrite cannot leave a stale
+ * range pointing at unrelated text.
+ */
+export function shiftPastes(pastes: readonly PasteRange[], prev: string, next: string): PasteRange[] {
+  if (prev === next) return [...pastes]
+  const diff = textDiff(prev, next)
+  const out: PasteRange[] = []
+  for (const paste of pastes) {
+    if (paste.end <= diff.start) {
+      if (validPaste(next, paste)) out.push(paste)
+      continue
+    }
+    if (paste.start >= diff.oldEnd) {
+      const moved = { ...paste, start: paste.start + diff.delta, end: paste.end + diff.delta }
+      if (validPaste(next, moved)) out.push(moved)
+      continue
+    }
+  }
+  return out
+}
+
+/** Replace every collapsed block in `text` with its full backing text. */
+export function expandPastes(text: string, pastes: readonly PasteRange[]): string {
+  let result = text
+  const ordered = [...pastes].filter(validPaste.bind(null, text)).sort((a, b) => b.start - a.start)
+  for (const paste of ordered) {
+    result = result.slice(0, paste.start) + paste.text + result.slice(paste.end)
+  }
+  return result
+}
+
+/**
+ * Split prompt text into plain runs, mention tokens, and collapsed paste chips.
+ * Paste ranges win over mention detection because their text is never a mention.
+ */
+export function buildPromptSegments(text: string, paths: Set<string>, pastes: readonly PasteRange[]): PromptSegment[] {
+  const segments: PromptSegment[] = []
+  const ordered = [...pastes].filter(validPaste.bind(null, text)).sort((a, b) => a.start - b.start)
+  let cursor = 0
+  for (const paste of ordered) {
+    if (paste.start < cursor) continue
+    if (paste.start > cursor) {
+      for (const part of buildHighlightSegments(text.slice(cursor, paste.start), paths)) {
+        segments.push({ text: part.text, kind: part.highlight ? "mention" : "plain" })
+      }
+    }
+    segments.push({ text: text.slice(paste.start, paste.end), kind: "paste", paste: paste.id })
+    cursor = paste.end
+  }
+  if (cursor < text.length) {
+    for (const part of buildHighlightSegments(text.slice(cursor), paths)) {
+      segments.push({ text: part.text, kind: part.highlight ? "mention" : "plain" })
+    }
+  }
+  return segments
+}
+
 export function insertSpacedText(
   text: string,
   value: string,

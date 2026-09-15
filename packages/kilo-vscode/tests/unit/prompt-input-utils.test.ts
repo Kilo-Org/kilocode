@@ -3,6 +3,7 @@ import {
   fileName,
   dirName,
   buildHighlightSegments,
+  buildPromptSegments,
   atEnd,
   insertSpacedText,
   isPromptBlocked,
@@ -13,6 +14,14 @@ import {
   applySandboxState,
   applySandboxStates,
   memoryRest,
+  promptLineCount,
+  isCollapsiblePaste,
+  pastePlaceholder,
+  findPastePlaceholders,
+  shiftPastes,
+  expandPastes,
+  textDiff,
+  type PasteRange,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 import { parseMemoryCommand } from "../../webview-ui/src/utils/memory-command"
 
@@ -359,5 +368,170 @@ describe("memoryRest", () => {
     // remember/correct/forget/auto/purge consume their text, so nothing remains.
     expect(memoryRest(parseMemoryCommand("/memory remember hello")!)).toBe("")
     expect(memoryRest(parseMemoryCommand("/memory auto on")!)).toBe("")
+  })
+})
+
+describe("paste collapse thresholds", () => {
+  it("counts lines from newlines plus one", () => {
+    expect(promptLineCount("one")).toBe(1)
+    expect(promptLineCount("one\ntwo")).toBe(2)
+    expect(promptLineCount("a\nb\nc\nd\ne")).toBe(5)
+  })
+
+  it("collapses at five lines or more than 800 characters", () => {
+    expect(isCollapsiblePaste("a\nb\nc\nd\ne")).toBe(true)
+    expect(isCollapsiblePaste("a".repeat(801))).toBe(true)
+    expect(isCollapsiblePaste("a\nb\nc\nd")).toBe(false)
+    expect(isCollapsiblePaste("a".repeat(800))).toBe(false)
+  })
+
+  it("builds the canonical placeholder", () => {
+    expect(pastePlaceholder("a\nb\nc\nd\ne")).toBe("[Pasted ~5 lines]")
+    expect(pastePlaceholder("a".repeat(801))).toBe("[Pasted ~1 lines]")
+  })
+})
+
+describe("findPastePlaceholders", () => {
+  it("finds every placeholder with its range", () => {
+    const text = "[Pasted ~5 lines] then [Pasted ~12 lines]"
+    expect(findPastePlaceholders(text)).toEqual([
+      { start: 0, end: 17 },
+      { start: 23, end: 41 },
+    ])
+  })
+
+  it("ignores look-alike text that is not a placeholder", () => {
+    expect(findPastePlaceholders("[Pasted 5 lines]")).toEqual([])
+    expect(findPastePlaceholders("Pasted ~5 lines")).toEqual([])
+  })
+
+  it("finds no placeholder in ordinary pasted text", () => {
+    expect(findPastePlaceholders("hello\nworld")).toEqual([])
+  })
+})
+
+describe("textDiff", () => {
+  it("locates an insertion", () => {
+    expect(textDiff("abcd", "abXcd")).toEqual({ start: 2, oldEnd: 2, newEnd: 3, delta: 1 })
+  })
+
+  it("locates a deletion", () => {
+    expect(textDiff("abXcd", "abcd")).toEqual({ start: 2, oldEnd: 3, newEnd: 2, delta: -1 })
+  })
+
+  it("locates a replacement", () => {
+    expect(textDiff("abcd", "abXYd")).toEqual({ start: 2, oldEnd: 3, newEnd: 4, delta: 1 })
+  })
+})
+
+describe("shiftPastes", () => {
+  const paste = (id: number, start: number, text: string): PasteRange => ({
+    id,
+    start,
+    end: start + "[Pasted ~5 lines]".length,
+    text,
+  })
+
+  it("keeps a block before the edit unchanged", () => {
+    const prev = "[Pasted ~5 lines] tail"
+    const next = "[Pasted ~5 lines] tail more"
+    const [moved] = shiftPastes([paste(1, 0, "body")], prev, next)
+    expect(moved).toEqual(paste(1, 0, "body"))
+  })
+
+  it("moves a block after an insertion", () => {
+    const prev = "lead [Pasted ~5 lines]"
+    const next = "lead more [Pasted ~5 lines]"
+    const [moved] = shiftPastes([paste(1, 5, "body")], prev, next)
+    expect(moved?.start).toBe(10)
+  })
+
+  it("moves a block after a deletion", () => {
+    const prev = "lead more [Pasted ~5 lines]"
+    const next = "lead [Pasted ~5 lines]"
+    const [moved] = shiftPastes([paste(1, 10, "body")], prev, next)
+    expect(moved?.start).toBe(5)
+  })
+
+  it("drops a block whose placeholder was edited away", () => {
+    const prev = "[Pasted ~5 lines]"
+    const next = "[Pasted ~5 line]"
+    expect(shiftPastes([paste(1, 0, "body")], prev, next)).toEqual([])
+  })
+
+  it("drops a block when the edit happens inside it", () => {
+    const prev = "[Pasted ~5 lines]"
+    const next = "[Pasted ~55 lines]"
+    expect(shiftPastes([paste(1, 0, "body")], prev, next)).toEqual([])
+  })
+
+  it("keeps identical placeholders addressed independently", () => {
+    const prev = "[Pasted ~5 lines] and [Pasted ~5 lines]"
+    const second = prev.indexOf("[Pasted ~5 lines]", 1)
+    const gap = prev.indexOf(" and ") + " and ".length
+    const next = prev.slice(0, gap) + "   " + prev.slice(gap)
+    const moved = shiftPastes([paste(1, 0, "one"), paste(2, second, "two")], prev, next)
+    expect(moved.map((item) => item.text)).toEqual(["one", "two"])
+    expect(moved[0]?.start).toBe(0)
+    expect(moved[1]?.start).toBe(second + 3)
+  })
+})
+
+describe("expandPastes", () => {
+  const paste = (id: number, start: number, text: string): PasteRange => ({
+    id,
+    start,
+    end: start + "[Pasted ~5 lines]".length,
+    text,
+  })
+
+  it("restores the full content of a single block", () => {
+    expect(expandPastes("[Pasted ~5 lines]", [paste(1, 0, "a\nb\nc\nd\ne")])).toBe("a\nb\nc\nd\ne")
+  })
+
+  it("restores identical placeholders to their own content, back to front", () => {
+    const text = "[Pasted ~5 lines] then [Pasted ~5 lines]"
+    const expanded = expandPastes(text, [paste(1, 0, "first"), paste(2, 23, "second")])
+    expect(expanded).toBe("first then second")
+  })
+
+  it("leaves placeholder-looking text with no backing unchanged", () => {
+    expect(expandPastes("typed [Pasted ~5 lines]", [])).toBe("typed [Pasted ~5 lines]")
+  })
+})
+
+describe("buildPromptSegments", () => {
+  const paste = (id: number, start: number, text: string): PasteRange => ({
+    id,
+    start,
+    end: start + "[Pasted ~5 lines]".length,
+    text,
+  })
+
+  it("marks a collapsed block as a paste chip", () => {
+    expect(buildPromptSegments("[Pasted ~5 lines] done", new Set(), [paste(7, 0, "body")])).toEqual([
+      { text: "[Pasted ~5 lines]", kind: "paste", paste: 7 },
+      { text: " done", kind: "plain" },
+    ])
+  })
+
+  it("still highlights mentions around a paste", () => {
+    const text = "@foo.ts [Pasted ~5 lines]"
+    const segments = buildPromptSegments(text, new Set(["foo.ts"]), [paste(1, 8, "body")])
+    expect(segments).toEqual([
+      { text: "@foo.ts", kind: "mention" },
+      { text: " ", kind: "plain" },
+      { text: "[Pasted ~5 lines]", kind: "paste", paste: 1 },
+    ])
+  })
+
+  it("renders a placeholder with no backing as plain text", () => {
+    expect(buildPromptSegments("[Pasted ~5 lines]", new Set(), [])).toEqual([
+      { text: "[Pasted ~5 lines]", kind: "plain" },
+    ])
+  })
+
+  it("returns an empty list for empty text", () => {
+    expect(buildPromptSegments("", new Set(), [])).toEqual([])
   })
 })
