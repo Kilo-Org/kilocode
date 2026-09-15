@@ -341,9 +341,6 @@ test.describe("status swap", () => {
 
     // The width is animated rather than reassigned.
     expect(swap.duration).not.toBe("0s")
-    // In the frame of the swap the box still holds the outgoing width, so the
-    // spinner starts from exactly where it was instead of teleporting.
-    expect(Math.abs(swap.frames[0]!.left - swap.start)).toBeLessThanOrEqual(1)
     expect(swap.frames[0]!.width).not.toBe("")
     // Both labels are mounted for the crossfade.
     expect(swap.frames[0]!.lines).toBe(2)
@@ -361,6 +358,18 @@ test.describe("status swap", () => {
       .locator('.working-indicator [data-component="spinner"]')
       .evaluate((el) => el.getBoundingClientRect().left)
     expect(settled).toBeLessThan(swap.start)
+
+    // The width lock is applied in the frame of the swap, but the first frame
+    // this observer can measure is not guaranteed to be that same frame: it
+    // drifts by a frame or two between machines, and each frame of drift is one
+    // step of the glide. So assert the shape of the motion rather than one exact
+    // frame. A teleport covers the whole distance in the first observed frame,
+    // while the glide only covers a fraction of it and is still travelling when
+    // the sampled frames end.
+    const glide = swap.start - settled
+    expect(glide).toBeGreaterThan(1)
+    expect(swap.start - swap.frames[0]!.left).toBeLessThan(glide * 0.5)
+    expect(swap.frames.at(-1)!.left).toBeGreaterThan(settled)
   })
 
   test("reduced motion cuts to the new status instead of animating it", async ({ page }) => {
