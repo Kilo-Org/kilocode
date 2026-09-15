@@ -117,8 +117,8 @@ if (diskCache) {
     for (const [file, value] of Object.entries(saved ?? {})) {
       if (!value || typeof value !== "object") continue
       if (typeof value.mtime !== "number" || typeof value.size !== "number") continue
-      if (typeof value.key !== "string") continue
-      index.set(file, { mtime: value.mtime, size: value.size, key: value.key })
+      if (typeof value.ctime !== "number" || typeof value.key !== "string") continue
+      index.set(file, { mtime: value.mtime, size: value.size, ctime: value.ctime, key: value.key })
     }
   } catch (err) {
     if (err.code !== "ENOENT") console.warn("[esbuild] ignoring unusable solid cache index", err)
@@ -188,16 +188,23 @@ const cachedSolidPlugin = {
     build.onLoad({ filter: /\.(t|j)sx$/ }, async (args) => {
       const st = fs.statSync(args.path)
       const recorded = index.get(args.path)
-      // Trust a recorded key only once the file is older than the coarsest
-      // filesystem mtime granularity, so a same-length edit inside one
-      // timestamp tick cannot reuse the previous transform.
-      const settled = Date.now() - st.mtimeMs > 2000
-      const known = settled && recorded !== undefined && recorded.mtime === st.mtimeMs && recorded.size === st.size
+      // Trust a recorded key only when the file is older than the coarsest
+      // filesystem mtime granularity and its metadata has not moved since the
+      // key was recorded. ctime changes on every write and cannot be set by
+      // tools that preserve mtime, such as cp -p or rsync -t, so a restored
+      // file is read again. Anything not trusted is hashed as before.
+      const settled = Date.now() - st.mtimeMs > 3000
+      const known =
+        settled &&
+        recorded !== undefined &&
+        recorded.mtime === st.mtimeMs &&
+        recorded.ctime === st.ctimeMs &&
+        recorded.size === st.size
       // Read the file only when its key is not already recorded, so an
       // unchanged file costs one stat instead of a read and a hash.
       const source = known ? undefined : fs.readFileSync(args.path, "utf8")
       const cacheKey = known ? recorded.key : key(source, args.path)
-      if (!known) index.set(args.path, { mtime: st.mtimeMs, size: st.size, key: cacheKey })
+      if (!known) index.set(args.path, { mtime: st.mtimeMs, size: st.size, ctime: st.ctimeMs, key: cacheKey })
 
       const memHit = solidMemCache.get(cacheKey)
       if (memHit) return { contents: memHit, loader: "js" }
