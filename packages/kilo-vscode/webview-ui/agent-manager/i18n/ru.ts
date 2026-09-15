@@ -43,6 +43,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Префикс ветки",
   "agentManager.settings.branchPrefix.description":
     "Префикс автоматически именуемых веток во всех проектах, например feature/. Не применяется к явно заданным именам веток. Оставьте пустым, чтобы не использовать префикс.",
+  "agentManager.settings.worktreePool.title": "Предварительный прогрев worktree",
+  "agentManager.settings.worktreePool.description":
+    "Подготовьте готовый worktree в фоне, чтобы новые сессии Agent Manager запускались быстрее. Использует дополнительное место на диске для одного checkout на каждый открытый проект.",
   "agentManager.settings.project.title": "Проект",
   "agentManager.settings.project.description": "Выберите repository, настройки worktree которого хотите изменить.",
   "agentManager.settings.project.empty": "Нет доступных проектов Agent Manager.",
@@ -235,6 +238,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Отправить всё в чат ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Отправить {{count}} в GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Отправка остановлена из-за ошибки GitHub: {{error}}",
   "agentManager.review.inlineCount": "Локальные комментарии ({{count}})",
   "agentManager.review.prCount": "Комментарии PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} файлов",

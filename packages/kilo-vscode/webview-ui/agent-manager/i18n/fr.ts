@@ -45,6 +45,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Préfixe de branche",
   "agentManager.settings.branchPrefix.description":
     "Préfixe des branches nommées automatiquement dans tous les projets, par exemple feature/. Ne s’applique pas aux noms de branches explicites. Laissez vide pour ne pas utiliser de préfixe.",
+  "agentManager.settings.worktreePool.title": "Préchauffer les worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prépare en arrière-plan un worktree prêt à l'emploi afin que les nouvelles sessions Agent Manager démarrent plus vite. Utilise de l'espace disque supplémentaire pour un checkout par projet ouvert.",
   "agentManager.settings.project.title": "Projet",
   "agentManager.settings.project.description":
     "Choisissez le repository dont vous souhaitez modifier les paramètres du worktree.",
@@ -239,6 +242,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Tout envoyer au chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Envoyer {{count}} à GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Envoi interrompu en raison d’une erreur GitHub : {{error}}",
   "agentManager.review.inlineCount": "Commentaires locaux ({{count}})",
   "agentManager.review.prCount": "Commentaires du PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} fichiers",

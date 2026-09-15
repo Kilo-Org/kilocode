@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Grenprefiks",
   "agentManager.settings.branchPrefix.description":
     "Prefiks for automatisk navngitte grener i alle prosjekter, for eksempel feature/. Gjelder ikke eksplisitte grennavn. La feltet stå tomt for å ikke bruke prefiks.",
+  "agentManager.settings.worktreePool.title": "Forvarm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Forbered et klart worktree i bakgrunnen slik at nye Agent Manager-økter starter raskere. Bruker ekstra diskplass for én checkout per åpne prosjekt.",
   "agentManager.settings.project.title": "Prosjekt",
   "agentManager.settings.project.description": "Velg repository hvis worktree-innstillinger du vil redigere.",
   "agentManager.settings.project.empty": "Ingen Agent Manager-prosjekter er tilgjengelige.",
@@ -230,6 +233,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Send alt til chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} til GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Sendingen ble stoppet på grunn av en GitHub-feil: {{error}}",
   "agentManager.review.inlineCount": "Lokale kommentarer ({{count}})",
   "agentManager.review.prCount": "PR-kommentarer ({{count}})",
   "agentManager.review.fileCount": "{{count}} filer",

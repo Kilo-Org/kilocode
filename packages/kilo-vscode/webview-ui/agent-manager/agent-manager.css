@@ -2468,6 +2468,44 @@ body.am-wt-dragging-active * {
   font-size: inherit;
   color: var(--text-weak);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.am-annotation-draft[data-mounted] {
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--font-size-base);
+  padding: 8px;
+  gap: 4px;
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
+}
+
+.am-annotation-draft[data-mounted]:focus-within {
+  border-color: var(--border-focus);
+}
+
+.am-annotation-form {
+  min-width: 0;
+}
+
+.am-diff-pr-context,
+.am-review-pr-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.am-diff-pr-context svg,
+.am-review-pr-context svg {
+  flex: 0 0 auto;
 }
 
 .am-annotation-textarea {
@@ -2654,6 +2692,15 @@ body.am-wt-dragging-active * {
   color: var(--text-weak);
 }
 
+.am-review-send-error {
+  margin: 0 8px;
+  font-size: var(--font-size-small);
+  color: var(--vscode-testing-iconFailed, #f87171);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Setup overlay */
 
 .am-setup-overlay {
@@ -2808,7 +2855,7 @@ body.am-wt-dragging-active * {
 .am-split-button[data-variant="primary"] > [data-component="button"] {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 26px;
+  min-height: 24px;
   border: 0;
   border-radius: 2px 0 0 2px;
   background: transparent;
@@ -2826,7 +2873,7 @@ body.am-wt-dragging-active * {
   width: 32px;
   min-width: 32px;
   height: auto;
-  min-height: 26px;
+  min-height: 24px;
   padding: 0;
   border: 0;
   border-radius: 0 2px 2px 0;
@@ -2914,6 +2961,19 @@ body.am-wt-dragging-active * {
 
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
+}
+
+/* Two explicit send-all actions; only the chat action shows the shortcut. */
+.am-send-all-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.am-send-all-actions [data-component="spinner"] {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
 }
 
 .am-worktree-menu-gap {

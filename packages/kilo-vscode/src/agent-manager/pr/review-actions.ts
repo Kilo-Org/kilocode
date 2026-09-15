@@ -150,6 +150,7 @@ export class PRReviewActions {
       if (!result.requestId) throw new Error("Missing request identity.")
       const initial = this.host.context(message)
       const context = { ...initial, pr: { ...initial.pr } }
+      await this.checkBranch(context)
       if (message.type === "agentManager.loadPRFiles") {
         const snapshot = await this.load(context, message)
         this.host.post({ ...result, type: "agentManager.loadPRFilesResult", success: true, snapshot })
@@ -180,6 +181,13 @@ export class PRReviewActions {
     }
   }
 
+  private async checkBranch(context: PRReviewContext) {
+    if (!this.host.checkBranch) return
+    const branch = await this.host.checkBranch(context.directory)
+    if (!branch || branch === "HEAD" || branch !== context.branch)
+      throw new Error("Diff branch changed. Refresh and try again.")
+  }
+
   private current(context: PRReviewContext, message: Record<string, unknown>) {
     if (identity(this.host.context(message)) !== identity(context))
       throw new Error("Pull request context changed. Reload the review.")
@@ -203,6 +211,7 @@ export class PRReviewActions {
       }
     }
     const after = await metadata(context)
+    await this.checkBranch(context)
     this.current(context, message)
     if (
       before.head !== after.head ||
@@ -229,6 +238,7 @@ export class PRReviewActions {
     const snapshot = this.snapshot(context, message)
     const { file, start, end, body } = selection(snapshot, message)
     const fresh = await metadata(context)
+    await this.checkBranch(context)
     this.current(context, message)
     if (fresh.head !== snapshot.data.head || fresh.base !== snapshot.base)
       throw new Error("Pull request changed. Reload the review before posting.")
@@ -263,6 +273,7 @@ export class PRReviewActions {
     if (message.head !== snapshot.data.head)
       throw new Error("Pull request changed. Reload the review before submitting.")
     const fresh = await metadata(context)
+    await this.checkBranch(context)
     this.current(context, message)
     if (fresh.head !== snapshot.data.head || fresh.base !== snapshot.base)
       throw new Error("Pull request changed. Reload the review before submitting.")
