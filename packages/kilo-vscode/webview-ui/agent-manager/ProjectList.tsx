@@ -1,4 +1,4 @@
-import { createMemo, type Component } from "solid-js"
+import { createEffect, createMemo, createSignal, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
@@ -21,8 +21,10 @@ import type { SidebarSearchItem } from "./sidebar-search"
 import { label, type Activity } from "../src/utils/session-activity"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { randomColor } from "./section-colors"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
+import { CaffeinationButton } from "./CaffeinationButton"
 
 const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
@@ -49,6 +51,7 @@ interface Props {
   onCreate?: (projectId: string) => void
   onSelect?: (target: AgentManagerSidebarTarget, restore?: boolean) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
+  onOpenPR?: (projectId: string, worktreeId: string) => void
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
@@ -169,6 +172,29 @@ export const ProjectList: Component<Props> = (props) => {
       />
     ))
   }
+  const [pendingSection, setPendingSection] = createSignal<{ project: string; ids: Set<string> }>()
+  const [renamingSection, setRenamingSection] = createSignal<string>()
+  createEffect(() => {
+    const previous = pendingSection()
+    if (!previous) return
+    const created = (props.states[previous.project]?.sections ?? []).find((section) => !previous.ids.has(section.id))
+    if (!created) return
+    setPendingSection(undefined)
+    setRenamingSection(created.id)
+  })
+  const newSection = (projectId: string, worktreeIds?: string[]) => {
+    setPendingSection({
+      project: projectId,
+      ids: new Set((props.states[projectId]?.sections ?? []).map((section) => section.id)),
+    })
+    vscode.postMessage({
+      type: "agentManager.createSection",
+      projectId,
+      name: props.t("agentManager.section.defaultName"),
+      color: randomColor(),
+      worktreeIds,
+    })
+  }
   return (
     <ProjectsSection
       projects={props.projects}
@@ -190,6 +216,7 @@ export const ProjectList: Component<Props> = (props) => {
             }}
             onSelect={selectSearch}
           />
+          <CaffeinationButton t={props.t} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}
@@ -213,6 +240,14 @@ export const ProjectList: Component<Props> = (props) => {
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
+      onNew={newWorktree}
+      onCreate={(projectId) => vscode.postMessage({ type: "agentManager.createWorktree", projectId })}
+      onSection={(projectId) => newSection(projectId)}
+      onSettings={(projectId) => vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId })}
+      bindings={props.bindings}
+      baseBranch={(projectId) =>
+        props.states[projectId]?.defaultBaseBranch ?? props.local[projectId]?.branch ?? props.t("common.default")
+      }
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
       }
@@ -240,7 +275,10 @@ export const ProjectList: Component<Props> = (props) => {
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
           onOpenComments={props.onOpenComments}
-          onNewWorktree={newWorktree}
+          onOpenPR={props.onOpenPR}
+          onCreateSection={(worktreeIds) => newSection(project.id, worktreeIds)}
+          renamingSection={renamingSection}
+          onRenameEnd={() => setRenamingSection(undefined)}
           shortcutMap={props.shortcutMap}
         />
       )}

@@ -53,8 +53,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "เสร็จสมบูรณ์ (โมเดลรายงาน)",
+  "session.goal.blocked": "ถูกบล็อก",
+  "session.goal.restart": "เริ่มเป้าหมายใหม่",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "กระดาน",
+  "task.swarm.refresh": "รีเฟรช",
+  "task.swarm.reset": "รีเซ็ตกระดาน",
+  "task.swarm.resetTitle": "รีเซ็ตกระดานนี้หรือไม่?",
+  "task.swarm.resetDescription":
+    "ล้างข้อความที่แสดงหรือไม่? การสนทนาและงานที่กำลังทำจะไม่เปลี่ยนแปลง เอเจนต์สามารถโพสต์ข้อความใหม่ได้",
+  "task.swarm.loading": "กำลังโหลดกระดาน...",
+  "task.swarm.failed": "ไม่สามารถโหลดหรือรีเซ็ตกระดานได้ โปรดลองรีเฟรช",
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
@@ -257,6 +268,9 @@ export const dict = {
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
   "notification.permission.titleSandboxEscalation": "อนุญาตการดำเนินการ Git นอกแซนด์บ็อกซ์หรือไม่?",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
+  "ui.permission.reject": "ปฏิเสธ",
+  "ui.permission.feedbackPlaceholder": "บอก Kilo ว่าควรทำต่างออกไปอย่างไร",
+  "ui.permission.feedbackHint": "Enter เพื่อปฏิเสธ, Esc เพื่อยกเลิก",
   "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
   "ui.permission.doomLoop.rule": "เรียกใช้ {{tool}} ต่อไป",
   "ui.permission.rule.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",
@@ -446,6 +460,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "ผู้ให้บริการที่กำหนดเอง",
   "settings.providers.connected.environmentDescription": "เชื่อมต่อจากตัวแปรสภาพแวดล้อมของคุณ",
   "settings.providers.action.signInChatGPT": "ลงชื่อเข้าใช้ด้วย ChatGPT",
+  "settings.providers.action.changeApiKey": "เปลี่ยนคีย์ API",
   "settings.providers.custom.description": "เพิ่มผู้ให้บริการแบบกำหนดเองด้วย URL พื้นฐาน",
   "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
   "settings.providers.subagentModel.description":
@@ -741,6 +756,14 @@ export const dict = {
   "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
   "session.outcome.error": "เทิร์นล้มเหลว",
   "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
+  "session.goal.label": "เป้าหมาย",
+  "prompt.goal.set": "ตั้งเป้าหมาย",
+  "prompt.goal.start": "เริ่มเป้าหมาย",
+  "session.goal.active": "ทำงานอยู่",
+  "session.goal.paused": "หยุดชั่วคราว",
+  "session.goal.pause": "พัก",
+  "session.goal.resume": "ดำเนินการต่อ",
+  "session.goal.clear": "ล้างเป้าหมาย",
   "session.costAlert.header": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "session.costAlert.continue": "ดำเนินการต่อ",
   "session.costAlert.question":
@@ -834,7 +857,17 @@ export const dict = {
   "settings.notifications.enable.title": "เปิดใช้การแจ้งเตือนด้วยเสียง",
   "settings.notifications.enable.description":
     "เล่นเสียงเมื่อเซสชันเสร็จสิ้น เกิดข้อผิดพลาด หรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.workbench.title": "เปิดใช้การแจ้งเตือนของ VS Code",
+  "settings.notifications.workbench.description":
+    "แสดงการแจ้งเตือนของ VS Code เมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.os.title": "เปิดใช้การแจ้งเตือนของระบบปฏิบัติการ",
+  "settings.notifications.os.description":
+    "แสดงการแจ้งเตือนแบบเนทีฟของระบบปฏิบัติการเมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูลขณะที่ VS Code ไม่ได้ใช้งานอยู่",
   "settings.notifications.testSound": "ทดสอบ",
+  "settings.notifications.testOS": "ทดสอบ",
+  "settings.notifications.testOS.testing": "กำลังส่งการแจ้งเตือนทดสอบ…",
+  "settings.notifications.testOS.success": "ส่งการแจ้งเตือนทดสอบแล้ว",
+  "settings.notifications.testOS.error": "ส่งการแจ้งเตือนทดสอบไม่สำเร็จ",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
   "settings.notifications.sound.system": "ระบบ",
   "settings.notifications.sound.description":
@@ -891,6 +924,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
@@ -1005,6 +1041,9 @@ export const dict = {
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles.description": "เส้นทางไฟล์คำสั่งเพิ่มเติมในพรอมต์ระบบ",
+  "settings.agentBehaviour.pushFixes.title": "พุชการแก้ไขของคำขอดึง",
+  "settings.agentBehaviour.pushFixes.description":
+    "เมื่อคุณส่งความล้มเหลวของ CI หรือความเห็นการตรวจสอบจากคำขอดึงให้เอเจนต์ หรืออัปเดต worktree จากสาขาฐาน ให้ขอให้เอเจนต์คอมมิตและพุชเพื่อให้คำขอดึงอัปเดต การขออนุญาตยังคงมีผล ปิดเพื่อคอมมิตด้วยตนเอง",
   "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1070,6 +1109,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "โมเดลที่ใช้สำหรับการบีบอัดอัตโนมัติและด้วยตนเอง เว้นว่างไว้เพื่อใช้โมเดลแชท ค่าใช้จ่าย ความเร็ว และคุณภาพของสรุปขึ้นอยู่กับโมเดล",
   "settings.context.compactionModel.useChatModel": "ใช้โมเดลแชท",
+  "settings.context.compactionModel.hint": "เลือกโมเดลที่ใช้สำหรับการบีบอัดได้ที่การตั้งค่าโมเดล",
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
@@ -1113,9 +1153,12 @@ export const dict = {
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
   "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
-  "settings.display.reasoningAutoCollapse.description":
-    "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
+  "settings.display.reasoningDisplay.title": "บล็อกเหตุผล",
+  "settings.display.reasoningDisplay.description":
+    "เลือกวิธีที่บล็อกเหตุผลเริ่มต้น ขยายจะแสดงข้อความเต็ม ตัวอย่างจะจำกัดให้เป็นตัวอย่างสั้นที่เลื่อนได้ และหัวข้อจะแสดงเฉพาะชื่อเรื่องและตัวบ่งชี้การสตรีมจนกว่าคุณจะเปิดมัน",
+  "settings.display.reasoningDisplay.expanded": "ขยาย",
+  "settings.display.reasoningDisplay.preview": "ตัวอย่าง",
+  "settings.display.reasoningDisplay.headline": "หัวข้อ",
   "settings.display.shiftTabCycle.title": "สลับระดับความพยายามในการให้เหตุผลด้วย Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "กด Shift+Tab ในช่องป้อนพรอมต์เพื่อสลับไปยังระดับความพยายามในการให้เหตุผลถัดไป ปิดใช้งานเพื่อคง Shift+Tab ไว้สำหรับการนำทางโฟกัสด้วยแป้นพิมพ์",
@@ -1253,6 +1296,18 @@ export const dict = {
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
   "diffViewer.group.session": "เซสชัน",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "บันทึกในเครื่อง",
+  "diffViewer.comment.sendToAgent": "ส่งไปยังเอเจนต์",
+  "diffViewer.comment.postToGithub": "โพสต์ไปยัง GitHub",
+  "diffViewer.comment.loadFailed": "ไม่สามารถโหลดการเปลี่ยนแปลงของคำขอรวมโค้ดได้",
+  "diffViewer.comment.unavailable": "บรรทัดนี้ไม่มีอยู่ในสแนปช็อตปัจจุบันของคำขอรวมโค้ด",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "เปิด Pull Request",
+  "diffViewer.comment.localChanges": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.comment.prChanges": "การเปลี่ยนแปลงของ PR",
+  "diffViewer.comment.sendToKilo": "ส่งไปยัง Kilo",
+  "diffViewer.comment.sendToGithub": "ส่งไปยัง GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "เลือกปลายทาง",
   "diffViewer.notice.snapshotsDisabled":
     "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
 

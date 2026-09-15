@@ -119,9 +119,19 @@ it("asks the agent to resolve the saved base upstream and stop for local-only or
     "both branches' intent",
     "tests, lint, and type checks",
     "normal tool permissions",
-    "Do not push",
+    "Do not push, merge a PR, or apply this worktree into the base",
   ])
     expect(text).toContain(safeguard)
+})
+
+it("asks to push the branch only when the push setting is on", () => {
+  const manual = baseUpdatePrompt(wt)
+  expect(manual).not.toContain("push this branch")
+  expect(manual).toContain("Do not push, merge a PR, or apply this worktree into the base")
+  const text = baseUpdatePrompt(wt, true)
+  expect(text).toContain("push this branch so its pull request updates, if it has one")
+  expect(text).toContain("Do not force-push")
+  expect(text).not.toContain("Do not push, merge a PR")
 })
 
 it("asks the agent to preserve local work without asking the user to choose a method", () => {
@@ -220,7 +230,28 @@ it("creates a session in the target worktree without replacing the user's active
   expect(ctx.stateManager().getSession("ses_target")?.worktreeId).toBe(wt.id)
   expect(api.requests.filter((item) => item.path === "/session")).toHaveLength(1)
   expect(api.requests.filter((item) => item.path.endsWith("/prompt_async"))).toHaveLength(1)
+  const body = api.requests.find((item) => item.path.endsWith("/prompt_async"))?.body
+  for (const key of ["model", "variant", "agent"]) expect(body).not.toHaveProperty(key)
 })
+
+it.each(["high", "", undefined])(
+  "forwards the selected model, agent, and variant %j through the SDK",
+  async (variant) => {
+    const api = backend()
+    ctx.stateManager().addSession("ses_target", wt.id)
+    const model = { providerID: "fixture", modelID: "available" }
+    await handleBaseUpdate({ ...api.request, sessionId: "ses_target", model, variant, agent: "code" }, ctx, api.host)
+    expect(api.errors).toEqual([])
+    const sent = api.requests.filter((item) => item.path.endsWith("/prompt_async"))
+    expect(sent).toHaveLength(1)
+    expect(sent.at(0)).toMatchObject({
+      path: "/session/ses_target/prompt_async",
+      directory: wt.path,
+      body: { model, agent: "code", ...(variant !== undefined && { variant }) },
+    })
+    if (variant === undefined) expect(sent.at(0)?.body).not.toHaveProperty("variant")
+  },
+)
 
 it("lets the backend queue the update prompt before dismissing target questions", async () => {
   const api = backend()

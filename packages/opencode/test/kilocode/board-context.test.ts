@@ -8,6 +8,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Agent } from "../../src/agent/agent"
 import { Session } from "../../src/session/session"
 import { SessionStatus } from "../../src/session/status"
@@ -33,6 +34,7 @@ const it = testEffect(
       BackgroundJob.node,
       SessionProjector.node,
       Config.node,
+      RuntimeFlags.node,
       Database.node,
       Agent.node,
       Truncate.node,
@@ -370,18 +372,20 @@ describe("shared board notifications", () => {
   )
 
   it.live("keeps notifications disabled with the experiment", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const root = yield* sessions.create({ title: "Disabled" })
-        const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
-        const message = yield* seed(root.id, "Work independently")
-        yield* post(child.id, "disabled")
-        const cache = BoardContext.cache()
-        const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
-        expect(yield* notify("read", output)).toBe(output)
-        expect(cache.cursor).toBe(0)
-      }),
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* sessions.create({ title: "Disabled" })
+          const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+          const message = yield* seed(root.id, "Work independently")
+          yield* post(child.id, "disabled")
+          const cache = BoardContext.cache()
+          const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
+          expect(yield* notify("read", output)).toBe(output)
+          expect(cache.cursor).toBe(0)
+        }),
+      { config: { experimental: { shared_agent_board: false } } },
     ),
   )
 

@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Завершено (за повідомленням моделі)",
+  "session.goal.blocked": "Заблоковано",
+  "session.goal.restart": "Перезапустити ціль",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Дошка",
+  "task.swarm.refresh": "Оновити",
+  "task.swarm.reset": "Скинути дошку",
+  "task.swarm.resetTitle": "Скинути цю дошку?",
+  "task.swarm.resetDescription":
+    "Очистити видимі повідомлення? Розмови й поточні завдання залишаться без змін. Агенти можуть публікувати нові повідомлення.",
+  "task.swarm.loading": "Завантаження дошки...",
+  "task.swarm.failed": "Не вдалося завантажити або скинути дошку. Спробуйте оновити її.",
 
   "command.provider.connect": "Підключити провайдера",
 
@@ -261,6 +272,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.reject": "Відхилити",
+  "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
+  "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
   "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
@@ -410,6 +424,7 @@ export const dict = {
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
   "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Змінити API-ключ",
   "settings.providers.custom.description": "Додати власного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",
@@ -738,6 +753,14 @@ export const dict = {
   "session.outcome.interrupted": "Хід перервано",
   "session.outcome.error": "Хід не вдався",
   "session.outcome.finish": "Причина завершення: {{reason}}",
+  "session.goal.label": "Мета",
+  "prompt.goal.set": "Задати мету",
+  "prompt.goal.start": "Почати роботу над метою",
+  "session.goal.active": "Активна",
+  "session.goal.paused": "Призупинена",
+  "session.goal.pause": "Пауза",
+  "session.goal.resume": "Продовжити",
+  "session.goal.clear": "Очистити мету",
   "session.costAlert.header": "Сповіщення про вартість сесії",
   "session.costAlert.continue": "Продовжити",
   "session.costAlert.question":
@@ -838,7 +861,17 @@ export const dict = {
   "settings.notifications.enable.title": "Увімкнути звукові сповіщення",
   "settings.notifications.enable.description":
     "Відтворювати звуки, коли сеанси завершуються, виникає помилка або потрібна ваша відповідь",
+  "settings.notifications.workbench.title": "Увімкнути сповіщення VS Code",
+  "settings.notifications.workbench.description":
+    "Показувати сповіщення VS Code, коли Kilo завершує завдання або потрібна ваша відповідь",
+  "settings.notifications.os.title": "Увімкнути сповіщення операційної системи",
+  "settings.notifications.os.description":
+    "Показувати нативні сповіщення операційної системи, коли Kilo завершує завдання або потрібна ваша відповідь, а VS Code неактивний.",
   "settings.notifications.testSound": "Тест",
+  "settings.notifications.testOS": "Тест",
+  "settings.notifications.testOS.testing": "Надсилання тестового сповіщення…",
+  "settings.notifications.testOS.success": "Тестове сповіщення надіслано.",
+  "settings.notifications.testOS.error": "Не вдалося надіслати тестове сповіщення",
   "settings.notifications.sound.default": "За замовчуванням",
   "settings.notifications.sound.system": "Системний",
   "settings.notifications.sound.description":
@@ -896,6 +929,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
+  "settings.experimental.claudeMigration.title": "Міграція Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
   "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
@@ -965,6 +1001,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Додаткові файли інструкцій",
   "settings.agentBehaviour.instructionFiles.description":
     "Шляхи до додаткових файлів інструкцій, що включаються до системного запиту",
+  "settings.agentBehaviour.pushFixes.title": "Надсилати виправлення запиту на злиття",
+  "settings.agentBehaviour.pushFixes.description":
+    "Коли ви надсилаєте агенту помилки CI або коментарі ревʼю із запиту на злиття або оновлюєте робоче дерево з базової гілки, попросити його зробити коміт і push, щоб запит на злиття оновився. Запити дозволів і далі діють. Вимкніть, щоб робити коміти вручну.",
   "settings.agentBehaviour.claudeCompat.heading": "Сумісність з Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Завантажувати файли Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1049,6 +1088,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
   "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
+  "settings.context.compactionModel.hint": "Щоб вибрати модель для стискання, див. Налаштування моделей.",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1093,9 +1133,12 @@ export const dict = {
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
-  "settings.display.reasoningAutoCollapse.description":
-    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.reasoningDisplay.title": "Блоки міркувань",
+  "settings.display.reasoningDisplay.description":
+    "Виберіть, як починаються блоки міркувань. Розгорнуті показує повний текст, Попередній перегляд обмежує його коротким прокручуваним переглядом, а Заголовок показує лише заголовок та індикатор потокового передавання, доки ви не відкриєте його.",
+  "settings.display.reasoningDisplay.expanded": "Розгорнуті",
+  "settings.display.reasoningDisplay.preview": "Попередній перегляд",
+  "settings.display.reasoningDisplay.headline": "Заголовок",
   "settings.display.shiftTabCycle.title": "Перемикати зусилля міркування за допомогою Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Натисніть Shift+Tab у полі введення запиту, щоб перейти до наступного рівня зусиль міркування. Вимкніть цю опцію, щоб зберегти Shift+Tab для навігації фокусом за допомогою клавіатури.",
@@ -1292,6 +1335,18 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Зберегти локально",
+  "diffViewer.comment.sendToAgent": "Надіслати агенту",
+  "diffViewer.comment.postToGithub": "Опублікувати на GitHub",
+  "diffViewer.comment.loadFailed": "Не вдалося завантажити зміни пул-реквесту.",
+  "diffViewer.comment.unavailable": "Цей рядок недоступний у поточному знімку пул-реквесту.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Відкрити PR",
+  "diffViewer.comment.localChanges": "Локальні зміни",
+  "diffViewer.comment.prChanges": "Зміни PR",
+  "diffViewer.comment.sendToKilo": "Надіслати до Kilo",
+  "diffViewer.comment.sendToGithub": "Надіслати до GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Вибрати призначення",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 

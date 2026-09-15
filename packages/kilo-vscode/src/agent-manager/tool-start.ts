@@ -5,6 +5,10 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { sameDirectory } from "../kilo-provider-utils"
+import { attribute } from "./prompt-attribution"
+import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecycle"
+import { Timing } from "./creation-timing"
+import { plan } from "./creation-plan"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -24,11 +28,13 @@ export interface ToolRequest {
   directory?: string
   sandboxInheritanceToken?: string
   mode: "worktree" | "local"
+  worktreeID?: string
   versions?: boolean
   tasks: ToolTask[]
 }
 
 export interface ToolSource {
+  sessionID?: string
   sandboxInheritanceToken?: string
 }
 
@@ -52,8 +58,16 @@ export interface ToolDeps {
   }) => Promise<WorktreeCreated | null>
   claimRequest?: (requestID: string) => boolean
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
-  setup: (dir: string, branch?: string, id?: string) => Promise<void>
-  createSessionInWorktree: (dir: string, branch: string, id?: string, source?: ToolSource) => Promise<Session | null>
+  hasScript: () => boolean
+  setup: (dir: string, branch?: string, id?: string, early?: () => Promise<void>) => Promise<void>
+  createSessionInWorktree: (
+    dir: string,
+    branch: string,
+    id?: string,
+    source?: ToolSource,
+    boot?: CreationBoot,
+    timing?: Timing,
+  ) => Promise<Session | null>
   sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   registerWorktreeSession: (sid: string, dir: string) => void
   notifyReady: (sid: string, result: CreateWorktreeResult, wid?: string) => void
@@ -106,14 +120,14 @@ function versionedLabel(base: string | undefined, index: number, total: number):
   return base
 }
 
-async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTask) {
+async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTask, source?: ToolSource) {
   const body = text(task)
   if (!body) return
   await client.session.promptAsync(
     {
       sessionID: sid,
       directory: dir,
-      parts: [{ type: "text", text: body }],
+      parts: [{ type: "text", text: attribute(body, source?.sessionID) }],
       model: task.model,
       variant: task.variant,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
@@ -122,14 +136,30 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
   )
 }
 
-async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directory?: string, source?: ToolSource) {
+function locate(state: WorktreeStateManager, root: string, dir: string, wid: string) {
+  if (!sameDirectory(dir, root) && !state.findWorktreeByPath(dir)) {
+    throw new Error(`Unknown caller directory for managed worktree target: ${dir}`)
+  }
+  const wt = state.getWorktree(wid)
+  if (!wt) throw new Error(`Unknown managed worktree in the caller's project: ${wid}`)
+  return wt
+}
+
+async function local(
+  deps: ToolDeps,
+  client: KiloClient,
+  task: ToolTask,
+  directory?: string,
+  source?: ToolSource,
+  wid?: string,
+) {
   const root = deps.getRoot()
   const state = deps.getState()
   if (!root || !state) return false
 
   const dir = clean(directory) ?? root
   const match = sameDirectory(dir, root)
-  const wt = match ? undefined : state.findWorktreeByPath(dir)
+  const wt = wid ? locate(state, root, dir, wid) : match ? undefined : state.findWorktreeByPath(dir)
   if (!match && !wt) {
     deps.log("Agent Manager tool local request ignored unknown directory", dir)
     deps.post({
@@ -155,7 +185,7 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
   deps.push()
   deps.getPanel()?.sessions.registerSession(session)
   if (wt) deps.post({ type: "agentManager.sessionAdded", sessionId: session.id, worktreeId: wt.id })
-  await prompt(client, session.id, target, task)
+  await prompt(client, session.id, target, task, source)
   deps.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
@@ -176,50 +206,87 @@ async function worktree(
   versions?: boolean,
   source?: ToolSource,
 ) {
-  const baseBranch = branch(task.branchName) ?? branch(task.name)
+  const baseBranch = task.branchName ?? branch(task.name)
   const baseLabel = label(task.name) ?? label(task.branchName) ?? label(task.prompt)
   const version = versionedName(baseBranch, versions ? index : 0, versions ? total : 1)
+  const timing = Timing.start(`create ${version.branch ?? "worktree"}`, deps.log)
   const created = await deps.createWorktree({
     groupId,
     branchName: version.branch,
     name: version.branch,
     label: versionedLabel(baseLabel, versions ? index : 0, versions ? total : 1),
   })
-  if (!created) return false
+  timing.mark("create")
+  if (!created) {
+    timing.end()
+    return false
+  }
 
-  await deps.setup(created.result.path, created.result.branch, created.worktree.id)
-  const session = await deps.createSessionInWorktree(
-    created.result.path,
-    created.result.branch,
-    created.worktree.id,
-    source,
+  const prepared = await prepareSession(
+    plan({ setupScript: deps.hasScript() }),
+    async (early) => {
+      await deps.setup(created.result.path, created.result.branch, created.worktree.id, early)
+      timing.mark("setup")
+    },
+    () => {
+      const boot = beginBoot(() => deps.sessionMetadata(client, created.result.path), timing)
+      return deps.createSessionInWorktree(
+        created.result.path,
+        created.result.branch,
+        created.worktree.id,
+        source,
+        boot,
+        timing,
+      )
+    },
   )
+  const { session, ready } = prepared
   if (!session) {
+    await prepared.done
     await deps.cleanupWorktree(created.worktree.id, created.result.path)
+    timing.mark("cleanup")
+    timing.end()
     return false
   }
 
   const state = deps.getState()
   if (!state) {
+    await prepared.done
     await deps.cleanupWorktree(created.worktree.id, created.result.path)
+    timing.mark("cleanup")
+    timing.end()
     return false
   }
   state.addSession(session.id, created.worktree.id)
   deps.registerWorktreeSession(session.id, created.result.path)
+  timing.mark("state")
   deps.notifyReady(session.id, created.result, created.worktree.id)
   deps.getPanel()?.sessions.registerSession(session)
-  await prompt(client, session.id, created.result.path, task)
+  timing.mark("ready")
+  await ready
+  try {
+    await prompt(client, session.id, created.result.path, task, source)
+  } finally {
+    await prepared.done
+  }
+  const span = timing.end()
   deps.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
     worktreeId: created.worktree.id,
     branch: created.result.branch,
     tool: true,
+    durationMs: span.total,
+    ...span.phases,
   })
   return true
 }
 
 export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<void> {
+  if (req.worktreeID != null && !parseToolRequest(req)) {
+    deps.error("Invalid Agent Manager worktree target. Use mode local without versions true or branchName.")
+    return
+  }
   if (deps.claimRequest && !deps.claimRequest(req.requestID)) {
     deps.log(`Agent Manager tool skipped duplicate request ${req.requestID}`)
     return
@@ -233,7 +300,7 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
   const versions = req.mode === "worktree" && req.versions === true && total > 1
   const groupId = versions ? `grp-${Date.now()}` : undefined
   const state = { ok: 0 }
-  const source = { sandboxInheritanceToken: req.sandboxInheritanceToken }
+  const source = { sessionID: req.sessionID, sandboxInheritanceToken: req.sandboxInheritanceToken }
 
   deps.post({
     type: "agentManager.multiVersionProgress",
@@ -248,7 +315,7 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
     try {
       const done =
         req.mode === "local"
-          ? await local(deps, client, task, req.directory, source)
+          ? await local(deps, client, task, req.directory, source, req.worktreeID)
           : await worktree(deps, client, task, i, total, groupId, versions, source)
       if (done) state.ok++
     } catch (err) {
@@ -317,6 +384,11 @@ export function parseToolRequest(value: unknown): ToolRequest | undefined {
   if (mode !== "worktree" && mode !== "local") return undefined
   if (!Array.isArray(tasks) || tasks.length === 0) return undefined
   const limited = tasks.slice(0, 20)
+  if (value.worktreeID != null) {
+    if (typeof value.worktreeID !== "string" || !value.worktreeID.trim()) return undefined
+    if (mode !== "local" || value.versions === true) return undefined
+    if (tasks.some((item) => record(item) && item.branchName != null)) return undefined
+  }
   const parsed = limited.map(task).filter((item): item is ToolTask => !!item)
   if (parsed.length !== limited.length) return undefined
   return {
@@ -327,6 +399,7 @@ export function parseToolRequest(value: unknown): ToolRequest | undefined {
     sandboxInheritanceToken:
       typeof value.sandboxInheritanceToken === "string" ? value.sandboxInheritanceToken : undefined,
     mode,
+    ...(value.worktreeID != null ? { worktreeID: value.worktreeID as string } : {}),
     versions: typeof value.versions === "boolean" ? value.versions : undefined,
     tasks: parsed,
   }

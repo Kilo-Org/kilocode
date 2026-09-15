@@ -151,6 +151,138 @@ test("the indicator stays a centered lane on a wide surface", async ({ page }) =
   expect(Math.abs(lane.leftGap - lane.rightGap)).toBeLessThanOrEqual(2)
 })
 
+for (const width of [340, 532, 720, 1400]) {
+  test(`goal preserves session actions and spinner geometry at ${width}px`, async ({ page }) => {
+    await openStory(page)
+    await page.setViewportSize({ width, height: 640 })
+    const spinner = page.locator('.working-indicator [data-component="spinner"]')
+    await page.getByTestId("toggle-busy").click()
+    await expect(spinner).toBeVisible()
+    // CSS motion overrides do not clear StatusText's JavaScript width lock.
+    await expect(page.locator(".working-status")).not.toHaveAttribute("data-swap")
+    const baseline = await spinner.boundingBox()
+    await page.getByTestId("toggle-busy").click()
+    await page.getByTestId("toggle-goal").click()
+
+    const actions = page.locator(".session-actions-row")
+    const goal = actions.locator(".session-goal-action")
+    const status = page.getByRole("img", { name: "Goal: Active" })
+    await expect(goal).toBeVisible()
+    await expect(goal.locator("svg").first()).toHaveAttribute("viewBox", "0 0 20 20")
+    await expect(goal.locator("svg").first().locator("circle")).toHaveCount(3)
+    await expect(status).toBeHidden()
+    for (const name of ["New Session", "Fork Session", "Move to Worktree"]) {
+      await expect(actions.getByRole("button", { name, exact: true })).toBeVisible()
+    }
+    const style = (el: Element) => {
+      const css = getComputedStyle(el)
+      return {
+        height: el.getBoundingClientRect().height,
+        font: css.fontSize,
+        padding: css.padding,
+        background: css.backgroundColor,
+      }
+    }
+    expect(await goal.evaluate(style)).toEqual(
+      await actions.getByRole("button", { name: "Fork Session", exact: true }).evaluate(style),
+    )
+    const anchor = await goal.boundingBox()
+    const dock = await page.locator(".session-dock").boundingBox()
+    if (!anchor || !dock) throw new Error("Goal or session dock missing")
+    for (const button of await actions.locator("button:not(.session-goal-action)").all()) {
+      const box = await button.boundingBox()
+      if (!box) throw new Error("Session action missing")
+      expect(box.x).toBeGreaterThanOrEqual(dock.x)
+      expect(box.x + box.width).toBeLessThanOrEqual(dock.x + dock.width)
+      expect(box.y + box.height).toBeLessThanOrEqual(dock.y + dock.height)
+      expect(box.x + box.width <= anchor.x || box.y + box.height <= anchor.y || box.y >= anchor.y + anchor.height).toBe(
+        true,
+      )
+    }
+
+    const idle = await geometry(page)
+    await goal.click()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeVisible()
+    await page.getByTestId("toggle-busy").evaluate((el) => {
+      if (!(el instanceof HTMLElement)) throw new Error("Status control missing")
+      el.click()
+    })
+    await expect(spinner).toBeVisible()
+    await expect(status).toBeVisible()
+    await expect(goal).toBeHidden()
+    await expect(actions).toBeHidden()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeHidden()
+    await expect(page.locator(".working-status")).not.toHaveAttribute("data-swap")
+    const bounds = await spinner.boundingBox()
+    if (!bounds || !baseline) throw new Error("Spinner missing")
+    expect(bounds.x).toBe(baseline.x)
+    expect(bounds.width).toBe(baseline.width)
+    expect(bounds.height).toBe(baseline.height)
+    // The dock hugs the visible state, so a wrapped actions row hands its extra
+    // height back to the transcript viewport; the composer itself never moves.
+    const working = await geometry(page)
+    expect(working.dock).toBeLessThanOrEqual(idle.dock)
+    expect(working.viewport - idle.viewport).toBe(idle.dock - working.dock)
+    expect(working.transcriptBottom - idle.transcriptBottom).toBe(idle.dock - working.dock)
+    await expect(status.locator("svg circle")).toHaveCount(3)
+    if (width >= 532) {
+      await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+      await expect(status.locator(".session-goal-status-label")).toBeVisible()
+    }
+    await status.hover()
+    await expect(page.getByRole("tooltip")).toContainText("Keep the session controls available")
+    await page.getByTestId("toggle-busy").hover()
+    await page.keyboard.press("Tab")
+    await status.focus()
+    await expect(page.getByRole("tooltip")).toContainText("Goal: Active")
+    await status.click()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeHidden()
+    await page.getByTestId("toggle-busy").click()
+    await expect(actions).toBeVisible()
+    await expect(goal).toBeVisible()
+    await expect(status).toBeHidden()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeHidden()
+  })
+}
+
+test("goal label fits the remaining space and recovers after compaction", async ({ page }) => {
+  await openStory(page)
+  await page.setViewportSize({ width: 380, height: 640 })
+  await page.getByTestId("toggle-goal").click()
+  await page.getByTestId("toggle-busy").click()
+  const status = page.getByRole("img", { name: "Goal: Active" })
+  const label = status.locator(".session-goal-status-label")
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+  await expect(label).toBeVisible()
+
+  await page.getByTestId("next-status").click()
+  await expect(status.locator(".session-goal-status-content")).toHaveAttribute("data-compact", "")
+  await expect(status.locator("svg")).toBeVisible()
+  await status.hover()
+  await expect(page.getByRole("tooltip")).toContainText("Keep the session controls available")
+
+  await page.setViewportSize({ width: 660, height: 640 })
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+  await expect(label).toBeVisible()
+  await page.setViewportSize({ width: 380, height: 640 })
+  await expect(status.locator(".session-goal-status-content")).toHaveAttribute("data-compact", "")
+  await page.getByTestId("next-status").click()
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+
+  await page.locator(".chat-view").evaluate((el) => {
+    if (!(el instanceof HTMLElement)) throw new Error("Chat missing")
+    el.style.display = "none"
+  })
+  await expect(status).toBeHidden()
+  await page.locator(".chat-view").evaluate((el) => {
+    if (!(el instanceof HTMLElement)) throw new Error("Chat missing")
+    el.style.removeProperty("display")
+  })
+  await expect(status).toBeVisible()
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+  await expect(label).toBeVisible()
+})
+
 test("the counter keeps its width as it ticks", async ({ page }) => {
   await openStory(page)
   await page.getByTestId("toggle-busy").click()
@@ -274,13 +406,63 @@ test("a wrapped narrow-sidebar actions row is not clipped", async ({ page }) => 
   expect(wrapped.dock).toBeGreaterThanOrEqual(wrapped.row)
   expect(wrapped.overflowBelow).toBeLessThanOrEqual(0)
 
-  // The swap still leaves the transcript untouched at this width.
-  const idle = await geometry(page)
+  // The wrapped row grows the dock only while it is shown. While a turn runs
+  // the dock is exactly the indicator, not the taller hidden actions row.
+  await page.getByTestId("toggle-busy").click()
+  const indicator = page.locator('[data-component="session-dock"] .working-indicator')
+  await expect(indicator).toBeVisible()
+  const working = await geometry(page)
+  const box = await indicator.boundingBox()
+  if (!box) throw new Error("indicator missing")
+
+  expect(working.dock).toBeLessThan(wrapped.dock)
+  // Within the one-line floor that keeps unwrapped surfaces free of sub-pixel
+  // shifts across the swap.
+  expect(working.dock - box.height).toBeGreaterThanOrEqual(0)
+  expect(working.dock - box.height).toBeLessThanOrEqual(1)
+})
+
+/**
+ * The hidden state used to reserve the wrapped narrow-sidebar actions height,
+ * so the spinner floated in an empty band whose size depended on the sidebar
+ * width. The dock now hugs the indicator, so the spinner keeps the same small
+ * distance from the composer at every width.
+ */
+test("the working indicator hugs the composer at every width", async ({ page }) => {
+  await openStory(page)
+  const measure = async () => {
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    return page.evaluate(() => {
+      const dock = document.querySelector('[data-component="session-dock"]')
+      const indicator = document.querySelector(".working-indicator")
+      const spinner = document.querySelector('.working-indicator [data-component="spinner"]')
+      const prompt = document.querySelector(".chat-input > .prompt-input-container")
+      if (
+        !(dock instanceof HTMLElement) ||
+        !(indicator instanceof HTMLElement) ||
+        !(spinner instanceof Element) ||
+        !(prompt instanceof HTMLElement)
+      )
+        throw new Error("missing")
+      return {
+        slack: dock.getBoundingClientRect().height - indicator.getBoundingClientRect().height,
+        gap: prompt.getBoundingClientRect().top - spinner.getBoundingClientRect().bottom,
+      }
+    })
+  }
+
   await page.getByTestId("toggle-busy").click()
   await expect(page.locator('[data-component="session-dock"] .working-indicator')).toBeVisible()
-  const working = await geometry(page)
+  const wide = await measure()
 
-  expect(working.dock).toBe(idle.dock)
-  expect(working.viewport).toBe(idle.viewport)
-  expect(working.transcriptBottom).toBe(idle.transcriptBottom)
+  // 340px wraps the actions row, which used to make the reserved dock (and the
+  // floating spinner gap) much taller than the indicator itself.
+  await page.setViewportSize({ width: 340, height: 640 })
+  const narrow = await measure()
+
+  // Only the one-line floor remains around the indicator, never the wrapped row.
+  expect(wide.slack).toBeLessThanOrEqual(1)
+  expect(narrow.slack).toBeLessThanOrEqual(1)
+  expect(narrow.gap).toBeLessThanOrEqual(12)
+  expect(narrow.gap).toBe(wide.gap)
 })

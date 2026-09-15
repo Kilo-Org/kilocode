@@ -49,6 +49,13 @@ export class WorktreeDiffController {
       () => [],
       (msg) => this.ctx.post(msg as AgentManagerOutMessage),
       {
+        available: (_, sessionId) => ({
+          type: "agentManager.worktreeDiffLoading",
+          projectId: this.owner,
+          sessionId,
+          loading: true,
+          reset: true,
+        }),
         loading: (source, loading) => ({
           type: "agentManager.worktreeDiffLoading",
           projectId: this.owner,
@@ -184,17 +191,7 @@ export class WorktreeDiffController {
   }
 
   public async requestFile(id: string, file: string): Promise<void> {
-    if (!file) return
-    if (this.controller.currentId !== id) {
-      this.ctx.post({
-        type: "agentManager.worktreeDiffFile",
-        projectId: this.owner,
-        sessionId: id,
-        file,
-        diff: null,
-      })
-      return
-    }
+    if (!file || this.controller.currentId !== id) return
     await this.controller.requestFile(file)
   }
 

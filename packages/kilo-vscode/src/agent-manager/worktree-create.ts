@@ -1,7 +1,7 @@
 import type { Worktree, WorktreeStateManager } from "./WorktreeStateManager"
 import type { WorktreeManager, CreateWorktreeResult } from "./WorktreeManager"
 import { chooseBaseBranch } from "./base-branch"
-import { classifyWorktreeError } from "./git-import"
+import { classifyWorktreeError, type WorktreeSetupErrorCode } from "./git-import"
 import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage } from "./types"
 
@@ -13,6 +13,12 @@ export type CreateWorktreeOnDiskOptions = {
   existingBranch?: string
   name?: string
   label?: string
+  onError?: (failure: WorktreeCreationFailure) => void
+}
+
+export type WorktreeCreationFailure = {
+  message: string
+  code?: WorktreeSetupErrorCode
 }
 
 export type CreateWorktreeOnDiskResult = {
@@ -29,6 +35,12 @@ export interface CreateWorktreeOnDiskContext {
   log: (...args: unknown[]) => void
 }
 
+function report(opts: CreateWorktreeOnDiskOptions | undefined, failure: WorktreeCreationFailure): void {
+  const onError = opts?.onError
+  if (!onError) return
+  onError(failure)
+}
+
 /**
  * Create a git worktree on disk and register it in state. Returns null on failure.
  *
@@ -41,10 +53,12 @@ export async function createWorktreeOnDisk(
   const manager = ctx.getWorktreeManager()
   const state = ctx.getStateManager()
   if (!manager || !state) {
+    const message = "Open a folder that contains a git repository to use worktrees"
+    report(opts, { message, code: "not_git_repo" })
     ctx.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "error",
-      message: "Open a folder that contains a git repository to use worktrees",
+      message,
       errorCode: "not_git_repo",
     })
     return null
@@ -68,11 +82,13 @@ export async function createWorktreeOnDisk(
     })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
+    const errorCode = classifyWorktreeError(msg)
+    report(opts, { message: msg, code: errorCode })
     ctx.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "error",
       message: msg,
-      errorCode: classifyWorktreeError(msg),
+      errorCode,
     })
     ctx.capture("Agent Manager Session Error", {
       source: PLATFORM,

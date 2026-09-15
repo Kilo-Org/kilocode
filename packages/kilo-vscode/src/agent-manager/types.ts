@@ -59,7 +59,18 @@ import type {
   PRComment,
   ReviewerState,
   PRReviewer,
+  PRStatus,
   PRConversationComment,
+  PRCommitItem,
+  PREventItem,
+  PREventKind,
+  PRTimelineItem,
+  PRReaction,
+  PRReactionContent,
+  PRMergeMethod,
+  PRMergeability,
+  PRMergeState,
+  PRMergeStatus,
 } from "../../webview-ui/agent-manager/pr/pr-types"
 
 export type {
@@ -72,35 +83,18 @@ export type {
   PRComment,
   ReviewerState,
   PRReviewer,
+  PRStatus,
   PRConversationComment,
-}
-
-export interface PRStatus {
-  number: number
-  title: string
-  body?: string
-  url: string
-  state: PRState
-  review: ReviewDecision | null
-  checks: {
-    status: AggregateCheckStatus
-    total: number
-    passed: number
-    failed: number
-    pending: number
-    checks: PRCheck[]
-  }
-  reviewers: PRReviewer[]
-  unresolvedThreads?: number
-  comments?: {
-    total: number
-    unresolved: number
-    comments: PRComment[]
-  }
-  conversation?: PRConversationComment[]
-  additions: number
-  deletions: number
-  files: number
+  PRCommitItem,
+  PREventItem,
+  PREventKind,
+  PRTimelineItem,
+  PRReaction,
+  PRReactionContent,
+  PRMergeMethod,
+  PRMergeability,
+  PRMergeState,
+  PRMergeStatus,
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +111,12 @@ interface WorktreeStatsMessage {
 interface WorktreeActivityMessage {
   type: "agentManager.worktreeActivity"
   active: string[]
+}
+
+interface WorktreeDeletedMessage {
+  type: "agentManager.worktreeDeleted"
+  projectId: string
+  worktreeId: string
 }
 
 interface LocalStatsMessage {
@@ -162,6 +162,7 @@ interface StateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   browserAutomation?: boolean
+  restricted?: boolean
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -352,6 +353,7 @@ interface WorktreeDiffLoadingMessage {
   projectId?: string
   sessionId: string
   loading: boolean
+  reset?: boolean
 }
 
 /** Source-level notice for a diff context (e.g. snapshots disabled). */
@@ -436,6 +438,17 @@ interface CommentActionResultMessage {
   error?: string
 }
 
+interface CommentReactionResultMessage {
+  type: "agentManager.commentReactionResult"
+  projectId?: string
+  worktreeId: string
+  commentId: string
+  reaction: PRReactionContent
+  add: boolean
+  success: boolean
+  error?: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -486,6 +499,8 @@ interface RunStatusMessage extends RunStatus {
 
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | WorktreeDeletedMessage
+  | import("../shared/pr-comment-actions").PRCommentResult
   | WorktreeActivityMessage
   | WorktreeStatsMessage
   | LocalStatsMessage
@@ -516,6 +531,7 @@ export type AgentManagerOutMessage =
   | PRStatusOutMessage
   | PRErrorOutMessage
   | CommentActionResultMessage
+  | CommentReactionResultMessage
   | ActionOutMessage
   | BrowserStateMessage
   | BrowserInspectionMessage
@@ -866,6 +882,15 @@ interface CommentActionIn {
   threadId: string
 }
 
+interface CommentReactionIn {
+  type: "agentManager.commentReaction"
+  projectId?: string
+  worktreeId: string
+  commentId: string
+  reaction: PRReactionContent
+  add: boolean
+}
+
 interface OpenSessionsIn {
   type: "agentManager.openSessions"
   sessionIDs: string[]
@@ -897,6 +922,7 @@ interface GenericOpenFileIn {
   filePath: string
   line?: number
   column?: number
+  sessionID?: string
 }
 
 interface PreviewImageIn {
@@ -1139,6 +1165,7 @@ interface BrowserRequestIn {
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
+  | import("../shared/pr-comment-actions").PRCommentRequest
   | import("../../webview-ui/src/types/messages/agent-manager").BaseUpdateRequest
   | CreateWorktreeIn
   | RequestProjectsIn
@@ -1194,6 +1221,7 @@ export type AgentManagerInMessage =
   | RefreshPRIn
   | OpenPRIn
   | CommentActionIn
+  | CommentReactionIn
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn

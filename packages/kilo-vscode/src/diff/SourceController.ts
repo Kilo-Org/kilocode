@@ -181,10 +181,7 @@ export class SourceController {
   async requestFile(file: string): Promise<void> {
     const source = this.active
     const epoch = this.epoch
-    if (!source) {
-      this.send(this.messages.diffFile(undefined, file, null))
-      return
-    }
+    if (!source) return
     if (!source.fetchFile) {
       this.send(this.messages.diffFile(source, file, null))
       return
@@ -192,17 +189,9 @@ export class SourceController {
     // Yield once so a worktree switch can advance the epoch before queued
     // detail work enters the shared Git semaphore.
     await new Promise<void>((resolve) => setTimeout(resolve, 0))
-    if (this.epoch !== epoch || this.active !== source) {
-      this.send(this.messages.diffFile(source, file, null))
-      return
-    }
+    if (this.epoch !== epoch) return
     const diff = await source.fetchFile(file).catch(() => null)
-    // Discard stale content after disposal/swap, but still complete the request
-    // so consumers can clear per-file loading state.
-    if (this.epoch !== epoch) {
-      this.send(this.messages.diffFile(source, file, null))
-      return
-    }
+    if (this.epoch !== epoch) return
     this.send(this.messages.diffFile(source, file, diff))
   }
 

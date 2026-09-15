@@ -11,6 +11,10 @@ import {
 const css = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/agent-manager.css"), "utf8")
 const app = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/AgentManagerApp.tsx"), "utf8")
 const subagent = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/SubagentPanel.tsx"), "utf8")
+const side = readFileSync(
+  resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
+  "utf8",
+)
 const terminal = readFileSync(
   resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   "utf8",
@@ -47,6 +51,12 @@ test("hides keyboard hints only in inspector tabs", () => {
   expect(
     readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/render.tsx"), "utf8"),
   ).not.toContain("showKeybind={false}")
+})
+
+test("releases frozen widths after terminal close clicks", () => {
+  expect(app).toContain("requestAnimationFrame(releaseTabs)")
+  expect(side).toContain("requestAnimationFrame(release)")
+  expect(side).toContain("close(term.id, api.focus, api.release)")
 })
 
 test("limits inspector layout updates during resize", () => {

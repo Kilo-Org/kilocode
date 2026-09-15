@@ -515,6 +515,38 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
+  test("skips mutation geometry reads after settling expires but still follows content resize", async () => {
+    const ctx = setup()
+    overflow(ctx)
+
+    try {
+      ctx.el.scrollHeight = 1080
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(1080)
+
+      await Bun.sleep(350)
+      ctx.el.scrollTop = 880
+      const height = mock(() => 1200)
+      const viewport = mock(() => 200)
+      Object.defineProperties(ctx.el, {
+        scrollHeight: { get: height },
+        clientHeight: { get: viewport },
+      })
+
+      ctx.mutate()
+
+      expect(height).not.toHaveBeenCalled()
+      expect(viewport).not.toHaveBeenCalled()
+      expect(ctx.el.scrollTop).toBe(880)
+      expect(ctx.scroll.userScrolled()).toBe(false)
+
+      ctx.resize(0)
+      expect(ctx.el.scrollTop).toBe(1200)
+    } finally {
+      ctx.dispose()
+    }
+  })
+
   test("ignores content mutations while the user reads earlier output", () => {
     const ctx = setup({ working: true })
     ctx.el.scrollHeight = 1000
@@ -529,8 +561,9 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
-  test("leaves an idle transcript where a layout clamp put it", () => {
+  test("leaves an idle transcript where a layout clamp put it", async () => {
     const ctx = setup()
+    await Bun.sleep(350)
     ctx.el.scrollHeight = 1000
     ctx.el.clientHeight = 200
     ctx.el.scrollTop = 800

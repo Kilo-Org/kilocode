@@ -1,4 +1,5 @@
 import * as fs from "fs/promises"
+import { classifyGenerated, generatedLike, gitGeneratedFiles } from "../diff/shared/git-attributes"
 import { imageMime, loadImage, readImageFile } from "../diff/shared/image"
 import { resolveInside } from "../diff/shared/path"
 import type { GitOps } from "./GitOps"
@@ -32,54 +33,7 @@ const MAX_SUMMARY_FILES = 32
 
 /** Ported from `packages/opencode/src/file/ignore.ts` — identical patterns,
  *  no runtime dependency on minimatch/picomatch. */
-const FOLDERS = new Set([
-  "node_modules",
-  "bower_components",
-  ".pnpm-store",
-  "vendor",
-  ".npm",
-  "dist",
-  "build",
-  "out",
-  ".next",
-  "target",
-  "bin",
-  "obj",
-  ".git",
-  ".svn",
-  ".hg",
-  ".vscode",
-  ".idea",
-  ".turbo",
-  ".output",
-  "desktop",
-  ".sst",
-  ".cache",
-  ".webkit-cache",
-  "__pycache__",
-  ".pytest_cache",
-  "mypy_cache",
-  ".history",
-  ".gradle",
-])
-
-const SUFFIXES = [".swp", ".swo", ".pyc", ".log"]
-const BASENAMES = new Set([".DS_Store", "Thumbs.db"])
-const CONTAINS_SEGMENTS = ["logs", "tmp", "temp", "coverage", ".nyc_output"]
-
-export function generatedLike(file: string): boolean {
-  const parts = file.split(/[/\\]/)
-  for (const part of parts) {
-    if (FOLDERS.has(part)) return true
-    if (CONTAINS_SEGMENTS.includes(part)) return true
-  }
-  for (const suffix of SUFFIXES) {
-    if (file.endsWith(suffix)) return true
-  }
-  const base = parts[parts.length - 1] ?? ""
-  if (BASENAMES.has(base)) return true
-  return false
-}
+export { generatedLike } from "../diff/shared/git-attributes"
 
 const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
 
@@ -173,6 +127,18 @@ function statusFromCode(code: string): Status {
 }
 
 async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<Meta[]> {
+  const markGenerated = async (entries: Meta[]) => {
+    const configured = await gitGeneratedFiles(
+      git,
+      dir,
+      entries.map((entry) => entry.file),
+    )
+    return entries.map((entry) => ({
+      ...entry,
+      generatedLike: classifyGenerated(entry.file, configured),
+    }))
+  }
+
   const [tracked, untracked] = await Promise.all([
     git.execGit(["-c", "core.quotepath=false", "diff", "--raw", "--numstat", "--no-renames", anc], dir, {
       priority: true,
@@ -224,11 +190,11 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
 
   if (untracked.code !== 0) {
     log?.("git ls-files --others failed", { code: untracked.code, stderr: untracked.stderr.trim() })
-    return result
+    return markGenerated(result)
   }
 
   const files = untracked.stdout.trim()
-  if (!files) return result
+  if (!files) return markGenerated(result)
   const paths = files.split("\n").filter((file) => file && !seen.has(file))
 
   for (let index = 0; index < paths.length; index += MAX_SUMMARY_FILES) {
@@ -255,7 +221,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     }
   }
 
-  return result
+  return markGenerated(result)
 }
 
 /**
@@ -295,6 +261,7 @@ async function detailMeta(
 ): Promise<Meta | undefined> {
   const full = resolveInside(dir, file)
   if (!full) return undefined
+  const configured = await gitGeneratedFiles(git, dir, [file], { signal })
   const tracked = await git.execGit(["ls-files", "--error-unmatch", "--", file], dir, { signal, priority: true })
   check(signal)
   if (tracked.code !== 0) {
@@ -312,7 +279,7 @@ async function detailMeta(
       deletions: 0,
       status: "added",
       tracked: false,
-      generatedLike: generatedLike(file),
+      generatedLike: classifyGenerated(file, configured),
       binary: value.binary,
       stamp: value.stamp,
     }
@@ -341,7 +308,7 @@ async function detailMeta(
     deletions: stat.deletions,
     status,
     tracked: true,
-    generatedLike: generatedLike(pathPart),
+    generatedLike: classifyGenerated(pathPart, configured),
     binary: stat.binary,
     stamp:
       status === "deleted"

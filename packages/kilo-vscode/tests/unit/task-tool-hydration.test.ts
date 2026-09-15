@@ -5,7 +5,13 @@ import {
   toolOpenKey,
   writeToolOpen,
 } from "../../../kilo-ui/src/components/tool-open-state"
-import { taskResult, taskRunning, taskVisible } from "../../webview-ui/src/components/chat/task-tool-state"
+import {
+  taskAutoOpen,
+  taskBackground,
+  taskResult,
+  taskRunning,
+  taskVisible,
+} from "../../webview-ui/src/components/chat/task-tool-state"
 
 describe("completed task hydration", () => {
   beforeEach(() => resetToolOpenState())
@@ -15,6 +21,24 @@ describe("completed task hydration", () => {
     expect(taskRunning("running")).toBe(true)
     expect(taskRunning("completed")).toBe(false)
     expect(readToolOpen(toolOpenKey({ tool: "task", partID: "part-new" }), taskRunning("completed"))).toBe(false)
+  })
+
+  it("keeps a pending or running background task collapsed", () => {
+    expect(taskAutoOpen("pending", true)).toBe(false)
+    expect(taskAutoOpen("running", true)).toBe(false)
+    expect(taskAutoOpen("running", false)).toBe(true)
+    expect(taskAutoOpen("pending", false)).toBe(false)
+    expect(taskAutoOpen("completed", false)).toBe(false)
+  })
+
+  it("reads the background flag from the streamed input before metadata lands", () => {
+    expect(taskBackground({ background: true }, undefined, undefined)).toBe(true)
+    expect(taskBackground({ background: true }, { background: false }, { background: false })).toBe(true)
+    expect(taskBackground({}, { background: true }, undefined)).toBe(true)
+    expect(taskBackground({}, undefined, { background: true })).toBe(true)
+    // partMetadata false shadows later state metadata, matching the original lookup
+    expect(taskBackground({}, { background: false }, { background: true })).toBe(false)
+    expect(taskBackground({}, undefined, undefined)).toBe(false)
   })
 
   it("keeps expansion state isolated by copied part ID", () => {

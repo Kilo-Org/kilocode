@@ -1,8 +1,10 @@
 package ai.kilocode.backend.diff
 
 import ai.kilocode.backend.rpc.CmdOut
+import ai.kilocode.backend.rpc.badDir
 import ai.kilocode.backend.rpc.baseBranch
 import ai.kilocode.backend.rpc.parseWorktreeList
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
@@ -14,6 +16,8 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import kotlin.io.path.fileSize
 import kotlin.io.path.inputStream
+
+private val LOG = KiloLog.create(GitComparison::class.java)
 
 internal class GitComparison private constructor(
     private val dir: Path,
@@ -39,6 +43,12 @@ internal class GitComparison private constructor(
             if (!Files.isDirectory(dir)) return null
             val inside = runGitCommand(dir, listOf("rev-parse", "--is-inside-work-tree"))
             if (inside.exit == 128 && inside.stderr.startsWith("fatal: not a git repository")) return null
+            // The directory can vanish between the isDirectory check above and this spawn (a
+            // concurrent worktree removal), which git or the process launcher reports in either of
+            // two message shapes — see badDir(). Treat that race as "no data" rather than a thrown
+            // failure: the caller isolates per-item failures anyway, but a race this narrow doesn't
+            // deserve a WARN-level stack trace every time it's hit.
+            if (badDir(inside.stderr)) return null
             if (inside.checked().trim() != "true") return null
             val head = revision(dir, "HEAD") ?: return null
             if (mode == Mode.Local) return GitComparison(dir, head, "", head, head, null)
@@ -141,12 +151,18 @@ internal class GitComparison private constructor(
     }
 }
 
-internal fun runGitCommand(dir: Path, args: List<String>): CmdOut {
+/** Default watchdog for a git command. Cheap queries only — a destructive delete needs its own, wider budget. */
+internal const val GIT_COMMAND_TIMEOUT_MS = 30_000
+
+internal fun runGitCommand(dir: Path, args: List<String>, timeoutMs: Int = GIT_COMMAND_TIMEOUT_MS): CmdOut {
     return try {
         val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(dir.toFile())
             .withCharset(StandardCharsets.UTF_8).withEnvironment("LC_ALL", "C")
-        val out = CapturingProcessHandler(cmd).runProcess(30_000)
-        CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
+        val out = CapturingProcessHandler(cmd).runProcess(timeoutMs)
+        if (out.isTimeout) {
+            LOG.warn("git command timed out: dir=$dir args=${args.joinToString(" ")} ms=$timeoutMs")
+        }
+        CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr, out.isTimeout)
     } catch (err: CancellationException) {
         throw err
     } catch (err: ProcessCanceledException) {

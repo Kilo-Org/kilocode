@@ -57,8 +57,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fullført (rapportert av modellen)",
+  "session.goal.blocked": "Blokkert",
+  "session.goal.restart": "Start mål på nytt",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Oppdater",
+  "task.swarm.reset": "Nullstill tavle",
+  "task.swarm.resetTitle": "Nullstille denne tavlen?",
+  "task.swarm.resetDescription":
+    "Tømme synlige meldinger? Samtaler og kjørende oppgaver endres ikke. Agenter kan sende nye meldinger.",
+  "task.swarm.loading": "Laster tavle...",
+  "task.swarm.failed": "Kunne ikke laste eller nullstille tavlen. Prøv å oppdatere den.",
 
   "command.provider.connect": "Koble til leverandør",
 
@@ -266,6 +277,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Tillate Git-operasjon utenfor sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
+  "ui.permission.reject": "Avvis",
+  "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
+  "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
   "ui.permission.rule.addToAllowed": "Legg til i tillatt-listen",
@@ -414,6 +428,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Egendefinert leverandør",
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
+  "settings.providers.action.changeApiKey": "Endre API-nøkkel",
   "settings.providers.custom.description": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
@@ -712,6 +727,14 @@ export const dict = {
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angi mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Satt på pause",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Fortsett",
+  "session.goal.clear": "Fjern mål",
   "session.costAlert.header": "Varsel om øktkostnad",
   "session.costAlert.continue": "Fortsett",
   "session.costAlert.question":
@@ -809,7 +832,17 @@ export const dict = {
   "settings.notifications.enable.title": "Aktiver lydvarsler",
   "settings.notifications.enable.description":
     "Spill av lyder når økter fullføres, det oppstår en feil eller det trengs innspill fra deg",
+  "settings.notifications.workbench.title": "Aktiver VS Code-varsler",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-varsler når Kilo fullfører en oppgave eller trenger innspill fra deg",
+  "settings.notifications.os.title": "Aktiver OS-varsler",
+  "settings.notifications.os.description":
+    "Vis opprinnelige operativsystemvarsler når Kilo fullfører en oppgave eller trenger innspill fra deg mens VS Code ikke er aktiv.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sender testvarsel…",
+  "settings.notifications.testOS.success": "Testvarsel sendt.",
+  "settings.notifications.testOS.error": "Testvarsel mislyktes",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -866,6 +899,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
+  "settings.experimental.claudeMigration.description":
+    "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
   "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
@@ -1020,6 +1056,9 @@ export const dict = {
     "Regler er instruksjonsfiler som styrer agentens atferd. De inkluderes i systemprompten for hver samtale. Legg til filstier nedenfor for å inkludere ekstra regler.",
   "settings.agentBehaviour.instructionFiles": "Ekstra instruksjonsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til ekstra instruksjonsfiler i systemprompten",
+  "settings.agentBehaviour.pushFixes.title": "Push pull request-rettelser",
+  "settings.agentBehaviour.pushFixes.description":
+    "Når du sender CI-feil eller review-kommentarer fra en pull request til agenten, eller oppdaterer et worktree fra basen, bes agenten committe og pushe slik at pull requesten oppdateres. Tillatelsesforespørsler gjelder fortsatt. Slå av for å committe manuelt.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Last inn Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1089,6 +1128,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modell som brukes for automatisk og manuell komprimering. La feltet stå tomt for å bruke chatmodellen. Kostnad, hastighet og kvaliteten på sammendraget avhenger av modellen.",
   "settings.context.compactionModel.useChatModel": "Bruk chatmodell",
+  "settings.context.compactionModel.hint":
+    "For å velge hvilken modell som brukes til komprimering, se Modellinnstillinger.",
   "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
@@ -1132,9 +1173,12 @@ export const dict = {
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
-  "settings.display.reasoningAutoCollapse.description":
-    "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
+  "settings.display.reasoningDisplay.title": "Resonnementblokker",
+  "settings.display.reasoningDisplay.description":
+    "Velg hvordan resonnementblokker starter. Utvidet viser hele teksten, Forhåndsvisning begrenser den til en kort rullbar forhåndsvisning, og Overskrift viser bare tittelen og strømmingsindikatoren til du åpner den.",
+  "settings.display.reasoningDisplay.expanded": "Utvidet",
+  "settings.display.reasoningDisplay.preview": "Forhåndsvisning",
+  "settings.display.reasoningDisplay.headline": "Overskrift",
   "settings.display.shiftTabCycle.title": "Bytt resonnementsinnsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Trykk Shift+Tab i et promptinndatafelt for å bytte til neste nivå for resonnementsinnsats. Deaktiver for å beholde Shift+Tab for tastaturnavigering av fokus.",
@@ -1272,6 +1316,19 @@ export const dict = {
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Lagre lokalt",
+  "diffViewer.comment.sendToAgent": "Send til agent",
+  "diffViewer.comment.postToGithub": "Publiser på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke laste inn endringene i pull requesten.",
+  "diffViewer.comment.unavailable":
+    "Denne linjen er ikke tilgjengelig i det gjeldende øyeblikksbildet av pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åpne pull request",
+  "diffViewer.comment.localChanges": "Lokale endringer",
+  "diffViewer.comment.prChanges": "PR-endringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Velg mål",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 

@@ -18,6 +18,7 @@ import {
   on,
   onCleanup,
 } from "solid-js"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { relativizeProjectPath } from "@kilocode/kilo-ui/message-part"
@@ -83,16 +84,20 @@ import {
 import type { Part, QuestionRequest, SuggestionRequest, ToolState } from "../../types/messages"
 
 interface MessageListProps {
-  onSelectSession?: (id: string) => void
+  onSelectSession?: (id: string) => boolean | void
+  isSessionOpen?: (id: string) => boolean
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
   onEditMessage?: (sessionID: string, messageID: string) => void
+  onScrollToBottomReady?: (handler: (() => void) | undefined) => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
   /** Non-tool suggestion requests to render inline at the bottom of the message list */
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  /** Whether inline questions and suggestions are actionable on this surface. */
+  interactivePrompts?: boolean
   queuedDisabled?: boolean
   editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
@@ -124,6 +129,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
   })
+  props.onScrollToBottomReady?.(() => autoScroll.resume())
+  onCleanup(() => props.onScrollToBottomReady?.(undefined))
   const [announcement, setAnnouncement] = createSignal("")
   createEffect(
     (prev: { sid?: string; working: boolean }) => {
@@ -440,16 +447,17 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Matches TaskToolExpanded.tsx (the renderer this webview actually
   // registers for "task", overriding kilo-ui's default) exactly: title is
-  // always `i18n.t("ui.tool.agent", { type })` regardless of status — the
-  // "capitalize" CSS class only changes how it *looks*, the DOM text node
-  // itself is the raw, lowercase subagent_type. The "(N)" child-tool-count
-  // suffix shown there is a live value from session.getSessionToolCount(),
-  // not stored on the part at all, so it can't be indexed from a snapshot —
-  // searching for that count isn't meaningful content anyway.
+  // `i18n.t("ui.tool.agent", { type })` once subagent_type is known, and
+  // `ui.tool.agent.default` while it is still absent. The "capitalize" CSS
+  // class only changes how it *looks*, the DOM text node itself is the raw,
+  // lowercase subagent_type. The "(N)" child-tool-count suffix shown there is
+  // a live value from session.getSessionToolCount(), not stored on the part at
+  // all, so it can't be indexed from a snapshot — searching for that count
+  // isn't meaningful content anyway.
   function taskText(part: Part & { type: "tool" }, state: ToolState): string[] {
     const input = state.input as { subagent_type?: string; description?: string } | undefined
-    const type = input?.subagent_type || part.tool
-    const chunks = [i18n.t("ui.tool.agent", { type })]
+    const type = input?.subagent_type
+    const chunks = [type ? i18n.t("ui.tool.agent", { type }) : i18n.t("ui.tool.agent.default")]
     if (input?.description) chunks.push(input.description)
     // TaskToolExpanded.tsx only shows the raw <task_result> body when there's
     // no live child session to display instead (result() there resolves to
@@ -864,9 +872,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const comfortMargin = box.height * 0.35
     const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
     if (fullyVisible && centered) return
-    const container = range.startContainer
-    const target = container instanceof Element ? container : container?.parentElement
-    target?.scrollIntoView({ block: "center", inline: "nearest" })
+    // Scroll only the transcript, not VS Code's outer webview container.
+    el.scrollBy({ top: rect.top + rect.height / 2 - box.top - el.clientTop - el.clientHeight / 2 })
   }
 
   // Two frames of margin so the virtualizer has settled the DOM for the new
@@ -951,11 +958,34 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const indexes = createMemo(() => new Map(keys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
 
+  // A row handed from the direct tail to Virtua (each new step of the same
+  // turn moves the previous assistant message) mounts at the 260px estimate
+  // until Virtua's ResizeObserver measures it. The auto-scroll pins to that
+  // shorter layout, the correction lands in the same ResizeObserver pass, and
+  // the follow-up pin is deferred to the next frame, so one frame paints with
+  // the transcript sitting below the bottom. Measure the handed rows in the
+  // same task and re-pin before anything is painted.
+  createEffect(
+    on(
+      () => ({ sid: session.currentSessionID(), keys: keys() }),
+      (now, prev) => {
+        if (!prev || prev.sid !== now.sid) return
+        if (now.keys.length <= prev.keys.length || now.keys.at(-1) === prev.keys.at(-1)) return
+        queueMicrotask(() => {
+          const handle = virtualizer()
+          if (!handle) return
+          handle.measure()
+          autoScroll.scrollToBottom()
+        })
+      },
+    ),
+  )
+
   const [pending, setPending] = createSignal<{ sid: string; key: string }>()
 
   // Scrolls the transcript to a row by key. Virtualized rows jump through
   // the virtualizer; direct/live/queued rows are mounted, so they use
-  // scrollIntoView. Pauses auto-follow first so the jump isn't snapped back.
+  // the transcript scroller. Pauses auto-follow first so the jump isn't snapped back.
   const jump = (key: string) => {
     autoScroll.pause()
     const index = indexes().get(key)
@@ -972,9 +1002,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
-    if (target) {
+    if (el && target) {
       setPending(undefined)
-      target.scrollIntoView({ block: "start" })
+      el.scrollBy({ top: target.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
       return
     }
     const sid = session.currentSessionID()
@@ -1001,10 +1031,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const row = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(target.key)}"]`)
-    if (!row) return
+    if (!el || !row) return
     setPending(undefined)
     autoScroll.pause()
-    row.scrollIntoView({ block: "start" })
+    el.scrollBy({ top: row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
   })
 
   // Clicking a bar in the task timeline scrolls the transcript to that message.
@@ -1224,6 +1254,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }),
   )
 
+  // Clicking Show on the session that is already selected leaves
+  // currentSessionID untouched, so the effect above never re-arms. Arm the same
+  // restore pass from the request itself; it resolves to a scroll-to-bottom.
+  createEffect(
+    on(session.scrollBottomID, (id) => {
+      if (id && id === session.currentSessionID()) setPendingRestore(id)
+    }),
+  )
+
   createEffect(() => {
     const id = pendingRestore()
     if (!id || session.loading()) return
@@ -1232,6 +1271,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
       if (pendingRestore() !== id) return
       const el = scrollEl()
       if (!el) return
+      if (session.consumeScrollBottom(id)) {
+        autoScroll.forceScrollToBottom()
+        setPendingRestore(undefined)
+        return
+      }
       const state = getScroll(id)
       const anchor = resolveAnchor(state, keys())
       const handle = virtualizer()
@@ -1329,6 +1373,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       <TranscriptRowView
                         row={row}
                         index={index()}
+                        onSelectSession={props.onSelectSession}
+                        isSessionOpen={props.isSessionOpen}
                         onForkMessage={props.onForkMessage}
                         onEditMessage={props.onEditMessage}
                         queuedDisabled={props.queuedDisabled}
@@ -1338,6 +1384,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                         readonly={props.readonly}
+                        interactivePrompts={props.interactivePrompts}
                       />
                     )}
                   </Virtualizer>
@@ -1346,6 +1393,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   {(key) => (
                     <TranscriptRowView
                       row={lookup().get(key)!}
+                      onSelectSession={props.onSelectSession}
+                      isSessionOpen={props.isSessionOpen}
                       onForkMessage={props.onForkMessage}
                       onEditMessage={props.onEditMessage}
                       queuedDisabled={props.queuedDisabled}
@@ -1355,6 +1404,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
                       readonly={props.readonly}
+                      interactivePrompts={props.interactivePrompts}
                     />
                   )}
                 </For>
@@ -1367,6 +1417,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
               {(row) => (
                 <TranscriptRowView
                   row={row}
+                  onSelectSession={props.onSelectSession}
+                  isSessionOpen={props.isSessionOpen}
                   onEditMessage={props.onEditMessage}
                   queuedDisabled={props.queuedDisabled}
                   editDisabled={props.editDisabled}
@@ -1374,12 +1426,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                   readonly={props.readonly}
+                  interactivePrompts={props.interactivePrompts}
                 />
               )}
             </For>
             <TurnOutcome />
-            <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
-            <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            <Show when={props.interactivePrompts !== false}>
+              <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
+              <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            </Show>
           </Show>
         </div>
       </div>
@@ -1411,13 +1466,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
       />
 
       <Show when={!introduction() && autoScroll.userScrolled()}>
-        <button
+        <IconButton
+          icon="arrow-down-to-line"
+          variant="ghost"
+          size="small"
           class="scroll-to-bottom-button"
           onClick={() => autoScroll.resume()}
           aria-label={language.t("session.messages.scrollToBottom")}
-        >
-          <Icon name="arrow-down-to-line" />
-        </button>
+        />
       </Show>
     </div>
   )

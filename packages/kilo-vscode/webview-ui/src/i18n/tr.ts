@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Tamamlandı (model bildirdi)",
+  "session.goal.blocked": "Engellendi",
+  "session.goal.restart": "Hedefi yeniden başlat",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Pano",
+  "task.swarm.refresh": "Yenile",
+  "task.swarm.reset": "Panoyu sıfırla",
+  "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
+  "task.swarm.resetDescription":
+    "Görünür mesajlar temizlensin mi? Konuşmalar ve çalışan görevler değişmez. Ajanlar yeni mesajlar gönderebilir.",
+  "task.swarm.loading": "Pano yükleniyor...",
+  "task.swarm.failed": "Pano yüklenemedi veya sıfırlanamadı. Yenilemeyi deneyin.",
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -259,6 +270,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation":
     "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.reject": "Reddet",
+  "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
+  "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
   "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
   "ui.permission.rule.addToAllowed": "İzin listesine ekle",
@@ -407,6 +421,7 @@ export const dict = {
   "settings.providers.tag.other": "Diğer",
   "settings.providers.connected.environmentDescription": "Ortam değişkenlerinizden bağlandı",
   "settings.providers.action.signInChatGPT": "ChatGPT ile oturum aç",
+  "settings.providers.action.changeApiKey": "API anahtarını değiştir",
   "settings.providers.custom.description": "Temel URL üzerinden özel bir sağlayıcı ekleyin.",
 
   "provider.custom.title": "Özel sağlayıcı",
@@ -738,6 +753,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",
+  "session.goal.label": "Hedef",
+  "prompt.goal.set": "Hedef belirle",
+  "prompt.goal.start": "Hedefi başlat",
+  "session.goal.active": "Etkin",
+  "session.goal.paused": "Duraklatıldı",
+  "session.goal.pause": "Duraklat",
+  "session.goal.resume": "Sürdür",
+  "session.goal.clear": "Hedefi temizle",
   "session.costAlert.header": "Oturum Maliyeti Uyarısı",
   "session.costAlert.continue": "Devam et",
   "session.costAlert.question":
@@ -837,7 +860,17 @@ export const dict = {
   "settings.notifications.enable.title": "Sesli bildirimleri etkinleştir",
   "settings.notifications.enable.description":
     "Oturumlar tamamlandığında, bir hatayla karşılaşıldığında veya sizden giriş beklendiğinde ses çal",
+  "settings.notifications.workbench.title": "VS Code bildirimlerini etkinleştir",
+  "settings.notifications.workbench.description":
+    "Kilo bir görevi tamamladığında veya sizden giriş beklendiğinde VS Code bildirimlerini göster",
+  "settings.notifications.os.title": "İşletim sistemi bildirimlerini etkinleştir",
+  "settings.notifications.os.description":
+    "VS Code etkin değilken Kilo bir görevi tamamladığında veya sizden giriş beklendiğinde yerel işletim sistemi bildirim uyarılarını göster.",
   "settings.notifications.testSound": "Test et",
+  "settings.notifications.testOS": "Test et",
+  "settings.notifications.testOS.testing": "Test bildirimi gönderiliyor…",
+  "settings.notifications.testOS.success": "Test bildirimi gönderildi.",
+  "settings.notifications.testOS.error": "Test bildirimi gönderilemedi",
   "settings.notifications.sound.default": "Varsayılan",
   "settings.notifications.sound.system": "Sistem",
   "settings.notifications.sound.description":
@@ -895,6 +928,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
+  "settings.experimental.claudeMigration.description":
+    "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
   "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
@@ -965,6 +1001,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",
+  "settings.agentBehaviour.pushFixes.title": "Çekme isteği düzeltmelerini push'la",
+  "settings.agentBehaviour.pushFixes.description":
+    "Bir çekme isteğinin CI hatalarını veya inceleme yorumlarını ajana gönderdiğinizde ya da bir worktree'yi tabanından güncellediğinizde, çekme isteğinin güncellenmesi için ajandan commit ve push yapmasını isteyin. İzin istemleri geçerli kalır. Commit'leri elle yapmak için kapatın.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1050,6 +1089,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Otomatik ve manuel sıkıştırma için kullanılan model. Sohbet modelini kullanmak için boş bırakın. Maliyet, hız ve özet kalitesi modele bağlıdır.",
   "settings.context.compactionModel.useChatModel": "Sohbet modelini kullan",
+  "settings.context.compactionModel.hint": "Sıkıştırma için kullanılacak modeli seçmek için Modeller ayarlarına bakın.",
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
@@ -1094,9 +1134,12 @@ export const dict = {
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
   "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
-  "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
-  "settings.display.reasoningAutoCollapse.description":
-    "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
+  "settings.display.reasoningDisplay.title": "Akıl Yürütme Blokları",
+  "settings.display.reasoningDisplay.description":
+    "Akıl yürütme bloklarının nasıl başlayacağını seçin. Genişletilmiş tam metni gösterir, Önizleme kısa ve kaydırılabilir bir önizlemeyle sınırlar, Başlık ise siz açana kadar yalnızca başlığı ve akış göstergesini gösterir.",
+  "settings.display.reasoningDisplay.expanded": "Genişletilmiş",
+  "settings.display.reasoningDisplay.preview": "Önizleme",
+  "settings.display.reasoningDisplay.headline": "Başlık",
   "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
   "settings.display.shiftTabCycle.description":
     "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
@@ -1292,6 +1335,18 @@ export const dict = {
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Yerel olarak kaydet",
+  "diffViewer.comment.sendToAgent": "Ajana gönder",
+  "diffViewer.comment.postToGithub": "GitHub'da paylaş",
+  "diffViewer.comment.loadFailed": "Çekme isteğindeki değişiklikler yüklenemedi.",
+  "diffViewer.comment.unavailable": "Bu satır, çekme isteğinin mevcut anlık görüntüsünde bulunmuyor.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull request'i aç",
+  "diffViewer.comment.localChanges": "Yerel değişiklikler",
+  "diffViewer.comment.prChanges": "PR değişiklikleri",
+  "diffViewer.comment.sendToKilo": "Kilo'ya gönder",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}} hedefine gönder",
+  "diffViewer.comment.chooseDestination": "Hedef seç",
   "diffViewer.notice.snapshotsDisabled":
     "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
 

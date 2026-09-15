@@ -58,8 +58,19 @@ export const anacondaDesktopDict = {
 type Keys = keyof typeof en
 
 export const dict = {
+  "session.goal.complete": "완료 (모델 보고)",
+  "session.goal.blocked": "차단됨",
+  "session.goal.restart": "목표 다시 시작",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "보드",
+  "task.swarm.refresh": "새로 고침",
+  "task.swarm.reset": "보드 초기화",
+  "task.swarm.resetTitle": "이 보드를 초기화할까요?",
+  "task.swarm.resetDescription":
+    "표시된 메시지를 지울까요? 대화와 실행 중인 작업은 변경되지 않습니다. 에이전트는 새 메시지를 게시할 수 있습니다.",
+  "task.swarm.loading": "보드 로딩 중...",
+  "task.swarm.failed": "보드를 불러오거나 초기화할 수 없습니다. 새로 고침을 시도하세요.",
 
   "command.provider.connect": "공급자 연결",
 
@@ -260,6 +271,9 @@ export const dict = {
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
   "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 Git 작업을 허용할까요?",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
+  "ui.permission.reject": "거부",
+  "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
+  "ui.permission.feedbackHint": "Enter로 거부, Esc로 취소",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
   "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
   "ui.permission.rule.addToAllowed": "허용 목록에 추가",
@@ -408,6 +422,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "사용자 정의 공급자",
   "settings.providers.connected.environmentDescription": "환경 변수에서 연결됨",
   "settings.providers.action.signInChatGPT": "ChatGPT로 로그인",
+  "settings.providers.action.changeApiKey": "API 키 변경",
   "settings.providers.custom.description": "기본 URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
@@ -746,6 +761,14 @@ export const dict = {
   "session.outcome.interrupted": "턴이 중단되었습니다",
   "session.outcome.error": "턴이 실패했습니다",
   "session.outcome.finish": "종료 이유: {{reason}}",
+  "session.goal.label": "목표",
+  "prompt.goal.set": "목표 설정",
+  "prompt.goal.start": "목표 시작",
+  "session.goal.active": "활성",
+  "session.goal.paused": "일시 중지됨",
+  "session.goal.pause": "일시 중지",
+  "session.goal.resume": "재개",
+  "session.goal.clear": "목표 지우기",
   "session.costAlert.header": "세션 비용 알림",
   "session.costAlert.continue": "계속",
   "session.costAlert.question": "이 세션이 세션별 알림 기준 {{limit}}을 방금 넘었고 비용은 {{cost}}입니다. 계속할까요?",
@@ -839,7 +862,17 @@ export const dict = {
   "settings.notifications.enable.title": "소리 알림 활성화",
   "settings.notifications.enable.description":
     "세션이 완료되거나 오류가 발생하거나 사용자 입력이 필요할 때 소리를 재생합니다",
+  "settings.notifications.workbench.title": "VS Code 알림 활성화",
+  "settings.notifications.workbench.description":
+    "Kilo가 작업을 완료하거나 사용자 입력이 필요할 때 VS Code 알림을 표시합니다",
+  "settings.notifications.os.title": "OS 알림 활성화",
+  "settings.notifications.os.description":
+    "VS Code가 활성화되어 있지 않을 때 Kilo가 작업을 완료하거나 사용자 입력이 필요하면 기본 운영 체제 알림을 표시합니다.",
   "settings.notifications.testSound": "테스트",
+  "settings.notifications.testOS": "테스트",
+  "settings.notifications.testOS.testing": "테스트 알림을 보내는 중…",
+  "settings.notifications.testOS.success": "테스트 알림을 보냈습니다.",
+  "settings.notifications.testOS.error": "테스트 알림을 보내지 못했습니다",
   "settings.notifications.sound.default": "기본값",
   "settings.notifications.sound.system": "시스템",
   "settings.notifications.sound.description":
@@ -896,6 +929,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
+  "settings.experimental.claudeMigration.description":
+    "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
   "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
@@ -1009,6 +1045,9 @@ export const dict = {
     "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
+  "settings.agentBehaviour.pushFixes.title": "풀 리퀘스트 수정 사항 푸시",
+  "settings.agentBehaviour.pushFixes.description":
+    "풀 리퀘스트의 CI 실패나 리뷰 댓글을 에이전트에게 보내거나 worktree를 기본 브랜치에서 업데이트할 때, 풀 리퀘스트가 업데이트되도록 커밋과 푸시를 요청합니다. 권한 확인은 계속 적용됩니다. 직접 커밋하려면 끄세요.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1073,6 +1112,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "자동 및 수동 압축에 사용하는 모델입니다. 채팅 모델을 사용하려면 설정하지 않은 상태로 두세요. 비용, 속도 및 요약 품질은 모델에 따라 달라집니다.",
   "settings.context.compactionModel.useChatModel": "채팅 모델 사용",
+  "settings.context.compactionModel.hint": "압축에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
@@ -1116,9 +1156,12 @@ export const dict = {
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.fontSize.title": "글꼴 크기",
   "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
-  "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
-  "settings.display.reasoningAutoCollapse.description":
-    "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
+  "settings.display.reasoningDisplay.title": "추론 블록",
+  "settings.display.reasoningDisplay.description":
+    "추론 블록의 시작 표시 방식을 선택합니다. 펼침은 전체 텍스트를 표시하고, 미리보기는 짧은 스크롤 미리보기로 제한하며, 헤드라인은 열기 전까지 제목과 스트리밍 표시기만 표시합니다.",
+  "settings.display.reasoningDisplay.expanded": "펼침",
+  "settings.display.reasoningDisplay.preview": "미리보기",
+  "settings.display.reasoningDisplay.headline": "헤드라인",
   "settings.display.shiftTabCycle.title": "Shift+Tab으로 추론 강도 전환",
   "settings.display.shiftTabCycle.description":
     "프롬프트 입력란에서 Shift+Tab을 눌러 다음 추론 강도 수준으로 전환합니다. Shift+Tab을 키보드 포커스 탐색에 사용하려면 비활성화하세요.",
@@ -1256,6 +1299,18 @@ export const dict = {
     "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "로컬에 저장",
+  "diffViewer.comment.sendToAgent": "에이전트로 보내기",
+  "diffViewer.comment.postToGithub": "GitHub에 게시",
+  "diffViewer.comment.loadFailed": "풀 리퀘스트 변경 사항을 불러올 수 없습니다.",
+  "diffViewer.comment.unavailable": "이 줄은 현재 풀 리퀘스트 스냅샷에서 사용할 수 없습니다.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "풀 리퀘스트 열기",
+  "diffViewer.comment.localChanges": "로컬 변경 사항",
+  "diffViewer.comment.prChanges": "PR 변경 사항",
+  "diffViewer.comment.sendToKilo": "Kilo로 보내기",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}}로 보내기",
+  "diffViewer.comment.chooseDestination": "대상 선택",
   "diffViewer.notice.snapshotsDisabled":
     "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 

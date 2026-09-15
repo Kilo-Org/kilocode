@@ -2,6 +2,7 @@
 
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.app.KiloBackendActivityManager
 import ai.kilocode.backend.app.KiloBackendChatManager
@@ -91,6 +92,14 @@ class KiloSessionRpcApiImpl internal constructor(
         val session = workspaces.get(directory).createSession()
         log.info("create session: id=${session.id}, directory=$directory")
         return session
+    }
+
+    override suspend fun fork(id: String, directory: String, messageId: String?): SessionDto {
+        app.requireReady()
+        log.info("${ChatLogSummary.sid(id)} kind=fork dir=${ChatLogSummary.dir(directory)} message=${messageId != null}")
+        val forked = withContext(Dispatchers.IO) { sessions.fork(id, directory, messageId) }
+        withContext(Dispatchers.IO) { ForkHandoff.record(chat, forked.id, directory) }
+        return forked
     }
 
     override suspend fun get(id: String, directory: String): SessionDto {

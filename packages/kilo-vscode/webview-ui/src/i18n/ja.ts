@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完了（モデルによる報告）",
+  "session.goal.blocked": "ブロック中",
+  "session.goal.restart": "目標を再開",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "ボード",
+  "task.swarm.refresh": "更新",
+  "task.swarm.reset": "ボードをリセット",
+  "task.swarm.resetTitle": "このボードをリセットしますか？",
+  "task.swarm.resetDescription":
+    "表示されているメッセージを消去しますか？会話と実行中のタスクは変更されません。エージェントは新しいメッセージを投稿できます。",
+  "task.swarm.loading": "ボードを読み込み中...",
+  "task.swarm.failed": "ボードを読み込むかリセットできませんでした。更新を試してください。",
 
   "command.provider.connect": "プロバイダーに接続",
 
@@ -259,6 +270,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
   "notification.permission.titleSandboxEscalation": "サンドボックス外での Git 操作を許可しますか？",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.reject": "拒否",
+  "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
+  "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
   "ui.permission.rule.addToAllowed": "許可リストに追加",
@@ -447,6 +461,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "カスタムプロバイダー",
   "settings.providers.connected.environmentDescription": "環境変数から接続されています",
   "settings.providers.action.signInChatGPT": "ChatGPT でサインイン",
+  "settings.providers.action.changeApiKey": "APIキーを変更",
   "settings.providers.custom.description": "ベース URL でカスタムプロバイダーを追加します。",
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
@@ -745,6 +760,14 @@ export const dict = {
   "session.outcome.interrupted": "ターンが中断されました",
   "session.outcome.error": "ターンが失敗しました",
   "session.outcome.finish": "終了理由: {{reason}}",
+  "session.goal.label": "目標",
+  "prompt.goal.set": "目標を設定",
+  "prompt.goal.start": "目標を開始",
+  "session.goal.active": "実行中",
+  "session.goal.paused": "一時停止中",
+  "session.goal.pause": "一時停止",
+  "session.goal.resume": "再開",
+  "session.goal.clear": "目標をクリア",
   "session.costAlert.header": "セッションコストアラート",
   "session.costAlert.continue": "続行",
   "session.costAlert.question":
@@ -842,7 +865,17 @@ export const dict = {
   "settings.notifications.enable.title": "サウンド通知を有効にする",
   "settings.notifications.enable.description":
     "セッションの完了時、エラーの発生時、またはユーザー入力が必要なときにサウンドを再生します",
+  "settings.notifications.workbench.title": "VS Code 通知を有効にする",
+  "settings.notifications.workbench.description":
+    "Kilo がタスクを完了したとき、またはユーザー入力が必要なときに VS Code の通知を表示します",
+  "settings.notifications.os.title": "OS 通知を有効にする",
+  "settings.notifications.os.description":
+    "VS Code が非アクティブのときに Kilo がタスクを完了した場合、またはユーザー入力が必要な場合にネイティブ OS 通知を表示します。",
   "settings.notifications.testSound": "テスト",
+  "settings.notifications.testOS": "テスト",
+  "settings.notifications.testOS.testing": "テスト通知を送信しています…",
+  "settings.notifications.testOS.success": "テスト通知を送信しました。",
+  "settings.notifications.testOS.error": "テスト通知の送信に失敗しました",
   "settings.notifications.sound.default": "デフォルト",
   "settings.notifications.sound.system": "システム",
   "settings.notifications.sound.description":
@@ -899,6 +932,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 移行",
+  "settings.experimental.claudeMigration.description":
+    "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
@@ -1015,6 +1051,9 @@ export const dict = {
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.pushFixes.title": "プルリクエストの修正をプッシュ",
+  "settings.agentBehaviour.pushFixes.description":
+    "プルリクエストの CI 失敗やレビューコメントをエージェントに送信したとき、またはベースから worktree を更新したときに、プルリクエストが更新されるようにコミットとプッシュを依頼します。権限の確認は引き続き行われます。手動でコミットしたい場合はオフにしてください。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1084,6 +1123,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "自動および手動の圧縮に使用するモデル。チャットモデルを使用するには未設定のままにしてください。コスト、速度、要約の品質はモデルによって異なります。",
   "settings.context.compactionModel.useChatModel": "チャットモデルを使用",
+  "settings.context.compactionModel.hint": "圧縮に使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
@@ -1127,9 +1167,12 @@ export const dict = {
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
   "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
-  "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
-  "settings.display.reasoningAutoCollapse.description":
-    "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
+  "settings.display.reasoningDisplay.title": "推論ブロック",
+  "settings.display.reasoningDisplay.description":
+    "推論ブロックの開始時の表示方法を選択します。展開では全文を表示し、プレビューでは短いスクロール可能なプレビューに制限し、見出しではブロックを開くまでタイトルとストリーミングインジケーターのみを表示します。",
+  "settings.display.reasoningDisplay.expanded": "展開",
+  "settings.display.reasoningDisplay.preview": "プレビュー",
+  "settings.display.reasoningDisplay.headline": "見出し",
   "settings.display.shiftTabCycle.title": "Shift+Tab で推論の強度を切り替える",
   "settings.display.shiftTabCycle.description":
     "プロンプト入力欄で Shift+Tab を押すと、次の推論の強度レベルに切り替わります。Shift+Tab をキーボードフォーカスの移動に使用する場合は、無効にしてください。",
@@ -1269,6 +1312,18 @@ export const dict = {
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ローカルに保存",
+  "diffViewer.comment.sendToAgent": "エージェントに送信",
+  "diffViewer.comment.postToGithub": "GitHubに投稿",
+  "diffViewer.comment.loadFailed": "プルリクエストの変更を読み込めませんでした。",
+  "diffViewer.comment.unavailable": "この行は現在のプルリクエストのスナップショットでは利用できません。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "プルリクエストを開く",
+  "diffViewer.comment.localChanges": "ローカルの変更",
+  "diffViewer.comment.prChanges": "PRの変更",
+  "diffViewer.comment.sendToKilo": "Kiloに送信",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}}に送信",
+  "diffViewer.comment.chooseDestination": "送信先を選択",
   "diffViewer.notice.snapshotsDisabled":
     "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
 

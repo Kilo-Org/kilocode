@@ -72,6 +72,20 @@
   opacity: 0.5;
 }
 
+/* Inline model reference reuses the shared ModelSelectorBase. The component
+   renders its own trigger button, so the wrapper collapses it to a zero-size,
+   non-focusable anchor that only positions the popover above the prompt. */
+.mention-model-anchor {
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mention-model-anchor button {
+  visibility: hidden;
+}
+
 /* ============================================
    Session Mention Picker (past chats)
    ============================================ */

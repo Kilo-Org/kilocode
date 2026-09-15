@@ -23,12 +23,13 @@ import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/kilocode/instance"
 import { Vcs } from "@/project/vcs"
+import { Git } from "@/git"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
-import { detectPrLink, readPrLinkOverride } from "@/kilo-sessions/pr-link"
+import { detectPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
 import type { PrLink } from "@/kilo-sessions/pr-link"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import {
@@ -94,6 +95,7 @@ export namespace KiloSessions {
   const orgKey = "kilo-sessions:org"
   const clientKey = "kilo-sessions:client"
   const gitUrlKeyPrefix = "kilo-sessions:git-url:"
+  const gitBranchKeyPrefix = "kilo-sessions:git-branch:"
 
   const ttlMs = 10_000
 
@@ -128,7 +130,12 @@ export namespace KiloSessions {
     clearInFlightCache(tokenValidKey)
     clearInFlightCache(clientKey)
     clearInFlightCache(orgKey)
+    // The git-url and per-directory branch caches are keyed per directory
+    // (`<prefix><directory>`); only the launch-directory entry is cleared here.
+    // Entries for other session directories expire via ttlMs (10 s) — there is
+    // intentionally no prefix-clear API.
     clearInFlightCache(gitUrlKeyPrefix + Instance.worktree)
+    clearInFlightCache(gitBranchKeyPrefix + Instance.worktree)
   }
 
   async function authValid(token: string) {
@@ -600,9 +607,25 @@ export namespace KiloSessions {
             const mdl = await model(evt.properties.info.model.providerID, evt.properties.info.model.modelID)
             await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [mdl] }])
           })
-          watch(MessageV2.Event.PartUpdated, (evt) =>
-            ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
-          )
+          watch(MessageV2.Event.PartUpdated, async (evt) => {
+            const part = evt.properties.part
+            await ingest.sync(part.sessionID, [{ type: "part", data: part }])
+            // kilocode_change - PR link from the session's own output: agent text
+            // or a completed tool's output (e.g. the `gh pr create` URL). The
+            // regex prefilters before the record attempt and `recordPrLinkText`
+            // returns a link only when it is new or changed, so the next
+            // heartbeat advertises it and `syncPrLinkForSession` queues exactly
+            // one `session_pr_link` item (the triple dedupe suppresses repeats).
+            const text =
+              part.type === "text"
+                ? part.text
+                : part.type === "tool" && part.state.status === "completed"
+                  ? part.state.output
+                  : undefined
+            if (!text || !/\/pull\/|\/pull-requests\/|\/merge_requests\//.test(text)) return
+            if (!recordPrLinkText(Instance.worktree, text)) return
+            await syncPrLinkForSession(part.sessionID)
+          })
           watch(Session.Event.Diff, (evt) =>
             cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
@@ -795,10 +818,10 @@ export namespace KiloSessions {
       // moment of sending. The flag may be set after this closure is created
       // (race-proof) — `getSessions` reads the current value each tick.
       const getSessions = async (): Promise<RemoteProtocol.Heartbeat> => {
-        const [gitUrl, gitBranch] = await Promise.all([
-          getGitUrl().catch(() => undefined),
-          branch().catch(() => undefined),
-        ])
+        // The instance advertisement describes the host process's own project,
+        // so it keeps the launch-directory (Vcs) branch. Session rows derive
+        // their repository metadata from each session's own directory below.
+        const gitBranch = await branch().catch(() => undefined)
         const { AppRuntime } = await import("@/effect/app-runtime")
         // Batch SessionStatus + attention lists once per heartbeat (not per session).
         // Permission/Question list() feeds the same precedence as deriveStatus().
@@ -819,17 +842,16 @@ export namespace KiloSessions {
             Effect.all(
               [...ids].map((id) =>
                 svc.get(SessionID.make(id)).pipe(
-                  Effect.map((session) => ({
-                    id,
-                    status: resolveDerivedSessionStatus({
+                Effect.map((session) => ({
+                  id,
+                  directory: session.directory,
+                  status: resolveDerivedSessionStatus({
                       hasPermission: permissionSessions.has(id),
                       hasQuestion: questionSessions.has(id),
                       statusType: statuses[id]?.type,
                     }),
                     title: session.title,
                     parentSessionId: session.parentID,
-                    gitUrl,
-                    gitBranch,
                     // kilocode_change - K1 W1: per-session platform, mirrors
                     // meta()'s resolution order so the live value always agrees
                     // with the session's stored created_on_platform.
@@ -841,7 +863,29 @@ export namespace KiloSessions {
             ),
           ),
         )
-        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
+        // Resolve repository metadata per distinct session directory: a host
+        // launched outside the selected repository must still publish each
+        // session's own repo. Directory-less sessions fall back to the launch
+        // worktree, and the in-flight cache collapses same-directory sessions
+        // into one git call per ttlMs.
+        const gitPairs = new Map<string, { gitUrl?: string; gitBranch?: string }>()
+        await Promise.all(
+          [...new Set(results.map((r) => r?.directory ?? Instance.worktree))].map(async (directory) => {
+            const [gitUrl, sessionGitBranch] = await Promise.all([
+              getGitUrl(directory).catch(() => undefined),
+              branchFor(directory).catch(() => undefined),
+            ])
+            gitPairs.set(directory, { gitUrl, gitBranch: sessionGitBranch })
+          }),
+        )
+        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r).map((r) => ({
+          id: r.id,
+          status: r.status,
+          title: r.title,
+          parentSessionId: r.parentSessionId,
+          ...gitPairs.get(r.directory ?? Instance.worktree),
+          platform: r.platform,
+        }))
         // kilocode_change - PR link advertise (plan 8.2): resolve once
         // (worktree-scoped) and attach to every advertised row, then ingest the
         // triple per session (deduped by last-sent triple).
@@ -852,7 +896,7 @@ export namespace KiloSessions {
         const advertised = pr.prLink ? sessions.map((row) => ({ ...row, prLink: pr.prLink })) : sessions
         const instance = instanceAdvertisement && {
           ...instanceAdvertisement,
-          // Reuse the current session branch without splitting a surrogate pair.
+          // Truncate the launch-directory branch without splitting a surrogate pair.
           gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
         }
         return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
@@ -1466,9 +1510,9 @@ export namespace KiloSessions {
     }
   }
 
-  async function getGitUrl(): Promise<string | undefined> {
-    return withInFlightCache(gitUrlKeyPrefix + Instance.worktree, ttlMs, async () => {
-      const repo = simpleGit(Instance.worktree)
+  async function getGitUrl(directory: string): Promise<string | undefined> {
+    return withInFlightCache(gitUrlKeyPrefix + directory, ttlMs, async () => {
+      const repo = simpleGit(directory)
       const remotes = await repo.getRemotes(true).catch(() => [])
       if (remotes.length === 0) return undefined
 
@@ -1488,17 +1532,48 @@ export namespace KiloSessions {
     })
   }
 
+  // Context-scoped branch for the instance advertisement: the ad describes the
+  // host process's own project, so it keeps the launch-directory Vcs branch.
   async function branch() {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
+  }
+
+  // Per-directory branch for session rows and persisted kilo_meta: a session
+  // created in a nested repository must report that repository's branch, not
+  // the host's launch directory. `Git.branch` returns undefined for
+  // non-repositories, which collapses to "no branch metadata".
+  async function branchFor(directory: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return withInFlightCache(gitBranchKeyPrefix + directory, ttlMs, () =>
+      AppRuntime.runPromise(Git.Service.use((svc) => svc.branch(directory))),
+    )
+  }
+
+  // Non-throwing launch-directory read for `meta()`: when called outside any
+  // instance context (e.g. the API-robustness path where Session.get already
+  // failed), `Instance.worktree` throws synchronously — before, the only access
+  // sat inside an async closure so it degraded to "git metadata absent".
+  // Degrade the same way instead of throwing.
+  function launchDirectory(): string | undefined {
+    try {
+      return Instance.worktree
+    } catch {
+      return undefined
+    }
   }
 
   async function meta(sessionId?: string, info?: Session.Info | null) {
     const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId(sessionId, info)
-    const gitBranch = await branch().catch(() => undefined)
-    const gitUrl = await getGitUrl().catch(() => undefined)
+    // Repository metadata follows the session's own directory (a `kilo remote`
+    // host launched outside the selected repository must still publish the
+    // session's repo); directory-less sessions fall back to the launch worktree
+    // when an instance context exists, else to "no git metadata".
+    const directory = info?.directory ?? launchDirectory()
+    const gitBranch = directory ? await branchFor(directory).catch(() => undefined) : undefined
+    const gitUrl = directory ? await getGitUrl(directory).catch(() => undefined) : undefined
 
     return {
       platform,

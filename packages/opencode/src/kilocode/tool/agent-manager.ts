@@ -2,7 +2,7 @@ import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { AgentManagerEvent, type AgentManagerTask } from "@/kilocode/agent-manager/event"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
-import type { Result } from "@/kilocode/agent-manager/protocol"
+import { RequestID, type Result } from "@/kilocode/agent-manager/protocol"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Provider } from "@/provider/provider"
@@ -60,6 +60,14 @@ const StartParams = Schema.Struct({
     description:
       "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
   }),
+  worktreeID: Schema.optional(
+    Schema.NullOr(
+      Schema.String.check(Schema.makeFilter((value) => (value.trim() ? undefined : "worktreeID must not be blank"))),
+    ),
+  ).annotate({
+    description:
+      "Start sessions only. Existing managed worktree ID returned by action=list in the caller's project. Requires mode local; omit or null to use the caller's directory. Never use a path or branch name.",
+  }),
   tasks: Schema.Array(Task)
     .check(Schema.isMinLength(1), Schema.isMaxLength(20))
     .annotate({ description: "Agent Manager sessions to start" }),
@@ -84,12 +92,20 @@ const ListParams = Schema.Struct({
   }),
 })
 
+const ReplyTo = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)).check(
+  Schema.makeFilter((value) => (value.trim() ? undefined : "replyTo must not be empty")),
+)
+
 const PromptParams = Schema.Struct({
   action: Schema.Literal("prompt"),
   sessionID: SessionID,
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
     Schema.makeFilter((value) => (value.trim() ? undefined : "Prompt must not be empty")),
   ),
+  replyTo: Schema.optional(Schema.NullOr(ReplyTo)).annotate({
+    description:
+      "Optional request ID from a peer-agent prompt. Use it only when replying to the session that sent the request.",
+  }),
 })
 
 const StopParams = Schema.Struct({
@@ -132,7 +148,15 @@ export const Params = Schema.Union([
   Schema.Struct({
     ...StartParams.fields,
     tasks: Schema.Union([StartParams.fields.tasks, Schema.fromJsonString(StartParams.fields.tasks)]),
-  }),
+  }).check(
+    Schema.makeFilter((params) => {
+      if (params.worktreeID == null) return undefined
+      if (params.mode !== "local") return "worktreeID requires mode local"
+      if (params.versions === true) return "worktreeID cannot be combined with versions true"
+      if (params.tasks.some((task) => task.branchName != null)) return "worktreeID cannot be combined with branchName"
+      return undefined
+    }),
+  ),
   ListParams,
   PromptParams,
   StopParams,
@@ -148,35 +172,38 @@ export const Params = Schema.Union([
 // the model is forced to invent a value, and an invented action wins over mode and
 // tasks, turning a start request into a list.
 const WireParams = Schema.Struct({
-  mode: Schema.optional(Schema.NullOr(StartParams.fields.mode)).annotate({
+  mode: Schema.NullOr(StartParams.fields.mode).annotate({
     description:
       "Start sessions only. Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions. Send null whenever action is set.",
   }),
-  versions: Schema.optional(Schema.NullOr(Schema.Boolean)).annotate({
+  versions: Schema.NullOr(Schema.Boolean).annotate({
     description:
       "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
   }),
-  tasks: Schema.optional(Schema.NullOr(StartParams.fields.tasks)).annotate({
+  tasks: Schema.NullOr(StartParams.fields.tasks).annotate({
     description: "Start sessions only. Agent Manager sessions to start. Send null whenever action is set.",
   }),
-  action: Schema.optional(
-    Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move", "answer"])).annotate({
-      description:
-        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
-    }),
-  ),
-  filter: ListParams.fields.filter,
-  sessionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+  worktreeID: Schema.NullOr(StartParams.fields.worktreeID),
+  action: Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move", "answer"])).annotate({
+    description:
+      "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
+  }),
+  filter: Schema.NullOr(ListParams.fields.filter),
+  sessionID: Schema.NullOr(Schema.String).annotate({
     description:
       "For prompt, stop, move, and answer: a session ID returned by action=list (IDs start with ses_). Send null for every other operation.",
   }),
-  prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+  prompt: Schema.NullOr(Schema.String).annotate({
     description:
       "For prompt: the instruction to send to that session. Start requests use tasks[].prompt instead, so send null.",
   }),
-  sectionID: Schema.optional(MoveParams.fields.sectionID),
-  questionID: AnswerParams.fields.questionID,
-  answers: Schema.optional(Schema.NullOr(AnswerParams.fields.answers)),
+  replyTo: Schema.NullOr(ReplyTo).annotate({
+    description:
+      "For prompt replies: the request ID included by Agent Manager in the peer-agent request. Send null otherwise.",
+  }),
+  sectionID: Schema.NullOr(MoveParams.fields.sectionID),
+  questionID: Schema.NullOr(Schema.String),
+  answers: Schema.NullOr(AnswerParams.fields.answers),
 })
 
 type Input = Schema.Schema.Type<typeof Task>
@@ -282,6 +309,8 @@ export const AgentManagerTool = Tool.define<
             }
             if (params.action === "prompt") {
               const prompt = params.prompt.trim()
+              const ref = params.replyTo?.trim()
+              const replyTo = ref && !["none", "null", "undefined"].includes(ref.toLowerCase()) ? ref : undefined
               yield* ctx.ask({
                 permission: "agent_manager",
                 patterns: ["prompt"],
@@ -289,6 +318,7 @@ export const AgentManagerTool = Tool.define<
                 metadata: {
                   action: "prompt",
                   sessionID: params.sessionID,
+                  ...(replyTo ? { replyTo } : {}),
                   description: `Send a prompt to Agent Manager session ${params.sessionID}:\n\n${prompt}`,
                 },
               })
@@ -297,16 +327,20 @@ export const AgentManagerTool = Tool.define<
                   operation: "prompt",
                   sessionID: ctx.sessionID,
                   targetSessionID: params.sessionID,
+                  sourceSessionID: ctx.sessionID,
                   prompt,
+                  ...(replyTo ? { replyTo: RequestID.make(replyTo) } : {}),
                 }),
                 ctx.abort,
               )
               if (result.operation !== "prompt")
                 return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
               return {
-                title: "Prompt accepted",
-                output: `Agent Manager session ${result.sessionID} accepted the prompt. If the session is busy, the prompt is queued behind active work. This does not wait for completion.`,
-                metadata: { action: "prompt", sessionID: result.sessionID },
+                title: replyTo ? "Reply accepted" : "Prompt accepted",
+                output: replyTo
+                  ? `Reply accepted by Agent Manager session ${result.sessionID}. If the session is busy, the reply is queued behind active work. This does not wait for completion.`
+                  : `Agent Manager session ${result.sessionID} accepted the prompt. If the session is busy, the prompt is queued behind active work. This does not wait for completion.`,
+                metadata: { action: "prompt", sessionID: result.sessionID, ...(replyTo ? { replyTo } : {}) },
               }
             }
             if (params.action === "stop") {
@@ -419,7 +453,11 @@ export const AgentManagerTool = Tool.define<
             permission: "agent_manager",
             patterns: [params.mode],
             always: [params.mode],
-            metadata: { mode: params.mode, count: tasks.length },
+            metadata: {
+              mode: params.mode,
+              count: tasks.length,
+              ...(params.worktreeID != null ? { worktreeID: params.worktreeID } : {}),
+            },
           })
 
           const requestID = `am-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -434,6 +472,7 @@ export const AgentManagerTool = Tool.define<
             sessionID: ctx.sessionID,
             sandboxInheritanceToken,
             mode: params.mode,
+            ...(params.worktreeID != null ? { worktreeID: params.worktreeID } : {}),
             ...(params.versions != null ? { versions: params.versions } : {}),
             tasks,
           })
@@ -453,6 +492,7 @@ export const AgentManagerTool = Tool.define<
             output: [
               `Requested ${tasks.length} Agent Manager ${params.mode === "worktree" ? "worktree" : "local"} session${tasks.length === 1 ? "" : "s"}.`,
               `request_id: ${requestID}`,
+              ...(params.worktreeID != null ? [`Existing managed worktree: ${params.worktreeID}`] : []),
               ...(resolved.length ? ["Resolved models:", ...resolved] : []),
               "The VS Code extension will create the sessions asynchronously and show progress in Agent Manager.",
             ].join("\n"),

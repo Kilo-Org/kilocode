@@ -47,6 +47,8 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
             listOf(
                 "Kilo.Session.AutoApprove",
                 "---",
+                "Kilo.Session.Fork",
+                "---",
                 "Kilo.Session.CompareToBase",
                 "Kilo.Session.OpenPr",
                 "Kilo.Session.CopyPrRef",
@@ -78,6 +80,8 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals(
             listOf(
                 "Kilo.Session.AutoApprove",
+                "---",
+                "Kilo.Session.Fork",
                 "---",
                 "Kilo.Session.CompareToBase",
                 "Kilo.Session.OpenPr",
@@ -194,6 +198,35 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         val event = event(action, Fake(id = "ses_test", readonly = true))
 
         ActionUtil.updateAction(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    // ---- fork ----
+
+    fun `test fork action follows the surface's fork capability`() {
+        val action = ForkSessionAction()
+
+        // The sidebar and read-only tabs report forkable=false; only worktree editor tabs opt in.
+        val off = event(action, Fake(id = "ses_test", forkable = false))
+        ActionUtil.updateAction(action, off)
+        assertFalse(off.presentation.isEnabledAndVisible)
+
+        val actions = Fake(id = "ses_test", forkable = true)
+        val on = event(action, actions)
+        ActionUtil.updateAction(action, on)
+        assertTrue(on.presentation.isEnabledAndVisible)
+
+        action.actionPerformed(on)
+        assertEquals(1, actions.forks)
+    }
+
+    fun `test fork action does nothing without a session context`() {
+        val action = ForkSessionAction()
+        val event = event(action, null)
+
+        ActionUtil.updateAction(action, event)
+        action.actionPerformed(event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -364,6 +397,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         override val pr: WorktreePrDto? = null,
         override val share: String? = null,
         override val git: Boolean = true,
+        override val forkable: Boolean = false,
         auto: Boolean = false,
     ) : SessionActions {
         // Backing field rather than `override var auto`: a var would generate setAuto(Z)V and clash
@@ -374,10 +408,15 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         var compares = 0
         var started = 0
         var stopped = 0
+        var forks = 0
 
         override fun setAuto(value: Boolean) {
             autos.add(value)
             state = value
+        }
+
+        override fun fork() {
+            forks++
         }
 
         override fun compare() {

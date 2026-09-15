@@ -16,6 +16,7 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { SortableTab, SortableReviewTab } from "./sortable-tab"
 import type { TerminalStateControls } from "./terminal"
 import { isTerminalTabId, renderTerminalTab } from "./terminal"
+import { closeOthers } from "./close-others"
 import type { SessionInfo } from "../src/types/messages"
 import type { Activity } from "../src/utils/session-activity"
 import { parseBindingTokens } from "./keybind-tokens"
@@ -204,26 +205,6 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
   )
 }
 
-function closeOthers(target: string, deps: TabRenderDeps) {
-  for (const id of deps.tabIds()) {
-    if (id === target) continue
-    if (isTerminalTabId(id)) {
-      deps.closeTerminal(id)
-      continue
-    }
-    if (id === deps.REVIEW_TAB_ID) {
-      deps.closeReview()
-      continue
-    }
-    deps.sessionClose(id)
-  }
-  if (isTerminalTabId(target)) {
-    deps.activateTerminal(target)
-    return
-  }
-  deps.selectSessionTab(target, deps.isPending(target))
-}
-
 // Terminal-specific renderers (layer + add button) live in `./terminal/render.tsx`
 // and are re-exported for convenience so AgentManagerApp.tsx has a single
 // import point for tab rendering.
@@ -272,9 +253,14 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
           />
         </TooltipKeybind>
         <DropdownMenu gutter={4} placement="bottom-end">
-          <DropdownMenu.Trigger class="am-split-arrow" aria-label={deps.moreOptionsLabel}>
-            <Icon name="chevron-down" size="small" />
-          </DropdownMenu.Trigger>
+          <DropdownMenu.Trigger
+            as={IconButton}
+            icon="chevron-down"
+            size="small"
+            variant="ghost"
+            class="am-split-arrow"
+            aria-label={deps.moreOptionsLabel}
+          />
           <DropdownMenu.Portal>
             <DropdownMenu.Content class="am-split-menu">
               <DropdownMenu.Item onSelect={deps.onNewSession}>

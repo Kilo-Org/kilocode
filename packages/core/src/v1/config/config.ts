@@ -107,7 +107,11 @@ export const Info = Schema.Struct({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
-    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
+    description:
+      "@deprecated Use 'reasoning_display' field instead. Automatically collapse reasoning blocks after the agent finishes writing them",
+  }),
+  reasoning_display: Schema.optional(Schema.Literals(["expanded", "preview", "headline"])).annotate({
+    description: "Controls how reasoning blocks are displayed in the VS Code chat UI",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
   console: Schema.optional(

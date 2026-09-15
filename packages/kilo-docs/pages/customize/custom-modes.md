@@ -740,7 +740,3 @@ Focus on:
 
 {% /tab %}
 {% /tabs %}
-
-## Community Gallery
-
-Ready to explore more? Check out the [Show and Tell](https://github.com/Kilo-Org/kilocode/discussions/categories/show-and-tell) to discover and share custom modes and agents created by the community!
