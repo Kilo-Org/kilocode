@@ -12,22 +12,22 @@ export type DocumentResult =
 /**
  * Whether `resolved` is `root` or lives inside it.
  *
- * Windows filesystems are case-insensitive and `fs.realpathSync` keeps the
- * drive-letter case of its input instead of normalizing it, so an absolute file
- * path can arrive with a different case than the session directory. Compare
- * folded on Windows, and exactly on POSIX, where case can name two real paths.
+ * Windows and default macOS filesystems are case-insensitive, and
+ * `fs.realpathSync` keeps the case of its input instead of normalizing it, so an
+ * absolute file path can arrive with a different case than the session
+ * directory. Compare folded on those platforms, matching the package's
+ * `samePath` policy, and exactly on Linux, where case can name two real paths.
  */
 export function isInsideWorktree(
   root: string,
   resolved: string,
   platform: NodeJS.Platform = process.platform,
 ): boolean {
-  if (platform === "win32") {
-    const base = root.toLowerCase()
-    const target = resolved.toLowerCase()
-    return target === base || target.startsWith(base + path.win32.sep)
-  }
-  return resolved === root || resolved.startsWith(root + path.sep)
+  const fold = platform === "win32" || platform === "darwin"
+  const sep = platform === "win32" ? path.win32.sep : path.sep
+  const base = fold ? root.toLowerCase() : root
+  const target = fold ? resolved.toLowerCase() : resolved
+  return target === base || target.startsWith(base + sep)
 }
 
 function mime(file: string): string | undefined {

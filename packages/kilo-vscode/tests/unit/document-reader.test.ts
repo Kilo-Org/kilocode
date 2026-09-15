@@ -33,9 +33,9 @@ describe("readDocument", () => {
 })
 
 describe("isInsideWorktree", () => {
-  // Windows paths are case-insensitive, and fs.realpathSync preserves the
-  // drive-letter case of its input, so a file link read from a webview can
-  // differ in case from the session directory. See #14182.
+  // Windows and default macOS filesystems are case-insensitive, and
+  // fs.realpathSync preserves the case of its input, so a file link read from a
+  // webview can differ in case from the session directory. See #14182.
   it("accepts Windows drive-letter case differences", () => {
     expect(isInsideWorktree("D:\\demo-project", "d:\\demo-project\\README.md", "win32")).toBe(true)
     expect(isInsideWorktree("d:\\demo-project", "D:\\demo-project\\README.md", "win32")).toBe(true)
@@ -57,7 +57,11 @@ describe("isInsideWorktree", () => {
     expect(isInsideWorktree("D:\\demo-project", "D:\\other\\README.md", "win32")).toBe(false)
   })
 
-  it("keeps the exact comparison on POSIX", () => {
+  it("accepts macOS path case differences", () => {
+    expect(isInsideWorktree("/Users/dev/Repo", "/users/dev/repo/src/file.ts", "darwin")).toBe(true)
+  })
+
+  it("keeps the exact comparison on Linux", () => {
     expect(isInsideWorktree("/work", "/work/file.md", "linux")).toBe(true)
     expect(isInsideWorktree("/work", "/Work/file.md", "linux")).toBe(false)
   })
