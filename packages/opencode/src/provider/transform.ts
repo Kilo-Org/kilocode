@@ -7,6 +7,7 @@ import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
+import { resolvePromptCacheKey } from "@/kilocode/session/cache-key" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -1541,8 +1542,10 @@ export function options(input: {
   }
 
   if (input.providerOptions?.setCacheKey !== false) {
+    // kilocode_change start - /btw forks reuse the parent session's prompt cache key
+    const cacheKey = resolvePromptCacheKey(input.sessionID)
     if (input.model.api.npm === "@ai-sdk/deepinfra" || input.model.api.npm === "@ai-sdk/cerebras") {
-      result["prompt_cache_key"] = input.sessionID
+      result["prompt_cache_key"] = cacheKey // kilocode_change
     } else if (
       input.model.api.npm === "@ai-sdk/openai" ||
       input.model.api.npm === "@ai-sdk/azure" ||
@@ -1553,8 +1556,9 @@ export function options(input: {
       (input.model.providerID === "openai" && input.model.api.npm !== "@ai-sdk/openai-compatible") ||
       input.providerOptions?.setCacheKey === true
     ) {
-      result["promptCacheKey"] = input.sessionID
+      result["promptCacheKey"] = cacheKey // kilocode_change
     }
+    // kilocode_change end
   }
 
   if (input.model.api.npm === "@ai-sdk/gateway") {
@@ -1608,7 +1612,7 @@ export function options(input: {
     }
 
     if (input.model.providerID.startsWith("opencode") && input.providerOptions?.setCacheKey !== false) {
-      result["promptCacheKey"] = input.sessionID
+      result["promptCacheKey"] = resolvePromptCacheKey(input.sessionID) // kilocode_change - /btw forks reuse the parent cache key
       result["include"] = INCLUDE_ENCRYPTED_REASONING
       result["reasoningSummary"] = "auto"
     }
