@@ -1297,6 +1297,33 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   onCleanup(() => save(session.currentSessionID()))
 
+  // Virtua, direct-tail, and queued rows render the same row view. Queued rows
+  // are pending user messages, so they keep the fork and timeline actions off.
+  // Row and index stay accessors so replacing a row object updates the mounted
+  // DOM in place instead of remounting it.
+  const renderRow = (
+    key: string,
+    source: () => TranscriptRow | undefined,
+    opts?: { index?: () => number; queued?: boolean },
+  ) => (
+    <TranscriptRowView
+      row={source()!}
+      index={opts?.index?.()}
+      onSelectSession={props.onSelectSession}
+      isSessionOpen={props.isSessionOpen}
+      onForkMessage={opts?.queued ? undefined : props.onForkMessage}
+      onEditMessage={props.onEditMessage}
+      queuedDisabled={props.queuedDisabled}
+      editDisabled={props.editDisabled}
+      highlight={opts?.queued ? undefined : highlight}
+      activeSearch={activeKey() === key}
+      activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
+      activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
+      readonly={props.readonly}
+      interactivePrompts={props.interactivePrompts}
+    />
+  )
+
   return (
     <div class="message-list-container" classList={{ "am-intro-layout": introduction() }}>
       <Show when={props.announce === false}>
@@ -1374,67 +1401,16 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     bufferSize={520}
                     itemSize={260}
                   >
-                    {(key, index) => (
-                      <TranscriptRowView
-                        row={virtual().get(key)!}
-                        index={index()}
-                        onSelectSession={props.onSelectSession}
-                        isSessionOpen={props.isSessionOpen}
-                        onForkMessage={props.onForkMessage}
-                        onEditMessage={props.onEditMessage}
-                        queuedDisabled={props.queuedDisabled}
-                        editDisabled={props.editDisabled}
-                        highlight={highlight}
-                        activeSearch={activeKey() === key}
-                        activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
-                        activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
-                        readonly={props.readonly}
-                        interactivePrompts={props.interactivePrompts}
-                      />
-                    )}
+                    {(key, index) => renderRow(key, () => virtual().get(key), { index })}
                   </Virtualizer>
                 </Show>
-                <For each={tail()}>
-                  {(key) => (
-                    <TranscriptRowView
-                      row={lookup().get(key)!}
-                      onSelectSession={props.onSelectSession}
-                      isSessionOpen={props.isSessionOpen}
-                      onForkMessage={props.onForkMessage}
-                      onEditMessage={props.onEditMessage}
-                      queuedDisabled={props.queuedDisabled}
-                      editDisabled={props.editDisabled}
-                      highlight={highlight}
-                      activeSearch={activeKey() === key}
-                      activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
-                      activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
-                      readonly={props.readonly}
-                      interactivePrompts={props.interactivePrompts}
-                    />
-                  )}
-                </For>
+                <For each={tail()}>{(key) => renderRow(key, () => lookup().get(key))}</For>
               </div>
             </Show>
             <Show when={revert()}>
               <RevertBanner />
             </Show>
-            <For each={partition().queued}>
-              {(row) => (
-                <TranscriptRowView
-                  row={row}
-                  onSelectSession={props.onSelectSession}
-                  isSessionOpen={props.isSessionOpen}
-                  onEditMessage={props.onEditMessage}
-                  queuedDisabled={props.queuedDisabled}
-                  editDisabled={props.editDisabled}
-                  activeSearch={activeKey() === row.key}
-                  activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
-                  activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
-                  readonly={props.readonly}
-                  interactivePrompts={props.interactivePrompts}
-                />
-              )}
-            </For>
+            <For each={partition().queued}>{(row) => renderRow(row.key, () => row, { queued: true })}</For>
             <TurnOutcome />
             <Show when={props.interactivePrompts !== false}>
               <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
