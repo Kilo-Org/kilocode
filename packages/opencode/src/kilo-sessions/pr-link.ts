@@ -35,12 +35,15 @@ function extractPrNumber(pathname: string): number | undefined {
   let match = pathname.match(/^\/[^/]+\/[^/]+\/pull\/(\d+)(?:\/.*)?$/)
   if (match) return Number(match[1])
 
-  // GitLab: /owner/repo/merge_requests/N and /owner/repo/-/merge_requests/N
-  match = pathname.match(/\/merge_requests\/(\d+)\/?$/)
+  // GitLab: /owner/repo/merge_requests/N and /owner/repo/-/merge_requests/N. The
+  // number sits directly after `merge_requests`; a trailing page path
+  // (`/diffs`) is tolerated like GitHub's `/files`, but nothing but digits may
+  // precede it.
+  match = pathname.match(/\/merge_requests\/(\d+)(?:\/.*)?$/)
   if (match) return Number(match[1])
 
-  // Generic: /pull/N and /pull-requests/N
-  match = pathname.match(/\/(?:pull|pull-requests)\/(\d+)\/?$/)
+  // Generic: /pull/N and /pull-requests/N, with the same trailing-path tolerance.
+  match = pathname.match(/\/(?:pull|pull-requests)\/(\d+)(?:\/.*)?$/)
   if (match) return Number(match[1])
 
   return undefined
@@ -71,12 +74,17 @@ export function parsePrUrl(url: string): PrLink | undefined {
 }
 
 // The branch identity a lookup is keyed by: the tracking ref (or the remote plus
-// the current branch when there is no upstream) plus the head commit.
+// the current branch when there is no upstream) plus the head commit. It also
+// carries the remote's platform, host and project path so a session-output URL
+// can be matched against the worktree's own repository.
 type Identity = {
   key: string
   owner: string
   repo: string
   branch: string
+  platform: string
+  host: string
+  path: string
 }
 
 type Recorded = {
@@ -95,7 +103,7 @@ type CacheEntry = {
 // (a `gh pr create` line, an agent message). The REST cache and the rate-limit
 // backoff are module-level per worktree, bounded so a long-lived `kilo serve`
 // that visits many worktrees does not grow them without limit.
-type Known = { branch: string; owner: string; repo: string }
+type Known = { branch: string; owner: string; repo: string; platform: string; host: string; path: string }
 type Positive = { branch: string | undefined; link: PrLink }
 
 const recordedLinks = new Map<string, Recorded>()
@@ -131,25 +139,49 @@ function branchOf(key: string) {
 }
 
 // A session-output URL only counts for this worktree when it points at the
-// worktree's own GitHub repository. Anything else the session merely mentions
-// (another repo's PR, a doc link) must not stick to this branch.
-function repoOf(link: PrLink) {
-  if (link.platform !== "github") return undefined
-  let path: string
+// worktree's own repository. Anything else the session merely mentions (another
+// repo's PR, a doc link) must not stick to this branch. The project path is
+// returned for the three PR shapes the shared matcher recognises: GitHub
+// `/owner/repo/pull/N`, GitLab `/<group>[/<subgroup>...]/<project>/-/merge_requests/N`
+// (and the `-`-less form), and Bitbucket/generic `/<workspace>/<repo>/pull-requests/N`
+// (or `/pull/N` on a custom host). Anything else stays unlinked.
+function urlRepo(link: PrLink) {
+  let url: URL
   try {
-    path = new URL(link.prUrl).pathname
+    url = new URL(link.prUrl)
   } catch {
     return undefined
   }
-  const match = path.match(/^\/([^/]+)\/([^/]+)\/(?:pull|pull-requests)\/\d+/)
-  if (!match) return undefined
-  return { owner: match[1], repo: match[2] }
+  // `platformFromHost` ignores a leading `www.`; a link host must fold it too or
+  // `https://www.github.com/...` never matches a `github.com` worktree.
+  const host = url.hostname.toLowerCase().replace(/^www\./, "")
+  const path = url.pathname
+
+  const github = path.match(/^\/([^/]+)\/([^/]+)\/pull\/\d+/)
+  if (github) return { host, path: `${github[1]}/${github[2]}` }
+
+  const generic = path.match(/^\/([^/]+)\/([^/]+)\/(?:pull-requests|pull)\/\d+/)
+  if (generic) return { host, path: `${generic[1]}/${generic[2]}` }
+
+  const gitlab = path.match(/^\/(.+?)\/(?:-\/)?merge_requests\/\d+/)
+  if (gitlab) return { host, path: gitlab[1] }
+
+  return undefined
 }
 
-function sameRepo(link: PrLink, repo: { owner: string; repo: string }) {
-  const own = repoOf(link)
+// The same project path on a compatible host. Hosts compare equal, or one side
+// has no dot: an SSH alias (`git@gitlab:group/proj.git`) cannot be compared to
+// the web URL host, so the path decides. Two different dotted hosts never match,
+// so a GitLab MR on `gitlab.other.example` cannot stick to a `gitlab.example.com`
+// worktree and a GitLab mirror URL cannot stick to a `github.com` worktree.
+function sameRepo(link: PrLink, identity: { host: string; path: string }) {
+  const own = urlRepo(link)
   if (!own) return false
-  return own.owner === repo.owner && own.repo === repo.repo
+  if (own.path.toLowerCase() !== identity.path.toLowerCase()) return false
+  const a = own.host
+  const b = identity.host.toLowerCase()
+  if (a === b) return true
+  return !a.includes(".") || !b.includes(".")
 }
 
 // The last positive link only applies to the branch it was recorded for.
@@ -159,19 +191,57 @@ function positiveFor(worktree: string, branch: string | undefined) {
   return positive.link
 }
 
-function githubRepo(raw: string) {
-  const value = raw.trim().replace(/\/+$/, "").replace(/\.git$/i, "")
-  const match =
-    value.match(/^(?:ssh:\/\/)?git@github\.com[:/](.+)$/i) ?? value.match(/^https?:\/\/github\.com\/(.+)$/i)
-  const slug = match?.[1]
-  if (!slug) return undefined
-  const [owner, repo] = slug.split("/")
-  if (!owner || !repo) return undefined
-  return { owner, repo }
+// Parse any remote form git can hold into its host, project path and platform:
+// `git@host:path(.git)`, `ssh://git@host[:port]/path.git`, `https://host/path(.git)`
+// and `git://host/path.git`. The host is lowercased with a leading `www.` and
+// the port stripped, and the path has any trailing slash then `.git` removed, so
+// a `…/proj.git/` remote yields the `proj` project, not `proj.git`. The platform
+// comes from the host, so a self-hosted GitLab host behaves exactly like
+// gitlab.com. `owner`/`repo` stay the last two path segments for the `gh` REST
+// call.
+function remoteRepo(raw: string) {
+  const value = raw.trim()
+  if (!value) return undefined
+
+  let host: string | undefined
+  let path: string | undefined
+  const scp = value.match(/^[^/@\s]+@([^/:\s]+):(.+)$/)
+  if (scp) {
+    host = scp[1]
+    path = scp[2]
+  } else {
+    let parsed: URL
+    try {
+      parsed = new URL(value)
+    } catch {
+      return undefined
+    }
+    if (!/^(?:https?|ssh|git):$/.test(parsed.protocol)) return undefined
+    host = parsed.hostname
+    path = parsed.pathname
+  }
+
+  // Strip the trailing slash before `.git` so `…/proj.git/` still ends in
+  // `.git`; the empty segment filter then drops any remaining slash.
+  const segments = path
+    .replace(/\/+$/, "")
+    .replace(/\.git$/i, "")
+    .split("/")
+    .filter(Boolean)
+  if (!host || segments.length === 0) return undefined
+
+  const name = host.toLowerCase().replace(/^www\./, "")
+  return {
+    host: name,
+    path: segments.join("/"),
+    platform: platformFromHost(name),
+    owner: segments.at(-2) ?? "",
+    repo: segments.at(-1) ?? "",
+  }
 }
 
 // Cheap local signals only: no `gh` spawn happens here. Returns undefined when
-// there is no branch or no GitHub remote, so the caller skips the lookup.
+// there is no branch or no parseable remote, so the caller skips the lookup.
 async function identityFor(worktree: string): Promise<Identity | undefined> {
   const git = simpleGit(worktree)
   const upstream = await git
@@ -200,14 +270,17 @@ async function identityFor(worktree: string): Promise<Identity | undefined> {
     .raw(["remote", "get-url", remote])
     .then((value) => value.trim())
     .catch(() => undefined)
-  const github = url ? githubRepo(url) : undefined
-  if (!github) return undefined
+  const repo = url ? remoteRepo(url) : undefined
+  if (!repo) return undefined
 
   return {
     key: `${tracking ?? `${remote}/${branch}`}|${head ?? ""}`,
-    owner: github.owner,
-    repo: github.repo,
+    owner: repo.owner,
+    repo: repo.repo,
     branch,
+    platform: repo.platform,
+    host: repo.host,
+    path: repo.path,
   }
 }
 
@@ -290,7 +363,15 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
   const worktree = Instance.worktree
   const identity = await identityFor(worktree)
   const branch = identity ? branchOf(identity.key) : undefined
-  if (identity && branch) remember(knownIdentity, worktree, { branch, owner: identity.owner, repo: identity.repo })
+  if (identity && branch)
+    remember(knownIdentity, worktree, {
+      branch,
+      owner: identity.owner,
+      repo: identity.repo,
+      platform: identity.platform,
+      host: identity.host,
+      path: identity.path,
+    })
 
   const recorded = recordedLinks.get(worktree)
   if (recorded) {
@@ -307,6 +388,11 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
   }
 
   if (!identity) return undefined
+
+  // Only GitHub has a REST lookup here (`gh api .../pulls`). A GitLab or
+  // Bitbucket identity must not spawn `gh`; its link comes from the session's
+  // own output (or the manual override) only.
+  if (identity.platform !== "github") return undefined
 
   const now = Date.now()
   const existing = restCache.get(worktree)
