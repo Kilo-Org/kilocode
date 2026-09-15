@@ -8,6 +8,7 @@ import {
   parseComments,
   parseReactions,
   parseReviewers,
+  related,
   signature,
   summarize,
 } from "../../src/agent-manager/pr/am-pr-utils"
@@ -50,6 +51,12 @@ describe("comment permissions", () => {
 describe("parsePRResult", () => {
   it("retains the pull request node ID", () => {
     expect(parsePRResult(JSON.stringify({ number: 1, id: "PR_1" }))?.id).toBe("PR_1")
+  })
+  it("parses the merge commit of a merged PR", () => {
+    expect(parsePRResult(JSON.stringify({ number: 1, mergeCommit: { oid: "c".repeat(40) } }))?.mergeCommit).toBe(
+      "c".repeat(40),
+    )
+    expect(parsePRResult(JSON.stringify({ number: 1, mergeCommit: null }))?.mergeCommit).toBeUndefined()
   })
   it("returns null when number is missing", () => {
     expect(parsePRResult(JSON.stringify({ title: "foo" }))).toBeNull()
@@ -328,6 +335,64 @@ describe("parsePRResult", () => {
 
     expect(result?.checks).toEqual({ status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] })
     expect(result?.reviewers).toEqual([])
+  })
+})
+
+// --- related ---
+
+describe("related", () => {
+  const head = "b".repeat(40)
+  const merge = "c".repeat(40)
+  const local = "d".repeat(40)
+  const base = { number: 1, title: "", body: "", url: "", review: null, additions: 0, deletions: 0, files: 0 } as const
+
+  /** A git stub whose HEAD is `at` and whose history contains `ancestors`. */
+  function repo(at: string, ancestors: string[]) {
+    const calls: string[][] = []
+    const git = async (args: string[]) => {
+      calls.push(args)
+      if (args[0] === "rev-parse") return `${at}\n`
+      if (ancestors.includes(args[2]!) || args[2] === at) return ""
+      throw new Error("exit 1")
+    }
+    return { git, calls }
+  }
+
+  it("keeps open and draft PRs without touching git", async () => {
+    const { git, calls } = repo(local, [])
+    expect(await related({ ...base, state: "open", headRefOid: head }, git)).toBe(true)
+    expect(await related({ ...base, state: "draft", headRefOid: head }, git)).toBe(true)
+    expect(calls).toEqual([])
+  })
+
+  it("keeps a merged PR whose head is the local HEAD", async () => {
+    const { git } = repo(head, [merge])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(true)
+  })
+
+  it("keeps a merged PR with local commits on top of its head", async () => {
+    const { git } = repo(local, [head])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(true)
+  })
+
+  it("drops a squash-merged PR that a recreated branch name inherited", async () => {
+    // The old PR head is not in the new branch's history.
+    const { git } = repo(local, [merge])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
+  })
+
+  it("drops a merge-commit PR that a branch created from the base after the merge inherited", async () => {
+    const { git } = repo(local, [head, merge])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
+  })
+
+  it("keeps a closed PR only when its head is in the local history", async () => {
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo(local, [head]).git)).toBe(true)
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo(local, []).git)).toBe(false)
+  })
+
+  it("keeps a merged PR without a head SHA", async () => {
+    expect(await related({ ...base, state: "merged" }, repo(local, []).git)).toBe(true)
   })
 })
 

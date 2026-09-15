@@ -38,8 +38,7 @@ export function parsePRResult(json: string): PRResult | null {
   const result: PRResult = {
     id: data.id,
     number: data.number,
-    ...(typeof data.baseRefOid === "string" ? { baseRefOid: data.baseRefOid } : {}),
-    ...(typeof data.headRefOid === "string" ? { headRefOid: data.headRefOid } : {}),
+    ...oids(data),
     title: data.title ?? "",
     body: data.body ?? "",
     ...(typeof data.author?.login === "string" ? { author: data.author.login } : {}),
@@ -57,6 +56,16 @@ export function parsePRResult(json: string): PRResult | null {
     result.reviewers = parseReviewers(data.reviewRequests as GhReviewRequest[], data.reviews as GhReview[])
   }
   return result
+}
+
+/** The commit SHAs `gh pr view --json` exposes, when present. */
+function oids(data: Record<string, unknown>): Pick<PRResult, "baseRefOid" | "headRefOid" | "mergeCommit"> {
+  const merge = (data.mergeCommit as { oid?: unknown } | null | undefined)?.oid
+  return {
+    ...(typeof data.baseRefOid === "string" ? { baseRefOid: data.baseRefOid } : {}),
+    ...(typeof data.headRefOid === "string" ? { headRefOid: data.headRefOid } : {}),
+    ...(typeof merge === "string" ? { mergeCommit: merge } : {}),
+  }
 }
 
 function parseMerge(data: Record<string, unknown>): PRResult["merge"] {
@@ -446,6 +455,30 @@ export function signature(pr: PRStatus): string {
           ],
     ) ?? [],
   ])
+}
+
+/**
+ * Whether a merged or closed PR belongs to this checkout. gh's finder (and the
+ * batched lookup that mirrors it) returns the newest merged or closed PR of a
+ * branch name, so a branch recreated with the name of an old PR branch
+ * inherits that PR. Keep the PR only when its head is the local HEAD, or is
+ * reachable from HEAD while the merge into the base branch is not (a branch
+ * created from the base after the merge contains both).
+ */
+export async function related(pr: PRResult, git: (args: string[]) => Promise<string>): Promise<boolean> {
+  if (pr.state === "open" || pr.state === "draft" || !pr.headRefOid) return true
+  const contains = (oid: string) =>
+    git(["merge-base", "--is-ancestor", oid, "HEAD"]).then(
+      () => true,
+      () => false,
+    )
+  const head = await git(["rev-parse", "HEAD"]).then(
+    (out) => out.trim(),
+    () => "",
+  )
+  if (head === pr.headRefOid) return true
+  if (!(await contains(pr.headRefOid))) return false
+  return pr.mergeCommit === undefined || !(await contains(pr.mergeCommit))
 }
 
 export function retainPRStatus(
