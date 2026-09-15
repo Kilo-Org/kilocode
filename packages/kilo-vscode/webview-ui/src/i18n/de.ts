@@ -1189,9 +1189,12 @@ export const dict = {
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
   "settings.display.fontSize.title": "Schriftgröße",
   "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
-  "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
-  "settings.display.reasoningAutoCollapse.description":
-    "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
+  "settings.display.reasoningDisplay.title": "Reasoning-Blöcke",
+  "settings.display.reasoningDisplay.description":
+    "Wählen Sie, wie Reasoning-Blöcke starten. Ausgeklappt zeigt den vollständigen Text, Vorschau begrenzt ihn auf eine kurze scrollbare Vorschau, und Überschrift zeigt nur den Titel und den Streaming-Indikator, bis Sie den Block öffnen.",
+  "settings.display.reasoningDisplay.expanded": "Ausgeklappt",
+  "settings.display.reasoningDisplay.preview": "Vorschau",
+  "settings.display.reasoningDisplay.headline": "Überschrift",
   "settings.display.shiftTabCycle.title": "Reasoning-Aufwand mit Shift+Tab durchlaufen",
   "settings.display.shiftTabCycle.description":
     "Drücken Sie Shift+Tab in einem Prompt-Eingabefeld, um zur nächsten Stufe des Reasoning-Aufwands zu wechseln. Deaktivieren Sie dies, um Shift+Tab für die Tastaturfokusnavigation beizubehalten.",

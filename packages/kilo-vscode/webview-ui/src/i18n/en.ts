@@ -1139,9 +1139,12 @@ export const dict = {
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
-  "settings.display.reasoningAutoCollapse.description":
-    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.reasoningDisplay.title": "Reasoning Blocks",
+  "settings.display.reasoningDisplay.description":
+    "Choose how reasoning blocks start. Expanded shows the full text, Preview caps it to a short scrolling preview, and Headline shows only the title and streaming indicator until you open it.",
+  "settings.display.reasoningDisplay.expanded": "Expanded",
+  "settings.display.reasoningDisplay.preview": "Preview",
+  "settings.display.reasoningDisplay.headline": "Headline",
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",

@@ -132,6 +132,7 @@ export interface BrowserSettings {
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
 export type McpToolDisplay = "expanded" | "collapsed"
+export type ReasoningDisplay = "expanded" | "preview" | "headline"
 
 export interface Config {
   permission?: PermissionConfig
@@ -165,6 +166,7 @@ export interface Config {
   tools?: Record<string, boolean>
   web_search?: boolean
   auto_collapse_reasoning?: boolean
+  reasoning_display?: ReasoningDisplay
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig
   indexing?: IndexingConfig

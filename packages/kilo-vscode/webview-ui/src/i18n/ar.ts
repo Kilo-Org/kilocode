@@ -1134,9 +1134,12 @@ export const dict = {
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
   "settings.display.fontSize.title": "حجم الخط",
   "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
-  "settings.display.reasoningAutoCollapse.description":
-    "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
+  "settings.display.reasoningDisplay.title": "كتل الاستدلال",
+  "settings.display.reasoningDisplay.description":
+    "اختر كيفية بدء كتل الاستدلال. يعرض موسّعة النص الكامل، ويحدّ معاينة منه إلى معاينة قصيرة قابلة للتمرير، ويعرض عنوان ومؤشر البث فقط حتى تفتحه.",
+  "settings.display.reasoningDisplay.expanded": "موسّعة",
+  "settings.display.reasoningDisplay.preview": "معاينة",
+  "settings.display.reasoningDisplay.headline": "عنوان",
   "settings.display.shiftTabCycle.title": "تبديل جهد الاستدلال باستخدام Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "اضغط على Shift+Tab في حقل إدخال الموجه للتبديل إلى مستوى جهد الاستدلال التالي. عطّل هذا الخيار للاحتفاظ بـ Shift+Tab للتنقل بين عناصر التركيز باستخدام لوحة المفاتيح.",

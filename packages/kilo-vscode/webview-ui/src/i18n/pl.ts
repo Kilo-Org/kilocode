@@ -1168,9 +1168,12 @@ export const dict = {
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.fontSize.title": "Rozmiar czcionki",
   "settings.display.fontSize.description": "Dostosuj rozmiar czcionki webview UI Kilo niezależnie od VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
-  "settings.display.reasoningAutoCollapse.description":
-    "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
+  "settings.display.reasoningDisplay.title": "Bloki rozumowania",
+  "settings.display.reasoningDisplay.description":
+    "Wybierz, jak zaczynają się bloki rozumowania. Rozwinięte pokazuje pełny tekst, Podgląd ogranicza go do krótkiego przewijanego podglądu, a Nagłówek pokazuje tylko tytuł i wskaźnik strumieniowania, dopóki go nie otworzysz.",
+  "settings.display.reasoningDisplay.expanded": "Rozwinięte",
+  "settings.display.reasoningDisplay.preview": "Podgląd",
+  "settings.display.reasoningDisplay.headline": "Nagłówek",
   "settings.display.shiftTabCycle.title": "Przełączaj wysiłek rozumowania za pomocą Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Naciśnij Shift+Tab w polu wprowadzania promptu, aby przełączyć się na następny poziom wysiłku rozumowania. Wyłącz tę opcję, aby zachować Shift+Tab do nawigacji fokusem za pomocą klawiatury.",

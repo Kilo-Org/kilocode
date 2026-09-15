@@ -34632,6 +34632,10 @@
           "auto_collapse_reasoning": {
             "type": "boolean"
           },
+          "reasoning_display": {
+            "type": "string",
+            "enum": ["expanded", "preview", "headline"]
+          },
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },
