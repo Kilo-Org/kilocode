@@ -3,6 +3,43 @@ const nonText = new Set(["button", "checkbox", "file", "hidden", "image", "radio
 export const hasPopup = (root: ParentNode = document): boolean =>
   root.querySelector(".popup-selector[data-expanded]") !== null
 
+/** Keep prompt focus across OS window deactivation without stealing other controls. */
+export function createHold(opts: {
+  target: () => HTMLElement | undefined
+  busy?: () => boolean
+  focused?: () => boolean
+  active?: () => Element | null
+  idle?: (el: Element | null) => boolean
+  defer?: (fn: () => void) => void
+}) {
+  let held = false
+  const focused = opts.focused ?? (() => document.hasFocus())
+  const active = opts.active ?? (() => document.activeElement)
+  const idle = opts.idle ?? ((el) => !el || el === document.body || el === document.documentElement)
+  const defer = opts.defer ?? ((fn) => requestAnimationFrame(fn))
+  return {
+    claim() {
+      held = true
+    },
+    release() {
+      defer(() => {
+        if (!focused()) return
+        if (active() === opts.target()) return
+        if (idle(active())) return
+        held = false
+      })
+    },
+    reclaim() {
+      if (!held || opts.busy?.()) return
+      const node = opts.target()
+      if (!node) return
+      const el = active()
+      if (el && !idle(el) && el !== node) return
+      node.focus({ preventScroll: true })
+    },
+  }
+}
+
 /**
  * Whether the user holds a text selection outside any text control. Focusing
  * the prompt would move the document selection into the textarea and drop it.
