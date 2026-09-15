@@ -2005,10 +2005,12 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     }
   }
 
+  const bottom = () => (ref ? Math.max(0, ref.scrollHeight - ref.clientHeight) : 0)
+
   const tick = () => {
     follow = undefined
     if (done() || scrolled || !ref) return
-    const target = Math.max(0, ref.scrollHeight - ref.clientHeight)
+    const target = bottom()
     const rest = target - ref.scrollTop
     if (Math.abs(rest) < 0.5) {
       ref.scrollTop = target
@@ -2018,11 +2020,23 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     follow = requestAnimationFrame(tick)
   }
 
+  // Streaming follows the growing text with a short animation. Once the block
+  // is done nothing resumes that loop, so a Markdown rebuild on the streaming
+  // flip, or a fresh remount, would leave the capped viewport resting at the
+  // top. Snap the finished block synchronously here instead: ResizeObserver
+  // runs after layout and before paint, so no top frame is ever painted. The
+  // expanded body has no overflow and a manual open removes the cap, where the
+  // snap is a harmless no-op.
   createResizeObserver(
     () => body,
     () => {
-      if (done() || !ref || scrolled || follow !== undefined) return
-      follow = requestAnimationFrame(tick)
+      if (!capped() || scrolled || !ref) return
+      if (!done()) {
+        if (follow !== undefined) return
+        follow = requestAnimationFrame(tick)
+        return
+      }
+      ref.scrollTop = bottom()
     },
   )
 

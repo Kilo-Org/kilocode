@@ -359,6 +359,17 @@ describe("Expanded tool motion and typography (source)", () => {
     expect(css).not.toContain("scroll-behavior: smooth")
   })
 
+  it("re-anchors the capped viewport to the bottom once the block settles", () => {
+    // A Markdown rebuild on the streaming flip or a fresh remount resizes the
+    // body after done(), when nothing resumes the streaming animation loop.
+    // The resize callback must snap synchronously, only while capped and only
+    // when the user has not scrolled away.
+    expect(reasoning).toContain("if (!capped() || scrolled || !ref) return")
+    expect(reasoning).toContain("ref.scrollTop = bottom()")
+    expect(reasoning).toContain("const bottom = () => (ref ? Math.max(0, ref.scrollHeight - ref.clientHeight) : 0)")
+    expect(reasoning).toMatch(/if \(!done\(\)\) \{[^}]*follow = requestAnimationFrame\(tick\)/)
+  })
+
   it("settles encrypted reasoning summaries once the stream moved past them", () => {
     // Encrypted reasoning items only set time.end on their summaries when the
     // whole item finishes, so the transcript settles them from the part order.
