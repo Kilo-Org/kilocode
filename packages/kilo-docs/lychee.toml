@@ -15,6 +15,10 @@ accept = [
   "429",
   "301",
   "307",
+  # External hosts intermittently return 503 to automated checks. Lychee retries
+  # 5xx responses, so a link that still returns 503 is transiently unavailable
+  # rather than broken.
+  "503",
 ]
 
 exclude = [
