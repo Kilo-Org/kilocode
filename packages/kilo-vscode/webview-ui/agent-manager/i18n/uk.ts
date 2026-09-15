@@ -44,6 +44,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Префікс гілки",
   "agentManager.settings.branchPrefix.description":
     "Префікс автоматично іменованих гілок у всіх проєктах, наприклад feature/. Не застосовується до явно заданих назв гілок. Залиште порожнім, щоб не використовувати префікс.",
+  "agentManager.settings.worktreePool.title": "Попереднє прогрівання worktree",
+  "agentManager.settings.worktreePool.description":
+    "Готувати worktree заздалегідь у фоновому режимі, щоб нові сесії Agent Manager запускалися швидше. Використовує додатковий простір на диску для одного checkout на кожен відкритий проєкт.",
   "agentManager.settings.project.title": "Проєкт",
   "agentManager.settings.project.description": "Виберіть repository, налаштування worktree якого потрібно змінити.",
   "agentManager.settings.project.empty": "Немає доступних проєктів Agent Manager.",
@@ -52,9 +55,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Запускайте перед початком роботи agent у новому worktree.",
   "agentManager.settings.setupScript.create": "Створити script",
   "agentManager.settings.setupScript.edit": "Редагувати script",
-  "agentManager.project.add": "Додати проєкт",
+  "agentManager.project.add": "Додати проєкт...",
   "agentManager.project.remove": "Видалити з Agent Manager",
   "agentManager.project.missing": "Репозиторій не знайдено",
+  "agentManager.project.settings": "Налаштування проєкту",
   "agentManager.project.restricted":
     "Поточна робоча область VS Code є домашньою папкою або коренем файлової системи. Відкрийте певну папку проєкту у VS Code, щоб використовувати Agent Manager.",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
@@ -243,6 +247,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Надіслати все до чату ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Надіслати {{count}} до GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Надсилання зупинено через помилку GitHub: {{error}}",
   "agentManager.review.inlineCount": "Локальні коментарі ({{count}})",
   "agentManager.review.prCount": "Коментарі PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} файлів",
@@ -317,6 +323,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Застарілий",
   "agentManager.pr.comment.sent": "Надіслано",
   "agentManager.pr.comment.copy": "Копіювати коментар",
+  "agentManager.pr.comment.copyLink": "Копіювати посилання на коментар",
   "agentManager.pr.comment.openOnGitHub": "Відкрити на GitHub",
   "agentManager.pr.comment.showInDiff": "Показати в diff",
   "agentManager.pr.comment.unplaced": "Коментарі поза поточним diff",

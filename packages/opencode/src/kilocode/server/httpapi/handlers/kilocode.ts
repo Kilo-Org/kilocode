@@ -37,10 +37,13 @@ import { Skill } from "@/skill"
 import { BackgroundJob } from "@/background/job"
 import { SessionRunState } from "@/session/run-state"
 import { SessionDrain } from "@/kilocode/session/drain"
+import { Wakeup } from "@/kilocode/wakeup"
 import { Drained } from "@opencode-ai/schema/kilocode/session-drain"
 import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
+import { Snapshot } from "@/snapshot"
+import { KiloSnapshotPrepare } from "@/kilocode/snapshot/prepare"
 import { Global } from "@opencode-ai/core/global"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
@@ -74,6 +77,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const background = yield* BackgroundJob.Service
     const runState = yield* SessionRunState.Service
     const drain = yield* SessionDrain.Service
+    const wake = yield* Wakeup.Service
     const flags = yield* RuntimeFlags.Service
     const locations = yield* LocationServiceMap.Service
     const fs = yield* FSUtil.Service
@@ -86,6 +90,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const events = yield* EventV2Bridge.Service
     const database = yield* Database.Service
     const scope = yield* Scope.Scope
+    const snapshot = yield* Snapshot.Service
 
     const board = <A>(work: Effect.Effect<A, BoardStore.Error | BoardStore.Conflict, Database.Service>) =>
       work.pipe(
@@ -391,6 +396,11 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return promoted !== undefined
     })
 
+    const wakeups = Effect.fn("KilocodeHttpApi.wakeups")(function* () {
+      const directory = yield* InstanceState.directory
+      return yield* wake.pending(directory)
+    })
+
     return handlers
       .handle("resumeSession", resumeSession)
       .handle("drainSession", drainSession)
@@ -402,6 +412,13 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
       .handle("removeSnapshot", removeSnapshot)
+      .handle("prepareSnapshot", () =>
+        Effect.gen(function* () {
+          const started = performance.now()
+          const prepared = yield* KiloSnapshotPrepare.run(snapshot)
+          return { prepared, durationMs: performance.now() - started }
+        }),
+      )
       .handle("providerUsage", providerUsage)
       .handle("providerUsageRefresh", providerUsageRefresh)
       .handle("notebookList", notebookList)
@@ -414,5 +431,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("backgroundJobs", backgroundJobs)
       .handle("backgroundJobCancel", backgroundJobCancel)
       .handle("backgroundJobPromote", backgroundJobPromote)
+      .handle("wakeups", wakeups)
   }),
 )

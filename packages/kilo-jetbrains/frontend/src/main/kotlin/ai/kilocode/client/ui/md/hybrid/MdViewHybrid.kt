@@ -5,6 +5,7 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.diagram.Fault
@@ -484,14 +485,32 @@ internal open class MdViewHybrid(
                 textArea(value, opts, disposable)
             }
         }
-        sizeCodeField(field, value)
-        val pane = object : CodePane(field), SessionCopyTarget {
+        val label = code.opts.fold?.invoke(value)
+        if (label == null || field !is CodeField) {
+            sizeCodeField(field, value)
+            val pane = object : CodePane(field), SessionCopyTarget {
+                override val copyAnchor: JComponent get() = this
+
+                override fun copyText() = fieldText(field)
+            }
+            styleCodePane(pane, opts)
+            sizeCodePane(pane, field)
+            return pane
+        }
+        // A foldable block leaves its field unpinned so the editor's own preferred height tracks
+        // the fold, and the pane measures itself from that on every pass.
+        val pane = object : FoldPane(field), SessionCopyTarget {
             override val copyAnchor: JComponent get() = this
 
             override fun copyText() = fieldText(field)
         }
         styleCodePane(pane, opts)
-        sizeCodePane(pane, field)
+        // A fold changes the block's height and what it draws, so re-measure and repaint the whole
+        // markdown root, the same way every other block size change in this view does.
+        field.fold(label) {
+            root.revalidate()
+            root.repaint()
+        }
         return pane
     }
 
@@ -696,6 +715,44 @@ internal open class MdViewHybrid(
             super.uiDataSnapshot(sink)
             selection?.provideCopy(sink) { text }
         }
+
+        /**
+         * Renders the whole block folded behind [label], reusing the prompt input's fold controller
+         * so the transcript gives the same interaction: click the placeholder to unfold, fold back
+         * from the gutter handle, and no gutter at all once nothing is folded.
+         */
+        fun fold(label: String, resize: () -> Unit) {
+            val folds = EditorFolds(live = { getEditor(false) }, resize = resize)
+            addSettingsProvider { ed ->
+                folds.install(ed)
+                if (ed.foldingModel.allFoldRegions.isEmpty()) folds.fold(ed, 0, ed.document.textLength, label)
+            }
+        }
+    }
+
+    /**
+     * A code pane whose height follows the editor's folded state instead of the document's line
+     * count, so a folded block occupies one line and an unfolded one grows back to the cap.
+     */
+    private open inner class FoldPane(private val field: CodeField) : CodePane(field) {
+        override fun getPreferredSize() = Dimension(0, foldHeight(this, field))
+
+        override fun getMinimumSize() = Dimension(0, foldHeight(this, field))
+
+        override fun getMaximumSize() = Dimension(Int.MAX_VALUE, foldHeight(this, field))
+    }
+
+    private fun foldHeight(pane: JBScrollPane, field: CodeField): Int {
+        val pad = pane.viewportBorder?.getBorderInsets(pane) ?: JBUI.emptyInsets()
+        val ed = field.getEditor(false)
+        val line = ed?.lineHeight ?: field.getFontMetrics(field.font).height
+        // Visual lines collapse to one while folded, which document line count cannot express.
+        val rows = ed?.let { it.offsetToVisualLine(it.document.textLength, true) + 1 }
+            ?: field.text.lineSequence().count()
+        val capped = code.opts.maxLines?.let { rows.coerceAtMost(it) } ?: rows
+        val scrollbar = if (code.opts.overlapScrollbar) 0 else pane.horizontalScrollBar.preferredSize.height
+        return line * capped.coerceAtLeast(SessionUiStyle.View.Code.MIN_ROWS) +
+            pane.insets.top + pane.insets.bottom + pad.top + pad.bottom + scrollbar
     }
 
     private inner class RootPanel : JPanel(), UiDataProvider {

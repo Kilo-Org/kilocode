@@ -40,6 +40,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "بادئة الفرع",
   "agentManager.settings.branchPrefix.description":
     "بادئة للفروع المسماة تلقائيًا في جميع المشاريع، مثل feature/. لا تنطبق على أسماء الفروع الصريحة. اتركها فارغة لعدم استخدام بادئة.",
+  "agentManager.settings.worktreePool.title": "تسخين Worktrees مسبقًا",
+  "agentManager.settings.worktreePool.description":
+    "جهّز worktree جاهزًا في الخلفية حتى تبدأ جلسات Agent Manager الجديدة بشكل أسرع. يستخدم مساحة إضافية على القرص مقابل checkout واحد لكل مشروع مفتوح.",
   "agentManager.settings.project.title": "المشروع",
   "agentManager.settings.project.description": "اختر repository الذي تريد تعديل إعدادات worktree الخاصة به.",
   "agentManager.settings.project.empty": "لا تتوفر أي مشاريع في Agent Manager.",
@@ -47,9 +50,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "شغّل قبل أن يبدأ agent في worktree جديد.",
   "agentManager.settings.setupScript.create": "إنشاء script",
   "agentManager.settings.setupScript.edit": "تحرير script",
-  "agentManager.project.add": "إضافة مشروع",
+  "agentManager.project.add": "إضافة مشروع...",
   "agentManager.project.remove": "إزالة من Agent Manager",
   "agentManager.project.missing": "المستودع غير موجود",
+  "agentManager.project.settings": "إعدادات المشروع",
   "agentManager.project.restricted":
     "مساحة عمل VS Code الحالية هي مجلدك الرئيسي أو جذر نظام الملفات. افتح مجلد مشروع محدد في VS Code لاستخدام Agent Manager.",
   "agentManager.notGitRepo": "ليس مستودع git",
@@ -227,6 +231,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "إرسال الكل إلى الدردشة ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "إرسال {{count}} إلى GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "توقف الإرسال بسبب خطأ في GitHub: {{error}}",
   "agentManager.review.inlineCount": "التعليقات المحلية ({{count}})",
   "agentManager.review.prCount": "تعليقات PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} ملفًا",
@@ -301,6 +307,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "قديم",
   "agentManager.pr.comment.sent": "تم الإرسال",
   "agentManager.pr.comment.copy": "نسخ التعليق",
+  "agentManager.pr.comment.copyLink": "نسخ رابط التعليق",
   "agentManager.pr.comment.openOnGitHub": "فتح على GitHub",
   "agentManager.pr.comment.showInDiff": "إظهار في الفرق",
   "agentManager.pr.comment.unplaced": "التعليقات خارج الفرق الحالي",

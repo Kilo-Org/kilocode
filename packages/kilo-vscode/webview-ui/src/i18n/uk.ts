@@ -228,7 +228,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
-  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.start": "Почати голосове введення",
   "speechToText.tooltip.shortcut":
     "Торкніться кнопки або натисніть Cmd/Ctrl+K, щоб почати чи зупинити запис; утримуйте кнопку під час мовлення, а потім відпустіть її, щоб транскрибувати й надіслати.",
   "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
@@ -272,6 +272,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.reject": "Відхилити",
+  "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
+  "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
   "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
@@ -421,6 +424,7 @@ export const dict = {
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
   "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Змінити API-ключ",
   "settings.providers.custom.description": "Додати власного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",
@@ -886,15 +890,26 @@ export const dict = {
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Надайте спільну дошку головному сеансу та його субагентам, які виконують завдання, включно з вкладеними субагентами. Використовуйте її для паралельних спроб знайти розв'язання або взаємодоповнювальної роботи, а не для кожного завдання.",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
   "settings.experimental.imageGenerationModel.description": "Модель генерації зображень",
   "settings.experimental.imageGenerationModel.placeholder": "За замовчуванням (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Ідентифікатор моделі, який надсилається до вашої власної кінцевої точки транскрипції, наприклад whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Базова URL-адреса мовлення в текст",
+  "settings.models.speechToTextBaseUrl.description":
+    "Використовуйте сумісний з OpenAI API транскрипції замість Kilo Gateway. Моделі читаються з /models, а аудіо надсилається на /audio/transcriptions. Залиште порожнім, щоб використовувати Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Ключ API мовлення в текст",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-токен, який надсилається на власну базову URL-адресу транскрипції. Зберігається у вашому файлі конфігурації Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
+    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text, або вкажіть нижче власну базову URL-адресу транскрипції.",
   "settings.models.speechToTextModel.title": "Модель мовлення в текст",
   "settings.models.speechToTextModel.description": "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
   "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
@@ -1073,6 +1088,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
   "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
+  "settings.context.compactionModel.hint": "Щоб вибрати модель для стискання, див. Налаштування моделей.",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1117,9 +1133,12 @@ export const dict = {
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
-  "settings.display.reasoningAutoCollapse.description":
-    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.reasoningDisplay.title": "Блоки міркувань",
+  "settings.display.reasoningDisplay.description":
+    "Виберіть, як починаються блоки міркувань. Розгорнуті показує повний текст, Попередній перегляд обмежує його коротким прокручуваним переглядом, а Заголовок показує лише заголовок та індикатор потокового передавання, доки ви не відкриєте його.",
+  "settings.display.reasoningDisplay.expanded": "Розгорнуті",
+  "settings.display.reasoningDisplay.preview": "Попередній перегляд",
+  "settings.display.reasoningDisplay.headline": "Заголовок",
   "settings.display.shiftTabCycle.title": "Перемикати зусилля міркування за допомогою Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Натисніть Shift+Tab у полі введення запиту, щоб перейти до наступного рівня зусиль міркування. Вимкніть цю опцію, щоб зберегти Shift+Tab для навігації фокусом за допомогою клавіатури.",
@@ -1316,6 +1335,18 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Зберегти локально",
+  "diffViewer.comment.sendToAgent": "Надіслати агенту",
+  "diffViewer.comment.postToGithub": "Опублікувати на GitHub",
+  "diffViewer.comment.loadFailed": "Не вдалося завантажити зміни пул-реквесту.",
+  "diffViewer.comment.unavailable": "Цей рядок недоступний у поточному знімку пул-реквесту.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Відкрити PR",
+  "diffViewer.comment.localChanges": "Локальні зміни",
+  "diffViewer.comment.prChanges": "Зміни PR",
+  "diffViewer.comment.sendToKilo": "Надіслати до Kilo",
+  "diffViewer.comment.sendToGithub": "Надіслати до GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Вибрати призначення",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 

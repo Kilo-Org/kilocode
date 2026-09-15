@@ -2455,6 +2455,7 @@ export const SessionProvider: ParentComponent = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    feedback?: string,
   ): boolean {
     // The rendered request must still exist in this provider. Never fall back to
     // the currently selected session for a stale callback.
@@ -2467,6 +2468,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // The permission is removed when the server confirms via permission.replied SSE.
     setRespondingPermissions((prev) => new Set(prev).add(permissionId))
 
+    const message = feedback?.trim()
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
@@ -2474,6 +2476,7 @@ export const SessionProvider: ParentComponent = (props) => {
       response,
       approvedAlways,
       deniedAlways,
+      ...(message ? { feedback: message } : {}),
     })
     return true
   }
@@ -3075,11 +3078,17 @@ export function useSessionVisibility(visible: Accessor<string | null | undefined
   const session = useSession()
   const vscode = useVSCode()
   const current = createMemo(() => (vscode.active() ? visible() : undefined))
+  // Mark the visible session as a visible stream so the host lifts it out of the throttled background lane.
+  const mark = (id: string, visible: boolean) =>
+    vscode.postMessage({ type: "streamSessionVisible", sessionID: id, visible })
   createEffect(
-    on(current, (id) => {
+    on(current, (id, prev) => {
+      if (prev && prev !== id) mark(prev, false)
+      if (id && id !== prev) mark(id, true)
       if (id) session.acknowledge(id)
     }),
   )
+  onCleanup(() => current() && mark(current()!, false))
 }
 
 export function useSession(): SessionContextValue {

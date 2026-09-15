@@ -219,7 +219,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
-  "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
+  "speechToText.tooltip.start": "开始语音输入",
   "speechToText.tooltip.shortcut": "点击或按下 Cmd/Ctrl+K 开始或停止录音；说话时按住，松开后即可转录并提交。",
   "speechToText.tooltip.starting": "正在启动麦克风... 请稍后再说。",
   "speechToText.tooltip.stop": "停止捕获音频",
@@ -257,6 +257,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
   "notification.permission.titleSandboxEscalation": "要允许在沙盒外执行 Git 操作吗？",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
+  "ui.permission.reject": "拒绝",
+  "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",
+  "ui.permission.feedbackHint": "按 Enter 拒绝，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
   "ui.permission.doomLoop.rule": "继续调用 {{tool}}",
   "ui.permission.rule.addToAllowed": "添加到允许列表",
@@ -443,6 +446,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "自定义提供商",
   "settings.providers.connected.environmentDescription": "从您的环境变量连接",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登录",
+  "settings.providers.action.changeApiKey": "更改 API 密钥",
   "settings.providers.custom.description": "通过基础 URL 添加自定义提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的默认模型和推理工作量。留空以继承调用代理的模型。",
@@ -859,15 +863,25 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "让主会话与负责其任务的子智能体共享看板，包括嵌套的子智能体。用于并行尝试解决方案或开展相互补充的工作，而不是用于每一项任务。",
   "settings.experimental.imageGenerationModel.title": "图像模型",
   "settings.experimental.imageGenerationModel.description": "图像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "默认 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription": "发送到自定义转录端点的模型 ID，例如 whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "语音转文本基础 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "使用兼容 OpenAI 的转录 API 代替 Kilo Gateway。模型从 /models 读取，音频发送到 /audio/transcriptions。留空则使用 Kilo Gateway。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "语音转文本 API 密钥",
+  "settings.models.speechToTextApiKey.description":
+    "发送到自定义转录基础 URL 的 Bearer 令牌。保存在你的 Kilo 配置文件中。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "启用并登录 Kilo 提供商以使用 Speech to Text。Speech to Text 目前仅支持通过 Kilo Gateway 使用。",
+    "启用并登录 Kilo 提供商以使用 Speech to Text，或在下方设置自定义转录基础 URL。",
   "settings.models.speechToTextModel.title": "语音转文本模型",
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
@@ -1055,6 +1069,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "用于自动和手动压缩的模型。留空以使用聊天模型。成本、速度和摘要质量取决于模型。",
   "settings.context.compactionModel.useChatModel": "使用聊天模型",
+  "settings.context.compactionModel.hint": "若要选择用于压缩的模型，请参阅模型设置。",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
   "settings.context.prune.title": "修剪旧输出",
@@ -1096,9 +1111,12 @@ export const dict = {
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.fontSize.title": "字体大小",
   "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
-  "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
-  "settings.display.reasoningAutoCollapse.description":
-    "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",
+  "settings.display.reasoningDisplay.title": "推理块",
+  "settings.display.reasoningDisplay.description":
+    "选择推理块的起始显示方式。展开会显示完整文本，预览会将其限制为简短的可滚动预览，标题仅显示标题和流式指示器，直到你打开它。",
+  "settings.display.reasoningDisplay.expanded": "展开",
+  "settings.display.reasoningDisplay.preview": "预览",
+  "settings.display.reasoningDisplay.headline": "标题",
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切换推理强度",
   "settings.display.shiftTabCycle.description":
     "在提示输入框中按 Shift+Tab 可切换到下一个推理强度等级。禁用此选项可将 Shift+Tab 用于键盘焦点导航。",
@@ -1231,6 +1249,18 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "保存到本地",
+  "diffViewer.comment.sendToAgent": "发送给智能体",
+  "diffViewer.comment.postToGithub": "发布到 GitHub",
+  "diffViewer.comment.loadFailed": "无法加载拉取请求的更改。",
+  "diffViewer.comment.unavailable": "此行在当前拉取请求快照中不可用。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "打开拉取请求",
+  "diffViewer.comment.localChanges": "本地更改",
+  "diffViewer.comment.prChanges": "PR 更改",
+  "diffViewer.comment.sendToKilo": "发送到 Kilo",
+  "diffViewer.comment.sendToGithub": "发送到 GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "选择目标",
   "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
 
   "diffViewer.baseBranch.auto": "默认",

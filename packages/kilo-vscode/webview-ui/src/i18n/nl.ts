@@ -231,7 +231,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
-  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.start": "Spraakinvoer starten",
   "speechToText.tooltip.shortcut":
     "Tik of druk op Cmd/Ctrl+K om de opname te starten of te stoppen; houd de knop ingedrukt terwijl je spreekt en laat deze los om te transcriberen en te verzenden.",
   "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
@@ -273,6 +273,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
   "notification.permission.titleSandboxEscalation": "Git-bewerking buiten de sandbox toestaan?",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
+  "ui.permission.reject": "Weigeren",
+  "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
+  "ui.permission.feedbackHint": "Enter om te weigeren, Esc om te annuleren",
   "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
   "ui.permission.doomLoop.rule": "Doorgaan met {{tool}}-aanroepen",
   "ui.permission.rule.addToAllowed": "Toevoegen aan toegestane lijst",
@@ -422,6 +425,7 @@ export const dict = {
   "settings.providers.tag.other": "Overige",
   "settings.providers.connected.environmentDescription": "Gekoppeld via je omgevingsvariabelen",
   "settings.providers.action.signInChatGPT": "Inloggen met ChatGPT",
+  "settings.providers.action.changeApiKey": "API-sleutel wijzigen",
   "settings.providers.custom.description": "Voeg een aangepaste provider toe via basis-URL.",
 
   "provider.custom.title": "Aangepaste provider",
@@ -893,15 +897,26 @@ export const dict = {
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Deel een bord tussen een hoofdsessie en de subagenten die haar taken uitvoeren, inclusief geneste subagenten. Gebruik het voor parallelle oplossingspogingen of werkzaamheden die elkaar aanvullen, niet voor elke taak.",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
   "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Model-ID die naar uw eigen transcriptie-eindpunt wordt gestuurd, bijvoorbeeld whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Spraak-naar-tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Gebruik een OpenAI-compatibele transcriptie-API in plaats van Kilo Gateway. Modellen worden gelezen van /models en audio gaat naar /audio/transcriptions. Laat leeg om Kilo Gateway te gebruiken.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Spraak-naar-tekst-API-sleutel",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token dat naar de eigen transcriptie-basis-URL wordt gestuurd. Opgeslagen in uw Kilo-configuratiebestand.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
+    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken, of stel hieronder een eigen transcriptie-basis-URL in.",
   "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
@@ -1086,6 +1101,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model dat wordt gebruikt voor automatische en handmatige compactie. Laat dit leeg om het chatmodel te gebruiken. Kosten, snelheid en de kwaliteit van de samenvatting hangen af van het model.",
   "settings.context.compactionModel.useChatModel": "Chatmodel gebruiken",
+  "settings.context.compactionModel.hint":
+    "Om te kiezen welk model wordt gebruikt voor compactie, zie de Modellen-instellingen.",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
@@ -1130,9 +1147,12 @@ export const dict = {
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.fontSize.title": "Lettergrootte",
   "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
-  "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
-  "settings.display.reasoningAutoCollapse.description":
-    "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
+  "settings.display.reasoningDisplay.title": "Redeneringsblokken",
+  "settings.display.reasoningDisplay.description":
+    "Kies hoe redeneringsblokken starten. Uitgeklapt toont de volledige tekst, Voorbeeld beperkt het tot een kort, scrollbaar voorbeeld, en Kop toont alleen de titel en streamingindicator totdat je het opent.",
+  "settings.display.reasoningDisplay.expanded": "Uitgeklapt",
+  "settings.display.reasoningDisplay.preview": "Voorbeeld",
+  "settings.display.reasoningDisplay.headline": "Kop",
   "settings.display.shiftTabCycle.title": "Doorloop niveaus van redeneringsinspanning met Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Druk op Shift+Tab in een promptinvoerveld om naar het volgende niveau van redeneringsinspanning te gaan. Schakel dit uit om Shift+Tab te behouden voor focusnavigatie via het toetsenbord.",
@@ -1328,6 +1348,18 @@ export const dict = {
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Lokaal opslaan",
+  "diffViewer.comment.sendToAgent": "Naar agent sturen",
+  "diffViewer.comment.postToGithub": "Op GitHub plaatsen",
+  "diffViewer.comment.loadFailed": "De wijzigingen van de pull request konden niet worden geladen.",
+  "diffViewer.comment.unavailable": "Deze regel is niet beschikbaar in de huidige snapshot van de pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull request openen",
+  "diffViewer.comment.localChanges": "Lokale wijzigingen",
+  "diffViewer.comment.prChanges": "PR-wijzigingen",
+  "diffViewer.comment.sendToKilo": "Naar Kilo sturen",
+  "diffViewer.comment.sendToGithub": "Naar GitHub #{{number}} sturen",
+  "diffViewer.comment.chooseDestination": "Bestemming kiezen",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 

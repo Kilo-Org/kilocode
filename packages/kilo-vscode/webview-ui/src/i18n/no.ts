@@ -233,7 +233,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klikk for å begrense skrivetilgang til filsystemet. Nettverkstilgang er fortsatt tillatt av sandbox-innstillingene dine.",
 
-  "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
+  "speechToText.tooltip.start": "Start taleinndata",
   "speechToText.tooltip.shortcut":
     "Trykk på knappen eller bruk Cmd/Ctrl+K for å starte eller stoppe opptaket; hold knappen inne mens du snakker, og slipp den for å transkribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med å snakke.",
@@ -277,6 +277,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Tillate Git-operasjon utenfor sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
+  "ui.permission.reject": "Avvis",
+  "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
+  "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
   "ui.permission.rule.addToAllowed": "Legg til i tillatt-listen",
@@ -425,6 +428,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Egendefinert leverandør",
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
+  "settings.providers.action.changeApiKey": "Endre API-nøkkel",
   "settings.providers.custom.description": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
@@ -856,15 +860,26 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Del en tavle mellom en hovedøkt og underagentene som utfører oppgavene dens, inkludert nestede underagenter. Bruk den til parallelle løsningsforsøk eller arbeidsoppgaver som utfyller hverandre, ikke til alle oppgaver.",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",
   "settings.experimental.imageGenerationModel.description": "Bildegenereringsmodell",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Modell-ID som sendes til ditt eget transkripsjonsendepunkt, for eksempel whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Tale-til-tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Bruk et OpenAI-kompatibelt transkripsjons-API i stedet for Kilo Gateway. Modeller leses fra /models, og lyd sendes til /audio/transcriptions. La feltet stå tomt for å bruke Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Tale-til-tekst-API-nøkkel",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token som sendes til den egne transkripsjons-basis-URL-en. Lagres i Kilo-konfigurasjonsfilen din.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med Kilo Gateway.",
+    "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text, eller angi en egen transkripsjons-basis-URL nedenfor.",
   "settings.models.speechToTextModel.title": "Tale-til-tekst-modell",
   "settings.models.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
@@ -1113,6 +1128,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modell som brukes for automatisk og manuell komprimering. La feltet stå tomt for å bruke chatmodellen. Kostnad, hastighet og kvaliteten på sammendraget avhenger av modellen.",
   "settings.context.compactionModel.useChatModel": "Bruk chatmodell",
+  "settings.context.compactionModel.hint":
+    "For å velge hvilken modell som brukes til komprimering, se Modellinnstillinger.",
   "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
@@ -1156,9 +1173,12 @@ export const dict = {
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
-  "settings.display.reasoningAutoCollapse.description":
-    "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
+  "settings.display.reasoningDisplay.title": "Resonnementblokker",
+  "settings.display.reasoningDisplay.description":
+    "Velg hvordan resonnementblokker starter. Utvidet viser hele teksten, Forhåndsvisning begrenser den til en kort rullbar forhåndsvisning, og Overskrift viser bare tittelen og strømmingsindikatoren til du åpner den.",
+  "settings.display.reasoningDisplay.expanded": "Utvidet",
+  "settings.display.reasoningDisplay.preview": "Forhåndsvisning",
+  "settings.display.reasoningDisplay.headline": "Overskrift",
   "settings.display.shiftTabCycle.title": "Bytt resonnementsinnsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Trykk Shift+Tab i et promptinndatafelt for å bytte til neste nivå for resonnementsinnsats. Deaktiver for å beholde Shift+Tab for tastaturnavigering av fokus.",
@@ -1296,6 +1316,19 @@ export const dict = {
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Lagre lokalt",
+  "diffViewer.comment.sendToAgent": "Send til agent",
+  "diffViewer.comment.postToGithub": "Publiser på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke laste inn endringene i pull requesten.",
+  "diffViewer.comment.unavailable":
+    "Denne linjen er ikke tilgjengelig i det gjeldende øyeblikksbildet av pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åpne pull request",
+  "diffViewer.comment.localChanges": "Lokale endringer",
+  "diffViewer.comment.prChanges": "PR-endringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Velg mål",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 

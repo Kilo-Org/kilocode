@@ -43,6 +43,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Branchprefix",
   "agentManager.settings.branchPrefix.description":
     "Prefix voor automatisch benoemde branches in alle projecten, bijvoorbeeld feature/. Geldt niet voor expliciete branchnamen. Laat leeg om geen prefix te gebruiken.",
+  "agentManager.settings.worktreePool.title": "Worktrees vooraf opwarmen",
+  "agentManager.settings.worktreePool.description":
+    "Bereid op de achtergrond een kant-en-klare worktree voor, zodat nieuwe Agent Manager-sessies sneller starten. Gebruikt extra schijfruimte voor één checkout per geopend project.",
   "agentManager.settings.project.title": "Project",
   "agentManager.settings.project.description": "Kies de repository waarvan je de worktree-instellingen wilt bewerken.",
   "agentManager.settings.project.empty": "Er zijn geen Agent Manager-projecten beschikbaar.",
@@ -51,9 +54,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Uitvoeren voordat een agent in een nieuwe worktree start.",
   "agentManager.settings.setupScript.create": "script maken",
   "agentManager.settings.setupScript.edit": "script bewerken",
-  "agentManager.project.add": "Project toevoegen",
+  "agentManager.project.add": "Project toevoegen...",
   "agentManager.project.remove": "Verwijderen uit Agent Manager",
   "agentManager.project.missing": "Repository niet gevonden",
+  "agentManager.project.settings": "Projectinstellingen",
   "agentManager.project.restricted":
     "Je huidige VS Code-werkruimte is je thuismap of de hoofdmap van het bestandssysteem. Open een specifieke projectmap in VS Code om Agent Manager te gebruiken.",
   "agentManager.notGitRepo": "Geen git repository",
@@ -239,6 +243,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Alles naar chat sturen ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "{{count}} naar GitHub #{{number}} sturen",
+  "agentManager.review.sendAllToGithubFailed": "Verzenden gestopt door een GitHub-fout: {{error}}",
   "agentManager.review.inlineCount": "Lokale opmerkingen ({{count}})",
   "agentManager.review.prCount": "PR-opmerkingen ({{count}})",
   "agentManager.review.fileCount": "{{count}} bestanden",
@@ -313,6 +319,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Verouderd",
   "agentManager.pr.comment.sent": "Verzonden",
   "agentManager.pr.comment.copy": "Opmerking kopiëren",
+  "agentManager.pr.comment.copyLink": "Link naar opmerking kopiëren",
   "agentManager.pr.comment.openOnGitHub": "Openen op GitHub",
   "agentManager.pr.comment.showInDiff": "In diff weergeven",
   "agentManager.pr.comment.unplaced": "Opmerkingen buiten de huidige diff",

@@ -134,7 +134,7 @@ const cfg = {
       },
     },
   },
-  experimental: { shared_agent_board: true },
+  shared_agent_board: true,
 }
 
 type Probe = { body: Record<string, unknown> }
@@ -231,7 +231,7 @@ for (const enabled of [false, true]) {
         )
         expect(JSON.stringify(tools).includes("main is the board root, not necessarily your parent")).toBe(enabled)
       }),
-      { config: (url) => ({ ...config(url), experimental: { shared_agent_board: enabled } }) },
+      { config: (url) => ({ ...config(url), shared_agent_board: enabled }) },
     ),
   )
 }

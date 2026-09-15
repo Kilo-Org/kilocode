@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Grenprefiks",
   "agentManager.settings.branchPrefix.description":
     "Prefiks for automatisk navngitte grener i alle prosjekter, for eksempel feature/. Gjelder ikke eksplisitte grennavn. La feltet stå tomt for å ikke bruke prefiks.",
+  "agentManager.settings.worktreePool.title": "Forvarm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Forbered et klart worktree i bakgrunnen slik at nye Agent Manager-økter starter raskere. Bruker ekstra diskplass for én checkout per åpne prosjekt.",
   "agentManager.settings.project.title": "Prosjekt",
   "agentManager.settings.project.description": "Velg repository hvis worktree-innstillinger du vil redigere.",
   "agentManager.settings.project.empty": "Ingen Agent Manager-prosjekter er tilgjengelige.",
@@ -49,9 +52,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Kjør før en agent starter i et nytt worktree.",
   "agentManager.settings.setupScript.create": "Opprett script",
   "agentManager.settings.setupScript.edit": "Rediger script",
-  "agentManager.project.add": "Legg til prosjekt",
+  "agentManager.project.add": "Legg til prosjekt...",
   "agentManager.project.remove": "Fjern fra Agent Manager",
   "agentManager.project.missing": "Repository ikke funnet",
+  "agentManager.project.settings": "Prosjektinnstillinger",
   "agentManager.project.restricted":
     "Det gjeldende VS Code-arbeidsområdet er hjemmemappen din eller filsystemroten. Åpne en bestemt prosjektmappe i VS Code for å bruke Agent Manager.",
   "agentManager.notGitRepo": "Ikke et git-repositorium",
@@ -230,6 +234,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Send alt til chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} til GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Sendingen ble stoppet på grunn av en GitHub-feil: {{error}}",
   "agentManager.review.inlineCount": "Lokale kommentarer ({{count}})",
   "agentManager.review.prCount": "PR-kommentarer ({{count}})",
   "agentManager.review.fileCount": "{{count}} filer",
@@ -304,6 +310,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Utdatert",
   "agentManager.pr.comment.sent": "Sendt",
   "agentManager.pr.comment.copy": "Kopier kommentar",
+  "agentManager.pr.comment.copyLink": "Kopier kommentarlenke",
   "agentManager.pr.comment.openOnGitHub": "Åpne på GitHub",
   "agentManager.pr.comment.showInDiff": "Vis i diff",
   "agentManager.pr.comment.unplaced": "Kommentarer utenfor gjeldende diff",

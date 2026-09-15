@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "브랜치 접두사",
   "agentManager.settings.branchPrefix.description":
     "모든 프로젝트에서 자동으로 이름이 지정되는 브랜치의 접두사입니다(예: feature/). 명시적인 브랜치 이름에는 적용되지 않습니다. 접두사를 사용하지 않으려면 비워 두세요.",
+  "agentManager.settings.worktreePool.title": "Worktree 미리 준비",
+  "agentManager.settings.worktreePool.description":
+    "백그라운드에서 준비된 worktree를 미리 만들어 두면 새 Agent Manager 세션이 더 빠르게 시작됩니다. 열린 프로젝트마다 checkout 하나를 위해 추가 디스크 공간을 사용합니다.",
   "agentManager.settings.project.title": "프로젝트",
   "agentManager.settings.project.description": "편집하려는 worktree 설정의 repository를 선택하세요.",
   "agentManager.settings.project.empty": "사용 가능한 Agent Manager 프로젝트가 없습니다.",
@@ -48,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "새 worktree에서 agent가 시작하기 전에 실행합니다.",
   "agentManager.settings.setupScript.create": "script 만들기",
   "agentManager.settings.setupScript.edit": "script 편집",
-  "agentManager.project.add": "프로젝트 추가",
+  "agentManager.project.add": "프로젝트 추가...",
   "agentManager.project.remove": "Agent Manager에서 제거",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
+  "agentManager.project.settings": "프로젝트 설정",
   "agentManager.project.restricted":
     "현재 VS Code 작업 영역이 홈 폴더 또는 파일 시스템 루트입니다. Agent Manager를 사용하려면 VS Code에서 특정 프로젝트 폴더를 여세요.",
   "agentManager.notGitRepo": "git 저장소가 아닙니다",
@@ -230,6 +234,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "모두 채팅으로 보내기 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "{{count}}개를 GitHub #{{number}}로 보내기",
+  "agentManager.review.sendAllToGithubFailed": "GitHub 오류로 전송이 중단되었습니다: {{error}}",
   "agentManager.review.inlineCount": "로컬 댓글 ({{count}})",
   "agentManager.review.prCount": "PR 댓글 ({{count}})",
   "agentManager.review.fileCount": "{{count}}개 파일",
@@ -304,6 +310,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "오래됨",
   "agentManager.pr.comment.sent": "전송됨",
   "agentManager.pr.comment.copy": "댓글 복사",
+  "agentManager.pr.comment.copyLink": "댓글 링크 복사",
   "agentManager.pr.comment.openOnGitHub": "GitHub에서 열기",
   "agentManager.pr.comment.showInDiff": "diff에서 보기",
   "agentManager.pr.comment.unplaced": "현재 diff에 없는 댓글",

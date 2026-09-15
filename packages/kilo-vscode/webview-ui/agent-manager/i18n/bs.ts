@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefiks grane",
   "agentManager.settings.branchPrefix.description":
     "Prefiks za automatski imenovane grane u svim projektima, na primjer feature/. Ne primjenjuje se na izričite nazive grana. Ostavite prazno ako ne želite prefiks.",
+  "agentManager.settings.worktreePool.title": "Prethodno zagrijavanje worktree-a",
+  "agentManager.settings.worktreePool.description":
+    "Pripremite spreman worktree u pozadini da nove sesije Agent Manager-a počinju brže. Koristi dodatni prostor na disku za jedan checkout po otvorenom projektu.",
   "agentManager.settings.project.title": "Projekat",
   "agentManager.settings.project.description": "Izaberite repository čije worktree postavke želite urediti.",
   "agentManager.settings.project.empty": "Nema dostupnih projekata u Agent Manager.",
@@ -48,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Pokrenite prije nego što agent počne u novom worktree.",
   "agentManager.settings.setupScript.create": "Kreiraj script",
   "agentManager.settings.setupScript.edit": "Uredi script",
-  "agentManager.project.add": "Dodaj projekat",
+  "agentManager.project.add": "Dodaj projekat...",
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
   "agentManager.project.missing": "Repozitorij nije pronađen",
+  "agentManager.project.settings": "Postavke projekta",
   "agentManager.project.restricted":
     "Vaš trenutni VS Code radni prostor je vaša početna fascikla ili korijen sistema datoteka. Otvorite određenu projektnu fasciklu u VS Code-u da koristite Agent Manager.",
   "agentManager.notGitRepo": "Nije git repozitorij",
@@ -231,6 +235,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Pošalji sve u chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Pošalji {{count}} na GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Slanje je zaustavljeno zbog greške na GitHubu: {{error}}",
   "agentManager.review.inlineCount": "Lokalni komentari ({{count}})",
   "agentManager.review.prCount": "PR komentari ({{count}})",
   "agentManager.review.fileCount": "{{count}} datoteka",
@@ -305,6 +311,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Zastarjelo",
   "agentManager.pr.comment.sent": "Poslano",
   "agentManager.pr.comment.copy": "Kopiraj komentar",
+  "agentManager.pr.comment.copyLink": "Kopiraj vezu komentara",
   "agentManager.pr.comment.openOnGitHub": "Otvori na GitHub",
   "agentManager.pr.comment.showInDiff": "Prikaži u diffu",
   "agentManager.pr.comment.unplaced": "Komentari izvan trenutnog diffa",

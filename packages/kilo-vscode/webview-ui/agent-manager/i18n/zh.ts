@@ -39,6 +39,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "分支前缀",
   "agentManager.settings.branchPrefix.description":
     "所有项目中自动命名分支的前缀，例如 feature/。不适用于明确指定的分支名称。留空则不使用前缀。",
+  "agentManager.settings.worktreePool.title": "预热 Worktree",
+  "agentManager.settings.worktreePool.description":
+    "在后台准备一个就绪的 Worktree，让新的 Agent Manager 会话启动更快。每个打开的项目会额外占用一个 checkout 的磁盘空间。",
   "agentManager.settings.project.title": "项目",
   "agentManager.settings.project.description": "选择要编辑其 worktree 设置的 repository。",
   "agentManager.settings.project.empty": "没有可用的 Agent Manager 项目。",
@@ -46,9 +49,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "在 agent 于新 worktree 中启动前运行。",
   "agentManager.settings.setupScript.create": "创建 script",
   "agentManager.settings.setupScript.edit": "编辑 script",
-  "agentManager.project.add": "添加项目",
+  "agentManager.project.add": "添加项目...",
   "agentManager.project.remove": "从 Agent Manager 移除",
   "agentManager.project.missing": "未找到仓库",
+  "agentManager.project.settings": "项目设置",
   "agentManager.project.restricted":
     "您当前的 VS Code 工作区是主文件夹或文件系统根目录。请在 VS Code 中打开特定项目文件夹以使用 Agent Manager。",
   "agentManager.notGitRepo": "不是 git 仓库",
@@ -222,6 +226,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "全部发送到聊天 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "发送 {{count}} 条评论到 GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "因 GitHub 错误而停止发送：{{error}}",
   "agentManager.review.inlineCount": "本地评论 ({{count}})",
   "agentManager.review.prCount": "PR 评论 ({{count}})",
   "agentManager.review.fileCount": "{{count}} 个文件",
@@ -296,6 +302,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "已过时",
   "agentManager.pr.comment.sent": "已发送",
   "agentManager.pr.comment.copy": "复制评论",
+  "agentManager.pr.comment.copyLink": "复制评论链接",
   "agentManager.pr.comment.openOnGitHub": "在 GitHub 上打开",
   "agentManager.pr.comment.showInDiff": "在差异中显示",
   "agentManager.pr.comment.unplaced": "当前差异之外的评论",

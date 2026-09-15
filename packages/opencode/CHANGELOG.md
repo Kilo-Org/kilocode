@@ -1,5 +1,51 @@
 # @kilocode/cli
 
+## 7.7.1
+
+### Minor Changes
+
+- [#14148](https://github.com/Kilo-Org/kilocode/pull/14148) [`02e92bc`](https://github.com/Kilo-Org/kilocode/commit/02e92bcc6d9fe8f24b8b1226df7f4f381514f786) - Speed up local session recall for common search terms across large conversation histories, rank whole-word matches above matches inside longer words, return flagged partial matches when no session contains every term, and match small typos against session titles.
+
+## 7.7.0
+
+### Minor Changes
+
+- [#14051](https://github.com/Kilo-Org/kilocode/pull/14051) [`b30b2cf`](https://github.com/Kilo-Org/kilocode/commit/b30b2cf0d37b3eaec335254b44f28080e81b8cd8) - Let permission denials include feedback so the agent can adjust before retrying.
+
+  Keep saved approval rules unchanged unless explicitly selected, and show a clear message when an edit has no changes to review.
+
+- [#14103](https://github.com/Kilo-Org/kilocode/pull/14103) [`3a2c5d5`](https://github.com/Kilo-Org/kilocode/commit/3a2c5d5c2e28980f36b8ac020206c11a626183ff) - Reload the entire project for `/reload` and the reload actions. A reload from an Agent Manager worktree now reboots every loaded instance of the same project, so a project config change applies to the main checkout and all worktrees. The reload is refused while any session in the project is running.
+
+- [#14094](https://github.com/Kilo-Org/kilocode/pull/14094) [`b7070e5`](https://github.com/Kilo-Org/kilocode/commit/b7070e507662db283fb09a72d37db60648a2bf04) - Support scheduling and cancelling future wakeups: the agent can ask to resume a session at a later time, see what it scheduled, and cancel a pending wakeup before it fires.
+
+- [#14134](https://github.com/Kilo-Org/kilocode/pull/14134) [`50fc57d`](https://github.com/Kilo-Org/kilocode/commit/50fc57db0cacf4210e8ee47d7bde8e767ecf162c) - Enable the Kilo Swarm shared board by default. Turn it off in Agent Behaviour settings or with `experimental.shared_agent_board: false`.
+
+### Patch Changes
+
+- [#14101](https://github.com/Kilo-Org/kilocode/pull/14101) [`5665631`](https://github.com/Kilo-Org/kilocode/commit/5665631aba6adcaf0fe80e5a9c6f445674a61a1b) - Keep a session goal running when you send a message. The message takes priority for that turn, then the goal continues. Pause or stop the goal explicitly with Stop or `/goal pause`. Shell commands and slash commands still pause it.
+
+- [#14048](https://github.com/Kilo-Org/kilocode/pull/14048) [`d4e894f`](https://github.com/Kilo-Org/kilocode/commit/d4e894f2594a8b1cbe3fe7309a5ab2b8affa3280) - Format detailed findings in `/review` as numbered, severity-tagged sections so each issue is visually distinct.
+
+- [#14051](https://github.com/Kilo-Org/kilocode/pull/14051) [`877f976`](https://github.com/Kilo-Org/kilocode/commit/877f9767164ab4ca80b34387c01627e5f01cefdc) - Reject pending permissions without feedback when using the app exit shortcut, returning to the normal prompt and its exit confirmation. Preserve Escape to open or cancel rejection feedback.
+
+- [#14047](https://github.com/Kilo-Org/kilocode/pull/14047) [`203f19f`](https://github.com/Kilo-Org/kilocode/commit/203f19f5d6829659c52081c5a5048bdeccefe55a) - Keep output and exit status of short-lived terminal commands that finish before the terminal session attaches its listeners
+
+- [#14075](https://github.com/Kilo-Org/kilocode/pull/14075) [`fdf1bca`](https://github.com/Kilo-Org/kilocode/commit/fdf1bca9d9ac4b1371fc25ea895ab6ee48f91cd1) - Let an app-controlled session set its pull-request link through the `set_pr_link` remote command, so the CLI advertises the PR the app already knows and stops local detection.
+
+- [#14075](https://github.com/Kilo-Org/kilocode/pull/14075) [`fdf1bca`](https://github.com/Kilo-Org/kilocode/commit/fdf1bca9d9ac4b1371fc25ea895ab6ee48f91cd1) - Detect the session pull-request link from local git signals, the PR URL a session prints in its own output, and at most one REST lookup, so Kilo no longer burns the GitHub GraphQL rate limit probing for a PR on a timer.
+
+- [#13192](https://github.com/Kilo-Org/kilocode/pull/13192) [`1e73d38`](https://github.com/Kilo-Org/kilocode/commit/1e73d3862489c23e5937f51fc02d2e21b99c6b74) Thanks [@maphew](https://github.com/maphew)! - Only route auxiliary tasks (session titles, commit messages, branch names) to the cloud kilo-auto/small model when kilo credentials are configured; otherwise fall back to the session's own model so offline and local-only setups keep working.
+
+- [#14115](https://github.com/Kilo-Org/kilocode/pull/14115) [`f40394f`](https://github.com/Kilo-Org/kilocode/commit/f40394f07a92e7fc3441b03485096d08777212ed) - Start the first snapshot of a new worktree several times faster. Seeding now reuses the checkout's index state instead of re-hashing every file, snapshot preparation reconciles the working tree before the first prompt arrives, and repacking snapshot objects waits until the snapshot repository is idle instead of blocking the tool steps of the running turn.
+
+  Delay the replacement of a claimed pre-warmed worktree so its checkout does not compete with the new session's first prompt.
+
+- [#14050](https://github.com/Kilo-Org/kilocode/pull/14050) [`7a6ab9a`](https://github.com/Kilo-Org/kilocode/commit/7a6ab9abf4104bd76a80d018e0a0af948e13ef01) - Speed up Agent Manager worktree creation by pre-warming reusable worktrees and claiming a ready one instead of running a full checkout. Control the pre-warming in Agent Manager settings under "Pre-warm worktrees"; it is enabled by default and uses one extra checkout of disk space per open project.
+
+  Prepare snapshots during session creation to reduce first-prompt initialization work. Start no-script sessions after environment files are copied, while preserving setup-script completion before agent startup. Discarded worktrees now remove their checkpoint data instead of leaving it behind.
+
+  Resolve the primary checkout with one git call instead of four and discover agents and skills for a new worktree before the first prompt arrives, so the first response starts sooner.
+
 ## 7.6.2
 
 ### Patch Changes

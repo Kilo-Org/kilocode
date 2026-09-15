@@ -348,15 +348,6 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
         </div>
       </div>
 
-      {/* Announcement banner */}
-      <div className="announcement-banner">
-        <p>
-          The all-new Kilo Code extension is here, rebuilt on the{" "}
-          <Link href="/code-with-ai/platforms/vscode/whats-new">Kilo CLI</Link> for speed, flexibility, and continued
-          access to 500+ models via the Kilo Gateway →
-        </p>
-      </div>
-
       <style jsx>{`
         .top-header {
           position: fixed;
@@ -541,35 +532,6 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 
           .right-actions {
             gap: 0.5rem;
-          }
-        }
-
-        .announcement-banner {
-          background: var(--bg-secondary);
-          color: var(--text-color);
-          padding: 0.5rem 1rem;
-          text-align: center;
-          font-size: 0.875rem;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        .announcement-banner p {
-          margin: 0;
-        }
-
-        .announcement-banner :global(a) {
-          color: var(--accent-color);
-          text-decoration: underline;
-          text-underline-offset: 2px;
-        }
-
-        .announcement-banner :global(a:hover) {
-          color: var(--accent-hover);
-        }
-
-        @media (max-width: 768px) {
-          .announcement-banner {
-            font-size: 0.8rem;
           }
         }
       `}</style>

@@ -3,6 +3,8 @@ export interface PRTarget {
   worktreeId: string
   prNumber: number
   prUrl: string
+  baseRefOid?: string
+  headRefOid?: string
 }
 
 export interface PRFile {

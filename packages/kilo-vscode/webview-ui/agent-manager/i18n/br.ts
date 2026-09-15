@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefixo da branch",
   "agentManager.settings.branchPrefix.description":
     "Prefixo para branches nomeadas automaticamente em todos os projetos, por exemplo feature/. Não se aplica a nomes explícitos de branches. Deixe vazio para não usar prefixo.",
+  "agentManager.settings.worktreePool.title": "Pré-aquecimento de worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare um worktree pronto em segundo plano para que novas sessões do Agent Manager iniciem mais rápido. Usa espaço em disco extra para um checkout por projeto aberto.",
   "agentManager.settings.project.title": "Projeto",
   "agentManager.settings.project.description":
     "Escolha o repository cujas configurações de worktree você deseja editar.",
@@ -50,9 +53,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Execute antes que um agent comece em um novo worktree.",
   "agentManager.settings.setupScript.create": "Criar script",
   "agentManager.settings.setupScript.edit": "Editar script",
-  "agentManager.project.add": "Adicionar projeto",
+  "agentManager.project.add": "Adicionar projeto...",
   "agentManager.project.remove": "Remover do Agent Manager",
   "agentManager.project.missing": "Repositório não encontrado",
+  "agentManager.project.settings": "Configurações do projeto",
   "agentManager.project.restricted":
     "Seu espaço de trabalho atual do VS Code é sua pasta pessoal ou a raiz do sistema de arquivos. Abra uma pasta de projeto específica no VS Code para usar o Agent Manager.",
   "agentManager.notGitRepo": "Não é um repositório git",
@@ -233,6 +237,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Enviar tudo para o chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Enviar {{count}} para o GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Envio interrompido por um erro do GitHub: {{error}}",
   "agentManager.review.inlineCount": "Comentários locais ({{count}})",
   "agentManager.review.prCount": "Comentários de PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} arquivos",
@@ -307,6 +313,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Desatualizado",
   "agentManager.pr.comment.sent": "Enviado",
   "agentManager.pr.comment.copy": "Copiar comentário",
+  "agentManager.pr.comment.copyLink": "Copiar link do comentário",
   "agentManager.pr.comment.openOnGitHub": "Abrir no GitHub",
   "agentManager.pr.comment.showInDiff": "Mostrar no diff",
   "agentManager.pr.comment.unplaced": "Comentários fora do diff atual",

@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "คำนำหน้าบรานช์",
   "agentManager.settings.branchPrefix.description":
     "คำนำหน้าสำหรับบรานช์ที่ตั้งชื่ออัตโนมัติในทุกโปรเจกต์ เช่น feature/ ไม่ใช้กับชื่อบรานช์ที่ระบุไว้อย่างชัดเจน เว้นว่างไว้หากไม่ต้องการคำนำหน้า",
+  "agentManager.settings.worktreePool.title": "อุ่นเครื่อง Worktree ล่วงหน้า",
+  "agentManager.settings.worktreePool.description":
+    "เตรียม Worktree ที่พร้อมใช้งานไว้ในเบื้องหลังเพื่อให้เซสชัน Agent Manager ใหม่เริ่มได้เร็วขึ้น ใช้พื้นที่ดิสก์เพิ่มขึ้นสำหรับหนึ่ง checkout ต่อโปรเจกต์ที่เปิดอยู่",
   "agentManager.settings.project.title": "โปรเจกต์",
   "agentManager.settings.project.description": "เลือก repository ที่มีการตั้งค่า worktree ที่คุณต้องการแก้ไข",
   "agentManager.settings.project.empty": "ไม่มีโปรเจกต์ Agent Manager ที่พร้อมใช้งาน",
@@ -48,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "เรียกใช้ก่อนที่ agent จะเริ่มทำงานใน worktree ใหม่",
   "agentManager.settings.setupScript.create": "สร้าง script",
   "agentManager.settings.setupScript.edit": "แก้ไข script",
-  "agentManager.project.add": "เพิ่มโปรเจกต์",
+  "agentManager.project.add": "เพิ่มโปรเจกต์...",
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
   "agentManager.project.missing": "ไม่พบ Repository",
+  "agentManager.project.settings": "การตั้งค่าโปรเจกต์",
   "agentManager.project.restricted":
     "พื้นที่ทำงาน VS Code ปัจจุบันของคุณคือโฟลเดอร์บ้านหรือรากของระบบไฟล์ เปิดโฟลเดอร์โครงการที่เจาะจงใน VS Code เพื่อใช้ Agent Manager",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",
@@ -226,6 +230,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "ส่งทั้งหมดไปยังแชท ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "ส่ง {{count}} รายการไปยัง GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "หยุดการส่งเนื่องจากข้อผิดพลาดของ GitHub: {{error}}",
   "agentManager.review.inlineCount": "ความคิดเห็นในเครื่อง ({{count}})",
   "agentManager.review.prCount": "ความคิดเห็น PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} ไฟล์",
@@ -300,6 +306,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "ล้าสมัย",
   "agentManager.pr.comment.sent": "ส่งแล้ว",
   "agentManager.pr.comment.copy": "คัดลอกความคิดเห็น",
+  "agentManager.pr.comment.copyLink": "คัดลอกลิงก์ความคิดเห็น",
   "agentManager.pr.comment.openOnGitHub": "เปิดบน GitHub",
   "agentManager.pr.comment.showInDiff": "แสดงใน diff",
   "agentManager.pr.comment.unplaced": "ความคิดเห็นนอก diff ปัจจุบัน",

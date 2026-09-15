@@ -33,6 +33,7 @@ import {
 import { BoardStore } from "@/kilocode/board/store"
 import { CommandFiles } from "@/kilocode/command-files"
 import { Token } from "@opencode-ai/schema/kilocode/session-drain"
+import { PendingInfo as WakeupPending } from "@opencode-ai/schema/kilocode/wakeup-event"
 
 const root = "/kilocode"
 const Scope = Schema.Literals(["global", "project"])
@@ -99,6 +100,7 @@ export const KilocodePaths = {
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
   removeSnapshot: `${root}/snapshot/remove`,
+  prepareSnapshot: `${root}/snapshot/prepare`,
   providerUsage: `${root}/provider-usage`,
   providerUsageRefresh: `${root}/provider-usage/refresh`,
   notebookList: `${root}/notebook`,
@@ -115,6 +117,7 @@ export const KilocodePaths = {
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
   backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
+  wakeups: `${root}/wakeups`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -242,6 +245,20 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.removeSnapshot",
             summary: "Remove a snapshot repository",
             description: "Remove the snapshot repository for an already deleted Agent Manager worktree.",
+          }),
+        ),
+        HttpApiEndpoint.post("prepareSnapshot", KilocodePaths.prepareSnapshot, {
+          query: WorkspaceRoutingQuery,
+          success: described(
+            Schema.Struct({ prepared: Schema.Boolean, durationMs: Schema.Number }),
+            "Snapshot repository preparation result",
+          ),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.snapshot.prepare",
+            summary: "Prepare a snapshot repository",
+            description:
+              "Initialize and seed snapshots for the routed directory without creating a session or tracking ref.",
           }),
         ),
         HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {
@@ -382,6 +399,17 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.backgroundJob.promote",
             summary: "Promote background job",
             description: "Continue one foreground subagent in the background.",
+          }),
+        ),
+        HttpApiEndpoint.get("wakeups", KilocodePaths.wakeups, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(WakeupPending), "Pending wakeups for the routed directory"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.wakeups",
+            summary: "List pending wakeups",
+            description:
+              "List the sessions that hold scheduled wakeups in the routed directory, with each session's pending count.",
           }),
         ),
       )

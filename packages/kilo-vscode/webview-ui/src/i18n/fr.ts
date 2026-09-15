@@ -231,7 +231,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Cliquez pour restreindre les écritures dans le système de fichiers. L'accès au réseau reste autorisé par vos paramètres de sandbox.",
 
-  "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
+  "speechToText.tooltip.start": "Démarrer la saisie vocale",
   "speechToText.tooltip.shortcut":
     "Touchez ou appuyez sur Cmd/Ctrl+K pour démarrer ou arrêter l’enregistrement ; maintenez la touche pendant que vous parlez, puis relâchez-la pour transcrire et envoyer.",
   "speechToText.tooltip.starting": "Démarrage du microphone... Attendez avant de parler.",
@@ -273,6 +273,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
   "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
+  "ui.permission.reject": "Rejeter",
+  "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
+  "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
   "ui.permission.doomLoop.rule": "Continuer les appels à {{tool}}",
   "ui.permission.rule.addToAllowed": "Ajouter à la liste des autorisés",
@@ -465,6 +468,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Fournisseur personnalisé",
   "settings.providers.connected.environmentDescription": "Connecté depuis vos variables d'environnement",
   "settings.providers.action.signInChatGPT": "Se connecter avec ChatGPT",
+  "settings.providers.action.changeApiKey": "Modifier la clé API",
   "settings.providers.custom.description": "Ajoutez un fournisseur personnalisé par URL de base.",
   "settings.providers.subagentModel.title": "Modèle de sous-agent",
   "settings.providers.subagentModel.description":
@@ -915,15 +919,26 @@ export const dict = {
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Partagez un tableau entre une session principale et ses sous-agents chargés de tâches, y compris les sous-agents imbriqués. Utilisez-le pour des tentatives de résolution en parallèle ou des travaux complémentaires, pas pour toutes les tâches.",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",
   "settings.experimental.imageGenerationModel.description": "Modèle de génération d'images",
   "settings.experimental.imageGenerationModel.placeholder": "Par défaut (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Identifiant de modèle envoyé à votre point de terminaison de transcription personnalisé, par exemple whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "URL de base de transcription vocale",
+  "settings.models.speechToTextBaseUrl.description":
+    "Utiliser une API de transcription compatible OpenAI au lieu de Kilo Gateway. Les modèles sont lus depuis /models et l'audio est envoyé à /audio/transcriptions. Laissez vide pour utiliser Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Clé d'API de transcription vocale",
+  "settings.models.speechToTextApiKey.description":
+    "Jeton porteur envoyé à l'URL de base de transcription personnalisée. Stocké dans votre fichier de configuration Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Activez et connectez-vous au fournisseur Kilo pour utiliser Speech to Text. Speech to Text n'est actuellement pris en charge qu'avec Kilo Gateway.",
+    "Activez et connectez-vous au fournisseur Kilo pour utiliser Speech to Text, ou définissez ci-dessous une URL de base de transcription personnalisée.",
   "settings.models.speechToTextModel.title": "Modèle de transcription vocale",
   "settings.models.speechToTextModel.description":
     "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",
@@ -1146,6 +1161,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modèle utilisé pour le compactage automatique et manuel. Laissez ce champ vide pour utiliser le modèle de chat. Le coût, la vitesse et la qualité du résumé dépendent du modèle.",
   "settings.context.compactionModel.useChatModel": "Utiliser le modèle de chat",
+  "settings.context.compactionModel.hint":
+    "Pour choisir le modèle utilisé pour le compactage, consultez les paramètres des Modèles.",
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
@@ -1191,9 +1208,12 @@ export const dict = {
   "settings.display.fontSize.title": "Taille de la police",
   "settings.display.fontSize.description":
     "Ajustez la taille de la police de la webview UI de Kilo indépendamment de VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Réduire automatiquement le raisonnement",
-  "settings.display.reasoningAutoCollapse.description":
-    "Réduit les blocs de raisonnement une fois que l'agent a fini de les écrire. Laissez désactivé pour garder le raisonnement développé, sauf si vous le réduisez manuellement.",
+  "settings.display.reasoningDisplay.title": "Blocs de raisonnement",
+  "settings.display.reasoningDisplay.description":
+    "Choisissez comment démarrent les blocs de raisonnement. Développés affiche le texte complet, Aperçu le limite à un court aperçu défilant, et En-tête affiche uniquement le titre et l'indicateur de streaming jusqu'à ce que vous l'ouvriez.",
+  "settings.display.reasoningDisplay.expanded": "Développés",
+  "settings.display.reasoningDisplay.preview": "Aperçu",
+  "settings.display.reasoningDisplay.headline": "En-tête",
   "settings.display.shiftTabCycle.title": "Parcourir l'effort de raisonnement avec Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Appuyez sur Shift+Tab dans un champ de saisie de prompt pour passer au niveau d'effort de raisonnement suivant. Désactivez cette option pour conserver Shift+Tab pour la navigation du focus au clavier.",
@@ -1337,6 +1357,18 @@ export const dict = {
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Enregistrer localement",
+  "diffViewer.comment.sendToAgent": "Envoyer à l’agent",
+  "diffViewer.comment.postToGithub": "Publier sur GitHub",
+  "diffViewer.comment.loadFailed": "Impossible de charger les modifications de la pull request.",
+  "diffViewer.comment.unavailable": "Cette ligne n’est pas disponible dans l’instantané actuel de la pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Ouvrir la pull request",
+  "diffViewer.comment.localChanges": "Modifications locales",
+  "diffViewer.comment.prChanges": "Modifications du PR",
+  "diffViewer.comment.sendToKilo": "Envoyer à Kilo",
+  "diffViewer.comment.sendToGithub": "Envoyer à GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choisir la destination",
   "diffViewer.notice.snapshotsDisabled":
     "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
 

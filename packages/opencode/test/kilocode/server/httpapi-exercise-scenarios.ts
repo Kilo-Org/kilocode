@@ -705,6 +705,20 @@ export const kiloScenarios: Scenario[] = [
       }
     }),
   http.protected
+    .get("/kilocode/wakeups", "kilocode.wakeups")
+    .at((ctx) => ({
+      path: "/kilocode/wakeups",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      array(body)
+      for (const item of body) {
+        object(item)
+        check(typeof item.sessionID === "string", "wakeup should include a session id")
+        check(typeof item.pending === "number" && item.pending > 0, "wakeup should include a positive pending count")
+      }
+    }),
+  http.protected
     .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")
     .at((ctx) => ({
       path: route("/kilocode/background-jobs/{jobID}/cancel", { jobID: "job_httpapi_missing" }),
@@ -727,6 +741,19 @@ export const kiloScenarios: Scenario[] = [
         yield* Effect.promise(() => rm(body, { force: true }))
       }),
     ),
+  http.protected
+    .post("/kilocode/snapshot/prepare", "kilocode.snapshot.prepare")
+    .mutating()
+    .inProject({ git: true })
+    .at((ctx) => ({
+      path: `/kilocode/snapshot/prepare?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.prepared === "boolean", "snapshot preparation should report whether it prepared")
+      check(typeof body.durationMs === "number", "snapshot preparation should report its duration")
+    }),
   http.protected
     .post("/kilocode/snapshot/remove", "kilocode.removeSnapshot")
     .mutating()
@@ -761,7 +788,10 @@ export const kiloScenarios: Scenario[] = [
       check(item.builtin === false, "command file should not be builtin")
       check(item.model === "anthropic/claude-sonnet-4-6", "command file should include model metadata")
       check(item.variant === "high", "command file should include variant metadata")
-      check(typeof item.content === "string" && item.content.includes("Run command."), "command file should include content")
+      check(
+        typeof item.content === "string" && item.content.includes("Run command."),
+        "command file should include content",
+      )
     }),
   http.protected
     .post("/kilocode/command/remove", "kilocode.removeCommand")
@@ -777,10 +807,7 @@ export const kiloScenarios: Scenario[] = [
       Effect.gen(function* () {
         check(body === true, "command removal should return true")
         const location = path.join(directory(ctx), ".kilo/command/httpapi-remove.md")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed command should not remain on disk",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed command should not remain on disk")
       }),
     ),
   http.protected

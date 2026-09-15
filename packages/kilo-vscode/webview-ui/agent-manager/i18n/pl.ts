@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefiks gałęzi",
   "agentManager.settings.branchPrefix.description":
     "Prefiks automatycznie nazywanych gałęzi we wszystkich projektach, na przykład feature/. Nie dotyczy jawnych nazw gałęzi. Pozostaw puste, aby nie używać prefiksu.",
+  "agentManager.settings.worktreePool.title": "Wstępne przygotowanie worktree",
+  "agentManager.settings.worktreePool.description":
+    "Przygotuj gotowy worktree w tle, aby nowe sesje Agent Manager uruchamiały się szybciej. Wykorzystuje dodatkowe miejsce na dysku na jeden checkout na otwarty projekt.",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description": "Wybierz repository, którego ustawienia worktree chcesz edytować.",
   "agentManager.settings.project.empty": "Brak dostępnych projektów Agent Manager.",
@@ -49,9 +52,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Uruchom przed tym, jak agent rozpocznie pracę w nowym worktree.",
   "agentManager.settings.setupScript.create": "Utwórz script",
   "agentManager.settings.setupScript.edit": "Edytuj script",
-  "agentManager.project.add": "Dodaj projekt",
+  "agentManager.project.add": "Dodaj projekt...",
   "agentManager.project.remove": "Usuń z Agent Manager",
   "agentManager.project.missing": "Nie znaleziono repozytorium",
+  "agentManager.project.settings": "Ustawienia projektu",
   "agentManager.project.restricted":
     "Bieżący obszar roboczy VS Code to folder domowy lub katalog główny systemu plików. Otwórz konkretny folder projektu w VS Code, aby używać Agent Manager.",
   "agentManager.notGitRepo": "Nie jest repozytorium git",
@@ -232,6 +236,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Wyślij wszystko do czatu ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Wyślij {{count}} do GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Wysyłanie zatrzymane z powodu błędu GitHuba: {{error}}",
   "agentManager.review.inlineCount": "Komentarze lokalne ({{count}})",
   "agentManager.review.prCount": "Komentarze PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} plików",
@@ -306,6 +312,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Nieaktualne",
   "agentManager.pr.comment.sent": "Wysłano",
   "agentManager.pr.comment.copy": "Kopiuj komentarz",
+  "agentManager.pr.comment.copyLink": "Kopiuj link do komentarza",
   "agentManager.pr.comment.openOnGitHub": "Otwórz na GitHub",
   "agentManager.pr.comment.showInDiff": "Pokaż w diffie",
   "agentManager.pr.comment.unplaced": "Komentarze poza bieżącym diffem",

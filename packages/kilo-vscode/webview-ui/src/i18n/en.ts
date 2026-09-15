@@ -223,7 +223,7 @@ export const dict = {
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
-  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.start": "Start voice input",
   "speechToText.tooltip.shortcut":
     "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
@@ -265,6 +265,9 @@ export const dict = {
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
   "notification.permission.titleSandboxEscalation": "Allow Git operation outside the sandbox?",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.reject": "Reject",
+  "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
+  "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
   "ui.permission.rule.addToAllowed": "Add to allowed list",
@@ -381,6 +384,7 @@ export const dict = {
   "settings.providers.tag.other": "Other",
   "settings.providers.connected.environmentDescription": "Connected from your environment variables",
   "settings.providers.action.signInChatGPT": "Sign in with ChatGPT",
+  "settings.providers.action.changeApiKey": "Change API key",
   "settings.providers.custom.description": "Add a custom provider by base URL.",
 
   "provider.custom.title": "Custom provider",
@@ -873,17 +877,29 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Share a board between a main session and its task subagents, including nested subagents. Use it for parallel solution attempts or complementary work, not every task.",
   "settings.experimental.imageGenerationModel.title": "Image Model",
   "settings.experimental.imageGenerationModel.description": "Image Generation Model",
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
 
   "settings.models.speechToText.disabledDescription":
-    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
+    "Kilo Gateway is selected. Enable and sign in to the Kilo provider to choose a supported model, or enter a custom transcription base URL above.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
-  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.description":
+    "Kilo Gateway is the active speech-to-text source. Choose its transcription model for voice input.",
+  "settings.models.speechToTextModel.customDescription":
+    "Model ID sent to your custom transcription endpoint, for example whisper-1. Voice input is unavailable until you set one.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Speech to Text Base URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Use an OpenAI-compatible transcription API instead of Kilo Gateway. Models are read from /models and audio is sent to /audio/transcriptions. Leave empty to use Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Speech to Text API Key",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer token sent to the custom transcription base URL. Stored in your Kilo config file.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
@@ -1097,6 +1113,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model used for automatic and manual compaction. Leave unset to use the chat model. Cost, speed, and summary quality depend on the model.",
   "settings.context.compactionModel.useChatModel": "Use chat model",
+  "settings.context.compactionModel.hint": "To choose which model is used for compaction, see the Models settings.",
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
@@ -1139,9 +1156,12 @@ export const dict = {
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
-  "settings.display.reasoningAutoCollapse.description":
-    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.reasoningDisplay.title": "Reasoning Blocks",
+  "settings.display.reasoningDisplay.description":
+    "Choose how reasoning blocks start. Expanded shows the full text, Preview caps it to a short scrolling preview, and Headline shows only the title and streaming indicator until you open it.",
+  "settings.display.reasoningDisplay.expanded": "Expanded",
+  "settings.display.reasoningDisplay.preview": "Preview",
+  "settings.display.reasoningDisplay.headline": "Headline",
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",
@@ -1293,6 +1313,18 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
+  "diffViewer.comment.saveLocal": "Save local",
+  "diffViewer.comment.sendToAgent": "Send to agent",
+  "diffViewer.comment.postToGithub": "Post to GitHub",
+  "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
+  "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Open pull request",
+  "diffViewer.comment.localChanges": "Local changes",
+  "diffViewer.comment.prChanges": "PR changes",
+  "diffViewer.comment.sendToKilo": "Send to Kilo",
+  "diffViewer.comment.sendToGithub": "Send to GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choose destination",
 
   "diffViewer.baseBranch.auto": "Default",
   "diffViewer.baseBranch.default": "Default",

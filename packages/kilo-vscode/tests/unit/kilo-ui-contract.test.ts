@@ -339,9 +339,37 @@ describe("Expanded tool motion and typography (source)", () => {
     expect(cap).not.toContain("data-streaming")
   })
 
+  it("renders the headline mode as a header-only block that opens on demand", () => {
+    expect(reasoning).toContain(`data-headline={headline() ? "" : undefined}`)
+    expect(reasoning).toContain(`const mode = () => props.reasoningDisplay ?? "expanded"`)
+    expect(reasoning).toContain(`const capped = () => mode() === "preview"`)
+    expect(reasoning).toContain(`const headline = () => mode() === "headline"`)
+    expect(reasoning).toContain("const trackable = () => capped() || headline()")
+    expect(reasoning).toContain(`if (headline() && !open()) return reasoningSummary(view().body)`)
+  })
+
+  it("derives the open state through reasoningOpenState and re-derives when the mode resolves", () => {
+    expect(reasoning).toContain("reasoningOpenState(")
+    expect(reasoning).toContain("const seed = () => derive() || !!props.forceOpen")
+    expect(reasoning).toContain("const [open, setOpen] = createSignal(seed())")
+    expect(reasoning).toContain("if (userOpened.has(id) || userCollapsed.has(id)) return")
+    expect(reasoning).toContain("setOpen(derive())")
+  })
+
   it("does not smooth streaming reasoning scroll updates", () => {
     const css = fs.readFileSync(KILO_MESSAGE_PART_CSS_FILE, "utf-8")
     expect(css).not.toContain("scroll-behavior: smooth")
+  })
+
+  it("re-anchors the capped viewport to the bottom once the block settles", () => {
+    // A Markdown rebuild on the streaming flip or a fresh remount resizes the
+    // body after done(), when nothing resumes the streaming animation loop.
+    // The resize callback must snap synchronously, only while capped and only
+    // when the user has not scrolled away.
+    expect(reasoning).toContain("if (!capped() || scrolled || !ref) return")
+    expect(reasoning).toContain("ref.scrollTop = bottom()")
+    expect(reasoning).toContain("const bottom = () => (ref ? Math.max(0, ref.scrollHeight - ref.clientHeight) : 0)")
+    expect(reasoning).toMatch(/if \(!done\(\)\) \{[^}]*follow = requestAnimationFrame\(tick\)/)
   })
 
   it("settles encrypted reasoning summaries once the stream moved past them", () => {
