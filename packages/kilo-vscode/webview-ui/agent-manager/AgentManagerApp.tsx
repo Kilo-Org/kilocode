@@ -1722,6 +1722,7 @@ const AgentManagerContent: Component = () => {
   })
   const prDiffComments = createPRDiffCommentState({
     post: vscode.postMessage,
+    onMessage: vscode.onMessage,
     project: activeProjectId,
     statuses: prStatuses,
   })
