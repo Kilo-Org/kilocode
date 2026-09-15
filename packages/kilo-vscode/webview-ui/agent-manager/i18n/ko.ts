@@ -51,7 +51,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "새 worktree에서 agent가 시작하기 전에 실행합니다.",
   "agentManager.settings.setupScript.create": "script 만들기",
   "agentManager.settings.setupScript.edit": "script 편집",
-  "agentManager.project.add": "프로젝트 추가",
+  "agentManager.project.add": "프로젝트 추가...",
   "agentManager.project.remove": "Agent Manager에서 제거",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
   "agentManager.project.settings": "프로젝트 설정",

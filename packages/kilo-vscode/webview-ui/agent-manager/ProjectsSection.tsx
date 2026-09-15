@@ -5,6 +5,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { LanguageContextValue } from "../src/context/language"
 import type { AgentProjectSnapshot } from "../src/types/messages"
+import { ProjectsFooter } from "./ProjectsFooter"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { ProjectRowActions } from "./ProjectRowActions"
 
@@ -41,18 +42,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
     <SidebarSectionHeader
       class="am-section-header"
       label={<span class="am-section-label">{props.t("agentManager.projects")}</span>}
-      actions={
-        <>
-          <IconButton
-            icon="plus"
-            size="small"
-            variant="ghost"
-            label={props.t("agentManager.project.add")}
-            onClick={props.onAdd}
-          />
-          {props.tools}
-        </>
-      }
+      actions={props.tools}
     />
     <div class="am-projects-list">
       <For each={props.projects.map((project) => project.id)}>
@@ -108,5 +98,6 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
         }}
       </For>
     </div>
+    <ProjectsFooter label={props.t("agentManager.project.add")} onAdd={props.onAdd} />
   </div>
 )

@@ -51,7 +51,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "เรียกใช้ก่อนที่ agent จะเริ่มทำงานใน worktree ใหม่",
   "agentManager.settings.setupScript.create": "สร้าง script",
   "agentManager.settings.setupScript.edit": "แก้ไข script",
-  "agentManager.project.add": "เพิ่มโปรเจกต์",
+  "agentManager.project.add": "เพิ่มโปรเจกต์...",
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
   "agentManager.project.missing": "ไม่พบ Repository",
   "agentManager.project.settings": "การตั้งค่าโปรเจกต์",

@@ -49,7 +49,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "在 agent 於新的 worktree 中啟動前執行。",
   "agentManager.settings.setupScript.create": "建立 script",
   "agentManager.settings.setupScript.edit": "編輯 script",
-  "agentManager.project.add": "新增專案",
+  "agentManager.project.add": "新增專案...",
   "agentManager.project.remove": "從 Agent Manager 移除",
   "agentManager.project.missing": "找不到儲存庫",
   "agentManager.project.settings": "專案設定",

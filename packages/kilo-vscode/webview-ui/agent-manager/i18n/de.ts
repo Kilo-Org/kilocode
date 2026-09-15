@@ -57,7 +57,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Vor dem Start eines agent in einem neuen worktree ausführen.",
   "agentManager.settings.setupScript.create": "Script erstellen",
   "agentManager.settings.setupScript.edit": "Script bearbeiten",
-  "agentManager.project.add": "Projekt hinzufügen",
+  "agentManager.project.add": "Projekt hinzufügen...",
   "agentManager.project.remove": "Aus Agent Manager entfernen",
   "agentManager.project.missing": "Repository nicht gefunden",
   "agentManager.project.settings": "Projekteinstellungen",
