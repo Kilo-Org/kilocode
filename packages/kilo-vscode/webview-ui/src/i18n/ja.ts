@@ -434,6 +434,11 @@ export const dict = {
   "settings.indexing.providerField.description": "プロバイダー固有の接続設定。",
   "settings.indexing.qdrantApiKey.description": "QdrantインスタンスのオプションのAPIキー。",
   "settings.indexing.qdrantApiKey.placeholder": "オプションのAPIキー",
+  "settings.indexing.valkeyUrl.title": "Valkey URL",
+  "settings.indexing.valkeyUrl.description": "Valkeyベクトルストアの接続URL。",
+  "settings.indexing.valkeyPassword.title": "Valkeyパスワード",
+  "settings.indexing.valkeyPassword.description": "Valkeyのオプションの認証パスワード。",
+  "settings.indexing.valkeyPassword.placeholder": "オプションのパスワード",
   "settings.indexing.fileExtensions.title": "ファイル拡張子",
   "settings.indexing.fileExtensions.description":
     "カンマ区切りの許可リストです。空欄のままにすると、組み込みのデフォルトが使用されます。",

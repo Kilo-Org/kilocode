@@ -41,6 +41,7 @@
     "@lancedb/lancedb": "0.26.2",
     "@parcel/watcher": "2.5.1",
     "@qdrant/js-client-rest": "1.17.0",
+    "@valkey/valkey-glide": "2.4.0",
     "async-mutex": "0.5.0",
     "effect": "catalog:",
     "glob": "13.0.6",
@@ -59,6 +60,7 @@
     "@tsconfig/node22": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "fast-check": "4.8.0",
     "typescript": "catalog:"
   },
   "peerDependencies": {}

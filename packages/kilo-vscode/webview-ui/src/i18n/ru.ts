@@ -440,6 +440,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "API-ключ Qdrant",
   "settings.indexing.qdrantApiKey.description": "Необязательный API-ключ для экземпляра Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Необязательный API-ключ",
+  "settings.indexing.valkeyUrl.title": "URL Valkey",
+  "settings.indexing.valkeyUrl.description": "URL подключения к векторному хранилищу Valkey.",
+  "settings.indexing.valkeyPassword.title": "Пароль Valkey",
+  "settings.indexing.valkeyPassword.description": "Необязательный пароль аутентификации для Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Необязательный пароль",
   "settings.indexing.fileExtensions.title": "Расширения файлов",
   "settings.indexing.fileExtensions.description":
     "Список разрешённых значений, разделённых запятыми. Оставьте пустым, чтобы использовать встроенные значения по умолчанию.",
