@@ -33,6 +33,8 @@ import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
 import { messageThroughput, formatTG } from "../../context/session-utils"
+import { formatClock, formatDuration } from "../../utils/message-time"
+import type { TurnTiming } from "../../context/transcript-rows"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
@@ -105,6 +107,9 @@ interface AssistantMessageProps {
   message: SDKAssistantMessage
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
+  /** Finish time and duration for the turn, shown inline in the assistant
+   * action row once the turn settles. */
+  timing?: TurnTiming
   feedback?: MessageFeedbackControls
   /** id of the part containing the current chat-search match, if any — forces
    * that part's collapsed tool/reasoning content open so the user can see
@@ -322,6 +327,24 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return <ThroughputBadge metrics={metrics} />
           })
 
+          // Turn finish time and duration render inline in the same action row
+          // as the copy/feedback buttons, on the trailing side, so the turn's
+          // timing never introduces a second line. Only the copy-carrying part
+          // builds it, which keeps it to one row per settled turn.
+          const turnMetaEl = createMemo<JSX.Element | undefined>(() => {
+            const timing = props.timing
+            if (!timing) return undefined
+            if (part.id !== props.showAssistantCopyPartID) return undefined
+            return (
+              <span data-component="message-time">
+                {formatClock(timing.completedAt, language.locale())}
+                <Show when={timing.durationMs}>
+                  {(ms) => <span data-slot="message-time-duration"> · {formatDuration(ms())}</span>}
+                </Show>
+              </span>
+            )
+          })
+
           return (
             <Show
               when={
@@ -370,6 +393,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       settled={settled()}
                                       feedback={props.feedback}
                                       throughput={throughputEl()}
+                                      turnMeta={turnMetaEl()}
                                       readonly={props.readonly}
                                       animate={
                                         part.type === "tool" &&

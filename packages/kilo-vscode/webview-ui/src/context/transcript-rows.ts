@@ -17,12 +17,22 @@ export interface TranscriptUserRow extends TranscriptMeta {
   answered: boolean
 }
 
+/**
+ * Wall-clock finish time and duration for a completed turn, shown as the
+ * turn's chat-line timestamp.
+ */
+export interface TurnTiming {
+  completedAt: number
+  durationMs?: number
+}
+
 export interface TranscriptAssistantRow extends TranscriptMeta {
   type: "assistant"
   key: string
   message: Message
   parts: Part[]
   copy?: string
+  timing?: TurnTiming
 }
 
 export interface TranscriptDiffRow extends TranscriptMeta {
@@ -84,6 +94,10 @@ function meta(a: TranscriptRow, b: TranscriptRow) {
   return a.turn === b.turn && a.partial === b.partial && a.queued === b.queued && a.live === b.live
 }
 
+function sameTiming(a?: TurnTiming, b?: TurnTiming) {
+  return a?.completedAt === b?.completedAt && a?.durationMs === b?.durationMs
+}
+
 function equal(a: TranscriptRow, b: TranscriptRow) {
   if (a.type !== b.type || !meta(a, b)) return false
   if (a.type === "user" && b.type === "user") {
@@ -92,7 +106,7 @@ function equal(a: TranscriptRow, b: TranscriptRow) {
     )
   }
   if (a.type === "assistant" && b.type === "assistant") {
-    return a.message === b.message && same(a.parts, b.parts) && a.copy === b.copy
+    return a.message === b.message && same(a.parts, b.parts) && a.copy === b.copy && sameTiming(a.timing, b.timing)
   }
   if (a.type === "diff" && b.type === "diff") {
     return a.message === b.message && same(a.diffs, b.diffs)
@@ -106,6 +120,21 @@ function equal(a: TranscriptRow, b: TranscriptRow) {
 function diffs(msg: Message) {
   if (!msg.summary || typeof msg.summary === "boolean") return []
   return msg.summary.diffs ?? []
+}
+
+/**
+ * Finish time and duration for a settled turn, derived the same way as the
+ * TUI session view: the last assistant message's completion time minus the
+ * user prompt's creation time. Partial (not-yet-parented) turns are skipped
+ * because their synthetic user message reuses an assistant timestamp.
+ */
+function turnTiming(turn: MessageTurn) {
+  if (turn.partial) return undefined
+  const end = turn.assistant.at(-1)?.time?.completed
+  if (typeof end !== "number") return undefined
+  const start = turn.user.time?.created
+  if (typeof start !== "number") return { completedAt: end }
+  return { completedAt: end, durationMs: Math.max(0, end - start) }
 }
 
 function content(parts: Part[]) {
@@ -165,31 +194,37 @@ export function transcriptRows(
       })
     }
 
+    let tail: TranscriptAssistantRow | undefined
     for (const msg of turn.assistant) {
       const visible = parts(msg.id)
       if (visible.length === 0) {
-        rows.push({
+        tail = {
           ...meta,
           type: "assistant",
           key: `${turn.id}:assistant:${msg.id}:empty`,
           message: msg,
           parts: visible,
           copy: copied,
-        })
+        }
+        rows.push(tail)
         continue
       }
       for (let start = 0; start < visible.length; start += size) {
         const chunk = visible.slice(start, start + size)
-        rows.push({
+        tail = {
           ...meta,
           type: "assistant",
           key: `${turn.id}:assistant:${msg.id}:${chunk[0]!.id}`,
           message: msg,
           parts: chunk,
           copy: copied,
-        })
+        }
+        rows.push(tail)
       }
     }
+
+    const timing = turnTiming(turn)
+    if (tail && timing) tail.timing = timing
 
     const changes = diffs(turn.user)
     if (changes.length > 0) {

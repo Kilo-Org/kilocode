@@ -270,6 +270,24 @@ describe("transcriptRows", () => {
     expect(live[0]).not.toBe(second[0])
     expect(live[1]).not.toBe(second[1])
   })
+
+  it("attaches finish time and duration to the last assistant row of a settled turn", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1", { time: { created: 1_500, completed: 3_500 } })
+    const rows = transcriptRows(messageTurns([u1, a1]), lookup({ a1: [part("p1", "a1")] }))
+
+    expect(rows.find((row) => row.type === "assistant")).toMatchObject({
+      timing: { completedAt: 3_500, durationMs: 2_500 },
+    })
+  })
+
+  it("omits turn timing while the last assistant message is still running", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1", { time: { created: 1_500 } })
+    const rows = transcriptRows(messageTurns([u1, a1]), lookup({ a1: [part("p1", "a1")] }))
+
+    expect(rows.find((row) => row.type === "assistant")?.timing).toBeUndefined()
+  })
 })
 
 describe("retainTurn", () => {
