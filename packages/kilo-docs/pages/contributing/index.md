@@ -167,7 +167,7 @@ The [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace) is a commun
 
 To contribute:
 
-1. Follow the documentation for [Custom Modes](/docs/customize/custom-modes), [Skills](/docs/customize/skills), or [MCP Servers](/docs/automate/mcp/overview) to create your resource
+1. Follow the documentation for [Custom Agents](/docs/customize/custom-modes), [Skills](/docs/customize/skills), or [MCP Servers](/docs/automate/mcp/overview) to create your resource
 
 2. Test your contribution thoroughly
 

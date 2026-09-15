@@ -437,7 +437,7 @@ mkdir -p .kilo/rules-docs
 ## Next Steps
 
 - [Learn about Custom Rules](/docs/customize/custom-rules)
-- [Explore Custom Modes](/docs/customize/custom-modes)
+- [Explore Custom Agents](/docs/customize/custom-modes)
 - [Set up Custom Instructions](/docs/customize/custom-instructions)
 - [Join our Discord](https://kilo.ai/discord) for migration support
 

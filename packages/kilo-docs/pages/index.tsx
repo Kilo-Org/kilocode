@@ -97,7 +97,7 @@ const categories = [
     ),
     links: [
       { title: "The Chat Interface", href: "/code-with-ai" },
-      { title: "Using Modes", href: "/code-with-ai" },
+      { title: "Using Agents", href: "/code-with-ai" },
       { title: "Custom Rules", href: "/code-with-ai" },
     ],
   },
@@ -198,7 +198,7 @@ export default function HomePage() {
   return (
     <div className="homepage">
       <Head>
-        <title>Kilo Code Docs: Setup, Models, MCP, Custom Modes & CLI</title>
+        <title>Kilo Code Docs: Setup, Models, MCP, Custom Agents & CLI</title>
       </Head>
       {/* Dotted background pattern */}
       <div className="dot-pattern" />

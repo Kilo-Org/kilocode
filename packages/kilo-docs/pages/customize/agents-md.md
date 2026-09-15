@@ -201,7 +201,7 @@ AGENTS.md itself cannot be individually disabled — it is always loaded if pres
 ## Related Features
 
 - **[Custom Rules](/docs/customize/custom-rules)** - Kilo Code-specific rules with more control
-- **[Custom Modes](/docs/customize/custom-modes)** - Specialized workflows with specific permissions
+- **[Custom Agents](/docs/customize/custom-modes)** - Specialized workflows with specific permissions
 - **[Custom Instructions](/docs/customize/custom-instructions)** - Personal preferences across all projects
 - **[Migrating from Cursor or Windsurf](/docs/getting-started/migrating)** - Migration guide for other tools
 

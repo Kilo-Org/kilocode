@@ -182,7 +182,7 @@ This allows delegation only to `code-reviewer` and `docs-writer`.
 
 ## Related
 
-- [Custom Modes](/docs/customize/custom-modes)
+- [Custom Agents](/docs/customize/custom-modes)
 - [Custom Subagents](/docs/customize/custom-subagents)
 - [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions)
 - [.kilocodeignore](/docs/customize/context/kilocodeignore)
