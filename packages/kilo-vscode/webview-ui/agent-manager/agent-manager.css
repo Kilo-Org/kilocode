@@ -348,16 +348,6 @@ html[data-theme="kilo-vscode"]
   margin-right: -4px;
 }
 
-.am-project-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* The project row needs 20px + 24px + 20px; the worktree row uses the
-     remaining space for its split-button and settings gap. */
-  width: 64px;
-  gap: 0;
-}
-
 .am-project {
   display: flex;
   flex-direction: column;
@@ -376,6 +366,12 @@ html[data-theme="kilo-vscode"]
      .am-worktree-item both use a 6px inset), so the tree reads as one line. */
   padding: 6px 6px;
   box-sizing: border-box;
+  /* Pin the project row with its New worktree control while its body scrolls.
+     The opaque sidebar background hides the rows passing underneath. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-base);
 }
 
 .am-project-item:hover {
@@ -2944,7 +2940,7 @@ body.am-wt-dragging-active * {
   min-width: 250px;
 }
 
-/* Per-project row actions (history, remove) */
+/* Per-project row actions (new worktree, overflow menu) */
 
 .am-project-actions-row {
   display: flex;

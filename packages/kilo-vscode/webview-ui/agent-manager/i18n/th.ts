@@ -54,6 +54,7 @@ export const dict = {
   "agentManager.project.add": "เพิ่มโปรเจกต์",
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
   "agentManager.project.missing": "ไม่พบ Repository",
+  "agentManager.project.settings": "การตั้งค่าโปรเจกต์",
   "agentManager.project.restricted":
     "พื้นที่ทำงาน VS Code ปัจจุบันของคุณคือโฟลเดอร์บ้านหรือรากของระบบไฟล์ เปิดโฟลเดอร์โครงการที่เจาะจงใน VS Code เพื่อใช้ Agent Manager",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",

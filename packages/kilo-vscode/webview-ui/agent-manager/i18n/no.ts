@@ -55,6 +55,7 @@ export const dict = {
   "agentManager.project.add": "Legg til prosjekt",
   "agentManager.project.remove": "Fjern fra Agent Manager",
   "agentManager.project.missing": "Repository ikke funnet",
+  "agentManager.project.settings": "Prosjektinnstillinger",
   "agentManager.project.restricted":
     "Det gjeldende VS Code-arbeidsområdet er hjemmemappen din eller filsystemroten. Åpne en bestemt prosjektmappe i VS Code for å bruke Agent Manager.",
   "agentManager.notGitRepo": "Ikke et git-repositorium",

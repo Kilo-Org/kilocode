@@ -1917,7 +1917,7 @@ export const MultiProjectSidebar: Story = {
   render: () => {
     return (
       <StoryProviders noPadding>
-        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
+        <div style={{ display: "flex", "flex-direction": "column", height: "720px", overflow: "hidden" }}>
           <ProjectList
             mode={createModeRouter()}
             projects={[projectA, projectB]}
@@ -1929,6 +1929,14 @@ export const MultiProjectSidebar: Story = {
                   wt("wt-a2", "fix/session-routing"),
                   wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
                   wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
+                  wt("wt-a5", "feat/sticky-project-row", "Sticky project row"),
+                  wt("wt-a6", "fix/overflow-menu", "Project overflow menu"),
+                  wt("wt-a7", "chore/storybook-scroll"),
+                  wt("wt-a8", "docs/agent-manager-projects"),
+                  wt("wt-a9", "refactor/project-row-actions"),
+                  wt("wt-a10", "test/project-row-sticky"),
+                  wt("wt-a11", "feat/project-menu-i18n"),
+                  wt("wt-a12", "fix/collapsed-project-plus"),
                 ],
                 [
                   { id: "ses-a1", worktreeId: null },
@@ -1936,7 +1944,21 @@ export const MultiProjectSidebar: Story = {
                 ],
                 [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
                 "main",
-                ["wt-a2", "sec-a1", "wt-a1", "wt-a3", "wt-a4"],
+                [
+                  "wt-a2",
+                  "sec-a1",
+                  "wt-a1",
+                  "wt-a3",
+                  "wt-a4",
+                  "wt-a5",
+                  "wt-a6",
+                  "wt-a7",
+                  "wt-a8",
+                  "wt-a9",
+                  "wt-a10",
+                  "wt-a11",
+                  "wt-a12",
+                ],
               ),
               [projectB.id]: projectState(
                 projectB.id,
@@ -1988,6 +2010,15 @@ export const MultiProjectSidebar200: Story = {
   ...MultiProjectSidebar,
   name: "Project List - minimum sidebar width",
   parameters: { layout: "fullscreen" },
+}
+
+export const MultiProjectSidebarScrolled: Story = {
+  ...MultiProjectSidebar,
+  name: "Project List — scrolled with pinned project row",
+  play: (context: { canvasElement: HTMLElement }) => {
+    const list = context.canvasElement.querySelector<HTMLElement>(".am-projects-list")
+    if (list) list.scrollTop = 360
+  },
 }
 
 // ---------------------------------------------------------------------------
