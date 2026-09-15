@@ -25,6 +25,7 @@ export namespace RecallSearch {
   const WORDCHAR = /^[\p{L}\p{N}_]$/u
   const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" })
   const ready = new WeakSet<object>()
+  const degraded = new WeakSet<object>()
 
   const TEXT_SQL = `CASE
       WHEN json_extract(p.data, '$.type') = 'text' THEN coalesce(json_extract(p.data, '$.text'), '')
@@ -98,8 +99,18 @@ export namespace RecallSearch {
 
   const lookup = (db: Database.Interface["db"], ids: MessageID[], indexed: boolean) =>
     indexed
-      ? db.all<MessageRow>(messages(ids, true)).pipe(Effect.catch(() => db.all<MessageRow>(messages(ids, false))))
+      ? db.all<MessageRow>(messages(ids, true)).pipe(Effect.catch((error) => fallback(db, ids, error)))
       : db.all<MessageRow>(messages(ids, false))
+
+  // A missing or mismatched role index degrades to non-covering lookups, so report it once per connection.
+  const fallback = (db: Database.Interface["db"], ids: MessageID[], error: unknown) =>
+    Effect.gen(function* () {
+      if (!degraded.has(db)) {
+        degraded.add(db)
+        yield* Effect.logWarning("recall role index unavailable, falling back to message row lookups", { error })
+      }
+      return yield* db.all<MessageRow>(messages(ids, false))
+    })
 
   export type Source = "user" | "assistant" | "reference" | "error"
 
