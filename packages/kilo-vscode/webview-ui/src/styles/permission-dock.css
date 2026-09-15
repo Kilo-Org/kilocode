@@ -420,6 +420,53 @@
     border: none;
     box-shadow: none;
   }
+
+  [data-slot="permission-feedback"] {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0 0;
+    flex-shrink: 0;
+  }
+
+  [data-slot="permission-feedback-input"] {
+    width: 100%;
+    min-height: 2.5em;
+    max-height: 8em;
+    resize: vertical;
+    padding: 6px 8px;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border, transparent));
+    border-radius: 4px;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font-family: var(--vscode-font-family, inherit);
+    font-size: var(--kilo-font-size-12);
+    line-height: 1.4;
+    outline: none;
+
+    &::placeholder {
+      color: var(--vscode-input-placeholderForeground, var(--text-weak));
+    }
+
+    &:focus {
+      border-color: var(--vscode-focusBorder);
+    }
+  }
+
+  [data-slot="permission-feedback-hint"] {
+    font-size: var(--kilo-font-size-11);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+
+  [data-slot="permission-actions"] > [data-component="button"][data-slot="permission-reject-confirm"] {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-inputValidation-errorBorder, #be1100);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.15);
+    }
+  }
 }
 
 @keyframes permission-slide-in {

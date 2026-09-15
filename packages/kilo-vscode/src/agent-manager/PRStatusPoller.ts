@@ -16,6 +16,8 @@ import {
   summarize,
 } from "./pr/am-pr-utils"
 import { TIMELINE_QUERY, parseTimeline } from "./pr/timeline"
+import { seed } from "./pr/am-pr-seed"
+import type { SeedHost, Seeds } from "./pr/am-pr-seed"
 import type { PRResult, GhThread, GhReviewRequest, GhReview, GhTimelineItem } from "./pr/am-pr-types"
 import { withContext } from "./pr/pr-comment-context"
 import { oid } from "../shared/pr-comment-preview"
@@ -289,7 +291,18 @@ export class PRStatusPoller {
       return
     }
 
-    const thunks = targets.map((wt) => () => this.fetchOne(wt.id, generation))
+    // Full syncs resolve every worktree in one GraphQL request (see pr/am-pr-seed.ts)
+    // so the per-worktree `fetchOne` calls below skip their own `gh` lookups. A seed
+    // failure must never abort the sync; those worktrees just fall back to fetchOne.
+    const seeds: Seeds = full
+      ? await seed(targets, this.host(generation)).catch((err: unknown) => {
+          this.options.log("Batched PR lookup failed:", err instanceof Error ? err.message : String(err))
+          return new Map()
+        })
+      : new Map()
+    if (this.stale(generation)) return
+
+    const thunks = targets.map((wt) => () => this.fetchOne(wt.id, generation, undefined, seeds.get(wt.id)))
     const results = full
       ? await settled(thunks, FULL_SYNC_CONCURRENCY)
       : await Promise.allSettled(thunks.map((fn) => fn()))
@@ -302,10 +315,27 @@ export class PRStatusPoller {
     this.failures++
   }
 
+  /** Callbacks the batched seed needs, bound to one poll generation. */
+  private host(generation: number): SeedHost {
+    return {
+      branch: (wt) => (this.options.getBranch ? this.options.getBranch(wt) : Promise.resolve(wt.branch)),
+      git: (args, cwd) => this.shell("git", args, { cwd, timeout: 5_000 }).then((r) => r.stdout),
+      gh: (args, cwd) => this.gh(args, { cwd, timeout: 20_000 }).then((r) => r.stdout),
+      repo: (cwd) => this.getRepoInfo(cwd),
+      rich: () => this.rich,
+      degrade: () => {
+        this.rich = false
+      },
+      stale: () => this.stale(generation),
+      log: (...args) => this.options.log(...args),
+    }
+  }
+
   private async fetchOne(
     worktreeId: string,
     generation = this.generation,
     full = this.activeWorktreeId === worktreeId,
+    seeded?: PRResult | null,
   ): Promise<void> {
     const wt = this.target(worktreeId)
     if (!wt) return
@@ -314,7 +344,7 @@ export class PRStatusPoller {
     try {
       branch = this.options.getBranch ? await this.options.getBranch(wt) : wt.branch
       if (this.stale(generation)) return
-      const pr = await this.cachedFetchPR(branch ?? wt.branch, wt.path)
+      const pr = seeded === undefined ? await this.cachedFetchPR(branch ?? wt.branch, wt.path) : seeded
       if (this.stale(generation)) return
       if (!pr) return this.empty(worktreeId, branch ?? wt.branch, branch)
 

@@ -99,6 +99,7 @@ export const KilocodePaths = {
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
   removeSnapshot: `${root}/snapshot/remove`,
+  prepareSnapshot: `${root}/snapshot/prepare`,
   providerUsage: `${root}/provider-usage`,
   providerUsageRefresh: `${root}/provider-usage/refresh`,
   notebookList: `${root}/notebook`,
@@ -242,6 +243,20 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.removeSnapshot",
             summary: "Remove a snapshot repository",
             description: "Remove the snapshot repository for an already deleted Agent Manager worktree.",
+          }),
+        ),
+        HttpApiEndpoint.post("prepareSnapshot", KilocodePaths.prepareSnapshot, {
+          query: WorkspaceRoutingQuery,
+          success: described(
+            Schema.Struct({ prepared: Schema.Boolean, durationMs: Schema.Number }),
+            "Snapshot repository preparation result",
+          ),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.snapshot.prepare",
+            summary: "Prepare a snapshot repository",
+            description:
+              "Initialize and seed snapshots for the routed directory without creating a session or tracking ref.",
           }),
         ),
         HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {

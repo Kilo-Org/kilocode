@@ -598,8 +598,8 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand(
       "kilo-code.new.openSubAgentViewer",
-      (sessionID: string, title?: string, directory?: string) => {
-        subAgentViewerProvider.openPanel(sessionID, title, directory)
+      (sessionID: string, title?: string, directory?: string, background?: boolean) => {
+        subAgentViewerProvider.openPanel(sessionID, title, directory, background)
       },
     ),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
