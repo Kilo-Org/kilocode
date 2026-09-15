@@ -1623,7 +1623,7 @@ const AgentManagerContent: Component = () => {
         managedSession: focusManagedSession,
       })
 
-      reportFailure(msg, { toast: showToast, t, project: currentProjectId() })
+      if (reportFailure(msg, { toast: showToast, t, project: currentProjectId() }) === "stale") return
 
       if (projectLive.apply(msg)) return
     })
