@@ -4,6 +4,7 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Skill } from "../skill"
 import * as Tool from "./tool"
 import DESCRIPTION from "./skill.txt"
+import { content as builtin } from "@/kilocode/skills/builtin" // kilocode_change
 // kilocode_change start - gate + run shell injection in skill bodies
 import { Config } from "@/config/config"
 import { Shell } from "@opencode-ai/core/shell"
@@ -15,6 +16,13 @@ import { SkillInject } from "@/kilocode/skills/inject"
 
 export const Parameters = Schema.Struct({
   name: Schema.String.annotate({ description: "The name of the skill from available_skills" }),
+  // kilocode_change start
+  reference: Schema.optional(
+    Schema.String.annotate({
+      description: "Load only a reference explicitly named by the loaded built-in skill guide.",
+    }),
+  ),
+  // kilocode_change end
 })
 
 export const SkillTool = Tool.define(
@@ -45,7 +53,7 @@ export const SkillTool = Tool.define(
           // kilocode_change start - render `!`cmd`` shell injection, gated by trust + kill-switch + batch approval
           const cfg = yield* config.get()
           const content = yield* SkillInject.render({
-            content: info.content,
+            content: builtin(info, params.reference),
             trusted: info.trusted === true,
             disabled: flags.disableSkillShell,
             cwd: yield* InstanceState.directory,
