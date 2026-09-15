@@ -189,9 +189,9 @@ Anyone with access to your Kilo account can send messages to your computer when 
 
 Cloud Agents are great for:
 
-- **Remote debugging** using Kilo Code debug mode
+- **Remote debugging** using the Kilo Code Debug agent
 - **Exploration of unfamiliar codebases** without touching your local machine
-- **Architect-mode brainstorming** while on the go
+- **Plan-agent brainstorming** while on the go
 - **Automated refactors or tech debt cleanup** driven by Kilo Code
 - **Offloading CI-like tasks**, experiments, or batch updates
 
