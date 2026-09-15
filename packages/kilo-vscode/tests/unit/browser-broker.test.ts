@@ -509,7 +509,7 @@ describe("BrowserBroker", () => {
       await expect(
         broker.open({ sessionId: "missing-runtime", directory: "/tmp/project" }, "http://localhost:3000/"),
       ).rejects.toThrow(
-        `${chrome ? "disable" : "enable"} Use System Chrome in Kilo Settings > Experimental for the Agent Manager browser`,
+        `${chrome ? "disable" : "enable"} Use System Chrome in Kilo Settings > Experimental for the Integrated Browser`,
       )
       expect(broker.sessions()).toEqual([])
     },

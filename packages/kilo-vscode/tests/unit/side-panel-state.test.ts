@@ -6,6 +6,60 @@ import { createProjectStore } from "../../webview-ui/agent-manager/project/store
 import { setupVisible, updateSetup } from "../../webview-ui/agent-manager/project/progress"
 
 describe("Agent Manager panel ownership", () => {
+  it("opens and closes the Integrated Browser before a session exists", () => {
+    createRoot((dispose) => {
+      const panels = createSidePanel({ project: () => "project", selection: () => "local", current: () => undefined })
+      panels.toggle(SidePanel.Browser)
+      expect(panels.panel()).toBe(SidePanel.Browser)
+      expect(panels.session()).toBeUndefined()
+      panels.toggle(SidePanel.Browser)
+      expect(panels.panel()).toBeNull()
+      panels.open(SidePanel.Browser)
+      panels.open(SidePanel.Documents)
+      expect(panels.panel()).toBe(SidePanel.Documents)
+      dispose()
+    })
+  })
+
+  it("keeps the empty browser separate from real sessions, projects, and worktrees", () => {
+    createRoot((dispose) => {
+      const [project, activate] = createSignal("project")
+      const [selection, select] = createSignal("local")
+      const [current, session] = createSignal<string>()
+      const panels = createSidePanel({ project, selection, current })
+      panels.open(SidePanel.Browser)
+      select("worktree")
+      expect(panels.panel()).toBeNull()
+      select("local")
+      activate("other")
+      expect(panels.panel()).toBeNull()
+      activate("project")
+      expect(panels.panel()).toBe(SidePanel.Browser)
+      session("real-session")
+      expect(panels.panel()).toBeNull()
+      panels.open(SidePanel.Browser)
+      session("sibling")
+      expect(panels.panel()).toBeNull()
+      session("real-session")
+      expect(panels.panel()).toBe(SidePanel.Browser)
+      panels.close()
+      session(undefined)
+      expect(panels.panel()).toBe(SidePanel.Browser)
+      dispose()
+    })
+  })
+
+  it("still requires a real session for other session-owned panels", () => {
+    createRoot((dispose) => {
+      const panels = createSidePanel({ project: () => "project", selection: () => "local", current: () => undefined })
+      panels.open(SidePanel.Subagents)
+      expect(panels.panel()).toBeNull()
+      panels.open(SidePanel.EditPreview)
+      expect(panels.panel()).toBeNull()
+      dispose()
+    })
+  })
+
   it("restores Local Diff and session panels independently, including explicit closes", () => {
     createRoot((dispose) => {
       const [project, activate] = createSignal("project")

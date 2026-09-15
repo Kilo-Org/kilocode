@@ -1,4 +1,4 @@
-Open the local application in the Browser panel for the current Agent Manager session.
+Open the local application in the Integrated Browser panel for the current Agent Manager session.
 
 Use this tool when the user asks you to inspect or verify a local web application.
 The user can see the same browser page in Agent Manager. Reuse this browser instead

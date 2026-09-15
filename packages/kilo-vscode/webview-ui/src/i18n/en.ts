@@ -905,12 +905,12 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
-  "settings.experimental.browserAutomation.title": "Agent Manager Browser",
+  "settings.experimental.browserAutomation.title": "Integrated Browser",
   "settings.experimental.browserAutomation.description":
     "Show local application previews in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
   "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
-    "Use installed Google Chrome for the Agent Manager browser. Disable only when a compatible Playwright Chromium browser is already installed.",
+    "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",

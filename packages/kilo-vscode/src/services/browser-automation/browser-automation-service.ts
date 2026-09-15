@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend"
 import { playwrightCommand } from "./settings"
+import { canonicalizePath, samePath } from "../../agent-manager/project/paths"
 
 type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
 
@@ -27,6 +28,22 @@ export class BrowserAutomationService implements vscode.Disposable {
         void this.syncWithSettings()
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.enqueue(() => this.apply(true))),
+      {
+        dispose: connectionService.onEvent((event) => {
+          if (event.type !== "server.instance.disposed") return
+          return this.enqueue(async () => {
+            if (this.disposed) return
+            const root = canonicalizePath(event.properties.directory)
+            const dirs = [...new Set([...this.registered, ...this.directories()])].filter((dir) =>
+              samePath(canonicalizePath(dir), root),
+            )
+            if (!dirs.length) return
+            // Config saves and Reload discard MCP state without reconnecting SSE.
+            for (const dir of dirs) this.registered.delete(dir)
+            await this.apply(true)
+          })
+        }),
+      },
     )
   }
 
@@ -43,6 +60,33 @@ export class BrowserAutomationService implements vscode.Disposable {
    */
   reregisterIfEnabled(): Promise<void> {
     return this.enqueue(() => this.apply())
+  }
+
+  ready(directory: string): Promise<void> {
+    return this.enqueue(async () => {
+      if (this.disposed || !this.enabled() || !vscode.workspace.isTrusted) return
+      const dir = this.directories().find((dir) => samePath(canonicalizePath(dir), canonicalizePath(directory)))
+      if (!dir) return
+      const client = this.getClient()
+      if (!client) throw new Error("Playwright browser automation is waiting for the CLI connection.")
+      // A prompt can arrive before the disposal event or before MCP startup finishes.
+      const { data: status } = await client.mcp.status({ directory: dir }, { throwOnError: true })
+      const server = status[BrowserAutomationService.MCP_SERVER_NAME]
+      if (server?.status === "connected") return
+      // A failed server stays failed until settings change, reconnect, or
+      // disposal. Do not spawn another npx attempt on every prompt.
+      if (server?.status === "failed") throw BrowserAutomationService.failure((server as { error?: string }).error)
+      this.registered.delete(dir)
+      if (!this.enabled()) return
+      await this.register([dir])
+      if (this.enabled() && !this.registered.has(dir)) throw BrowserAutomationService.failure()
+    })
+  }
+
+  private static failure(detail?: string): Error {
+    return new Error(
+      `Playwright browser automation could not connect${detail ? ` (${detail})` : ""}. Check the Extension Host output, or disable Browser Automation in Web Tools to continue without it.`,
+    )
   }
 
   /**

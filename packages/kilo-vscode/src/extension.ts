@@ -71,7 +71,11 @@ export async function activate(context: vscode.ExtensionContext) {
   })
 
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(context, () => browserBroker.env())
+  const connectionService = new KiloConnectionService(
+    context,
+    () => browserBroker.env(),
+    (dir): Promise<void> => browserAutomationService.ready(dir),
+  )
 
   // Manages the built-in Playwright MCP server for ordinary sessions. This is
   // independent from the Agent Manager browser broker above.

@@ -226,6 +226,7 @@ function createConnection(client: ReturnType<typeof createClient> | null) {
     getConnectionError: () => null,
     resolveEventSessionId: () => undefined,
     recordMessageSessionId: () => undefined,
+    prepareTools: async (_dir: string) => {},
     notifyNotificationDismissed: () => undefined,
     pruneSession: () => undefined,
     registerVisible: () => undefined,
@@ -294,7 +295,7 @@ function makeProvider(
       sent.push(message)
     },
   }
-  return { provider, internal, sent }
+  return { provider, internal, sent, connection }
 }
 
 function status(internal: ProviderInternals, type: "busy" | "idle", directory = "/repo", sessionID = "s1") {
@@ -1593,6 +1594,70 @@ describe("KiloProvider.handleLoadMessages / slim payload", () => {
     await internal.handleSendMessage("hello", "m1", "s1")
 
     expect(client.prompted).toHaveLength(1)
+  })
+
+  it("waits for browser tool readiness before submitting the prompt", async () => {
+    const client = createClient()
+    const { internal, connection } = makeProvider(client)
+    internal.currentSession = mkSession()
+    internal.gatherEditorContext = async () => ({})
+    const started = Promise.withResolvers<void>()
+    const ready = Promise.withResolvers<void>()
+    connection.prepareTools = async (dir) => {
+      expect(dir).toBe("/repo")
+      started.resolve()
+      await ready.promise
+    }
+    const send = internal.handleSendMessage("browser test", "m1", "s1")
+    await started.promise
+    expect(client.prompted).toHaveLength(0)
+    ready.resolve()
+    await send
+    expect(client.prompted).toHaveLength(1)
+  })
+
+  it("waits for browser tool readiness for Agent Manager prompts too", async () => {
+    const client = createClient()
+    const { internal, connection } = makeProvider(client)
+    internal.currentSession = mkSession()
+    internal.gatherEditorContext = async () => ({})
+    const dirs: string[] = []
+    connection.prepareTools = async (dir) => {
+      dirs.push(dir)
+    }
+    await internal.handleSendMessage(
+      "browser test",
+      "m1",
+      "s1",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "am-context",
+    )
+    expect(dirs).toEqual(["/repo"])
+    expect(client.prompted).toHaveLength(1)
+  })
+
+  it("reports a browser readiness failure instead of submitting without tools", async () => {
+    const client = createClient()
+    const { internal, connection, sent } = makeProvider(client)
+    internal.currentSession = mkSession()
+    internal.gatherEditorContext = async () => ({})
+    connection.prepareTools = async () => {
+      throw new Error("Playwright browser automation could not connect")
+    }
+    await internal.handleSendMessage("browser test", "m1", "s1")
+    expect(client.prompted).toHaveLength(0)
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "sendMessageFailed",
+        error: "Playwright browser automation could not connect",
+      }),
+    )
   })
 
   it("aborts when the cost alert is stopped", async () => {

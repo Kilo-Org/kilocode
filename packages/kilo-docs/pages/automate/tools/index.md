@@ -104,7 +104,7 @@ The VS Code extension has a built-in browser automation tool powered by [Playwri
 
 These follow the same permission model as all MCP tools (see below).
 
-The experimental Agent Manager browser is separate. It shows local application previews in Agent Manager, is enabled under **Settings → Experimental → Agent Manager Browser**, and does not affect Playwright MCP.
+The experimental Integrated Browser is separate. It shows local application previews in Agent Manager, is enabled under **Settings → Experimental → Integrated Browser**, and does not affect Playwright MCP.
 
 ### MCP Tools
 

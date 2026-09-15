@@ -24,9 +24,10 @@ export function createSidePanel(opts: {
     const id = opts.current()
     return id ? JSON.stringify([opts.project() ?? "single", id]) : undefined
   }
+  // A draft can show the browser's no-session guidance without creating a backend session.
+  const owner = () => session() ?? JSON.stringify([opts.project() ?? "single", opts.selection(), null])
   const selected = () => {
-    const id = session()
-    const override = id ? sessions()[id] : undefined
+    const override = sessions()[owner()]
     return override !== undefined ? override : (worktrees()[worktree()] ?? null)
   }
   const panel = () => {
@@ -36,21 +37,20 @@ export function createSidePanel(opts: {
   const open = (value: SidePanel) => {
     const id = session()
     if (ownership[value] === "session") {
-      if (id) setSessions((prev) => ({ ...prev, [id]: value }))
+      if (id || value === SidePanel.Browser) setSessions((prev) => ({ ...prev, [owner()]: value }))
       return
     }
     const key = worktree()
     batch(() => {
       setWorktrees((prev) => ({ ...prev, [key]: value }))
-      if (id) setSessions((prev) => ({ ...prev, [id]: undefined }))
+      setSessions((prev) => ({ ...prev, [owner()]: undefined }))
     })
   }
   const close = (expected?: SidePanel) => {
     const value = selected()
     if (!value || (expected && value !== expected)) return
-    const id = session()
-    if (ownership[value] === "session" && id) {
-      setSessions((prev) => ({ ...prev, [id]: null }))
+    if (ownership[value] === "session") {
+      setSessions((prev) => ({ ...prev, [owner()]: null }))
       return
     }
     setWorktrees((prev) => ({ ...prev, [worktree()]: null }))

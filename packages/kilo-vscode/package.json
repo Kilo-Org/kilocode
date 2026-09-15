@@ -1080,7 +1080,7 @@
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "Enable the experimental Agent Manager browser panel and browser_open tool."
+          "description": "Enable the experimental Integrated Browser panel and browser_open tool in Agent Manager."
         },
         "kilo-code.new.experimental.claudeMigration": {
           "type": "boolean",
@@ -1155,7 +1155,7 @@
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "Use system-installed Google Chrome for the Agent Manager browser. Disable only when a compatible Playwright Chromium browser is already installed."
+          "description": "Use system-installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed."
         },
         "kilo-code.new.attention.enabled": {
           "type": "boolean",
