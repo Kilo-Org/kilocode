@@ -15,10 +15,6 @@ accept = [
   "429",
   "301",
   "307",
-  # External hosts intermittently return 503 to automated checks. Lychee retries
-  # 5xx responses, so a link that still returns 503 is transiently unavailable
-  # rather than broken.
-  "503",
 ]
 
 exclude = [
@@ -27,6 +23,9 @@ exclude = [
   # Synthetic's site intermittently returns 503 to automated link checks.
   '^https?://synthetic\.new/?$',
   '^https?://synthetic\.new/pricing/?$',
+  # Google AI docs intermittently return 503 to automated link checks.
+  '^https?://ai\.google\.dev/gemini-api/docs/api-key/?$',
+  '^https?://ai\.google\.dev/pricing/?$',
   'https://platform.slack-edge.com/img/add_to_slack.png',
   'https://console.groq.com/pages/models',
   '^https?://([A-Za-z0-9-]+\.)?glama\.ai(/|$)',
