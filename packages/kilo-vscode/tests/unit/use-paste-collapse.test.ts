@@ -97,4 +97,30 @@ describe("usePasteCollapse", () => {
     expect(el.value).toBe(second)
     ctx.dispose()
   })
+
+  it("writes a large expansion directly instead of through execCommand", () => {
+    const ctx = setup()
+    const el = field("")
+    const backing = Array.from({ length: 120 }, (_, index) => `${index} ${"x".repeat(40)}`).join("\n")
+    let calls = 0
+    const global = globalThis as unknown as { document?: unknown }
+    global.document = {
+      execCommand: () => {
+        calls += 1
+        return true
+      },
+    }
+    try {
+      ctx.paste.paste(clipboard(backing), el, ctx.setText)
+      expect(calls).toBe(1)
+
+      const [entry] = ctx.paste.pastes()
+      expect(ctx.paste.expand(entry!.id, el, ctx.setText)).toBe(true)
+      expect(calls).toBe(1)
+      expect(el.value).toBe(backing)
+    } finally {
+      delete global.document
+    }
+    ctx.dispose()
+  })
 })

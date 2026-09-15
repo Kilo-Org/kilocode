@@ -1945,6 +1945,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                         e.preventDefault()
                         e.stopPropagation()
                         paste.expand(seg().paste!, textareaRef, setText, () => {
+                          // A large expansion writes the textarea value directly
+                          // and skips the input handler, so reset the same state
+                          // that handler resets on a manual edit.
+                          preEnhanceText = null
+                          preEnhancePastes = null
+                          history.reset()
                           adjustHeight()
                           syncHighlightScroll()
                         })

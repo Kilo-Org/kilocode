@@ -48,6 +48,9 @@ export interface PasteCollapse {
   ) => boolean
 }
 
+/** Inserts above this size skip execCommand, which turns superlinear for large writes. */
+const directLimit = 2048
+
 /**
  * Collapses large pasted blocks behind a `[Pasted ~N lines]` chip in the prompt
  * input. The chip is literal text in the textarea, so the overlay and textarea
@@ -79,12 +82,19 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
   ) => {
     textarea.focus()
     textarea.setSelectionRange(start, end)
-    try {
-      document.execCommand("insertText", false, value)
-    } catch {
-      // execCommand is unavailable in some hosts; the direct write below covers it.
+    if (value.length > directLimit) {
+      // execCommand is superlinear for large inserts (seconds for ~100 KB) and
+      // fires an input event that reparses the whole prompt. Set the value
+      // directly instead; the caller still gets the resulting text and range.
+      textarea.value = expected
+    } else {
+      try {
+        document.execCommand("insertText", false, value)
+      } catch {
+        // execCommand is unavailable in some hosts; the direct write below covers it.
+      }
+      if (textarea.value !== expected) textarea.value = expected
     }
-    if (textarea.value !== expected) textarea.value = expected
     setText(expected)
     // The caller knows the exact edited span, so shift by it instead of inferring
     // the span from a diff, which cannot tell two identical chips apart.
