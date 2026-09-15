@@ -1,6 +1,7 @@
 // kilocode_change - new file (moved from src/kilo-sessions/pr-link.test.ts so the
 // package test runner scans it; it previously sat under src/ and never ran).
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { Global } from "@opencode-ai/core/global"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -37,11 +38,13 @@ const { Instance } = await import("@/kilocode/instance")
 import type { InstanceContext } from "@/project/instance-context"
 
 // Write a record the way a previous process would have, so the read side can be
-// exercised across processes.
+// exercised across processes. Storage persists each key as
+// `<data>/storage/<key...>.json` (see `Storage.file`), so writing that file
+// directly reproduces the exact on-disk shape `readRecordedPrLink` reads back.
 async function writeRecorded(worktree: string, value: unknown) {
-  const { AppRuntime } = await import("@/effect/app-runtime")
-  const { Storage } = await import("@/storage/storage")
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(recordedKey(worktree), value)))
+  const target = path.join(Global.Path.data, "storage", ...recordedKey(worktree)) + ".json"
+  await fs.mkdir(path.dirname(target), { recursive: true })
+  await fs.writeFile(target, JSON.stringify(value, null, 2))
 }
 
 function restoreWorktree<T>(worktree: string, fn: () => T): T {

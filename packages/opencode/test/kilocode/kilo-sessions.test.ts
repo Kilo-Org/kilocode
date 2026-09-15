@@ -1645,16 +1645,8 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
           emitPart(id, textPart(id, "p-persist", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
           await new Promise((r) => setTimeout(r, 200))
 
-          const { AppRuntime } = await import("@/effect/app-runtime")
-          const { Storage } = await import("@/storage/storage")
-          const stored = await AppRuntime.runPromise(
-            Storage.Service.use((svc) =>
-              svc.read<{ link: { platform: string; prUrl: string; prNumber: number } }>(
-                PrLink.recordedKey(Instance.worktree),
-              ),
-            ),
-          )
-          expect(stored.link).toEqual({
+          const stored = await PrLink.readRecordedPrLink(Instance.worktree)
+          expect(stored?.link).toEqual({
             platform: "gitlab",
             prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
             prNumber: 3,
