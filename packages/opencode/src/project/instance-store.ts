@@ -24,6 +24,9 @@ export interface Interface {
   readonly disposeDirectory: (directory: string) => Effect.Effect<void>
   readonly disposeAll: () => Effect.Effect<void>
   readonly provide: <A, E, R>(input: LoadInput, effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
+  // kilocode_change start
+  readonly list: () => Effect.Effect<InstanceContext[]>
+  // kilocode_change end
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/InstanceStore") {}
@@ -223,11 +226,28 @@ const layer: Layer.Layer<Service, never, Project.Service | InstanceBootstrap.Ser
     const provide = <A, E, R>(input: LoadInput, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
       load(input).pipe(Effect.flatMap((ctx) => effect.pipe(Effect.provideService(InstanceRef, ctx))))
 
+    // kilocode_change start - loaded instance contexts for project-scoped operations
+    const list = (): Effect.Effect<InstanceContext[]> =>
+      Effect.forEach([...cache.values()], (entry) =>
+        Deferred.isDone(entry.deferred).pipe(
+          Effect.flatMap((done) =>
+            done
+              ? Deferred.await(entry.deferred).pipe(
+                  Effect.exit,
+                  Effect.map((exit) => (Exit.isSuccess(exit) ? exit.value : undefined)),
+                )
+              : Effect.succeed(undefined),
+          ),
+        ),
+      ).pipe(Effect.map((contexts) => contexts.filter((ctx): ctx is InstanceContext => ctx !== undefined)))
+    // kilocode_change end
+
     yield* Effect.addFinalizer(() => disposeAll().pipe(Effect.ignore))
 
     return Service.of({
       load,
       reload,
+      list, // kilocode_change
       dispose,
       disposeDirectory,
       disposeAll,

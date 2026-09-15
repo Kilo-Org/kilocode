@@ -95,7 +95,7 @@ Compaction is configured in your `kilo.jsonc` file:
 
 ### Use a different model for compaction
 
-Summarization can use a cheaper or larger-context model than your main agent. Configure a dedicated compaction agent:
+Summarization can use a cheaper or larger-context model than your main agent. In VS Code, choose **Compaction model** under **Settings → Models**, or configure a dedicated compaction agent in `kilo.jsonc`:
 
 ```jsonc
 {
@@ -108,6 +108,8 @@ Summarization can use a cheaper or larger-context model than your main agent. Co
 ```
 
 If no compaction agent is set, the current session's model is used.
+
+The selection applies to automatic and manual compaction without changing your chat model. Clear it to use the current session's model again.
 
 ### Environment overrides
 

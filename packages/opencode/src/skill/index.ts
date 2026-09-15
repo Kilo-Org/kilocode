@@ -215,6 +215,12 @@ const discoverSkills = Effect.fnUntraced(function* (
   if (Flag.KILO_EXPERIMENTAL_CLAUDE_MIGRATION || ClaudeMigration.hasAttempt()) yield* config.getGlobal()
   // kilocode_change end
 
+  // kilocode_change start - one primary checkout lookup serves both the external and the config dir scans
+  const projectDirs = disableClaudeCodeSkills ? [AGENTS_EXTERNAL_DIR] : [CLAUDE_EXTERNAL_DIR, AGENTS_EXTERNAL_DIR]
+  const mirrored = yield* primaryPaths(directory, worktree, [...projectDirs, ".kilocode", ".kilo"])
+  const fallbacks = mirrored.filter((file) => projectDirs.includes(path.basename(file)))
+  // kilocode_change end
+
   const externalDirs: string[] = []
   if (!disableExternalSkills) {
     if (!disableClaudeCodeSkills && !ClaudeMigration.globalHandoff()) externalDirs.push(CLAUDE_EXTERNAL_DIR)
@@ -227,11 +233,9 @@ const discoverSkills = Effect.fnUntraced(function* (
     }
 
     // kilocode_change start
-    const projectDirs = disableClaudeCodeSkills ? [AGENTS_EXTERNAL_DIR] : [CLAUDE_EXTERNAL_DIR, AGENTS_EXTERNAL_DIR]
     const local = yield* fsys
       .up({ targets: projectDirs, start: directory, stop: projectRoot })
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
-    const fallbacks = yield* primaryPaths(directory, worktree, projectDirs) // kilocode_change
     const upDirs = [...fallbacks, ...local]
     // kilocode_change end
 
@@ -249,7 +253,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 
   const configDirs = yield* config.directories()
-  const primary = new Set(yield* primaryPaths(directory, worktree, [".kilocode", ".kilo"])) // kilocode_change
+  const primary = new Set(mirrored.filter((file) => !projectDirs.includes(path.basename(file)))) // kilocode_change
   for (const dir of configDirs) {
     // kilocode_change start - global and explicit KILO_CONFIG_DIR skills are trusted; project and primary-checkout
     // skills remain confined to the active project boundary.

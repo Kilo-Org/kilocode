@@ -268,6 +268,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.reject": "Отклонить",
+  "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
+  "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
   "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",
@@ -458,6 +461,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Пользовательский провайдер",
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Изменить API-ключ",
   "settings.providers.custom.description": "Добавьте пользовательский провайдер по базовому URL.",
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
@@ -1301,6 +1305,18 @@ export const dict = {
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Сохранить локально",
+  "diffViewer.comment.sendToAgent": "Отправить агенту",
+  "diffViewer.comment.postToGithub": "Опубликовать на GitHub",
+  "diffViewer.comment.loadFailed": "Не удалось загрузить изменения запроса на слияние.",
+  "diffViewer.comment.unavailable": "Эта строка недоступна в текущем снимке запроса на слияние.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Открыть PR",
+  "diffViewer.comment.localChanges": "Локальные изменения",
+  "diffViewer.comment.prChanges": "Изменения PR",
+  "diffViewer.comment.sendToKilo": "Отправить в Kilo",
+  "diffViewer.comment.sendToGithub": "Отправить в GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Выбрать назначение",
   "diffViewer.notice.snapshotsDisabled":
     "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
 

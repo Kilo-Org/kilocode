@@ -31,6 +31,24 @@ describe("RuntimeFlags", () => {
   )
   // kilocode_change end
 
+  // kilocode_change start - shared agent board defaults on with a kill switch
+  it.effect("enables the shared agent board by default", () =>
+    Effect.gen(function* () {
+      const flags = yield* readFlags.pipe(Effect.provide(fromConfig({})))
+
+      expect(flags.experimentalSharedAgentBoard).toBe(true)
+    }),
+  )
+
+  it.effect("allows disabling the shared agent board explicitly", () =>
+    Effect.gen(function* () {
+      const flags = yield* readFlags.pipe(Effect.provide(fromConfig({ KILO_EXPERIMENTAL_SHARED_AGENT_BOARD: "false" })))
+
+      expect(flags.experimentalSharedAgentBoard).toBe(false)
+    }),
+  )
+  // kilocode_change end
+
   it.effect("layer parses plugin flags from the active ConfigProvider", () =>
     Effect.gen(function* () {
       const flags = yield* readFlags.pipe(

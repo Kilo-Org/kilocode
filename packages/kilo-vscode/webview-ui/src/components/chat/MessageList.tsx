@@ -96,6 +96,8 @@ interface MessageListProps {
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  /** Show reasoning as a compact capped preview (background subagent transcripts). */
+  reasoningCapped?: boolean
   /** Whether inline questions and suggestions are actionable on this surface. */
   interactivePrompts?: boolean
   queuedDisabled?: boolean
@@ -958,6 +960,29 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const indexes = createMemo(() => new Map(keys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
 
+  // A row handed from the direct tail to Virtua (each new step of the same
+  // turn moves the previous assistant message) mounts at the 260px estimate
+  // until Virtua's ResizeObserver measures it. The auto-scroll pins to that
+  // shorter layout, the correction lands in the same ResizeObserver pass, and
+  // the follow-up pin is deferred to the next frame, so one frame paints with
+  // the transcript sitting below the bottom. Measure the handed rows in the
+  // same task and re-pin before anything is painted.
+  createEffect(
+    on(
+      () => ({ sid: session.currentSessionID(), keys: keys() }),
+      (now, prev) => {
+        if (!prev || prev.sid !== now.sid) return
+        if (now.keys.length <= prev.keys.length || now.keys.at(-1) === prev.keys.at(-1)) return
+        queueMicrotask(() => {
+          const handle = virtualizer()
+          if (!handle) return
+          handle.measure()
+          autoScroll.scrollToBottom()
+        })
+      },
+    ),
+  )
+
   const [pending, setPending] = createSignal<{ sid: string; key: string }>()
 
   // Scrolls the transcript to a row by key. Virtualized rows jump through
@@ -1362,6 +1387,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                         readonly={props.readonly}
                         interactivePrompts={props.interactivePrompts}
+                        reasoningCapped={props.reasoningCapped}
                       />
                     )}
                   </Virtualizer>
@@ -1382,6 +1408,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
                       readonly={props.readonly}
                       interactivePrompts={props.interactivePrompts}
+                      reasoningCapped={props.reasoningCapped}
                     />
                   )}
                 </For>
@@ -1404,6 +1431,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                   readonly={props.readonly}
                   interactivePrompts={props.interactivePrompts}
+                  reasoningCapped={props.reasoningCapped}
                 />
               )}
             </For>
