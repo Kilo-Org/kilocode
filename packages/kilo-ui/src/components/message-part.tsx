@@ -177,6 +177,9 @@ export interface MessagePartProps {
   working?: boolean
   feedback?: MessageFeedbackControls
   throughput?: JSX.Element
+  /** Finish time and duration for the turn, rendered inline in the assistant
+   * copy/feedback action row rather than on its own line. */
+  turnMeta?: JSX.Element
   readonly?: boolean
 }
 
@@ -816,11 +819,7 @@ export function UserMessageDisplay(props: {
   const stamp = createMemo(() => {
     const created = props.message.time?.created
     if (typeof created !== "number") return ""
-    const date = new Date(created)
-    const hours = date.getHours()
-    const hour12 = hours % 12 || 12
-    const minute = String(date.getMinutes()).padStart(2, "0")
-    return `${hour12}:${minute} ${hours < 12 ? "AM" : "PM"}`
+    return new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }).format(new Date(created))
   })
 
   const metaHead = createMemo(() => {
@@ -942,17 +941,23 @@ export function UserMessageDisplay(props: {
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
               </Show>
-              <GrowBox animate={!!props.animate} open={!!props.queued}>
+            </div>
+
+            {/* Queued controls live in the same reserved action row as the
+                hover actions, so unqueueing swaps content without a height change. */}
+            <div
+              data-slot="user-message-copy-wrapper"
+              data-interrupted={props.interrupted ? "" : undefined}
+              data-queued={props.queued ? "" : undefined}
+            >
+              <Show when={props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
                   <Edit />
                   <Delete />
                 </div>
-              </GrowBox>
-            </div>
-
-            <div data-slot="user-message-copy-wrapper" data-interrupted={props.interrupted ? "" : undefined}>
-              <Show when={metaHead() || metaTail()}>
+              </Show>
+              <Show when={!props.queued && (metaHead() || metaTail())}>
                 <span data-slot="user-message-meta-wrap">
                   <Show when={metaHead()}>
                     <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
@@ -1002,23 +1007,25 @@ export function UserMessageDisplay(props: {
                   />
                 </Tooltip>
               </Show>
-              <Tooltip
-                value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                placement="right"
-                gutter={4}
-              >
-                <IconButton
-                  icon={copied() ? "check" : "copy"}
-                  size="normal"
-                  variant="ghost"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleCopy()
-                  }}
-                  aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                />
-              </Tooltip>
+              <Show when={!props.queued}>
+                <Tooltip
+                  value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  placement="right"
+                  gutter={4}
+                >
+                  <IconButton
+                    icon={copied() ? "check" : "copy"}
+                    size="normal"
+                    variant="ghost"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleCopy()
+                    }}
+                    aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  />
+                </Tooltip>
+              </Show>
             </div>
           </>
         </Show>
@@ -1093,6 +1100,7 @@ export function Part(props: MessagePartProps) {
         working={props.working}
         feedback={props.feedback}
         throughput={props.throughput}
+        turnMeta={props.turnMeta}
         readonly={props.readonly}
       />
     </Show>
@@ -1826,6 +1834,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
               </Tooltip>
             </Show>
             <Show when={props.throughput}>{(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}</Show>
+            <Show when={props.turnMeta}>
+              {(el) => (
+                <span data-slot="assistant-turn-meta" class="cursor-default">
+                  {el()}
+                </span>
+              )}
+            </Show>
           </div>
         </Show>
         <Show when={summary()}>

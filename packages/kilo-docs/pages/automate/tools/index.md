@@ -116,7 +116,7 @@ These tools help manage the conversation and task flow:
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 - `open_plan` - Opens a saved plan for review in the VS Code extension
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
-- `board_post` / `board_read` - Exchange messages on the experimental Kilo Swarm board
+- `board_post` / `board_read` - Exchange messages on the Kilo Swarm board
 
 ### Task tool
 
@@ -146,7 +146,7 @@ Background subagents are available when the server exposes the background capabi
 
 ### Kilo Swarm board tools
 
-Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
+Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
 
 - `board_post` stores a concise material update for another participant. Use it for findings, questions, results, blockers, or corrections.
 - `board_read` reads board messages explicitly. Use the cursor from the previous read for incremental reads instead of polling.

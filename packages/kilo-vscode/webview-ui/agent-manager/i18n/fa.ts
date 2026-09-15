@@ -52,7 +52,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "قبل از شروع agent در یک worktree جدید اجرا شود.",
   "agentManager.settings.setupScript.create": "ایجاد script",
   "agentManager.settings.setupScript.edit": "ویرایش script",
-  "agentManager.project.add": "افزودن پروژه",
+  "agentManager.project.add": "افزودن پروژه...",
   "agentManager.project.remove": "حذف از Agent Manager",
   "agentManager.project.missing": "مخزن یافت نشد",
   "agentManager.project.settings": "تنظیمات پروژه",

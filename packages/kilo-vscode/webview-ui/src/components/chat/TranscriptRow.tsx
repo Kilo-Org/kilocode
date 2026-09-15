@@ -108,6 +108,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               message={row().message as unknown as SDKAssistantMessage}
               parts={row().parts as unknown as SDKPart[]}
               showAssistantCopyPartID={row().copy}
+              timing={row().timing}
               forceOpenPartID={props.activeSearchPartID}
               forceOpenFile={props.activeSearchPartFile}
               highlight={props.highlight}

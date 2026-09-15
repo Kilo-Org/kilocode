@@ -766,8 +766,8 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Condividi una board tra una sessione principale e i suoi sotto-agenti incaricati dei task, inclusi quelli annidati. Usala per tentativi di soluzione in parallelo o attività complementari, non per ogni task.",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",
   "settings.experimental.imageGenerationModel.description": "Modello di generazione di immagini",
@@ -1237,8 +1237,19 @@ export const dict = {
   "session.costAlert.stop": "Interrompi",
 
   // Speech to Text
+  "settings.models.speechToTextModel.customDescription":
+    "ID del modello inviato al tuo endpoint di trascrizione personalizzato, ad esempio whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "URL di base Da voce a testo",
+  "settings.models.speechToTextBaseUrl.description":
+    "Usa un'API di trascrizione compatibile con OpenAI al posto di Kilo Gateway. I modelli vengono letti da /models e l'audio viene inviato a /audio/transcriptions. Lascia vuoto per usare Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Chiave API Da voce a testo",
+  "settings.models.speechToTextApiKey.description":
+    "Token bearer inviato all'URL di base di trascrizione personalizzato. Salvato nel tuo file di configurazione Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Abilita e accedi al provider Kilo per usare Da voce a testo. Da voce a testo è attualmente supportato solo tramite Kilo Gateway.",
+    "Abilita e accedi al provider Kilo per usare Da voce a testo, oppure imposta di seguito un URL di base di trascrizione personalizzato.",
   "settings.models.speechToTextModel.title": "Modello Da voce a testo",
   "settings.models.speechToTextModel.description": "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
 
@@ -1304,7 +1315,7 @@ export const dict = {
     "Accedi di nuovo con ChatGPT, quindi invia di nuovo il tuo messaggio per continuare a usare i modelli Codex.",
 
   // Speech to Text tooltips and errors
-  "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.start": "Avvia input vocale",
   "speechToText.tooltip.shortcut":
     "Tocca o premi Cmd/Ctrl+K per avviare o interrompere la registrazione; tieni premuto mentre parli e rilascia per trascrivere e inviare.",
   "speechToText.tooltip.starting": "Avvio del microfono... Attendi prima di parlare.",

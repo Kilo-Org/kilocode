@@ -51,7 +51,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Pokrenite prije nego što agent počne u novom worktree.",
   "agentManager.settings.setupScript.create": "Kreiraj script",
   "agentManager.settings.setupScript.edit": "Uredi script",
-  "agentManager.project.add": "Dodaj projekat",
+  "agentManager.project.add": "Dodaj projekat...",
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
   "agentManager.project.missing": "Repozitorij nije pronađen",
   "agentManager.project.settings": "Postavke projekta",
