@@ -75,27 +75,6 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.display.reasoningDisplay.title")}
-          description={language.t("settings.display.reasoningDisplay.description")}
-        >
-          <Select
-            options={REASONING_OPTIONS}
-            current={REASONING_OPTIONS.find((o) => o.value === display.reasoningDisplay())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (!o) return
-              const next = o.value as ReasoningDisplay
-              if (next === display.reasoningDisplay()) return
-              display.setReasoningDisplay(next)
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.display.shiftTabCycle.title")}
           description={language.t("settings.display.shiftTabCycle.description")}
         >
@@ -132,6 +111,27 @@ const DisplayTab: Component = () => {
           >
             {language.t("settings.display.autoApprovalReason.title")}
           </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.reasoningDisplay.title")}
+          description={language.t("settings.display.reasoningDisplay.description")}
+        >
+          <Select
+            options={REASONING_OPTIONS}
+            current={REASONING_OPTIONS.find((o) => o.value === display.reasoningDisplay())}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as ReasoningDisplay
+              if (next === display.reasoningDisplay()) return
+              display.setReasoningDisplay(next)
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
         </SettingsRow>
 
         <SettingsRow
