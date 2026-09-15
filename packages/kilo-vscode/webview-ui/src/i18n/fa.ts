@@ -215,7 +215,7 @@ export const dict = {
     "برای محدود کردن نوشتن در سیستم فایل کلیک کنید. دسترسی به شبکه طبق تنظیمات sandbox شما مجاز است.",
   "prompt.action.enhanceDescription":
     "دکمه «بهبود پرامپت» با ارائه زمینه بیشتر، توضیح یا بازنویسی، به بهتر کردن پرامپت شما کمک می‌کند. یک پرامپت تایپ کنید و دوباره روی دکمه کلیک کنید تا نحوه عملکرد آن را ببینید.",
-  "speechToText.tooltip.start": "شروع ورودی صوتی با Kilo Gateway",
+  "speechToText.tooltip.start": "شروع ورودی صوتی",
   "speechToText.tooltip.shortcut":
     "برای شروع یا توقف ضبط، روی دکمه ضربه بزنید یا Cmd/Ctrl+K را فشار دهید؛ هنگام صحبت دکمه را نگه دارید و سپس رها کنید تا گفتار به متن تبدیل و ارسال شود.",
   "speechToText.tooltip.starting": "در حال راه‌اندازی میکروفون... منتظر بمانید.",
@@ -859,6 +859,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "شناسه مدلی که به نقطه پایانی رونویسی دلخواه شما فرستاده می‌شود، برای نمونه whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "نشانی پایه تبدیل گفتار به متن",
   "settings.models.speechToTextBaseUrl.description":
     "به‌جای Kilo Gateway از یک API رونویسی سازگار با OpenAI استفاده کنید. مدل‌ها از /models خوانده می‌شوند و صدا به /audio/transcriptions فرستاده می‌شود. برای استفاده از Kilo Gateway خالی بگذارید.",

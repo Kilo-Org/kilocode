@@ -216,7 +216,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Dosya sistemi yazma işlemlerini kısıtlamak için tıklayın. Sandbox ayarlarınız ağ erişimine izin vermeye devam ediyor.",
 
-  "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
+  "speechToText.tooltip.start": "Sesli girişi başlatın",
   "speechToText.tooltip.shortcut":
     "Kaydı başlatmak veya durdurmak için dokunun ya da Cmd/Ctrl+K tuşlarına basın; konuşurken basılı tutun, ardından metne dönüştürüp göndermek için bırakın.",
   "speechToText.tooltip.starting": "Mikrofon başlatılıyor... Henüz konuşmayın.",
@@ -865,6 +865,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "Kendi transkripsiyon uç noktanıza gönderilen model kimliği, örneğin whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "Sesten metne temel URL",
   "settings.models.speechToTextBaseUrl.description":
     "Kilo Gateway yerine OpenAI uyumlu bir transkripsiyon API'si kullanın. Modeller /models adresinden okunur, ses /audio/transcriptions adresine gönderilir. Kilo Gateway kullanmak için boş bırakın.",

@@ -215,7 +215,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
-  "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.start": "Начать голосовой ввод",
   "speechToText.tooltip.shortcut":
     "Коснитесь или нажмите Cmd/Ctrl+K, чтобы начать или остановить запись; удерживайте кнопку во время речи, затем отпустите её, чтобы транскрибировать и отправить.",
   "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
@@ -872,6 +872,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "Идентификатор модели, отправляемый в ваш собственный эндпоинт транскрипции, например whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "Базовый URL речи в текст",
   "settings.models.speechToTextBaseUrl.description":
     "Использовать совместимый с OpenAI API транскрипции вместо Kilo Gateway. Модели читаются из /models, аудио отправляется в /audio/transcriptions. Оставьте пустым, чтобы использовать Kilo Gateway.",

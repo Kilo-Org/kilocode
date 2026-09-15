@@ -218,7 +218,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Kliknij, aby ograniczyć zapisy w systemie plików. Ustawienia sandboxa nadal zezwalają na dostęp do sieci.",
 
-  "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe z Kilo Gateway",
+  "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe",
   "speechToText.tooltip.shortcut":
     "Stuknij lub naciśnij Cmd/Ctrl+K, aby rozpocząć albo zatrzymać nagrywanie; przytrzymaj podczas mówienia, a następnie zwolnij, aby dokonać transkrypcji i wysłać.",
   "speechToText.tooltip.starting": "Uruchamianie mikrofonu... Poczekaj, zanim zaczniesz mówić.",
@@ -832,6 +832,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "Identyfikator modelu wysyłany do własnego punktu końcowego transkrypcji, na przykład whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "Bazowy adres URL mowy na tekst",
   "settings.models.speechToTextBaseUrl.description":
     "Użyj API transkrypcji zgodnego z OpenAI zamiast Kilo Gateway. Modele są odczytywane z /models, a dźwięk jest wysyłany do /audio/transcriptions. Pozostaw puste, aby używać Kilo Gateway.",

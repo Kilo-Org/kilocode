@@ -240,7 +240,7 @@ const ModelsTab: Component = () => {
             fallback={
               <TextField
                 value={config().experimental?.speech_to_text_model ?? ""}
-                placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.id}
+                placeholder={language.t("settings.models.speechToTextModel.customPlaceholder")}
                 onChange={(value: string) => updateSpeech({ speech_to_text_model: value.trim() || null })}
               />
             }

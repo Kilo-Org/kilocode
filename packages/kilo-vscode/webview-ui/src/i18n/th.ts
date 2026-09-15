@@ -215,7 +215,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
-  "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
+  "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียง",
   "speechToText.tooltip.shortcut":
     "แตะหรือกด Cmd/Ctrl+K เพื่อเริ่มหรือหยุดบันทึก จากนั้นกดค้างไว้ขณะพูด แล้วปล่อยเพื่อถอดเสียงและส่ง",
   "speechToText.tooltip.starting": "กำลังเริ่มไมโครโฟน... โปรดรอก่อนพูด",
@@ -861,6 +861,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "รหัสโมเดลที่ส่งไปยังปลายทางการถอดเสียงของคุณเอง เช่น whisper-1",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "URL พื้นฐานสำหรับแปลงเสียงเป็นข้อความ",
   "settings.models.speechToTextBaseUrl.description":
     "ใช้ API การถอดเสียงที่เข้ากันได้กับ OpenAI แทน Kilo Gateway โมเดลจะอ่านจาก /models และเสียงจะถูกส่งไปยัง /audio/transcriptions เว้นว่างไว้เพื่อใช้ Kilo Gateway",

@@ -220,7 +220,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
-  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.start": "Spraakinvoer starten",
   "speechToText.tooltip.shortcut":
     "Tik of druk op Cmd/Ctrl+K om de opname te starten of te stoppen; houd de knop ingedrukt terwijl je spreekt en laat deze los om te transcriberen en te verzenden.",
   "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
@@ -873,6 +873,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "Model-ID die naar uw eigen transcriptie-eindpunt wordt gestuurd, bijvoorbeeld whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "Spraak-naar-tekst-basis-URL",
   "settings.models.speechToTextBaseUrl.description":
     "Gebruik een OpenAI-compatibele transcriptie-API in plaats van Kilo Gateway. Modellen worden gelezen van /models en audio gaat naar /audio/transcriptions. Laat leeg om Kilo Gateway te gebruiken.",

@@ -217,7 +217,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
-  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.start": "Почати голосове введення",
   "speechToText.tooltip.shortcut":
     "Торкніться кнопки або натисніть Cmd/Ctrl+K, щоб почати чи зупинити запис; утримуйте кнопку під час мовлення, а потім відпустіть її, щоб транскрибувати й надіслати.",
   "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
@@ -866,6 +866,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "Ідентифікатор моделі, який надсилається до вашої власної кінцевої точки транскрипції, наприклад whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "Базова URL-адреса мовлення в текст",
   "settings.models.speechToTextBaseUrl.description":
     "Використовуйте сумісний з OpenAI API транскрипції замість Kilo Gateway. Моделі читаються з /models, а аудіо надсилається на /audio/transcriptions. Залиште порожнім, щоб використовувати Kilo Gateway.",

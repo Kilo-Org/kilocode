@@ -215,7 +215,7 @@ export const dict = {
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
-  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.start": "Start voice input",
   "speechToText.tooltip.shortcut":
     "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
@@ -853,11 +853,13 @@ export const dict = {
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
 
   "settings.models.speechToText.disabledDescription":
-    "Enable and sign in to the Kilo provider to use Speech to Text, or set a custom transcription base URL below.",
+    "Kilo Gateway is selected. Enable and sign in to the Kilo provider to choose a supported model, or enter a custom transcription base URL above.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
-  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.description":
+    "Kilo Gateway is the active speech-to-text source. Choose its transcription model for voice input.",
   "settings.models.speechToTextModel.customDescription":
-    "Model ID sent to your custom transcription endpoint, for example whisper-1.",
+    "Model ID sent to your custom transcription endpoint, for example whisper-1. Voice input is unavailable until you set one.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "Speech to Text Base URL",
   "settings.models.speechToTextBaseUrl.description":
     "Use an OpenAI-compatible transcription API instead of Kilo Gateway. Models are read from /models and audio is sent to /audio/transcriptions. Leave empty to use Kilo Gateway.",

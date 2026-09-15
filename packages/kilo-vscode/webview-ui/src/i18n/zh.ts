@@ -209,7 +209,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
-  "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
+  "speechToText.tooltip.start": "开始语音输入",
   "speechToText.tooltip.shortcut": "点击或按下 Cmd/Ctrl+K 开始或停止录音；说话时按住，松开后即可转录并提交。",
   "speechToText.tooltip.starting": "正在启动麦克风... 请稍后再说。",
   "speechToText.tooltip.stop": "停止捕获音频",
@@ -840,6 +840,7 @@ export const dict = {
   "settings.experimental.imageGenerationModel.placeholder": "默认 (Auto Router)",
 
   "settings.models.speechToTextModel.customDescription": "发送到自定义转录端点的模型 ID，例如 whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "语音转文本基础 URL",
   "settings.models.speechToTextBaseUrl.description":
     "使用兼容 OpenAI 的转录 API 代替 Kilo Gateway。模型从 /models 读取，音频发送到 /audio/transcriptions。留空则使用 Kilo Gateway。",

@@ -1183,6 +1183,7 @@ export const dict = {
   // Speech to Text
   "settings.models.speechToTextModel.customDescription":
     "ID del modello inviato al tuo endpoint di trascrizione personalizzato, ad esempio whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "URL di base Da voce a testo",
   "settings.models.speechToTextBaseUrl.description":
     "Usa un'API di trascrizione compatibile con OpenAI al posto di Kilo Gateway. I modelli vengono letti da /models e l'audio viene inviato a /audio/transcriptions. Lascia vuoto per usare Kilo Gateway.",
@@ -1258,7 +1259,7 @@ export const dict = {
     "Accedi di nuovo con ChatGPT, quindi invia di nuovo il tuo messaggio per continuare a usare i modelli Codex.",
 
   // Speech to Text tooltips and errors
-  "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.start": "Avvia input vocale",
   "speechToText.tooltip.shortcut":
     "Tocca o premi Cmd/Ctrl+K per avviare o interrompere la registrazione; tieni premuto mentre parli e rilascia per trascrivere e inviare.",
   "speechToText.tooltip.starting": "Avvio del microfono... Attendi prima di parlare.",

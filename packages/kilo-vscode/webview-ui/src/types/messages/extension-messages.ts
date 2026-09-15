@@ -504,6 +504,10 @@ export interface ImageModelsLoadedMessage {
 export interface SpeechToTextModelsLoadedMessage {
   type: "speechToTextModelsLoaded"
   models: SpeechToTextModelDef[]
+  source: "gateway" | "custom"
+  // Producer instance id. A new epoch means a restarted host, not a stale reply.
+  epoch: string
+  seq: number
 }
 
 export interface ProvidersLoadedMessage {

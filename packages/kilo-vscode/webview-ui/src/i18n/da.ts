@@ -217,7 +217,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
-  "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.start": "Start stemmeinput",
   "speechToText.tooltip.shortcut":
     "Tryk på knappen eller brug Cmd/Ctrl+K til at starte eller stoppe optagelsen; hold knappen nede, mens du taler, og slip den for at transskribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med at tale.",
@@ -875,6 +875,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "Model-id, der sendes til dit eget transskriptionsendpoint, for eksempel whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "Tale til tekst-basis-URL",
   "settings.models.speechToTextBaseUrl.description":
     "Brug en OpenAI-kompatibel transskriptions-API i stedet for Kilo Gateway. Modeller læses fra /models, og lyd sendes til /audio/transcriptions. Lad feltet stå tomt for at bruge Kilo Gateway.",

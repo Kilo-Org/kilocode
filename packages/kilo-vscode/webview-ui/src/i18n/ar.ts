@@ -210,7 +210,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
-  "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.start": "بدء الإدخال الصوتي",
   "speechToText.tooltip.shortcut":
     "انقر أو اضغط على Cmd/Ctrl+K لبدء التسجيل أو إيقافه؛ اضغط باستمرار أثناء التحدث ثم اتركه لتحويل الكلام إلى نص وإرساله.",
   "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
@@ -853,6 +853,7 @@ export const dict = {
 
   "settings.models.speechToTextModel.customDescription":
     "معرّف النموذج الذي يُرسل إلى نقطة النهاية المخصصة للنسخ، مثل whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
   "settings.models.speechToTextBaseUrl.title": "عنوان URL الأساسي لتحويل الصوت إلى نص",
   "settings.models.speechToTextBaseUrl.description":
     "استخدم واجهة نسخ متوافقة مع OpenAI بدلاً من Kilo Gateway. تُقرأ النماذج من /models ويُرسل الصوت إلى /audio/transcriptions. اتركه فارغًا لاستخدام Kilo Gateway.",
