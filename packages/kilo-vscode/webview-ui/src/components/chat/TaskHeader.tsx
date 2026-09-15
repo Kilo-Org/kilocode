@@ -287,14 +287,43 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <TranscriptSearch />
         </div>
       </Show>
-      {/* Expanded graph section: timeline + context bar + token breakdown */}
-      <Show when={expanded() && hasTimeline()}>
+      {/* Expanded graph section: timeline + context bar + token breakdown.
+          Every row keeps a fixed height and renders a placeholder until its
+          data arrives, so the header does not jump while a turn streams. */}
+      <Show when={expanded()}>
         <div data-component="task-header-graph">
-          <TaskTimeline />
+          <Show
+            when={hasTimeline()}
+            fallback={
+              <div class="task-header-skeleton-chart" aria-hidden="true">
+                <For each={[14, 22, 10, 18, 8]}>
+                  {(h, i) => (
+                    <div
+                      class="task-header-skeleton"
+                      style={{ height: `${h}px`, "animation-delay": `${i() * 80}ms` }}
+                    />
+                  )}
+                </For>
+              </div>
+            }
+          >
+            <TaskTimeline />
+          </Show>
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
-          <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
+          <Show
+            when={tokens()}
+            fallback={
+              <div class="task-header-tokens" aria-hidden="true">
+                <div class="task-header-skeleton" style={{ width: "42px" }} />
+                <div class="task-header-skeleton" style={{ width: "36px" }} />
+                <div class="task-header-skeleton" style={{ width: "28px" }} />
+              </div>
+            }
+          >
+            {(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}
+          </Show>
         </div>
       </Show>
       <BackgroundAgents readonly={props.readonly} />

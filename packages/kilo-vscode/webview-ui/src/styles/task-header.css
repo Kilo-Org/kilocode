@@ -421,6 +421,7 @@
   align-items: center;
   gap: 6px;
   flex: 1;
+  height: 16px;
   white-space: nowrap;
   font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
@@ -479,7 +480,42 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 16px;
   padding: 0 8px;
+}
+
+/* Skeleton placeholders keep each graph row at its final height until the
+   real data arrives. Same pulse as the Agent Manager worktree skeletons. */
+@keyframes task-header-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+.task-header-skeleton {
+  height: 8px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: task-header-skeleton-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* Mirrors .task-timeline: 26px tall, bars bottom-aligned, 12px wide, 4px gap. */
+.task-header-skeleton-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+}
+
+.task-header-skeleton-chart .task-header-skeleton {
+  width: 12px;
+  border-radius: 2px 2px 0 0;
 }
 
 /* ============================================
@@ -597,6 +633,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 2px 6px;
+  min-height: 24px;
   padding: 0 8px;
   font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
@@ -616,10 +653,10 @@
   display: flex;
   align-items: center;
   width: calc(100% - 16px);
-  min-height: 28px;
+  min-height: 24px;
   height: auto;
   margin: 0 8px;
-  padding: 2px 0;
+  padding: 0;
   border-radius: 3px;
   color: inherit;
 }
@@ -636,6 +673,7 @@
 .task-header-usage-trigger .task-header-tokens {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   padding: 0;
 }
 

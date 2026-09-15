@@ -51,7 +51,16 @@ export const ContextProgress: Component = () => {
   })
 
   return (
-    <Show when={data()}>
+    <Show
+      when={data()}
+      fallback={
+        <div class="context-progress" aria-hidden="true">
+          <div class="task-header-skeleton" style={{ width: "32px" }} />
+          <div class="task-header-skeleton" style={{ flex: 1, height: "4px" }} />
+          <div class="task-header-skeleton" style={{ width: "32px" }} />
+        </div>
+      }
+    >
       {(d) => (
         <div class="context-progress">
           <span class="context-progress-count">{fmt(d().used)}</span>
