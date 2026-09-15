@@ -698,7 +698,7 @@ describe("browser element reference contract", () => {
     expect(source).toContain("browserFeedbackData(browsers())")
     expect(source).toContain("formatBrowserFeedback(browserData.references)")
     expect(source).toContain(
-      'const message = [contextText, review, push, browserText, draft].filter(Boolean).join("\\n\\n")',
+      'const message = [review, push, browserText, contextText, draft].filter(Boolean).join("\\n\\n")',
     )
     expect(source).toContain("references.delete(key)")
   })

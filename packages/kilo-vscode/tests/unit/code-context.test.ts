@@ -6,6 +6,8 @@ import {
   mergeCodeContexts,
   type CodeContext,
 } from "../../src/shared/code-context"
+import { browserFeedbackData, formatBrowserFeedback, partFeedback } from "../../src/shared/browser-feedback"
+import { formatReviewCommentsMarkdown } from "../../webview-ui/src/utils/review-comment-markdown"
 import { createPrompt } from "../../src/services/code-actions/support-prompt"
 
 function context(overrides: Partial<CodeContext> = {}): CodeContext {
@@ -59,5 +61,54 @@ describe("mergeCodeContexts", () => {
     const other = context({ id: "2", startLine: 300, endLine: 305 })
     expect(mergeCodeContexts([first], [duplicate])).toEqual([first])
     expect(mergeCodeContexts([first], [other])).toEqual([first, other])
+  })
+})
+
+describe("code context feedback composition", () => {
+  const review = {
+    version: 1 as const,
+    comments: [
+      {
+        id: "review-1",
+        file: "src/app.ts",
+        side: "additions" as const,
+        line: 3,
+        comment: "Keep this branch safe",
+        selectedText: "return value",
+      },
+    ],
+  }
+  const browser = browserFeedbackData([
+    {
+      id: "browser-1",
+      sessionId: "session-1",
+      selector: "main > button.save",
+      url: "https://example.com/app",
+      text: "Save settings",
+    },
+  ])!
+  const reviewPrefix = formatReviewCommentsMarkdown(review.comments)
+  const browserPrefix = formatBrowserFeedback(browser.references)
+  const codeContext = formatCodeContexts([context()])
+  const draft = "Please review"
+
+  // Code context is not feedback metadata, so it must follow the review and
+  // browser sections. Leading with it makes parseFeedback return undefined and
+  // the host can no longer rebuild the review and browser cards.
+  it("keeps review metadata parseable with a selection attached", () => {
+    const content = [reviewPrefix, codeContext, draft].filter(Boolean).join("\n\n")
+    expect(partFeedback({ kilo: { review } }, content)).toMatchObject({
+      review,
+      body: `${codeContext}\n\n${draft}`,
+    })
+  })
+
+  it("keeps review and browser metadata parseable with a selection attached", () => {
+    const content = [reviewPrefix, browserPrefix, codeContext, draft].filter(Boolean).join("\n\n")
+    expect(partFeedback({ kilo: { review, browserFeedback: browser } }, content)).toMatchObject({
+      review,
+      browserFeedback: browser,
+      body: `${codeContext}\n\n${draft}`,
+    })
   })
 })
