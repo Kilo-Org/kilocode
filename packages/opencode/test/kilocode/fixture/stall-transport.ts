@@ -84,15 +84,41 @@ function stalling() {
   )
 }
 
+const ZERO: StallState = { calls: 0, stalls: 0, recovered: 0 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const transient = (error: unknown) => {
+  if (typeof error !== "object" || error === null || !("code" in error)) return false
+  return ["EPERM", "EACCES", "EBUSY"].includes(String((error as { code: unknown }).code))
+}
+
+// Replacing the state file with rename fails transiently on Windows while the
+// test's state poll (every 200ms) or Defender holds the destination open. Retry
+// so a transient lock never drops a state update.
+async function persist(file: string, json: string) {
+  const tmp = `${file}.${crypto.randomUUID()}.tmp`
+  await Bun.write(tmp, json)
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(tmp, file)
+      return
+    } catch (error) {
+      if (attempt >= 20 || !transient(error)) throw error
+      await sleep(50)
+    }
+  }
+}
+
 export function createStallTransport(input: { state: string; answer?: string; command?: string }) {
   const state: StallState = { calls: 0, stalls: 0, recovered: 0 }
   let pending = Promise.resolve()
   const save = () => {
     const json = JSON.stringify(state)
-    const tmp = `${input.state}.${crypto.randomUUID()}.tmp`
-    pending = pending.then(async () => {
-      await Bun.write(tmp, json)
-      await rename(tmp, input.state)
+    pending = pending.then(() => persist(input.state, json)).catch((error) => {
+      // The state file is test diagnostics, not provider protocol. A failed
+      // mirror must not reject the simulated response and end the turn early.
+      console.error("[stall-transport] state write failed", error)
     })
     return pending
   }
@@ -125,6 +151,11 @@ export function createStallTransport(input: { state: string; answer?: string; co
 
 export async function readStallState(file: string): Promise<StallState> {
   const handle = Bun.file(file)
-  if (!(await handle.exists())) return { calls: 0, stalls: 0, recovered: 0 }
-  return JSON.parse(await handle.text()) as StallState
+  if (!(await handle.exists())) return { ...ZERO }
+  try {
+    return JSON.parse(await handle.text()) as StallState
+  } catch {
+    // A concurrent replace can expose an empty or partial file for one poll.
+    return { ...ZERO }
+  }
 }
