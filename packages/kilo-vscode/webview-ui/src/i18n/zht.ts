@@ -217,7 +217,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabled": "點擊以限制檔案系統寫入和網路存取。",
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
-  "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
+  "speechToText.tooltip.start": "開始語音輸入",
   "speechToText.tooltip.shortcut": "點擊或按下 Cmd/Ctrl+K 開始或停止錄音；說話時按住，放開後即可轉錄並提交。",
   "speechToText.tooltip.starting": "正在啟動麥克風... 請稍後再說。",
   "speechToText.tooltip.stop": "停止擷取音訊",
@@ -830,8 +830,17 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "圖像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "預設 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription": "傳送到自訂轉錄端點的模型 ID，例如 whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "語音轉文字基礎 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "使用相容 OpenAI 的轉錄 API 取代 Kilo Gateway。模型從 /models 讀取，音訊傳送到 /audio/transcriptions。留空則使用 Kilo Gateway。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "語音轉文字 API 金鑰",
+  "settings.models.speechToTextApiKey.description": "傳送到自訂轉錄基礎 URL 的 Bearer 權杖。儲存在你的 Kilo 設定檔中。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "啟用並登入 Kilo 供應商以使用 Speech to Text。Speech to Text 目前僅支援透過 Kilo Gateway 使用。",
+    "啟用並登入 Kilo 供應商以使用 Speech to Text，或在下方設定自訂轉錄基礎 URL。",
   "settings.models.speechToTextModel.title": "語音轉文字模型",
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.nativeNotebookTools.title": "原生筆記本工具",

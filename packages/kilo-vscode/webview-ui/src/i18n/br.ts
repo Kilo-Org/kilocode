@@ -231,7 +231,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Clique para restringir as operações de escrita no sistema de arquivos. O acesso à rede continua permitido pelas configurações do sandbox.",
 
-  "speechToText.tooltip.start": "Iniciar entrada de voz com o Kilo Gateway",
+  "speechToText.tooltip.start": "Iniciar entrada de voz",
   "speechToText.tooltip.shortcut":
     "Toque ou pressione Cmd/Ctrl+K para iniciar ou parar a gravação; mantenha o botão pressionado enquanto fala e solte-o para transcrever e enviar.",
   "speechToText.tooltip.starting": "Iniciando o microfone... Aguarde antes de falar.",
@@ -912,8 +912,19 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "Modelo de geração de imagens",
   "settings.experimental.imageGenerationModel.placeholder": "Padrão (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "ID do modelo enviado ao seu endpoint de transcrição próprio, por exemplo whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "URL base de fala para texto",
+  "settings.models.speechToTextBaseUrl.description":
+    "Use uma API de transcrição compatível com OpenAI em vez do Kilo Gateway. Os modelos são lidos de /models e o áudio é enviado para /audio/transcriptions. Deixe vazio para usar o Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Chave de API de fala para texto",
+  "settings.models.speechToTextApiKey.description":
+    "Token bearer enviado para a URL base de transcrição própria. Armazenado no seu arquivo de configuração do Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Ative e faça login no provedor Kilo para usar o Speech to Text. Atualmente, o Speech to Text é compatível apenas com o Kilo Gateway.",
+    "Ative e faça login no provedor Kilo para usar o Speech to Text, ou defina abaixo uma URL base de transcrição própria.",
   "settings.models.speechToTextModel.title": "Modelo de fala para texto",
   "settings.models.speechToTextModel.description":
     "Escolha o modelo de transcrição do Kilo Gateway para entrada de voz.",
