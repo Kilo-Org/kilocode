@@ -5,7 +5,9 @@ import os from "os"
 import path from "path"
 import { Context, Effect, Exit, Layer } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { EventV2 } from "@opencode-ai/core/event"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Git } from "@/git"
 import { Wakeup } from "@/kilocode/wakeup"
 import { SessionID } from "@/session/schema"
@@ -13,11 +15,13 @@ import { Storage } from "@/storage/storage"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 
 type FireMode = { inPlace?: boolean } | undefined
+type Published = { type: string; data: unknown }
 
 const Recorder = Context.Service<{
   calls: Wakeup.Info[]
   modes: FireMode[]
   reenter: Effect.Effect<void>
+  events: Published[]
 }>("@test/WakeupRecorder")
 const TestDir = Context.Service<{ dir: string }>("@test/WakeupDir")
 
@@ -25,6 +29,15 @@ const storageLayer = (dir: string) =>
   Storage.layerFromDir(path.join(dir, "storage")).pipe(
     Layer.provide(LayerNode.compile(LayerNode.group([FSUtil.node, Git.node]))),
   )
+
+const eventsLayer = (published: Published[]) =>
+  Layer.mock(EventV2Bridge.Service, {
+    publish: (definition, data) =>
+      Effect.sync(() => {
+        published.push({ type: definition.type, data })
+        return { id: EventV2.ID.create(), type: definition.type, data }
+      }),
+  })
 
 const fireLayer = (calls: Wakeup.Info[]) =>
   Layer.succeed(
@@ -55,8 +68,8 @@ const recorderFire = Layer.effect(
 
 // Layer.fresh: without it Effect's in-test layer cache hands nested builds the
 // outer test's storage and Fire, so a "restart" would share the first process.
-const serviceLayer = <R>(dir: string, fire: Layer.Layer<Wakeup.Fire, never, R>) =>
-  Layer.fresh(Wakeup.layer.pipe(Layer.provide(Layer.merge(storageLayer(dir), fire))))
+const serviceLayer = <R>(dir: string, fire: Layer.Layer<Wakeup.Fire, never, R>, published: Published[] = []) =>
+  Layer.fresh(Wakeup.layer.pipe(Layer.provide(Layer.mergeAll(storageLayer(dir), fire, eventsLayer(published)))))
 
 const dirLayer = Layer.effect(
   TestDir,
@@ -74,17 +87,28 @@ const dirLayer = Layer.effect(
 const wakeupLayer = Layer.unwrap(
   Effect.gen(function* () {
     const { dir } = yield* TestDir
+    const published: Published[] = []
     const recorder = Layer.effect(
       Recorder,
-      Effect.sync(() => ({ calls: [] as Wakeup.Info[], modes: [] as FireMode[], reenter: Effect.void })),
+      Effect.sync(() => ({
+        calls: [] as Wakeup.Info[],
+        modes: [] as FireMode[],
+        reenter: Effect.void,
+        events: published,
+      })),
     )
-    return Layer.provideMerge(serviceLayer(dir, recorderFire), recorder)
+    return Layer.provideMerge(serviceLayer(dir, recorderFire, published), recorder)
   }),
 )
 
 const it = testEffect(Layer.provideMerge(wakeupLayer, dirLayer))
 
 const session = () => SessionID.descending()
+
+const wakeEvents = (events: Published[]) =>
+  events
+    .filter((event) => event.type === "session.wakeup")
+    .map((event) => event.data as { sessionID: string; pending: number })
 
 function info(over: Partial<Wakeup.Info> = {}): Wakeup.Info {
   const now = Date.now()
@@ -117,6 +141,7 @@ describe("Wakeup", () => {
   it.effect("schedules and lists a wakeup", () =>
     Effect.gen(function* () {
       const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
       const dir = (yield* TestDir).dir
       const sessionID = session()
 
@@ -126,12 +151,14 @@ describe("Wakeup", () => {
       expect(list.map((item) => item.id)).toEqual([info.id])
       expect(list[0]?.prompt).toBe("check the build")
       expect(list[0]?.dueAt).toBeGreaterThan(info.created)
+      expect(wakeEvents(recorder.events)).toEqual([{ sessionID, pending: 1 }])
     }),
   )
 
   it.effect("cancels a pending wakeup and is idempotent", () =>
     Effect.gen(function* () {
       const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
       const dir = (yield* TestDir).dir
       const sessionID = session()
 
@@ -141,6 +168,48 @@ describe("Wakeup", () => {
       expect(removed?.id).toBe(info.id)
       expect(yield* wake.list({ sessionID })).toEqual([])
       expect(yield* wake.cancel(info.id)).toBeUndefined()
+      expect(wakeEvents(recorder.events)).toEqual([
+        { sessionID, pending: 1 },
+        { sessionID, pending: 0 },
+      ])
+    }),
+  )
+
+  it.effect("reports per-session pending counts for a directory", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const dir = (yield* TestDir).dir
+      const other = path.join(dir, "other")
+      const a = session()
+      const b = session()
+      const c = session()
+
+      yield* wake.schedule({ sessionID: a, directory: dir, prompt: "one", delay: "1m" })
+      yield* wake.schedule({ sessionID: a, directory: dir, prompt: "two", delay: "2m" })
+      yield* wake.schedule({ sessionID: b, directory: dir, prompt: "three", delay: "3m" })
+      yield* wake.schedule({ sessionID: c, directory: other, prompt: "four", delay: "4m" })
+
+      expect(yield* wake.pending(dir)).toEqual([
+        { sessionID: a, pending: 2 },
+        { sessionID: b, pending: 1 },
+      ])
+      expect(yield* wake.pending(other)).toEqual([{ sessionID: c, pending: 1 }])
+    }),
+  )
+
+  it.effect("cancels every wakeup for a session", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
+      const dir = (yield* TestDir).dir
+      const sessionID = session()
+
+      yield* wake.schedule({ sessionID, directory: dir, prompt: "one", delay: "1m" })
+      yield* wake.schedule({ sessionID, directory: dir, prompt: "two", delay: "2m" })
+
+      expect(yield* wake.cancelSession(sessionID)).toBe(2)
+      expect(yield* wake.list({ sessionID })).toEqual([])
+      expect(wakeEvents(recorder.events).at(-1)).toEqual({ sessionID, pending: 0 })
     }),
   )
 

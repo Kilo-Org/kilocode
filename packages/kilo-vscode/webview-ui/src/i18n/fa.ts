@@ -226,7 +226,7 @@ export const dict = {
     "برای محدود کردن نوشتن در سیستم فایل کلیک کنید. دسترسی به شبکه طبق تنظیمات sandbox شما مجاز است.",
   "prompt.action.enhanceDescription":
     "دکمه «بهبود پرامپت» با ارائه زمینه بیشتر، توضیح یا بازنویسی، به بهتر کردن پرامپت شما کمک می‌کند. یک پرامپت تایپ کنید و دوباره روی دکمه کلیک کنید تا نحوه عملکرد آن را ببینید.",
-  "speechToText.tooltip.start": "شروع ورودی صوتی با Kilo Gateway",
+  "speechToText.tooltip.start": "شروع ورودی صوتی",
   "speechToText.tooltip.shortcut":
     "برای شروع یا توقف ضبط، روی دکمه ضربه بزنید یا Cmd/Ctrl+K را فشار دهید؛ هنگام صحبت دکمه را نگه دارید و سپس رها کنید تا گفتار به متن تبدیل و ارسال شود.",
   "speechToText.tooltip.starting": "در حال راه‌اندازی میکروفون... منتظر بمانید.",
@@ -883,15 +883,26 @@ export const dict = {
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "یک برد را بین یک جلسهٔ اصلی و عامل‌های فرعی مسئول وظایف آن، از جمله عامل‌های فرعی تودرتو، به اشتراک بگذارید. از آن برای تلاش‌های موازی جهت یافتن راه‌حل یا کارهای مکمل استفاده کنید، نه برای هر وظیفه.",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
   "settings.experimental.imageGenerationModel.description": "مدل تولید تصویر",
   "settings.experimental.imageGenerationModel.placeholder": "پیش‌فرض (مسیریاب خودکار)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "شناسه مدلی که به نقطه پایانی رونویسی دلخواه شما فرستاده می‌شود، برای نمونه whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "نشانی پایه تبدیل گفتار به متن",
+  "settings.models.speechToTextBaseUrl.description":
+    "به‌جای Kilo Gateway از یک API رونویسی سازگار با OpenAI استفاده کنید. مدل‌ها از /models خوانده می‌شوند و صدا به /audio/transcriptions فرستاده می‌شود. برای استفاده از Kilo Gateway خالی بگذارید.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "کلید API تبدیل گفتار به متن",
+  "settings.models.speechToTextApiKey.description":
+    "توکن Bearer که به نشانی پایه رونویسی دلخواه فرستاده می‌شود. در فایل پیکربندی Kilo شما ذخیره می‌شود.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "برای استفاده از تبدیل گفتار به متن، ارائه‌دهنده Kilo را فعال کرده و وارد شوید. تبدیل گفتار به متن در حال حاضر فقط از طریق Kilo Gateway پشتیبانی می‌شود.",
+    "برای استفاده از تبدیل گفتار به متن، ارائه‌دهنده Kilo را فعال کرده و وارد شوید، یا در پایین یک نشانی پایه رونویسی دلخواه تعیین کنید.",
   "settings.models.speechToTextModel.title": "مدل تبدیل گفتار به متن",
   "settings.models.speechToTextModel.description": "مدل رونویسی Kilo Gateway را برای ورودی صوتی انتخاب کنید.",
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
@@ -1149,9 +1160,12 @@ export const dict = {
   "settings.display.username.description": "نام کاربری سفارشی که در مکالمات نمایش داده می‌شود",
   "settings.display.fontSize.title": "اندازه قلم",
   "settings.display.fontSize.description": "اندازه قلم رابط کاربری وب‌ویو Kilo را مستقل از VS Code تنظیم کنید.",
-  "settings.display.reasoningAutoCollapse.title": "جمع‌شدن خودکار استدلال",
-  "settings.display.reasoningAutoCollapse.description":
-    "بلوک‌های استدلال را پس از اتمام نوشتن توسط عامل جمع می‌کند. برای نگه داشتن استدلال در حالت باز، این گزینه را خاموش بگذارید مگر اینکه خودتان آن را جمع کنید.",
+  "settings.display.reasoningDisplay.title": "بلوک‌های استدلال",
+  "settings.display.reasoningDisplay.description":
+    "انتخاب کنید که بلوک‌های استدلال چگونه شروع شوند. باز متن کامل را نشان می‌دهد، پیش‌نمایش آن را به یک پیش‌نمایش کوتاه قابل اسکرول محدود می‌کند، و عنوان تنها عنوان و نشانگر پخش جریانی را تا زمانی که آن را باز کنید نمایش می‌دهد.",
+  "settings.display.reasoningDisplay.expanded": "باز",
+  "settings.display.reasoningDisplay.preview": "پیش‌نمایش",
+  "settings.display.reasoningDisplay.headline": "عنوان",
   "settings.display.shiftTabCycle.title": "چرخش سطح استدلال با Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "در ورودی پرامپت، Shift+Tab را فشار دهید تا به سطح تلاش استدلال بعدی بروید. برای حفظ عملکرد Shift+Tab جهت ناوبری فوکوس صفحه‌کلید، این گزینه را غیرفعال کنید.",

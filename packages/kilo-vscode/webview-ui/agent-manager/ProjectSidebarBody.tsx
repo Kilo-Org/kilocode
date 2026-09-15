@@ -22,10 +22,8 @@ import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
-import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
-import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
 import {
@@ -40,7 +38,6 @@ import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
-import { randomColor } from "./section-colors"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 import { rootSessions } from "./project/session-filter"
 import { createWorktreeCompletion } from "./worktree-completion"
@@ -69,7 +66,9 @@ interface Props {
   onSelectWorktree: (projectId: string, worktreeId: string) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
   onOpenPR?: (projectId: string, worktreeId: string) => void
-  onNewWorktree: (projectId: string) => void
+  onCreateSection: (worktreeIds?: string[]) => void
+  renamingSection: () => string | undefined
+  onRenameEnd: () => void
   shortcutMap?: () => Map<string, number>
 }
 
@@ -86,10 +85,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   }
   const [pending, setPending] = createSignal<string>()
   const [renaming, setRenaming] = createSignal<string>()
-  const [renamingSection, setRenamingSection] = createSignal<string>()
-  const [pendingSection, setPendingSection] = createSignal<
-    { ids: Set<string>; state?: AgentManagerStateMessage } | undefined
-  >()
   const [dragging, setDragging] = createSignal<string>()
   const [dragOrigin, setDragOrigin] = createSignal<string[]>()
   const [name, setName] = createSignal("")
@@ -163,27 +158,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     const prefix = `${props.project.id}:${kind}:`
     return value.startsWith(prefix) ? value.slice(prefix.length) : undefined
   }
-
-  const createSection = (worktreeIds?: string[]) => {
-    setPendingSection({ ids: new Set(sections().map((section) => section.id)), state: state() })
-    post({
-      type: "agentManager.createSection",
-      name: props.t("agentManager.section.defaultName"),
-      color: randomColor(),
-      worktreeIds,
-    })
-  }
-
-  createEffect(() => {
-    const previous = pendingSection()
-    if (!previous) return
-    const current = state()
-    if (current === previous.state) return
-    const created = (current?.sections ?? []).find((section) => !previous.ids.has(section.id))
-    setPendingSection(undefined)
-    if (!created) return
-    setRenamingSection(created.id)
-  })
 
   const worktreeIds = createMemo(() => new Set(worktrees().map((wt) => wt.id)))
   const sectionIds = createMemo(() => new Set(sections().map((section) => scope("section", section.id))))
@@ -324,7 +298,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onMoveToSection={(sectionId) =>
             post({ type: "agentManager.moveToSection", worktreeIds: [worktree.id], sectionId })
           }
-          onMoveToNewSection={() => createSection([worktree.id])}
+          onMoveToNewSection={() => props.onCreateSection([worktree.id])}
           onClick={() => props.onSelectWorktree(props.project.id, worktree.id)}
           onCancelDelete={() => setPending(undefined)}
           onDelete={(event) => {
@@ -416,24 +390,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       </button>
 
       <div class="am-section">
-        <SidebarSectionHeader
-          class="am-section-header"
-          label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
-          actions={
-            <ProjectActions
-              branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
-              bindings={props.bindings}
-              loaded={state() !== undefined}
-              t={props.t}
-              onCreate={() => post({ type: "agentManager.createWorktree" })}
-              onNew={() => props.onNewWorktree(props.project.id)}
-              onSection={() => createSection()}
-              onSettings={() =>
-                vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.project.id })
-              }
-            />
-          }
-        />
         <div class="am-worktree-list">
           <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider
@@ -458,9 +414,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
                         section={section}
                         dropId={scope("section", section.id)}
                         count={list.length}
-                        autoRename={renamingSection() === section.id}
+                        autoRename={props.renamingSection() === section.id}
                         onRenameEnd={() => {
-                          if (renamingSection() === section.id) setRenamingSection(undefined)
+                          if (props.renamingSection() === section.id) props.onRenameEnd()
                         }}
                         onToggle={() => post({ type: "agentManager.toggleSectionCollapsed", sectionId: section.id })}
                         onRename={(value: string) =>
