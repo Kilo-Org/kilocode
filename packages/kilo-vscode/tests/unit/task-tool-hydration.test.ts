@@ -50,6 +50,15 @@ describe("completed task hydration", () => {
     expect(readToolOpen(toolOpenKey(fork), fork.defaultOpen)).toBe(false)
   })
 
+  it("keeps an auto-opened card open when it remounts after completion", () => {
+    const key = toolOpenKey({ tool: "task", partID: "part-live" })
+    // The running card auto-opens and persists that decision.
+    expect(taskAutoOpen("running", false)).toBe(true)
+    writeToolOpen(key, true)
+    // Handed to the virtualizer once completed: the remount must not collapse it.
+    expect(readToolOpen(key, taskAutoOpen("completed", false))).toBe(true)
+  })
+
   it("hydrates and streams a child only while expanded", () => {
     expect(taskVisible(false, "ses_child")).toBeUndefined()
     expect(taskVisible(true, "ses_child")).toBe("ses_child")

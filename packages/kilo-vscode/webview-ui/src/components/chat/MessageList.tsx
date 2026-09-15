@@ -955,6 +955,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const tail = createMemo(() => partition().direct.map((row) => row.key))
   const lookup = createMemo(() => new Map(partition().direct.map((row) => [row.key, row])))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
+  // Virtua keys its items by identity. Row objects are rebuilt whenever turn
+  // meta changes (live flag at completion, copy anchor), which would remount
+  // every row of the turn at the 260px estimate and bounce the transcript.
+  // Feed it the stable keys and resolve the row reactively, like the tail.
+  const virtual = createMemo(() => new Map(partition().virtual.map((row) => [row.key, row])))
   const indexes = createMemo(() => new Map(keys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
 
@@ -1362,16 +1367,16 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 <Show when={scrollEl() && partition().virtual.length > 0}>
                   <Virtualizer
                     ref={setVirtualizer}
-                    data={partition().virtual}
+                    data={keys()}
                     scrollRef={scrollEl()}
                     shift={session.messageMutation() === "prepend"}
                     cache={measurement()}
                     bufferSize={520}
                     itemSize={260}
                   >
-                    {(row, index) => (
+                    {(key, index) => (
                       <TranscriptRowView
-                        row={row}
+                        row={virtual().get(key)!}
                         index={index()}
                         onSelectSession={props.onSelectSession}
                         isSessionOpen={props.isSessionOpen}
@@ -1380,9 +1385,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         queuedDisabled={props.queuedDisabled}
                         editDisabled={props.editDisabled}
                         highlight={highlight}
-                        activeSearch={activeKey() === row.key}
-                        activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
-                        activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                        activeSearch={activeKey() === key}
+                        activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
+                        activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
                         readonly={props.readonly}
                         interactivePrompts={props.interactivePrompts}
                       />
