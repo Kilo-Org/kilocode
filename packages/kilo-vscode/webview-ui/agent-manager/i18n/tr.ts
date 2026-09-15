@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Dal öneki",
   "agentManager.settings.branchPrefix.description":
     "Tüm projelerde otomatik adlandırılan dallar için önek, örneğin feature/. Açıkça belirtilen dal adlarına uygulanmaz. Önek kullanmamak için boş bırakın.",
+  "agentManager.settings.worktreePool.title": "Worktree'leri önceden ısıtma",
+  "agentManager.settings.worktreePool.description":
+    "Yeni Agent Manager oturumlarının daha hızlı başlaması için arka planda hazır bir worktree oluşturun. Açık proje başına bir checkout için fazladan disk alanı kullanır.",
   "agentManager.settings.project.title": "Proje",
   "agentManager.settings.project.description": "Worktree ayarlarını düzenlemek istediğiniz repository'yi seçin.",
   "agentManager.settings.project.empty": "Kullanılabilir Agent Manager projesi yok.",
@@ -240,6 +243,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Tümünü sohbete gönder ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "{{count}} yorumu GitHub #{{number}} hedefine gönder",
+  "agentManager.review.sendAllToGithubFailed": "Gönderim bir GitHub hatası nedeniyle durduruldu: {{error}}",
   "agentManager.review.inlineCount": "Yerel yorumlar ({{count}})",
   "agentManager.review.prCount": "PR yorumları ({{count}})",
   "agentManager.review.fileCount": "{{count}} dosya",

@@ -40,6 +40,8 @@ interface ChatViewProps {
   onForkMessage?: (sessionId: string, messageId: string) => void
   onForkSession?: (sessionId: string) => void
   readonly?: boolean
+  /** Show reasoning as a compact capped preview (background subagent transcripts). */
+  reasoningCapped?: boolean
   /** Whether this chat owns actionable prompt controls. Defaults to true. */
   interactivePrompts?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
@@ -175,10 +177,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    feedback?: string,
   ) => {
     const perm = permissionRequest()
     if (!perm || perm.id !== permissionID || session.respondingPermissions().has(permissionID)) return
-    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways)
+    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways, feedback)
   }
 
   const startSession = () => window.dispatchEvent(new CustomEvent("newTaskRequest"))
@@ -399,6 +402,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 questions={standaloneQuestions}
                 suggestions={standaloneSuggestions}
                 readonly={props.readonly}
+                reasoningCapped={props.reasoningCapped}
                 interactivePrompts={ownsPrompts()}
                 emptyState={props.emptyState}
                 introduction={props.introduction}
