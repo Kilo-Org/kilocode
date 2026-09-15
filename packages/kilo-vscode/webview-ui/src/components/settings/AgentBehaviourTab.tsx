@@ -310,23 +310,8 @@ const AgentBehaviourTab: Component = () => {
             />
           </SettingsRow>
           <SettingsRow
-            title={language.t("settings.experimental.sharedAgentBoard.title")}
-            description={language.t("settings.experimental.sharedAgentBoard.description")}
-          >
-            <Switch
-              checked={config().experimental?.shared_agent_board ?? true}
-              onChange={(checked: boolean) =>
-                updateConfig({ experimental: { ...config().experimental, shared_agent_board: checked } })
-              }
-              hideLabel
-            >
-              {language.t("settings.experimental.sharedAgentBoard.title")}
-            </Switch>
-          </SettingsRow>
-          <SettingsRow
             title={language.t("settings.agentBehaviour.pushFixes.title")}
             description={language.t("settings.agentBehaviour.pushFixes.description")}
-            last
           >
             <Switch
               checked={settings()["agentManager.pushFixes"] !== false}
@@ -334,6 +319,19 @@ const AgentBehaviourTab: Component = () => {
               hideLabel
             >
               {language.t("settings.agentBehaviour.pushFixes.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.sharedAgentBoard.title")}
+            description={language.t("settings.agentBehaviour.sharedAgentBoard.description")}
+            last
+          >
+            <Switch
+              checked={config().shared_agent_board ?? true}
+              onChange={(checked: boolean) => updateConfig({ shared_agent_board: checked })}
+              hideLabel
+            >
+              {language.t("settings.agentBehaviour.sharedAgentBoard.title")}
             </Switch>
           </SettingsRow>
         </Card>

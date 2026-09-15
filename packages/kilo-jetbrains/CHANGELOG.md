@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.6.3
+
+### Patch Changes
+
+- [#13889](https://github.com/Kilo-Org/kilocode/pull/13889) [`a30a196`](https://github.com/Kilo-Org/kilocode/commit/a30a1962db25356fdffbdef6e77793dcf69af4be) - Fold large pasted text into a `[Pasted ~N lines]` placeholder you can click to unfold and fold back from the gutter. Each paste folds independently, and sent messages fold the same way in the transcript.
+
 ## 7.6.0
 
 ### Minor Changes

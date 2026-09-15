@@ -229,7 +229,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
-  "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.start": "Započni glasovni unos",
   "speechToText.tooltip.shortcut":
     "Dodirnite dugme ili pritisnite Cmd/Ctrl+K da pokrenete ili zaustavite snimanje; držite dugme pritisnutim dok govorite, a zatim ga otpustite da biste pretvorili govor u tekst i poslali ga.",
   "speechToText.tooltip.starting": "Pokretanje mikrofona... Sačekajte prije nego što progovorite.",
@@ -900,15 +900,26 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Dijelite ploču između glavne sesije i njenih podagenata za zadatke, uključujući ugniježđene podagente. Koristite je za paralelne pokušaje rješavanja problema ili rad na zadacima koji se međusobno nadopunjuju, a ne za svaki zadatak.",
   "settings.experimental.imageGenerationModel.title": "Model slike",
   "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
   "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "ID modela koji se šalje vašoj vlastitoj krajnjoj tački za transkripciju, na primjer whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Osnovni URL za govor u tekst",
+  "settings.models.speechToTextBaseUrl.description":
+    "Koristite API za transkripciju kompatibilan s OpenAI umjesto Kilo Gatewaya. Modeli se čitaju s /models, a zvuk se šalje na /audio/transcriptions. Ostavite prazno da biste koristili Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "API ključ za govor u tekst",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer token koji se šalje na vlastiti osnovni URL za transkripciju. Čuva se u vašoj Kilo konfiguracijskoj datoteci.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text. Speech to Text je trenutno podržan samo uz Kilo Gateway.",
+    "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text ili ispod postavite vlastiti osnovni URL za transkripciju.",
   "settings.models.speechToTextModel.title": "Model govora u tekst",
   "settings.models.speechToTextModel.description": "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.nativeNotebookTools.title": "Izvorni alati za bilježnice",
@@ -1168,9 +1179,12 @@ export const dict = {
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.fontSize.title": "Veličina fonta",
   "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
-  "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
-  "settings.display.reasoningAutoCollapse.description":
-    "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
+  "settings.display.reasoningDisplay.title": "Blokovi razmišljanja",
+  "settings.display.reasoningDisplay.description":
+    "Odaberite kako blokovi razmišljanja počinju. Prošireni prikazuje cijeli tekst, Pregled ga ograničava na kratak pregled s pomicanjem, a Naslov prikazuje samo naslov i indikator strujanja dok ga ne otvorite.",
+  "settings.display.reasoningDisplay.expanded": "Prošireni",
+  "settings.display.reasoningDisplay.preview": "Pregled",
+  "settings.display.reasoningDisplay.headline": "Naslov",
   "settings.display.shiftTabCycle.title": "Promijeni napor razmišljanja pomoću Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pritisnite Shift+Tab u polju za unos upita da pređete na sljedeći nivo napora razmišljanja. Onemogućite ovu opciju kako biste zadržali Shift+Tab za navigaciju fokusom putem tastature.",

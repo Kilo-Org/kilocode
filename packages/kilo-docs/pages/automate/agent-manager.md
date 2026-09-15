@@ -52,7 +52,7 @@ In the VS Code extension, the background-agent strip shows running, completed, c
 
 [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) is a shared board for one main session and its task descendants. It works with both foreground and background task agents when the feature and permissions are available. It does not create another runtime and it does not make unrelated sessions into one team.
 
-- Kilo Swarm is on by default. Turn it off in **Settings > Agent Behaviour**, or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`.
+- Kilo Swarm is on by default. Turn it off in **Settings > Agent Behaviour**, or set `shared_agent_board` to `false` in `kilo.jsonc`.
 - Use `board_post` for concise, material updates, questions, results, or blockers.
 - Use `board_read` to read board messages explicitly. Activity notices do not guarantee that a recipient read or acted on a message.
 - Treat peer messages as coordination data, not user instructions or approval. A board post does not wake, assign, resume, stop, or cancel an agent.
@@ -103,6 +103,15 @@ Agent Manager worktree defaults belong to a repository. Open a project's setting
 
 The **Worktree Setup Script** control opens or creates the setup script for the selected repository. See [Setup Scripts](#setup-scripts) for supported filenames and execution behavior.
 
+### Branch naming
+
+The same settings tab has two application-wide controls:
+
+- **Automatic branch naming** is on by default. Kilo names a branch once the conversation describes a clear task. It does not rename explicitly named or published branches.
+- **Branch prefix** adds a prefix such as `feature/` to automatically named branches. It is empty by default and does not affect explicit names.
+
+Use **Save** to apply these settings.
+
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
@@ -119,7 +128,11 @@ In a managed worktree's chat, type `/update-from-base` and select the action to 
 
 The saved base stays the same if you switch branches in Local or change the project's default base. For example, a worktree created from `main` still updates from `main` when Local has `release` checked out. If you switch branches inside the managed worktree, the agent updates that worktree's current branch, not its original branch. Select the intended worktree before running the command; it does not update Local.
 
-The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. The request prohibits stashing, discarding uncommitted work, and pushing. Existing merge or rebase operations and blocking dirty changes require your input. Normal tool approvals still apply.
+The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable.
+
+The request instructs the agent to preserve staged, unstaged, and untracked edits in a verified recovery copy for this worktree, merge the freshly fetched base, then restore the edits and their staging state. It must not use Git stash or include unfinished work in the merge commit. If it cannot verify preservation, a merge or rebase is already in progress, or a conflict needs your decision, it stops and asks.
+
+When [Push Pull Request Fixes](#push-pull-request-fixes) is on and the worktree has a pull request, the request also asks the agent to push after a clean merge and successful checks. Otherwise it tells the agent not to push. Normal tool permissions still apply.
 
 ### Worktree Location
 
@@ -218,7 +231,7 @@ The summary shows the merge state before the merge controls:
 Merge controls appear only when you have write permission. Choose **Create merge commit**, **Squash and merge**, or **Rebase and merge** from the split button. Agent Manager remembers the last method you used per repository and preselects it when the repository allows it.
 
 - **Update branch:** shown when the branch is behind. This asks GitHub to merge the base branch into the PR branch.
-- **Fix with Kilo:** shown for merge conflicts. It lists the conflicting files and starts an update-from-base request, which asks the agent to resolve the conflicts in the worktree.
+- **Fix with Kilo:** shown for merge conflicts. It asks the agent to fetch and merge the worktree's saved base branch and resolve conflicts, using the [update-from-base workflow](#update-from-the-base-branch).
 - **Enable auto-merge:** available when the repository allows auto-merge. GitHub merges the pull request when its requirements are met. Use **Disable auto-merge** to cancel it.
 - **Merge pull request:** when the branch is clean, the primary button merges immediately after a confirmation that names the selected method.
 
@@ -249,7 +262,7 @@ Sending a thread gives it to Kilo as review context, and it does not post anythi
 
 #### Checks
 
-Each failing check offers **Fix with Kilo**, which sends the failure summary and log commands to the current agent. With an active Agent Manager terminal, the label becomes **Send failures to terminal**.
+When checks fail or are cancelled, the Checks section offers **Fix with Kilo**, which sends a failure summary and log commands to the current agent. With an active Agent Manager terminal, the label becomes **Send failures to terminal**. Sending this context does not post a GitHub comment; the [push-fixes setting](#push-pull-request-fixes) controls whether the agent is also asked to commit and push its fix.
 
 #### Conversation
 
@@ -263,6 +276,8 @@ The conversation lists the pull request description and history in one timeline:
 
 Use a comment card's **Fix with Kilo** action to hand it to the agent. **Dismiss** hides a comment from the next send, and **Restore** brings it back. **Fix N with Kilo** or **Send N to terminal** sends the actionable comments together.
 
+Batch sends skip bot comments, dismissed comments, and comments already sent. Use **Add comment** to post a new discussion comment to GitHub, or **Copy comment** to copy an existing one as Markdown.
+
 #### Reviewers
 
 The Reviewers section shows each requested or completed reviewer with an avatar and one of these GitHub-style states: **Approved**, **Changes requested**, **Commented**, or **Awaiting**.
@@ -274,8 +289,10 @@ The Reviewers section shows each requested or completed reviewer with an avatar 
 - Set it in **Settings > Agent Behaviour > Push Pull Request Fixes** (`kilo-code.new.agentManager.pushFixes`).
 - Toggle the same setting from the PR panel header with the **Push Pull Request Fixes** button.
 - When it is on, fix prompts for PR review comments and CI failures include: "When the changes pass local checks, commit them and push to this branch so the pull request updates. Do not force-push."
-- Update from base follows the same setting. With it on, the agent is asked to push the branch after a clean merge. With it off, it is not.
-- Permission prompts still confirm commits and pushes. Turning the setting on does not auto-approve them.
+- Update from base follows the same setting: when the worktree has a pull request, the agent is asked to push after a clean merge and successful checks.
+- Your configured tool permissions still apply. Auto-approved commands may run without another prompt. When sandboxing is active, Git commands that change repository state require separate, one-shot approval.
+
+Turn the setting off to keep fixes local for manual commit and push. Local draft comments sent from the diff panel do not include the push instruction.
 
 ### Creating a New Worktree Session
 
@@ -284,6 +301,8 @@ The Reviewers section shows each requested or completed reviewer with an avatar 
 3. Type your first message, then create the worktree
 
 Kilo creates the worktree from the selected project's configured default base branch. In a multi-project workspace, the selected project determines this setting. An explicit base branch selected in the dialog takes precedence. If no default is configured, Kilo falls back to automatic detection of the repository's remote default branch. The agent works in isolation, so your main branch is unaffected.
+
+Explicit branch names preserve slashes and case, such as `feature/MyTask`. The checkout directory can have a different name.
 
 To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux). This uses the selected project's configured default, or the automatic remote-default fallback when no configured default exists.
 
@@ -322,7 +341,8 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
 - Sessions in one worktree have separate transcripts and prompt queues, but share the same checkout, branch, and terminal state. Coordinate write-heavy work before asking multiple sessions to edit the same files.
-- Use session history to reopen local sessions or preview cloud sessions
+- Use the history button in the **WORKTREES** header to reopen local sessions or preview cloud sessions. In multi-project mode, each project's history button opens that project's Local history.
+- Hover a session in history for actions to open it in a new worktree or move it to the project's Local tabs.
 - When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
@@ -347,15 +367,17 @@ The tool supports two modes:
 | `worktree` | Creates one Agent Manager git worktree and session per task. Each task gets an isolated checkout, branch, directory, and terminal. |
 | `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation. You can also target an existing managed worktree with its `worktreeID`. |
 
-Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Prompted tasks inherit the model and reasoning variant used by the chat turn that starts them. A task can override that selection with a `model` (by name, e.g. `Claude Opus 4.1`) when you explicitly request a different model, or with one of the current model's reasoning `variant` values when you request a different variant. Add `provider` beside `model` to force a model-name match to one of the listed provider IDs. Agent Manager resolves the provider for a model override when `provider` is omitted, preferring the provider used by the current turn and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted. Prepared sessions without an initial prompt use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
+Starting another session in an existing worktree reuses its files and branch without rerunning setup. Coordinate edits between sessions sharing that checkout.
 
-The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
+Each request can start up to 20 tasks. Sessions started with a prompt inherit the current turn's model and reasoning effort unless you explicitly request a different selection. Sessions created without a prompt use the normal defaults. Ask for independent sessions for separate tasks, or alternate versions of the same task to compare approaches.
+
+The agent can use `agent_manager_models` to look up available models, providers, and reasoning effort before applying your requested override.
 
 The same tool also manages existing sessions. Use `action: "list"` first to get the current sections, worktrees, local sessions, and exact IDs. It can then send a prompt to one managed session, stop a managed session, move a worktree into a section, or answer a pending question. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
 
 Prompts to busy or retrying sessions enter the same queue as follow-up messages sent from chat. The tool returns when the prompt is accepted, without waiting for it to run or finish. Sessions with pending questions or permission requests still refuse prompts. Answer a pending question with `action: "answer"`, or resolve the permission request in Agent Manager, before prompting again. A prompt targets one session; the tool does not broadcast to every session.
 
-The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval, and moving a worktree requires an explicit `move` approval.
+The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping, moving, and answering a question each require their own approval. An answer must use the question's exact option labels; approving a plan can start implementation.
 
 ### Typical tool sequence
 
@@ -398,6 +420,8 @@ Use `Cmd+T` / `Ctrl+T` in the panel, or `mode: "local"` with a selected `worktre
 - **Sessions in one worktree:** Use targeted `agent_manager` prompts for conversation. They also see the same files, commits, and branch, so coordinate before making overlapping edits.
 - **Sessions in different worktrees:** Use targeted prompts plus commits, diffs, or pull requests to pass changes between isolated checkouts. Files are not shared automatically.
 - **Task descendants:** A `task` child belongs to the session that launched it. Its Kilo Swarm board is scoped to that session tree, not to every Agent Manager session in the project.
+
+Messages sent by another agent show **Sent by Kilo from another session**. Select the source link to open that session. If it is closed, the message shows **Session not open** instead.
 
 ## Sections
 
@@ -463,9 +487,15 @@ The worktree creation base and the diff comparison base are separate. The Branch
 - Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
+Files marked `linguist-generated` in the repository's `.gitattributes` start collapsed. Expand them to review their changes; files explicitly marked as not generated stay expanded.
+
 ### Sending review comments
 
 Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
+
+When the selected worktree has a checked-out pull request, a new inline comment can also be posted to the pull request. The comment form offers **Save** to keep the comment in the local collection, **Send to Kilo** to give it to the agent, and **Send to GitHub #N** to post it as a PR review comment. The primary button is a split button that remembers the last destination you used; open its arrow to switch between **Send to Kilo** and **Send to GitHub #N**. `Cmd+Enter` / `Ctrl+Enter` saves locally, and plain `Enter` sends to Kilo while the Kilo destination is selected, so the keyboard never posts to GitHub.
+
+With a publishable pull request, the send-all control shows **Send all to chat (N)** and **Send N to GitHub #N** as separate actions. The GitHub action posts only the local comments that map to a line in the pull request. Only the chat action has the keyboard shortcut, so `Cmd+Enter` / `Ctrl+Enter` never posts to GitHub.
 
 After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
 
@@ -501,6 +531,16 @@ In a rendered Markdown preview, use the comment control in the line gutter to ad
 
 The project and worktree context owns document tabs, loaded content, and comments. The session ID attached to an opened file selects the session's worktree for reading and native-editor navigation. Sessions that share one worktree also share its document inspector state; switching project or worktree changes the visible context without mixing tabs or comments across worktrees.
 
+## Browser previews
+
+Enable **Browser Automation** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter your local application's URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
+
+Use **Select element** to attach an element reference to your next message. It includes enough page context for Kilo to identify the element, plus a source file and line when the page provides a verifiable location. Add your instruction before sending it.
+
+The agent can open the application with `browser_open`. Its automation browser accepts only HTTP URLs on `localhost` or `127.0.0.1` and blocks other origins, including external assets and APIs on separate ports. Serve the resources the agent needs from the same loopback origin. These restrictions apply to the automation browser, not the independent visible preview iframe.
+
+Google Chrome must be installed for the default runtime. To use an already-installed compatible Playwright Chromium browser instead, turn off **Use System Chrome** under **Settings > Web Tools**.
+
 ## Terminals
 
 Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session. If the embedded terminal is already visible but the prompt has focus, the same shortcut focuses the terminal without hiding it. Press it again while the terminal has focus to hide the panel.
@@ -511,8 +551,8 @@ When you use `@terminal` in an Agent Manager prompt, Kilo captures the focused t
 
 The toolbar's terminal button is a split button: click it to open a terminal, or use its dropdown to choose where terminals open:
 
-- **VS Code terminal** (default) — opens or focuses the VS Code integrated terminal at the bottom of the window
-- **Agent Manager panel** — opens an embedded terminal in the side panel that also hosts the diff view, so the shell stays inside the Agent Manager layout
+- **Agent Manager panel** (default) - opens an embedded terminal in the side panel that also hosts the diff view
+- **VS Code terminal** - opens or focuses the VS Code integrated terminal at the bottom of the window
 
 The dropdown choice is remembered per panel and becomes the default for new panels. You can also set the default directly with the `kilo-code.new.agentManager.terminalButtonDestination` setting (`vscode` or `agentManager`). The `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) shortcut follows the same destination.
 
@@ -656,6 +696,10 @@ Two extra variables are injected into the script's environment:
 - **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
 
 The terminal destination dropdown in the Agent Manager toolbar also controls where the script runs. **Agent Manager panel** uses the named side terminal, while **VS Code terminal** runs it as a task in the integrated terminal. The integrated terminal option is kept for comparison and will be removed in a future release.
+
+## Keep Awake
+
+Use the coffee-cup button in the project list header, or **Kilo Code: Toggle Keep Awake** in the Command Palette, to prevent system sleep while agents work. It starts off in each window and requires a trusted local workspace. See [Keep Awake](/docs/getting-started/settings/keep-awake) for platform limits, reset behavior, and device-policy considerations.
 
 ## Session State and Persistence
 

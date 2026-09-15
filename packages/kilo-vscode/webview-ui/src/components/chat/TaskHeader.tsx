@@ -287,14 +287,45 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <TranscriptSearch />
         </div>
       </Show>
-      {/* Expanded graph section: timeline + context bar + token breakdown */}
-      <Show when={expanded() && hasTimeline()}>
+      {/* Expanded graph section: timeline + context bar + token breakdown.
+          The section always reserves the height of all three rows, so the
+          header keeps one height as a turn streams and the transcript never
+          moves on a turn boundary. A row with no data shows a skeleton only
+          while a turn is running; otherwise it stays empty. */}
+      <Show when={expanded()}>
         <div data-component="task-header-graph">
-          <TaskTimeline />
+          <Show
+            when={hasTimeline()}
+            fallback={
+              <div class="task-header-skeleton-chart" aria-hidden="true">
+                <Show when={busy()}>
+                  <For each={[14, 22, 10, 18, 8]}>
+                    {(h, i) => (
+                      <div
+                        class="task-header-skeleton"
+                        style={{ height: `${h}px`, "animation-delay": `${i() * 80}ms` }}
+                      />
+                    )}
+                  </For>
+                </Show>
+              </div>
+            }
+          >
+            <TaskTimeline />
+          </Show>
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
+          <Show when={!tokens()}>
+            <div class="task-header-tokens" aria-hidden="true">
+              <Show when={busy()}>
+                <div class="task-header-skeleton" style={{ width: "42px" }} />
+                <div class="task-header-skeleton" style={{ width: "36px" }} />
+                <div class="task-header-skeleton" style={{ width: "28px" }} />
+              </Show>
+            </div>
+          </Show>
         </div>
       </Show>
       <BackgroundAgents readonly={props.readonly} />

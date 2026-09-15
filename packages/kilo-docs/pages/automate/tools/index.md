@@ -19,7 +19,7 @@ Tools are organized into logical groups based on their functionality:
 | **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
 | **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
 | **Web Group** | Fetch and search web content | `webfetch`, `websearch` | Research, documentation lookup |
-| **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
+| **Browser Preview** | Agent Manager's built-in browser preview | `browser_open` | Previewing and checking locally running apps |
 | **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
 | **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager`, `board_post`, `board_read` | Context switching and task organization |
 
@@ -94,15 +94,11 @@ Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 
 ### Browser Tools
 
-The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in Settings → Browser Automation. When enabled, it registers an MCP server named `kilo-playwright` and exposes tools such as:
+The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Browser panel and returns a screenshot and diagnostics. Enable **Browser Automation** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium.
 
-- `kilo-playwright_browser_navigate` - Navigate to a URL
-- `kilo-playwright_browser_click` - Click an element
-- `kilo-playwright_browser_type` - Type text into an element
-- `kilo-playwright_browser_screenshot` - Capture a screenshot
-- `kilo-playwright_browser_snapshot` - Capture an accessibility snapshot
+The `browser_open` automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` only, and blocks resources from other origins. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback.
 
-These follow the same permission model as all MCP tools (see below).
+This restriction is specific to `browser_open`, not Kilo's web access in general. Use `websearch` and `webfetch` to find and read public web pages. Browser tools from a separately configured MCP server can provide interactive web browsing according to that server's capabilities and permissions.
 
 ### MCP Tools
 
@@ -118,8 +114,9 @@ These tools help manage the conversation and task flow:
 - `todoread` - Reads the current session TODO list
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
+- `open_plan` - Opens a saved plan for review in the VS Code extension
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
-- `board_post` / `board_read` - Exchange messages on the experimental Kilo Swarm board
+- `board_post` / `board_read` - Exchange messages on the Kilo Swarm board
 
 ### Task tool
 
@@ -149,7 +146,7 @@ Background subagents are available when the server exposes the background capabi
 
 ### Kilo Swarm board tools
 
-Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
+Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
 
 - `board_post` stores a concise material update for another participant. Use it for findings, questions, results, blockers, or corrections.
 - `board_read` reads board messages explicitly. Use the cursor from the previous read for incremental reads instead of polling.
