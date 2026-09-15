@@ -1917,7 +1917,7 @@ export const MultiProjectSidebar: Story = {
   render: () => {
     return (
       <StoryProviders noPadding>
-        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
+        <div style={{ display: "flex", "flex-direction": "column", height: "720px", overflow: "hidden" }}>
           <ProjectList
             mode={createModeRouter()}
             projects={[projectA, projectB]}
