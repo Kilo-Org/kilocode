@@ -16,6 +16,7 @@
 import type { PermissionRequest } from "@kilocode/sdk/v2"
 import type { PermissionReply } from "./types"
 import { toolPath, toolPermissionInfo } from "./tool"
+import { requiresInteractiveApproval, ACTION_GATE_DEGRADED_KEY, ACTION_GATE_REASON_KEY } from "@/kilocode/permission/interactive-approval" // kilocode_change
 
 type Dict = Record<string, unknown>
 
@@ -90,7 +91,7 @@ export function permissionOptions(stage: PermissionStage, temporary?: boolean): 
   return []
 }
 
-export function permissionInfo(request: PermissionRequest): PermissionInfo {
+function baseInfo(request: PermissionRequest): PermissionInfo { // kilocode_change - was permissionInfo; the exported permissionInfo below wraps this with degraded awareness
   const pats = patterns(request)
   const input = data(request)
   const info = toolPermissionInfo(request.permission, input, dict(request.metadata), pats)
@@ -128,6 +129,20 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
     }
   }
 
+  // kilocode_change start - MCP tool call: show the safe envelope (server + tool + argument KEYS only, never values).
+  const envMeta = dict(request.metadata)
+  const server = text(envMeta.server)
+  const toolName = text(envMeta.tool)
+  const argKeys = Array.isArray(envMeta.argKeys) ? (envMeta.argKeys as unknown[]).map(String) : []
+  if (server || toolName || argKeys.length) {
+    return {
+      icon: "⚙",
+      title: `Call MCP tool ${[server, toolName].filter(Boolean).join(" / ") || request.permission}`,
+      lines: argKeys.length ? [`args: ${argKeys.join(", ")}`] : ["(no arguments)"],
+    }
+  }
+  // kilocode_change end
+
   return {
     icon: "⚙",
     title: `Call tool ${request.permission}`,
@@ -135,8 +150,27 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
   }
 }
 
+// kilocode_change start - ActionGate degraded escalation: build the NORMAL action view, then AUGMENT it with a
+// classifier-unavailable warning on top (path / diff / command preserved). Not a replacement.
+export function permissionInfo(request: PermissionRequest): PermissionInfo {
+  const base = baseInfo(request)
+  const md = dict(request.metadata)
+  if (md[ACTION_GATE_DEGRADED_KEY] !== true) return base
+  const reason = text(md[ACTION_GATE_REASON_KEY]) || "classifier failure"
+  return {
+    ...base, // preserve diff / file / any other base fields
+    icon: "!",
+    title: `⚠ Safety classifier unavailable — ${base.title}`,
+    lines: [
+      `The safety classifier could not verify this action (${reason}). Approve only if you trust it; applies once.`,
+      ...base.lines,
+    ],
+  }
+}
+// kilocode_change end
+
 export function temporaryPermission(request: PermissionRequest) {
-  return request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+  return requiresInteractiveApproval(request.metadata) // kilocode_change - +actionGateDegraded
 }
 
 export function permissionAlwaysLines(request: PermissionRequest): string[] {

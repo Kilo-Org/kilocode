@@ -13,6 +13,7 @@ import type { ACPSession } from "./session"
 import { pendingToolCall, toLocations, type ToolInput } from "./tool"
 import { Effect } from "effect"
 import { SkillShellPrompt } from "@/kilocode/acp/permission" // kilocode_change
+import { requiresInteractiveApproval, ACTION_GATE_DEGRADED_KEY, ACTION_GATE_REASON_KEY } from "@/kilocode/permission/interactive-approval" // kilocode_change
 
 type PermissionEvent = Extract<Event, { type: "permission.asked" }>
 type Reply = "once" | "always" | "reject"
@@ -60,12 +61,15 @@ export class Handler {
     }
 
     const skillShell = SkillShellPrompt.is(permission.metadata) // kilocode_change - skill batches list commands and never persist
-    const temporary = skillShell || permission.metadata?.["sandboxEscalation"] === true // kilocode_change
+    const degraded = permission.metadata?.[ACTION_GATE_DEGRADED_KEY] === true // kilocode_change - ActionGate classifier-failure escalation
+    const temporary = skillShell || requiresInteractiveApproval(permission.metadata) // kilocode_change - +actionGateDegraded
     const title = skillShell
       ? SkillShellPrompt.title
-      : temporary
-        ? "Allow Git operation outside the sandbox"
-        : undefined // kilocode_change
+      : degraded
+        ? `Safety classifier unavailable - approve ${permission.permission}? (${String(permission.metadata?.[ACTION_GATE_REASON_KEY] ?? "classifier failure")})`
+        : permission.metadata?.["sandboxEscalation"] === true
+          ? "Allow Git operation outside the sandbox"
+          : undefined // kilocode_change
     const result = await this.input.connection
       .requestPermission({
         sessionId: permission.sessionID,
