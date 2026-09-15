@@ -33,7 +33,6 @@ import type {
   RunStatus,
   PRStatus,
   AgentManagerPRStatusMessage,
-  AgentManagerPRErrorMessage,
   AgentManagerProjectsMessage,
   AgentProjectSnapshot,
   ManagedSessionState,
@@ -80,6 +79,7 @@ import { createModeRouter } from "./mode-router"
 import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
+import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
@@ -1623,21 +1623,7 @@ const AgentManagerContent: Component = () => {
         managedSession: focusManagedSession,
       })
 
-      if (msg.type === "agentManager.prError") {
-        if (!isCurrent(msg, currentProjectId())) return
-        const ev = msg as AgentManagerPRErrorMessage
-        showToast({
-          variant: "error",
-          title: t(`agentManager.pr.error.${ev.error}.title`),
-          description: t(`agentManager.pr.error.${ev.error}.description`),
-        })
-      }
-
-      // Host-side failures used to be posted and silently dropped here, so a worktree action could
-      // fail with the only trace in an output channel the user never opens.
-      if (msg.type === "error" && typeof msg.message === "string" && msg.message) {
-        showToast({ variant: "error", title: t("agentManager.error.title"), description: msg.message })
-      }
+      reportFailure(msg, { toast: showToast, t, project: currentProjectId() })
 
       if (projectLive.apply(msg)) return
     })
