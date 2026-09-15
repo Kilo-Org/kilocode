@@ -389,9 +389,10 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   /* While queued, the action row holds the queued controls and must stay
-     visible without hover. */
+     visible and interactive without hover. */
   [data-slot="user-message-copy-wrapper"][data-queued] {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 

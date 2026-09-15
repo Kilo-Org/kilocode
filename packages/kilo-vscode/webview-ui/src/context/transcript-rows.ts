@@ -125,16 +125,33 @@ function diffs(msg: Message) {
 /**
  * Finish time and duration for a settled turn, derived the same way as the
  * TUI session view: the last assistant message's completion time minus the
- * user prompt's creation time. Partial (not-yet-parented) turns are skipped
- * because their synthetic user message reuses an assistant timestamp.
+ * user prompt's creation time. Mirrors the TUI's finish guard, because
+ * `time.completed` is also set on `tool-calls` steps, and skips partial
+ * (not-yet-parented) turns whose synthetic user message reuses an assistant
+ * timestamp.
  */
 function turnTiming(turn: MessageTurn) {
   if (turn.partial) return undefined
-  const end = turn.assistant.at(-1)?.time?.completed
+  const last = turn.assistant.at(-1)
+  if (!last?.finish || last.finish === "tool-calls" || last.finish === "unknown") return undefined
+  const end = last.time?.completed
   if (typeof end !== "number") return undefined
   const start = turn.user.time?.created
   if (typeof start !== "number") return { completedAt: end }
   return { completedAt: end, durationMs: Math.max(0, end - start) }
+}
+
+/**
+ * The row whose action row carries the copy button. Turn timing renders inside
+ * that action row, so it must attach here rather than to the turn's last row:
+ * the copy part can sit in an earlier chunk, and a tool-only or empty trailing
+ * message has no action row at all.
+ */
+function copyOwner(rows: TranscriptRow[], copied?: string) {
+  if (!copied) return undefined
+  return rows.find(
+    (row): row is TranscriptAssistantRow => row.type === "assistant" && row.parts.some((part) => part.id === copied),
+  )
 }
 
 function content(parts: Part[]) {
@@ -194,37 +211,35 @@ export function transcriptRows(
       })
     }
 
-    let tail: TranscriptAssistantRow | undefined
     for (const msg of turn.assistant) {
       const visible = parts(msg.id)
       if (visible.length === 0) {
-        tail = {
+        rows.push({
           ...meta,
           type: "assistant",
           key: `${turn.id}:assistant:${msg.id}:empty`,
           message: msg,
           parts: visible,
           copy: copied,
-        }
-        rows.push(tail)
+        })
         continue
       }
       for (let start = 0; start < visible.length; start += size) {
         const chunk = visible.slice(start, start + size)
-        tail = {
+        rows.push({
           ...meta,
           type: "assistant",
           key: `${turn.id}:assistant:${msg.id}:${chunk[0]!.id}`,
           message: msg,
           parts: chunk,
           copy: copied,
-        }
-        rows.push(tail)
+        })
       }
     }
 
     const timing = turnTiming(turn)
-    if (tail && timing) tail.timing = timing
+    const owner = copyOwner(rows, copied)
+    if (owner && timing) owner.timing = timing
 
     const changes = diffs(turn.user)
     if (changes.length > 0) {
