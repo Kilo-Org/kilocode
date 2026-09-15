@@ -23,6 +23,44 @@ const watch = process.argv.includes("--watch")
 const solidCacheDir = path.join(os.tmpdir(), `kilo-vscode-esbuild-solid-${process.getuid?.() ?? "user"}`)
 const solidMemCache = new Map()
 
+// Cache entries are read by the bundler, so they are only used when the
+// current user owns a directory that other users cannot write to. os.tmpdir()
+// is world writable on Linux, where another local user could pre-create this
+// path and poison entries. An untrusted directory falls back to memory only.
+const diskCache = (() => {
+  try {
+    fs.mkdirSync(solidCacheDir, { recursive: true, mode: 0o700 })
+    const st = fs.statSync(solidCacheDir)
+    if (typeof process.getuid === "function" && st.uid !== process.getuid()) {
+      throw new Error(`directory is owned by uid ${st.uid}`)
+    }
+    // mkdir does not change the mode of an existing directory.
+    if (process.platform !== "win32" && (st.mode & 0o077) !== 0) {
+      fs.chmodSync(solidCacheDir, 0o700)
+    }
+    return true
+  } catch (err) {
+    console.warn("[esbuild] ignoring unusable solid cache directory, using memory cache only", err)
+    return false
+  }
+})()
+
+// Reclaim temp files left behind by a build that was killed between writing
+// and renaming. Only files old enough that no running build can still own
+// them are removed.
+if (diskCache) {
+  const cutoff = Date.now() - 60 * 60 * 1000
+  try {
+    for (const file of fs.readdirSync(solidCacheDir)) {
+      if (!file.endsWith(".tmp")) continue
+      const orphan = path.join(solidCacheDir, file)
+      if (fs.statSync(orphan).mtimeMs < cutoff) fs.rmSync(orphan, { force: true })
+    }
+  } catch (err) {
+    console.warn("[esbuild] could not reclaim orphaned solid cache temp files", err)
+  }
+}
+
 // Version of a package as resolved from another package's directory, so the
 // cache key follows the transitive dependency that does the actual transform.
 function version(name, from) {
@@ -46,14 +84,6 @@ const buildScriptHash = crypto
   .digest("hex")
   .slice(0, 8)
 
-if (!fs.existsSync(solidCacheDir)) {
-  try {
-    fs.mkdirSync(solidCacheDir, { recursive: true })
-  } catch (err) {
-    console.warn("[esbuild] could not create solid cache directory", err)
-  }
-}
-
 const cachedSolidPlugin = {
   name: "esbuild:solid-cached",
   setup(build) {
@@ -76,7 +106,7 @@ const cachedSolidPlugin = {
 
       const diskPath = path.join(solidCacheDir, cacheKey + ".js")
 
-      if (fs.existsSync(diskPath)) {
+      if (diskCache && fs.existsSync(diskPath)) {
         try {
           const diskCode = fs.readFileSync(diskPath, "utf8")
           solidMemCache.set(cacheKey, diskCode)
@@ -101,15 +131,17 @@ const cachedSolidPlugin = {
 
       if (solidMemCache.size > 2000) solidMemCache.clear()
       solidMemCache.set(cacheKey, result.code)
-      // Write through a temp file and rename so a concurrent build in another
-      // worktree never reads a partially written entry.
-      const tmp = `${diskPath}.${process.pid}.${crypto.randomUUID()}.tmp`
-      try {
-        fs.writeFileSync(tmp, result.code)
-        fs.renameSync(tmp, diskPath)
-      } catch (err) {
-        fs.rmSync(tmp, { force: true })
-        console.warn("[esbuild] cache write failed", diskPath, err)
+      if (diskCache) {
+        // Write through a temp file and rename so a concurrent build in
+        // another worktree never reads a partially written entry.
+        const tmp = `${diskPath}.${process.pid}.${crypto.randomUUID()}.tmp`
+        try {
+          fs.writeFileSync(tmp, result.code)
+          fs.renameSync(tmp, diskPath)
+        } catch (err) {
+          fs.rmSync(tmp, { force: true })
+          console.warn("[esbuild] cache write failed", diskPath, err)
+        }
       }
 
       return { contents: result.code, loader: "js" }
