@@ -9,7 +9,7 @@
 
 import { Component, createEffect, createMemo, createSignal, Index, Show, on, onCleanup } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
-import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
+import { BasicTool, initialOpen, rememberOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { AgentAvatar } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -31,6 +31,7 @@ import {
   taskBackground,
   taskResult,
   taskRunning,
+  taskStoredOpen,
   taskVisible,
 } from "./task-tool-state"
 
@@ -109,20 +110,26 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   )
   // The open state is controlled so the card settles once the input arrives.
   // A stored preference, a search match, or a manual toggle wins over it.
-  const [touched, setTouched] = createSignal(
-    !!props.forceOpen || initialOpen({ tool: props.tool, partID: props.partID }) !== undefined,
-  )
+  // A stored open state means this card was mounted before while open
+  // (virtualizer handoff, session switch). Mount its body synchronously then: a
+  // deferred body paints one frame at header height, and the shorter transcript
+  // pulls the pinned scroll position up before the body lands. A stored closed
+  // state keeps the deferred mount so a collapsed body is not built.
+  const stored = initialOpen({ tool: props.tool, partID: props.partID })
+  const [touched, setTouched] = createSignal(!!props.forceOpen || stored !== undefined)
   const change = (value: boolean) => {
     setTouched(true)
     setOpen(value)
   }
+  // Persist the open state so the card survives a remount. Once the task
+  // completes `auto()` is false, so a card handed from the live tail to the
+  // virtualizer would otherwise remount collapsed and shrink the transcript
+  // by its full height in one frame.
   createEffect(() => {
-    if (touched()) return
-    if (auto()) {
-      setOpen(true)
-      return
-    }
-    if (backgroundTask()) setOpen(false)
+    const next = taskStoredOpen(auto(), backgroundTask(), touched())
+    if (next === undefined) return
+    setOpen(next)
+    rememberOpen({ tool: props.tool, partID: props.partID }, next)
   })
 
   let synced: string | undefined
@@ -277,7 +284,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         defaultOpen={auto()}
         open={open()}
         forceOpen={props.forceOpen}
-        defer
+        defer={stored !== true}
         onOpenChange={change}
       >
         <div ref={viewport} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
