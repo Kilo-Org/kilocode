@@ -19,6 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type { CodeContext } from "../../../../src/shared/code-context"
 import type { PRMergeResult } from "../../../../src/shared/pr-comment-actions"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
@@ -376,6 +377,11 @@ export interface AppendChatBoxMessage {
   browser?: BrowserReference
 }
 
+export interface AppendChatContextMessage {
+  type: "appendChatContext"
+  context: CodeContext
+}
+
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewCommentEntry[]
@@ -514,6 +520,10 @@ export interface ImageModelsLoadedMessage {
 export interface SpeechToTextModelsLoadedMessage {
   type: "speechToTextModelsLoaded"
   models: SpeechToTextModelDef[]
+  source: "gateway" | "custom"
+  // Producer instance id. A new epoch means a restarted host, not a stale reply.
+  epoch: string
+  seq: number
 }
 
 export interface ProvidersLoadedMessage {
@@ -1305,8 +1315,6 @@ export interface EnhancePromptErrorMessage {
 export interface ViewSubAgentSessionMessage {
   type: "viewSubAgentSession"
   sessionID: string
-  /** True for async background agents, whose reasoning shows a capped preview. */
-  background?: boolean
 }
 
 export interface DiffViewerContextMessage {
@@ -1705,6 +1713,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
+  | AppendChatContextMessage
   | AppendReviewCommentsMessage
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage

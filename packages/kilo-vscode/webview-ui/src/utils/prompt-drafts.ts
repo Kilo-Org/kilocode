@@ -69,33 +69,37 @@ export function clearPromptDraftRoutes(id?: string): void {
   }
 }
 
-export function movePromptDraft<T, C, I, S, B>(
+export function movePromptDraft<T, C, I, S, B, X>(
   stores: {
     text: Map<string, T>
     comments: Map<string, C>
     images: Map<string, I>
     scrolls: Map<string, S>
     browsers?: Map<string, B>
+    contexts?: Map<string, X>
   },
   source: string,
   target: string,
-): { text?: T; comments?: C; images?: I; scroll?: S; browsers?: B } {
+): { text?: T; comments?: C; images?: I; scroll?: S; browsers?: B; contexts?: X } {
   const draft = {
     text: stores.text.get(source),
     comments: stores.comments.get(source),
     images: stores.images.get(source),
     scroll: stores.scrolls.get(source),
     ...(stores.browsers?.has(source) ? { browsers: stores.browsers.get(source) } : {}),
+    ...(stores.contexts?.has(source) ? { contexts: stores.contexts.get(source) } : {}),
   }
   if (draft.text !== undefined && !stores.text.has(target)) stores.text.set(target, draft.text)
   if (draft.comments !== undefined && !stores.comments.has(target)) stores.comments.set(target, draft.comments)
   if (draft.images !== undefined && !stores.images.has(target)) stores.images.set(target, draft.images)
   if (draft.scroll !== undefined && !stores.scrolls.has(target)) stores.scrolls.set(target, draft.scroll)
   if (draft.browsers !== undefined) stores.browsers?.set(target, draft.browsers)
+  if (draft.contexts !== undefined) stores.contexts?.set(target, draft.contexts)
   stores.text.delete(source)
   stores.comments.delete(source)
   stores.images.delete(source)
   stores.scrolls.delete(source)
   stores.browsers?.delete(source)
+  stores.contexts?.delete(source)
   return draft
 }

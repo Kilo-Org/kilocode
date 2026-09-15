@@ -14,6 +14,7 @@ import type { LLMEvent, ProviderMetadata, Usage } from "@opencode-ai/llm"
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { SessionRetry } from "@/session/retry"
 import { computeMetrics as computeMetricsHelper, type TokenRates } from "@/kilocode/session/metrics"
+import { InvalidArgumentsError } from "@/tool/tool"
 
 export type ReviewTelemetry = {
   mode: "review"
@@ -238,6 +239,61 @@ export namespace KiloSessionProcessor {
     return { text: false, reasoning: false, tool: false, usage: false, finished: false }
   }
 
+  /**
+   * Consecutive invalid-argument failures allowed in one turn before it is
+   * aborted. A model that keeps re-issuing malformed calls never makes
+   * progress, so retrying it again only burns tokens (#14143).
+   */
+  export const REPEATED_TOOL_FAILURE_LIMIT = 3
+
+  /**
+   * Per-turn failure counts. A turn spans several `SessionProcessor.create`
+   * calls (one per model step), so the count is keyed by the parent user
+   * message rather than held in the processor instance. Entries clear on a
+   * completed tool call, a non-validation failure, or when they trip. A turn
+   * that ends without any of those leaves its entry for the 64-entry cache
+   * bound to evict; entries are small and the map is never unbounded.
+   */
+  const malformed = new Map<string, number>()
+
+  export function malformedToolFailure(tool: string) {
+    return new MessageV2.APIError({
+      message: `Stopped after ${REPEATED_TOOL_FAILURE_LIMIT} consecutive invalid-argument failures for the "${tool}" tool. The model kept re-issuing malformed input, so the turn was aborted to avoid burning tokens.`,
+      isRetryable: false,
+    }).toObject()
+  }
+
+  /**
+   * Circuit breaker for stuck tool validation. `inspect` returns a ready abort
+   * error once the turn accumulates `REPEATED_TOOL_FAILURE_LIMIT` consecutive
+   * invalid-argument failures, regardless of which tool failed or how the
+   * malformed input differed. A completed tool call or any other tool failure
+   * clears the count, so unrelated errors and progress cannot trip it. Call
+   * `reset` when a tool call completes.
+   */
+  export const malformedToolGuard = {
+    inspect(key: string, error: unknown) {
+      if (!(error instanceof InvalidArgumentsError)) {
+        malformed.delete(key)
+        return undefined
+      }
+      const count = (malformed.get(key) ?? 0) + 1
+      if (count < REPEATED_TOOL_FAILURE_LIMIT) {
+        if (malformed.size >= 64 && !malformed.has(key)) {
+          const oldest = malformed.keys().next()
+          if (!oldest.done) malformed.delete(oldest.value)
+        }
+        malformed.set(key, count)
+        return undefined
+      }
+      malformed.delete(key)
+      return malformedToolFailure(error.tool)
+    },
+    reset(key: string) {
+      malformed.delete(key)
+    },
+  }
+
   export function observe(attempt: Attempt, event: LLMEvent) {
     if (event.type === "text-delta" && event.text.trim()) attempt.text = true
     if (event.type === "reasoning-delta" && event.text.trim()) attempt.reasoning = true
@@ -289,8 +345,7 @@ export namespace KiloSessionProcessor {
         if (!error && !input.replayable()) return
 
         yield* input.discard()
-        if (index === INCOMPLETE_RESPONSE_RETRIES)
-          return yield* Effect.fail(error ?? new IncompleteResponseError())
+        if (index === INCOMPLETE_RESPONSE_RETRIES) return yield* Effect.fail(error ?? new IncompleteResponseError())
         const wait = SessionRetry.delay(index + 1)
         yield* input.set({ attempt: index + 1, message: INCOMPLETE_RESPONSE_MESSAGE, next: Date.now() + wait })
         yield* Effect.sleep(`${wait} millis`)

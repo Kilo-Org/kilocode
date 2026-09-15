@@ -37,6 +37,7 @@ import { Skill } from "@/skill"
 import { BackgroundJob } from "@/background/job"
 import { SessionRunState } from "@/session/run-state"
 import { SessionDrain } from "@/kilocode/session/drain"
+import { Wakeup } from "@/kilocode/wakeup"
 import { Drained } from "@opencode-ai/schema/kilocode/session-drain"
 import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -76,6 +77,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const background = yield* BackgroundJob.Service
     const runState = yield* SessionRunState.Service
     const drain = yield* SessionDrain.Service
+    const wake = yield* Wakeup.Service
     const flags = yield* RuntimeFlags.Service
     const locations = yield* LocationServiceMap.Service
     const fs = yield* FSUtil.Service
@@ -394,6 +396,11 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return promoted !== undefined
     })
 
+    const wakeups = Effect.fn("KilocodeHttpApi.wakeups")(function* () {
+      const directory = yield* InstanceState.directory
+      return yield* wake.pending(directory)
+    })
+
     return handlers
       .handle("resumeSession", resumeSession)
       .handle("drainSession", drainSession)
@@ -424,5 +431,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("backgroundJobs", backgroundJobs)
       .handle("backgroundJobCancel", backgroundJobCancel)
       .handle("backgroundJobPromote", backgroundJobPromote)
+      .handle("wakeups", wakeups)
   }),
 )

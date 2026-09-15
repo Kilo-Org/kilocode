@@ -42,7 +42,7 @@ const it = testEffect(
     ]),
   ),
 )
-const options = { config: { experimental: { shared_agent_board: true }, snapshot: false } }
+const options = { config: { shared_agent_board: true, snapshot: false } }
 const agent = { name: "code", permission: Permission.fromConfig({ board_read: "allow" }) }
 const output = { title: "Read file", output: "Original tool output", metadata: { original: true } }
 const model: Provider.Model = {
@@ -372,18 +372,20 @@ describe("shared board notifications", () => {
   )
 
   it.live("keeps notifications disabled with the experiment", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const root = yield* sessions.create({ title: "Disabled" })
-        const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
-        const message = yield* seed(root.id, "Work independently")
-        yield* post(child.id, "disabled")
-        const cache = BoardContext.cache()
-        const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
-        expect(yield* notify("read", output)).toBe(output)
-        expect(cache.cursor).toBe(0)
-      }),
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* sessions.create({ title: "Disabled" })
+          const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+          const message = yield* seed(root.id, "Work independently")
+          yield* post(child.id, "disabled")
+          const cache = BoardContext.cache()
+          const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
+          expect(yield* notify("read", output)).toBe(output)
+          expect(cache.cursor).toBe(0)
+        }),
+      { config: { shared_agent_board: false } },
     ),
   )
 

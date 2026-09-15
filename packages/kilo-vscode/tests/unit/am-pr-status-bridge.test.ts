@@ -1586,6 +1586,43 @@ describe("PRStatusPoller batched full sync", () => {
     ])
   })
 
+  it("drops a merged PR of an old branch that a new worktree reuses the name of", async () => {
+    // Agent Manager derives the branch from the session title, so a repeated task
+    // recreates the branch name of an already merged PR. gh's finder returns that
+    // PR by name; the worktree HEAD is unrelated to its head commit.
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    const old = "e".repeat(40)
+    execute.mockImplementation(
+      ghRouter(calls, {
+        ...batchNode,
+        state: "MERGED",
+        mergeStateStatus: "UNKNOWN",
+        headRefOid: old,
+        mergeCommit: { oid: "f".repeat(40) },
+      }),
+    )
+    git.mockImplementation(async (cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return { stdout: `${refs.headRefOid}\n`, stderr: "" }
+      if (cmd === "git" && args[0] === "merge-base") throw new Error(`fatal: Not a valid commit name ${args[2]}`)
+      return { stdout: "", stderr: "" }
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(calls.filter((args) => graphQuery(args).includes("mergeCommit { oid }"))).toHaveLength(1)
+    expect(git.mock.calls.map((call) => (call as unknown[])[1])).toContainEqual([
+      "merge-base",
+      "--is-ancestor",
+      old,
+      "HEAD",
+    ])
+    expect(sent).toEqual([expect.objectContaining({ type: "agentManager.prStatus", worktreeId: "wt1", pr: null })])
+  })
+
   it("does not attribute a fork PR that only shares the branch name and skips legacy lookups", async () => {
     // headRefName "main" on the base repo matches fork PRs opened from the fork's main.
     const { bridge, sent, worktrees } = harness()

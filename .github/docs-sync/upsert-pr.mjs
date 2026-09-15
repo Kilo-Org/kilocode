@@ -446,7 +446,7 @@ export function surfaceBlock({ name, map, reviewers, note }) {
     `- Paths that fall to \`${other}\`: ${list(otherPaths)}`,
     ...(repos.length > 0
       ? [
-          `- Reviewers are ranked from ${list(repos)}; the workflow needs a token with \`contents: read\` on that repository (repository secret \`DOCS_SYNC_CLOUD_TOKEN\`, exposed to the upsert step as \`CLOUD_REPO_TOKEN\`).`,
+          `- Reviewers are ranked from ${list(repos)}; the workflow needs a token with \`contents: read\` on that repository (repository secret \`CROSS_REPO_ACCESS_TOKEN\`, exposed to the upsert step as \`CLOUD_REPO_TOKEN\`).`,
         ]
       : []),
     `- How the two were computed: ${note}`,

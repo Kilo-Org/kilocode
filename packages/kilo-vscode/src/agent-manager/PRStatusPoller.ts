@@ -15,6 +15,7 @@ import {
   formatCheckDuration,
   parseComments,
   parseReviewers,
+  related,
   summarize,
 } from "./pr/am-pr-utils"
 import { TIMELINE_QUERY, parseTimeline } from "./pr/timeline"
@@ -382,7 +383,9 @@ export class PRStatusPoller {
     try {
       branch = this.options.getBranch ? await this.options.getBranch(wt) : wt.branch
       if (this.stale(generation)) return
-      const pr = seeded === undefined ? await this.cachedFetchPR(branch ?? wt.branch, wt.path) : seeded
+      const found = seeded === undefined ? await this.cachedFetchPR(branch ?? wt.branch, wt.path) : seeded
+      if (this.stale(generation)) return
+      const pr = await this.claimed(found, wt.path)
       if (this.stale(generation)) return
       if (!pr) return this.empty(worktreeId, branch ?? wt.branch, branch)
 
@@ -427,6 +430,13 @@ export class PRStatusPoller {
       this.handleError(worktreeId, branch, wt.path, err)
       throw err // propagate so fetchAll can track failures for backoff
     }
+  }
+
+  /** Drop a merged or closed PR that a recreated branch name inherited from its old branch. */
+  private async claimed(pr: PRResult | null, cwd: string): Promise<PRResult | null> {
+    if (!pr) return null
+    const git = (args: string[]) => this.shell("git", args, { cwd, timeout: 5_000 }).then((r) => r.stdout)
+    return (await related(pr, git)) ? pr : null
   }
 
   private extras(pr: PRResult, cwd: string) {
@@ -504,7 +514,7 @@ export class PRStatusPoller {
   }
 
   private static readonly BASE_JSON_FIELDS =
-    "id,number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,baseRefOid,headRefOid,author,createdAt"
+    "id,number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,baseRefOid,headRefOid,mergeCommit,author,createdAt"
   private static readonly PR_JSON_FIELDS = `${PRStatusPoller.BASE_JSON_FIELDS},statusCheckRollup,reviewRequests,reviews,mergeable,mergeStateStatus,autoMergeRequest`
 
   /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
