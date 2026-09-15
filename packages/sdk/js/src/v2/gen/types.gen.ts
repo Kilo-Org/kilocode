@@ -2536,6 +2536,7 @@ export type Config = {
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
   reasoning_display?: "expanded" | "preview" | "headline"
+  shared_agent_board?: boolean
   indexing?: IndexingConfig
   console?: {
     /**
@@ -2685,7 +2686,6 @@ export type Config = {
     task_model_selection?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
-    shared_agent_board?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean

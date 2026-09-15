@@ -1634,7 +1634,7 @@ function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
 export const BoardClosed: Story = {
   name: "Board, header button",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} />
     </StoryProviders>
   ),
@@ -1643,7 +1643,7 @@ export const BoardClosed: Story = {
 export const BoardEmpty: Story = {
   name: "Board, hidden when empty",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={{ ...swarm, messages: [] }} />
     </StoryProviders>
   ),
@@ -1652,7 +1652,7 @@ export const BoardEmpty: Story = {
 export const BoardOpen: Story = {
   name: "Board, messages",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} open />
     </StoryProviders>
   ),

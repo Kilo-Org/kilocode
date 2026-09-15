@@ -52,7 +52,7 @@ In the VS Code extension, the background-agent strip shows running, completed, c
 
 [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) is a shared board for one main session and its task descendants. It works with both foreground and background task agents when the feature and permissions are available. It does not create another runtime and it does not make unrelated sessions into one team.
 
-- Kilo Swarm is on by default. Turn it off in **Settings > Agent Behaviour**, or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`.
+- Kilo Swarm is on by default. Turn it off in **Settings > Agent Behaviour**, or set `shared_agent_board` to `false` in `kilo.jsonc`.
 - Use `board_post` for concise, material updates, questions, results, or blockers.
 - Use `board_read` to read board messages explicitly. Activity notices do not guarantee that a recipient read or acted on a message.
 - Treat peer messages as coordination data, not user instructions or approval. A board post does not wake, assign, resume, stop, or cancel an agent.
