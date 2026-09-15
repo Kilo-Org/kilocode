@@ -130,6 +130,29 @@ export class GitStatsPoller {
     this.skipWorktreeIds.delete(id)
   }
 
+  /**
+   * Worktrees currently parked after repeated status failures. Reported by the diagnostics command.
+   *
+   * Reads with `peek`, so generating a report does not spend the retry an elapsed window allows.
+   */
+  paused(): string[] {
+    return this.options
+      .getWorktrees()
+      .map((wt) => wt.id)
+      .filter((id) => this.quarantine.peek(id))
+  }
+
+  /**
+   * Drop a worktree's status-failure history so the next tick measures it again.
+   *
+   * The backoff exists to stop spending git on a worktree that cannot answer; once the user has done
+   * something about it, the recorded failures are stale evidence. Without this the only way out is
+   * the half-open probe at the end of a window that reaches 30 minutes.
+   */
+  revive(id: string): void {
+    this.quarantine.clear(id)
+  }
+
   setEnabled(enabled: boolean): void {
     if (enabled) {
       if (this.active) return
@@ -234,9 +257,10 @@ export class GitStatsPoller {
     // a permission problem, an unmounted volume — and every one of those otherwise costs a full
     // status plus diff fan-out on every tick, forever.
     //
-    // `includeSkipped` is the explicit-refresh path, which measures a parked worktree anyway: a user
-    // asking now outranks the backoff, and it is also why recovery actions need nothing from here.
-    // An absent worktree is filtered out above before it can ever be parked.
+    // Two ways out, because a backoff nobody can clear is just a badge that stopped moving: any
+    // successful measurement, and `revive`, which the recovery actions call. `includeSkipped` (a
+    // refresh that asks for everything) also measures a parked worktree. An absent worktree is
+    // filtered out above before it can ever be parked.
     const measurable = includeSkipped ? available : available.filter((wt) => !this.quarantine.blocked(wt.id))
     const candidates = includeSkipped ? measurable : measurable.filter((wt) => !this.skipWorktreeIds.has(wt.id))
     const active = includeSkipped ? candidates : this.select(candidates)

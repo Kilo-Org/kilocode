@@ -1176,7 +1176,10 @@ export class AgentManagerProvider implements Disposable {
       push: () => this.pushState(),
       log: (...args) => this.log(...args),
       reconcile: (ctx) => reconcileProject(ctx, (...args: unknown[]) => this.log(...args)),
-      refresh: (worktreeId) => this.prBridge.poller.refresh(worktreeId, true),
+      refresh: (worktreeId) => {
+        this.prBridge.poller.refresh(worktreeId, true)
+        this.statsPoller.revive(worktreeId)
+      },
     })
   }
 
@@ -1838,11 +1841,8 @@ export class AgentManagerProvider implements Disposable {
   public diagnose(): Promise<void> {
     return runDoctor(this.context, {
       reconcile: (ctx) => reconcileProject(ctx, (...args: unknown[]) => this.log(...args)),
-      quarantined: () => this.prBridge.poller.paused(),
-      show: async (text) => {
-        this.outputChannel.appendLine(text)
-        this.outputChannel.show?.()
-      },
+      quarantined: () => [...this.prBridge.poller.paused(), ...this.statsPoller.paused()],
+      out: this.outputChannel,
       log: (...args) => this.log(...args),
     })
   }

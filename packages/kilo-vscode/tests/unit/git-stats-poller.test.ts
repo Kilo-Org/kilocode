@@ -565,6 +565,42 @@ describe("GitStatsPoller", () => {
     expect(logs.some((line) => line.includes("Stats polling paused"))).toBe(true)
   })
 
+  it("reports a parked worktree and measures it again once revived", async () => {
+    // A backoff nobody can clear is just a badge that stopped moving: the recovery actions call
+    // revive(), and the diagnostics report reads paused() so it can say why a row went quiet.
+    let attempts = 0
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [worktree("broken")],
+      getWorkspaceRoot: () => undefined,
+      source: {
+        status: async () => {
+          attempts++
+          throw new Error("index.lock exists")
+        },
+        refs: async () => ({ oids: new Map(), upstreams: new Map() }),
+        diff: async () => ({ files: 0, additions: 0, deletions: 0 }),
+      },
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async () => ""),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => attempts >= 3, 2000)
+    await waitFor(() => poller.paused().length === 1, 2000)
+    const parked = attempts
+    // Reporting must not spend the retry the window allows.
+    expect(poller.paused()).toEqual(["broken"])
+    expect(poller.paused()).toEqual(["broken"])
+
+    poller.revive("broken")
+    expect(poller.paused()).toEqual([])
+    await waitFor(() => attempts > parked, 2000)
+    poller.stop()
+  })
+
   it("measures a parked worktree again on an explicit refresh", async () => {
     // The backoff is for the poll loop. A user asking now outranks it, which is also why recovery
     // actions need nothing from this poller.

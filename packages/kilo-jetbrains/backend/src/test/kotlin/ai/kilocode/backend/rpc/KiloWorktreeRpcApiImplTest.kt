@@ -1,7 +1,9 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.diff.GIT_PROBE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GIT_READ_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.failure
 import ai.kilocode.backend.diff.gitBudget
 import ai.kilocode.backend.worktree.WorktreeTrash
@@ -85,6 +87,16 @@ class KiloWorktreeRpcApiImplTest {
         // succeeded — the failure these budgets exist to report, caused by the budget itself.
         assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("status", "--porcelain=v2")))
         assertTrue(GIT_PROBE_TIMEOUT_MS < GIT_READ_TIMEOUT_MS)
+    }
+
+    @Test
+    fun `the prune a poll runs is budgeted as metadata, not as a write`() {
+        // This prune is the one command a poll runs while holding the repository's mutation lock, so
+        // its budget is also the longest a user-initiated create or remove can be made to wait. A
+        // prune rewrites `$GIT_DIR/worktrees` bookkeeping and nothing else, so it belongs with the
+        // metadata probes rather than with `worktree add` and `fetch`.
+        assertEquals(GIT_PROBE_TIMEOUT_MS, GIT_PRUNE_TIMEOUT_MS)
+        assertTrue(GIT_PRUNE_TIMEOUT_MS < GIT_WRITE_TIMEOUT_MS)
     }
 
     @Test

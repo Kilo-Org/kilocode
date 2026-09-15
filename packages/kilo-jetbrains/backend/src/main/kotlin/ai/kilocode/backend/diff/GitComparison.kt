@@ -166,14 +166,27 @@ internal const val GIT_READ_TIMEOUT_MS = 15_000
 internal const val GIT_COMMAND_TIMEOUT_MS = GIT_READ_TIMEOUT_MS
 
 /**
- * Budget for commands that write a working tree or talk to a remote: `git worktree add`, `worktree
- * prune`, and `git fetch`.
+ * Budget for commands that write a working tree or talk to a remote: `git worktree add` and the
+ * `worktree prune` that clears the way for a retried add, plus `git fetch`.
  *
  * These legitimately run for minutes on a large repository or a slow network, so the read budget
  * would cut them off for reasons that have nothing to do with a wedged git — reporting a normal
  * checkout as a failure, which is the opposite of what the tighter budgets are for.
+ *
+ * Not for the prune a poll runs: that one holds the repository's mutation lock, so its budget is the
+ * length of time a user-initiated create or remove can be made to wait. See [GIT_PRUNE_TIMEOUT_MS].
  */
 internal const val GIT_WRITE_TIMEOUT_MS = 180_000
+
+/**
+ * Budget for the opportunistic `git worktree prune` a status poll runs.
+ *
+ * A prune only rewrites `$GIT_DIR/worktrees` bookkeeping — metadata, like the rest of the probe
+ * class — but unlike the other probes it runs while holding the repository's mutation lock, so this
+ * number is also the longest a create, import, or remove can be stuck behind a poll. A prune that
+ * does not finish in this budget is skipped; the entry is still stale on the next poll.
+ */
+internal const val GIT_PRUNE_TIMEOUT_MS = GIT_PROBE_TIMEOUT_MS
 
 /**
  * Commands that only touch `.git` metadata and must answer almost immediately.

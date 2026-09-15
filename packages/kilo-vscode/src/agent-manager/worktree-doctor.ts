@@ -15,9 +15,10 @@ import type { WorktreeHealthReport } from "./worktree-reconcile"
 export interface DoctorHost {
   /** Re-run the reconcile so the report reflects the current state rather than the last poll. */
   reconcile: (ctx: ProjectContext) => Promise<WorktreeHealthReport | undefined>
-  /** Worktrees the pollers are currently skipping. */
+  /** Worktrees the pollers are currently skipping, from every loop that parks them. */
   quarantined: () => string[]
-  show: (text: string) => Promise<void>
+  /** Where the report is written; `show` reveals the channel when the host supports it. */
+  out: { appendLine: (text: string) => void; show?: () => void }
   log: (...args: unknown[]) => void
 }
 
@@ -40,7 +41,8 @@ export async function collect(ctx: ProjectContext, host: DoctorHost): Promise<st
     worktreesDir: manager.worktreesDir,
     probes,
     report,
-    quarantined: host.quarantined(),
+    // One loop parking a worktree and another parking the same one is one line in the report.
+    quarantined: [...new Set(host.quarantined())],
     labels,
   })
 }
@@ -48,10 +50,15 @@ export async function collect(ctx: ProjectContext, host: DoctorHost): Promise<st
 /** Run the diagnostics command: collect, log, and reveal the report. */
 export async function runDoctor(ctx: ProjectContext | undefined, host: DoctorHost): Promise<void> {
   if (!ctx) {
-    await host.show("Kilo Agent Manager — no project is open.")
+    show(host, "Kilo Agent Manager — no project is open.")
     return
   }
   const text = await collect(ctx, host)
   host.log(`worktree diagnostics:\n${text}`)
-  await host.show(text)
+  show(host, text)
+}
+
+function show(host: DoctorHost, text: string): void {
+  host.out.appendLine(text)
+  host.out.show?.()
 }

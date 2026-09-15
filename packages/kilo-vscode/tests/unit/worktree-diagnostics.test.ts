@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { diagnostics, probeTool } from "../../src/agent-manager/worktree-diagnostics"
+import { runDoctor } from "../../src/agent-manager/worktree-doctor"
 import type { WorktreeHealthReport } from "../../src/agent-manager/worktree-reconcile"
 
 function report(overrides: Partial<WorktreeHealthReport> = {}): WorktreeHealthReport {
@@ -44,6 +45,24 @@ describe("diagnostics", () => {
     expect(text).toContain("[ok] Alive row — /repo/.kilo/worktrees/a (sessions=1)")
     expect(text).toContain("[unregistered] broken — /repo/.kilo/worktrees/c (sessions=0 quarantined)")
     expect(text).toContain("[leftover] /repo/.kilo/worktrees/leftover")
+  })
+
+  it("counts a worktree parked by both pollers once", () => {
+    // The PR loop and the stats loop park worktrees independently, and the same broken worktree is
+    // usually parked by both. The report is about worktrees, not about loops.
+    const text = diagnostics({
+      root: "/repo",
+      worktreesDir: "/repo/.kilo/worktrees",
+      probes,
+      report: report({
+        entries: [{ id: "a", path: "/repo/.kilo/worktrees/a", branch: "stuck", health: "ok", sessions: 0 }],
+      }),
+      quarantined: [...new Set(["a", "a"])],
+      labels: new Map(),
+    })
+
+    expect(text).toContain("  quarantined: 1")
+    expect(text).toContain("[ok] stuck — /repo/.kilo/worktrees/a (sessions=0 quarantined)")
   })
 
   it("says plainly when a failed tool is the reason everything looks broken", () => {
@@ -101,5 +120,41 @@ describe("probeTool", () => {
 
     expect(probe.version).toBeUndefined()
     expect(probe.error).toBe("spawn gh ENOENT")
+  })
+})
+
+describe("runDoctor", () => {
+  it("writes the report to the output channel and reveals it", async () => {
+    const lines: string[] = []
+    let revealed = 0
+
+    await runDoctor(undefined, {
+      reconcile: async () => undefined,
+      quarantined: () => [],
+      out: {
+        appendLine: (text) => lines.push(text),
+        show: () => {
+          revealed++
+        },
+      },
+      log: () => undefined,
+    })
+
+    // A command that reveals nothing looks like a command that did nothing.
+    expect(lines).toEqual(["Kilo Agent Manager — no project is open."])
+    expect(revealed).toBe(1)
+  })
+
+  it("still writes the report when the channel cannot be revealed", async () => {
+    const lines: string[] = []
+
+    await runDoctor(undefined, {
+      reconcile: async () => undefined,
+      quarantined: () => [],
+      out: { appendLine: (text) => lines.push(text) },
+      log: () => undefined,
+    })
+
+    expect(lines).toHaveLength(1)
   })
 })

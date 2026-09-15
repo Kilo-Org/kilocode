@@ -3,6 +3,7 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.diff.GIT_COMMAND_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
@@ -271,9 +272,14 @@ class KiloWorktreeRpcApiImpl(
     private fun main(all: List<WorktreeDto>): Path? =
         all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
 
-    /** `git worktree prune`, on the write budget it shares with the other worktree-writing commands. */
+    /**
+     * `git worktree prune`, on a budget short enough to bound how long a mutation waits for a poll.
+     *
+     * See [GIT_PRUNE_TIMEOUT_MS]: this runs holding the repository's mutation lock, so the write
+     * budget would let one wedged prune park a user-initiated create for three minutes.
+     */
     private fun prune(root: Path): Boolean {
-        val res = runGit(root, listOf("worktree", "prune", "-v"), GIT_WRITE_TIMEOUT_MS)
+        val res = runGit(root, listOf("worktree", "prune", "-v"), GIT_PRUNE_TIMEOUT_MS)
         if (!res.ok) LOG.warn("worktree prune during sync failed: exit=${res.exit} stderr=${snippet(res.stderr)}")
         if (res.ok && res.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(res.stdout)}")
         return res.ok
