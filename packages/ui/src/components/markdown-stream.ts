@@ -91,6 +91,16 @@ export function canReusePendingBlock(current: Pick<Block, "mode" | "raw"> | unde
 }
 
 export function project(previous: Projection | undefined, text: string, live: boolean): Projection {
+  // kilocode_change start: keep the streamed block layout when a stream ends so
+  // the finished message does not rebuild every paragraph and drop a selection.
+  if (!live && previous && text.startsWith(previous.text) && previous.blocks.some((block) => block.mode !== "full"))
+    return {
+      text,
+      blocks: stream(text, true).map((block) =>
+        block.mode === "live" ? { raw: block.raw, src: block.raw, mode: "full" as const } : block,
+      ),
+    }
+  // kilocode_change end
   if (!live || !previous || !text.startsWith(previous.text)) return { text, blocks: stream(text, live) }
   const tail = previous.blocks.at(-1)
   const suffix = text.slice(previous.text.length)

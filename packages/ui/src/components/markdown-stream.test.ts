@@ -177,6 +177,30 @@ describe("markdown stream", () => {
     ])
   })
 
+  // kilocode_change start
+  test("keeps the streamed block layout when the stream ends", () => {
+    const live = project(undefined, "one\n\ntwo\n\nthree", true)
+    const done = project(live, live.text, false)
+
+    expect(live.blocks.map((block) => block.mode)).toEqual(["full", "full", "live"])
+    expect(done.blocks).toEqual([
+      { raw: "one\n\n", src: "one\n\n", mode: "full" },
+      { raw: "two\n\n", src: "two\n\n", mode: "full" },
+      { raw: "three", src: "three", mode: "full" },
+    ])
+    expect(project(done, `${done.text} more`, false).blocks.length).toBe(1)
+    expect(project(undefined, "one\n\ntwo", false).blocks.length).toBe(1)
+  })
+
+  test("keeps the block layout when the final delta arrives with the stream end", () => {
+    const live = project(undefined, "one\n\ntwo\n\nthr", true)
+    const done = project(live, `${live.text}ee`, false)
+
+    expect(done.blocks.map((block) => block.mode)).toEqual(["full", "full", "full"])
+    expect(done.blocks.at(-1)).toEqual({ raw: "three", src: "three", mode: "full" })
+  })
+  // kilocode_change end
+
   test("closes tilde fences split across provider deltas", () => {
     const open = project(undefined, "~~~ts\nconst x = 1\n", true)
     const one = project(open, `${open.text}~`, true)

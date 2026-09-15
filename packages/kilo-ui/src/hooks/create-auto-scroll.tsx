@@ -95,6 +95,9 @@ export function createAutoScroll(options: AutoScrollOptions) {
     // Upward wheel input anywhere in the transcript expresses the user's
     // intent to review earlier content, even when a nested region consumes it.
     onUp: stop,
+    // A finished text selection must stay in place until the user scrolls
+    // back to the bottom, otherwise the follow-up pin drops the selection.
+    onSelect: stop,
   })
 
   // ---------------------------------------------------------------------------

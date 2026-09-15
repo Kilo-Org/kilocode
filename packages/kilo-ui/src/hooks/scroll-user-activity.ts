@@ -1,6 +1,7 @@
 interface UserActivityOptions {
   grace: number
   onUp: () => void
+  onSelect?: () => void
 }
 
 type Kind = "pointer" | "mouse" | "touch"
@@ -87,11 +88,23 @@ export const createUserActivity = (options: UserActivityOptions) => {
     mark()
   }
 
+  // A drag that selects text never scrolls, so nothing pauses auto-follow and
+  // the next content update snaps the view to the bottom and unmounts the
+  // rows that hold the selection. Report a finished selection gesture.
+  const selected = () => {
+    if (!doc || !scroll || typeof doc.getSelection !== "function") return false
+    const selection = doc.getSelection()
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return false
+    const range = selection.getRangeAt(0)
+    return scroll.contains(range.startContainer) || scroll.contains(range.endContainer)
+  }
+
   const end = (event: Event, kind: Kind) => {
     if (!doc || !scroll || gestures.get(doc) !== scroll || !match(event, kind)) return
     mark()
     gesture = undefined
     gestures.delete(doc)
+    if (kind !== "touch" && selected()) options.onSelect?.()
   }
 
   const clear = () => {

@@ -875,6 +875,61 @@ describe("createAutoScroll non-scrollable layouts", () => {
     }
   })
 
+  test("pauses auto-follow after a drag that selects transcript text", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const child = new FakeElement()
+    ctx.el.append(child)
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({
+      isCollapsed: false,
+      rangeCount: 1,
+      getRangeAt: () => ({ startContainer: child, endContainer: child }),
+    })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("mousedown", new FakeMouseEvent(child) as unknown as Event)
+      ctx.doc.fire("mousemove", new FakeMouseEvent(child) as unknown as Event)
+      ctx.doc.fire("mouseup", new FakeMouseEvent(child) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(800)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
+      ctx.dispose()
+    }
+  })
+
+  test("does not pause auto-follow after a click that leaves no selection", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({ isCollapsed: true, rangeCount: 1 })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("mousedown", new FakeMouseEvent(ctx.el) as unknown as Event)
+      ctx.doc.fire("mouseup", new FakeMouseEvent(ctx.el) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(false)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(1400)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
+      ctx.dispose()
+    }
+  })
+
   test("does not mark an off-gutter document press", () => {
     const ctx = setup({ working: true })
     overflow(ctx)
