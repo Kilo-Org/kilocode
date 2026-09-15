@@ -125,10 +125,14 @@ if (diskCache) {
   }
 }
 
-// The index only records the files this build loaded, so paths that leave a
-// build drop out instead of accumulating.
+// The index persists between builds: it is seeded from the previous run and
+// topped up with the keys this run recorded. Entries whose file no longer
+// exists are dropped on save, so renames and deletions do not accumulate.
 function saveIndex() {
   if (!diskCache || index.size === 0) return
+  for (const file of index.keys()) {
+    if (!fs.existsSync(file)) index.delete(file)
+  }
   const tmp = `${indexPath}.${process.pid}.tmp`
   try {
     fs.writeFileSync(tmp, JSON.stringify(Object.fromEntries(index)))
@@ -184,7 +188,11 @@ const cachedSolidPlugin = {
     build.onLoad({ filter: /\.(t|j)sx$/ }, async (args) => {
       const st = fs.statSync(args.path)
       const recorded = index.get(args.path)
-      const known = recorded !== undefined && recorded.mtime === st.mtimeMs && recorded.size === st.size
+      // Trust a recorded key only once the file is older than the coarsest
+      // filesystem mtime granularity, so a same-length edit inside one
+      // timestamp tick cannot reuse the previous transform.
+      const settled = Date.now() - st.mtimeMs > 2000
+      const known = settled && recorded !== undefined && recorded.mtime === st.mtimeMs && recorded.size === st.size
       // Read the file only when its key is not already recorded, so an
       // unchanged file costs one stat instead of a read and a hash.
       const source = known ? undefined : fs.readFileSync(args.path, "utf8")
