@@ -314,6 +314,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "منسوخ",
   "agentManager.pr.comment.sent": "ارسال شد",
   "agentManager.pr.comment.copy": "کپی نظر",
+  "agentManager.pr.comment.copyLink": "کپی پیوند نظر",
   "agentManager.pr.comment.openOnGitHub": "باز کردن در GitHub",
   "agentManager.pr.comment.showInDiff": "نمایش در diff",
   "agentManager.pr.comment.unplaced": "نظرات خارج از diff فعلی",

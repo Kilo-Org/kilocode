@@ -301,6 +301,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "已过时",
   "agentManager.pr.comment.sent": "已发送",
   "agentManager.pr.comment.copy": "复制评论",
+  "agentManager.pr.comment.copyLink": "复制评论链接",
   "agentManager.pr.comment.openOnGitHub": "在 GitHub 上打开",
   "agentManager.pr.comment.showInDiff": "在差异中显示",
   "agentManager.pr.comment.unplaced": "当前差异之外的评论",

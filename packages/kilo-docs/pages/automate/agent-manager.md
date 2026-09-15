@@ -493,6 +493,10 @@ Files marked `linguist-generated` in the repository's `.gitattributes` start col
 
 Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
 
+When the selected worktree has a checked-out pull request, a new inline comment can also be posted to the pull request. The comment form offers **Save** to keep the comment in the local collection, **Send to Kilo** to give it to the agent, and **Send to GitHub #N** to post it as a PR review comment. The primary button is a split button that remembers the last destination you used; open its arrow to switch between **Send to Kilo** and **Send to GitHub #N**. `Cmd+Enter` / `Ctrl+Enter` saves locally, and plain `Enter` sends to Kilo while the Kilo destination is selected, so the keyboard never posts to GitHub.
+
+With a publishable pull request, the send-all control shows **Send all to chat (N)** and **Send N to GitHub #N** as separate actions. The GitHub action posts only the local comments that map to a line in the pull request. Only the chat action has the keyboard shortcut, so `Cmd+Enter` / `Ctrl+Enter` never posts to GitHub.
+
 After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
 
 ### PR review comments in the diff

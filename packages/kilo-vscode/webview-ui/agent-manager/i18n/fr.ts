@@ -318,6 +318,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Obsolète",
   "agentManager.pr.comment.sent": "Envoyé",
   "agentManager.pr.comment.copy": "Copier le commentaire",
+  "agentManager.pr.comment.copyLink": "Copier le lien du commentaire",
   "agentManager.pr.comment.openOnGitHub": "Ouvrir sur GitHub",
   "agentManager.pr.comment.showInDiff": "Afficher dans le diff",
   "agentManager.pr.comment.unplaced": "Commentaires en dehors du diff actuel",

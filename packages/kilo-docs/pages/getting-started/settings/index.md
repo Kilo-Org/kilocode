@@ -79,6 +79,22 @@ You can also enable it in `kilo.jsonc`:
 }
 ```
 
+### Compaction Model
+
+Choose the model used for automatic and manual compaction under **Models** > **Compaction Model**. Leave it unset to use the chat model. The Compaction section in **Settings → Context** links to this selector.
+
+This stores `agent.compaction.model` in `kilo.jsonc`:
+
+```json
+{
+  "agent": {
+    "compaction": {
+      "model": "anthropic/claude-haiku-4-5"
+    }
+  }
+}
+```
+
 ### Reasoning Blocks
 
 Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:

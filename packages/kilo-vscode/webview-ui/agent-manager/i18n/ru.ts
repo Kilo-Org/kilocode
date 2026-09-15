@@ -314,6 +314,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Устарело",
   "agentManager.pr.comment.sent": "Отправлено",
   "agentManager.pr.comment.copy": "Копировать комментарий",
+  "agentManager.pr.comment.copyLink": "Копировать ссылку на комментарий",
   "agentManager.pr.comment.openOnGitHub": "Открыть на GitHub",
   "agentManager.pr.comment.showInDiff": "Показать в diff",
   "agentManager.pr.comment.unplaced": "Комментарии вне текущего diff",

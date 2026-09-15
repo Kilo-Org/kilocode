@@ -309,6 +309,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "오래됨",
   "agentManager.pr.comment.sent": "전송됨",
   "agentManager.pr.comment.copy": "댓글 복사",
+  "agentManager.pr.comment.copyLink": "댓글 링크 복사",
   "agentManager.pr.comment.openOnGitHub": "GitHub에서 열기",
   "agentManager.pr.comment.showInDiff": "diff에서 보기",
   "agentManager.pr.comment.unplaced": "현재 diff에 없는 댓글",
