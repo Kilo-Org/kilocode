@@ -1,4 +1,5 @@
 const esbuild = require("esbuild")
+const os = require("os")
 const path = require("path")
 const fs = require("fs")
 const crypto = require("crypto")
@@ -13,14 +14,35 @@ const watch = process.argv.includes("--watch")
 /**
  * Cache transformed Solid JSX files in memory and on disk to avoid
  * re-parsing and re-transforming unchanged files across builds and webviews.
+ *
+ * Entries are keyed by file content, not by path or mtime, and live in the OS
+ * temp dir so every git worktree of this repo shares one cache. A fresh
+ * Agent Manager worktree therefore starts with a warm cache instead of
+ * re-transforming every JSX file on its first build.
  */
-const solidCacheDir = path.join(__dirname, "node_modules", ".cache", "esbuild-solid")
+const solidCacheDir = path.join(os.tmpdir(), `kilo-vscode-esbuild-solid-${process.getuid?.() ?? "user"}`)
 const solidMemCache = new Map()
+
+// Version of a package as resolved from another package's directory, so the
+// cache key follows the transitive dependency that does the actual transform.
+function version(name, from) {
+  const dir = path.dirname(require.resolve(`${from}/package.json`))
+  try {
+    return require(require.resolve(`${name}/package.json`, { paths: [dir] })).version || ""
+  } catch (err) {
+    console.warn(`[esbuild] could not resolve ${name} from ${from}`, err)
+    return ""
+  }
+}
+
 const buildScriptHash = crypto
   .createHash("sha256")
   .update(fs.readFileSync(__filename, "utf8"))
+  .update(require("@babel/core/package.json").version || "")
   .update(require("babel-preset-solid/package.json").version || "")
+  .update(version("babel-plugin-jsx-dom-expressions", "babel-preset-solid"))
   .update(require("@babel/preset-typescript/package.json").version || "")
+  .update(version("@babel/plugin-transform-typescript", "@babel/preset-typescript"))
   .digest("hex")
   .slice(0, 8)
 
@@ -36,22 +58,23 @@ const cachedSolidPlugin = {
   name: "esbuild:solid-cached",
   setup(build) {
     build.onLoad({ filter: /\.(t|j)sx$/ }, async (args) => {
-      let mtime = 0
-      let size = 0
-      try {
-        const st = fs.statSync(args.path)
-        mtime = st.mtimeMs
-        size = st.size
-      } catch (err) {
-        console.warn("[esbuild] could not stat source file for cache key", args.path, err)
-      }
-
-      const cacheKey = `${args.path}:${mtime}:${size}:${buildScriptHash}`
+      const source = fs.readFileSync(args.path, "utf8")
+      const { name, ext } = path.parse(args.path)
+      const filename = name + ext
+      // The transform output depends only on the file name (for the inline
+      // source map), the source text, and the transform toolchain.
+      const cacheKey = crypto
+        .createHash("sha256")
+        .update(filename)
+        .update("\0")
+        .update(source)
+        .update("\0")
+        .update(buildScriptHash)
+        .digest("hex")
       const memHit = solidMemCache.get(cacheKey)
       if (memHit) return { contents: memHit, loader: "js" }
 
-      const diskKey = crypto.createHash("sha256").update(cacheKey).digest("hex") + ".js"
-      const diskPath = path.join(solidCacheDir, diskKey)
+      const diskPath = path.join(solidCacheDir, cacheKey + ".js")
 
       if (fs.existsSync(diskPath)) {
         try {
@@ -63,9 +86,6 @@ const cachedSolidPlugin = {
         }
       }
 
-      const source = fs.readFileSync(args.path, "utf8")
-      const { name, ext } = path.parse(args.path)
-      const filename = name + ext
       const result = await core.transformAsync(source, {
         presets: [
           [solid, {}],
@@ -81,9 +101,14 @@ const cachedSolidPlugin = {
 
       if (solidMemCache.size > 2000) solidMemCache.clear()
       solidMemCache.set(cacheKey, result.code)
+      // Write through a temp file and rename so a concurrent build in another
+      // worktree never reads a partially written entry.
+      const tmp = `${diskPath}.${process.pid}.${crypto.randomUUID()}.tmp`
       try {
-        fs.writeFileSync(diskPath, result.code)
+        fs.writeFileSync(tmp, result.code)
+        fs.renameSync(tmp, diskPath)
       } catch (err) {
+        fs.rmSync(tmp, { force: true })
         console.warn("[esbuild] cache write failed", diskPath, err)
       }
 
