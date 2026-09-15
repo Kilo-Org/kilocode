@@ -2,6 +2,9 @@ import { Schema } from "effect"
 import DESCRIPTION from "./shell.txt"
 import { PositiveInt } from "@opencode-ai/core/schema"
 import { Global } from "@opencode-ai/core/global"
+import fs from "node:fs" // kilocode_change
+import os from "os" // kilocode_change
+import path from "path" // kilocode_change
 import { ShellID } from "./id"
 
 const PS = new Set(["powershell", "pwsh"])
@@ -48,6 +51,24 @@ function shellDisplayName(name: string) {
   if (name === "cmd") return "cmd.exe"
   return name
 }
+
+// kilocode_change start - cloud sessions allowlist a session-scoped temp dir instead of the shared one
+function sessionTmp() {
+  const cloud = process.env["KILO_CLOUD_AGENT"]?.toLowerCase()
+  if (cloud !== "true" && cloud !== "1") return Global.Path.tmp
+  const session = process.env.SESSION_ID
+  if (!session || !/^[A-Za-z0-9_-]+$/.test(session)) return Global.Path.tmp
+  const dir = path.join(os.tmpdir(), session)
+  try {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
+    // lstat, not stat: a pre-existing symlink must not redirect the advertised dir
+    if (!fs.lstatSync(dir).isDirectory()) return Global.Path.tmp
+    return dir
+  } catch {
+    return Global.Path.tmp
+  }
+}
+// kilocode_change end
 
 function powershellNotes(name: string) {
   if (name === "pwsh") {
@@ -296,7 +317,7 @@ export function render(name: string, platform: NodeJS.Platform, limits: Limits, 
       intro: selected.intro,
       os: platform,
       shell: name,
-      tmp: Global.Path.tmp,
+      tmp: sessionTmp(), // kilocode_change - session-scoped temp dir in cloud sessions
       workdirSection: selected.workdirSection,
       commandSection: selected.commandSection,
       gitCommands: selected.gitCommands,
