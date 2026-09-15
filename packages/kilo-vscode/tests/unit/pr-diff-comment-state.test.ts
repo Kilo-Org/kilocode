@@ -80,10 +80,12 @@ describe("PR diff comment state", () => {
     state.dispose()
   })
 
-  it("keeps the cached snapshot when a comment succeeds or belongs elsewhere", () => {
+  it("keeps the cached snapshot when a comment succeeds, fails on content, or belongs elsewhere", () => {
     const { posted, receive, state, comment } = setup()
 
     receive(comment({ success: true, error: undefined }) as ExtensionMessage)
+    receive(comment({ error: "A review comment body is required." }) as ExtensionMessage)
+    receive(comment({ error: "Selected lines are not in a complete review hunk." }) as ExtensionMessage)
     receive(comment({ worktreeId: "other" }) as ExtensionMessage)
     receive(comment({ projectId: "other" }) as ExtensionMessage)
 

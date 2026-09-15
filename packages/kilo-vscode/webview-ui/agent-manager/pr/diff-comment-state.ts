@@ -84,10 +84,15 @@ export function createPRDiffCommentState(opts: Options) {
   }
 
   // The host caps its snapshot store, so a comment can fail against a snapshot
-  // it has already dropped. Drop the cached snapshot and reload, so the next
-  // attempt is bound to a snapshot the host still holds.
+  // it has already dropped. Those failures, and the context/ref changes that
+  // invalidate a snapshot, end with the host's reload hints; content errors
+  // (empty body, bad line range, unconfirmed write) must not force a reload.
+  // Keep in sync with the throw messages in review-actions.ts and
+  // pr-status-bridge.ts.
+  const expired = /(?:Reload the review|Refresh and try again|Reopen the PR review)/
   const release = opts.onMessage((message) => {
     if (message.type !== "agentManager.createReviewCommentResult" || message.success) return
+    if (!expired.test(message.error ?? "")) return
     const ctx = typeof message.worktreeId === "string" ? message.worktreeId : undefined
     const route = target(ctx)
     if (!route || route.projectId !== message.projectId) return
