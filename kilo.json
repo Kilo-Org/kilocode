@@ -1,0 +1,11 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "provider": {
+    "my-custom": {
+      "name": "My Custom",
+      "npm": "@ai-sdk/openai-compatible",
+      "models": {}
+    }
+  },
+  "disabled_providers": ["my-custom"]
+}
