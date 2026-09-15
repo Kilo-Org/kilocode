@@ -16,10 +16,9 @@ const successTtl = 60_000
 const errorTtl = 10_000
 const readyPlugin = PluginV2.ID.make("config-provider")
 
-interface AdapterContext {
+export interface AdapterContext {
+  providers: readonly ProviderV2.Info[]
   candidates: readonly Candidate[]
-  codex: Codex.Input
-  scope: string | undefined
   failedCandidates: readonly Candidate["providerID"][]
   cloud: (() => Promise<Cloud.CloudState>) | undefined
   token: string | undefined
@@ -28,7 +27,6 @@ interface AdapterContext {
   fetch: typeof fetch
   usage: typeof Cloud.fetchCodingPlanUsage
   identityCurrent(identity: string): boolean
-  current(identity: string): boolean
   source(id: string, load: () => Promise<Contract.UsageSnapshot>, identity?: string): Promise<Contract.UsageSnapshot>
   preserve(prefix: string, identity?: string): Contract.UsageSnapshot[]
   prune(prefix: string, keep: string[]): void
@@ -38,9 +36,10 @@ interface AdapterResult {
   items: ReadonlyArray<Contract.UsageSnapshot>
 }
 
-interface Adapter {
+export interface Adapter {
   cachePrefixes: readonly string[]
   cloudScoped?: boolean
+  valid?: () => boolean
   run(ctx: AdapterContext): Promise<AdapterResult>
 }
 
@@ -84,22 +83,6 @@ const minimax: Adapter = {
   },
 }
 
-const codex: Adapter = {
-  cachePrefixes: ["codex-chatgpt"],
-  async run(ctx) {
-    if (ctx.codex.status === "absent") return { items: [] }
-    if (ctx.codex.status === "failed") {
-      return { items: ctx.scope ? ctx.preserve("codex-chatgpt", ctx.scope) : [] }
-    }
-    const current = ctx.codex
-    if (!ctx.current(current.identity)) return { items: [] }
-    const item = await ctx.source("codex-chatgpt", () => Codex.load(current.candidate, ctx.fetch), current.identity)
-    return { items: ctx.current(current.identity) ? [item] : [] }
-  },
-}
-
-const registry: readonly Adapter[] = [managed, minimax, codex]
-
 export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("ProviderUsageServiceError", {
   message: Schema.String,
 }) {}
@@ -123,7 +106,6 @@ interface State {
   sources: Map<string, SourceCell>
   cloud: CloudCell
   cloudIdentity?: string
-  codex?: { connection: string; identity: string }
 }
 
 function fingerprint(value: string) {
@@ -299,27 +281,12 @@ function nonempty(value: unknown) {
   return text || undefined
 }
 
-function scoped(state: State, current: Codex.Input) {
-  if (current.status === "failed" && state.codex?.connection === current.connection) return state.codex.identity
-  if (
-    current.status === "ready" &&
-    state.codex?.connection === current.connection &&
-    state.codex.identity === current.identity
-  ) {
-    return current.identity
-  }
-  state.codex = current.status === "ready" ? { connection: current.connection, identity: current.identity } : undefined
-  prune(state, "codex-chatgpt", [])
-  return state.codex?.identity
-}
-
 const inputs = Effect.fn("ProviderUsage.inputs")(function* (
   catalog: Catalog.Interface,
   integrations: Integration.Interface,
 ) {
   const providers = yield* catalog.provider.all()
   const byID = new Map(providers.map((provider) => [provider.id, provider]))
-  const codex = yield* Codex.discover(byID.get(ProviderV2.ID.openai), integrations)
   const failedCandidates: Candidate["providerID"][] = []
   const candidates = yield* Effect.forEach(Object.keys(bindings) as (keyof typeof bindings)[], (providerID) =>
     Effect.gen(function* () {
@@ -346,8 +313,8 @@ const inputs = Effect.fn("ProviderUsage.inputs")(function* (
   const token =
     kilo.ok && kilo.value?.type === "oauth" && !organization && kilo.value.access ? kilo.value.access : undefined
   return {
+    providers,
     candidates: candidates.filter((item): item is Candidate => item !== undefined),
-    codex,
     failedCandidates,
     token,
     cloudReliable,
@@ -361,16 +328,15 @@ function makeService(
   ready: Effect.Effect<void>,
 ) {
   const state: State = { sources: new Map(), cloud: { expires: 0 } }
+  const codex = Codex.create(integrations)
 
   const evaluate = Effect.fn("ProviderUsage.evaluate")(function* (force: boolean) {
     yield* ready
     const current = yield* inputs(catalog, integrations)
     const cloudIdentity = current.cloudReliable ? scopeCloudCache(state, current.token) : state.cloudIdentity
-    const identity = scoped(state, current.codex)
     const ctx: AdapterContext = {
+      providers: current.providers,
       candidates: current.candidates,
-      codex: current.codex,
-      scope: identity,
       failedCandidates: current.failedCandidates,
       cloud:
         current.token && cloudIdentity
@@ -382,24 +348,27 @@ function makeService(
       fetch: transport.fetch,
       usage: transport.usage,
       identityCurrent: (identity) => state.cloudIdentity === identity,
-      current: (identity) => state.codex?.identity === identity,
       source: (id, load, identity) => source(state, id, force, load, identity),
       preserve: (prefix, identity) => preserve(state, prefix, identity),
       prune: (prefix, keep) => prune(state, prefix, keep),
     }
+    const registry: readonly Adapter[] = [managed, minimax, yield* codex(ctx)]
     const results = yield* Effect.promise(() =>
       Promise.all(
         registry.map((adapter) =>
           // Adapters are expected to be total (they absorb their own failures into
           // unavailable/stale snapshots). This catch is the containment boundary so a
           // faulty future adapter degrades to stale output instead of failing the endpoint.
-          adapter.run(ctx).catch(
-            (): AdapterResult => ({
-              items: adapter.cachePrefixes.flatMap((prefix) =>
-                ctx.preserve(prefix, adapter.cloudScoped ? ctx.cloudIdentity : undefined),
-              ),
-            }),
-          ),
+          adapter
+            .run(ctx)
+            .catch(
+              (): AdapterResult => ({
+                items: adapter.cachePrefixes.flatMap((prefix) =>
+                  ctx.preserve(prefix, adapter.cloudScoped ? ctx.cloudIdentity : undefined),
+                ),
+              }),
+            )
+            .then((result) => ({ ...result, valid: adapter.valid })),
         ),
       ),
     )
@@ -407,11 +376,8 @@ function makeService(
       (value): value is string => value !== undefined,
     )
     return {
-      items: results
-        .flatMap((result) => result.items)
-        .filter(
-          (item) => item.id !== "codex-chatgpt" || (identity !== undefined && state.codex?.identity === identity),
-        ),
+      // An adapter can be invalidated while a slower sibling is still loading.
+      items: results.filter((result) => result.valid?.() !== false).flatMap((result) => result.items),
       generatedAt: stamps.toSorted().at(-1) ?? new Date().toISOString(),
     } satisfies Contract.Info
   })

@@ -2,7 +2,8 @@ import type { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
 import { Effect } from "effect"
 import { createHash } from "node:crypto"
 import { Integration } from "../../integration"
-import type { ProviderV2 } from "../../provider"
+import { ProviderV2 } from "../../provider"
+import type { Adapter, AdapterContext } from "../provider-usage"
 
 const url = "https://chatgpt.com/backend-api/wham/usage"
 const manage = "https://chatgpt.com/codex/settings/usage"
@@ -36,12 +37,7 @@ interface Candidate {
   account?: string
 }
 
-export type Input =
-  | { status: "absent" }
-  | { status: "failed"; connection: string }
-  | { status: "ready"; connection: string; identity: string; candidate: Candidate }
-
-export const discover = Effect.fn("ProviderUsage.Codex.discover")(function* (
+const discover = Effect.fn("ProviderUsage.Codex.discover")(function* (
   provider: ProviderV2.Info | undefined,
   integrations: Integration.Interface,
 ) {
@@ -74,6 +70,35 @@ export const discover = Effect.fn("ProviderUsage.Codex.discover")(function* (
     },
   }
 })
+
+export function create(integrations: Integration.Interface) {
+  let state: { connection: string; identity: string } | undefined
+  return Effect.fn("ProviderUsage.Codex.prepare")(function* (ctx: AdapterContext) {
+    const current = yield* discover(
+      ctx.providers.find((provider) => provider.id === ProviderV2.ID.openai),
+      integrations,
+    )
+    const retained =
+      (current.status === "failed" && state?.connection === current.connection) ||
+      (current.status === "ready" && state?.connection === current.connection && state.identity === current.identity)
+    if (!retained) {
+      state = current.status === "ready" ? { connection: current.connection, identity: current.identity } : undefined
+      ctx.prune("codex-chatgpt", [])
+    }
+    const identity = state?.identity
+    const valid = () => identity !== undefined && state?.identity === identity
+    return {
+      cachePrefixes: ["codex-chatgpt"],
+      valid,
+      async run(ctx) {
+        if (!valid() || current.status === "absent") return { items: [] }
+        if (current.status === "failed") return { items: ctx.preserve("codex-chatgpt", identity) }
+        const item = await ctx.source("codex-chatgpt", () => load(current.candidate, ctx.fetch), current.identity)
+        return { items: [item] }
+      },
+    } satisfies Adapter
+  })
+}
 
 interface Window {
   used: number

@@ -385,6 +385,50 @@ describe("Codex provider usage service", () => {
     }),
   )
 
+  it.live("rechecks a completed Codex result after a delayed sibling and account change", () =>
+    Effect.gen(function* () {
+      const started = yield* Deferred.make<void>()
+      const replaced = yield* Deferred.make<void>()
+      const pending = Promise.withResolvers<Response>()
+      return yield* fixture(
+        async (input, init) => {
+          const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+          if (!url.includes("chatgpt.com")) {
+            Effect.runSync(Deferred.succeed(started, undefined))
+            return pending.promise
+          }
+          const account = new Headers(init?.headers).get("chatgpt-account-id")
+          if (account === "acct-new") Effect.runSync(Deferred.succeed(replaced, undefined))
+          return Response.json(payload({ rate_limit: { primary_window: window(account === "acct-new" ? 70 : 10) } }))
+        },
+        ({ usage, credentials, integrations }) =>
+          Effect.gen(function* () {
+            yield* connect(credentials, { account: "acct-old" })
+            expect((yield* usage.get()).items[0]?.windows[0]?.used).toBe(10)
+            yield* integrations.connection.key({ integrationID: minimax, key: "sk-cp-sibling" })
+
+            const first = yield* usage.get().pipe(Effect.forkChild)
+            yield* Deferred.await(started).pipe(Effect.timeout("2 seconds"))
+            yield* Effect.yieldNow
+            yield* connect(credentials, { account: "acct-new" })
+            const second = yield* usage.get().pipe(Effect.forkChild)
+            yield* Deferred.await(replaced).pipe(Effect.timeout("2 seconds"))
+            pending.resolve(native(80))
+
+            const previous = yield* Fiber.join(first)
+            expect(previous.items.map((item) => item.providerID)).toEqual(["minimax-coding-plan"])
+            expect(previous.items[0]?.windows[0]?.remaining).toBe(80)
+            const current = yield* Fiber.join(second)
+            expect(current.items.find((item) => item.providerID === "openai")?.windows[0]?.used).toBe(70)
+            expect(current.items.find((item) => item.providerID === "minimax-coding-plan")?.windows[0]?.remaining).toBe(
+              80,
+            )
+          }),
+        { minimax: true },
+      )
+    }),
+  )
+
   for (const state of ["disabled", "removed"]) {
     it.live(`prunes cached usage when the OpenAI provider is ${state}`, () =>
       fixture(
