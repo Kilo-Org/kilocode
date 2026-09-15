@@ -10,9 +10,10 @@ export function createDialogModels(opts: {
   variants: (model: ModelSelection) => string[]
 }) {
   const [choice, select] = createSignal(opts.saved)
+  const [held, hold] = createSignal<ModelSelection | null>(null)
   const valid = (value: ModelSelection) => (value.providerID !== "kilo" || opts.ready()) && opts.valid(value)
   const model = createMemo(() => {
-    const saved = choice()
+    const saved = choice() ?? held()
     if (saved && valid(saved)) return saved
     const fallback = opts.fallback()
     return fallback && valid(fallback) ? fallback : null
@@ -29,5 +30,9 @@ export function createDialogModels(opts: {
         (entry.variant === undefined || opts.variants(entry).includes(entry.variant)),
     )
   }
-  return { choice, select, model, canSubmit }
+  const retain = () => {
+    // Mode switches retain the displayed default without turning it into a saved user preference.
+    if (!choice() && !held()) hold(model())
+  }
+  return { choice, select, model, canSubmit, retain }
 }

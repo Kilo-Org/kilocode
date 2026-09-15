@@ -136,6 +136,12 @@ export const NewWorktreeDialog: Component<{
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
+  const preferred = session.preferredSelection()
+  let pending = !session.preferencesReady()
+  if (preferred) {
+    saved.model = { providerID: preferred.providerID, modelID: preferred.modelID }
+    saved.variant = preferred.variant
+  }
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
   const [agent, setAgent] = createSignal(initialAgent)
@@ -179,9 +185,10 @@ export const NewWorktreeDialog: Component<{
   }
 
   const selectAgent = (name: string) => {
+    pending = false
+    selection.retain()
+    setVariant(variant() ?? effectiveVariant() ?? (variants().length > 0 ? DEFAULT_VARIANT : undefined))
     setAgent(name)
-    selection.select(undefined)
-    setVariant(undefined)
   }
 
   const cycle = (direction: 1 | -1) => {
@@ -212,18 +219,28 @@ export const NewWorktreeDialog: Component<{
     const list = variants()
     if (list.length === 0) return undefined
     const stored = variant() ?? session.variantForAgent(agent(), model())
-    return stored && list.includes(stored) ? stored : undefined
+    // Catalog refreshes may temporarily hide a model or effort. Never rewrite the saved choice.
+    return preserveVariant(stored, list)
   })
 
-  // Reset variant when model changes and stored variant is not in new list
+  const selectVariant = (value: string | undefined) => {
+    pending = false
+    const next = value ?? DEFAULT_VARIANT
+    setVariant(next)
+    const sel = model()
+    if (!sel || compareMode()) return
+    selection.select(sel)
+    session.rememberSelection(agent(), sel, next)
+  }
+
   createEffect(() => {
-    const list = variants()
-    if (list.length === 0) {
-      setVariant(undefined)
-      return
-    }
-    const stored = variant()
-    if (stored && !list.includes(stored)) setVariant(preserveVariant(stored, list))
+    if (!pending || !session.preferencesReady()) return
+    // Initial host preferences may arrive after opening, but never replace an in-progress choice.
+    pending = false
+    const preferred = session.preferredSelection()
+    if (!preferred) return
+    selection.select({ providerID: preferred.providerID, modelID: preferred.modelID })
+    setVariant(preferred.variant)
   })
 
   createEffect(() => {
@@ -483,7 +500,7 @@ export const NewWorktreeDialog: Component<{
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
       e.preventDefault()
-      setVariant(next ?? DEFAULT_VARIANT)
+      selectVariant(next)
       return
     }
     undo(e)
@@ -826,11 +843,14 @@ export const NewWorktreeDialog: Component<{
                       value={model()}
                       onSelect={(pid, mid) => {
                         if (!pid || !mid) return
-                        const current = effectiveVariant()
+                        pending = false
+                        const current = variant() ?? effectiveVariant()
                         const next = { providerID: pid, modelID: mid }
                         const list = Object.keys(provider.findModel(next)?.variants ?? {})
+                        const effort = preserveVariant(current, list) ?? DEFAULT_VARIANT
                         selection.select(next)
-                        setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
+                        setVariant(effort)
+                        session.rememberSelection(agent(), next, effort)
                       }}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
@@ -842,8 +862,8 @@ export const NewWorktreeDialog: Component<{
                     <ThinkingSelectorBase
                       variants={variants()}
                       value={effectiveVariant()}
-                      onSelect={setVariant}
-                      onClear={() => setVariant(DEFAULT_VARIANT)}
+                      onSelect={selectVariant}
+                      onClear={() => selectVariant(DEFAULT_VARIANT)}
                       allowClear
                       clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}

@@ -90,7 +90,7 @@ describe("sendCommand dismisses pending tool requests", () => {
     expect(body).toContain("selectAgent(overrides.agent, scope)")
     expect(body).toContain("if (overrides?.model)")
     expect(body).toContain("selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)")
-    expect(body).toContain("if (overrides?.variant)")
+    expect(body).toContain("if (overrides?.variant !== undefined)")
     expect(body).toContain("selectVariant(overrides.variant, scope)")
   })
 })
