@@ -347,9 +347,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imgs: ImageAttachment[],
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
     browser: BrowserReference[] = browsers(),
-    pastes = key === draftKey() ? paste.pastes().map((item) => item.text) : undefined,
     codeContexts: CodeContext[] = contexts(),
-  ) => savePromptDraft(key, next, comments, imgs, scroll, browser, pastes, codeContexts)
+    pastes = key === draftKey() ? paste.pastes().map((item) => item.text) : undefined,
+  ) => savePromptDraft(key, next, comments, imgs, scroll, browser, codeContexts, pastes)
   const readDraft = () => ({
     text: text().trim(),
     comments: reviewComments(),
@@ -583,8 +583,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             imgs,
             undefined,
             browser,
-            untrack(paste.pastes).map((item) => item.text),
             codeContexts,
+            untrack(paste.pastes).map((item) => item.text),
           )
         }
       }
@@ -686,7 +686,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const id = tabs?.add()
     if (!id) session.clearCurrentSession()
     const key = id ? scopeDraftKey(boxKey(), pendingDraftKey(id) ?? "new") : draftKey()
-    saveDraft(key, draft, comments, imgs, scroll, browser, pastes)
+    saveDraft(key, draft, comments, imgs, scroll, browser, undefined, pastes)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
@@ -715,8 +715,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       draft.images,
       draft.scroll,
       draft.browsers,
-      draft.pastes,
       draft.contexts,
+      draft.pastes,
     )
   }
   window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
@@ -846,7 +846,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const comments = active ? reviewComments() : (reviewDrafts.get(key) ?? [])
       const pastes = active ? paste.pastes().map((item) => item.text) : undefined
       const codeContexts = active ? contexts() : (contextDrafts.get(key) ?? [])
-      savePromptDraft(key, value, comments, images, undefined, undefined, pastes, codeContexts)
+      savePromptDraft(key, value, comments, images, undefined, undefined, codeContexts, pastes)
       mentionDrafts.set(key, { paths: state.paths, sessions: state.sessions })
       if (!active) return
       enhanceCounter++

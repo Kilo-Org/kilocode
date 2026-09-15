@@ -25,8 +25,8 @@ export function savePromptDraft(
   images: ImageAttachment[],
   scroll = 0,
   browsers: BrowserReference[] = [],
-  pastes?: string[],
   contexts: CodeContext[] = [],
+  pastes?: string[],
 ) {
   if (!text) mentionDrafts.delete(key)
   if (text) drafts.set(key, text)
@@ -61,6 +61,7 @@ function remove(raw: string | undefined) {
     mentionDrafts,
     pasteDrafts,
   ]) {
+    for (const key of map.keys()) {
       if (typeof key === "string" && key.endsWith(suffix)) map.delete(key)
     }
   }
