@@ -104,6 +104,8 @@ describe("usePasteCollapse", () => {
     const backing = Array.from({ length: 120 }, (_, index) => `${index} ${"x".repeat(40)}`).join("\n")
     let calls = 0
     const global = globalThis as unknown as { document?: unknown }
+    const hadDoc = "document" in globalThis
+    const previous = global.document
     global.document = {
       execCommand: () => {
         calls += 1
@@ -119,7 +121,8 @@ describe("usePasteCollapse", () => {
       expect(calls).toBe(1)
       expect(el.value).toBe(backing)
     } finally {
-      delete global.document
+      if (hadDoc) global.document = previous
+      else delete global.document
     }
     ctx.dispose()
   })
