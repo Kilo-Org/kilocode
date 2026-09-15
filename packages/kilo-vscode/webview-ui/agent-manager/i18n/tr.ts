@@ -53,7 +53,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Yeni bir worktree'de agent başlamadan önce çalıştırın.",
   "agentManager.settings.setupScript.create": "script oluştur",
   "agentManager.settings.setupScript.edit": "script düzenle",
-  "agentManager.project.add": "Proje ekle",
+  "agentManager.project.add": "Proje ekle...",
   "agentManager.project.remove": "Agent Manager'dan kaldır",
   "agentManager.project.missing": "Depo bulunamadı",
   "agentManager.project.settings": "Proje ayarları",

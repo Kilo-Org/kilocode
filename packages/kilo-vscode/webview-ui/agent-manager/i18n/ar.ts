@@ -50,7 +50,7 @@ export const dict = {
   "agentManager.settings.setupScript.description": "شغّل قبل أن يبدأ agent في worktree جديد.",
   "agentManager.settings.setupScript.create": "إنشاء script",
   "agentManager.settings.setupScript.edit": "تحرير script",
-  "agentManager.project.add": "إضافة مشروع",
+  "agentManager.project.add": "إضافة مشروع...",
   "agentManager.project.remove": "إزالة من Agent Manager",
   "agentManager.project.missing": "المستودع غير موجود",
   "agentManager.project.settings": "إعدادات المشروع",
