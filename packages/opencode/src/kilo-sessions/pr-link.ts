@@ -389,6 +389,21 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
 
   if (!identity) return undefined
 
+  // A link another process recorded from the session's own output outlives that
+  // process. Return it before the REST lookup so a GitLab/Bitbucket worktree —
+  // which has no REST lookup — still shows the MR/PR the session linked; a
+  // GitHub record likewise skips the lookup. Drop it when the worktree's repo
+  // or branch no longer matches.
+  const stored = await readRecordedPrLink(worktree)
+  if (stored) {
+    const staleBranch = stored.key != null && stored.key !== branch
+    if (!sameRepo(stored.link, identity) || staleBranch) {
+      await forgetRecordedPrLink(worktree)
+    } else {
+      return stored.link
+    }
+  }
+
   // Only GitHub has a REST lookup here (`gh api .../pulls`). A GitLab or
   // Bitbucket identity must not spawn `gh`; its link comes from the session's
   // own output (or the manual override) only.
@@ -430,6 +445,14 @@ export function overrideKey(worktree: string) {
   return ["session_pr_link", encodeURIComponent(worktree)]
 }
 
+// The same single-segment encoding for the session-output link a process
+// recorded. It outlives the recording process so a later `kilo pr status`
+// prints the GitLab MR or Bitbucket PR the session linked, the way a GitHub
+// pull request does.
+export function recordedKey(worktree: string) {
+  return ["session_pr_link_recorded", encodeURIComponent(worktree)]
+}
+
 export async function writePrLinkOverride(worktree: string, value: PrLinkOverride) {
   const { AppRuntime } = await import("@/effect/app-runtime")
   return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(overrideKey(worktree), value)))
@@ -440,4 +463,28 @@ export async function readPrLinkOverride(worktree: string): Promise<PrLinkOverri
   return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<PrLinkOverride>(overrideKey(worktree)))).catch(
     () => undefined,
   )
+}
+
+// Persist the link this process recorded from the session's own output, so a
+// later CLI process can return it. `recordedLinks` dies with the process; a
+// GitLab/Bitbucket link has no REST lookup to recover it, so the write here is
+// what keeps `kilo pr status` showing it after the session exits. A no-op when
+// this process recorded nothing.
+export async function persistRecordedPrLink(worktree: string) {
+  const recorded = recordedLinks.get(worktree)
+  if (!recorded) return
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(recordedKey(worktree), recorded)))
+}
+
+export async function readRecordedPrLink(worktree: string): Promise<Recorded | undefined> {
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<Recorded>(recordedKey(worktree)))).catch(
+    () => undefined,
+  )
+}
+
+export async function forgetRecordedPrLink(worktree: string) {
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(recordedKey(worktree)))).catch(() => undefined)
 }

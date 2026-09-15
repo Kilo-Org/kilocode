@@ -29,7 +29,7 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
-import { detectPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
+import { detectPrLink, persistRecordedPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
 import type { PrLink } from "@/kilo-sessions/pr-link"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import {
@@ -624,6 +624,10 @@ export namespace KiloSessions {
                   : undefined
             if (!text || !/\/pull\/|\/pull-requests\/|\/merge_requests\//.test(text)) return
             if (!recordPrLinkText(Instance.worktree, text)) return
+            // kilocode_change - keep the link for the next process: a GitLab/
+            // Bitbucket link has no REST lookup to recover it after this
+            // process exits, so the CLI would print `no PR linked`.
+            await persistRecordedPrLink(Instance.worktree)
             await syncPrLinkForSession(part.sessionID)
           })
           watch(Session.Event.Diff, (evt) =>

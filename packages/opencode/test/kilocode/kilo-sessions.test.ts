@@ -1626,6 +1626,46 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
     })
   }, 30000)
 
+  // The write side the CLI's next process depends on: a GitLab MR URL in the
+  // session's own output is persisted under `recordedKey`, so a later
+  // `kilo pr status` process (which has no in-process record and no REST
+  // lookup for GitLab) can read it back.
+  test("session-output link is persisted for the next process", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          emitPart(id, textPart(id, "p-persist", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const { AppRuntime } = await import("@/effect/app-runtime")
+          const { Storage } = await import("@/storage/storage")
+          const stored = await AppRuntime.runPromise(
+            Storage.Service.use((svc) =>
+              svc.read<{ link: { platform: string; prUrl: string; prNumber: number } }>(
+                PrLink.recordedKey(Instance.worktree),
+              ),
+            ),
+          )
+          expect(stored.link).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
   test("repeated identical URL enqueues no second item", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
