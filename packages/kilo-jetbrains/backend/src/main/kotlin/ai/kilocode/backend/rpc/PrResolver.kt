@@ -93,6 +93,12 @@ internal enum class RichRefusal {
  * org policies answer with a scope or forbidden error.
  */
 internal fun richRefusal(stderr: String): RichRefusal? {
+    // A checkout deleted mid-poll fails before `gh` runs, with `Cannot start a process, the working
+    // directory '...' does not exist` — which the field test below reads as a rejected field name. That
+    // is a race against one directory, not something this `gh` cannot do, and both callers latch on
+    // FIELD: one lost `gh` call would strip review, CI, and conversation state from every worktree in
+    // the IDE until it restarted. Agent Manager deletes worktrees routinely, so it happens for real.
+    if (badDir(stderr)) return null
     val text = stderr.lowercase()
     if (text.contains("unknown json field")) return RichRefusal.FIELD
     if (text.contains("doesn't exist") || text.contains("does not exist")) return RichRefusal.FIELD

@@ -132,6 +132,57 @@ class PrResolverTest {
     }
 
     @Test
+    fun `keeps asking for review and ci fields after a checkout vanished mid-poll`() {
+        // A worktree deleted while a poll is in flight fails the spawn, not the query. The message
+        // carries "does not exist", so it used to read as a rejected field name and latch the downgrade
+        // for the whole backend: every row kept its PR number and silently lost its approved and checks
+        // badges until the IDE restarted.
+        val vanished = "$path-deleted"
+        val resolver = resolver(
+            view = { if (dir == vanished) gone(vanished) else pr(7, "OPEN") },
+            list = { if (dir == vanished) gone(vanished) else ok("[]") },
+            api = { if (dir == vanished) gone(vanished) else threads() },
+        )
+
+        val lost = resolver.resolve(vanished, "feature/x", base = "main")
+        calls.clear()
+        val live = resolver.resolve(path, "feature/x", base = "main")
+
+        assertNull(lost.pr, "a checkout that no longer exists has no pull request to report")
+        assertEquals(GhAvailability.OK, lost.availability, "a deleted worktree is not a gh problem")
+        assertEquals(7, assertNotNull(live.pr).number)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()), calls)
+    }
+
+    @Test
+    fun `keeps asking about review conversations after a checkout vanished mid-poll`() {
+        // The same race one call later: the view answered, then the delete landed, so only the thread
+        // query fails to spawn. Latching there costs every other worktree its conversation badge.
+        val vanished = "$path-deleted"
+        val resolver = resolver(
+            view = { pr(7, "OPEN") },
+            api = { if (dir == vanished) gone(vanished) else threads(unresolved = 2) },
+        )
+
+        val lost = resolver.resolve(vanished, "feature/x", base = "main")
+        val live = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.OK, lost.availability)
+        assertEquals(0, lost.pr?.comments?.unresolved)
+        assertEquals(2, live.pr?.comments?.unresolved, "the query must still run for a live checkout")
+    }
+
+    @Test
+    fun `does not read a vanished working directory as a refused field`() {
+        // Both shapes of the same race: the platform refusing to spawn into a gone directory, and git
+        // losing the directory after it started.
+        assertNull(richRefusal("Cannot start a process, the working directory '$path' does not exist"))
+        assertNull(richRefusal("fatal: Unable to read current working directory: No such file or directory"))
+        // The wordings that really are a refused field must still latch.
+        assertEquals(RichRefusal.FIELD, richRefusal("""Unknown JSON field: "reviewDecision""""))
+    }
+
+    @Test
     fun `keeps reporting an authorization failure rather than retrying scalars`() {
         val resolver = resolver(view = { CmdOut(1, "", "gh: authentication required") })
 
@@ -442,6 +493,9 @@ class PrResolverTest {
     private fun ok(stdout: String) = CmdOut(0, stdout, "")
 
     private fun missing() = CmdOut(1, "", "no pull requests found for branch \"feature/x\"")
+
+    /** The spawn failure a checkout deleted mid-poll produces: no process, so no `gh` stderr at all. */
+    private fun gone(at: String) = CmdOut(-1, "", "Cannot start a process, the working directory '$at' does not exist")
 
     private companion object {
         const val SHA = "1111111111111111111111111111111111111111"
