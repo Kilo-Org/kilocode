@@ -19,6 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type { CodeContext } from "../../../../src/shared/code-context"
 import type { PRMergeResult } from "../../../../src/shared/pr-comment-actions"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
@@ -374,6 +375,11 @@ export interface AppendChatBoxMessage {
   type: "appendChatBoxMessage"
   text: string
   browser?: BrowserReference
+}
+
+export interface AppendChatContextMessage {
+  type: "appendChatContext"
+  context: CodeContext
 }
 
 export interface AppendReviewCommentsMessage {
@@ -1698,6 +1704,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
+  | AppendChatContextMessage
   | AppendReviewCommentsMessage
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
