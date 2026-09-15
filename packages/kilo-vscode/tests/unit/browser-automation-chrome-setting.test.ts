@@ -12,14 +12,16 @@ describe("Integrated Browser Chrome preference", () => {
   const descriptors = Object.getOwnPropertyDescriptors(vscode.workspace)
   let writes: Array<{ key: string; value: unknown; target: unknown }> = []
 
-  function config(input: { current?: boolean; previous?: boolean }) {
+  function config(input: { current?: boolean; previous?: boolean; previousWorkspace?: boolean }) {
     writes = []
     vscode.workspace.getConfiguration = ((section: string) =>
       ({
         get: (_key: string, fallback?: unknown) =>
           section === INTEGRATED_BROWSER ? (input.current ?? fallback) : fallback,
         inspect: () =>
-          section === INTEGRATED_BROWSER ? { globalValue: input.current } : { globalValue: input.previous },
+          section === INTEGRATED_BROWSER
+            ? { globalValue: input.current }
+            : { globalValue: input.previous, workspaceValue: input.previousWorkspace },
         update: async (key: string, value: unknown, target: unknown) => {
           writes.push({ key, value, target })
         },
@@ -54,6 +56,12 @@ describe("Integrated Browser Chrome preference", () => {
 
   test("does not write when no legacy preference exists", async () => {
     config({})
+    await migrateIntegratedBrowserUseSystemChrome()
+    expect(writes).toEqual([])
+  })
+
+  test("does not promote a workspace-scoped legacy preference", async () => {
+    config({ previousWorkspace: false })
     await migrateIntegratedBrowserUseSystemChrome()
     expect(writes).toEqual([])
   })
