@@ -134,16 +134,16 @@ const it = testEffect(env)
 
 const detail = '["filePath"]: is missing and is required'
 
-function invalid(index: number, message = detail): Event[] {
+function invalid(index: number, message = detail, name = "edit"): Event[] {
   const id = `call-${index}`
   return [
-    LLMEvent.toolInputStart({ id, name: "edit" }),
-    LLMEvent.toolCall({ id, name: "edit", input: { value: `malformed-${index}` } }),
+    LLMEvent.toolInputStart({ id, name }),
+    LLMEvent.toolCall({ id, name, input: { value: `malformed-${index}` } }),
     LLMEvent.toolError({
       id,
-      name: "edit",
+      name,
       message: "invalid arguments",
-      error: new InvalidArgumentsError({ tool: "edit", detail: message }),
+      error: new InvalidArgumentsError({ tool: name, detail: message }),
     }),
   ]
 }
@@ -244,13 +244,13 @@ describe("session processor invalid-argument circuit breaker", () => {
     ),
   )
 
-  it.effect("aborts when the same tool alternates malformed details", () =>
+  it.effect("aborts when malformed failures vary across tools and details", () =>
     provideTmpdirProject((dir) =>
       Effect.gen(function* () {
         const state = yield* turn(dir)
-        yield* run(state, step(0, ...invalid(1, '["filePath"]: is missing and is required')))
-        yield* run(state, step(1, ...invalid(2, '["oldString"]: is missing and is required')))
-        const last = yield* run(state, step(2, ...invalid(3, '["newString"]: is missing and is required')))
+        yield* run(state, step(0, ...invalid(1, '["filePath"]: is missing and is required', "edit")))
+        yield* run(state, step(1, ...invalid(2, '["filePath"]: is missing and is required', "read")))
+        const last = yield* run(state, step(2, ...invalid(3, '["command"]: is missing and is required', "bash")))
         expect(last.result).toBe("stop")
         expect(last.message.error?.name).toBe("APIError")
         if (last.message.error?.name !== "APIError") return

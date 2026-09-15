@@ -240,21 +240,21 @@ export namespace KiloSessionProcessor {
   }
 
   /**
-   * Consecutive invalid-argument failures allowed for one tool before the turn
-   * is aborted. A model that keeps re-issuing malformed calls never makes
+   * Consecutive invalid-argument failures allowed in one turn before it is
+   * aborted. A model that keeps re-issuing malformed calls never makes
    * progress, so retrying it again only burns tokens (#14143).
    */
   export const REPEATED_TOOL_FAILURE_LIMIT = 3
 
   /**
-   * Per-turn failure streaks. A turn spans several `SessionProcessor.create`
-   * calls (one per model step), so the streak is keyed by the parent user
+   * Per-turn failure counts. A turn spans several `SessionProcessor.create`
+   * calls (one per model step), so the count is keyed by the parent user
    * message rather than held in the processor instance. Entries clear on a
    * completed tool call, a non-validation failure, or when they trip. A turn
    * that ends without any of those leaves its entry for the 64-entry cache
    * bound to evict; entries are small and the map is never unbounded.
    */
-  const malformed = new Map<string, { tool?: string; count: number }>()
+  const malformed = new Map<string, number>()
 
   export function malformedToolFailure(tool: string) {
     return new MessageV2.APIError({
@@ -265,10 +265,11 @@ export namespace KiloSessionProcessor {
 
   /**
    * Circuit breaker for stuck tool validation. `inspect` returns a ready abort
-   * error once the same tool fails validation `REPEATED_TOOL_FAILURE_LIMIT`
-   * times in a row, even when the malformed details differ. Any other tool
-   * failure or a completed tool call clears the streak, so unrelated errors and
-   * progress cannot trip it. Call `reset` when a tool call completes.
+   * error once the turn accumulates `REPEATED_TOOL_FAILURE_LIMIT` consecutive
+   * invalid-argument failures, regardless of which tool failed or how the
+   * malformed input differed. A completed tool call or any other tool failure
+   * clears the count, so unrelated errors and progress cannot trip it. Call
+   * `reset` when a tool call completes.
    */
   export const malformedToolGuard = {
     inspect(key: string, error: unknown) {
@@ -276,15 +277,13 @@ export namespace KiloSessionProcessor {
         malformed.delete(key)
         return undefined
       }
-      const state = malformed.get(key) ?? { count: 0 }
-      state.count = state.tool === error.tool ? state.count + 1 : 1
-      state.tool = error.tool
-      if (state.count < REPEATED_TOOL_FAILURE_LIMIT) {
+      const count = (malformed.get(key) ?? 0) + 1
+      if (count < REPEATED_TOOL_FAILURE_LIMIT) {
         if (malformed.size >= 64 && !malformed.has(key)) {
           const oldest = malformed.keys().next()
           if (!oldest.done) malformed.delete(oldest.value)
         }
-        malformed.set(key, state)
+        malformed.set(key, count)
         return undefined
       }
       malformed.delete(key)
