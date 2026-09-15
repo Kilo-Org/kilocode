@@ -8,6 +8,7 @@ import { codeContextLabel, type CodeContext } from "../../../../src/shared/code-
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { fileName } from "./prompt-input-utils"
+import { PromptShowMore } from "./PromptShowMore"
 
 /** Rows rendered before the "show more" toggle takes over. */
 const PREVIEW = 3
@@ -139,13 +140,7 @@ export const CodeContextChips: Component<CodeContextChipsProps> = (props) => {
           </For>
         </div>
 
-        <Show when={hidden() > 0}>
-          <button type="button" class="prompt-review-more" onClick={() => setAll(!all())}>
-            {all()
-              ? language.t("agentManager.review.showLess")
-              : language.t("agentManager.review.showMore", { count: hidden() })}
-          </button>
-        </Show>
+        <PromptShowMore hidden={hidden()} all={all()} onToggle={() => setAll(!all())} />
       </Show>
     </div>
   )

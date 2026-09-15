@@ -758,10 +758,12 @@ describe("code context pill contract", () => {
   })
 
   it("reuses the review attachment shell for collapse and large lists", () => {
+    const more = readFile(path.join(ROOT, "webview-ui/src/components/chat/PromptShowMore.tsx"))
     expect(chips).toContain("prompt-review-comments-toggle")
     expect(chips).toContain("prompt-review-row")
     expect(chips).toContain("prompt-review-list--scroll")
-    expect(chips).toContain("agentManager.review.showMore")
+    expect(chips).toContain("PromptShowMore")
+    expect(more).toContain("agentManager.review.showMore")
     expect(chips).toContain("agentManager.review.clearAll")
     expect(chips).toContain("ui.promptInput.context")
     expect(source).toContain("onClear={clearContexts}")
