@@ -1,5 +1,6 @@
 import { createEffect, createSignal, type Accessor } from "solid-js"
 import {
+  buildHighlightSegments,
   buildPromptSegments,
   expandPastes,
   findPastePlaceholders,
@@ -235,7 +236,18 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
 
   return {
     pastes,
-    segments: (text, paths) => buildPromptSegments(text, paths, pastes()),
+    segments: (text, paths) => {
+      const list = pastes()
+      // Fast path with no collapsed blocks: keep the original segment build so
+      // typing stays on the same code path it had before this feature.
+      if (list.length === 0) {
+        return buildHighlightSegments(text, paths).map((part) => ({
+          text: part.text,
+          kind: part.highlight ? ("mention" as const) : ("plain" as const),
+        }))
+      }
+      return buildPromptSegments(text, paths, list)
+    },
     plainText: (text) => expandPastes(text, pastes()),
     paste,
     expand,
