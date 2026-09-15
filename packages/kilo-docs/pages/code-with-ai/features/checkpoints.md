@@ -53,6 +53,39 @@ When enabled, the system automatically captures snapshots at each step of a task
 {% /tab %}
 {% /tabs %}
 
+## Automatic Task Cleanup
+
+{% callout type="info" %}
+Automatic task cleanup is available in the VS Code extension only.
+{% /callout %}
+
+Task history grows over time, and old tasks can take up meaningful disk space. **Auto-Cleanup** deletes old tasks for you on a schedule so you do not have to prune history by hand.
+
+### Enabling Auto-Cleanup
+
+1. Open Settings by clicking the gear icon {% codicon name="gear" /%}
+2. Go to the **Checkpoints** tab
+3. Toggle **Enable automatic task cleanup** on
+4. Set how long tasks are kept:
+   - **Keep tasks for (days)** — retention for regular task history (default 30 days)
+   - **Keep abandoned tasks for (days)** — retention for tasks that never ran a real exchange, such as empty or abandoned sessions (default 7 days)
+5. Click **Save** if you made changes
+
+Once enabled, cleanup runs shortly after the extension starts and then once a day. You can also run it immediately with the **Run Cleanup Now** button. After each run, the **Last cleanup** line shows what happened — how many tasks were deleted, how many were skipped, and whether anything failed.
+
+{% callout type="warning" %}
+Deleted tasks are gone permanently, including their conversation history. Running tasks are never deleted.
+{% /callout %}
+
+### What Is Protected
+
+- **Running tasks** — a task that is currently executing is never deleted
+- **Tasks with a recent fork** — deleting a task also deletes tasks forked from it, so an old task with a recent fork stays until the fork ages out too
+
+### Snapshots and Cleanup
+
+Task cleanup does not delete checkpoint data directly. Snapshot storage prunes itself: unreachable snapshot objects older than 7 days are removed by an hourly garbage-collection pass, so snapshots belonging to deleted tasks disappear on their own within about a week (see [Storage and Cleanup](#storage-and-cleanup)).
+
 ## How Checkpoints Work
 
 The new extension uses **git-based snapshots** to track your workspace state. A dedicated Git repository (with a detached work tree pointing at your project) is created outside your project directory to store snapshot data — your project's own `.git` history is never touched.

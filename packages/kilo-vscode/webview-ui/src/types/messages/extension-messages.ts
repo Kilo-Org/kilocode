@@ -785,6 +785,20 @@ export interface TimelineSettingLoadedMessage {
   visible: boolean
 }
 
+export interface AutoCleanupLastResult {
+  at: number
+  scanned: number
+  deleted: number
+  skippedActive: number
+  failed: number
+  durationMs: number
+}
+
+export interface AutoCleanupStateLoadedMessage {
+  type: "autoCleanupStateLoaded"
+  last: AutoCleanupLastResult | null
+}
+
 export interface ThroughputSettingLoadedMessage {
   type: "throughputSettingLoaded"
   visible: boolean
@@ -1665,6 +1679,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | OSNotificationTestResultMessage
   | TimelineSettingLoadedMessage
+  | AutoCleanupStateLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
