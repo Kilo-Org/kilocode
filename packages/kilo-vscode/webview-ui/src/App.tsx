@@ -14,7 +14,6 @@ import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { SidebarTopBar } from "./components/chat/SidebarTopBar"
 import { openSubagent } from "./components/chat/open-subagent"
-import { backgroundChildren } from "./components/chat/background-agents"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 import { useWorktreeMode } from "./context/worktree-mode"
@@ -133,12 +132,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   const openAgent = (id: string, title?: string) => {
     const parent = session.sessions().find((item) => item.id === id)?.parentID ?? session.currentSessionID()
-    const background = parent ? backgroundChildren(session.getSessionToolParts(parent)).has(id) : false
     openSubagent({
       sessionID: id,
       title,
       parentSessionID: parent,
-      background,
       worktree: !!worktree,
       post: vscode.postMessage,
     })
