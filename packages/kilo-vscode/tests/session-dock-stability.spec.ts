@@ -383,6 +383,90 @@ test.describe("status swap", () => {
     expect(swap.glide).toBe("0s")
     expect(["absent", "none"]).toContain(swap.old)
   })
+
+  /**
+   * The truncation fade marks a label the box has not opened up for yet. It used
+   * to be judged from the box's own `scrollWidth`, which the outgoing copy still
+   * contributes while it holds the width lock: on a shrink that copy is wider
+   * than the box for the whole glide, so the fade landed on a shorter incoming
+   * label that already fit and cut its tail off.
+   */
+  test("the truncation fade only marks a label the box has not opened up for", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await openStory(page, true)
+    await page.getByTestId("toggle-busy").click()
+    await expect(page.locator(".working-status")).toBeVisible()
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+
+    const sample = () =>
+      page.evaluate(async () => {
+        const box = document.querySelector(".working-status")
+        const next = document.querySelector('[data-testid="next-status"]')
+        if (!(box instanceof HTMLElement) || !(next instanceof HTMLElement)) throw new Error("indicator missing")
+        next.click()
+        const frames: { swap: boolean; clip: boolean; box: number; live: number }[] = []
+        for (let i = 0; i < 12; i++) {
+          await new Promise((resolve) => requestAnimationFrame(resolve))
+          const line = box.querySelector(".working-status-line:not([data-old])")
+          frames.push({
+            swap: box.hasAttribute("data-swap"),
+            clip: box.hasAttribute("data-clip"),
+            box: box.clientWidth,
+            live: line?.getBoundingClientRect().width ?? 0,
+          })
+        }
+        return frames
+      })
+
+    // "Thinking…" to "Searching the codebase": the box opens from the narrower
+    // label, so the cut is faded until it has caught up.
+    const grow = await sample()
+    expect(grow.some((frame) => frame.swap)).toBe(true)
+    expect(grow.some((frame) => frame.clip)).toBe(true)
+
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+    // "Making edits" to "Thinking…": the box starts wider than the incoming
+    // label and only ever narrows toward it, so the label always fits and no
+    // frame may fade it.
+    await page.getByTestId("next-status").click()
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+    const shrink = await sample()
+    expect(shrink.some((frame) => frame.swap)).toBe(true)
+    expect(shrink.filter((frame) => frame.clip)).toEqual([])
+    for (const frame of shrink) expect(frame.live).toBeLessThanOrEqual(frame.box + 1)
+  })
+
+  /**
+   * The outgoing copy is kept mounted after its exit animation so the width lock
+   * is not released early. It holds no opacity by then, but it still painted its
+   * own tail past the shrunken box, which read as a faded fragment beside the
+   * new label.
+   */
+  test("the outgoing label stops painting once its exit lands", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await openStory(page, true)
+    await page.getByTestId("toggle-busy").click()
+    await expect(page.locator(".working-status")).toBeVisible()
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+
+    const lines = await page.evaluate(async () => {
+      const box = document.querySelector(".working-status")
+      const next = document.querySelector('[data-testid="next-status"]')
+      if (!(box instanceof HTMLElement) || !(next instanceof HTMLElement)) throw new Error("indicator missing")
+      next.click()
+      const seen: { mounted: boolean; visibility: string }[] = []
+      for (let i = 0; i < 24; i++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+        const old = box.querySelector(".working-status-line[data-old]")
+        seen.push({ mounted: old !== null, visibility: old ? getComputedStyle(old).visibility : "unmounted" })
+      }
+      return seen
+    })
+
+    const mounted = lines.filter((line) => line.mounted)
+    expect(mounted.length).toBeGreaterThan(0)
+    expect(mounted.at(-1)!.visibility).toBe("hidden")
+  })
 })
 
 test("a wrapped narrow-sidebar actions row is not clipped", async ({ page }) => {
