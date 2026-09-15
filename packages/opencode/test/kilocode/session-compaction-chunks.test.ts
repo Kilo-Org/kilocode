@@ -173,7 +173,12 @@ function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   }
 }
 
-function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty = false) {
+function fakeRuntime(
+  outputTokenMax?: number,
+  error?: MessageV2.Assistant["error"],
+  empty = false,
+  reasoningOnly = false,
+) {
   const calls: string[] = []
   const outputs: number[] = []
   const bus = Bus.layer
@@ -208,13 +213,24 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
                     ? "chunk one"
                     : "chunk two"
                 if (!empty)
-                  yield* sessions.updatePart({
-                    id: PartID.ascending(),
-                    messageID: input.assistantMessage.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    text,
-                  })
+                  yield* sessions.updatePart(
+                    reasoningOnly
+                      ? {
+                          id: PartID.ascending(),
+                          messageID: input.assistantMessage.id,
+                          sessionID: input.sessionID,
+                          type: "reasoning",
+                          text,
+                          time: { start: Date.now() },
+                        }
+                      : {
+                          id: PartID.ascending(),
+                          messageID: input.assistantMessage.id,
+                          sessionID: input.sessionID,
+                          type: "text",
+                          text,
+                        },
+                  )
                 input.assistantMessage.finish = "stop"
                 return "continue" as const
               }),
@@ -251,7 +267,7 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
   }
 }
 
-async function failure(error?: MessageV2.Assistant["error"], empty = false) {
+async function failure(error?: MessageV2.Assistant["error"], empty = false, reasoningOnly = false) {
   await using tmp = await tmpdir()
   return provideTestInstance({
     directory: tmp.path,
@@ -268,7 +284,7 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false) {
         }),
       )
 
-      const { rt } = fakeRuntime(undefined, error, empty)
+      const { rt } = fakeRuntime(undefined, error, empty, reasoningOnly)
       try {
         const msgs = await svc.messages({ sessionID: session.id })
         const parent = msgs.at(-1)?.info.id
@@ -412,6 +428,17 @@ describe("KiloCompactionChunks", () => {
     if (result.summary.info.error?.name !== "APIError") return
     expect(result.summary.info.error.data.message).toBe("Compaction worker returned an empty response")
     expect(result.summary.info.error.data.isRetryable).toBe(true)
+  })
+
+  test("keeps a chunk worker response that only carries reasoning", async () => {
+    const result = await failure(undefined, false, true)
+
+    expect(result.result).toBe("continue")
+    expect(result.summary?.info.role).toBe("assistant")
+    if (result.summary?.info.role !== "assistant") return
+    expect(result.summary.info.finish).toBe("stop")
+    expect(result.summary.info.error).toBeUndefined()
+    expect(result.summary.parts.some((part) => part.type === "text" && part.text === "chunk one")).toBe(true)
   })
 
   test("falls back to chunk workers after the first compaction overflows", async () => {
