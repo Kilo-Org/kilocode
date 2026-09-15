@@ -257,6 +257,24 @@ class MessageViewCompactTest : BasePlatformTestCase() {
         assertEquals("a collapsed group must not build children", 0, group.attachedCount())
     }
 
+    // Re-keying re-inserts into the groups map and moves that entry to the back, so group order has to
+    // come from the segment plan rather than from map iteration.
+    fun `test group order follows render order after a re-key`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("t2", "read"), tool("t3", "read"))
+        add(view, tool("a1", "task"), tool("a2", "task"))
+        val before = listOf(ToolGroupKind.MERGED, ToolGroupKind.SUBAGENT)
+        assertEquals(before, view.groupViews().map { it.kind })
+
+        view.removePart("t1")
+
+        assertEquals(
+            "a re-keyed group must not jump behind groups created after it",
+            before,
+            view.groupViews().map { it.kind },
+        )
+    }
+
     fun `test removing the head of a run keeps its group card`() {
         val view = assistant()
         add(view, tool("t1", "read"), tool("t2", "read"), tool("t3", "read"))

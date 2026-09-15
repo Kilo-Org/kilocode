@@ -98,7 +98,9 @@ class MessageView(
     // (see syncError), so msg.parts goes stale almost immediately and cannot be the rebuild source.
     // Values are the live Content instances the model mutates in place, not copies.
     private val known = LinkedHashMap<String, Content>()
-    // Compact-mode tool groups, in render order, plus the reverse index from a grouped content id.
+    // Compact-mode tool groups keyed by synthetic id, plus the reverse index from a grouped content
+    // id. Iteration order is not render order: re-keying a group that lost its head re-inserts it and
+    // moves it to the back. [segments] is the source of truth for order.
     private val groups = LinkedHashMap<String, ToolGroupView>()
     private val owner = HashMap<String, ToolGroupView>()
     private var segments = emptyList<Segment>()
@@ -545,9 +547,14 @@ class MessageView(
         return true
     }
 
-    /** Compact-mode groups in render order — for tests and dumps. */
+    /**
+     * Compact-mode groups in render order — for tests and dumps. Derived from [segments] rather than
+     * from [groups], whose iteration order a re-key disturbs.
+     */
     @RequiresEdt
-    internal fun groupViews(): List<ToolGroupView> = groups.values.toList()
+    internal fun groupViews(): List<ToolGroupView> = segments.mapNotNull {
+        if (it is Segment.Grouped) groups[groupId(it)] else null
+    }
 
     @RequiresEdt
     private fun addAttachment(content: FileAttachment) {
