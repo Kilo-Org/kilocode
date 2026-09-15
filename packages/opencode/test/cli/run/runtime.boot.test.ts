@@ -167,6 +167,7 @@ describe("run runtime boot", () => {
       default: Record<string, string>
       connected: string[]
       failed: string[]
+      disabled: Provider[] // kilocode_change
     } = {
       all: [
         {
@@ -196,6 +197,7 @@ describe("run runtime boot", () => {
       default: {},
       connected: [],
       failed: [],
+      disabled: [], // kilocode_change
     }
     const configured = {
       providers: [data.all[0]!],
@@ -235,6 +237,7 @@ describe("run runtime boot", () => {
       default: Record<string, string>
       connected: string[]
       failed: string[]
+      disabled: Provider[] // kilocode_change
     } = {
       all: [
         {
@@ -264,6 +267,7 @@ describe("run runtime boot", () => {
       default: {},
       connected: [],
       failed: [],
+      disabled: [], // kilocode_change
     }
     spyOn(sdk.config, "providers").mockRejectedValue(new Error("boom"))
     spyOn(sdk.provider, "list").mockImplementation(() =>
