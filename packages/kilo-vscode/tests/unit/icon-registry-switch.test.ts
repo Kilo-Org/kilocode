@@ -1,36 +1,4 @@
-import { expect, test } from "bun:test"
-import path from "node:path"
-import { build } from "esbuild"
-import { solidPlugin } from "esbuild-plugin-solid"
+import { it } from "bun:test"
+import { fixture } from "../fixtures/run"
 
-const root = path.resolve(import.meta.dir, "../..")
-
-test("kilo-ui Icon survives switching between kilo-ui and upstream icon names", async () => {
-  const solid = path.dirname(Bun.resolveSync("solid-js/package.json", root))
-  const result = await build({
-    entryPoints: [path.join(root, "tests/fixtures/icon-registry-switch.tsx")],
-    bundle: true,
-    conditions: ["browser"],
-    external: ["happy-dom"],
-    format: "esm",
-    platform: "node",
-    loader: { ".css": "empty" },
-    logLevel: "silent",
-    alias: {
-      "solid-js": path.join(solid, "dist/solid.js"),
-      "solid-js/web": path.join(solid, "web/dist/web.js"),
-      "solid-js/store": path.join(solid, "store/dist/store.js"),
-    },
-    plugins: [solidPlugin()],
-    target: "es2022",
-    write: false,
-  })
-  const child = Bun.spawnSync([process.execPath, "run", "-"], {
-    cwd: root,
-    stdin: result.outputFiles.at(0)!.contents,
-    stdout: "pipe",
-    stderr: "pipe",
-    windowsHide: true,
-  })
-  expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
-})
+it("survives switching between kilo-ui and upstream icon names", () => fixture("icon-registry-switch"), 30_000)
