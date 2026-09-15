@@ -94,6 +94,11 @@ class WorktreeController(
     @Volatile
     private var known: Set<String> = emptySet()
 
+    /** `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. */
+    @Volatile
+    var origin: String? = null
+        private set
+
     fun isPending(id: String): Boolean = id in pending
 
     fun progress(id: String): String? = tasks[id]
@@ -116,6 +121,7 @@ class WorktreeController(
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
+                origin = branchInfo.origin
                 onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }

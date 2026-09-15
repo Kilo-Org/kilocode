@@ -377,6 +377,17 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("main", "feature/x", "release/1.0"), controller.branches)
     }
 
+    fun `test reload caches the origin repo slug`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.originSlug = "Kilo-Org/kilocode"
+        val controller = controller()
+
+        controller.reload()
+        flush()
+
+        assertEquals("Kilo-Org/kilocode", controller.origin)
+    }
+
     fun `test base branches exclude branches checked out in worktrees`() {
         rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")

@@ -85,6 +85,9 @@ internal class NewWorktreeDialog(
     private val suggestedName: String,
     private val defaultBase: String,
     private val branches: List<String>,
+    // `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. Used to
+    // reject a pull request URL that belongs to a different repository before it is ever fetched.
+    private val origin: String? = null,
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
 ) : DialogWrapper(parent, false), NewWorktreeHandle {
@@ -332,8 +335,16 @@ internal class NewWorktreeDialog(
             url.requestFocusInWindow()
             return
         }
-        if (parsePrUrl(value) == null) {
+        val ref = parsePrUrl(value)
+        if (ref == null) {
             setErrorText(KiloBundle.message("worktree.import.pr.invalid"), url)
+            url.requestFocusInWindow()
+            url.selectAll()
+            return
+        }
+        val slug = "${ref.owner}/${ref.repo}"
+        if (origin != null && !slug.equals(origin, ignoreCase = true)) {
+            setErrorText(KiloBundle.message("worktree.import.pr.foreign", slug, origin), url)
             url.requestFocusInWindow()
             url.selectAll()
             return

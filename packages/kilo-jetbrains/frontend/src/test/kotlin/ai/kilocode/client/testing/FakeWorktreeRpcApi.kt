@@ -34,6 +34,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     /** When set, [branchStatus] throws it instead of answering. */
     var branchThrows: Exception? = null
     var currentBranch: String? = null
+    var originSlug: String? = null
     val moves = CopyOnWriteArrayList<Triple<String, String?, String>>()
     /** Progress events emitted by [moveToWorktree], in order. */
     var moveScript: List<MoveProgressDto> = emptyList()
@@ -103,7 +104,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto {
         assertNotEdt("listBranches")
-        return WorktreeBranchesDto(branchesList.toList(), currentBranch)
+        return WorktreeBranchesDto(branchesList.toList(), currentBranch, originSlug)
     }
 
     override suspend fun stats(directory: String): WorktreeStatsListDto {

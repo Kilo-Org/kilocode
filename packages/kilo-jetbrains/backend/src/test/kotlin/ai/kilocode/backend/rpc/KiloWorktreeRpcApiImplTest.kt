@@ -8,6 +8,7 @@ import ai.kilocode.backend.diff.failure
 import ai.kilocode.backend.diff.gitBudget
 import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.rpc.parsePrUrl
+import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
@@ -181,6 +182,28 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("timed out", api.reason(CmdOut(-1, "", "", timeout = true), "git worktree remove failed"))
         assertEquals("boom", api.reason(CmdOut(1, "", "boom"), "git worktree remove failed"))
         assertEquals("git worktree remove failed", api.reason(CmdOut(1, "", ""), "git worktree remove failed"))
+    }
+
+    @Test
+    fun `fetchReason turns known git failures into actionable text instead of raw stderr`() {
+        val timeout = CmdOut(-1, "", "", timeout = true)
+        assertTrue(api.fetchReason(timeout, "feature/x").contains("timed out"))
+
+        val conflict = CmdOut(
+            1,
+            "",
+            "error: 'refs/remotes/origin/docs/auto-sync' exists; cannot create 'refs/remotes/origin/docs/auto-sync/jetbrains'",
+        )
+        val conflictText = api.fetchReason(conflict, "docs/auto-sync/jetbrains")
+        assertTrue(conflictText.contains("docs/auto-sync"), conflictText)
+        assertTrue(conflictText.contains("docs/auto-sync/jetbrains"), conflictText)
+        assertFalse(conflictText.contains("refs/remotes"), "should read as a branch name, not a raw ref path")
+
+        val missing = CmdOut(1, "", "fatal: couldn't find remote ref refs/pull/7/head")
+        assertTrue(api.fetchReason(missing, "feature/x").contains("no longer on the remote"))
+
+        val unknown = CmdOut(1, "", "fatal: something unexpected happened")
+        assertTrue(api.fetchReason(unknown, "feature/x").contains("something unexpected happened"))
     }
 
     @Test
@@ -969,6 +992,46 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `listBranches reports the origin repo slug`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
+
+        assertEquals("Kilo-Org/kilocode", api.listBranches(repo.toString()).origin)
+    }
+
+    @Test
+    fun `listBranches reports no origin when the repo has no remote`() = runBlocking {
+        initRepo()
+
+        assertNull(api.listBranches(repo.toString()).origin)
+    }
+
+    @Test
+    fun `importPr rejects a pull request url from a different repository`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
+
+        val result = api.importPr(repo.toString(), "https://github.com/other/repo/pull/7")
+
+        assertNull(result.worktree, "a foreign pull request must not create a worktree")
+        val error = assertNotNull(result.error)
+        assertTrue(error.contains("other/repo"), error)
+        assertTrue(error.contains("Kilo-Org/kilocode"), error)
+    }
+
+    @Test
+    fun `importPr does not reject a matching repository slug that differs only in case`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
+
+        val result = api.importPr(repo.toString(), "https://github.com/kilo-org/KiloCode/pull/7")
+
+        // The cross-repo guard must not fire for a case-only difference; whatever failure follows
+        // (e.g. gh unavailable in the test environment) is unrelated to this guard.
+        assertFalse(result.error.orEmpty().contains("belongs to"), result.error ?: "")
+    }
+
+    @Test
     fun `stats reports committed diff against the base branch`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
@@ -1181,6 +1244,16 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `parseRepoSlug reads owner repo from ssh and https remotes`() {
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("git@github.com:Kilo-Org/kilocode.git"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode.git"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode/"))
+        assertNull(parseRepoSlug("https://gitlab.com/Kilo-Org/kilocode.git"))
+        assertNull(parseRepoSlug("not a url"))
+    }
+
+    @Test
     fun `parsePrHead reads head branch and repository`() {
         val same = parsePrHead("""{"headRefName":"feature/login","title":"x","isCrossRepository":false}""")
         assertEquals("feature/login", same.ref)
@@ -1293,6 +1366,45 @@ class KiloWorktreeRpcApiImplTest {
 
         assertNotNull(failure, "a repo without origin cannot fetch a pull request")
         assertFalse(failure.ok)
+    }
+
+    @Test
+    fun `fetchPrBranch prunes a stale remote-tracking ref and retries`() {
+        initRepo()
+        val origin = originWith(pull = 7, head = "docs/auto-sync/jetbrains")
+        // A branch deleted upstream ("docs/auto-sync") leaves this local tracking ref behind. It
+        // occupies the path a nested head ("docs/auto-sync/jetbrains") needs, the exact directory/
+        // file ref conflict reported against PR imports.
+        git(repo, "update-ref", "refs/remotes/origin/docs/auto-sync", "HEAD")
+
+        val failure = fetchPrBranch(runner(repo), 7, PrHead("docs/auto-sync/jetbrains"), "docs/auto-sync/jetbrains")
+
+        assertNull(failure, "a stale remote-tracking ref should be pruned and the fetch retried")
+        assertEquals(
+            head(origin, "refs/heads/docs/auto-sync/jetbrains"),
+            head(repo, "refs/heads/docs/auto-sync/jetbrains"),
+        )
+    }
+
+    @Test
+    fun `fetchPrBranch does not prune for a failure unrelated to a ref conflict`() {
+        // A repository cannot hold both `refs/heads/docs/auto-sync` and
+        // `refs/heads/docs/auto-sync/jetbrains` at once — the blocking side of a directory/file
+        // conflict against a single remote is therefore always stale relative to that remote's
+        // current state, so pruning always recovers it (see the test above). What still needs
+        // covering is that an unrelated failure (e.g. no network) is reported as-is, without
+        // speculatively running `remote prune` first.
+        val calls = mutableListOf<List<String>>()
+        val run = fun(args: List<String>): CmdOut {
+            calls += args
+            return if (args.first() == "fetch") CmdOut(1, "", "fatal: unable to access remote: Could not resolve host") else CmdOut(0, "", "")
+        }
+
+        val failure = fetchPrBranch(run, 7, PrHead("feature/login"), "feature/login")
+
+        assertNotNull(failure, "a network failure should be reported")
+        assertFalse(refConflict(failure), "this failure is not a ref conflict")
+        assertTrue(calls.none { it.firstOrNull() == "remote" }, "prune must only run after a confirmed ref conflict: $calls")
     }
 
     @Test

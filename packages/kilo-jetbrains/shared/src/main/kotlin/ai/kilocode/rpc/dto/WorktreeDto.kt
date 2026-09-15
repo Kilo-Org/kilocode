@@ -224,6 +224,8 @@ data class MoveProgressDto(
 data class WorktreeBranchesDto(
     val branches: List<String> = emptyList(),
     val current: String? = null,
+    // `owner/repo` for the checkout's origin remote; null when there is no GitHub origin.
+    val origin: String? = null,
 )
 
 @Serializable

@@ -11,6 +11,7 @@ import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.parsePrUrl
+import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
@@ -200,7 +201,9 @@ class KiloWorktreeRpcApiImpl(
         val refs = runGit(base, "for-each-ref", "--format=%(refname:short)", "refs/heads")
         val branches = if (!refs.ok) emptyList() else refs.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val current = runGit(base, "branch", "--show-current").stdout.trim().takeIf { it.isNotEmpty() }
-        WorktreeBranchesDto(branches, current)
+        val remote = runGit(base, "remote", "get-url", "origin")
+        val origin = if (remote.ok) parseRepoSlug(remote.stdout) else null
+        WorktreeBranchesDto(branches, current, origin)
     }
 
     override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
@@ -567,6 +570,21 @@ class KiloWorktreeRpcApiImpl(
         withContext(Dispatchers.IO) {
             val base = Path.of(directory).normalize()
             val ref = parsePrUrl(url) ?: return@withContext CreateWorktreeResultDto(error = "Enter a valid GitHub pull request URL")
+            // `gh pr view` resolves against the URL's own repo, but every fetch below targets this
+            // checkout's local `origin` — so a foreign PR URL either fails obscurely or, if the local
+            // origin happens to have a PR sharing that number, silently imports the wrong PR. Catch it
+            // before spawning `gh` at all. A null origin (no remote, non-GitHub remote, GitHub
+            // Enterprise) skips the guard rather than blocking an import we cannot verify.
+            val slug = "${ref.owner}/${ref.repo}"
+            val remote = runGit(base, "remote", "get-url", "origin")
+            val origin = if (remote.ok) parseRepoSlug(remote.stdout) else null
+            if (origin != null && !slug.equals(origin, ignoreCase = true)) {
+                LOG.warn("pr import rejected: url=$url pr=$slug origin=$origin")
+                return@withContext CreateWorktreeResultDto(
+                    error = "This pull request belongs to $slug, but this project is $origin. " +
+                        "Open a project on $slug to import the pull request there.",
+                )
+            }
             lock(base, "import") {
                 when (ghAvailable(base)) {
                     GhAvailability.GIT_MISSING -> return@lock CreateWorktreeResultDto(error = "Git is not installed")
@@ -597,9 +615,7 @@ class KiloWorktreeRpcApiImpl(
                 val failure = fetchPrBranch({ args -> runGit(base, args, GIT_WRITE_TIMEOUT_MS) }, ref.number, head, branch)
                 if (failure != null) {
                     LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()} timeout=${failure.timeout}")
-                    return@lock CreateWorktreeResultDto(
-                        error = reason(failure, "Failed to check out the pull request branch"),
-                    )
+                    return@lock CreateWorktreeResultDto(error = fetchReason(failure, branch))
                 }
                 addWorktree(base, branch, existing = true, baseRef = null)
             }
@@ -1096,6 +1112,26 @@ class KiloWorktreeRpcApiImpl(
         return res.stderr.ifBlank { fallback }
     }
 
+    /** Import-specific wording for a failed PR fetch of [branch]. Raw git output stays in the log. */
+    internal fun fetchReason(res: CmdOut, branch: String): String {
+        if (res.timeout) return "Fetching the pull request timed out. Check your connection and try again."
+        if (refConflict(res)) {
+            return "Another branch named \"${conflictBranch(res, branch)}\" blocks \"$branch\". " +
+                "Delete or rename that branch, then import again."
+        }
+        if (res.stderr.contains("find remote ref")) {
+            return "This pull request's head is no longer on the remote. Reopen or re-push the branch, then import again."
+        }
+        val text = snippet(res.stderr)
+        return if (text.isBlank()) "Couldn't check out the pull request branch." else "Couldn't check out the pull request branch: $text"
+    }
+
+    /** The remote-tracking ref git reported as blocking the fetch, trimmed to a branch-like name. */
+    private fun conflictBranch(res: CmdOut, fallback: String): String {
+        val match = Regex("'([^']+)' exists; cannot create").find(res.stderr) ?: return fallback
+        return match.groupValues[1].removePrefix("refs/remotes/origin/")
+    }
+
 }
 
 /**
@@ -1310,26 +1346,45 @@ internal fun prBranchName(head: PrHead, number: Int): String {
 }
 
 /**
+ * Both directions of git's ref directory/file conflict, e.g.:
+ *   'refs/remotes/origin/a' exists; cannot create 'refs/remotes/origin/a/b'
+ *   cannot lock ref 'refs/remotes/origin/a': 'refs/remotes/origin/a/b' exists; cannot create 'refs/remotes/origin/a'
+ * A branch deleted upstream leaves a stale remote-tracking ref behind that occupies the path a
+ * nested head needs (e.g. `origin/docs/auto-sync` vs `origin/docs/auto-sync/jetbrains`).
+ */
+internal fun refConflict(out: CmdOut): Boolean = out.stderr.contains("exists; cannot create")
+
+/**
  * Fetches the PR head into [branch] and records which PR it belongs to, mirroring `gh pr checkout`:
  * a same-repo PR gets an ordinary upstream (so `git push`/`git pull` work in the imported worktree),
  * while a fork PR is tracked through `refs/pull/<number>/head`, which `gh` resolves back to the PR
  * by number. [run] executes git in the repository. Returns the failing command, or null on success.
  */
 internal fun fetchPrBranch(run: (List<String>) -> CmdOut, number: Int, head: PrHead, branch: String): CmdOut? {
+    // Git names its own fix for a stale remote-tracking ref blocking a fetch (`git remote prune
+    // origin`); take it once rather than reporting a wall of git output. This prunes every stale
+    // ref under origin, not just the blocking one — acceptable, since "stale" already means gone
+    // upstream, and it only runs after a confirmed conflict.
+    val fetch = fun(args: List<String>): CmdOut {
+        val first = run(args)
+        if (first.ok || !refConflict(first)) return first
+        run(listOf("remote", "prune", "origin"))
+        return run(args)
+    }
     val pull = "refs/pull/$number/head"
     // A fork head lives in a repository we may have no remote for. The pull ref reaches it without
     // adding one, and '+' force-updates a stale branch left by an earlier import attempt.
     if (head.cross || head.ref.isBlank()) {
-        val fetch = run(listOf("fetch", "origin", "+$pull:$branch"))
-        if (!fetch.ok) return fetch
+        val result = fetch(listOf("fetch", "origin", "+$pull:$branch"))
+        if (!result.ok) return result
         recordPrBranch(run, branch, pull)
         return null
     }
     val tracking = "refs/remotes/origin/${head.ref}"
-    val direct = run(listOf("fetch", "origin", "+refs/heads/${head.ref}:$tracking"))
+    val direct = fetch(listOf("fetch", "origin", "+refs/heads/${head.ref}:$tracking"))
     if (!direct.ok) {
         // The head branch is gone — merged PR, or the author deleted it — but the pull ref survives.
-        val fallback = run(listOf("fetch", "origin", "+$pull:$tracking"))
+        val fallback = fetch(listOf("fetch", "origin", "+$pull:$tracking"))
         if (!fallback.ok) return fallback
     }
     val point = run(listOf("branch", "--force", branch, tracking))
