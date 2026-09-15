@@ -207,6 +207,78 @@ class MessageViewCompactTest : BasePlatformTestCase() {
         assertTrue(view.part("a1") is TaskToolView)
     }
 
+    // Segment.Grouped equality covers ids, so a growing run used to compare unequal, get disposed and
+    // rebuilt collapsed — snapping the card shut under the user on every tool that joined the run.
+    fun `test a growing run keeps its group card and expanded state`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("t2", "read"))
+        val group = single(view)
+        group.expand()
+        val child = view.part("t1")
+
+        add(view, tool("t3", "read"))
+
+        assertSame("the card survives a tool joining the run", group, single(view))
+        assertTrue("and stays expanded", group.isExpanded())
+        assertEquals(listOf("t1", "t2", "t3"), group.ids())
+        assertEquals(3, group.attachedCount())
+        assertSame("retained children keep their identity", child, view.part("t1"))
+    }
+
+    fun `test a shrinking run keeps its group card`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("t2", "read"), tool("t3", "read"))
+        val group = single(view)
+        group.expand()
+
+        view.removePart("t3")
+
+        assertSame(group, single(view))
+        assertTrue(group.isExpanded())
+        assertEquals(listOf("t1", "t2"), group.ids())
+    }
+
+    // rebuild() runs whenever a grouped child needs a fresh renderer. Gated on the cached body it
+    // would build every child of a collapsed group, since collapse() keeps the body instance.
+    fun `test replacing a child in a collapsed group builds nothing`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("t2", "read"))
+        val group = single(view)
+        group.expand()
+        group.collapse()
+        assertEquals(0, group.attachedCount())
+
+        val swapped = tools.getValue("t2")
+        swapped.state = ToolExecState.COMPLETED
+        view.upsertPart(swapped)
+
+        assertFalse(group.isExpanded())
+        assertEquals("a collapsed group must not build children", 0, group.attachedCount())
+    }
+
+    fun `test tools with dedicated cards never group and break the run`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("t2", "read"))
+        add(view, done("todo1", "todowrite"))
+        add(view, tool("t3", "read"), tool("t4", "read"))
+
+        assertEquals("the to-do list splits the run", 2, view.groupViews().size)
+        assertNotNull("and renders as its own card", view.part("todo1"))
+    }
+
+    fun `test a plan exit card leaves the run once it completes`() {
+        val view = assistant()
+        add(view, tool("t1", "read"), tool("p1", "plan_exit"))
+        assertEquals("in flight it is ordinary tool noise", listOf("t1", "p1"), single(view).ids())
+
+        val plan = tools.getValue("p1")
+        plan.state = ToolExecState.COMPLETED
+        view.upsertPart(plan)
+
+        assertTrue("once it has a card to show it stands alone", view.groupViews().isEmpty())
+        assertNotNull(view.part("p1"))
+    }
+
     fun `test turning compact off restores standalone cards`() {
         val view = assistant()
         add(view, tool("t1", "read"), tool("t2", "read"), tool("t3", "read"))
@@ -321,4 +393,7 @@ class MessageViewCompactTest : BasePlatformTestCase() {
     private fun tool(id: String, name: String): Tool = tools.getOrPut(id) {
         Tool(id, name, toolKind(name)).also { it.state = ToolExecState.RUNNING }
     }
+
+    /** A completed tool, for the renderers whose `canRender` requires it. */
+    private fun done(id: String, name: String): Tool = tool(id, name).also { it.state = ToolExecState.COMPLETED }
 }

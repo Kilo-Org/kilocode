@@ -283,6 +283,14 @@ class MessageView(
      */
     @RequiresEdt
     private fun updateGrouped(group: ToolGroupView, tool: Tool): Boolean {
+        // A state change can move a tool out of its category: a completing plan_exit, todowrite, or
+        // question gains a dedicated content card and has to leave the run. Re-derive the plan in that
+        // case rather than only refreshing the group's summary, which would strand it in the group.
+        if (kindOf(tool) != group.kind) {
+            applyPlan()
+            refresh()
+            return true
+        }
         var changed = group.note(tool)
         val view = parts[tool.id] ?: return changed
         if (ViewFactory.shouldReplace(view, tool)) {
@@ -405,16 +413,46 @@ class MessageView(
      * Reconcile containment with [plan]. Only the changed tail is rebuilt: an appended part leaves
      * every earlier segment untouched, so streaming costs a constant number of container operations
      * even though the plan itself is recomputed.
+     *
+     * A group whose membership grew or shrank is reconciled in place rather than torn down, so the
+     * card keeps its identity and its expanded state while the turn streams.
      */
     @RequiresEdt
     private fun applyPlan(): Boolean {
         val next = plan()
         if (next == segments) return false
-        val keep = next.zip(segments).takeWhile { it.first == it.second }.count()
+        var keep = 0
+        while (keep < next.size && keep < segments.size) {
+            val old = segments[keep]
+            val fresh = next[keep]
+            if (old != fresh && !reconcileGroup(old, fresh)) break
+            keep++
+        }
         for (index in segments.size - 1 downTo keep) teardown(segments[index])
         for (index in keep until next.size) build(next[index])
         segments = next
         syncBorder()
+        return true
+    }
+
+    /**
+     * Absorb a membership-only change into the group card that already renders this slot, returning
+     * false when the slot changed shape and has to be rebuilt instead.
+     *
+     * [Segment.Grouped] equality covers `ids`, so a run growing from `[t1, t2]` to `[t1, t2, t3]`
+     * compares unequal. Without this the planner would dispose the card and build a fresh one, which
+     * starts collapsed — snapping the group shut under a user who had just expanded it, on every
+     * tool that joins the run.
+     */
+    @RequiresEdt
+    private fun reconcileGroup(old: Segment, fresh: Segment): Boolean {
+        if (old !is Segment.Grouped || fresh !is Segment.Grouped) return false
+        if (old.kind != fresh.kind || groupId(old) != groupId(fresh)) return false
+        val group = groups[groupId(fresh)] ?: return false
+        val ids = fresh.ids.toSet()
+        old.ids.filterNot { it in ids }.forEach { owner.remove(it) }
+        fresh.ids.forEach { owner[it] = group }
+        group.reconcile(fresh.ids) { known[it] as? Tool }
         return true
     }
 
@@ -586,8 +624,14 @@ class MessageView(
             }
             attachments = null
         }
-        aliases.values.removeAll { it == contentId }
-        sources.keys.removeAll { it !in aliases }
+        // Reasoning children merged into this host rendered through its view, so their text goes with
+        // it. Dropping only the alias would leave them in known and unfiltered by rendered(), and the
+        // applyPlan below would resurrect them as standalone blocks.
+        for (id in aliases.filterValues { it == contentId }.keys.toList()) {
+            aliases.remove(id)
+            sources.remove(id)
+            known.remove(id)
+        }
         removeView(view)
         Disposer.dispose(view)
         if (view === prompt) prompt = null

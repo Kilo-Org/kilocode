@@ -3,12 +3,14 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.views.question.QuestionResultView
+import ai.kilocode.client.session.views.todo.TodoWriteView
 
 /**
- * Groupable tool category. Every category maps to exactly one compact-mode toggle, and the mapping
- * is total: [OTHER] catches everything the named categories do not, so no tool can end up silently
- * ungroupable. Shell commands dominate real transcripts, so leaving them out made compact mode a
- * no-op on exactly the sessions that needed it most.
+ * Groupable tool category. Among tools that group at all the mapping is total: [OTHER] catches
+ * everything the named categories do not, so no tool can end up silently ungroupable. Shell commands
+ * dominate real transcripts, so leaving them out made compact mode a no-op on exactly the sessions
+ * that needed it most.
  */
 enum class ToolGroupCategory { READ, WRITE, WEB, TASK, OTHER }
 
@@ -17,8 +19,24 @@ enum class ToolGroupKind { MERGED, SUBAGENT }
 
 private val WEB_TOOLS = setOf("websearch", "webfetch")
 
-/** The category [tool] belongs to for compact-mode grouping. Never null — see [ToolGroupCategory]. */
-fun categoryOf(tool: Tool): ToolGroupCategory = when {
+/**
+ * True when [tool] owns a dedicated content card: the to-do list, the "Plan is ready" card, or a
+ * recorded question and answer. These carry meaningful output rather than tool noise, so folding them
+ * into "N tools called" would hide precisely what compact mode exists to keep visible.
+ *
+ * Mirrors [ViewFactory]'s precedence, where these three win over the generic tool renderers. Note
+ * these are state-dependent — an in-flight `plan_exit` is ordinary tool noise and groups normally,
+ * then leaves the run once it completes and has a card to show.
+ */
+private fun dedicated(tool: Tool): Boolean =
+    TodoWriteView.canRender(tool) || PlanExitView.canRender(tool) || QuestionResultView.canRender(tool)
+
+/**
+ * The category [tool] belongs to for compact-mode grouping, or null when it must never group because
+ * it owns a dedicated content card. A null result also breaks the surrounding run.
+ */
+fun categoryOf(tool: Tool): ToolGroupCategory? = when {
+    dedicated(tool) -> null
     tool.name == "task" -> ToolGroupCategory.TASK
     tool.kind == ToolKind.READ -> ToolGroupCategory.READ
     tool.kind == ToolKind.WRITE -> ToolGroupCategory.WRITE
@@ -40,5 +58,6 @@ fun groupKindOf(tool: Tool): ToolGroupKind? {
         ToolGroupCategory.WRITE -> ToolGroupKind.MERGED.takeIf { KiloPluginSettings.getCompactGroupWrites() }
         ToolGroupCategory.WEB -> ToolGroupKind.MERGED.takeIf { KiloPluginSettings.getCompactGroupWeb() }
         ToolGroupCategory.OTHER -> ToolGroupKind.MERGED.takeIf { KiloPluginSettings.getCompactGroupOther() }
+        null -> null
     }
 }

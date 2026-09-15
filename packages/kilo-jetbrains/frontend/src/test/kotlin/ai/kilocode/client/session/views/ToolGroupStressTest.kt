@@ -102,7 +102,9 @@ class ToolGroupStressTest : BasePlatformTestCase() {
 
     private fun assistant(): MessageView {
         val msg = Message(MessageDto("m1", "ses", "assistant", MessageTimeDto(0.0)))
-        return MessageView(msg, openFile = { _, _ -> })
+        // MessageView owns its part renderers, so every run has to be disposed or the retained
+        // pre-run card's Swing tree (and any editor it holds) outlives the test.
+        return MessageView(msg, openFile = { _, _ -> }).also { Disposer.register(testRootDisposable, it) }
     }
 
     private fun edit(index: Int) = Tool("t$index", "edit", toolKind("edit")).also {

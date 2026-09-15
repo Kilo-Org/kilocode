@@ -101,6 +101,30 @@ class ToolGroupView private constructor(
         syncChildren()
     }
 
+    /**
+     * Reset the run to exactly [ids], in that order, resolving ids the group has not seen through
+     * [lookup]. Returns true when anything moved.
+     *
+     * This is what keeps the card — and any expansion the user performed — alive across a run that
+     * merely grows or shrinks. A streaming turn extends its trailing run one tool at a time, so
+     * rebuilding the card per arrival would hand back a collapsed replacement each time.
+     */
+    @RequiresEdt
+    fun reconcile(ids: List<String>, lookup: (String) -> Tool?): Boolean {
+        if (states.keys.toList() == ids) return false
+        val next = LinkedHashMap<String, ToolExecState>()
+        for (id in ids) next[id] = states[id] ?: lookup(id)?.state ?: continue
+        states.clear()
+        states.putAll(next)
+        for (id in attached.keys.toList()) {
+            if (id in next) continue
+            detach(id)
+        }
+        syncHeader()
+        if (isExpanded()) syncChildren()
+        return true
+    }
+
     @RequiresEdt
     override fun collapse(): Boolean {
         val changed = super.collapse()
@@ -170,7 +194,11 @@ class ToolGroupView private constructor(
      */
     @RequiresEdt
     private fun syncChildren() {
-        if (!hasBody()) return
+        // Containment, not the cached body, is the honest gate here. collapse() keeps the body
+        // instance so hasBody() stays true afterwards, and rebuild() on a collapsed group would then
+        // build and attach every child the group exists to avoid building. The expand path is
+        // unaffected: super.expand() attaches the body before this runs.
+        if (!isExpanded()) return
         val panel = groupBody()
         for (view in attached.values) panel.remove(view)
         attached.clear()
