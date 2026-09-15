@@ -198,18 +198,18 @@ test("preserves scroll while adding and editing a review comment", async ({ page
   const line = target.locator('[data-line="1"]').last()
   await line.hover()
   await target.locator("[data-utility-button]").last().click()
-  await expect(target.locator(".am-annotation-textarea")).toBeVisible()
-  await target.locator(".am-annotation-textarea").fill("Keep this stable")
+  await expect(target.locator(".am-annotation-draft textarea")).toBeVisible()
+  await target.locator(".am-annotation-draft textarea").fill("Keep this stable")
   const top = await target.evaluate((el) => el.getBoundingClientRect().top)
   const before = await scroller.evaluate((el) => el.scrollTop)
 
   await page.getByRole("button", { name: "Apply agent edit" }).click()
   await expect(page.getByTestId("agent-edit-version")).toHaveText("after")
-  await expect(target.locator(".am-annotation-textarea")).toHaveValue("Keep this stable")
+  await expect(target.locator(".am-annotation-draft textarea")).toHaveValue("Keep this stable")
   await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeCloseTo(before, 0)
   await expect.poll(async () => target.evaluate((el) => el.getBoundingClientRect().top)).toBeCloseTo(top, 0)
 
-  await target.getByRole("button", { name: "Comment" }).click()
+  await target.locator('[data-action="save"]').click()
   await expect(target.getByText("Keep this stable")).toBeVisible()
   const saved = await scroller.evaluate((el) => el.scrollTop)
 
@@ -229,15 +229,15 @@ for (const modifier of ["Meta", "Control"] as const) {
     for (const text of ["First comment", "Second comment"]) {
       await target.locator('[data-line="1"]').last().hover()
       await target.locator("[data-utility-button]").last().click()
-      await target.locator(".am-annotation-textarea").fill(text)
+      await target.locator(".am-annotation-draft textarea").fill(text)
       if (text === "First comment") {
-        await target.getByRole("button", { name: "Comment", exact: true }).click()
+        await target.locator('[data-action="save"]').click()
         await expect(target.getByText(text, { exact: true })).toBeVisible()
       }
     }
 
     await page.keyboard.press("Shift+Enter")
-    await expect(target.locator(".am-annotation-textarea")).toHaveValue("Second comment\n")
+    await expect(target.locator(".am-annotation-draft textarea")).toHaveValue("Second comment\n")
 
     const result = await page.evaluate((modifier) => {
       const sent: Array<{ comments: Array<{ comment: string }>; autoSend: boolean }> = []

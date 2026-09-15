@@ -16898,6 +16898,37 @@ export type KilocodeRemoveSnapshotResponses = {
 
 export type KilocodeRemoveSnapshotResponse = KilocodeRemoveSnapshotResponses[keyof KilocodeRemoveSnapshotResponses]
 
+export type KilocodeSnapshotPrepareData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/snapshot/prepare"
+}
+
+export type KilocodeSnapshotPrepareErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSnapshotPrepareError = KilocodeSnapshotPrepareErrors[keyof KilocodeSnapshotPrepareErrors]
+
+export type KilocodeSnapshotPrepareResponses = {
+  /**
+   * Snapshot repository preparation result
+   */
+  200: {
+    prepared: boolean
+    durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
+export type KilocodeSnapshotPrepareResponse = KilocodeSnapshotPrepareResponses[keyof KilocodeSnapshotPrepareResponses]
+
 export type KilocodeProviderUsageGetData = {
   body?: never
   path?: never
