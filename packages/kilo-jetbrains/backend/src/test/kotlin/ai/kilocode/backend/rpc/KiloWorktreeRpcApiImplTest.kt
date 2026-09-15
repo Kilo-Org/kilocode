@@ -1305,6 +1305,8 @@ class KiloWorktreeRpcApiImplTest {
         // A host that merely ends in github.com is a different server, so the guard must skip it
         // rather than compare this checkout against a slug it never published.
         assertNull(parseRepoSlug("https://notgithub.com/Kilo-Org/kilocode.git"))
+        // The host must be the authority, not a path segment that happens to end in it.
+        assertNull(parseRepoSlug("https://gitlab.com/team/x.github.com/owner/repo.git"))
         assertNull(parseRepoSlug("/tmp/local-origin"))
         assertNull(parseRepoSlug("not a url"))
     }
@@ -1312,6 +1314,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `parsePrUrl requires a github host boundary`() {
         assertNull(parsePrUrl("https://notgithub.com/Kilo-Org/kilocode/pull/7"))
+        assertNull(parsePrUrl("https://gitlab.com/team/x.github.com/Kilo-Org/kilocode/pull/7"))
         assertEquals(7, parsePrUrl("ssh://git@github.com:22/Kilo-Org/kilocode/pull/7")?.number)
         assertEquals(7, parsePrUrl("https://www.github.com/Kilo-Org/kilocode/pull/7")?.number)
     }

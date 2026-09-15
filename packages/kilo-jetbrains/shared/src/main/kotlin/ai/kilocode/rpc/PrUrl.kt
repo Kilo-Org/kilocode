@@ -2,11 +2,12 @@ package ai.kilocode.rpc
 
 data class PrRef(val owner: String, val repo: String, val number: Int)
 
-// `github.com` has to start the string or sit on a scheme/userinfo/subdomain boundary, so a host that
-// merely ends in it — `notgithub.com` — is not read as GitHub, while `www.github.com` still is. The
-// dot matters: without it a `www.` origin parses as null, which `foreignPr` reads as "cannot tell"
-// and the cross-repo guard silently stops running. The optional port covers `ssh://…:22/` URLs.
-private const val HOST = "(?:^|//|@|\\.)github\\.com(?::\\d+)?[/:]"
+// The host has to sit at the start of the string or on a scheme/userinfo boundary, with any subdomain
+// labels in between, so `notgithub.com` is not read as GitHub while `www.github.com` is. Both halves
+// matter: without the labels a `www.` origin parses as null, which `foreignPr` reads as "cannot tell"
+// and the cross-repo guard silently stops running; without the boundary anchor a *path* segment
+// ending in `.github.com` would match too. The optional port covers `ssh://…:22/` URLs.
+private const val HOST = "(?:^|//|@)(?:[\\w-]+\\.)*github\\.com(?::\\d+)?[/:]"
 
 private val PR_URL = Regex("$HOST([^/]+)/([^/]+?)(?:\\.git)?/pull/(\\d+)")
 private val REPO_URL = Regex("$HOST([^/]+)/([^/]+?)(?:\\.git)?/*$")
