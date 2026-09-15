@@ -207,6 +207,7 @@ export const dict = {
   "prompt.action.send.recording": "Transkribieren und senden",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Prompt verbessern",
+  "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",
   "prompt.action.autoApprove.enable": "Automatische Genehmigung aktivieren",
   "prompt.action.autoApprove.disable": "Automatische Genehmigung deaktivieren",
   "prompt.action.autoApprove.enabled":
