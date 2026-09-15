@@ -73,14 +73,6 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
 
-## Switching accounts
-
-Switch between your Personal account and your organizations from the account control directly below the title on **Home**, **Agents**, and **Quick Chat**. The app saves your choice on the device and restores it on launch; while the choice loads, the account label shows a loading state instead of briefly showing Personal.
-
-Session headers show the Personal account or organization a session belongs to without changing the account selected on other screens.
-
-If a saved account can't be loaded, the app shows a warning and keeps your selection until you choose another account. Retry a failed load or save from the same screen without leaving it, and a failed save does not undo your selection. Personal stays in the picker when your organization list is empty.
-
 ## Live session counts
 
 When an organization is selected, the **Agents** screen shows how many of its sessions are live above the title, and the **Agents** tab shows a matching badge that stays visible from other tabs. The count disappears while sessions are loading, after an error, and when no sessions are live.
