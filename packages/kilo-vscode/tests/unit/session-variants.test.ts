@@ -44,6 +44,25 @@ function setup(session?: string, configured?: string) {
 }
 
 describe("session variants", () => {
+  it("distinguishes an unset effort from an explicit Default selection", () => {
+    const state = setup()
+    expect(state.variants.saved(model, "code")).toBeUndefined()
+    expect(state.variants.choice()).toBeUndefined()
+    expect(state.variants.request()).toBe("")
+    state.variants.select("")
+    expect(state.variants.saved(model, "code")).toBe("")
+    expect(state.variants.choice()).toBe("")
+    expect(state.variants.request()).toBe("")
+  })
+
+  it.each([undefined, "session-a"])("carries explicit Default rather than the target preference for %s", (id) => {
+    const state = setup(id, "max")
+    state.selections["agent/code/anthropic/claude-sonnet-4"] = "high"
+    state.variants.carry(model, "", "code", id)
+    expect(state.variants.current(id)).toBeUndefined()
+    expect(state.variants.request(id)).toBe("")
+  })
+
   it("subscribes before requesting persisted variants and returns cleanup", () => {
     const state = setup()
     const unsub = state.variants.load()

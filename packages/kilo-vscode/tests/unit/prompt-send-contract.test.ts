@@ -322,7 +322,7 @@ describe("sendMessage / sendCommand draft id contract", () => {
   it("sendCommand seeds the pending agent before resolving draft-scoped settings", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*submission\(scope, effectiveSelection\)/,
+      /if \(!sid && !draftID && effectiveDraftID\) \{\s*agentDrafts\.seed\(effectiveDraftID\)[\s\S]*submission\(scope, effectiveSelection\)/,
     )
   })
 

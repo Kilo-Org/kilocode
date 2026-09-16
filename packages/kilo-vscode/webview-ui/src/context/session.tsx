@@ -101,6 +101,7 @@ import { isSameSessionTree } from "./model-usage"
 import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
+import { createPreferenceLoader } from "./session-preference-loader"
 import { activities, type Activity } from "../utils/session-activity"
 import { active as activeTiming, hold, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
@@ -522,8 +523,9 @@ export const SessionProvider: ParentComponent = (props) => {
     store,
     model: (scope, id, model) => setStore(scope, id, model),
     set: (key, value) => setStore("variantSelections", key, value),
-    scopes: () => [...Object.keys(store.messages), currentSessionID(), draftSessionID()],
-    initialized: (id) => !store.sessions[id] || store.messages[id] !== undefined,
+    clear: (update) => setStore(produce((store) => update(store))),
+    scopes: () => [currentSessionID(), draftSessionID(), ...Object.keys(submissionMap)],
+    initialized: (id) => /^(?:sidebar-)?pending:/.test(id) || isSubmitting(id) || store.messages[id] !== undefined,
     selected,
     defaults: (agent) =>
       preferredSelection() ??
@@ -561,7 +563,7 @@ export const SessionProvider: ParentComponent = (props) => {
     current: currentSessionID,
     agent: agentForScope,
     selected,
-    variant: variants.request,
+    variant: variants.choice,
     apply: memory.apply,
     set: (id, selection) => setStore("sessionOverrides", id, selection),
     carry: carryVariant,
@@ -737,7 +739,6 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestMcpStatus" })
 
   const fallback = setTimeout(() => {
-    if (!preferencesReady()) vscode.postMessage({ type: "requestModelSelections" })
     if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
     if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
   }, 3000)
@@ -746,7 +747,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.type !== "extensionDataReady") return
     unsubReady()
     clearTimeout(fallback)
-    if (!preferencesReady()) vscode.postMessage({ type: "requestModelSelections" })
+    retryPreferences()
     if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
     if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
   })
@@ -781,7 +782,11 @@ export const SessionProvider: ParentComponent = (props) => {
       setPreferencesReady(true)
     })
   })
-  vscode.postMessage({ type: "requestModelSelections" })
+  const retryPreferences = createPreferenceLoader({
+    ready: preferencesReady,
+    connected: server.isConnected,
+    request: () => vscode.postMessage({ type: "requestModelSelections" }),
+  })
   onCleanup(unsubSelections)
 
   // Load persisted recent models from extension globalState
@@ -1170,24 +1175,7 @@ export const SessionProvider: ParentComponent = (props) => {
         }
         if (pendingAgent) setStore("agentSelections", session.id, pendingAgent)
         if (pendingModel) setStore("sessionOverrides", session.id, pendingModel)
-        setStore(
-          "agentSelections",
-          produce((agents) => {
-            delete agents[draftID]
-          }),
-        )
-        setStore(
-          "sessionOverrides",
-          produce((models) => {
-            delete models[draftID]
-          }),
-        )
-        setStore(
-          "variantSelections",
-          produce((variants) => {
-            for (const key of sessionVariantKeys(variants, draftID)) delete variants[key]
-          }),
-        )
+        memory.forget(draftID)
         agentDrafts.promote(draftID)
       } else if (pendingAgent && !store.agentSelections[session.id]) {
         setStore("agentSelections", session.id, pendingAgent)
@@ -2308,7 +2296,11 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
-    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
+    if (!sid && !draftID && effectiveDraftID) {
+      agentDrafts.seed(effectiveDraftID)
+      // Generated drafts have no history to load; initialize before applying mode overrides.
+      setStore("messages", effectiveDraftID, [])
+    }
 
     if (effectiveSelection) {
       if (overrides?.agent) {
@@ -2988,6 +2980,7 @@ export const SessionProvider: ParentComponent = (props) => {
     preferredSelection,
     preferencesReady,
     rememberSelection,
+    trackScopes: memory.track,
     costBreakdown,
     contextUsage,
     modelUsage,
@@ -3029,6 +3022,7 @@ export const SessionProvider: ParentComponent = (props) => {
     variantList,
     currentVariant,
     variantForAgent,
+    variantPreference: (agent, model) => (model ? variants.saved(model, agent) : undefined),
     selectVariant,
     revert,
     revertedCount,

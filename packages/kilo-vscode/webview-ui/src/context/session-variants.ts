@@ -86,8 +86,13 @@ export function createSessionVariants(options: Options) {
     preferred(selection) ??
     options.selections()[variantKey(selection, name)] ??
     options.selections()[legacyVariantKey(selection)] ??
-    configured(name, selection) ??
-    DEFAULT_VARIANT
+    configured(name, selection)
+
+  const choice = (sessionID?: string) => {
+    const id = sessionID ?? options.session()
+    const model = options.selected(id)
+    return model ? saved(model, options.agent(id), id) : undefined
+  }
 
   const select = (value: string | undefined, sessionID?: string) => {
     const sid = sessionID ?? options.session()
@@ -104,9 +109,7 @@ export function createSessionVariants(options: Options) {
   const carry = (selection: ModelSelection, value: string | undefined, name: string, sessionID?: string) => {
     const list = Object.keys(options.find(selection)?.variants ?? {})
     if (list.length === 0) return
-    // An absent value means the model default, not an explicit user choice.
-    // Do not write a default sentinel here because it would shadow a cached
-    // agent-level variant when this selection is resolved for a new session.
+    // Undefined leaves the target's effort intact; an explicit Default must be carried.
     const next = value === DEFAULT_VARIANT ? DEFAULT_VARIANT : preserveVariant(value, list)
     if (next === undefined) return
     const key = variantKey(selection, name, sessionID)
@@ -126,5 +129,5 @@ export function createSessionVariants(options: Options) {
     return unsub
   }
 
-  return { carry, list, agent, current, request, saved, select, load }
+  return { carry, list, agent, current, request, saved, choice, select, load }
 }

@@ -1,6 +1,6 @@
-import { batch } from "solid-js"
+import { batch, createEffect, createSignal, on, type Accessor } from "solid-js"
 import type { ModelSelection, WebviewMessage } from "../types/messages"
-import { variantKey } from "./session-variant-store"
+import { DEFAULT_VARIANT, sessionVariantKeys, variantKey } from "./session-variant-store"
 
 interface Store {
   modelSelections: Record<string, ModelSelection | null>
@@ -13,6 +13,7 @@ export function createModelPreferences(options: {
   store: Store
   model: (scope: "modelSelections" | "sessionOverrides", id: string, model: ModelSelection) => void
   set: (key: string, variant: string) => void
+  clear: (update: (store: Store) => void) => void
   scopes: () => (string | undefined)[]
   initialized: (id: string) => boolean
   selected: (id: string) => ModelSelection | null
@@ -23,20 +24,52 @@ export function createModelPreferences(options: {
   update: (agent: string, model: ModelSelection, variant: string) => void
   post: (message: WebviewMessage) => void
 }) {
-  function pin(id: string) {
+  const inventories = new Set<Accessor<readonly string[]>>()
+  const [version, setVersion] = createSignal(0)
+  const scopes = () => {
+    version()
+    return new Set(
+      [...options.scopes(), ...[...inventories].flatMap((ids) => [...ids()])].filter((id): id is string => !!id),
+    )
+  }
+  let previous = new Set<string>()
+  const sync = (ids: Set<string>) => {
+    for (const id of previous) if (/^(?:sidebar-)?pending:/.test(id) && !ids.has(id)) forget(id)
+    previous = ids
+    return ids
+  }
+  createEffect(on(scopes, sync))
+
+  function track(ids: Accessor<readonly string[]>) {
+    inventories.add(ids)
+    setVersion((value) => value + 1)
+    return () => {
+      inventories.delete(ids)
+      setVersion((value) => value + 1)
+    }
+  }
+
+  function forget(id: string) {
+    options.clear((store) => {
+      delete store.agentSelections[id]
+      delete store.sessionOverrides[id]
+      for (const key of sessionVariantKeys(store.variantSelections, id)) delete store.variantSelections[key]
+    })
+  }
+
+  function pin(id: string, freeze = false) {
     if (!options.store.sessionOverrides[id] && !options.initialized(id)) return
     const model = options.store.sessionOverrides[id] ?? options.defaults(options.agent(id)) ?? options.selected(id)
     if (!model) return
     const key = variantKey(model, options.agent(id), id)
-    const value = options.variant(id, model)
+    const value = options.variant(id, model) ?? (freeze ? DEFAULT_VARIANT : undefined)
     if (options.store.variantSelections[key] === undefined && value !== undefined) options.set(key, value)
     // Copy inherited models so updates to a mode's store cannot mutate the session.
     if (!options.store.sessionOverrides[id]) options.model("sessionOverrides", id, { ...model })
   }
 
   function retain() {
-    const ids = new Set([...options.scopes(), ...Object.keys(options.store.agentSelections)])
-    for (const id of ids) if (id) pin(id)
+    for (const id of sync(scopes())) pin(id, true)
   }
 
   function apply(agent: string, model: ModelSelection, id?: string) {
@@ -68,5 +101,5 @@ export function createModelPreferences(options: {
     options.post({ type: "persistVariant", key: variantKey(model, agent), value: variant })
   }
 
-  return { apply, pin, remember }
+  return { apply, pin, remember, track, forget }
 }

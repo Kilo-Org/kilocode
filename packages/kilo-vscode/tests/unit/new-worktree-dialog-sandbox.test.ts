@@ -7,14 +7,6 @@ const providerPath = join(__dirname, "..", "..", "src", "KiloProvider.ts")
 const src = readFileSync(path, "utf8")
 const provider = readFileSync(providerPath, "utf8")
 
-function fragment(start: string, end: string) {
-  const from = src.indexOf(start)
-  const to = src.indexOf(end, from)
-  expect(from).toBeGreaterThanOrEqual(0)
-  expect(to).toBeGreaterThan(from)
-  return new Bun.Transpiler({ loader: "tsx" }).transformSync(src.slice(from, to))
-}
-
 describe("NewWorktreeDialog sandbox toggle", () => {
   it("uses the persisted default and only sends explicit modal overrides", () => {
     expect(src).toContain('vscode.postMessage({ type: "requestSandboxDefault", requestID: sandboxRequestID })')
@@ -55,7 +47,7 @@ function check(code: string) {
     import { plugin } from "bun"
     import { isModelValid } from "./src/context/provider-utils.ts"
     import { toggleModel, setAllocationVariant } from "./agent-manager/multi-model-utils.ts"
-    import { DEFAULT_VARIANT, preserveVariant } from "./src/context/session-variant-store.ts"
+    import { DEFAULT_VARIANT } from "./src/context/session-variant-store.ts"
 
     const solid = join(dirname(require.resolve("solid-js")), "solid.js")
     plugin({
@@ -64,8 +56,8 @@ function check(code: string) {
         build.onResolve({ filter: /^solid-js$/ }, () => ({ path: solid }))
       },
     })
-    const { batch, createComputed, createEffect, createMemo, createRoot, createSignal, onCleanup } = await import("solid-js")
-    const { createDialogModels } = await import("./agent-manager/new-worktree-models.ts")
+    const { batch, createComputed, createRoot, createSignal, onCleanup } = await import("solid-js")
+    const { createDialogModels, createDialogPreferences } = await import("./agent-manager/new-worktree-models.ts")
 
     const x = { providerID: "kilo", modelID: "x" }
     const y = { providerID: "kilo", modelID: "y" }
@@ -97,42 +89,31 @@ function check(code: string) {
       return { state, snapshot, refresh: (update) => refresh((current) => ({ ...current, ...update })), switchAgent, seen }
     }
 
-    // Run the dialog's actual model/variant setup, handlers and persistence effect, without rendering unrelated UI.
+    // Import the same reactive preference controller used by the dialog, without rendering unrelated UI.
     function dialog(saved = {}, initial = { providers: catalog(x, y), fallback: y, alternate: y, ready: true, connected: [] }) {
       const result = createRoot((dispose) => {
         const [snapshot, refresh] = createSignal(initial)
-        const [agent, setAgent] = createSignal(saved.agent ?? "code")
         const [compareMode, setCompareMode] = createSignal(false)
-        const [modelAllocations, setModelAllocations] = createSignal(new Map())
-        const [sandbox] = createSignal(undefined)
         const preferences = []
-        const provider = {
+        const state = createDialogPreferences({
+          saved,
+          agent: saved.agent ?? "code",
           ready: () => snapshot().ready,
-          isModelValid: (value) => isModelValid(snapshot().providers, snapshot().connected, value),
-          findModel: (value) => snapshot().providers[value.providerID]?.models[value.modelID],
-        }
-        const session = {
-          modelForAgent: (name) => name === "code" ? snapshot().fallback : snapshot().alternate ?? null,
-          variantForAgent: (name) => snapshot().efforts?.[name],
-          preferredSelection: () => snapshot().preferred,
-          preferencesReady: () => snapshot().hydrated ?? true,
-          rememberSelection: (...args) => preferences.push(args),
-        }
-        let cached = {}
-        const vscode = { getState: () => cached, setState: (value) => { cached = value } }
-        ${fragment("const preferred =", "const [versions")}
-        ${fragment("const selection = createDialogModels({", "const [compareMode")}
-        ${fragment("const [variant, setVariant] =", "const [sandbox, setSandbox] =")}
-        ${fragment("const selectAgent =", "const cycle =")}
-        ${fragment("// Variant list for the currently selected model", "  createEffect(() => {\n    if (!sandboxVisible())")}
-        ${fragment("  createEffect(() => {\n    const state = vscode.getState", "// Auto-persist images")}
-        const pick = ${src.match(/onSelect=\{(\(pid, mid\) => \{[\s\S]*?\n\s*\})\}/)?.[1]}
-        const choose = ${src.match(/<ThinkingSelectorBase[\s\S]*?onSelect=\{([^\n]*)\}/)?.[1]}
-        const clear = ${src.match(/<ThinkingSelectorBase[\s\S]*?onClear=\{([^\n]*)\}/)?.[1]}
-        const allocate = ${src.match(/<MultiModelSelector[^\n]*onChange=\{([^\n]*)\}/)?.[1]}
+          valid: (value) => isModelValid(snapshot().providers, snapshot().connected, value),
+          variants: (value) => Object.keys(snapshot().providers[value.providerID]?.models[value.modelID]?.variants ?? {}),
+          fallback: (name) => name === "code" ? snapshot().fallback : snapshot().alternate ?? null,
+          effort: (name, model) => model ? snapshot().efforts?.[name + "/" + model.modelID] ?? snapshot().efforts?.[name] : undefined,
+          preferred: () => snapshot().preferred,
+          hydrated: () => snapshot().hydrated ?? true,
+          compare: compareMode,
+          remember: (...args) => preferences.push(args),
+        })
         return {
-          selection, model, variant, effectiveVariant, pick, choose, clear, selectAgent, setCompareMode, preferences, allocate,
-          cached: () => cached.advancedDialogSelections,
+          ...state, setCompareMode, preferences,
+          pick: state.selectModel,
+          choose: state.selectVariant,
+          clear: () => state.selectVariant(DEFAULT_VARIANT),
+          cached: state.saved,
           refresh: (update) => refresh((current) => ({ ...current, ...update })), dispose,
         }
       })
@@ -156,26 +137,24 @@ function check(code: string) {
 }
 
 describe("NewWorktreeDialog models", () => {
-  it("persists only the saved choice and wires the effective model to display, variants, and guarded submission", () => {
-    expect(src).toContain("saved: saved.model,")
-    expect(src).toContain("const preferred = session.preferredSelection()")
-    expect(src).toContain("fallback: () => session.modelForAgent(agent()),")
-    expect(src).toContain("ready: provider.ready,")
-    expect(src).toContain("const model = selection.model")
-    expect(src).toContain("model: selection.choice(),")
-    expect(src).not.toContain("model: model(),")
-    expect(src).not.toContain("selection.select(undefined)")
-    expect(src).toContain("selection.retain()")
-    expect(src).not.toContain("setModel(")
-    expect(src).toContain("selection.select(next)")
-    expect(src).toContain("selectVariant(next)")
-    expect(src).toContain("value={model()}")
-    expect(src).toContain("const sel = model()")
-    expect(src).toContain("session.variantForAgent(agent(), model())")
-    expect(src).toContain("const sel = isCompare ? null : model()")
-    expect(src).toContain("return selection.canSubmit(compareMode() ? modelAllocations() : undefined)")
-    expect(src).toContain("if (!canSubmit()) return")
-    expect(src).toContain("disabled={!canSubmit()}")
+  it("caches only explicit model choices and guards submission using the available model", () => {
+    check(`
+      const state = dialog()
+      await Promise.resolve()
+      assert.deepEqual(state.model(), y)
+      assert.deepEqual(state.cached(), { agent: "code", model: undefined, variant: undefined })
+      assert.equal(state.selection.canSubmit(), true)
+      state.refresh({ providers: {}, ready: false })
+      assert.equal(state.model(), null)
+      assert.equal(state.cached().model, undefined)
+      assert.equal(state.selection.canSubmit(), false)
+      state.refresh({ providers: catalog(x, y), ready: true })
+      state.pick("kilo", "x")
+      assert.deepEqual(state.model(), x)
+      assert.deepEqual(state.cached(), { agent: "code", model: x, variant: "" })
+      assert.equal(state.selection.canSubmit(), true)
+      assert.deepEqual(state.preferences, [["code", x, ""]])
+    `)
   })
 
   it("keeps saved X through reactive X to Y to X catalog changes", () => {
@@ -208,6 +187,20 @@ describe("NewWorktreeDialog models", () => {
     `)
   })
 
+  it.each([
+    [undefined, "high"],
+    ["", ""],
+  ])("uses the target model preference only when outgoing effort is %s", (value, expected) => {
+    check(`
+      const state = dialog({ model: x, variant: ${JSON.stringify(value)} }, {
+        providers: catalog(x, y), fallback: x, ready: true, connected: [], efforts: { "code/y": "high" },
+      })
+      state.pick("kilo", "y")
+      assert.equal(state.variant(), ${JSON.stringify(expected)})
+      assert.deepEqual(state.preferences, [["code", y, ${JSON.stringify(expected)}]])
+    `)
+  })
+
   it("pins the displayed inherited model and effort on mode switch without saving a model preference", () => {
     check(`
       const state = dialog({}, {
@@ -225,6 +218,45 @@ describe("NewWorktreeDialog models", () => {
       assert.deepEqual(state.model(), x)
       assert.equal(state.selection.choice(), undefined)
       assert.equal(state.cached().model, undefined)
+      assert.deepEqual(state.preferences, [])
+    `)
+  })
+
+  it.each([
+    [undefined, "low"],
+    ["", undefined],
+    ["high", "high"],
+  ])("keeps outgoing effort %s distinct from an unset choice on mode switch", (value, expected) => {
+    check(`
+      const providers = catalog(x)
+      providers.kilo.models.x.variants = { low: {}, high: {} }
+      const state = dialog(${value === "" ? '{ variant: "" }' : "{}"}, {
+        providers, fallback: x, alternate: x, ready: true, connected: [],
+        efforts: { code: ${JSON.stringify(value)}, plan: "low" },
+      })
+      await Promise.resolve()
+      state.selectAgent("plan")
+      assert.equal(state.effectiveVariant(), ${JSON.stringify(expected)})
+      assert.equal(state.variant(), ${JSON.stringify(value)})
+      assert.deepEqual(state.preferences, [])
+    `)
+  })
+
+  it.each(["", "high"])("keeps inherited raw effort %s through catalog changes and a mode switch", (value) => {
+    check(`
+      const providers = catalog(x)
+      providers.kilo.models.x.variants = { low: {} }
+      const state = dialog({}, {
+        providers, fallback: x, alternate: x, ready: true, connected: [],
+        efforts: { code: ${JSON.stringify(value)}, plan: "low" },
+      })
+      await Promise.resolve()
+      assert.equal(state.variant(), undefined)
+      assert.equal(state.effectiveVariant(), ${value === "" ? "undefined" : '"low"'})
+      state.selectAgent("plan")
+      assert.equal(state.variant(), ${JSON.stringify(value)})
+      state.refresh({ providers: catalog(x) })
+      assert.equal(state.effectiveVariant(), ${value === "" ? "undefined" : '"high"'})
       assert.deepEqual(state.preferences, [])
     `)
   })
@@ -401,7 +433,8 @@ describe("NewWorktreeDialog models", () => {
       state.refresh({ fallback: x })
       assert.deepEqual(state.model(), y)
       state.setCompareMode(true)
-      state.allocate(setAllocationVariant(toggleModel(new Map(), "kilo", "x", "X"), "kilo", "x", "high"))
+      const allocations = setAllocationVariant(toggleModel(new Map(), "kilo", "x", "X"), "kilo", "x", "high")
+      assert.equal(state.selection.canSubmit(allocations), true)
       state.choose(undefined)
       assert.equal(state.preferences.length, 1)
       state.selectAgent("plan")

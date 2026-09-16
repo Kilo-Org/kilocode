@@ -24,7 +24,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { DEFAULT_VARIANT, cycleVariant, preserveVariant } from "../src/context/session-variant-store"
+import { DEFAULT_VARIANT, cycleVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -51,7 +51,7 @@ import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
-import { createDialogModels } from "./new-worktree-models"
+import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -136,24 +136,23 @@ export const NewWorktreeDialog: Component<{
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
-  const preferred = session.preferredSelection()
-  let pending = !session.preferencesReady()
-  if (preferred) {
-    saved.model = { providerID: preferred.providerID, modelID: preferred.modelID }
-    saved.variant = preferred.variant
-  }
   const [versions, setVersions] = createSignal<VersionCount>(1)
+  const [compareMode, setCompareMode] = createSignal(false)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
-  const [agent, setAgent] = createSignal(initialAgent)
-  const selection = createDialogModels({
-    saved: saved.model,
-    fallback: () => session.modelForAgent(agent()),
+  const preferences = createDialogPreferences({
+    saved,
+    agent: initialAgent,
+    fallback: session.modelForAgent,
+    effort: session.variantPreference,
+    preferred: session.preferredSelection,
+    hydrated: session.preferencesReady,
     ready: provider.ready,
     valid: provider.isModelValid,
     variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
+    compare: compareMode,
+    remember: session.rememberSelection,
   })
-  const model = selection.model
-  const [compareMode, setCompareMode] = createSignal(false)
+  const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [starting, setStarting] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
@@ -163,7 +162,6 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(saved.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -184,13 +182,6 @@ export const NewWorktreeDialog: Component<{
     setEnhancing(false)
   }
 
-  const selectAgent = (name: string) => {
-    pending = false
-    selection.retain()
-    setVariant(variant() ?? effectiveVariant() ?? (variants().length > 0 ? DEFAULT_VARIANT : undefined))
-    setAgent(name)
-  }
-
   const cycle = (direction: 1 | -1) => {
     cycleAgent({
       agents: session.agents(),
@@ -204,43 +195,6 @@ export const NewWorktreeDialog: Component<{
     if (tab() !== "new") return
     const dispose = props.mode.register(cycle)
     onCleanup(dispose)
-  })
-
-  // Variant list for the currently selected model
-  const variants = createMemo(() => {
-    const sel = model()
-    if (!sel) return []
-    const found = provider.findModel(sel)
-    if (!found?.variants) return []
-    return Object.keys(found.variants)
-  })
-
-  const effectiveVariant = createMemo(() => {
-    const list = variants()
-    if (list.length === 0) return undefined
-    const stored = variant() ?? session.variantForAgent(agent(), model())
-    // Catalog refreshes may temporarily hide a model or effort. Never rewrite the saved choice.
-    return preserveVariant(stored, list)
-  })
-
-  const selectVariant = (value: string | undefined) => {
-    pending = false
-    const next = value ?? DEFAULT_VARIANT
-    setVariant(next)
-    const sel = model()
-    if (!sel || compareMode()) return
-    selection.select(sel)
-    session.rememberSelection(agent(), sel, next)
-  }
-
-  createEffect(() => {
-    if (!pending || !session.preferencesReady()) return
-    // Initial host preferences may arrive after opening, but never replace an in-progress choice.
-    pending = false
-    const preferred = session.preferredSelection()
-    if (!preferred) return
-    selection.select({ providerID: preferred.providerID, modelID: preferred.modelID })
-    setVariant(preferred.variant)
   })
 
   createEffect(() => {
@@ -317,9 +271,7 @@ export const NewWorktreeDialog: Component<{
     vscode.setState({
       ...state,
       advancedDialogSelections: {
-        agent: agent(),
-        model: selection.choice(),
-        variant: variant(),
+        ...preferences.saved(),
         sandbox: sandbox(),
       },
     })
@@ -841,17 +793,7 @@ export const NewWorktreeDialog: Component<{
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
                       value={model()}
-                      onSelect={(pid, mid) => {
-                        if (!pid || !mid) return
-                        pending = false
-                        const current = variant() ?? effectiveVariant()
-                        const next = { providerID: pid, modelID: mid }
-                        const list = Object.keys(provider.findModel(next)?.variants ?? {})
-                        const effort = preserveVariant(current, list) ?? DEFAULT_VARIANT
-                        selection.select(next)
-                        setVariant(effort)
-                        session.rememberSelection(agent(), next, effort)
-                      }}
+                      onSelect={selectModel}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
                       trigger={WORKTREE_PROMPT_SCOPE}
