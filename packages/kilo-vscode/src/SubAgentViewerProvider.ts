@@ -14,7 +14,6 @@ import type { KiloConnectionService } from "./services/cli-backend"
 export class SubAgentViewerProvider implements vscode.Disposable {
   private panels = new Map<string, vscode.WebviewPanel>()
   private providers = new Map<string, KiloProvider>()
-  private backgrounds = new Map<string, boolean>()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -22,17 +21,10 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
   ) {}
 
-  openPanel(sessionID: string, title?: string, directory?: string, background?: boolean): void {
+  openPanel(sessionID: string, title?: string, directory?: string): void {
     const existing = this.panels.get(sessionID)
     if (existing) {
       if (directory) this.providers.get(sessionID)?.setSessionDirectory(sessionID, directory)
-      // A reused panel keeps its original flag. Re-post when the caller reports
-      // a different one so a transcript that first opened before the task
-      // metadata landed still gets the reasoning cap.
-      if (background !== undefined && this.backgrounds.get(sessionID) !== background) {
-        this.backgrounds.set(sessionID, background)
-        this.providers.get(sessionID)?.postMessage({ type: "viewSubAgentSession", sessionID, background })
-      }
       existing.reveal(vscode.ViewColumn.One)
       return
     }
@@ -69,7 +61,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
       if (msg.type !== "webviewReady") return
       readyDisposable.dispose()
 
-      provider.postMessage({ type: "viewSubAgentSession", sessionID, background })
+      provider.postMessage({ type: "viewSubAgentSession", sessionID })
       void provider.loadMessages(sessionID)
 
       try {
@@ -94,7 +86,6 @@ export class SubAgentViewerProvider implements vscode.Disposable {
 
     this.panels.set(sessionID, panel)
     this.providers.set(sessionID, provider)
-    this.backgrounds.set(sessionID, background === true)
 
     panel.onDidDispose(() => {
       console.log("[Kilo New] Sub-agent viewer panel disposed:", sessionID)
@@ -102,7 +93,6 @@ export class SubAgentViewerProvider implements vscode.Disposable {
       provider.dispose()
       this.panels.delete(sessionID)
       this.providers.delete(sessionID)
-      this.backgrounds.delete(sessionID)
     })
   }
 
@@ -112,6 +102,5 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     }
     this.panels.clear()
     this.providers.clear()
-    this.backgrounds.clear()
   }
 }

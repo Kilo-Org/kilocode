@@ -65,6 +65,8 @@ import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { reasoningHeading, reasoningSummary } from "./reasoning-heading"
+import { reasoningOpenState, type ReasoningDisplay } from "./reasoning-open"
+export type { ReasoningDisplay } from "./reasoning-open"
 import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
@@ -157,14 +159,9 @@ export interface MessagePartProps {
    * forces a collapsed tool/reasoning block open so the user can see the
    * highlighted match without manually expanding it first. */
   forceOpen?: boolean
-  /** For a multi-file apply_patch part, the specific file path (matching
-   * that file's `filePath`) whose accordion contains the current match —
-   * lets that one nested item open instead of every file in the patch. */
-  forceOpenFile?: string
-  reasoningAutoCollapse?: boolean
-  /** Show reasoning as a capped preview that starts open and never auto-expands
-   * while streaming. Used for background subagent transcripts. */
-  reasoningCapped?: boolean
+  /** How reasoning blocks render: expanded (open body), preview (capped
+   * scrolling viewport), or headline (header only until opened). */
+  reasoningDisplay?: ReasoningDisplay
   /** True when the stream has moved past this reasoning part. Encrypted
    * reasoning items hold every summary's `time.end` until the whole item
    * finishes, so the caller settles finished summaries from the part order. */
@@ -176,6 +173,9 @@ export interface MessagePartProps {
   working?: boolean
   feedback?: MessageFeedbackControls
   throughput?: JSX.Element
+  /** Finish time and duration for the turn, rendered inline in the assistant
+   * copy/feedback action row rather than on its own line. */
+  turnMeta?: JSX.Element
   readonly?: boolean
 }
 
@@ -434,7 +434,7 @@ export function AssistantParts(props: {
   turnDiffSummary?: () => JSX.Element
   working?: boolean
   showReasoningSummaries?: boolean
-  reasoningAutoCollapse?: boolean
+  reasoningDisplay?: ReasoningDisplay
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
   mcpToolDefaultOpen?: boolean
@@ -700,7 +700,7 @@ export function AssistantParts(props: {
                               props.editToolDefaultOpen,
                               props.mcpToolDefaultOpen,
                             )}
-                            reasoningAutoCollapse={props.reasoningAutoCollapse}
+                            reasoningDisplay={props.reasoningDisplay}
                             hideDetails={false}
                             animate={props.animate}
                             working={props.working}
@@ -815,11 +815,7 @@ export function UserMessageDisplay(props: {
   const stamp = createMemo(() => {
     const created = props.message.time?.created
     if (typeof created !== "number") return ""
-    const date = new Date(created)
-    const hours = date.getHours()
-    const hour12 = hours % 12 || 12
-    const minute = String(date.getMinutes()).padStart(2, "0")
-    return `${hour12}:${minute} ${hours < 12 ? "AM" : "PM"}`
+    return new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }).format(new Date(created))
   })
 
   const metaHead = createMemo(() => {
@@ -941,17 +937,23 @@ export function UserMessageDisplay(props: {
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
               </Show>
-              <GrowBox animate={!!props.animate} open={!!props.queued}>
+            </div>
+
+            {/* Queued controls live in the same reserved action row as the
+                hover actions, so unqueueing swaps content without a height change. */}
+            <div
+              data-slot="user-message-copy-wrapper"
+              data-interrupted={props.interrupted ? "" : undefined}
+              data-queued={props.queued ? "" : undefined}
+            >
+              <Show when={props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
                   <Edit />
                   <Delete />
                 </div>
-              </GrowBox>
-            </div>
-
-            <div data-slot="user-message-copy-wrapper" data-interrupted={props.interrupted ? "" : undefined}>
-              <Show when={metaHead() || metaTail()}>
+              </Show>
+              <Show when={!props.queued && (metaHead() || metaTail())}>
                 <span data-slot="user-message-meta-wrap">
                   <Show when={metaHead()}>
                     <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
@@ -1001,23 +1003,25 @@ export function UserMessageDisplay(props: {
                   />
                 </Tooltip>
               </Show>
-              <Tooltip
-                value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                placement="right"
-                gutter={4}
-              >
-                <IconButton
-                  icon={copied() ? "check" : "copy"}
-                  size="normal"
-                  variant="ghost"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleCopy()
-                  }}
-                  aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                />
-              </Tooltip>
+              <Show when={!props.queued}>
+                <Tooltip
+                  value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  placement="right"
+                  gutter={4}
+                >
+                  <IconButton
+                    icon={copied() ? "check" : "copy"}
+                    size="normal"
+                    variant="ghost"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleCopy()
+                    }}
+                    aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  />
+                </Tooltip>
+              </Show>
             </div>
           </>
         </Show>
@@ -1082,9 +1086,7 @@ export function Part(props: MessagePartProps) {
         hideDetails={props.hideDetails}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
-        forceOpenFile={props.forceOpenFile}
-        reasoningAutoCollapse={props.reasoningAutoCollapse}
-        reasoningCapped={props.reasoningCapped}
+        reasoningDisplay={props.reasoningDisplay}
         settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
@@ -1093,6 +1095,7 @@ export function Part(props: MessagePartProps) {
         working={props.working}
         feedback={props.feedback}
         throughput={props.throughput}
+        turnMeta={props.turnMeta}
         readonly={props.readonly}
       />
     </Show>
@@ -1113,9 +1116,6 @@ export interface ToolProps {
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
-  /** For a multi-file apply_patch part, the specific file path whose
-   * accordion contains the current transcript search match. */
-  forceOpenFile?: string
   locked?: boolean
   animate?: boolean
   reveal?: boolean
@@ -1495,7 +1495,6 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 hideDetails={props.hideDetails}
                 defaultOpen={props.defaultOpen}
                 forceOpen={props.forceOpen}
-                forceOpenFile={props.forceOpenFile}
                 animate
                 reveal={props.animate}
                 readonly={props.readonly}
@@ -1826,6 +1825,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
               </Tooltip>
             </Show>
             <Show when={props.throughput}>{(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}</Show>
+            <Show when={props.turnMeta}>
+              {(el) => (
+                <span data-slot="assistant-turn-meta" class="cursor-default">
+                  {el()}
+                </span>
+              )}
+            </Show>
           </div>
         </Show>
         <Show when={summary()}>
@@ -1886,20 +1892,36 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const id = (props.part as any).id as string
   if (!done()) rememberReasoningState(streamed, id)
 
-  // Auto-collapse mode: streaming or streamed this session -> open (capped),
-  // historical -> collapsed, unless the user toggled it. Expanded mode: open
-  // unless the user explicitly collapsed this reasoning part. Background
-  // transcripts always start open in the capped preview so they stay compact.
-  const capped = () => props.reasoningAutoCollapse || props.reasoningCapped
-  const initial =
-    props.reasoningAutoCollapse && !props.reasoningCapped
-      ? !userCollapsed.has(id) && (streamed.has(id) || userOpened.has(id))
-      : !userCollapsed.has(id)
-  const [open, setOpen] = createSignal(initial)
+  // Three display modes. Preview streams open in a capped viewport, historical
+  // blocks collapse. Headline shows only the header until the user opens it.
+  // Expanded opens the full body unless the user collapsed it.
+  const mode = () => props.reasoningDisplay ?? "expanded"
+  const capped = () => mode() === "preview"
+  const headline = () => mode() === "headline"
+  const trackable = () => capped() || headline()
+  const derive = () =>
+    reasoningOpenState({
+      mode: mode(),
+      streamed: streamed.has(id),
+      userOpened: userOpened.has(id),
+      userCollapsed: userCollapsed.has(id),
+    })
+  const seed = () => derive() || !!props.forceOpen
+  const [open, setOpen] = createSignal(seed())
+  // Mount-time value for the inline content styles and lazy body mount, before
+  // the re-derive effect can run. useCollapsible owns later transitions.
+  const start = open()
+  // Re-derive when the resolved mode changes (config arriving after the part
+  // mounted), unless the user already made an explicit open/close choice.
+  createEffect(() => {
+    if (userOpened.has(id) || userCollapsed.has(id)) return
+    setOpen(derive())
+  })
   const [manual, setManual] = createSignal(capped() && userOpened.has(id))
   const title = createMemo(() => {
     const value = view().title
     if (value) return value
+    if (headline() && !open()) return reasoningSummary(view().body)
     if (!done() || open()) return ""
     return reasoningSummary(view().body)
   })
@@ -1915,7 +1937,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const track = (value: boolean) => {
     if (value) userCollapsed.delete(id)
     else rememberReasoningState(userCollapsed, id)
-    if (capped()) {
+    if (trackable()) {
       if (value) rememberReasoningState(userOpened, id)
       else userOpened.delete(id)
       setManual(value)
@@ -1929,13 +1951,13 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   // does for tool calls. Recorded into userOpened/userCollapsed the same way
   // a manual open would be, so it stays open across remounts/re-renders.
   createEffect(() => {
-    if (!props.forceOpen || open()) return
+    if (!props.forceOpen) return
     userCollapsed.delete(id)
-    if (capped()) {
+    if (trackable()) {
       rememberReasoningState(userOpened, id)
       setManual(true)
     }
-    setOpen(true)
+    if (!open()) setOpen(true)
   })
 
   // Auto-scroll the content container while streaming.
@@ -1948,6 +1970,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   let ref: HTMLDivElement | undefined
   let body: HTMLDivElement | undefined
   let scrolled = false
+  let last = 0
   let follow: number | undefined
 
   const stop = () => {
@@ -1956,7 +1979,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     follow = undefined
   }
 
-  const [mounted, setMounted] = createSignal(initial)
+  const [mounted, setMounted] = createSignal(start)
   createEffect(() => {
     if (open()) setMounted(true)
   })
@@ -1974,7 +1997,10 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   const onScroll = (e: Event) => {
     const el = e.currentTarget as HTMLDivElement
-    if (el.scrollHeight - el.clientHeight - el.scrollTop < 10) scrolled = false
+    const top = el.scrollTop
+    if (el.scrollHeight - el.clientHeight - top < 10) scrolled = false
+    else if (top < last - 1) scrolled = true
+    last = top
   }
 
   const onWheel = (e: WheelEvent) => {
@@ -1984,10 +2010,12 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     }
   }
 
+  const bottom = () => (ref ? Math.max(0, ref.scrollHeight - ref.clientHeight) : 0)
+
   const tick = () => {
     follow = undefined
     if (done() || scrolled || !ref) return
-    const target = Math.max(0, ref.scrollHeight - ref.clientHeight)
+    const target = bottom()
     const rest = target - ref.scrollTop
     if (Math.abs(rest) < 0.5) {
       ref.scrollTop = target
@@ -1997,11 +2025,23 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     follow = requestAnimationFrame(tick)
   }
 
+  // Streaming follows the growing text with a short animation. Once the block
+  // is done nothing resumes that loop, so a Markdown rebuild on the streaming
+  // flip, or a fresh remount, would leave the capped viewport resting at the
+  // top. Snap the finished block synchronously here instead: ResizeObserver
+  // runs after layout and before paint, so no top frame is ever painted. The
+  // expanded body has no overflow and a manual open removes the cap, where the
+  // snap is a harmless no-op.
   createResizeObserver(
     () => body,
     () => {
-      if (done() || !ref || scrolled || follow !== undefined) return
-      follow = requestAnimationFrame(tick)
+      if (!capped() || scrolled || !ref) return
+      if (!done()) {
+        if (follow !== undefined) return
+        follow = requestAnimationFrame(tick)
+        return
+      }
+      ref.scrollTop = bottom()
     },
   )
 
@@ -2015,6 +2055,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
         data-component="reasoning-part"
         data-streaming={!done() ? "" : undefined}
         data-auto-collapse={capped() ? "" : undefined}
+        data-headline={headline() ? "" : undefined}
         data-manual={manual() ? "" : undefined}
       >
         <Show
@@ -2035,7 +2076,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Content>
               <div
                 ref={content}
-                style={{ overflow: "clip", height: initial ? "auto" : "0px", display: initial ? "" : "none" }}
+                style={{ overflow: "clip", height: start ? "auto" : "0px", display: start ? "" : "none" }}
               >
                 <div ref={frame} data-slot="reasoning-details">
                   <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
@@ -3115,30 +3156,11 @@ ToolRegistry.register({
       seeded = true
       setExpanded(list.filter((f) => f.type !== "delete").map((f) => f.filePath))
     })
-    // Deleted files start collapsed above; a chat search match could be
-    // inside one. `forceOpenFile` (from MessageList's per-chunk file
-    // attribution) names exactly which file's accordion to open. This is
-    // tracked separately from the user's own manual toggles: replacing it
-    // on every navigation (rather than appending to `expanded`, which never
-    // shrinks) closes the previously force-opened file again, so its Pierre
-    // diff instance unmounts instead of accumulating one per visited match.
-    const [searchOpenFile, setSearchOpenFile] = createSignal<string | undefined>()
+    // Deleted files start collapsed above. A generic forceOpen (still part of
+    // this component's API) expands everything rather than nothing.
     createEffect(() => {
-      if (props.forceOpenFile) {
-        setSearchOpenFile(props.forceOpenFile)
-        return
-      }
-      // Defensive fallback for forceOpen without a known file (MessageList
-      // always attributes apply_patch matches to a specific file today):
-      // expand everything rather than nothing.
-      setSearchOpenFile(undefined)
       if (!props.forceOpen) return
       setExpanded(files().map((f) => f.filePath))
-    })
-    const allExpanded = createMemo(() => {
-      const search = searchOpenFile()
-      if (!search) return expanded()
-      return expanded().includes(search) ? expanded() : [...expanded(), search]
     })
     const subtitle = createMemo(() => {
       const count = files().length
@@ -3194,21 +3216,17 @@ ToolRegistry.register({
                   multiple
                   data-scope="apply-patch"
                   style={{ "--sticky-accordion-offset": "37px" }}
-                  value={allExpanded()}
+                  value={expanded()}
                   onChange={(value) => {
                     const next = Array.isArray(value) ? value : value ? [value] : []
-                    // The user explicitly closed the search-forced file —
-                    // stop treating it as force-open so it doesn't reopen
-                    // itself out of `allExpanded()` on the next render.
-                    if (searchOpenFile() && !next.includes(searchOpenFile()!)) setSearchOpenFile(undefined)
-                    setExpanded(next.filter((path) => path !== searchOpenFile()))
+                    setExpanded(next)
                   }}
                 >
                   <For each={files()}>
                     {(file) => {
                       // Diff defers its own expensive render; mounting the container
                       // here avoids dropping the last item during batch expansion.
-                      const active = createMemo(() => allExpanded().includes(file.filePath))
+                      const active = createMemo(() => expanded().includes(file.filePath))
 
                       return (
                         <Accordion.Item value={file.filePath} data-type={file.type}>

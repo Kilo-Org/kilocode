@@ -26,7 +26,7 @@ export interface BatchNode {
 export type BatchResult = { nodes: BatchNode[]; home?: string } | { error: string }
 
 const FIELDS =
-  "id number title body url state isDraft reviewDecision additions deletions changedFiles headRefName baseRefOid headRefOid isCrossRepository createdAt author { login }"
+  "id number title body url state isDraft reviewDecision additions deletions changedFiles headRefName baseRefOid headRefOid mergeCommit { oid } isCrossRepository createdAt author { login }"
 
 // Mirrors the limits and shape `gh pr view --json` uses (cli/cli api/query_builder.go)
 // so full-sync results and active-tick results hash identically.
@@ -78,6 +78,7 @@ export function reshape(node: BatchNode): Record<string, unknown> {
     headRefName: node.headRefName,
     baseRefOid: node.baseRefOid,
     headRefOid: node.headRefOid,
+    mergeCommit: node.mergeCommit,
     isCrossRepository: node.isCrossRepository,
     createdAt: node.createdAt,
     author: node.author,

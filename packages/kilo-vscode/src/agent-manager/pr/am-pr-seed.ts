@@ -9,6 +9,7 @@
  */
 
 import { existsSync } from "fs"
+import { isTimeout } from "../command-budget"
 import type { Worktree } from "../WorktreeStateManager"
 import type { PRResult } from "./am-pr-types"
 import { CHUNK, own, query, parse, pick, reshape, unknown } from "./am-pr-batch"
@@ -29,6 +30,15 @@ export interface SeedHost {
   degrade(): void
   /** Whether the poll generation that started this seed has been superseded. */
   stale(): boolean
+  /**
+   * Whether a worktree must be left out of the batch entirely — quarantined, or reported broken by
+   * the health reconcile.
+   *
+   * The per-worktree path gates on the same answer, so a batch that ignored it would spend a git
+   * process per parked worktree on every full sync and, worse, hand one of their directories to the
+   * single `gh api graphql` call as its working directory.
+   */
+  skip(id: string): boolean
   log(...args: unknown[]): void
 }
 
@@ -69,6 +79,7 @@ async function collect(targets: Worktree[], host: SeedHost): Promise<Item[]> {
 
 /** One worktree's batch item, or undefined when it cannot be resolved. */
 async function one(wt: Worktree, host: SeedHost): Promise<Item | undefined> {
+  if (host.skip(wt.id)) return undefined
   if (!existsSync(wt.path)) return undefined
   // A rejected branch lookup must not abort the sync for every other worktree.
   const branch = await host.branch(wt).then(
@@ -104,6 +115,13 @@ async function chunk(
     }
   } catch (err) {
     const msg = message(err)
+    // A hung request is not an unsupported field, and asking again would spend a second full budget
+    // on a command that already proved it does not answer. Named as a timeout so the log says which
+    // failure this was — the per-worktree fallback below is what records it against a worktree.
+    if (isTimeout(err)) {
+      host.log("Batched PR lookup timed out, falling back to per-worktree lookups:", msg)
+      return
+    }
     if (host.rich() && unknown(msg)) {
       host.degrade()
       await chunk(items, repo, host, seeds)

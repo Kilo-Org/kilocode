@@ -1,5 +1,4 @@
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
-import { lstat } from "node:fs/promises"
 import { getErrorMessage } from "../kilo-provider-utils"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"
@@ -15,6 +14,7 @@ import { Timing } from "./creation-timing"
 import { plan, type Start } from "./creation-plan"
 import { copyEnvFiles } from "./env-copy"
 import { runWorktreeSetupScript } from "./setup-script-task"
+import { broken } from "./worktree-reconcile"
 
 export async function runLifecycleSetup(
   input: Parameters<typeof runWorktreeSetupScript>[0],
@@ -225,6 +225,29 @@ export async function removeWorktreeSnapshot(host: LifecycleHost, root: string, 
   }
 }
 
+/** Re-home sessions to the project root so they stay reachable under Local. Never rejects. */
+async function moveSessionsToRoot(
+  client: KiloClient,
+  host: LifecycleHost,
+  root: string,
+  ids: Iterable<string>,
+): Promise<void> {
+  const results = await Promise.allSettled(
+    [...ids].map((sessionID) =>
+      client.experimental.controlPlane.moveSession(
+        { sessionID, destination: { directory: root }, moveChanges: false },
+        { throwOnError: true },
+      ),
+    ),
+  )
+  const failed = results.filter((result) => result.status === "rejected")
+  for (const result of failed) host.log(`Failed to move a worktree session to Local: ${result.reason}`)
+  if (failed.length === 0) return
+  host.notify(
+    "The worktree was deleted, but some conversations could not be moved to Local. Conversation history is preserved.",
+  )
+}
+
 /** Delete a worktree and dissociate its sessions. */
 export async function deleteLifecycleWorktree(
   ctx: ProjectContext,
@@ -302,21 +325,15 @@ export async function deleteLifecycleWorktree(
     return fail(`Failed to stop worktree processes: ${getErrorMessage(error)}`)
   }
   try {
-    await client.instance.dispose({ directory: worktree.path }, { throwOnError: true })
-    await ctx.worktreeManager().removeWorktree(worktree.path, branch)
-    await Promise.all(
-      [...retained].map((sessionID) =>
-        client.experimental.controlPlane.moveSession(
-          { sessionID, destination: { directory: ctx.root }, moveChanges: false },
-          { throwOnError: true },
-        ),
-      ),
-    )
-    if (!(await removeWorktreeSnapshot(host, ctx.root, worktree.path))) {
-      host.notify(
-        "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
-      )
-    }
+    // The rename is the point of no return. Git bookkeeping (prune, branch delete) finishes under
+    // the git lock afterwards so a pool refill in progress cannot block the deletion; the manager
+    // flushes it on project dispose.
+    await ctx.worktreeManager().detachWorktree(worktree.path, branch)
+    // Conversations live in the backend database whatever their location; the move only re-homes
+    // them to the project root so they stay reachable under Local. A failed move keeps the
+    // history and must not leave a row for a directory that is already gone, which would make
+    // the worktree undeletable.
+    await moveSessionsToRoot(client, host, ctx.root, retained)
     state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
@@ -324,6 +341,14 @@ export async function deleteLifecycleWorktree(
     host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
+    // Checkpoint cleanup verifies under its own lock that the worktree directory is absent, so it
+    // can run after the row is gone. Failure only leaves checkpoint data behind.
+    void removeWorktreeSnapshot(host, ctx.root, worktree.path).then((removed) => {
+      if (removed) return
+      host.notify(
+        "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
+      )
+    })
   } catch (error) {
     host.unskipStats(worktreeId)
     host.log(`Failed to delete worktree ${worktreeId}: ${error}`)
@@ -334,15 +359,26 @@ export async function deleteLifecycleWorktree(
   return null
 }
 
-/** Remove a stale worktree entry from state without touching the filesystem. */
+/**
+ * Remove a stale worktree entry from state without touching the filesystem.
+ *
+ * With `keepSessions`, the worktree's conversations are moved to Local instead of being dropped with
+ * the row: the directory is unrecoverable, but the history is not, and losing it silently is worse
+ * than an extra row under Local.
+ */
 export async function removeStaleLifecycleWorktree(
   ctx: ProjectContext,
   host: LifecycleHost,
   worktreeId: string,
+  keepSessions = false,
 ): Promise<null> {
   const state = ctx.peekState()
   if (!state) return null
-  if (!ctx.stale.has(worktreeId)) {
+  // Either signal is proof enough: the presence probe saw it disappear, or the health reconcile
+  // classified it as something that cannot answer.
+  // `unavailable` is not proof of anything, so it must not authorize an entry-dropping removal.
+  const unhealthy = ctx.report?.entries.some((entry) => entry.id === worktreeId && broken(entry.health)) === true
+  if (!ctx.stale.has(worktreeId) && !unhealthy) {
     host.log(`Ignored stale removal for non-stale worktree ${worktreeId}`)
     return null
   }
@@ -363,25 +399,25 @@ export async function removeStaleLifecycleWorktree(
     const releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
     releasePtyCleanup()
   } catch (error) {
-    host.log(`Failed to remove stale worktree PTYs: ${error}`)
-    // A deleted directory may no longer be reachable through the backend.
-    // Only bypass cleanup when the path is missing, not when access is denied.
-    const missing = await lstat(worktree.path).then(
-      () => false,
-      (err: NodeJS.ErrnoException) => err.code === "ENOENT",
-    )
-    if (!missing) {
-      host.post({ type: "error", message: "Failed to stop terminals before removing the stale worktree" })
-      return null
-    }
+    // Nothing on this path deletes files, so a terminal that cannot be stopped is not a reason to
+    // refuse. Refusing was a dead end: for an `unregistered` worktree the directory still exists, so
+    // dropping the row is the only action the UI offers, and it failed with a message about terminals
+    // — a problem the user cannot act on, reported instead of the one they asked to fix. The terminal
+    // keeps running against a directory that is still there; the row is what they asked to remove.
+    host.log(`Removing stale worktree ${worktreeId} without backend terminal cleanup: ${error}`)
   }
   host.forgetName(worktreeId)
+  const kept = keepSessions ? state.getSessions(worktreeId) : []
+  // Detach before removing the row: removeWorktree() deletes the sessions that still point at it.
+  for (const session of kept) state.moveSession(session.id, null)
   const orphaned = state.removeWorktree(worktreeId)
-  host.stopDiffs(worktree.path, orphaned)
-  for (const session of orphaned) host.sessions.clearDirectory(session.id)
+  host.stopDiffs(worktree.path, [...orphaned, ...kept])
+  for (const session of [...orphaned, ...kept]) host.sessions.clearDirectory(session.id)
+  for (const session of kept) routeProjectSession(host.sessions, ctx.id, session.id, ctx.root, ctx.generation)
   ctx.stale.delete(worktreeId)
   host.push()
-  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})`)
+  const suffix = kept.length > 0 ? `, kept ${kept.length} session(s) under Local` : ""
+  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})${suffix}`)
   return null
 }
 

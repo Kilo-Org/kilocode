@@ -1,10 +1,12 @@
-import { createSignal, untrack, type Accessor } from "solid-js"
+import { createSignal, onCleanup, untrack, type Accessor } from "solid-js"
 import type { PRDiffSnapshot, PRTarget } from "../../../src/shared/pr-comment-actions"
-import type { PRStatus } from "../../src/types/messages"
+import type { ExtensionMessage, PRStatus } from "../../src/types/messages"
 import { reviewRequest } from "./pr-review-request"
 
 interface Options {
   post: (message: never) => void
+  /** Review results, so a snapshot the host no longer holds can be reloaded. */
+  onMessage: (handler: (message: ExtensionMessage) => void) => () => void
   project: Accessor<string | undefined>
   statuses: Accessor<Record<string, Pick<PRStatus, "number" | "url" | "baseRefOid" | "headRefOid"> | null>>
 }
@@ -41,6 +43,14 @@ export function createPRDiffCommentState(opts: Options) {
   const loading = (ctx: string | undefined) => pending().has(key(ctx))
   const error = (ctx: string | undefined) => errors()[key(ctx)]
 
+  const drop = (id: string) =>
+    setSnapshots((prev) => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+
   const load = (ctx: string | undefined) => {
     const route = target(ctx)
     if (!route) return
@@ -72,6 +82,25 @@ export function createPRDiffCommentState(opts: Options) {
       },
     )
   }
+
+  // The host caps its snapshot store, so a comment can fail against a snapshot
+  // it has already dropped. Those failures, and the context/ref changes that
+  // invalidate a snapshot, end with the host's reload hints; content errors
+  // (empty body, bad line range, unconfirmed write) must not force a reload.
+  // Keep in sync with the throw messages in review-actions.ts and
+  // pr-status-bridge.ts.
+  const expired = /(?:Reload the review|Refresh and try again|Reopen the PR review)/
+  const release = opts.onMessage((message) => {
+    if (message.type !== "agentManager.createReviewCommentResult" || message.success) return
+    if (!expired.test(message.error ?? "")) return
+    const ctx = typeof message.worktreeId === "string" ? message.worktreeId : undefined
+    const route = target(ctx)
+    if (!route || route.projectId !== message.projectId) return
+    if (route.prNumber !== message.prNumber || route.prUrl !== message.prUrl) return
+    drop(key(ctx))
+    load(ctx)
+  })
+  onCleanup(release)
 
   return { target, snapshot, loading, error, load }
 }

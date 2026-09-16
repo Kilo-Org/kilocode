@@ -238,6 +238,28 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertNull(plan())
     }
 
+    fun `test a pr url from a different repo does not import`() {
+        open(origin = "kilo-org/kilocode")
+        selectPr()
+        edt {
+            url().text = "https://github.com/other/repo/pull/7"
+            submit()
+        }
+
+        assertNull(plan())
+    }
+
+    fun `test a pr url from the origin repo imports despite case differences`() {
+        open(origin = "Kilo-Org/kilocode")
+        selectPr()
+        edt {
+            url().text = "https://github.com/kilo-org/KiloCode/pull/7"
+            submit()
+        }
+
+        assertEquals(NewWorktreePlan.Pr("https://github.com/kilo-org/KiloCode/pull/7"), taken())
+    }
+
     fun `test picking a branch produces a branch plan`() {
         open(branches = listOf("main", "feature/x"))
         selectBranch()
@@ -327,7 +349,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertNull(plan())
     }
 
-    private fun open(branches: List<String> = listOf("main")) {
+    private fun open(branches: List<String> = listOf("main"), origin: String? = null) {
         dialog = edt {
             NewWorktreeDialog(
                 JBPanel<Nothing>(),
@@ -336,6 +358,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                 "agent/foo",
                 "main",
                 branches,
+                origin,
                 app,
                 workspaces,
             )
