@@ -183,6 +183,18 @@ export class McpOAuthProvider implements OAuthClientProvider {
 export class McpOAuthPendingProvider extends McpOAuthProvider {
   private pendingClientInfo?: OAuthClientInformationFull
   private pendingTokens?: OAuthTokens
+  // kilocode_change start - the pending flow owns its OAuth state and PKCE
+  // verifier. `mcp-auth.json` is keyed by server name and shared by every Kilo
+  // process, so a completion that arrives from a second browser tab (after
+  // another process refreshed this server, or after an automatic reconnect)
+  // must not redeem with values another flow wrote to that file.
+  private flowState?: string
+  private flowCodeVerifier?: string
+
+  pinState(state: string) {
+    this.flowState = state
+  }
+  // kilocode_change end
 
   override async clientInformation(): Promise<OAuthClientInformation | undefined> {
     if (!this.config.clientId) return this.pendingClientInfo
@@ -191,6 +203,23 @@ export class McpOAuthPendingProvider extends McpOAuthProvider {
       client_secret: this.config.clientSecret,
     }
   }
+
+  // kilocode_change start
+  override async state(): Promise<string> {
+    if (this.flowState) return this.flowState
+    return super.state()
+  }
+
+  override async saveCodeVerifier(codeVerifier: string): Promise<void> {
+    this.flowCodeVerifier = codeVerifier
+    await super.saveCodeVerifier(codeVerifier)
+  }
+
+  override async codeVerifier(): Promise<string> {
+    if (this.flowCodeVerifier) return this.flowCodeVerifier
+    return super.codeVerifier()
+  }
+  // kilocode_change end
 
   override async saveClientInformation(info: OAuthClientInformationFull): Promise<void> {
     this.pendingClientInfo = info
