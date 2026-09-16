@@ -9,8 +9,8 @@ import type { Permission } from "@/permission"
  * marker back out to report the winning source.
  */
 export namespace PermissionProvenance {
-  /** Where the deciding rule came from. */
-  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default"
+  /** Where the deciding rule came from. `action_gate` = a classifier one-shot pre-approval (never persisted). */
+  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default" | "action_gate"
 
   /** A rule optionally carrying its origin. `source` is runtime-only, never persisted. */
   export type SourcedRule = Permission.Rule & { source?: Source }

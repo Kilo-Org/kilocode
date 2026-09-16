@@ -1,5 +1,6 @@
 import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { requiresInteractiveApproval } from "@/kilocode/permission/interactive-approval" // kilocode_change
 // kilocode_change start - use Kilo CLI branding
 // CLI entry point for `kilo run` and `kilo --mini`.
 //
@@ -943,7 +944,7 @@ export const RunCommand = effectCmd({
               if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue // kilocode_change
               // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
               // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
-              if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {
+              if (requiresInteractiveApproval(permission.metadata)) { // kilocode_change - +actionGateDegraded (headless -> reject = deny-and-continue)
                 await client.permission.reply({ requestID: permission.id, reply: "reject" })
                 continue
               }

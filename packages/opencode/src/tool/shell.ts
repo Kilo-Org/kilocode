@@ -1,4 +1,4 @@
-import { Effect, Fiber, Stream } from "effect" // kilocode_change - Fiber
+import { Effect, Fiber, Stream, Option } from "effect" // kilocode_change - Fiber, Option (ActionJudge)
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
@@ -22,6 +22,15 @@ import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import * as ActionGate from "@/kilocode/gate/action-gate" // kilocode_change
+import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change - reasoning-blind classifier (stage 2)
+import {
+  ACTION_GATE_DEGRADED_KEY,
+  ACTION_GATE_REASON_KEY,
+  ACTION_GATE_AUTHORIZED_KEY,
+  authorizerAllows,
+} from "@/kilocode/permission/interactive-approval" // kilocode_change - degraded escalation + one-shot pre-approval metadata
+import { Provider } from "@/provider/provider" // kilocode_change - ActionJudge model access (via serviceOption)
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -283,12 +292,14 @@ const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boole
   return tree
 })
 
-const ask = Effect.fn("ShellTool.ask")(function* (
+export const ask = Effect.fn("ShellTool.ask")(function* (
   ctx: Tool.Context,
   scan: Scan,
   command: string,
   metadata: ReturnType<typeof heredocs>, // kilocode_change
   description?: string, // kilocode_change
+  degraded?: ActionJudge.AskCode, // kilocode_change - classifier-failure escalation: tag this real bash ask
+  authorized?: boolean, // kilocode_change - classifier `allow` one-shot pre-approval: tag ONLY this bash ask
 ) {
   // kilocode_change
   if (scan.dirs.size > 0) {
@@ -314,12 +325,22 @@ const ask = Effect.fn("ShellTool.ask")(function* (
     })
   }
 
-  if (scan.patterns.size === 0) return
+  // kilocode_change - degraded escalation reuses THIS real bash ask; force a prompt even with empty patterns.
+  const shellPatterns = scan.patterns.size === 0 ? (degraded ? [command] : []) : Array.from(scan.patterns)
+  if (shellPatterns.length === 0) return
   yield* ctx.ask({
     permission: ShellID.ToolID,
-    patterns: Array.from(scan.patterns),
-    always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata }, // kilocode_change
+    patterns: shellPatterns,
+    // kilocode_change - both a degraded escalation and a one-shot pre-approval persist NO rule.
+    always: degraded || authorized ? [] : Array.from(scan.always),
+    metadata: {
+      command: normalizeUrls(command),
+      ...(description ? { description } : {}),
+      ...metadata,
+      ...(degraded ? { [ACTION_GATE_DEGRADED_KEY]: true, [ACTION_GATE_REASON_KEY]: degraded } : {}),
+      // kilocode_change - one-shot pre-approval marker (never alongside degraded; degraded is a forced prompt).
+      ...(authorized && !degraded ? { [ACTION_GATE_AUTHORIZED_KEY]: true } : {}),
+    },
   })
 })
 
@@ -432,7 +453,95 @@ export const ShellPermission = Effect.gen(function* () {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
-        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
+        // kilocode_change start - ActionGate tripwire #1: block destructive `rm -rf` of a critical path,
+        // regardless of intent. Targets are extracted from the parse tree and resolved against the
+        // effective cwd (never a regex over the raw command). Blocking fails the permission check,
+        // which surfaces to the agent as a tool error (deny-and-continue), not a session halt.
+        if (ActionGate.enabled) {
+          // A command that changes the working directory (cd / pushd / popd) makes the EFFECTIVE cwd of a
+          // RELATIVE rm target that runs AFTER it unprovable from static parsing (we do not model cwd state
+          // across a `&&` / `;` chain). Fail closed prefix-aware: a relative destructive-rm target is treated
+          // as unresolved (and therefore blocked) ONLY when a cwd-changing command PRECEDES it in the chain.
+          // This closes `cd .. && rm -rf <workspace-basename>` while still allowing `rm -rf build && cd ..`.
+          // Absolute targets are cwd-independent, so they always resolve normally.
+          const isCwdChanger = (node: Node) => {
+            const head = (ActionGate.peelWrappers(parts(node).map((item) => item.text))[0] ?? "").split(/[\\/]/).pop()
+            return head === "cd" || head === "pushd" || head === "popd"
+          }
+          let cwdChangedBefore = false
+          for (const node of commands(tree.rootNode)) {
+            if (isCwdChanger(node)) cwdChangedBefore = true
+            const tokens = parts(node).map((item) => item.text)
+            const rm = ActionGate.analyzeRm(tokens)
+            if (!rm.destructive) continue
+            // Resolve each target against the effective cwd. argpath returns undefined for dynamic or
+            // unresolvable targets ($HOME, $PWD, globs); we keep those as `resolved: undefined` so the
+            // gate can fail closed instead of silently allowing them.
+            const targets: ActionGate.RmTarget[] = []
+            for (const arg of rm.paths) {
+              const relative = !path.isAbsolute(home(unquote(arg)))
+              const resolved = cwdChangedBefore && relative ? undefined : yield* argpath(arg, input.cwd, ps, input.shell)
+              targets.push({ raw: arg, resolved })
+            }
+            const verdict = ActionGate.checkDestructiveRm(targets, input.cwd, instance.directory)
+            if (verdict.block) throw new Error(verdict.reason)
+          }
+        }
+        // kilocode_change end
+        // kilocode_change start - ActionGate stage 2: reasoning-blind classifier (KILO_ACTION_CLASSIFIER=1).
+        // Order: deterministic tripwire (above) -> proven read-only fast path -> classifier -> ask() below.
+        // A classifier block surfaces as a tool error (deny-and-continue); a classifier infra FAILURE (ask)
+        // tags the bash ask below as degraded so it force-prompts a human (fail-safe escalation).
+        let degradedReason: ActionJudge.AskCode | undefined = undefined
+        // kilocode_change - classifier `allow` one-shot pre-approval (opt-in): only on a proven `allow`, only
+        // when the authorizer is ON, and only in a ROOT session (child intent provenance is not proven).
+        let authorized = false
+        if (ActionJudge.enabled) {
+          const root = tree.rootNode
+          const cmdList: ActionJudge.ShellCommand[] = commands(root).map((node) => {
+            const toks = parts(node).map((item) => item.text)
+            return { executable: ActionJudge.basename(toks[0] ?? ""), args: toks }
+          })
+          const flags = {
+            hasRedirect:
+              root.descendantsOfType("file_redirect").length > 0 || root.descendantsOfType("heredoc_redirect").length > 0,
+            hasSubstitution:
+              root.descendantsOfType("command_substitution").length > 0 ||
+              root.descendantsOfType("process_substitution").length > 0,
+            hasError: root.descendantsOfType("ERROR").length > 0,
+          }
+          const readOnly = ActionJudge.provenReadOnly(cmdList, flags)
+          // Structural view; ctx.messages (SessionV1.WithParts[]) matches ActionJudge.MessageView by shape.
+          const { intent, model } = ActionJudge.selectIntent(
+            ctx.messages as unknown as ActionJudge.MessageView[],
+            ctx.userMessageID,
+          )
+          const decision = ActionJudge.route({ tripwireBlocked: false, readOnly, hasIntent: Boolean(intent) })
+          if (decision === "intent-missing-block") {
+            throw new Error(
+              "Blocked by action classifier: cannot verify this command against the user's request (no user intent available).",
+            )
+          }
+          if (decision === "classify") {
+            const providerOpt = yield* Effect.serviceOption(Provider.Service)
+            const verdict = yield* ActionJudge.classify(
+              providerOpt,
+              model,
+              { surface: "shell", userIntent: intent!, cwd: input.cwd, command: input.command, commands: cmdList },
+              ctx.abort,
+              ctx.sessionID,
+              ctx.callID ?? "",
+            )
+            // block -> tool error; ask (classifier infra failure) -> escalate via the real bash ask below.
+            if (verdict.decision === "block") throw new Error(`Blocked by action classifier (${verdict.reasonCode}).`)
+            if (verdict.decision === "ask") degradedReason = verdict.reasonCode
+            // kilocode_change - a proven allow may pre-approve ONLY this bash ask; authorizerAllows requires the
+            // flag AND a ROOT session (a genuine child session is never pre-approved).
+            if (verdict.decision === "allow" && authorizerAllows(ctx.parentSessionID)) authorized = true
+          }
+        }
+        // kilocode_change end
+        yield* ask(ctx, scan, input.command, metadata, input.description, degradedReason, authorized) // kilocode_change
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {
           yield* ctx.ask({

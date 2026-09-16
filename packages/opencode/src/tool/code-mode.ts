@@ -10,6 +10,12 @@ import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { EffectBridge } from "@/effect/bridge" // kilocode_change
+import * as McpGate from "@/kilocode/gate/mcp-gate" // kilocode_change - Code Mode child MCP gate
+import * as McpCodeMode from "@/kilocode/gate/mcp-codemode" // kilocode_change - Code Mode child-MCP gate wiring (testable adapter)
+import * as DegradedGate from "@/kilocode/gate/degraded" // kilocode_change - fail-safe escalation approver
+import { authorizerAllows } from "@/kilocode/permission/interactive-approval" // kilocode_change - classifier one-shot pre-approval (flag + root session)
+import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change
+import { Provider } from "@/provider/provider" // kilocode_change
 
 export const CODE_MODE_TOOL = "execute"
 
@@ -146,13 +152,27 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID },
     { args: input.args },
   )
-  const result: CallToolResult = yield* input.bridge
+  // kilocode_change start - MCP gate (KILO_MCP_GATE=1): classify server+tool+argKeys vs intent BEFORE the
+  // external child MCP call. DegradedGate.guardSurface runs runChild once on allow, throws on block, and on
+  // ask escalates via selective withDegraded (tags only the entry.key ask) so no call happens without a human.
+  const runChild = (c: Tool.Context) =>
+    input.bridge
     .run(
       SandboxPolicy.executeMcp(
         input.ctx.sessionID,
         input.entry.tool,
         Effect.gen(function* () {
-          yield* input.ctx.ask({ permission: input.entry.key, metadata: {}, patterns: ["*"], always: ["*"] })
+          // envelope for the prompt: server + tool + argument KEYS only (never values).
+          yield* c.ask({
+            permission: input.entry.key,
+            metadata: {
+              server: input.entry.tool.clientName,
+              tool: input.entry.tool.def.name,
+              argKeys: McpGate.argKeys(input.args),
+            },
+            patterns: ["*"],
+            always: ["*"],
+          })
           // Deliberately mirrors McpCatalog.convertTool's transport call so the MCP service stays free of tool-loop concerns.
           return yield* Effect.promise(async () => {
             const raw = await input.entry.tool.client.callTool(
@@ -188,6 +208,37 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
         },
       }),
     )
+  const result: CallToolResult = yield* (McpGate.enabled
+    ? Effect.gen(function* () {
+        const providerOpt = yield* Effect.serviceOption(Provider.Service)
+        return yield* DegradedGate.guardSurface({
+          decide: McpCodeMode.decideChildMcp({
+            tool: input.entry.tool,
+            args: input.args,
+            ctx: {
+              messages: input.ctx.messages as unknown as ActionJudge.MessageView[],
+              userMessageID: input.ctx.userMessageID,
+              parentSessionID: input.ctx.parentSessionID,
+              abort: input.ctx.abort,
+              sessionID: input.ctx.sessionID,
+              callID: input.callID,
+            },
+            makeJudge: (model) => (mi) =>
+              ActionJudge.classify(providerOpt, model, mi, input.ctx.abort, input.ctx.sessionID, input.callID),
+          }),
+          ctx: input.ctx,
+          // degraded tags ONLY the child MCP tool key ask; nothing else.
+          appliesTo: (p) => p === input.entry.key,
+          blockMessage: (rc) => `Blocked by MCP gate (${rc}).`,
+          run: runChild,
+          // kilocode_change - classifier one-shot pre-approval follows the SESSION, like everywhere else: a
+          // ROOT session (parentSessionID == null) may pre-approve; only a genuine child/subagent session
+          // (parentSessionID set) is refused. authorizerAllows enforces flag AND root-session together.
+          canAuthorize: authorizerAllows(input.ctx.parentSessionID),
+        })
+      })
+    : runChild(input.ctx))
+  // kilocode_change end
   yield* input.plugin.trigger(
     "tool.execute.after",
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID, args: input.args },
