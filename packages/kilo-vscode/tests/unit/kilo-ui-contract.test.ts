@@ -580,11 +580,17 @@ describe("Deferred tool card remount contract (source)", () => {
     // Otherwise every virtualizer remount of an expanded diff paints a
     // collapsed frame, then grows by the full diff height and the pinned
     // transcript jumps (and can loop through the virtualizer's range).
-    expect(wrapper).toContain("const defer = () => props.defer && !(seen() && initial())")
+    expect(wrapper).toContain("const defer = () => props.defer && !(remount && initial())")
     // The memory is separate from the user preference map: a display setting
     // or search forceOpen must not become a durable per-card open state.
-    expect(wrapper).toContain("if (initial() && !props.forceOpen) remember(key())")
+    expect(wrapper).toContain("if (initial() && !props.forceOpen) remember(id)")
     expect(wrapper).not.toContain("writeToolOpen(key(), true)")
+    // Remembering must happen after the remount check, or an initially-open
+    // card would skip deferral on its very first mount too.
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeGreaterThan(-1)
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeLessThan(
+      wrapper.indexOf("remember(id)"),
+    )
   })
 
   it("keeps the bottom independent of the working state", () => {
@@ -593,6 +599,9 @@ describe("Deferred tool card remount contract (source)", () => {
     const scrollHandler = scroll.slice(scroll.indexOf("const handleScroll"), scroll.indexOf("const onContentResize"))
     expect(scrollHandler).not.toContain("if (active()) bottom()")
     const viewport = scroll.slice(scroll.indexOf("const onViewportResize"), scroll.indexOf("// Effects"))
+    // The post-click grace window must not block a resize re-pin, but a gesture
+    // in progress must still be protected.
     expect(viewport).not.toContain("isRecent()")
+    expect(viewport).toContain("userActivity.isDragging()")
   })
 })

@@ -1055,7 +1055,6 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   }
 
-  // Handle messages from extension
   onMount(() => {
     const unsubscribeProject = vscode.onMessage(trackAgentProject)
     const unsubscribeAck = vscode.onMessage((message) => {
@@ -1072,6 +1071,7 @@ export const SessionProvider: ParentComponent = (props) => {
       unsubscribeProject()
       unsubscribeAck()
       unsubscribe()
+      frames.cancel()
     })
   })
 

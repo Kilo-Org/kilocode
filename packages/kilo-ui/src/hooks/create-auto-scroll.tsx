@@ -183,11 +183,13 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   // A viewport resize (composer growing, a dock mounting, the panel being
   // resized) is never a scroll gesture, so a recent click must not block the
-  // re-pin. Only an explicit scroll away from the bottom releases it.
+  // re-pin. A gesture still in progress is different: a text-selection drag
+  // produces no scroll event, so the resize would otherwise pull the view away
+  // from the selection.
   const onViewportResize = () => {
     if (!scroll) return
     if (!canScroll(scroll)) return
-    if (store.userScrolled) return
+    if (store.userScrolled || userActivity.isDragging()) return
     bottom()
   }
 

@@ -21,11 +21,15 @@ export function createFrameQueue<T>(apply: (items: T[]) => void, coalesce: (item
   let frame: number | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
 
-  const drain = () => {
+  const stop = () => {
     if (frame !== undefined && typeof cancelAnimationFrame === "function") cancelAnimationFrame(frame)
     if (timer !== undefined) clearTimeout(timer)
     frame = undefined
     timer = undefined
+  }
+
+  const drain = () => {
+    stop()
     if (queue.length === 0) return
     apply(queue.splice(0))
   }
@@ -50,8 +54,16 @@ export function createFrameQueue<T>(apply: (items: T[]) => void, coalesce: (item
       queue.push(item)
       schedule()
     },
-    /** Apply everything queued now. Tests and teardown use this. */
+    /** Apply everything queued now. Tests use this to drain without a frame. */
     flush: drain,
+    /**
+     * Drop the queue and any scheduled drain without applying it. Teardown uses
+     * this so a pending batch cannot run against a disposed store.
+     */
+    cancel() {
+      stop()
+      queue.length = 0
+    },
     get size() {
       return queue.length
     },

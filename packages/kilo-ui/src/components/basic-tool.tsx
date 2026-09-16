@@ -66,12 +66,11 @@ export function BasicTool(props: BasicToolProps) {
   // that already mounted open, separately from the user preference map so the
   // display setting and search `forceOpen` are not turned into a preference,
   // and mount the body in the same frame when such a card comes back open.
-  const seen = () => {
-    const id = key()
-    return id !== undefined && mounted.has(id)
-  }
-  const defer = () => props.defer && !(seen() && initial())
-  if (initial() && !props.forceOpen) remember(key())
+  const id = key()
+  // Captured before the card is remembered so the first mount stays deferred.
+  const remount = id !== undefined && mounted.has(id)
+  if (initial() && !props.forceOpen) remember(id)
+  const defer = () => props.defer && !(remount && initial())
   const approval = useToolApproval()
   const inBody = () => shouldRenderApprovalInBody(props.approvalPlacement, approval() !== undefined)
   const change = (open: boolean) => {

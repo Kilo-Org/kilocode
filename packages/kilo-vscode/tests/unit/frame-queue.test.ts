@@ -81,3 +81,16 @@ describe("streamMessage", () => {
     expect(streamMessage({ type: "questionResolved" } as never)).toBe(false)
   })
 })
+
+describe("createFrameQueue cancel", () => {
+  it("drops the queue and the scheduled drain without applying it", async () => {
+    const drains: number[][] = []
+    const queue = createFrameQueue<number>((items) => drains.push(items))
+    queue.push(1)
+    queue.push(2)
+    queue.cancel()
+    expect(queue.size).toBe(0)
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    expect(drains).toEqual([])
+  })
+})
