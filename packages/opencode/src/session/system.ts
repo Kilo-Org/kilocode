@@ -29,7 +29,7 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import SOUL from "../kilocode/soul.txt"
 import type { EditorContext } from "../kilocode/editor-context"
 import { KilocodeSystemPrompt } from "../kilocode/system-prompt"
-import { isLing } from "../kilocode/model-match"
+import { isGpt6, isLing } from "../kilocode/model-match"
 import { Config } from "@/config/config"
 import * as KiloReference from "@/kilocode/reference"
 // kilocode_change end
@@ -70,9 +70,7 @@ export function provider(model: Provider.Model) {
 
   const kilo = prompt()
   if (kilo) return kilo
-  const id = model.api.id.split("/").at(-1)?.toLowerCase() ?? ""
-  const major = Number(id.match(/^gpt-(\d+)(?:\.\d+)?(?:-|$)/)?.at(1))
-  if (major >= 6 || id === "gpt-astra-latest") return [PROMPT_GPT6]
+  if (isGpt6(model.api.id)) return [PROMPT_GPT6]
   // kilocode_change end
   if (model.api.id.includes("muse-spark")) return [PROMPT_META]
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
