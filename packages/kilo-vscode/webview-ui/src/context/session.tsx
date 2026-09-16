@@ -1127,12 +1127,6 @@ export const SessionProvider: ParentComponent = (props) => {
           .filter((message) => !ids.has(message.id))
           .map((message) => ({ ...message, sessionID: session.id }))
         setStore("messages", session.id, [...current, ...promoted])
-        setStore(
-          "messages",
-          produce((messages) => {
-            delete messages[draftID]
-          }),
-        )
 
         const pending = pendingOptimistic.get(draftID)
         if (pending) {
@@ -1168,6 +1162,13 @@ export const SessionProvider: ParentComponent = (props) => {
       const pendingAgent = draftID ? store.agentSelections[draftID] : pendingAgentSelection()
       const pendingModel = draftID ? store.sessionOverrides[draftID] : undefined
       if (draftID) {
+        // Goal commands have no optimistic messages, but their empty draft cache must also be removed.
+        setStore(
+          "messages",
+          produce((messages) => {
+            delete messages[draftID]
+          }),
+        )
         const entries = transferVariants(store.variantSelections, draftID, session.id)
         for (const [key, value] of Object.entries(entries)) {
           setStore("variantSelections", key, value)

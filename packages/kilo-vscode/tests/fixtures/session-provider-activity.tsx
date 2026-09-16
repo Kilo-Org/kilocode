@@ -945,6 +945,8 @@ try {
     false,
   )
   await emit({ type: "sessionCreated", session: info("ses_command-promoted"), draftID: accepted.draftID })
+  assert.equal(Object.hasOwn(value.allMessages(), accepted.draftID), false)
+  assert(value.allMessages()["ses_command-promoted"]?.some((message) => message.id === accepted.messageID))
   choice(value.selected("ses_command-promoted"), personal)
   assert.equal(value.selectedAgent("ses_command-promoted"), "ask")
   assert.equal(value.currentVariant("ses_command-promoted"), "high")
@@ -1001,7 +1003,13 @@ try {
       sent.slice(start).map((message) => message.type),
       ["sendCommand"],
     )
+    assert.deepEqual(unwrap(value.allMessages()[command.draftID]), [])
     await emit({ type: "sessionCreated", session: info("ses_goal-draft"), draftID: command.draftID })
+    assert.equal(
+      Object.hasOwn(value.allMessages(), command.draftID),
+      false,
+      "Promotion must remove empty goal draft caches",
+    )
     assert.equal(value.currentSessionID(), "ses_goal-draft")
     assert.equal(value.selectedAgent(), "ask")
     choice(value.selected(), first)
@@ -2396,6 +2404,35 @@ try {
     value.rememberSelection("code", outgoing, "low")
     choice(value.selected("closed-history-cache"), outgoing)
     choice(value.selected("background-empty"), first)
+  }
+  // Repeated goal promotion removes empty draft caches without overwriting arriving session history.
+  for (const [index, args] of ["pause", "do X"].entries()) {
+    value.clearCurrentSession()
+    const size = Object.keys(value.allMessages()).length
+    assert.equal(value.sendCommand("goal", args), true)
+    const request = sent.findLast((message) => message.type === "sendCommand")
+    assert(request?.draftID)
+    assert.deepEqual(unwrap(value.allMessages()[request.draftID]), [])
+    const sid = `goal-cache-${index}`
+    const messages =
+      index === 0
+        ? []
+        : [
+            {
+              id: "goal-history",
+              sessionID: sid,
+              role: "user" as const,
+              agent: "code",
+              model: first,
+              createdAt: info(sid).createdAt,
+            },
+          ]
+    if (messages.length) await emit({ type: "messagesLoaded", sessionID: sid, messages })
+    await emit({ type: "sessionCreated", session: info(sid), draftID: request.draftID })
+    assert.equal(Object.hasOwn(value.allMessages(), request.draftID), false)
+    assert.deepEqual(unwrap(value.allMessages()[sid]), messages)
+    assert.equal(Object.keys(value.allMessages()).length, size + 1, "Only the promoted session cache should remain")
+    await emit({ type: "sessionCommandCompleted", messageID: request.messageID })
   }
   assert.deepEqual(failures, [])
 } finally {
