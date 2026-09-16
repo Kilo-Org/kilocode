@@ -796,6 +796,16 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected
+    .post("/kilocode/worktree/teardown", "kilocode.teardownWorktree")
+    .mutating()
+    .inProject({ git: true })
+    .at((ctx) => ({
+      path: `/kilocode/worktree/teardown?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: { worktree: path.join(directory(ctx), ".kilo", "worktrees", "api-worktree-teardown") },
+    }))
+    .status(401),
+  http.protected
     .get("/kilocode/command/files", "kilocode.commandFiles")
     .inProject({ git: true, init: command })
     .json(200, (body, ctx) => {

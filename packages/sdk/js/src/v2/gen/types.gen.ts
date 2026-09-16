@@ -17210,6 +17210,39 @@ export type KilocodeRemoveSnapshotResponses = {
 
 export type KilocodeRemoveSnapshotResponse = KilocodeRemoveSnapshotResponses[keyof KilocodeRemoveSnapshotResponses]
 
+export type KilocodeTeardownWorktreeData = {
+  body?: {
+    worktree: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/worktree/teardown"
+}
+
+export type KilocodeTeardownWorktreeErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeTeardownWorktreeError = KilocodeTeardownWorktreeErrors[keyof KilocodeTeardownWorktreeErrors]
+
+export type KilocodeTeardownWorktreeResponses = {
+  /**
+   * Worktree backend teardown result
+   */
+  200: {
+    disposed: boolean
+  }
+}
+
+export type KilocodeTeardownWorktreeResponse =
+  KilocodeTeardownWorktreeResponses[keyof KilocodeTeardownWorktreeResponses]
+
 export type KilocodeSnapshotPrepareData = {
   body?: never
   path?: never
