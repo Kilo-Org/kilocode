@@ -118,12 +118,6 @@
         "icon": "$(organization)"
       },
       {
-        "command": "kilo-code.new.kiloClawOpen",
-        "title": "KiloClaw",
-        "category": "Kilo Code",
-        "icon": "$(comment-discussion)"
-      },
-      {
         "command": "kilo-code.new.marketplaceButtonClicked",
         "title": "Marketplace",
         "category": "Kilo Code",
@@ -156,11 +150,6 @@
         "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
         "title": "Agent Manager",
         "icon": "$(organization)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
-        "title": "KiloClaw",
-        "icon": "$(comment-discussion)"
       },
       {
         "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
@@ -506,10 +495,6 @@
           "when": "false"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
-          "when": "false"
-        },
-        {
           "command": "kilo-code.new.agentManager.advancedWorktree",
           "when": "false"
         },
@@ -543,23 +528,18 @@
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
+          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
           "group": "navigation@3",
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
+          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
           "group": "navigation@4",
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
-          "group": "navigation@5",
-          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
-        },
-        {
           "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
-          "group": "navigation@6",
+          "group": "navigation@5",
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         }
       ],
