@@ -738,6 +738,8 @@ export const layer: Layer.Layer<
                   () => {},
                 ),
               )
+              // kilocode_change - stop a removed session's wakeups holding Keep Awake
+              yield* KiloSession.cancelWakeups(sessionID)
             }
             // kilocode_change - migrated from legacy sync.run/sync.remove to EventV2 (events.publish/remove)
             yield* events.publish(SessionV1.Event.Deleted, { sessionID, info: session })

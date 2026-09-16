@@ -196,7 +196,6 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
       sessionID: agent.id,
       title: agent.description,
       parentSessionID: session.currentSessionID(),
-      background: true,
       worktree: !!worktree,
       post: vscode.postMessage,
     })
