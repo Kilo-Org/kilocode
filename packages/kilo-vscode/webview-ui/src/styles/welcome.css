@@ -31,13 +31,17 @@
   opacity: 0;
 }
 
-.kilo-logo-hover .kilo-logo-static {
+.kilo-logo-hover .kilo-logo-animated {
+  transform: rotate(270deg);
+}
+
+/* The crossfade waits for the player, so a slow or failed load keeps the static mark. */
+.kilo-logo-ready .kilo-logo-static {
   opacity: 0;
 }
 
-.kilo-logo-hover .kilo-logo-animated {
+.kilo-logo-ready .kilo-logo-animated {
   opacity: 1;
-  transform: rotate(270deg);
 }
 
 .kilo-logo img,
