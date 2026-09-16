@@ -427,7 +427,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Kilo エージェント用のスリープ防止モードが有効です。クリックして無効にします",
   "agentManager.caffeination.active": "Kilo エージェントの作業中もコンピューターをスリープさせません",
   "agentManager.caffeination.unavailable": "このプラットフォームではスリープ防止モードを利用できません",
-  "agentManager.browser.title": "ブラウザー",
+  "agentManager.browser.title": "統合ブラウザー",
   "agentManager.browser.url": "ローカルアプリケーション URL",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "開く",
@@ -436,7 +436,8 @@ export const dict = {
   "agentManager.browser.inspect": "要素を選択",
   "agentManager.browser.devtoolsTitle": "開発者ツール",
   "agentManager.browser.empty": "ローカルアプリケーションを開くと、ここでプレビューできます。",
-  "agentManager.browser.noSession": "先に Agent Manager セッションを選択してください。",
+  "agentManager.browser.noSession":
+    "ローカルアプリケーションを表示するには、Agent Manager でセッションを開始または選択してください。",
   "agentManager.browser.screenshotAlt": "現在のブラウザーページ",
   "agentManager.browser.errors": "ブラウザーの問題: {{count}} 件",
   "agentManager.browser.diagnostics": "ブラウザー診断",

@@ -427,7 +427,7 @@ export const dict = {
   "agentManager.caffeination.active": "Holder datamaskinen våken mens Kilo-agentene arbeider",
   "agentManager.caffeination.unavailable":
     "Modus for å holde datamaskinen våken er ikke tilgjengelig på denne plattformen",
-  "agentManager.browser.title": "Nettleser",
+  "agentManager.browser.title": "Integrert nettleser",
   "agentManager.browser.url": "URL for lokal applikasjon",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Åpne",
@@ -436,7 +436,7 @@ export const dict = {
   "agentManager.browser.refresh": "Oppdater nettleser",
   "agentManager.browser.close": "Lukk nettleser",
   "agentManager.browser.empty": "Åpne en lokal applikasjon for å forhåndsvise den her.",
-  "agentManager.browser.noSession": "Velg en økt i Agent Manager først.",
+  "agentManager.browser.noSession": "Start eller velg en økt i Agent Manager for å bla i en lokal applikasjon.",
   "agentManager.browser.screenshotAlt": "Gjeldende nettleserside",
   "agentManager.browser.errors": "Nettleserproblemer: {{count}}",
   "agentManager.browser.diagnostics": "Nettleserdiagnostikk",

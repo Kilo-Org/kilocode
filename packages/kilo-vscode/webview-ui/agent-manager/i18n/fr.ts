@@ -434,7 +434,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Mode anti-veille activé pour les agents Kilo ; cliquez pour désactiver",
   "agentManager.caffeination.active": "Ordinateur maintenu éveillé pendant que les agents Kilo travaillent",
   "agentManager.caffeination.unavailable": "Le mode veille active n'est pas disponible sur cette plateforme",
-  "agentManager.browser.title": "Navigateur",
+  "agentManager.browser.title": "Navigateur intégré",
   "agentManager.browser.url": "URL de l'application locale",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Ouvrir",
@@ -443,7 +443,8 @@ export const dict = {
   "agentManager.browser.refresh": "Actualiser le navigateur",
   "agentManager.browser.close": "Fermer le navigateur",
   "agentManager.browser.empty": "Ouvrez une application locale pour l'afficher ici en aperçu.",
-  "agentManager.browser.noSession": "Sélectionnez d'abord une session dans Agent Manager.",
+  "agentManager.browser.noSession":
+    "Démarrez ou sélectionnez une session dans Agent Manager pour parcourir une application locale.",
   "agentManager.browser.screenshotAlt": "Page actuelle du navigateur",
   "agentManager.browser.errors": "Problèmes du navigateur : {{count}}",
   "agentManager.browser.diagnostics": "Diagnostics du navigateur",

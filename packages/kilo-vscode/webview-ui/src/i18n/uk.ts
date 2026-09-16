@@ -834,7 +834,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навички",
 
   "settings.browser.description":
-    "Після увімкнення агент ШІ може взаємодіяти з веб-сторінками — навігація, натискання, введення тексту та знімки екрана. Відкриється вікно Chrome, щоб ви могли стежити за роботою агента.",
+    "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
   "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
@@ -1370,5 +1370,11 @@ export const dict = {
   "chat.search.close": "Закрити пошук",
   "chat.search.invalidRegex": "Недійсний регулярний вираз",
   "chat.search.noResults": "Немає результатів",
+  "settings.experimental.browserAutomation.title": "Вбудований браузер",
+  "settings.experimental.browserAutomation.description":
+    "Показуйте попередній перегляд локальних застосунків в Agent Manager і надавайте інструмент browser_open сесіям Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Використовувати системний Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Використовувати встановлений Google Chrome для вбудованого браузера. Вимкніть лише якщо сумісний браузер Playwright Chromium уже встановлено.",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
 }

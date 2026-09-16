@@ -834,7 +834,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "ทักษะ",
 
   "settings.browser.description":
-    "เมื่อเปิดใช้งาน ตัวแทน AI สามารถโต้ตอบกับหน้าเว็บได้ — นำทาง คลิก พิมพ์ และจับภาพหน้าจอ หน้าต่าง Chrome จะเปิดขึ้นเพื่อให้คุณดูการทำงานของตัวแทน",
+    "กำหนดค่าการทำงานอัตโนมัติของเบราว์เซอร์ในตัวที่ขับเคลื่อนโดย Playwright Kilo สามารถนำทาง โต้ตอบ และจับภาพหน้าจอของหน้าเว็บในเซสชันของคุณได้",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
   "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
@@ -1331,5 +1331,11 @@ export const dict = {
   "chat.search.close": "ปิดการค้นหา",
   "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "chat.search.noResults": "ไม่มีผลลัพธ์",
+  "settings.experimental.browserAutomation.title": "เบราว์เซอร์ในตัว",
+  "settings.experimental.browserAutomation.description":
+    "แสดงตัวอย่างแอปพลิเคชันในเครื่องใน Agent Manager และเปิดเผยเครื่องมือ browser_open ให้กับเซสชัน Agent Manager",
+  "settings.experimental.browserAutomation.systemChrome.title": "ใช้ Chrome ของระบบ",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
 }
