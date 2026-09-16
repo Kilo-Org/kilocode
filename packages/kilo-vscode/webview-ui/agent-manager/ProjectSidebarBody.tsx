@@ -22,7 +22,8 @@ import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
-import { WorktreeItem } from "./WorktreeItem"
+import { OrphanNotice } from "./OrphanNotice"
+import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
@@ -278,7 +279,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           busy={props.busy(worktree.id)}
           activity={props.activityFor(worktree.id)}
           blocked={props.blocked(worktree.id)}
-          stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
+          stale={
+            state()?.staleWorktreeIds?.includes(worktree.id) === true ||
+            actionable(state()?.worktreeHealth?.[worktree.id])
+          }
+          health={state()?.worktreeHealth?.[worktree.id]}
           stats={props.stats?.[worktree.id]}
           shortcut={values().shortcut}
           navHint={values().navHint}
@@ -316,6 +321,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
             selectAfterDelete(worktree.id)
           }}
+          onRemoveKeepSessions={() => {
+            post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id, keepSessions: true })
+            selectAfterDelete(worktree.id)
+          }}
+          onRestore={() => post({ type: "agentManager.restoreWorktree", worktreeId: worktree.id })}
           onUpdateBase={() =>
             updateBase(
               worktree.id,
@@ -455,6 +465,10 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               </DragOverlay>
             </DragDropProvider>
           </Show>
+          <OrphanNotice
+            orphans={store.orphanDirectories()}
+            onClean={(paths) => post({ type: "agentManager.cleanOrphanDirectories", paths })}
+          />
         </div>
       </div>
     </div>

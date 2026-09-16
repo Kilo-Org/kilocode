@@ -262,6 +262,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.agentManager.diagnostics",
+        "title": "Agent Manager: Show Worktree Diagnostics",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManager.search",
         "title": "Agent Manager: Search Worktrees and Sessions",
         "category": "Kilo Code"
@@ -1086,7 +1091,7 @@
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "Enable the experimental Agent Manager browser panel and browser_open tool."
+          "description": "Enable the experimental Integrated Browser panel and browser_open tool in Agent Manager."
         },
         "kilo-code.new.experimental.claudeMigration": {
           "type": "boolean",
@@ -1142,10 +1147,26 @@
           "maximum": 24,
           "description": "Font size in pixels for the Kilo Code webview UI."
         },
+        "kilo-code.new.browserAutomation.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
+        },
         "kilo-code.new.browserAutomation.useSystemChrome": {
           "type": "boolean",
           "default": true,
-          "description": "Use system-installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed."
+          "description": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
+        },
+        "kilo-code.new.browserAutomation.headless": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
+        },
+        "kilo-code.new.agentManager.browser.useSystemChrome": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Use system-installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed."
         },
         "kilo-code.new.attention.enabled": {
           "type": "boolean",
@@ -1270,7 +1291,7 @@
   "scripts": {
     "prepare:cli-binary": "bun script/local-bin.ts",
     "prepare:sdk": "bun script/prepare-sdk.ts",
-    "build:launch": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check:production",
+    "build:launch": "bun run prepare:sdk && bun run --parallel prepare:cli-binary build:check:production",
     "compile": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check",
     "watch": "bun run prepare:sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
@@ -1348,6 +1369,7 @@
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
+    "@lottiefiles/dotlottie-web": "0.63.0",
     "@opencode-ai/core": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@pierre/diffs": "catalog:",

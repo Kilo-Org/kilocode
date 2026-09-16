@@ -67,6 +67,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const pending = () => `${PENDING_TAB_PREFIX}${crypto.randomUUID()}`
   const init = restoreTabs(saved?.sidebarSessionTabIDs, saved?.sidebarActiveSessionTabID, pending)
   const [ids, setIds] = createSignal(init.ids)
+  onCleanup(session.trackScopes(ids))
   const [active, setActive] = createSignal(init.active)
   const [cloud, setCloud] = createSignal<string>()
   const fresh = new Set<string>()

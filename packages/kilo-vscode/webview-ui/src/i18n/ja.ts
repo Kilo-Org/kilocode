@@ -201,6 +201,7 @@ export const dict = {
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
@@ -676,6 +677,7 @@ export const dict = {
   "profile.usage.source.direct": "直接",
   "profile.usage.state.stale": "最後に更新された使用状況を表示しています。",
   "profile.usage.state.unavailable": "使用状況を取得できません。",
+  "profile.usage.state.empty": "使用量の上限は報告されていません。",
   "profile.usage.plan.pastDue": "プラン：支払い期限切れ",
   "profile.usage.plan.canceling": "プラン：期間終了時に解約",
   "profile.usage.plan.unknown": "プラン：ステータス不明",
@@ -839,7 +841,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "スキル",
 
   "settings.browser.description":
-    "有効にすると、AIエージェントがWebページを操作できるようになります — ナビゲーション、クリック、入力、スクリーンショットの撮影。Chromeウィンドウが開き、エージェントの作業を確認できます。",
+    "Playwrightを利用した組み込みブラウザ自動化を設定します。Kiloはセッション内でWebページのナビゲーション、操作、スクリーンショット撮影を行えます。",
   "settings.browser.enable.title": "ブラウザ自動化を有効にする",
   "settings.browser.enable.description": "Playwright MCPサーバーをCLIバックエンドに登録します。",
   "settings.browser.systemChrome.title": "システムChromeを使用",
@@ -1345,5 +1347,11 @@ export const dict = {
   "chat.search.close": "検索を閉じる",
   "chat.search.invalidRegex": "正規表現が無効です",
   "chat.search.noResults": "見つかりませんでした",
+  "settings.experimental.browserAutomation.title": "統合ブラウザー",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager でローカルアプリケーションのプレビューを表示し、browser_open ツールを Agent Manager セッションに公開します。",
+  "settings.experimental.browserAutomation.systemChrome.title": "システムChromeを使用",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
 }

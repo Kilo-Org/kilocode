@@ -358,17 +358,17 @@ describe("partitionRows", () => {
     })
     const result = partitionRows(rows, new Set(["u2"]))
 
-    expect(result.virtual.map((row) => `${row.turn}:${row.type}`)).toEqual([
-      "u1:user",
-      "u1:assistant",
+    // The whole live turn renders directly; only completed turns are virtualized.
+    expect(result.virtual.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:user", "u1:assistant"])
+    expect(result.direct.map((row) => `${row.turn}:${row.type}`)).toEqual([
       "u2:user",
       "u2:assistant",
       "u2:assistant",
+      "u2:assistant",
     ])
-    expect(result.direct.flatMap((row) => (row.type === "assistant" ? row.parts : [])).map((item) => item.id)).toEqual([
-      "p16",
-      "p17",
-    ])
+    expect(result.direct.flatMap((row) => (row.type === "assistant" ? row.parts : [])).map((item) => item.id)).toEqual(
+      parts.map((item) => item.id),
+    )
   })
 
   it("keeps trailing diff and error rows after the direct assistant suffix", () => {
@@ -379,8 +379,8 @@ describe("partitionRows", () => {
     })
     const result = partitionRows(rows, new Set(["u1"]))
 
-    expect(result.virtual.map((row) => row.type)).toEqual(["user"])
-    expect(result.direct.map((row) => row.type)).toEqual(["assistant", "diff", "error"])
+    expect(result.virtual).toEqual([])
+    expect(result.direct.map((row) => row.type)).toEqual(["user", "assistant", "diff", "error"])
   })
 
   it("returns a completed suffix to virtual history after queue handoff", () => {
@@ -393,8 +393,8 @@ describe("partitionRows", () => {
       queued: new Set(["u2"]),
     })
     const active = partitionRows(first, new Set(["u1"]))
-    expect(active.virtual.map((row) => row.type)).toEqual(["user"])
-    expect(active.direct.map((row) => row.turn)).toEqual(["u1"])
+    expect(active.virtual).toEqual([])
+    expect(active.direct.map((row) => row.turn)).toEqual(["u1", "u1"])
     expect(active.queued.map((row) => row.turn)).toEqual(["u2"])
 
     const second = transcriptRows(messageTurns([u1, a1, u2]), lookup(parts), {
@@ -425,8 +425,8 @@ describe("partitionRows", () => {
     const rows = transcriptRows(messageTurns([u1, u2, a2]), lookup({ a2: [part("p1", "a2")] }))
     const result = partitionRows(rows, new Set(["u1", "u2"]))
 
-    expect(result.virtual.map((row) => row.turn)).toEqual(["u1", "u2"])
-    expect(result.direct.map((row) => `${row.turn}:${row.type}`)).toEqual(["u2:assistant"])
+    expect(result.virtual.map((row) => row.turn)).toEqual(["u1"])
+    expect(result.direct.map((row) => `${row.turn}:${row.type}`)).toEqual(["u2:user", "u2:assistant"])
   })
 
   it("keeps queued rows after virtual and direct rows", () => {
@@ -443,8 +443,8 @@ describe("partitionRows", () => {
     )
     const result = partitionRows(rows, new Set(["u1"]))
 
-    expect(result.virtual.map((row) => row.type)).toEqual(["user"])
-    expect(result.direct.map((row) => row.type)).toEqual(["assistant"])
+    expect(result.virtual).toEqual([])
+    expect(result.direct.map((row) => row.type)).toEqual(["user", "assistant"])
     expect(result.queued.map((row) => row.turn)).toEqual(["u2"])
     expect(result.queued[0]).toMatchObject({ type: "user", queued: true })
   })

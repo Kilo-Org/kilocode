@@ -28,13 +28,14 @@ import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+import { usePasteCollapse } from "../../hooks/usePasteCollapse"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
 import { isMentionEntry } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
-import { useSlashCommand } from "../../hooks/useSlashCommand"
+import { useSlashCommand, skill as isSkill } from "../../hooks/useSlashCommand"
 import { useGoalComposer } from "./goal/useGoalComposer"
 import { GoalHeader } from "./goal/GoalHeader"
 import { useGhostText } from "../../hooks/useGhostText"
@@ -52,7 +53,6 @@ import { cycleVariant } from "../../context/session-variant-store"
 import {
   fileName,
   dirName,
-  buildHighlightSegments,
   atEnd,
   insertSpacedText,
   isPromptBusy,
@@ -60,6 +60,7 @@ import {
   memoryRest,
   type SandboxDefaultState,
   type SandboxState,
+  undoKey,
 } from "./prompt-input-utils"
 import { sandboxMessages } from "./prompt-sandbox-messages"
 import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
@@ -86,6 +87,7 @@ import {
   mentionDrafts,
   isPendingDraftDiscarded,
   isSessionDraftDiscarded,
+  pasteDrafts,
   reviewDrafts,
   savePromptDraft,
   scrollDrafts,
@@ -347,12 +349,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
     browser: BrowserReference[] = browsers(),
     codeContexts: CodeContext[] = contexts(),
-  ) => savePromptDraft(key, next, comments, imgs, scroll, browser, codeContexts)
+    pastes = key === draftKey() ? paste.pastes().map((item) => item.text) : undefined,
+  ) => savePromptDraft(key, next, comments, imgs, scroll, browser, codeContexts, pastes)
   const readDraft = () => ({
     text: text().trim(),
     comments: reviewComments(),
     images: imageAttach.images(),
     browsers: browsers(),
+    pastes: paste.pastes().map((item) => item.text),
     contexts: contexts(),
     scroll: textareaRef?.scrollTop ?? scrollDrafts.get(draftKey()) ?? 0,
   })
@@ -360,6 +364,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [browsers, setBrowsers] = createSignal<BrowserReference[]>([])
+  // Large pastes collapse into a `[Pasted ~N lines]` chip, matching the CLI and
+  // JetBrains plugin. Honor the same experimental opt-out.
+  const paste = usePasteCollapse({
+    enabled: () => globalConfig()?.experimental?.disable_paste_summary !== true,
+    text,
+  })
   const [contexts, setContexts] = createSignal<CodeContext[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
@@ -478,6 +488,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
+  // Backing text of collapsed pastes, restored alongside preEnhanceText on undo.
+  let preEnhancePastes: string[] | null = null
 
   createEffect(() => {
     const sessionID = sandboxID()
@@ -565,13 +577,23 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           codeContexts.length > 0 ||
           drafts.has(prev)
         ) {
-          saveDraft(prev, val, comments, imgs, undefined, browser, codeContexts)
+          saveDraft(
+            prev,
+            val,
+            comments,
+            imgs,
+            undefined,
+            browser,
+            codeContexts,
+            untrack(paste.pastes).map((item) => item.text),
+          )
         }
       }
       const draft = drafts.get(key) ?? ""
       const pending = reviewDrafts.get(key) ?? []
       const scroll = scrollDrafts.get(key) ?? 0
       setText(draft)
+      paste.load(draft, pasteDrafts.get(key) ?? [])
       mention.seedFromText(draft)
       const refs = mentionDrafts.get(key)
       if (refs) {
@@ -584,6 +606,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
       preEnhanceText = null
+      preEnhancePastes = null
       history.reset()
       if (textareaRef) {
         textareaRef.value = draft
@@ -666,10 +689,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const browser = browsers()
     const scroll = textareaRef?.scrollTop ?? 0
+    // Capture paste backing before tabs.add() switches the draft and clears it.
+    const pastes = paste.pastes().map((item) => item.text)
     const id = tabs?.add()
     if (!id) session.clearCurrentSession()
     const key = id ? scopeDraftKey(boxKey(), pendingDraftKey(id) ?? "new") : draftKey()
-    saveDraft(key, draft, comments, imgs, scroll, browser)
+    saveDraft(key, draft, comments, imgs, scroll, browser, undefined, pastes)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
@@ -699,6 +724,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       draft.scroll,
       draft.browsers,
       draft.contexts,
+      draft.pastes,
     )
   }
   window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
@@ -826,12 +852,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         ...(active ? imageAttach.images() : (imageDrafts.get(key) ?? [])),
       ]
       const comments = active ? reviewComments() : (reviewDrafts.get(key) ?? [])
+      const pastes = active ? paste.pastes().map((item) => item.text) : undefined
       const codeContexts = active ? contexts() : (contextDrafts.get(key) ?? [])
-      savePromptDraft(key, value, comments, images, undefined, undefined, codeContexts)
+      savePromptDraft(key, value, comments, images, undefined, undefined, codeContexts, pastes)
       mentionDrafts.set(key, { paths: state.paths, sessions: state.sessions })
       if (!active) return
       enhanceCounter++
       preEnhanceText = null
+      preEnhancePastes = null
       history.reset()
       setText(value)
       mention.seedFromParts(state.paths, value)
@@ -964,6 +992,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return
     }
     setText(message.text)
+    paste.load(message.text, pasteDrafts.get(key) ?? [])
     if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
     else mention.seedFromText(message.text)
     if (message.sessions?.length) mention.seedSessions(message.sessions, message.text)
@@ -1078,6 +1107,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         images: imageDrafts,
         scrolls: scrollDrafts,
         browsers: references,
+        pastes: pasteDrafts,
         contexts: contextDrafts,
       },
       source,
@@ -1226,6 +1256,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return
     }
     imageAttach.handlePaste(e)
+    // Collapse a large plain-text paste into a chip before the browser inserts
+    // it; images and files keep the default path.
+    if (
+      textareaRef &&
+      paste.paste(e, textareaRef, setText, () => {
+        adjustHeight()
+        syncHighlightScroll()
+      })
+    ) {
+      return
+    }
     // After pasting text, the textarea content changes but the layout may not
     // have reflowed yet, causing the caret position to be visually out of sync.
     // Defer height recalculation to after the browser completes the reflow.
@@ -1244,6 +1285,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const val = target.value
     setText(val)
     preEnhanceText = null
+    preEnhancePastes = null
     adjustHeight()
     syncHighlightScroll()
     history.reset()
@@ -1266,6 +1308,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return true
   }
 
+  // Native undo/redo. Plain undo falls through to handleKeyDown when an
+  // Enhance result can be reverted first.
+  const undo = (e: KeyboardEvent): boolean => {
+    const action = undoKey(e)
+    if (!action) return false
+    e.stopPropagation()
+    if (action === "undo" && preEnhanceText !== null) return false
+    e.preventDefault()
+    if (readonly()) return true
+    document.execCommand(action)
+    return true
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (goal.pending()) {
       escape(e)
@@ -1273,13 +1328,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
     if (locked()) return
     // Undo enhanced prompt with Ctrl+Z / ⌘Z
-    if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
+    if (undoKey(e) === "undo" && preEnhanceText !== null) {
       e.preventDefault()
       const restored = preEnhanceText
+      const pastes = preEnhancePastes
       preEnhanceText = null
+      preEnhancePastes = null
       setText(restored)
       if (textareaRef) {
         textareaRef.value = restored
+        paste.load(restored, pastes ?? [])
         adjustHeight()
       }
       return
@@ -1294,7 +1352,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     )
       return
 
-    // Skip cursor over mentions on arrow keys
+    // Atomic collapsed-paste removal on backspace
+    if (paste.backspace(e, textareaRef, setText)) {
+      adjustHeight()
+      syncHighlightScroll()
+      return
+    }
+
+    // Skip cursor over mentions and collapsed pastes on arrow keys
+    paste.arrow(e, textareaRef)
     if (mention.handleArrowKey(e, textareaRef)) return
 
     if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
@@ -1369,7 +1435,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
-    const draft = text().trim()
+    const draft = paste.plainText(text()).trim()
     if (!draft) {
       const description = language.t("prompt.action.enhanceDescription")
       setText(description)
@@ -1381,6 +1447,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return
     }
     preEnhanceText = text()
+    preEnhancePastes = paste.pastes().map((item) => item.text)
     enhanceCounter++
     setEnhancing(true)
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
@@ -1529,7 +1596,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handleSend = async () => {
-    const draft = text().trim()
+    // Collapsed pastes are expanded to their full content before anything reads
+    // the draft: sending, attachments, slash detection, and history all see the
+    // real text, never the placeholder.
+    const draft = paste.plainText(text()).trim()
     if (
       !goal.prepare(draft, () => {
         setText("")
@@ -1558,6 +1628,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
+      pasteDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       return
     }
@@ -1585,6 +1656,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
+      pasteDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       matched.action()
       return
@@ -1704,7 +1776,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     clearDraft(key, draft)
   }
 
-  const clearDraft = (key: string, value = key === draftKey() ? text().trim() : (drafts.get(key) ?? "").trim()) => {
+  const clearDraft = (key: string, value?: string) => {
+    if (value === undefined) {
+      const active = key === draftKey()
+      const source = active ? text() : (drafts.get(key) ?? "")
+      const backing = active ? paste.pastes().map((item) => item.text) : (pasteDrafts.get(key) ?? [])
+      value = paste.plainTextFor(source, backing).trim()
+    }
     history.append(value)
     drafts.delete(key)
     reviewDrafts.delete(key)
@@ -1713,6 +1791,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageDrafts.delete(key)
     mentionDrafts.delete(key)
     scrollDrafts.delete(key)
+    pasteDrafts.delete(key)
     if (draftKey() !== key) return
 
     history.reset()
@@ -1875,56 +1954,43 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             {(() => {
               const all = slash.results()
               const actions = all.filter((c) => c.action)
-              const server = all.filter((c) => !c.action)
-              const offset = actions.length
+              const commands = all.filter((c) => !c.action && !isSkill(c))
+              const skills = all.filter(isSkill)
+              // results() is ordered actions, commands, skills; keyboard indexes follow that order.
+              const groups = [
+                { label: "Actions", items: actions, offset: 0 },
+                { label: "Commands", items: commands, offset: actions.length },
+                { label: "Skills", items: skills, offset: actions.length + commands.length },
+              ].filter((group) => group.items.length > 0)
               return (
-                <>
-                  <Show when={actions.length > 0}>
-                    <div class="slash-command-group-label">Actions</div>
-                    <For each={actions}>
-                      {(cmd, idx) => (
-                        <div
-                          class="slash-command-item"
-                          classList={{ "slash-command-item--active": idx() === slash.index() }}
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
-                          }}
-                          onMouseEnter={() => slash.setIndex(idx())}
-                        >
-                          <span class="slash-command-name">/{cmd.name}</span>
-                          <Show when={cmd.description}>
-                            <span class="slash-command-desc">{cmd.description}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                  <Show when={server.length > 0}>
-                    <Show when={actions.length > 0}>
-                      <div class="slash-command-separator" />
-                    </Show>
-                    <div class="slash-command-group-label">Commands</div>
-                    <For each={server}>
-                      {(cmd, idx) => (
-                        <div
-                          class="slash-command-item"
-                          classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
-                          }}
-                          onMouseEnter={() => slash.setIndex(idx() + offset)}
-                        >
-                          <span class="slash-command-name">/{cmd.name}</span>
-                          <Show when={cmd.description}>
-                            <span class="slash-command-desc">{cmd.description}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </>
+                <For each={groups}>
+                  {(group, g) => (
+                    <>
+                      <Show when={g() > 0}>
+                        <div class="slash-command-separator" />
+                      </Show>
+                      <div class="slash-command-group-label">{group.label}</div>
+                      <For each={group.items}>
+                        {(cmd, idx) => (
+                          <div
+                            class="slash-command-item"
+                            classList={{ "slash-command-item--active": idx() + group.offset === slash.index() }}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                            }}
+                            onMouseEnter={() => slash.setIndex(idx() + group.offset)}
+                          >
+                            <span class="slash-command-name">/{cmd.name}</span>
+                            <Show when={cmd.description}>
+                              <span class="slash-command-desc">{cmd.description}</span>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </>
+                  )}
+                </For>
               )
             })()}
           </Show>
@@ -1962,25 +2028,56 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
-            <Index each={buildHighlightSegments(text(), highlightMentions())}>
+            <Index each={paste.segments(text(), highlightMentions())}>
               {(seg) => (
-                <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
-                  <span
-                    class="prompt-input-file-mention"
-                    classList={{
-                      "prompt-input-file-mention--file": isPathMention(seg().text) && !isModelMention(seg().text),
-                    }}
-                    onClick={(e) => {
-                      if (!isPathMention(seg().text)) return
-                      if (isModelMention(seg().text)) return
-                      if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
-                      e.preventDefault()
-                      e.stopPropagation()
-                      vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })
-                    }}
-                  >
-                    {seg().text}
-                  </span>
+                <Show
+                  when={seg().kind !== "paste"}
+                  fallback={
+                    <span
+                      class="prompt-input-paste"
+                      title={language.t("prompt.paste.expand")}
+                      onClick={(e) => {
+                        if (readonly()) return
+                        if (!textareaRef) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        paste.expand(seg().paste!, textareaRef, setText, () => {
+                          // A large expansion writes the textarea value directly
+                          // and skips the input handler. Reset the enhance and
+                          // history state a manual edit would reset, but leave
+                          // mention, slash, and ghost alone: restored paste
+                          // content is not new input, so it should not rerun
+                          // autocomplete or request a suggestion.
+                          preEnhanceText = null
+                          preEnhancePastes = null
+                          history.reset()
+                          adjustHeight()
+                          syncHighlightScroll()
+                        })
+                      }}
+                    >
+                      {seg().text}
+                    </span>
+                  }
+                >
+                  <Show when={seg().kind === "mention"} fallback={<span>{seg().text}</span>}>
+                    <span
+                      class="prompt-input-file-mention"
+                      classList={{
+                        "prompt-input-file-mention--file": isPathMention(seg().text) && !isModelMention(seg().text),
+                      }}
+                      onClick={(e) => {
+                        if (!isPathMention(seg().text)) return
+                        if (isModelMention(seg().text)) return
+                        if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })
+                      }}
+                    >
+                      {seg().text}
+                    </span>
+                  </Show>
                 </Show>
               )}
             </Index>
@@ -2003,10 +2100,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onInput={handleInput}
             onKeyDown={(e) => {
               if (speechDown(e)) return
-              const key = e.key.toLowerCase()
-              if ((e.ctrlKey || e.metaKey) && !e.altKey && (key === "z" || (key === "y" && !e.shiftKey))) {
-                e.stopPropagation()
-              }
+              if (undo(e)) return
               handleKeyDown(e)
             }}
             onKeyUp={(e) => {
@@ -2014,6 +2108,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               syncGhost()
             }}
             onPaste={handlePaste}
+            onCopy={(e) => {
+              if (paste.clipboard(e, textareaRef, setText)) syncGhost()
+            }}
+            onCut={(e) => {
+              if (!paste.clipboard(e, textareaRef, setText, true)) return
+              adjustHeight()
+              syncHighlightScroll()
+              syncGhost()
+            }}
             onClick={syncGhost}
             onFocus={() => {
               hold.claim()

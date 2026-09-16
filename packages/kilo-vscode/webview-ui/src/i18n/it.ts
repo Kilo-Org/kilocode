@@ -179,6 +179,7 @@ export const dict = {
   "prompt.action.send.blocked": "Rispondi alla domanda in sospeso o ignorala prima di continuare",
   "prompt.action.stop": "Ferma",
   "prompt.action.enhance": "Migliora prompt",
+  "prompt.paste.expand": "Fai clic per espandere il testo incollato",
   "prompt.action.indexing": "Impostazioni indicizzazione",
   "prompt.action.autoApprove.enable": "Abilita approvazione automatica",
   "prompt.action.autoApprove.disable": "Disabilita approvazione automatica",
@@ -521,6 +522,7 @@ export const dict = {
   "profile.usage.source.direct": "Diretto",
   "profile.usage.state.stale": "Vengono mostrati i dati di utilizzo dell'ultimo aggiornamento.",
   "profile.usage.state.unavailable": "Dati di utilizzo non disponibili.",
+  "profile.usage.state.empty": "Nessun limite di utilizzo segnalato.",
   "profile.usage.plan.pastDue": "Piano: Pagamento scaduto",
   "profile.usage.plan.canceling": "Piano: Si annulla al termine del periodo",
   "profile.usage.plan.unknown": "Piano: Stato sconosciuto",
@@ -709,7 +711,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Workflow",
   "settings.agentBehaviour.subtab.skills": "Skill",
   "settings.browser.description":
-    "Quando è abilitato, l'agente AI può interagire con pagine web: navigare, fare clic, scrivere e acquisire screenshot. Si aprirà una finestra Chrome così puoi osservare il lavoro dell'agente.",
+    "Configura l'automazione del browser integrata basata su Playwright. Kilo può navigare, interagire e acquisire screenshot delle pagine web nelle tue sessioni.",
   "settings.browser.enable.title": "Abilita automazione browser",
   "settings.browser.enable.description": "Registra il server MCP Playwright con il backend CLI.",
   "settings.browser.systemChrome.title": "Usa Chrome di sistema",
@@ -1335,5 +1337,11 @@ export const dict = {
   "chat.search.close": "Chiudi ricerca",
   "chat.search.invalidRegex": "Espressione regolare non valida",
   "chat.search.noResults": "Nessun risultato",
+  "settings.experimental.browserAutomation.title": "Browser integrato",
+  "settings.experimental.browserAutomation.description":
+    "Mostra le anteprime delle applicazioni locali in Agent Manager ed esponi lo strumento browser_open alle sessioni di Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Usa Chrome di sistema",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Usa il Google Chrome installato per il Browser integrato. Disattivalo solo se è già installato un browser Playwright Chromium compatibile.",
   "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
 } as const

@@ -393,12 +393,13 @@
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
-            <reference ref="Kilo.Worktree.CopyPrRef"/>
+            <separator/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
             <reference ref="Kilo.Worktree.OpenLocalDiff"/>
             <separator/>
             <reference ref="Kilo.Worktree.CopyBranchName"/>
             <reference ref="Kilo.Worktree.CopyBranchPath"/>
+            <reference ref="Kilo.Worktree.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>

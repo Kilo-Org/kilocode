@@ -144,6 +144,12 @@ export const dict = {
     "Bu depo Git LFS kullanıyor, ancak git-lfs bulunamadı. Lütfen Git LFS'yi yükleyin.",
   "agentManager.setup.error.no_commits":
     "Bu depoda henüz commit bulunmuyor. Worktree'leri kullanmadan önce bir başlangıç commit'i oluşturun.",
+  "agentManager.setup.error.worktree_missing":
+    "Bu worktree'nin klasörü artık yok. Dalından geri yükleyin veya worktree'yi kaldırın.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git bu klasörü artık worktree olarak izlemiyor. Kaldırıp yeni bir worktree oluşturun.",
+  "agentManager.setup.error.git_timeout":
+    "Git zamanında yanıt vermedi. Deponun erişilebilir olduğunu doğrulayıp yeniden deneyin.",
   "agentManager.shortcuts.title": "Klavye Kısayolları",
   "agentManager.shortcuts.category.sidebar": "Kenar Çubuğu",
   "agentManager.shortcuts.category.tabs": "Sekmeler",
@@ -430,7 +436,7 @@ export const dict = {
     "Kilo ajanları için bilgisayarı uyanık tutma modu etkin; devre dışı bırakmak için tıklayın",
   "agentManager.caffeination.active": "Kilo ajanları çalışırken bilgisayar uyanık tutuluyor",
   "agentManager.caffeination.unavailable": "Bilgisayarı uyanık tutma modu bu platformda kullanılamıyor",
-  "agentManager.browser.title": "Tarayıcı",
+  "agentManager.browser.title": "Entegre Tarayıcı",
   "agentManager.browser.url": "Yerel uygulama URL'si",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Aç",
@@ -439,7 +445,8 @@ export const dict = {
   "agentManager.browser.inspect": "Öğeyi seç",
   "agentManager.browser.devtoolsTitle": "Geliştirici araçları",
   "agentManager.browser.empty": "Burada önizlemek için yerel bir uygulama açın.",
-  "agentManager.browser.noSession": "Önce bir Agent Manager oturumu seçin.",
+  "agentManager.browser.noSession":
+    "Yerel bir uygulamada gezinmek için Agent Manager'da bir oturum başlatın veya seçin.",
   "agentManager.browser.screenshotAlt": "Geçerli tarayıcı sayfası",
   "agentManager.browser.errors": "Tarayıcı sorunları: {{count}}",
   "agentManager.browser.diagnostics": "Tarayıcı tanılaması",
@@ -475,4 +482,28 @@ export const dict = {
   "agentManager.intro.guide": "Kılavuzu okuyun",
   "agentManager.intro.dismiss": "Tanıtımı atla",
   "agentManager.intro.reopen": "Agent Manager nasıl çalışır",
+  "agentManager.worktree.health.absent-restorable": "Klasör silindi",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Klasör yok, ancak {{branch}} dalı hâlâ duruyor. Buradan devam etmek için geri yükleyin.",
+  "agentManager.worktree.health.absent-gone": "Klasör ve dal silindi",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ne klasör ne de dal artık var. Düzen için kaydı kaldırın; oturumlar Yerel altında korunur.",
+  "agentManager.worktree.health.unregistered": "git worktree değil",
+  "agentManager.worktree.health.unregisteredNote":
+    "Klasör var, ancak git artık worktree olarak izlemiyor. Durumu okunamıyor.",
+  "agentManager.worktree.health.unavailable": "Durum kullanılamıyor",
+  "agentManager.worktree.health.unavailableNote":
+    "Git veya GitHub CLI zamanında yanıt vermedi. Bu worktree için sorgulama duraklatıldı ve yeniden denenecek.",
+  "agentManager.worktree.restore": "Worktree'yi geri yükle",
+  "agentManager.worktree.removeKeepSessions": "Kaldır, oturumları koru",
+  "agentManager.orphans.title": "Artakalan worktree klasörleri",
+  "agentManager.orphans.summary": ".kilo/worktrees altındaki {{count}} klasör git worktree değil.",
+  "agentManager.orphans.clean": "Artakalan klasörleri temizle",
+  "agentManager.orphans.confirm":
+    "Bu klasörler kalıcı olarak silinsin mi? Burada git tarafından izlenen hiçbir şey yok.",
+  "agentManager.orphans.cancel": "İptal",
+  "agentManager.orphans.checkout": "bir git checkout içeriyor",
+  "agentManager.orphans.confirmCheckout":
+    "Bu klasörler kalıcı olarak silinsin mi? {{count}} tanesi hâlâ commit edilmemiş değişiklikler içerebilecek bir git checkout barındırıyor.",
+  "agentManager.error.title": "Agent Manager hatası",
 }

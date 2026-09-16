@@ -271,16 +271,18 @@ export function partitionRows(rows: TranscriptRow[], direct: ReadonlySet<string>
   // Only the latest visible turn can render directly.
   if (!turn || !direct.has(turn)) return { virtual: visible, direct: [], queued }
 
-  let boundary = -1
-  for (let i = 0; i < visible.length; i += 1) {
-    const row = visible[i]!
-    if (row.turn === turn && row.type === "assistant") boundary = i
+  // The selected turn has no renderable assistant row.
+  if (!visible.some((row) => row.turn === turn && row.type === "assistant")) {
+    return { virtual: visible, direct: [], queued }
   }
 
-  // The selected turn has no renderable assistant row.
-  if (boundary === -1) return { virtual: visible, direct: [], queued }
+  // The whole live turn renders directly. Handing each finished step to the
+  // virtualizer mid-turn mounted those rows at the 260px estimate while their
+  // real height (a collapsed tool row is ~28px) was only known once measured;
+  // the correction fought the bottom pin and rows near the range edge blinked
+  // in and out of the DOM. One handoff happens when the next turn starts.
+  const boundary = visible.findIndex((row) => row.turn === turn)
 
-  // Boundary starts the direct suffix, preserving rows after the streaming assistant.
   return {
     virtual: visible.slice(0, boundary),
     direct: visible.slice(boundary),

@@ -94,7 +94,9 @@ Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 
 ### Browser Tools
 
-The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Browser panel and returns a screenshot and diagnostics. Enable **Browser Automation** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium.
+The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in **Settings → Web Tools → Browser Automation**. When enabled, it registers an MCP server named `kilo-playwright` and exposes browser tools that follow the same permission model as all MCP tools.
+
+The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Integrated Browser panel and returns a screenshot and diagnostics. Enable **Integrated Browser** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium. It is independent from Playwright MCP.
 
 The `browser_open` automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` only, and blocks resources from other origins. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback.
 

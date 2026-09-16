@@ -78,6 +78,15 @@ export const RemoveSnapshotPayload = Schema.Struct({
   worktree: Schema.String,
 })
 
+export const TeardownWorktreePayload = Schema.Struct({
+  worktree: Schema.String,
+})
+
+export const TeardownWorktreeResult = Schema.Struct({
+  /** True when a loaded backend instance for the worktree was disposed. */
+  disposed: Schema.Boolean,
+})
+
 export const ResumeSessionPayload = Schema.Struct({
   messageID: MessageID,
   snapshotInitialization: Schema.optional(Schema.Literal("wait")),
@@ -110,6 +119,7 @@ export const KilocodePaths = {
   marketplaceInstall: `${root}/marketplace/install`,
   marketplaceRemove: `${root}/marketplace/remove`,
   removeSnapshot: `${root}/snapshot/remove`,
+  teardownWorktree: `${root}/worktree/teardown`,
   prepareSnapshot: `${root}/snapshot/prepare`,
   providerUsage: `${root}/provider-usage`,
   providerUsageRefresh: `${root}/provider-usage/refresh`,
@@ -287,6 +297,19 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.removeSnapshot",
             summary: "Remove a snapshot repository",
             description: "Remove the snapshot repository for an already deleted Agent Manager worktree.",
+          }),
+        ),
+        HttpApiEndpoint.post("teardownWorktree", KilocodePaths.teardownWorktree, {
+          query: WorkspaceRoutingQuery,
+          payload: TeardownWorktreePayload,
+          success: described(TeardownWorktreeResult, "Worktree backend teardown result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.teardownWorktree",
+            summary: "Tear down backend state for a managed worktree",
+            description:
+              "Kill the PTYs rooted in an Agent Manager worktree and dispose its backend instance when one is loaded, without booting an instance for the directory.",
           }),
         ),
         HttpApiEndpoint.post("prepareSnapshot", KilocodePaths.prepareSnapshot, {

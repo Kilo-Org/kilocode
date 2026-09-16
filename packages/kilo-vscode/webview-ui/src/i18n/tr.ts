@@ -201,6 +201,7 @@ export const dict = {
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
   "prompt.action.enhance": "Komutu geliştir",
+  "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.action.indexing": "İndeksleme ayarları",
   "prompt.action.autoApprove.enable": "Otomatik onayı etkinleştir",
   "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
@@ -632,6 +633,7 @@ export const dict = {
   "profile.usage.source.direct": "Doğrudan",
   "profile.usage.state.stale": "Son güncellenen kullanım verileri gösteriliyor.",
   "profile.usage.state.unavailable": "Kullanım verileri kullanılamıyor.",
+  "profile.usage.state.empty": "Herhangi bir kullanım sınırı bildirilmedi.",
   "profile.usage.plan.pastDue": "Plan: Ödeme gecikmiş",
   "profile.usage.plan.canceling": "Plan: Dönem sonunda iptal edilecek",
   "profile.usage.plan.unknown": "Plan: Durum bilinmiyor",
@@ -832,7 +834,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Beceriler",
 
   "settings.browser.description":
-    "Etkinleştirildiğinde, yapay zeka ajanı web sayfalarıyla etkileşime girebilir — gezinme, tıklama, yazma ve ekran görüntüsü alma. Ajanın çalışmasını izleyebilmeniz için bir Chrome penceresi açılacak.",
+    "Playwright ile çalışan yerleşik tarayıcı otomasyonunu yapılandırın. Kilo, oturumlarınızda web sayfalarında gezinebilir, bunlarla etkileşime girebilir ve ekran görüntüsü alabilir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
   "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
@@ -1368,5 +1370,11 @@ export const dict = {
   "chat.search.close": "Aramayı kapat",
   "chat.search.invalidRegex": "Geçersiz normal ifade",
   "chat.search.noResults": "Sonuç yok",
+  "settings.experimental.browserAutomation.title": "Entegre Tarayıcı",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager'da yerel uygulama önizlemelerini gösterin ve browser_open aracını Agent Manager oturumlarına sunun.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu Kullan",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
 }

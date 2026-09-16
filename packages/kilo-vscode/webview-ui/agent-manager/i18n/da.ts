@@ -138,6 +138,11 @@ export const dict = {
     "Dette repository bruger Git LFS, men git-lfs blev ikke fundet. Installer venligst Git LFS.",
   "agentManager.setup.error.no_commits":
     "Dette repository har ingen commits endnu. Opret et indledende commit før du bruger worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Mappen til dette worktree findes ikke længere. Gendan den fra dens branch, eller fjern worktreet.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git sporer ikke længere denne mappe som worktree. Fjern den og opret et nyt worktree.",
+  "agentManager.setup.error.git_timeout": "Git svarede ikke i tid. Kontrollér, at repositoryet kan nås, og prøv igen.",
   "agentManager.shortcuts.title": "Tastaturgenveje",
   "agentManager.shortcuts.category.sidebar": "Sidebjælke",
   "agentManager.shortcuts.category.tabs": "Faner",
@@ -424,7 +429,7 @@ export const dict = {
   "agentManager.caffeination.active": "Holder computeren vågen, mens Kilo-agenterne arbejder",
   "agentManager.caffeination.unavailable":
     "Tilstanden til at holde computeren vågen er ikke tilgængelig på denne platform",
-  "agentManager.browser.title": "Browser",
+  "agentManager.browser.title": "Integreret browser",
   "agentManager.browser.url": "URL til lokal applikation",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Åbn",
@@ -433,7 +438,7 @@ export const dict = {
   "agentManager.browser.refresh": "Opdater browser",
   "agentManager.browser.close": "Luk browser",
   "agentManager.browser.empty": "Åbn en lokal applikation for at få vist en forhåndsvisning her.",
-  "agentManager.browser.noSession": "Vælg først en session i Agent Manager.",
+  "agentManager.browser.noSession": "Start eller vælg en session i Agent Manager for at gennemse en lokal applikation.",
   "agentManager.browser.screenshotAlt": "Aktuel browserside",
   "agentManager.browser.errors": "Browserproblemer: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnostik",
@@ -469,4 +474,27 @@ export const dict = {
   "agentManager.intro.guide": "Læs guiden",
   "agentManager.intro.dismiss": "Spring introduktion over",
   "agentManager.intro.reopen": "Sådan fungerer Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Mappe slettet",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Mappen er væk, men branchen {{branch}} findes stadig. Gendan den for at arbejde videre her.",
+  "agentManager.worktree.health.absent-gone": "Mappe og branch slettet",
+  "agentManager.worktree.health.absent-goneNote":
+    "Hverken mappen eller branchen findes længere. Fjern posten for at rydde op; sessioner bevares under Lokal.",
+  "agentManager.worktree.health.unregistered": "Ikke et git-worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Mappen findes, men git sporer den ikke længere som worktree. Dens status kan ikke læses.",
+  "agentManager.worktree.health.unavailable": "Status utilgængelig",
+  "agentManager.worktree.health.unavailableNote":
+    "Git eller GitHub CLI svarede ikke i tid. Forespørgsler for dette worktree er sat på pause og prøves igen.",
+  "agentManager.worktree.restore": "Gendan worktree",
+  "agentManager.worktree.removeKeepSessions": "Fjern, behold sessioner",
+  "agentManager.orphans.title": "Efterladte worktree-mapper",
+  "agentManager.orphans.summary": "{{count}} mappe(r) under .kilo/worktrees er ikke git-worktrees.",
+  "agentManager.orphans.clean": "Ryd op i efterladte mapper",
+  "agentManager.orphans.confirm": "Slet disse mapper permanent? Intet her spores af git.",
+  "agentManager.orphans.cancel": "Annuller",
+  "agentManager.orphans.checkout": "indeholder et git-checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Slet disse mapper permanent? {{count}} indeholder stadig et git-checkout, der kan have ikke-committede ændringer.",
+  "agentManager.error.title": "Agent Manager-fejl",
 }

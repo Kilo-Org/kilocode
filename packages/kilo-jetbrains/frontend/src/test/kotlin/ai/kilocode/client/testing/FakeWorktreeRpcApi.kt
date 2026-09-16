@@ -34,6 +34,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     /** When set, [branchStatus] throws it instead of answering. */
     var branchThrows: Exception? = null
     var currentBranch: String? = null
+    var originSlug: String? = null
     val moves = CopyOnWriteArrayList<Triple<String, String?, String>>()
     /** Progress events emitted by [moveToWorktree], in order. */
     var moveScript: List<MoveProgressDto> = emptyList()
@@ -63,10 +64,16 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val prAges = CopyOnWriteArrayList<Long?>()
     val statsCalls = CopyOnWriteArrayList<String>()
     val dirtyCalls = CopyOnWriteArrayList<String>()
+    /** When set, [stats] throws it instead of answering. */
+    var statsThrows: Exception? = null
+    /** When set, [dirty] throws it instead of answering. */
+    var dirtyThrows: Exception? = null
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
     var beforeGhStatus: suspend () -> Unit = {}
+    /** Gate for holding a [stats] answer open, so a test can prove polls do not stack. */
+    var beforeStats: suspend () -> Unit = {}
     /** Gate for holding a [prStatus] answer open while the test changes state around it. */
     var beforePrStatus: suspend () -> Unit = {}
     var adoptResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
@@ -97,18 +104,21 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto {
         assertNotEdt("listBranches")
-        return WorktreeBranchesDto(branchesList.toList(), currentBranch)
+        return WorktreeBranchesDto(branchesList.toList(), currentBranch, originSlug)
     }
 
     override suspend fun stats(directory: String): WorktreeStatsListDto {
         assertNotEdt("stats")
         statsCalls.add(directory)
+        beforeStats()
+        statsThrows?.let { throw it }
         return statsResult
     }
 
     override suspend fun dirty(directory: String): WorktreeDirtyListDto {
         assertNotEdt("dirty")
         dirtyCalls.add(directory)
+        dirtyThrows?.let { throw it }
         return dirtyResult
     }
 

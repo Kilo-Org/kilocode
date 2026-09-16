@@ -141,6 +141,12 @@ export const dict = {
     "Этот репозиторий использует Git LFS, но git-lfs не найден. Пожалуйста, установите Git LFS.",
   "agentManager.setup.error.no_commits":
     "В этом репозитории еще нет коммитов. Создайте начальный коммит перед использованием worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Папки этого worktree больше нет. Восстановите её из ветки или удалите worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git больше не отслеживает эту папку как worktree. Удалите её и создайте новый worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git не ответил вовремя. Проверьте доступность репозитория и повторите попытку.",
   "agentManager.shortcuts.title": "Сочетания клавиш",
   "agentManager.shortcuts.category.sidebar": "Боковая панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",
@@ -424,7 +430,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Режим предотвращения сна включён для агентов Kilo; нажмите для отключения",
   "agentManager.caffeination.active": "Компьютер не переходит в спящий режим, пока работают агенты Kilo",
   "agentManager.caffeination.unavailable": "Режим предотвращения сна недоступен на этой платформе",
-  "agentManager.browser.title": "Браузер",
+  "agentManager.browser.title": "Встроенный браузер",
   "agentManager.browser.url": "URL локального приложения",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Открыть",
@@ -433,7 +439,7 @@ export const dict = {
   "agentManager.browser.inspect": "Выбрать элемент",
   "agentManager.browser.devtoolsTitle": "Инструменты разработчика",
   "agentManager.browser.empty": "Откройте локальное приложение, чтобы просмотреть его здесь.",
-  "agentManager.browser.noSession": "Сначала выберите сеанс Agent Manager.",
+  "agentManager.browser.noSession": "Запустите или выберите сеанс в Agent Manager, чтобы открыть локальное приложение.",
   "agentManager.browser.screenshotAlt": "Текущая страница браузера",
   "agentManager.browser.errors": "Проблемы браузера: {{count}}",
   "agentManager.browser.diagnostics": "Диагностика браузера",
@@ -469,4 +475,27 @@ export const dict = {
   "agentManager.intro.guide": "Читать руководство",
   "agentManager.intro.dismiss": "Пропустить введение",
   "agentManager.intro.reopen": "Как работает Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Папка удалена",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Папки нет, но ветка {{branch}} сохранилась. Восстановите её, чтобы продолжить работу здесь.",
+  "agentManager.worktree.health.absent-gone": "Папка и ветка удалены",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ни папки, ни ветки больше нет. Удалите запись для порядка; сессии сохранятся в разделе «Локально».",
+  "agentManager.worktree.health.unregistered": "Не git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Папка существует, но git больше не отслеживает её как worktree. Состояние прочитать нельзя.",
+  "agentManager.worktree.health.unavailable": "Состояние недоступно",
+  "agentManager.worktree.health.unavailableNote":
+    "Git или GitHub CLI не ответил вовремя. Опрос этого worktree приостановлен и будет повторён.",
+  "agentManager.worktree.restore": "Восстановить worktree",
+  "agentManager.worktree.removeKeepSessions": "Удалить, сохранив сессии",
+  "agentManager.orphans.title": "Оставшиеся папки worktree",
+  "agentManager.orphans.summary": "{{count}} папк(и) в .kilo/worktrees не являются git worktree.",
+  "agentManager.orphans.clean": "Очистить оставшиеся папки",
+  "agentManager.orphans.confirm": "Удалить эти папки безвозвратно? Git ничего здесь не отслеживает.",
+  "agentManager.orphans.cancel": "Отмена",
+  "agentManager.orphans.checkout": "содержит рабочую копию git",
+  "agentManager.orphans.confirmCheckout":
+    "Удалить эти папки безвозвратно? {{count}} всё ещё содержат рабочую копию git с возможными незакоммиченными изменениями.",
+  "agentManager.error.title": "Ошибка Agent Manager",
 }

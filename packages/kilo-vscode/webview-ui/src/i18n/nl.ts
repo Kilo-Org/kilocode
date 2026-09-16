@@ -202,6 +202,7 @@ export const dict = {
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.action.indexing": "Indexeringsinstellingen",
   "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
   "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
@@ -635,6 +636,7 @@ export const dict = {
   "profile.usage.source.direct": "Direct",
   "profile.usage.state.stale": "De laatst bijgewerkte gebruiksgegevens worden weergegeven.",
   "profile.usage.state.unavailable": "Gebruiksgegevens niet beschikbaar.",
+  "profile.usage.state.empty": "Geen gebruikslimieten gemeld.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling achterstallig",
   "profile.usage.plan.canceling": "Abonnement: Wordt aan het einde van de periode opgezegd",
   "profile.usage.plan.unknown": "Abonnement: Status onbekend",
@@ -837,7 +839,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Indien ingeschakeld kan de AI agent interactie hebben met webpagina's — navigeren, klikken, typen en screenshots maken. Er wordt een Chrome-venster geopend zodat je de agent aan het werk kunt zien.",
+    "Configureer ingebouwde browserautomatisering mogelijk gemaakt door Playwright. Kilo kan in je sessies door webpagina's navigeren, ermee werken en schermafbeeldingen maken.",
   "settings.browser.enable.title": "Browserautomatisering inschakelen",
   "settings.browser.enable.description": "Registreer de Playwright MCP-server bij de CLI backend.",
   "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
@@ -1381,5 +1383,11 @@ export const dict = {
   "chat.search.close": "Zoeken sluiten",
   "chat.search.invalidRegex": "Ongeldige reguliere expressie",
   "chat.search.noResults": "Geen resultaten",
+  "settings.experimental.browserAutomation.title": "Geïntegreerde browser",
+  "settings.experimental.browserAutomation.description":
+    "Toon voorbeelden van lokale applicaties in Agent Manager en stel de tool browser_open beschikbaar aan Agent Manager-sessies.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Gebruik Systeem Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
 }
