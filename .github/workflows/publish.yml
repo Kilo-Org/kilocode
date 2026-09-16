@@ -386,7 +386,7 @@ jobs:
       - name: Verify signatures
         shell: pwsh
         run: |
-          $kit = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          $kit = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory | Where-Object { $_.Name -match '^\d+\.' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
           $signtool = Join-Path $kit.FullName "x64\signtool.exe"
           foreach ($exe in Get-ChildItem "dist\@kilocode\cli-windows-*\bin\kilo.exe") {
             & $signtool verify /pa $exe.FullName

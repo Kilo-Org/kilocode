@@ -54,6 +54,6 @@ jobs:
       - name: Verify signature
         shell: pwsh
         run: |
-          $kit = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          $kit = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory | Where-Object { $_.Name -match '^\d+\.' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
           & (Join-Path $kit.FullName "x64\signtool.exe") verify /pa test-bin\kilo.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
