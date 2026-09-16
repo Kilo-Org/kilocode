@@ -729,3 +729,77 @@ describe("select", () => {
     ctx.dispose()
   })
 })
+
+describe("skill commands and collision disambiguation", () => {
+  it("orders actions, commands, and skills in results()", () => {
+    const ctx = setup(() => {})
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "test-skill", description: "A skill", source: "skill", hints: [] },
+        { name: "test-cmd", description: "A command", hints: [] },
+      ],
+    })
+    ctx.slash.onInput("/test", 5)
+    const results = ctx.slash.results()
+    const names = results.map((c) => c.name)
+    expect(names).toEqual(["test-cmd", "test-skill"])
+    expect(results[0]?.source).not.toBe("skill")
+    expect(results[1]?.source).toBe("skill")
+    ctx.dispose()
+  })
+
+  it("disambiguates skills colliding with server commands by appending :skill", () => {
+    const ctx = setup(() => {})
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "foo", description: "Foo custom command", hints: [] },
+        { name: "foo", description: "Foo skill", source: "skill", hints: [] },
+      ],
+    })
+    ctx.slash.onInput("/foo", 4)
+    const results = ctx.slash.results()
+    expect(results).toHaveLength(2)
+    expect(results[0]).toMatchObject({ name: "foo", description: "Foo custom command" })
+    expect(results[1]).toMatchObject({ name: "foo:skill", description: "Foo skill", source: "skill" })
+    expect(results[1]?.hints).toContain("foo")
+
+    let currentText = ""
+    const textarea = {
+      value: "/foo",
+      selectionStart: 4,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.select(results[1], textarea, (text) => (currentText = text))
+    expect(currentText).toBe("/foo:skill ")
+    expect(textarea.value).toBe("/foo:skill ")
+    ctx.dispose()
+  })
+
+  it("disambiguates skills colliding with client actions by appending :skill", () => {
+    const ctx = setup(() => {})
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "reload", description: "Reload skill", source: "skill", hints: [] }],
+    })
+    ctx.slash.onInput("/reload", 7)
+    const results = ctx.slash.results()
+    const skill = results.find((c) => c.source === "skill")
+    expect(skill).toBeDefined()
+    expect(skill?.name).toBe("reload:skill")
+    expect(skill?.hints).toContain("reload")
+
+    let currentText = ""
+    const textarea = {
+      value: "/reload",
+      selectionStart: 7,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.select(skill!, textarea, (text) => (currentText = text))
+    expect(currentText).toBe("/reload:skill ")
+    ctx.dispose()
+  })
+})

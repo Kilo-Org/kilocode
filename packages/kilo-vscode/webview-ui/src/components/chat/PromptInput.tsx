@@ -1875,8 +1875,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             {(() => {
               const all = slash.results()
               const actions = all.filter((c) => c.action)
-              const server = all.filter((c) => !c.action)
-              const offset = actions.length
+              const commands = all.filter((c) => !c.action && c.source !== "skill")
+              const skills = all.filter((c) => !c.action && c.source === "skill")
+              const commandOffset = actions.length
+              const skillOffset = actions.length + commands.length
               return (
                 <>
                   <Show when={actions.length > 0}>
@@ -1900,23 +1902,48 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       )}
                     </For>
                   </Show>
-                  <Show when={server.length > 0}>
+                  <Show when={commands.length > 0}>
                     <Show when={actions.length > 0}>
                       <div class="slash-command-separator" />
                     </Show>
                     <div class="slash-command-group-label">Commands</div>
-                    <For each={server}>
+                    <For each={commands}>
                       {(cmd, idx) => (
                         <div
                           class="slash-command-item"
-                          classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
+                          classList={{ "slash-command-item--active": idx() + commandOffset === slash.index() }}
                           onMouseDown={(e) => {
                             e.preventDefault()
                             if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
                           }}
-                          onMouseEnter={() => slash.setIndex(idx() + offset)}
+                          onMouseEnter={() => slash.setIndex(idx() + commandOffset)}
                         >
                           <span class="slash-command-name">/{cmd.name}</span>
+                          <Show when={cmd.description}>
+                            <span class="slash-command-desc">{cmd.description}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                  <Show when={skills.length > 0}>
+                    <Show when={actions.length > 0 || commands.length > 0}>
+                      <div class="slash-command-separator" />
+                    </Show>
+                    <div class="slash-command-group-label">Skills</div>
+                    <For each={skills}>
+                      {(cmd, idx) => (
+                        <div
+                          class="slash-command-item"
+                          classList={{ "slash-command-item--active": idx() + skillOffset === slash.index() }}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                          }}
+                          onMouseEnter={() => slash.setIndex(idx() + skillOffset)}
+                        >
+                          <span class="slash-command-name">/{cmd.name}</span>
+                          <span class="slash-command-badge">skill</span>
                           <Show when={cmd.description}>
                             <span class="slash-command-desc">{cmd.description}</span>
                           </Show>
