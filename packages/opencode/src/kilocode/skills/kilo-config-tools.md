@@ -1,6 +1,6 @@
 ## Permissions
 
-Scalar form applies to all patterns. Object form maps glob patterns to actions. Evaluated top-to-bottom; first match wins.
+Scalar form applies to all patterns. Object form maps glob patterns to actions. Evaluated top-to-bottom; the last matching rule wins. Put broad fallback patterns first, then specific overrides.
 
 ```jsonc
 {
@@ -8,9 +8,9 @@ Scalar form applies to all patterns. Object form maps glob patterns to actions. 
     "bash": "allow", // scalar: allow all bash
     "edit": {
       // object: pattern-matched
+      "*": "ask", // fallback
       "src/**": "allow",
       "*.lock": "deny",
-      "*": "ask", // fallback
     },
     "read": "ask",
     "skill": { "my-skill": "allow" },

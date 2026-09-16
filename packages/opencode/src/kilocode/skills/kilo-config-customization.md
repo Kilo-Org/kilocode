@@ -1,6 +1,6 @@
 ## Commands (`.kilo/command/*.md`)
 
-Markdown files with YAML frontmatter. The filename (minus `.md`) becomes the command name invoked via `/name`. Commands can live in `.kilo/`, legacy `.kilocode/`, and global config roots, with both `command/` and `commands/` directory names supported. See Config File Locations for the full search order.
+Markdown files with YAML frontmatter. The filename (minus `.md`) becomes the command name invoked via `/name`. Commands can live in `.kilo/`, legacy `.kilocode/`, and global config roots, with both `command/` and `commands/` directory names supported. For the full search order, load `skill({name:"kilo-config",reference:"configuration"})` and see Config File Locations.
 
 ```yaml
 ---
@@ -48,8 +48,8 @@ color: "#FF5733" # hex or theme name
 permission: # optional, agent-level permissions
   bash: allow
   edit:
-    "src/**": allow
     "*": ask
+    "src/**": allow
 ---
 System prompt for this agent.
 ```
@@ -74,5 +74,3 @@ Additional skill directories and remote URLs:
 ```
 
 Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md`) with `name` and `description` in frontmatter. Discovered inside `.kilo/` and legacy `.kilocode/` directories.
-
-For Config File Locations, load `skill({name:"kilo-config",reference:"configuration"})`.
