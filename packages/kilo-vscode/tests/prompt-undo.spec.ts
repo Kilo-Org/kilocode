@@ -58,7 +58,13 @@ test("non-Latin layouts match the undo chord by keyCode", async ({ page }) => {
   const read = await observe(page, true)
 
   await input.evaluate((element) => {
-    const event = new KeyboardEvent("keydown", { key: "ז", code: "KeyZ", metaKey: true, bubbles: true, cancelable: true })
+    const event = new KeyboardEvent("keydown", {
+      key: "ז",
+      code: "KeyZ",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
     Object.defineProperty(event, "keyCode", { get: () => 90 })
     element.dispatchEvent(event)
   })
