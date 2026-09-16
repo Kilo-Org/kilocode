@@ -51,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "新しい worktree で agent が開始する前に実行します。",
   "agentManager.settings.setupScript.create": "script を作成",
   "agentManager.settings.setupScript.edit": "script を編集",
-  "agentManager.project.add": "プロジェクトを追加",
+  "agentManager.project.add": "プロジェクトを追加...",
   "agentManager.project.remove": "Agent Managerから削除",
   "agentManager.project.missing": "リポジトリが見つかりません",
+  "agentManager.project.settings": "プロジェクト設定",
   "agentManager.project.restricted":
     "現在の VS Code ワークスペースはホームフォルダーまたはファイルシステムのルートです。Agent Manager を使用するには、VS Code で特定のプロジェクトフォルダーを開いてください。",
   "agentManager.notGitRepo": "gitリポジトリではありません",
@@ -137,6 +138,12 @@ export const dict = {
     "このリポジトリはGit LFSを使用していますが、git-lfsが見つかりませんでした。Git LFSをインストールしてください。",
   "agentManager.setup.error.no_commits":
     "このリポジトリにはまだコミットがありません。worktreesを使用する前に最初のコミットを作成してください。",
+  "agentManager.setup.error.worktree_missing":
+    "この worktree のフォルダーは存在しません。ブランチから復元するか、worktree を削除してください。",
+  "agentManager.setup.error.worktree_unregistered":
+    "git はこのフォルダーを worktree として追跡していません。削除して新しい worktree を作成してください。",
+  "agentManager.setup.error.git_timeout":
+    "Git が時間内に応答しませんでした。リポジトリに接続できるか確認して、もう一度お試しください。",
   "agentManager.shortcuts.title": "キーボードショートカット",
   "agentManager.shortcuts.category.sidebar": "サイドバー",
   "agentManager.shortcuts.category.tabs": "タブ",
@@ -311,6 +318,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "古い",
   "agentManager.pr.comment.sent": "送信済み",
   "agentManager.pr.comment.copy": "コメントをコピー",
+  "agentManager.pr.comment.copyLink": "コメントのリンクをコピー",
   "agentManager.pr.comment.openOnGitHub": "GitHubで開く",
   "agentManager.pr.comment.showInDiff": "差分で表示",
   "agentManager.pr.comment.unplaced": "現在の差分にないコメント",
@@ -419,7 +427,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Kilo エージェント用のスリープ防止モードが有効です。クリックして無効にします",
   "agentManager.caffeination.active": "Kilo エージェントの作業中もコンピューターをスリープさせません",
   "agentManager.caffeination.unavailable": "このプラットフォームではスリープ防止モードを利用できません",
-  "agentManager.browser.title": "ブラウザー",
+  "agentManager.browser.title": "統合ブラウザー",
   "agentManager.browser.url": "ローカルアプリケーション URL",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "開く",
@@ -428,7 +436,8 @@ export const dict = {
   "agentManager.browser.inspect": "要素を選択",
   "agentManager.browser.devtoolsTitle": "開発者ツール",
   "agentManager.browser.empty": "ローカルアプリケーションを開くと、ここでプレビューできます。",
-  "agentManager.browser.noSession": "先に Agent Manager セッションを選択してください。",
+  "agentManager.browser.noSession":
+    "ローカルアプリケーションを表示するには、Agent Manager でセッションを開始または選択してください。",
   "agentManager.browser.screenshotAlt": "現在のブラウザーページ",
   "agentManager.browser.errors": "ブラウザーの問題: {{count}} 件",
   "agentManager.browser.diagnostics": "ブラウザー診断",
@@ -467,4 +476,27 @@ export const dict = {
   "agentManager.intro.guide": "ガイドを読む",
   "agentManager.intro.dismiss": "イントロダクションをスキップ",
   "agentManager.intro.reopen": "Agent Manager の仕組み",
+  "agentManager.worktree.health.absent-restorable": "フォルダーが削除されています",
+  "agentManager.worktree.health.absent-restorableNote":
+    "フォルダーはありませんが、ブランチ {{branch}} は残っています。復元すればここで作業を続けられます。",
+  "agentManager.worktree.health.absent-gone": "フォルダーとブランチが削除されています",
+  "agentManager.worktree.health.absent-goneNote":
+    "フォルダーもブランチも存在しません。エントリを削除して整理できます。セッションは「ローカル」に保持されます。",
+  "agentManager.worktree.health.unregistered": "git worktree ではありません",
+  "agentManager.worktree.health.unregisteredNote":
+    "フォルダーは存在しますが、git が worktree として追跡していないため状態を読み取れません。",
+  "agentManager.worktree.health.unavailable": "状態を取得できません",
+  "agentManager.worktree.health.unavailableNote":
+    "Git または GitHub CLI が時間内に応答しませんでした。この worktree のポーリングを一時停止し、後で再試行します。",
+  "agentManager.worktree.restore": "worktree を復元",
+  "agentManager.worktree.removeKeepSessions": "削除してセッションを保持",
+  "agentManager.orphans.title": "残された worktree フォルダー",
+  "agentManager.orphans.summary": ".kilo/worktrees 配下の {{count}} 個のフォルダーは git worktree ではありません。",
+  "agentManager.orphans.clean": "残ったフォルダーを整理",
+  "agentManager.orphans.confirm": "これらのフォルダーを完全に削除しますか？ git が追跡しているものはありません。",
+  "agentManager.orphans.cancel": "キャンセル",
+  "agentManager.orphans.checkout": "git チェックアウトが残っています",
+  "agentManager.orphans.confirmCheckout":
+    "これらのフォルダーを完全に削除しますか？{{count}} 個には git チェックアウトが残っており、コミットされていない変更がある可能性があります。",
+  "agentManager.error.title": "Agent Manager エラー",
 }

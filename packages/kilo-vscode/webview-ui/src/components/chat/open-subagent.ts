@@ -12,8 +12,6 @@ interface OpenSubagent {
   sessionID: string
   title?: string
   parentSessionID?: string
-  /** True for async background agents, whose reasoning shows a capped preview. */
-  background?: boolean
   /** True inside Agent Manager, where the inspector replaces the editor tab. */
   worktree: boolean
   post: (message: WebviewMessage) => void
@@ -34,6 +32,5 @@ export function openSubagent(input: OpenSubagent) {
     sessionID: input.sessionID,
     title: input.title,
     parentSessionID: input.parentSessionID,
-    background: input.background,
   })
 }

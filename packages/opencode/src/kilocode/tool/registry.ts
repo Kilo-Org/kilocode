@@ -291,13 +291,13 @@ export namespace KiloToolRegistry {
         image_generation?: boolean
         native_notebook_tools?: boolean
         task_model_selection?: boolean
-        shared_agent_board?: boolean
       }
+      shared_agent_board?: boolean
     },
     flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">,
   ): Tool.Def[] {
     const enabled = BoardEnabled.resolve({
-      config: cfg.experimental?.shared_agent_board,
+      config: cfg.shared_agent_board,
       flag: flags.experimentalSharedAgentBoard,
     })
     return [

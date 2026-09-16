@@ -204,6 +204,7 @@ export const dict = {
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
+  "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
   "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
@@ -229,7 +230,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
 
-  "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
+  "speechToText.tooltip.start": "음성 입력 시작",
   "speechToText.tooltip.shortcut":
     "탭하거나 Cmd/Ctrl+K를 눌러 녹음을 시작하거나 중지하고, 말하는 동안에는 누르고 있다가 놓으면 음성을 텍스트로 변환해 제출합니다.",
   "speechToText.tooltip.starting": "마이크를 시작하는 중... 잠시 후 말씀해 주세요.",
@@ -636,6 +637,7 @@ export const dict = {
   "profile.usage.source.direct": "직접",
   "profile.usage.state.stale": "마지막으로 업데이트된 사용량을 표시합니다.",
   "profile.usage.state.unavailable": "사용량을 확인할 수 없습니다.",
+  "profile.usage.state.empty": "보고된 사용량 한도가 없습니다.",
   "profile.usage.plan.pastDue": "요금제: 결제 기한 지남",
   "profile.usage.plan.canceling": "요금제: 기간 종료 시 취소",
   "profile.usage.plan.unknown": "요금제: 상태 알 수 없음",
@@ -837,7 +839,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "스킬",
 
   "settings.browser.description":
-    "활성화하면 AI 에이전트가 웹 페이지와 상호작용할 수 있습니다 — 탐색, 클릭, 입력, 스크린샷 촬영. Chrome 창이 열려 에이전트의 작업을 확인할 수 있습니다.",
+    "Playwright 기반의 내장 브라우저 자동화를 구성합니다. Kilo는 세션에서 웹 페이지를 탐색하고 상호 작용하며 스크린샷을 찍을 수 있습니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
   "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
@@ -890,15 +892,26 @@ export const dict = {
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "메인 세션과 해당 세션의 작업을 맡은 하위 에이전트(중첩된 하위 에이전트 포함)가 보드를 공유합니다. 모든 작업에 사용하지 말고, 해결책을 병렬로 시도하거나 서로 보완하는 작업을 수행할 때 사용하세요.",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",
   "settings.experimental.imageGenerationModel.description": "이미지 생성 모델",
   "settings.experimental.imageGenerationModel.placeholder": "기본값 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "사용자 지정 변환 엔드포인트로 전송되는 모델 ID입니다. 예: whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "음성 텍스트 변환 기본 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Kilo Gateway 대신 OpenAI 호환 변환 API를 사용합니다. 모델은 /models에서 읽고 오디오는 /audio/transcriptions로 전송됩니다. 비워 두면 Kilo Gateway를 사용합니다.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "음성 텍스트 변환 API 키",
+  "settings.models.speechToTextApiKey.description":
+    "사용자 지정 변환 기본 URL로 전송되는 베어러 토큰입니다. Kilo 설정 파일에 저장됩니다.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
+    "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하거나, 아래에서 사용자 지정 변환 기본 URL을 설정하세요.",
   "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
@@ -1145,9 +1158,12 @@ export const dict = {
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.fontSize.title": "글꼴 크기",
   "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
-  "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
-  "settings.display.reasoningAutoCollapse.description":
-    "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
+  "settings.display.reasoningDisplay.title": "추론 블록",
+  "settings.display.reasoningDisplay.description":
+    "추론 블록의 시작 표시 방식을 선택합니다. 펼침은 전체 텍스트를 표시하고, 미리보기는 짧은 스크롤 미리보기로 제한하며, 헤드라인은 열기 전까지 제목과 스트리밍 표시기만 표시합니다.",
+  "settings.display.reasoningDisplay.expanded": "펼침",
+  "settings.display.reasoningDisplay.preview": "미리보기",
+  "settings.display.reasoningDisplay.headline": "헤드라인",
   "settings.display.shiftTabCycle.title": "Shift+Tab으로 추론 강도 전환",
   "settings.display.shiftTabCycle.description":
     "프롬프트 입력란에서 Shift+Tab을 눌러 다음 추론 강도 수준으로 전환합니다. Shift+Tab을 키보드 포커스 탐색에 사용하려면 비활성화하세요.",
@@ -1318,5 +1334,11 @@ export const dict = {
   "chat.search.close": "검색 닫기",
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
+  "settings.experimental.browserAutomation.title": "통합 브라우저",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager에서 로컬 애플리케이션 미리보기를 표시하고 browser_open 도구를 Agent Manager 세션에 노출합니다.",
+  "settings.experimental.browserAutomation.systemChrome.title": "시스템 Chrome 사용",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "통합 브라우저에 설치된 Google Chrome을 사용합니다. 호환되는 Playwright Chromium 브라우저가 이미 설치된 경우에만 비활성화하세요.",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
 }

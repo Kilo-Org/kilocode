@@ -5,6 +5,7 @@ type PermissionConfig = Partial<Record<string, PermissionRule>>
 export interface WorkStyleConfig {
   permission?: PermissionConfig
   terminal_command_display?: "expanded" | "collapsed"
+  reasoning_display?: "expanded" | "preview" | "headline"
   auto_collapse_reasoning?: boolean
 }
 
@@ -65,7 +66,7 @@ export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
     style: "human-in-the-loop",
     config: {
       terminal_command_display: "expanded",
-      auto_collapse_reasoning: false,
+      reasoning_display: "expanded",
       permission: {
         read: {
           "*": "allow",
@@ -94,7 +95,7 @@ export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
     style: "autonomous",
     config: {
       terminal_command_display: "collapsed",
-      auto_collapse_reasoning: true,
+      reasoning_display: "preview",
     },
     settings: {
       showTaskTimeline: false,
@@ -145,8 +146,8 @@ export function buildWorkStyleApplyPlan(input: {
   if (input.config.terminal_command_display === undefined) {
     next.terminal_command_display = preset.config.terminal_command_display
   }
-  if (input.config.auto_collapse_reasoning === undefined) {
-    next.auto_collapse_reasoning = preset.config.auto_collapse_reasoning
+  if (input.config.reasoning_display === undefined && input.config.auto_collapse_reasoning === undefined) {
+    next.reasoning_display = preset.config.reasoning_display
   }
 
   const settingDefault = input.settingDefault ?? (() => true)

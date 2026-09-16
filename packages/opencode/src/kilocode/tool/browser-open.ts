@@ -67,7 +67,7 @@ export const BrowserOpenTool = Tool.define<
           ) {
             return {
               title: "Browser unavailable",
-              output: "The Agent Manager browser is not available in this session.",
+              output: "The Integrated Browser is not available in this session.",
               metadata: { status: "error", errors: 0 } satisfies Meta,
             }
           }
@@ -134,7 +134,7 @@ export const BrowserOpenTool = Tool.define<
                 state.logs?.length
                   ? `Console diagnostics:\n${state.logs.map((line) => `- ${line}`).join("\n")}`
                   : undefined,
-                "The user can inspect this page in the Agent Manager Browser panel.",
+                "The user can inspect this page in the Integrated Browser panel in Agent Manager.",
               ]
                 .filter(Boolean)
                 .join("\n"),

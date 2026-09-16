@@ -366,6 +366,7 @@ export class VscodeHost implements Host {
     const channel = vscode.window.createOutputChannel(name)
     return {
       appendLine: (msg) => channel.appendLine(msg),
+      show: () => channel.show(true),
       dispose: () => channel.dispose(),
     }
   }
