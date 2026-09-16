@@ -2,17 +2,6 @@ import type { Command } from "@/command"
 import type { ReviewCommand } from "@kilocode/kilo-telemetry"
 import REVIEW from "./review.txt"
 
-const legacy = {
-  "local-review": {
-    description: "deprecated; use /review branch",
-    message: "/local-review is deprecated and no longer runs a review. Use /review branch instead.",
-  },
-  "local-review-uncommitted": {
-    description: "deprecated; use /review uncommitted",
-    message: "/local-review-uncommitted is deprecated and no longer runs a review. Use /review uncommitted instead.",
-  },
-}
-
 export function isReviewCommand(command: string | undefined): command is ReviewCommand {
   return command === "review"
 }
@@ -33,20 +22,5 @@ export function reviewCommand(): Command.Info {
     description: "review changes [uncommitted|staged|unpushed|branch|commit|pr]",
     template: REVIEW,
     hints: ["$ARGUMENTS"],
-  }
-}
-
-export function legacyReviewMessage(name: string) {
-  return legacy[name as keyof typeof legacy]?.message
-}
-
-export function legacyReviewCommand(name: string): Command.Info | undefined {
-  const item = legacy[name as keyof typeof legacy]
-  if (!item) return
-  return {
-    name,
-    description: item.description,
-    template: item.message,
-    hints: [],
   }
 }
