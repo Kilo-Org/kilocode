@@ -186,6 +186,8 @@ describe("createWorktreeDiffs", () => {
   it("replaces a single file on a diffFile message and clears its pending flag", () => {
     withDiffs((diffs) => {
       diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [diff("a.ts", 1)] })
+      diffs.requestDiffFile("s1", "a.ts")
+      expect(diffs.diffFileLoadingFor(() => "s1").has("a.ts")).toBe(true)
       diffs.onWorktreeDiffFile({
         type: "agentManager.worktreeDiffFile",
         sessionId: "s1",
@@ -193,6 +195,28 @@ describe("createWorktreeDiffs", () => {
         diff: diff("a.ts", 9),
       })
       expect(diffs.diffDatas()["single\0s1"]![0]!.additions).toBe(9)
+      expect(diffs.diffFileLoadingFor(() => "s1").size).toBe(0)
+    })
+  })
+
+  it("keeps failed detail visible through polling and retry", () => {
+    withDiffs((diffs) => {
+      const summary = { ...diff("a.ts"), summarized: true }
+      const message = { type: "agentManager.worktreeDiffFile", sessionId: "s1", file: "a.ts" } as const
+      const current = () => diffs.diffDatas()["single\0s1"]?.at(0)
+      diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [summary] })
+      diffs.requestDiffFile("s1", "a.ts")
+      diffs.onWorktreeDiffFile({ ...message, diff: null })
+      expect(current()).toEqual({ ...summary, failed: true })
+      expect(diffs.diffFileLoadingFor(() => "s1").size).toBe(0)
+      diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [{ ...summary }] })
+      expect(current()?.failed).toBe(true)
+      diffs.requestDiffFile("s1", "a.ts")
+      expect(current()?.failed).toBe(true)
+      expect(diffs.diffFileLoadingFor(() => "s1").has("a.ts")).toBe(true)
+      const detail = { ...summary, before: "old", after: "new", summarized: false }
+      diffs.onWorktreeDiffFile({ ...message, diff: detail })
+      expect(current()).toBe(detail)
       expect(diffs.diffFileLoadingFor(() => "s1").size).toBe(0)
     })
   })
@@ -209,11 +233,26 @@ describe("createWorktreeDiffs", () => {
     })
   })
 
-  it("keeps loading isolated to its composite diff id", () => {
-    withDiffs((diffs) => {
-      diffs.onWorktreeDiffLoading({ type: "agentManager.worktreeDiffLoading", sessionId: "s1#branch", loading: true })
-      expect(diffs.diffLoadingFor(() => "s1#branch")).toBe(true)
-      expect(diffs.diffLoadingFor(() => "s2#branch")).toBe(false)
+  it("resets cancelled files on activation without resetting another project or ordinary refreshes", () => {
+    withDiffs((diffs, sent) => {
+      const loading = { type: "agentManager.worktreeDiffLoading", sessionId: "s1", loading: true } as const
+      const other = () => diffs.refreshStaleDiffs("s1", new Set(["b.ts"]), diffDataKey("other", "s1"), "other")
+      const summary = { ...diff("a.ts"), summarized: true }
+      diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [summary] })
+      diffs.requestDiffFile("s1", "a.ts")
+      other()
+      diffs.onWorktreeDiffLoading(loading)
+      expect(diffs.diffFileLoadingFor(() => "s1").has("a.ts")).toBe(true)
+      expect(diffs.diffLoadingFor(() => "s2")).toBe(false)
+
+      diffs.onWorktreeDiffLoading({ ...loading, sessionId: "s2", reset: true })
+      expect(diffs.diffFileLoadingFor(() => "s1").size).toBe(0)
+      expect(diffs.diffDatas()["single\0s1"]?.at(0)?.failed).toBeUndefined()
+      diffs.onWorktreeDiffLoading({ ...loading, reset: true })
+      diffs.requestDiffFile("s1", "a.ts")
+      other()
+      expect(sent).toHaveLength(3)
+      expect(diffs.diffFileLoadingFor(() => "s1").has("a.ts")).toBe(true)
     })
   })
 
@@ -232,19 +271,6 @@ describe("createWorktreeDiffs", () => {
       diffs.refreshStaleDiffs("s1", new Set(["a.ts", "b.ts"]))
       const files = sent.filter((m) => m.type === "agentManager.requestWorktreeDiffFile").map((m) => m.file)
       expect(files).toEqual(["a.ts", "b.ts"])
-    })
-  })
-
-  it("clears the session key once its last pending file resolves", () => {
-    withDiffs((diffs) => {
-      diffs.requestDiffFile("s1", "a.ts")
-      diffs.onWorktreeDiffFile({
-        type: "agentManager.worktreeDiffFile",
-        sessionId: "s1",
-        file: "a.ts",
-        diff: diff("a.ts"),
-      })
-      expect(diffs.diffFileLoadingFor(() => "s1").size).toBe(0)
     })
   })
 })

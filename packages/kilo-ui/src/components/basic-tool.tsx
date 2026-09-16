@@ -1,4 +1,4 @@
-import { Show } from "solid-js"
+import { createMemo, Show } from "solid-js"
 import { BasicTool as Base, GenericTool } from "@opencode-ai/ui/basic-tool"
 import type { BasicToolProps as BaseProps, TriggerTitle } from "@opencode-ai/ui/basic-tool"
 import { toolOpenKey, readToolOpen, writeToolOpen } from "./tool-open-state"
@@ -18,6 +18,12 @@ type OpenProps = Pick<BasicToolProps, "tool" | "callID" | "partID" | "forceOpen"
 
 export function initialOpen(props: OpenProps) {
   return props.forceOpen ? true : readToolOpen(toolOpenKey(props), props.defaultOpen)
+}
+
+// Persist an open state decided outside the trigger (auto-open) so a remount
+// (virtualizer handoff, session switch) restores it instead of re-deriving.
+export function rememberOpen(props: OpenProps, open: boolean) {
+  writeToolOpen(toolOpenKey(props), open)
 }
 
 export function useToolApprovalLine() {
@@ -46,12 +52,18 @@ export function BasicTool(props: BasicToolProps) {
   }
   // Renders after the body/tool list, not before — it's context about what
   // happened, not part of the header.
-  const details = () => (
+  const buildDetails = () => (
     <div data-slot="basic-tool-details">
       {props.children}
       <Show when={inBody() && approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
     </div>
   )
+  // Base reads its children getter several times while laying out the tool, and a
+  // bare accessor rebuilds this subtree on every read (for a bash card, three
+  // BashHighlightedOutput instances per render). Memoize eager tools so repeated
+  // reads reuse one subtree. Deferred tools must stay lazy: createMemo runs
+  // eagerly, which would build a collapsed body before the card opens.
+  const details = props.defer ? buildDetails : createMemo(buildDetails)
   // A <Show>, not a plain `if`: inBody() tracks the visibility toggle, which can
   // flip after mount (Settings), so the branch must stay reactive.
   return (

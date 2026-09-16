@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloProviderService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeProviderRpcApi
 import ai.kilocode.client.testing.installBrowser
+import ai.kilocode.client.testing.rowDescription
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListActionCell
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -1425,10 +1426,8 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         .filter { it.isVisible }
         .mapNotNull { it.text.takeIf(String::isNotBlank) }
 
-    private fun descriptions(renderer: ActiveListRenderer): List<String> = components(renderer)
-        .filterIsInstance<JBLabel>()
-        .filter { it.isVisible && it !is ActiveListActionCell }
-        .mapNotNull { it.text.takeIf(String::isNotBlank) }
+    private fun descriptions(renderer: ActiveListRenderer): List<String> =
+        listOfNotNull(rowDescription(renderer).takeIf { it.isVisible }?.toString()?.takeIf(String::isNotBlank))
 
     private fun iconSizes(renderer: ActiveListRenderer): List<Dimension> = components(renderer)
         .filterIsInstance<JBLabel>()

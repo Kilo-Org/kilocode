@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Permission } from "@/permission"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -11,6 +10,8 @@ import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
+import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KilocodeConfigSources } from "../config/sources"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
@@ -196,16 +197,7 @@ function askEditGuard() {
 // `agent.<name>.permission`, which merges after patchAgents in agent.ts.
 // Exported so KiloTask.inherited carries the same set into delegated sessions; a tool
 // guarded here but not there would be reachable again through a subagent.
-export const guarded = [
-  "bash",
-  "task",
-  "notebook_edit",
-  "notebook_execute",
-  "write",
-  "agent_manager",
-  "repo_clone",
-  "interactive_terminal",
-]
+export const guarded = ["bash", "task", "notebook_edit", "notebook_execute", "write", "agent_manager", "repo_clone"]
 
 // Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules
 // in the guards, so they are denied there instead.
@@ -279,11 +271,18 @@ function planEditGuard(worktree: string) {
 
 export function hardenPlan(
   key: string,
-  item: { permission: Permission.Ruleset },
+  item: { native?: boolean; permission: Permission.Ruleset },
   worktree: string,
   ...explicit: Permission.Ruleset[]
 ) {
-  if (key !== "plan" && key !== "architect") return
+  // Plan-mode edit restrictions are a ceiling for the built-in plan agent only.
+  // Custom agents named `architect` are governed by their own permission config;
+  // the previous name check appended the guard after their rules, so last-match-
+  // wins made their edit allows unreachable with no opt-out (#13581). A custom
+  // `agent.plan` config reuses the built-in object, so `native` stays true and
+  // the ceiling still applies there.
+  if (key !== "plan") return
+  if (item.native !== true) return
   const edit = explicit.map(editRestrictions)
   item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
 }
@@ -309,6 +308,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    open_plan: "allow",
     task: {
       "*": "allow",
       general: "deny",
@@ -350,14 +350,19 @@ export function getMcpRules(cfg: Config.Info): Record<string, "allow" | "ask" | 
 export interface KiloData {
   mcpRules: Record<string, "allow" | "ask" | "deny">
   defaultsPatch: Permission.Ruleset
+  board: boolean
 }
 
 // Prepare kilo-specific data derived from config. Call once per state initialization.
-export function prepare(cfg: Config.Info): KiloData {
+export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">): KiloData {
   const mcpRules = getMcpRules(cfg)
+  const enabled = BoardEnabled.resolve({
+    config: cfg.shared_agent_board,
+    flag: flags.experimentalSharedAgentBoard,
+  })
   const defaultsPatch = Permission.fromConfig({
     bash,
-    ...board(cfg.experimental?.shared_agent_board === true),
+    ...board(enabled),
     recall: "ask",
     ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.native_notebook_tools === true
       ? { notebook_read: "ask" as const, notebook_edit: "ask" as const, notebook_execute: "ask" as const }
@@ -366,7 +371,7 @@ export function prepare(cfg: Config.Info): KiloData {
     kilo_memory_recall: "ask",
     kilo_memory_save: "ask",
   })
-  return { mcpRules, defaultsPatch }
+  return { mcpRules, defaultsPatch, board: enabled }
 }
 
 export function cacheKey(cfg: Config.Info) {
@@ -377,7 +382,7 @@ export function cacheKey(cfg: Config.Info) {
     mode: cfg.mode,
     permission: cfg.permission,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
-    shared_agent_board: cfg.experimental?.shared_agent_board,
+    shared_agent_board: cfg.shared_agent_board,
     references: cfg.references,
     reference: cfg.reference,
   })
@@ -483,12 +488,11 @@ export function patchAgents(
   >,
   defaults: Permission.Ruleset,
   user: Permission.Ruleset,
-  cfg: Config.Info,
   kilo: KiloData,
   worktree: string,
   whitelistedDirs: string[],
 ) {
-  const enabled = cfg.experimental?.shared_agent_board === true
+  const enabled = kilo.board
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
     agents.code = {
@@ -525,6 +529,7 @@ export function patchAgents(
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
+      description: `${agents.explore.description} Bash is limited to an allowlist of read-only commands. For required scripts, tests, or binary-analysis commands outside that allowlist, select an available agent whose permissions allow them while preserving the requested no-change scope.`,
       permission: Permission.merge(
         defaults,
         Permission.fromConfig({

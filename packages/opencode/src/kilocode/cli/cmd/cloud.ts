@@ -2,6 +2,7 @@ import type { Argv } from "yargs"
 import { Effect } from "effect"
 import { cmd } from "@/cli/cmd/cmd"
 import { effectCmd } from "@/cli/effect-cmd"
+import { cloudPromptOptions, withCloudPrompt } from "./cloud-stdin"
 
 // Keep the top-level import graph light: this module is registered eagerly at CLI
 // startup, so the cloud implementation is imported inside handlers (same deferral
@@ -12,12 +13,7 @@ export const CloudStartCommand = effectCmd({
   command: "start",
   describe: "start a Cloud Agent task",
   builder: (yargs) =>
-    yargs
-      .option("prompt", {
-        type: "string",
-        demandOption: true,
-        describe: "prompt for the Cloud Agent",
-      })
+    cloudPromptOptions(yargs)
       .option("repo", {
         type: "string",
         describe: "repository shorthand or URL",
@@ -48,17 +44,21 @@ export const CloudStartCommand = effectCmd({
         describe: "connect to the WebSocket stream and print events as JSONL",
       }),
   handler: Effect.fn("Cli.cloud.start")(function* (args) {
-    const CloudCommands = yield* cloud
-    yield* CloudCommands.start({
-      prompt: args.prompt,
-      ...(args.repo === undefined ? {} : { repo: args.repo }),
-      ...(args.repoType === undefined ? {} : { repoType: args.repoType }),
-      ...(args.branch === undefined ? {} : { branch: args.branch }),
-      ...(args.model === undefined ? {} : { model: args.model }),
-      ...(args.mode === undefined ? {} : { mode: args.mode }),
-      ...(args.orgId === undefined ? {} : { orgID: args.orgId }),
-      ...(args.stream === undefined ? {} : { stream: args.stream }),
-    })
+    yield* withCloudPrompt(args, (prompt) =>
+      Effect.gen(function* () {
+        const CloudCommands = yield* cloud
+        yield* CloudCommands.start({
+          prompt,
+          ...(args.repo === undefined ? {} : { repo: args.repo }),
+          ...(args.repoType === undefined ? {} : { repoType: args.repoType }),
+          ...(args.branch === undefined ? {} : { branch: args.branch }),
+          ...(args.model === undefined ? {} : { model: args.model }),
+          ...(args.mode === undefined ? {} : { mode: args.mode }),
+          ...(args.orgId === undefined ? {} : { orgID: args.orgId }),
+          ...(args.stream === undefined ? {} : { stream: args.stream }),
+        })
+      }),
+    )
   }),
 })
 
@@ -67,20 +67,19 @@ export const CloudSendCommand = effectCmd({
   describe: "send a follow-up prompt to a Cloud Agent task",
   instance: false,
   builder: (yargs) =>
-    yargs
+    cloudPromptOptions(yargs)
       .option("session-id", {
         type: "string",
         demandOption: true,
         describe: "Cloud Agent session ID",
-      })
-      .option("prompt", {
-        type: "string",
-        demandOption: true,
-        describe: "follow-up prompt for the Cloud Agent",
       }),
   handler: Effect.fn("Cli.cloud.send")(function* (args) {
-    const CloudCommands = yield* cloud
-    yield* CloudCommands.send({ sessionID: args.sessionId, prompt: args.prompt })
+    yield* withCloudPrompt(args, (prompt) =>
+      Effect.gen(function* () {
+        const CloudCommands = yield* cloud
+        yield* CloudCommands.send({ sessionID: args.sessionId, prompt })
+      }),
+    )
   }),
 })
 

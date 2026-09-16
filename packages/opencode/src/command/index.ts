@@ -116,6 +116,13 @@ const layer = Layer.effect(
       }
       // kilocode_change start
       commands[Default.REVIEW] = reviewCommand()
+      commands.goal = {
+        name: "goal",
+        description: "Keep working toward a session goal. /goal <objective> or pause, resume, clear",
+        source: "command",
+        template: "$ARGUMENTS",
+        hints: ["<objective | pause | resume | clear>"],
+      }
       commands["resume-claude"] = SessionResume.resumeClaude
       commands["resume-codex"] = SessionResume.resumeCodex
       commands["btw"] = btwCommand() // kilocode_change - side-question command
@@ -124,11 +131,14 @@ const layer = Layer.effect(
       // kilocode_change start - defer partial overrides until all command sources are registered
       const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
+        if (name === "goal")
+          throw new Error("The /goal command is reserved for session goals. Rename the custom command.")
         if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change
       }
       // kilocode_change end
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
+        if (name === "goal") throw new Error("The /goal command is reserved for session goals. Rename the MCP prompt.") // kilocode_change
         commands[name] = {
           name,
           source: "mcp",

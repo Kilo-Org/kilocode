@@ -4,6 +4,7 @@ import { Schema } from "effect"
 import { define, inventory } from "../event"
 import { ascending } from "../identifier"
 import { statics } from "../schema"
+import { optional } from "../schema" // kilocode_change
 import { SessionID } from "../session-id"
 import { SessionV1 } from "./session"
 
@@ -31,7 +32,13 @@ const base = {
   header: Schema.String.annotate({ description: "Very short label (max 30 chars)" }),
   options: Schema.Array(Option).annotate({ description: "Available choices" }),
   multiple: Schema.optional(Schema.Boolean).annotate({ description: "Allow selecting multiple choices" }),
-  // kilocode_change start - optional Kilo client localization keys
+  // kilocode_change start - optional Kilo client hints
+  default: optional(
+    Schema.String.annotate({
+      description:
+        "Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown.",
+    }),
+  ),
   questionKey: Schema.optional(Schema.String).annotate({
     description: "Optional i18n key for the question text; clients fall back to `question` when missing",
   }),

@@ -24,13 +24,18 @@ export async function removePtys(
   const result = await client.v2.pty.list({ location: { directory } })
   if (result.error) throw result.error
   const failed: unknown[] = []
-  for (const pty of result.data?.data ?? []) {
-    try {
-      const removed = await client.v2.pty.remove({ ptyID: pty.id, location: { directory } })
-      if (removed.error) failed.push(removed.error)
-    } catch (error) {
-      failed.push(error)
-    }
+  const ptys = result.data?.data ?? []
+  for (let index = 0; index < ptys.length; index += 4) {
+    await Promise.all(
+      ptys.slice(index, index + 4).map(async (pty) => {
+        try {
+          const removed = await client.v2.pty.remove({ ptyID: pty.id, location: { directory } })
+          if (removed.error) failed.push(removed.error)
+        } catch (error) {
+          failed.push(error)
+        }
+      }),
+    )
   }
   if (failed.length > 0) throw new AggregateError(failed, `Failed to remove PTYs in ${directory}`)
 }

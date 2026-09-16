@@ -10,6 +10,78 @@ import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./
 import { recordPromotionHandoff } from "./promotion-handoff"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 import { routeProjectSession } from "./project/messages"
+import { Timing } from "./creation-timing"
+import { plan, type Start } from "./creation-plan"
+import { copyEnvFiles } from "./env-copy"
+import { runWorktreeSetupScript } from "./setup-script-task"
+import { broken } from "./worktree-reconcile"
+
+export async function runLifecycleSetup(
+  input: Parameters<typeof runWorktreeSetupScript>[0],
+  env: Parameters<typeof runWorktreeSetupScript>[1],
+  output: (message: string) => void,
+  early?: () => Promise<void>,
+): Promise<void> {
+  await copyEnvFiles(env.repoPath, env.worktreePath, (msg) => output(`[EnvCopy] ${msg}`))
+  if (!input.service?.hasScript()) await early?.()
+  try {
+    await runWorktreeSetupScript(input, env)
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    output(`[AgentManager] Setup script error: ${msg}`)
+    input.post({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: `Setup script failed: ${msg}`,
+      projectId: input.projectId,
+      branch: input.branch,
+      worktreeId: input.worktreeId,
+    })
+  }
+}
+
+/** Setup calls the optional early step only after copying .env files. */
+export async function prepareSession(
+  start: Start,
+  setup: (early?: () => Promise<void>) => Promise<void>,
+  create: () => Promise<Session | null>,
+) {
+  const result = Promise.withResolvers<{ session: Session | null; ready: Promise<void>; done: Promise<void> }>()
+  const ready = Promise.withResolvers<void>()
+  const pending = { created: false }
+  const provision = async () => {
+    if (pending.created) return
+    pending.created = true
+    const session = await create()
+    ready.resolve()
+    result.resolve({ session, ready: ready.promise, done })
+  }
+  const done = Promise.resolve()
+    .then(() => setup(start === "immediate" ? provision : undefined))
+    .then(provision)
+  // The caller owns completion, including failures after the early result.
+  void done.catch(result.reject)
+  return result.promise
+}
+
+/** A backend-instance boot started after directory preparation, awaited before session creation. */
+export interface CreationBoot {
+  /** Timing clock reading captured when the boot request started. */
+  at: number
+  metadata: () => Promise<Record<string, unknown>>
+}
+
+/**
+ * Start a directory boot without blocking its caller. The error is retained and
+ * rethrown when `metadata` is awaited, so a setup failure before that point
+ * cannot leave an unhandled rejection.
+ */
+export function beginBoot(start: () => Promise<Record<string, unknown>>, timing?: Timing): CreationBoot {
+  const at = timing?.now() ?? performance.now()
+  const pending = (async () => start())()
+  void pending.catch(() => undefined)
+  return { at, metadata: () => pending }
+}
 
 /**
  * Provider capabilities the worktree lifecycle needs beyond project state.
@@ -20,8 +92,15 @@ import { routeProjectSession } from "./project/messages"
  */
 export interface LifecycleHost {
   createOnDisk: (opts?: CreateWorktreeOnDiskOptions) => Promise<CreateWorktreeOnDiskResult | null>
-  runSetup: (dir: string, branch: string, id: string) => Promise<void>
-  createSession: (dir: string, branch: string, id: string) => Promise<Session | null>
+  hasScript: () => boolean
+  runSetup: (dir: string, branch: string, id: string, early?: () => Promise<void>) => Promise<void>
+  createSession: (
+    dir: string,
+    branch: string,
+    id: string,
+    boot?: CreationBoot,
+    timing?: Timing,
+  ) => Promise<Session | null>
   notifyReady: (sessionId: string, result: CreateWorktreeResult, worktreeId?: string) => void
   sessions: {
     register: (session: Session) => void
@@ -61,26 +140,45 @@ export async function createLifecycleWorktree(
   ctx: ProjectContext,
   host: LifecycleHost,
   opts: { baseBranch?: string; branchName?: string },
-): Promise<null> {
+): Promise<{ session: Session; ready: Promise<void> } | null> {
+  const timing = Timing.start(`create ${opts.branchName ?? "worktree"}`, host.log)
+
   await initContextState(ctx, host.log)
+  timing.mark("context")
 
   const created = await host.createOnDisk({ baseBranch: opts.baseBranch, branchName: opts.branchName })
-  if (!created) return null
+  timing.mark("create")
+  if (!created) {
+    timing.end()
+    return null
+  }
 
-  // Run setup script for new worktree (blocks until complete, shows in overlay)
-  await host.runSetup(created.result.path, created.result.branch, created.worktree.id)
-
-  const session = await host.createSession(created.result.path, created.result.branch, created.worktree.id)
+  const prepared = await prepareSession(
+    plan({ setupScript: host.hasScript() }),
+    async (early) => {
+      await host.runSetup(created.result.path, created.result.branch, created.worktree.id, early)
+      timing.mark("setup")
+    },
+    () => {
+      const boot = beginBoot(() => host.metadata(host.client(), created.result.path), timing)
+      return host.createSession(created.result.path, created.result.branch, created.worktree.id, boot, timing)
+    },
+  )
+  const { session, ready } = prepared
+  await prepared.done
   if (!session) {
     let releasePtyCleanup: () => void
     try {
       releasePtyCleanup = await host.acquirePtyCleanup(created.result.path)
     } catch (error) {
       host.log("Failed to remove worktree PTYs:", error)
+      timing.mark("cleanup")
+      timing.end()
       return null
     }
     try {
       await ctx.worktreeManager().removeWorktree(created.result.path, created.result.branch)
+      await removeWorktreeSnapshot(host, ctx.root, created.result.path)
       ctx.peekState()?.removeWorktree(created.worktree.id)
       host.push()
     } catch (error) {
@@ -88,6 +186,8 @@ export async function createLifecycleWorktree(
     } finally {
       releasePtyCleanup()
     }
+    timing.mark("cleanup")
+    timing.end()
     return null
   }
 
@@ -95,18 +195,34 @@ export async function createLifecycleWorktree(
   state.addSession(session.id, created.worktree.id)
   if (!opts.branchName && host.autoName().enabled) state.armAutoName(created.worktree.id, session.id)
   host.register(session.id, created.result.path)
+  timing.mark("state")
   // Push state before registerSession so the webview's sessionCreated handler
   // sees the worktree mapping and routes the session to the worktree tab.
   host.notifyReady(session.id, created.result, created.worktree.id)
   host.sessions.register(session)
+  timing.mark("ready")
+  const span = timing.end()
   host.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
     worktreeId: created.worktree.id,
     branch: created.result.branch,
+    durationMs: span.total,
+    ...span.phases,
   })
   host.log(`Created worktree ${created.worktree.id} with session ${session.id}`)
-  return null
+  return { session, ready }
+}
+
+/** Remove a worktree's snapshot repository. Teardown must still complete if removal fails. */
+export async function removeWorktreeSnapshot(host: LifecycleHost, root: string, dir: string): Promise<boolean> {
+  try {
+    await host.client().kilocode.removeSnapshot({ directory: root, worktree: dir }, { throwOnError: true })
+    return true
+  } catch (error) {
+    host.log(`Failed to remove worktree snapshots: ${error}`)
+    return false
+  }
 }
 
 /** Delete a worktree and dissociate its sessions. */
@@ -196,10 +312,7 @@ export async function deleteLifecycleWorktree(
         ),
       ),
     )
-    try {
-      await client.kilocode.removeSnapshot({ directory: ctx.root, worktree: worktree.path }, { throwOnError: true })
-    } catch (error) {
-      host.log(`Failed to remove worktree snapshots: ${error}`)
+    if (!(await removeWorktreeSnapshot(host, ctx.root, worktree.path))) {
       host.notify(
         "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
       )
@@ -208,6 +321,7 @@ export async function deleteLifecycleWorktree(
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
     for (const sessionID of retained) routeProjectSession(host.sessions, ctx.id, sessionID, ctx.root, ctx.generation)
+    host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
   } catch (error) {
@@ -220,15 +334,26 @@ export async function deleteLifecycleWorktree(
   return null
 }
 
-/** Remove a stale worktree entry from state without touching the filesystem. */
+/**
+ * Remove a stale worktree entry from state without touching the filesystem.
+ *
+ * With `keepSessions`, the worktree's conversations are moved to Local instead of being dropped with
+ * the row: the directory is unrecoverable, but the history is not, and losing it silently is worse
+ * than an extra row under Local.
+ */
 export async function removeStaleLifecycleWorktree(
   ctx: ProjectContext,
   host: LifecycleHost,
   worktreeId: string,
+  keepSessions = false,
 ): Promise<null> {
   const state = ctx.peekState()
   if (!state) return null
-  if (!ctx.stale.has(worktreeId)) {
+  // Either signal is proof enough: the presence probe saw it disappear, or the health reconcile
+  // classified it as something that cannot answer.
+  // `unavailable` is not proof of anything, so it must not authorize an entry-dropping removal.
+  const unhealthy = ctx.report?.entries.some((entry) => entry.id === worktreeId && broken(entry.health)) === true
+  if (!ctx.stale.has(worktreeId) && !unhealthy) {
     host.log(`Ignored stale removal for non-stale worktree ${worktreeId}`)
     return null
   }
@@ -249,16 +374,25 @@ export async function removeStaleLifecycleWorktree(
     const releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
     releasePtyCleanup()
   } catch (error) {
-    host.log(`Failed to remove stale worktree PTYs: ${error}`)
-    return null
+    // Nothing on this path deletes files, so a terminal that cannot be stopped is not a reason to
+    // refuse. Refusing was a dead end: for an `unregistered` worktree the directory still exists, so
+    // dropping the row is the only action the UI offers, and it failed with a message about terminals
+    // — a problem the user cannot act on, reported instead of the one they asked to fix. The terminal
+    // keeps running against a directory that is still there; the row is what they asked to remove.
+    host.log(`Removing stale worktree ${worktreeId} without backend terminal cleanup: ${error}`)
   }
   host.forgetName(worktreeId)
+  const kept = keepSessions ? state.getSessions(worktreeId) : []
+  // Detach before removing the row: removeWorktree() deletes the sessions that still point at it.
+  for (const session of kept) state.moveSession(session.id, null)
   const orphaned = state.removeWorktree(worktreeId)
-  host.stopDiffs(worktree.path, orphaned)
-  for (const session of orphaned) host.sessions.clearDirectory(session.id)
+  host.stopDiffs(worktree.path, [...orphaned, ...kept])
+  for (const session of [...orphaned, ...kept]) host.sessions.clearDirectory(session.id)
+  for (const session of kept) routeProjectSession(host.sessions, ctx.id, session.id, ctx.root, ctx.generation)
   ctx.stale.delete(worktreeId)
   host.push()
-  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})`)
+  const suffix = kept.length > 0 ? `, kept ${kept.length} session(s) under Local` : ""
+  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})${suffix}`)
   return null
 }
 

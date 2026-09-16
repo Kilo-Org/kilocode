@@ -20,6 +20,7 @@ export namespace KiloQuestion {
     const text = (value: string) => value.replace(/\r\n/g, "\n").replace(/\r/g, " ")
     return {
       ...info,
+      ...(info.default == null ? {} : { default: line(info.default) }),
       question: text(info.question),
       header: line(info.header),
       options: info.options.map((option) => ({

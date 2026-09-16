@@ -300,11 +300,24 @@ Otherwise, output the matching header followed by this exact structure:
 If no issues found: "No issues found."
 
 ### Detailed Findings
-For each issue listed in the table above:
-- **File:** `path/to/file.ts:line`
-- **Confidence:** X%
-- **Problem:** What's wrong and why it matters
-- **Suggestion:** Recommended fix with code snippet if applicable
+
+Repeat the block below once for each issue listed in the table above, in the same order and numbered to match its table row. Separate consecutive findings with a blank line. Put the severity from the table in brackets in the heading so the two sections cross-reference.
+
+#### 1. [CRITICAL] `path/to/file.ts:line`: Short title from the table
+
+**Confidence:** X%
+
+**Problem:** What's wrong and why it matters.
+
+**Suggestion:** Recommended fix with code snippet if applicable.
+
+#### 2. [WARNING] `path/to/file.ts:line`: Short title from the table
+
+**Confidence:** X%
+
+**Problem:** What's wrong and why it matters.
+
+**Suggestion:** Recommended fix with code snippet if applicable.
 
 If no issues found: "No detailed findings."
 

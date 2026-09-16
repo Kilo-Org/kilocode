@@ -1,10 +1,11 @@
 import { type Component, createSignal, createMemo, createEffect, on, onCleanup, Show, type JSXElement } from "solid-js"
-import type { VirtualizerHandle } from "virtua/solid"
 // Styles are imported by the component so every consumer (sidebar diff viewer,
 // agent manager, storybook) picks them up automatically. Keep these imports here —
 // see tests/unit/diff-viewer-css-arch.test.ts for the invariant.
 import "../agent-manager/agent-manager.css"
 import "../agent-manager/agent-manager-review.css"
+import "../agent-manager/pr/pr-panel.css"
+import "./remote-comments.css"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -12,13 +13,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import type { WorktreeFileDiff } from "../src/types/messages"
-import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
-import { treeOrder } from "./file-tree-utils"
-import type { ReviewComment } from "./review-comments"
-import { createReviewComposer, type ReviewComposer } from "./review-annotations"
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
   allOpenFiles,
@@ -28,61 +23,71 @@ import {
   toggleOpenFiles,
 } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { DiffViewerNotice } from "./DiffViewerNotice"
 import { VirtualDiffList } from "./VirtualDiffList"
-import { createDiffRows } from "./diff-state"
-import { createDiffRequests, createDiffViewport } from "./diff-requests"
+import { createDiffViewport } from "./diff-requests"
+import { RemoteCommentsOutside } from "./remote-comment-renderer"
 import { ReviewDiffItem } from "./ReviewDiffItem"
-import { createReviewOpenState } from "./review-state"
-import { createReviewScrollPreserver } from "./review-scroll"
-import { createReviewController } from "./review-controller"
-import { keepsNativeFocus, notice, reviewFocus, reviewSendAllKeybind } from "./review-setup"
+import { type ReviewViewProps } from "./review-controller"
+import { createReviewSurface } from "./review-surface"
+import { SendAllButton } from "./SendAllButton"
+import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 
 type DiffStyle = "unified" | "split"
 
-interface FullScreenDiffViewProps {
-  diffs: WorktreeFileDiff[]
+interface FullScreenDiffViewProps extends ReviewViewProps {
   loading: boolean
-  loadingFiles?: Set<string>
   sessionId?: string
-  sessionKey?: string
   /** Well-known source notice kind (e.g. "snapshots-disabled"), shown as a banner. */
   notice?: string
-  comments: ReviewComment[]
-  onCommentsChange: (comments: ReviewComment[]) => void
-  composer?: ReviewComposer
-  onSendAll?: () => void
-  onSendClick?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
-  markdownRender?: boolean
   onMarkdownRenderChange?: (render: boolean) => void
-  onRequestDiff?: (file: string) => void
-  onOpenFile?: (relativePath: string, line?: number) => void
   initialFile?: string
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
-  activeTerminalId?: string
   /** Defaults to true. Hides the per-file Revert action when false. */
   canRevert?: boolean
-  /** Defaults to true. Disables comment creation and "Send all" when false. */
-  canComment?: boolean
   /** Optional leading content rendered first in the toolbar's left group. */
   lead?: JSXElement
+  prTarget?: PRTarget
+  prSnapshot?: PRDiffSnapshot
+  prLoading?: boolean
+  prError?: string
   onClose: () => void
 }
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
-  const { t } = useLanguage()
-  const noticeText = () => notice(t, props.notice)
-  const sendAllKeybind = () => reviewSendAllKeybind(t)
-  const localComposer = createReviewComposer()
-  const composer = () => props.composer ?? localComposer
-  const reviewOpen = createReviewOpenState(
-    () => props.diffs,
-    () => props.sessionKey,
-  )
-  const open = reviewOpen.open
-  const setOpen = reviewOpen.setOpen
+  let rootRef: HTMLDivElement | undefined
+  const {
+    t,
+    noticeText,
+    sendAllKeybind,
+    open,
+    setOpen,
+    rows,
+    remote,
+    register,
+    scroller,
+    setScroller,
+    virtualizer,
+    setVirtualizer,
+    comments,
+    review,
+    pinned,
+    render,
+    request,
+    handleRootMouseDown,
+    handleKeyDown,
+    commentsByFile,
+    handleGutterClick,
+    sendAllClick,
+    sendAllToGithub,
+    sendAllGithubCount,
+    sendAllGithubAvailable,
+    sendAllPending,
+    sendAllError,
+  } = createReviewSurface(props, () => rootRef)
 
   const [manualActiveFile, setManualActiveFile] = createSignal<Record<string, string | null>>({})
   const activeFile = createMemo(() => {
@@ -100,47 +105,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
   const [treeWidth, setTreeWidth] = createSignal(240)
   let initialFileKey: string | undefined
-  let rootRef: HTMLDivElement | undefined
-  const [scroller, setScroller] = createSignal<HTMLDivElement>()
-  const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
   let syncFrame: number | undefined
-
-  // Reorder diffs to match the file-tree's depth-first visual order so
-  // scrolling through the diff panel matches the tree on the left.
-  const sorted = createMemo(() => treeOrder(props.diffs))
-  const rows = createDiffRows(sorted, () => props.sessionKey)
-
-  const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
-  const comments = () => props.comments
-
-  const focusRoot = () => reviewFocus(() => rootRef)
-
-  const preserveScroll = createReviewScrollPreserver(rows, virtualizer)
-
-  const review = createReviewController({
-    diffs: () => props.diffs,
-    rows,
-    comments: () => props.comments,
-    setComments,
-    composer,
-    key: () => props.sessionKey,
-    preserveScroll,
-    focus: focusRoot,
-    label: t,
-    activeTerminalId: () => props.activeTerminalId,
-    canComment: () => props.canComment !== false,
-    onSendClick: props.onSendClick,
-    onSendAll: props.onSendAll,
-  })
-  const {
-    pinned,
-    commentsByFile,
-    annotationsForFile,
-    buildAnnotation,
-    handleGutterClick,
-    sendAllToChat,
-    sendAllClick,
-  } = review
 
   createEffect(
     on(
@@ -154,32 +119,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       },
     ),
   )
-  const request = createDiffRequests({
-    key: () => props.sessionKey,
-    diffs: () => props.diffs,
-    open,
-    loading: () => props.loadingFiles,
-    send: () => props.onRequestDiff,
-    eager: false,
-  })
-
-  const handleRootMouseDown = (e: MouseEvent) => {
-    if (keepsNativeFocus(e.target)) return
-    focusRoot()
-  }
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== "Enter") return
-    if (!(e.metaKey || e.ctrlKey)) return
-    const target = e.target
-    if (keepsNativeFocus(target)) return
-    if (props.canComment === false) return
-    if (comments().length === 0) return
-    e.preventDefault()
-    e.stopPropagation()
-    sendAllToChat()
-  }
-
   const handleFileSelect = (path: string) => {
     const diff = props.diffs.find((item) => item.file === path)
     if (diff) request(diff)
@@ -262,6 +201,16 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
           <Show when={props.lead}>{props.lead}</Show>
+          <Show when={props.prTarget}>
+            {(target) => (
+              <span class="am-review-pr-context" title={target().prUrl}>
+                {t("diffViewer.comment.prContext", { number: target().prNumber })}
+                <Show when={props.prLoading}>
+                  <Spinner />
+                </Show>
+              </span>
+            )}
+          </Show>
           <RadioGroup
             options={["unified", "split"] as const}
             current={props.diffStyle}
@@ -296,19 +245,26 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             {openLabel()}
           </Button>
           <Show when={comments().length > 0 && props.canComment !== false}>
-            <TooltipKeybind
-              title={t("agentManager.review.sendAllToChat")}
+            <SendAllButton
+              count={comments().length}
+              githubCount={sendAllGithubCount()}
+              githubNumber={sendAllGithubAvailable() ? props.prTarget?.prNumber : undefined}
+              pending={sendAllPending()}
+              onSendChat={sendAllClick}
+              onSendGithub={sendAllToGithub}
               keybind={sendAllKeybind()}
               placement="bottom"
-            >
-              <Button variant="primary" size="small" onClick={sendAllClick}>
-                {t("agentManager.review.sendAllToChatWithCount", { count: comments().length })}
-              </Button>
-            </TooltipKeybind>
+            />
+          </Show>
+          <Show when={sendAllError()}>
+            <span class="am-review-send-error" role="alert">
+              {sendAllError()}
+            </span>
           </Show>
           <IconButton icon="close" size="small" variant="ghost" label={t("common.close")} onClick={props.onClose} />
         </div>
       </div>
+      <DiffViewerNotice text={props.prError} role="alert" />
 
       {/* Body: file tree + diff viewer */}
       <div class="am-review-body">
@@ -333,14 +289,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           />
         </div>
         <div class="am-review-diff" ref={setScroller}>
-          <Show when={noticeText()}>
-            <div class="diff-viewer-notice" role="status">
-              <span class="diff-viewer-notice-icon">
-                <Icon name="warning" size="small" />
-              </span>
-              <span class="diff-viewer-notice-text">{noticeText()}</span>
-            </div>
-          </Show>
+          <DiffViewerNotice text={noticeText()} role="status" />
 
           <Show when={props.loading && props.diffs.length === 0}>
             <div class="am-diff-loading">
@@ -366,18 +315,21 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                   onReady={setVirtualizer}
                   render={(diff) => {
                     const viewport = createDiffViewport(scroller)
+                    const annotations = remote.annotations(diff.file)
                     return (
                       <ReviewDiffItem
                         diff={diff}
                         open={open}
                         viewport={viewport}
-                        request={request}
+                        request={props.onRequestDiff ? request : undefined}
                         loading={() => props.loadingFiles?.has(diff.file) ?? false}
-                        comments={() => (commentsByFile().get(diff.file) ?? []).length}
+                        comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
                         diffStyle={() => props.diffStyle}
                         markdownRender={() => props.markdownRender ?? false}
-                        annotations={() => annotationsForFile(diff.file)}
-                        renderAnnotation={buildAnnotation}
+                        handle={(handle) => register(diff.file, handle)}
+                        scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
+                        annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
+                        renderAnnotation={render}
                         onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                         onOpenFile={props.onOpenFile}
                         onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
@@ -396,6 +348,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               </Show>
             </div>
           </Show>
+          <RemoteCommentsOutside controller={remote} />
         </div>
       </div>
     </div>

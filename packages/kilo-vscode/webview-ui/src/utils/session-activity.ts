@@ -23,14 +23,22 @@ export function activity(input: ActivityInput): Activity {
 export function activities(input: {
   parents: ReadonlyMap<string, string>
   statuses: Record<string, { type: Status }>
-  outcomes: Record<string, { reason: string } | undefined>
+  outcomes: Record<string, { reason: string; seen?: boolean } | undefined>
   blocked: Iterable<string>
   submitting?: Iterable<string>
+  suggested?: Iterable<string>
   disconnected: boolean
 }): Record<string, Activity> {
   const blocked = new Set(input.blocked)
   const submitting = new Set(input.submitting)
-  const ids = new Set([...Object.keys(input.statuses), ...Object.keys(input.outcomes), ...blocked, ...submitting])
+  const suggested = new Set(input.suggested)
+  const ids = new Set([
+    ...Object.keys(input.statuses),
+    ...Object.keys(input.outcomes),
+    ...blocked,
+    ...submitting,
+    ...suggested,
+  ])
   const result: Record<string, Activity> = {}
   for (const id of ids) {
     const status = submitting.has(id) ? "busy" : input.statuses[id]?.type
@@ -41,7 +49,7 @@ export function activities(input: {
       blocked: blocked.has(id),
       disconnected: input.disconnected,
       errored: close === "error",
-      finished: close === "completed",
+      finished: close ? close === "completed" && !input.outcomes[id]?.seen : suggested.has(id),
     })
     result[id] = strongest([result[id] ?? "idle", own])
     if (active === "idle") continue

@@ -261,6 +261,7 @@ jobs:
           path: |
             .artifacts/unit/junit.xml
             packages/*/.artifacts/unit/junit.xml
+            packages/opencode/.artifacts/unit/startup.json
       # kilocode_change end
 
   # kilocode_change start

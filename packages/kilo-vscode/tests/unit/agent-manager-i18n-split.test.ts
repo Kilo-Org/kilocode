@@ -145,6 +145,19 @@ describe("Agent Manager i18n split", () => {
     }
   })
 
+  it("keeps introduction card captions short in every locale", () => {
+    for (const [locale, dict] of Object.entries(locales)) {
+      expect(dict["agentManager.intro.stage1.text"].length, `${locale}: repository caption`).toBeLessThanOrEqual(100)
+      expect(dict["agentManager.intro.stage3.text"].length, `${locale}: worktree caption`).toBeLessThanOrEqual(80)
+    }
+  })
+
+  it("references the base update command in every introduction locale", () => {
+    for (const [locale, dict] of Object.entries(locales)) {
+      expect(dict["agentManager.intro.updateText"], `${locale}: base update command`).toContain("/update-from-base")
+    }
+  })
+
   it("contains required core keys in every locale", () => {
     const required = [
       "agentManager.local",

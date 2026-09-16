@@ -17,10 +17,12 @@ import { Discovery } from "./discovery"
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
 import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
 import { Git } from "@/git" // kilocode_change
+import { ClaudeMigration } from "@/kilocode/config/claude-migration" // kilocode_change
 import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { escapeHtml } from "@/util/html"
 import { trustedInProject } from "../kilocode/skill/trust" // kilocode_change
+import * as SkillPaths from "../kilocode/skill/paths" // kilocode_change
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -210,9 +212,19 @@ const discoverSkills = Effect.fnUntraced(function* (
   const state: ScanState = { matches: new Map(), dirs: new Set() } // kilocode_change
   const projectRoot = worktree === "/" ? directory : worktree // kilocode_change - project substitution boundary
 
+  // kilocode_change start - settle the one-time global Claude handoff before scanning external skills
+  if (Flag.KILO_EXPERIMENTAL_CLAUDE_MIGRATION || ClaudeMigration.hasAttempt()) yield* config.getGlobal()
+  // kilocode_change end
+
+  // kilocode_change start - one primary checkout lookup serves both the external and the config dir scans
+  const projectDirs = disableClaudeCodeSkills ? [AGENTS_EXTERNAL_DIR] : [CLAUDE_EXTERNAL_DIR, AGENTS_EXTERNAL_DIR]
+  const mirrored = yield* primaryPaths(directory, worktree, [...projectDirs, ".kilocode", ".kilo"])
+  const fallbacks = mirrored.filter((file) => projectDirs.includes(path.basename(file)))
+  // kilocode_change end
+
   const externalDirs: string[] = []
   if (!disableExternalSkills) {
-    if (!disableClaudeCodeSkills) externalDirs.push(CLAUDE_EXTERNAL_DIR)
+    if (!disableClaudeCodeSkills && !ClaudeMigration.globalHandoff()) externalDirs.push(CLAUDE_EXTERNAL_DIR)
     externalDirs.push(AGENTS_EXTERNAL_DIR)
 
     for (const dir of externalDirs) {
@@ -223,9 +235,8 @@ const discoverSkills = Effect.fnUntraced(function* (
 
     // kilocode_change start
     const local = yield* fsys
-      .up({ targets: externalDirs, start: directory, stop: projectRoot })
+      .up({ targets: projectDirs, start: directory, stop: projectRoot })
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
-    const fallbacks = yield* primaryPaths(directory, worktree, externalDirs) // kilocode_change
     const upDirs = [...fallbacks, ...local]
     // kilocode_change end
 
@@ -243,7 +254,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 
   const configDirs = yield* config.directories()
-  const primary = new Set(yield* primaryPaths(directory, worktree, [".kilocode", ".kilo"])) // kilocode_change
+  const primary = new Set(mirrored.filter((file) => !projectDirs.includes(path.basename(file)))) // kilocode_change
   for (const dir of configDirs) {
     // kilocode_change start - global and explicit KILO_CONFIG_DIR skills are trusted; project and primary-checkout
     // skills remain confined to the active project boundary.
@@ -263,15 +274,16 @@ const discoverSkills = Effect.fnUntraced(function* (
   const cfg = yield* config.get()
   for (const item of cfg.skills?.paths ?? []) {
     const expanded = item.startsWith("~/") ? path.join(global.home, item.slice(2)) : item
-    const dir = path.isAbsolute(expanded) ? expanded : path.join(directory, expanded)
+    const dir = yield* SkillPaths.resolve(expanded, directory, fsys.isDir) // kilocode_change - "/x" falls back to the project root
     if (!(yield* fsys.isDir(dir))) {
       yield* Effect.logWarning("skill path not found", { path: dir })
       continue
     }
 
     // kilocode_change start - trust follows the config source that declared the path, never the selected path.
+    // A "/x" entry that fell back to the project root is project content and stays untrusted.
     const origin = cfg.skill_path_origins?.[item]
-    const trusted = origin?.trusted === true && path.isAbsolute(expanded)
+    const trusted = origin?.trusted === true && path.isAbsolute(expanded) && dir === expanded
     yield* scan(state, dir, SKILL_PATTERN, {
       trusted,
       root: trusted ? undefined : (origin?.root ?? projectRoot),
