@@ -1016,39 +1016,76 @@ const layer = Layer.effect(
       const pending = pendingOAuthTransports.get(mcpName)
       if (!pending || pending.state !== result.oauthState) {
         yield* auth.clearOAuthState(mcpName)
-        throw new Error("Browser authorization was rejected: this request was replaced by another authorization attempt")
+        throw new Error(
+          pending
+            ? "Browser authorization was rejected: this request was replaced by another authorization attempt"
+            : `Browser authorization was rejected: no pending authorization flow for MCP server "${mcpName}"`,
+        )
+      }
+      yield* auth.clearOAuthState(mcpName)
+      if ("error" in outcome) {
+        yield* releasePendingFlow(mcpName, pending) // kilocode_change
+        throw new Error(`Browser authorization failed: ${outcome.error.message}`) // kilocode_change
       }
       // kilocode_change end
-      yield* auth.clearOAuthState(mcpName)
-      if ("error" in outcome) throw new Error(`Browser authorization failed: ${outcome.error.message}`) // kilocode_change
-      return yield* finishAuth(mcpName, outcome.code) // kilocode_change
+      // kilocode_change start - redeem with the flow this completion was matched against, so a
+      // concurrent startAuth for the same server cannot substitute its transport, provider or
+      // PKCE verifier between the state check above and the token exchange below
+      return yield* completeAuth(mcpName, outcome.code, pending)
+      // kilocode_change end
     })
 
-    const finishAuth = Effect.fn("MCP.finishAuth")(function* (mcpName: string, authorizationCode: string) {
-      yield* requireMcpConfig(mcpName)
-      const pending = pendingOAuthTransports.get(mcpName)
-      if (!pending) throw new Error(`No pending OAuth flow for MCP server: ${mcpName}`)
+    // kilocode_change start - the completion redeems the flow it was handed, not one looked up
+    // by name afterwards, and releases that flow before the exchange so a failed or abandoned
+    // authorization does not retain its transport, provider and in-memory PKCE verifier.
+    // `finishAuth` keeps the name-based lookup for callers that complete a flow by name.
+    const completeAuth = Effect.fn("MCP.completeAuth")(function* (
+      mcpName: string,
+      authorizationCode: string,
+      pending: PendingOAuthFlow,
+    ) {
+      if (pendingOAuthTransports.get(mcpName) === pending) pendingOAuthTransports.delete(mcpName)
 
       const error = yield* Effect.tryPromise({
         try: () => pending.transport.finishAuth(authorizationCode),
         catch: (error) => error,
       }).pipe(
         Effect.match({
-          onFailure: (error) => oauthFailureReason(error), // kilocode_change
+          onFailure: (error) => oauthFailureReason(error),
           onSuccess: () => undefined,
         }),
       )
 
-      if (error) return { status: "failed", error: `Token exchange failed: ${error}` } satisfies Status // kilocode_change
+      if (error) {
+        yield* releasePendingFlow(mcpName, pending)
+        return { status: "failed", error: `Token exchange failed: ${error}` } satisfies Status
+      }
 
       yield* Effect.promise(() => pending.provider?.commit() ?? Promise.resolve())
       yield* auth.clearCodeVerifier(mcpName)
-      pendingOAuthTransports.delete(mcpName)
 
       const mcpConfig = yield* requireMcpConfig(mcpName)
 
       return yield* createAndStore(mcpName, { ...mcpConfig, enabled: true })
     })
+
+    const finishAuth = Effect.fn("MCP.finishAuth")(function* (mcpName: string, authorizationCode: string) {
+      yield* requireMcpConfig(mcpName)
+      const pending = pendingOAuthTransports.get(mcpName)
+      if (!pending) throw new Error(`No pending OAuth flow for MCP server: ${mcpName}`)
+      return yield* completeAuth(mcpName, authorizationCode, pending) // kilocode_change
+    })
+
+    // Release a pending flow this completion owns, so a failed or abandoned authorization
+    // does not retain its transport, provider and in-memory PKCE verifier.
+    const releasePendingFlow = Effect.fn("MCP.releasePendingFlow")(function* (
+      mcpName: string,
+      pending: PendingOAuthFlow,
+    ) {
+      if (pendingOAuthTransports.get(mcpName) === pending) pendingOAuthTransports.delete(mcpName)
+      yield* Effect.tryPromise(() => pending.transport.close() ?? Promise.resolve()).pipe(Effect.ignore)
+    })
+    // kilocode_change end
 
     const removeAuth = Effect.fn("MCP.removeAuth")(function* (mcpName: string) {
       yield* auth.remove(mcpName)

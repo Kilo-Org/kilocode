@@ -6,17 +6,23 @@ import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import { Cause, Effect, Fiber } from "effect"
+import { Cause, Effect, Fiber, Layer } from "effect"
 import { Config } from "../../src/config/config"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { McpAuth } from "../../src/mcp/auth"
+import { McpBrowser } from "../../src/mcp/browser"
 import { MCP } from "../../src/mcp/index"
 import { McpOAuthCallback } from "../../src/mcp/oauth-callback"
 import { testEffect, pollWithTimeout } from "../lib/effect"
 
+// The platform opener is not what these tests assert; the flow is driven by the callbacks
+// they deliver themselves, and the real layer would add its 500 ms settle timer to each test.
+const browserLayer = Layer.succeed(McpBrowser.Service, McpBrowser.Service.of({ open: () => Effect.void }))
+
 const mcpTest = testEffect(
   LayerNode.compile(
     LayerNode.group([MCP.node, McpAuth.node, EventV2Bridge.node, Config.node, CrossSpawnSpawner.node, FSUtil.node]),
+    [[McpBrowser.node, browserLayer]],
   ),
 )
 
@@ -32,10 +38,7 @@ function serveOAuthMcp() {
   const seen = { challenge: undefined as string | undefined }
   const server = Effect.acquireRelease(
     Effect.promise(async () => {
-      const protocol = new Server(
-        { name: "oauth-browser", version: "1.0.0" },
-        { capabilities: { tools: {} } },
-      )
+      const protocol = new Server({ name: "oauth-browser", version: "1.0.0" }, { capabilities: { tools: {} } })
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
         enableJsonResponse: true,
@@ -167,14 +170,35 @@ function startFlow(name: string, url: string) {
   })
 }
 
+function failure(effect: Effect.Effect<unknown, unknown>) {
+  return Effect.gen(function* () {
+    const outcome = yield* effect.pipe(
+      Effect.map(() => undefined),
+      Effect.catchCause((cause) => Effect.succeed(Cause.squash(cause))),
+    )
+    if (!(outcome instanceof Error)) throw new Error(`expected an Error, received ${String(outcome)}`)
+    return outcome
+  })
+}
+
+function joinFailure(fiber: Fiber.Fiber<unknown, unknown>) {
+  return failure(Fiber.join(fiber))
+}
+
 mcpTest.instance("authenticate() completes when the callback is completed in a separate browser tab", () =>
   Effect.gen(function* () {
     yield* stopOAuthCallback
     const { seen, server } = serveOAuthMcp()
     const target = yield* server
     const flow = yield* startFlow("test-browser-completion", target.url)
-    const authorize = yield* deliverCallback(flow.authorizationUrl, "code=browser-code&state=" + parseAuthorization(flow.authorizationUrl).state)
+    const authorize = parseAuthorization(flow.authorizationUrl)
+    // Record the challenge before the callback settles: the forked authenticate fiber
+    // starts the token exchange as soon as it does, so the /token handler must already
+    // be able to compare the redeemed verifier against it.
+    expect(authorize.challenge).toBeTruthy()
     seen.challenge = authorize.challenge ?? undefined
+
+    yield* deliverCallback(flow.authorizationUrl, `code=browser-code&state=${authorize.state}`)
 
     const status = yield* Fiber.join(flow.fiber)
     expect(status.status).toBe("connected")
@@ -182,46 +206,53 @@ mcpTest.instance("authenticate() completes when the callback is completed in a s
   }),
 )
 
-mcpTest.instance("authenticate() redeems with its own PKCE verifier when another Kilo process rewrites the shared auth file", () =>
-  Effect.gen(function* () {
-    yield* stopOAuthCallback
-    const { seen, server } = serveOAuthMcp()
-    const target = yield* server
-    const flow = yield* startFlow("test-shared-verifier", target.url)
-    const authorize = parseAuthorization(flow.authorizationUrl)
-    seen.challenge = authorize.challenge ?? undefined
+mcpTest.instance(
+  "authenticate() redeems with its own PKCE verifier when another Kilo process rewrites the shared auth file",
+  () =>
+    Effect.gen(function* () {
+      yield* stopOAuthCallback
+      const { seen, server } = serveOAuthMcp()
+      const target = yield* server
+      const flow = yield* startFlow("test-shared-verifier", target.url)
+      const authorize = parseAuthorization(flow.authorizationUrl)
+      expect(authorize.challenge).toBeTruthy()
+      seen.challenge = authorize.challenge ?? undefined
 
-    // While the browser tab is open, any other Kilo process sharing mcp-auth.json
-    // (the VS Code extension, a TUI in another terminal) that touches this server
-    // rewrites its OAuth credentials.
-    const auth = yield* McpAuth.Service
-    yield* auth.updateCodeVerifier("test-shared-verifier", OTHER_VERIFIER)
+      // While the browser tab is open, any other Kilo process sharing mcp-auth.json
+      // (the VS Code extension, a TUI in another terminal) that touches this server
+      // rewrites its OAuth credentials.
+      const auth = yield* McpAuth.Service
+      yield* auth.updateCodeVerifier("test-shared-verifier", OTHER_VERIFIER)
+      expect((yield* auth.get("test-shared-verifier"))?.codeVerifier).toBe(OTHER_VERIFIER)
 
-    yield* deliverCallback(flow.authorizationUrl, `code=browser-code&state=${authorize.state}`)
+      yield* deliverCallback(flow.authorizationUrl, `code=browser-code&state=${authorize.state}`)
 
-    const status = yield* Fiber.join(flow.fiber)
-    expect(status.status).toBe("connected")
-    expect((yield* flow.mcp.status())["test-shared-verifier"]?.status).toBe("connected")
-  }),
+      const status = yield* Fiber.join(flow.fiber)
+      expect(status.status).toBe("connected")
+      expect((yield* flow.mcp.status())["test-shared-verifier"]?.status).toBe("connected")
+    }),
 )
 
-mcpTest.instance("authenticate() matches the callback against its own state when another Kilo process rewrites the shared auth file", () =>
-  Effect.gen(function* () {
-    yield* stopOAuthCallback
-    const { server } = serveOAuthMcp()
-    const target = yield* server
-    const flow = yield* startFlow("test-shared-state", target.url)
-    const authorize = parseAuthorization(flow.authorizationUrl)
+mcpTest.instance(
+  "authenticate() matches the callback against its own state when another Kilo process rewrites the shared auth file",
+  () =>
+    Effect.gen(function* () {
+      yield* stopOAuthCallback
+      const { server } = serveOAuthMcp()
+      const target = yield* server
+      const flow = yield* startFlow("test-shared-state", target.url)
+      const authorize = parseAuthorization(flow.authorizationUrl)
 
-    const auth = yield* McpAuth.Service
-    yield* auth.updateOAuthState("test-shared-state", OTHER_STATE)
+      const auth = yield* McpAuth.Service
+      yield* auth.updateOAuthState("test-shared-state", OTHER_STATE)
+      expect((yield* auth.get("test-shared-state"))?.oauthState).toBe(OTHER_STATE)
 
-    yield* deliverCallback(flow.authorizationUrl, `code=browser-code&state=${authorize.state}`)
+      yield* deliverCallback(flow.authorizationUrl, `code=browser-code&state=${authorize.state}`)
 
-    const status = yield* Fiber.join(flow.fiber)
-    expect(status.status).toBe("connected")
-    expect((yield* flow.mcp.status())["test-shared-state"]?.status).toBe("connected")
-  }),
+      const status = yield* Fiber.join(flow.fiber)
+      expect(status.status).toBe("connected")
+      expect((yield* flow.mcp.status())["test-shared-state"]?.status).toBe("connected")
+    }),
 )
 
 mcpTest.instance("authenticate() names the token exchange when the authorization server rejects the code", () =>
@@ -254,13 +285,68 @@ mcpTest.instance("authenticate() names the browser step when the authorization s
       `error=access_denied&error_description=Authorization%20approval%20was%20not%20confirmed&state=${authorize.state}`,
     )
 
-    const outcome = yield* Fiber.join(flow.fiber).pipe(
-      Effect.map(() => undefined),
-      Effect.catchCause((cause) => Effect.succeed(Cause.squash(cause))),
-    )
-    expect(outcome).toBeInstanceOf(Error)
-    if (!(outcome instanceof Error)) throw new Error(`expected an Error, received ${String(outcome)}`)
+    const outcome = yield* joinFailure(flow.fiber)
     expect(outcome.message).toContain("Browser authorization failed")
     expect(outcome.message).toContain("Authorization approval was not confirmed")
+  }),
+)
+
+mcpTest.instance("authenticate() releases its pending flow when the token exchange fails", () =>
+  Effect.gen(function* () {
+    yield* stopOAuthCallback
+    const { server } = serveOAuthMcp()
+    const target = yield* server
+    const name = "test-release-on-failure"
+    const flow = yield* startFlow(name, target.url)
+    const authorize = parseAuthorization(flow.authorizationUrl)
+
+    yield* deliverCallback(flow.authorizationUrl, `code=stale-code&state=${authorize.state}`)
+
+    const status = yield* Fiber.join(flow.fiber)
+    expect(status.status).toBe("failed")
+
+    // A failed flow must not keep owning a pending authorization: the retained transport
+    // and the PKCE verifier it pinned would let a later completion redeem a code through
+    // the abandoned flow, and the needs_auth reconnect could never replace its entry.
+    const reason = yield* failure(flow.mcp.finishAuth(name, "valid-code"))
+    expect(reason.message).toContain("No pending OAuth flow")
+  }),
+)
+
+mcpTest.instance("authenticate() reports a missing pending flow when the authorization was removed", () =>
+  Effect.gen(function* () {
+    yield* stopOAuthCallback
+    const { server } = serveOAuthMcp()
+    const target = yield* server
+    const name = "test-removed-flow"
+    const flow = yield* startFlow(name, target.url)
+
+    yield* flow.mcp.removeAuth(name)
+
+    // Nothing replaced this request, so the completion must not claim it was replaced.
+    const reason = yield* joinFailure(flow.fiber)
+    expect(reason.message).toContain(`no pending authorization flow for MCP server "${name}"`)
+    expect(reason.message).not.toContain("replaced")
+  }),
+)
+
+mcpTest.instance("authenticate() reports the replacement when another authorization replaced its flow", () =>
+  Effect.gen(function* () {
+    yield* stopOAuthCallback
+    const { server } = serveOAuthMcp()
+    const target = yield* server
+    const name = "test-replaced-flow"
+    const flow = yield* startFlow(name, target.url)
+    const authorize = parseAuthorization(flow.authorizationUrl)
+
+    // A second `kilo mcp auth` for the same server while the browser tab is still open
+    // replaces the pending flow.
+    yield* flow.mcp.startAuth(name)
+
+    yield* deliverCallback(flow.authorizationUrl, `code=browser-code&state=${authorize.state}`)
+
+    const reason = yield* joinFailure(flow.fiber)
+    expect(reason.message).toContain("replaced by another authorization attempt")
+    yield* flow.mcp.removeAuth(name)
   }),
 )
