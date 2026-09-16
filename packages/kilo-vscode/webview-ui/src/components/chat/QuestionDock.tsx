@@ -25,7 +25,6 @@ import { isTextControl } from "../../utils/focus"
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const id = props.request.id
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)

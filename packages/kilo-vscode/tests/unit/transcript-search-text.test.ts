@@ -54,6 +54,8 @@ describe("rowSearchText", () => {
   it("strips hidden markdown link URLs from assistant text", () => {
     const result = rowSearchText(row("assistant", [text("text-1", "see [marked.tsx](src/marked.tsx) now")]))
     expect(result.text).toBe("see marked.tsx now")
+    // Ranges must be measured against the stripped text, not the raw source.
+    expect(result.ranges).toEqual([{ start: 0, end: 18, partId: "text-1" }])
   })
 
   it("keeps brackets in user text, which renders literally", () => {
