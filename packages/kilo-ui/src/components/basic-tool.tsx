@@ -20,6 +20,12 @@ export function initialOpen(props: OpenProps) {
   return props.forceOpen ? true : readToolOpen(toolOpenKey(props), props.defaultOpen)
 }
 
+// Persist an open state decided outside the trigger (auto-open) so a remount
+// (virtualizer handoff, session switch) restores it instead of re-deriving.
+export function rememberOpen(props: OpenProps, open: boolean) {
+  writeToolOpen(toolOpenKey(props), open)
+}
+
 export function useToolApprovalLine() {
   const approval = useToolApproval()
   return () => {

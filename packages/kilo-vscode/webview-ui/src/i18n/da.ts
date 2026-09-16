@@ -228,7 +228,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
-  "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.start": "Start stemmeinput",
   "speechToText.tooltip.shortcut":
     "Tryk på knappen eller brug Cmd/Ctrl+K til at starte eller stoppe optagelsen; hold knappen nede, mens du taler, og slip den for at transskribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med at tale.",
@@ -681,6 +681,7 @@ export const dict = {
   "profile.usage.source.direct": "Direkte",
   "profile.usage.state.stale": "Viser de senest opdaterede forbrugsdata.",
   "profile.usage.state.unavailable": "Forbrugsdata er ikke tilgængelige.",
+  "profile.usage.state.empty": "Ingen forbrugsgrænser rapporteret.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling forfalden",
   "profile.usage.plan.canceling": "Abonnement: Opsiges ved periodens udgang",
   "profile.usage.plan.unknown": "Abonnement: Status ukendt",
@@ -899,15 +900,26 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Del et board mellem en hovedsession og dens underagenter til opgaveløsning, herunder indlejrede underagenter. Brug det til parallelle løsningsforsøg eller arbejdsopgaver, der supplerer hinanden, ikke til alle opgaver.",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
   "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Model-id, der sendes til dit eget transskriptionsendpoint, for eksempel whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Tale til tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Brug en OpenAI-kompatibel transskriptions-API i stedet for Kilo Gateway. Modeller læses fra /models, og lyd sendes til /audio/transcriptions. Lad feltet stå tomt for at bruge Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Tale til tekst-API-nøgle",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token, der sendes til den egne transskriptions-basis-URL. Gemmes i din Kilo-konfigurationsfil.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
+    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text, eller angiv en egen transskriptions-basis-URL nedenfor.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
@@ -1164,9 +1176,12 @@ export const dict = {
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
-  "settings.display.reasoningAutoCollapse.description":
-    "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
+  "settings.display.reasoningDisplay.title": "Ræsonnementsblokke",
+  "settings.display.reasoningDisplay.description":
+    "Vælg, hvordan ræsonnementsblokke starter. Foldet ud viser hele teksten, Forhåndsvisning begrænser den til en kort rulbar forhåndsvisning, og Overskrift viser kun titlen og streamingindikatoren, indtil du åbner den.",
+  "settings.display.reasoningDisplay.expanded": "Foldet ud",
+  "settings.display.reasoningDisplay.preview": "Forhåndsvisning",
+  "settings.display.reasoningDisplay.headline": "Overskrift",
   "settings.display.shiftTabCycle.title": "Skift ræsonnementsindsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Tryk på Shift+Tab i et promptindtastningsfelt for at skifte til næste niveau af ræsonnementsindsats. Deaktivér for at beholde Shift+Tab til tastaturnavigation af fokus.",

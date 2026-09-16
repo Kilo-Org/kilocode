@@ -1,5 +1,4 @@
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
-import { lstat } from "node:fs/promises"
 import { getErrorMessage } from "../kilo-provider-utils"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"
@@ -15,6 +14,7 @@ import { Timing } from "./creation-timing"
 import { plan, type Start } from "./creation-plan"
 import { copyEnvFiles } from "./env-copy"
 import { runWorktreeSetupScript } from "./setup-script-task"
+import { broken } from "./worktree-reconcile"
 
 export async function runLifecycleSetup(
   input: Parameters<typeof runWorktreeSetupScript>[0],
@@ -334,15 +334,26 @@ export async function deleteLifecycleWorktree(
   return null
 }
 
-/** Remove a stale worktree entry from state without touching the filesystem. */
+/**
+ * Remove a stale worktree entry from state without touching the filesystem.
+ *
+ * With `keepSessions`, the worktree's conversations are moved to Local instead of being dropped with
+ * the row: the directory is unrecoverable, but the history is not, and losing it silently is worse
+ * than an extra row under Local.
+ */
 export async function removeStaleLifecycleWorktree(
   ctx: ProjectContext,
   host: LifecycleHost,
   worktreeId: string,
+  keepSessions = false,
 ): Promise<null> {
   const state = ctx.peekState()
   if (!state) return null
-  if (!ctx.stale.has(worktreeId)) {
+  // Either signal is proof enough: the presence probe saw it disappear, or the health reconcile
+  // classified it as something that cannot answer.
+  // `unavailable` is not proof of anything, so it must not authorize an entry-dropping removal.
+  const unhealthy = ctx.report?.entries.some((entry) => entry.id === worktreeId && broken(entry.health)) === true
+  if (!ctx.stale.has(worktreeId) && !unhealthy) {
     host.log(`Ignored stale removal for non-stale worktree ${worktreeId}`)
     return null
   }
@@ -363,25 +374,25 @@ export async function removeStaleLifecycleWorktree(
     const releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
     releasePtyCleanup()
   } catch (error) {
-    host.log(`Failed to remove stale worktree PTYs: ${error}`)
-    // A deleted directory may no longer be reachable through the backend.
-    // Only bypass cleanup when the path is missing, not when access is denied.
-    const missing = await lstat(worktree.path).then(
-      () => false,
-      (err: NodeJS.ErrnoException) => err.code === "ENOENT",
-    )
-    if (!missing) {
-      host.post({ type: "error", message: "Failed to stop terminals before removing the stale worktree" })
-      return null
-    }
+    // Nothing on this path deletes files, so a terminal that cannot be stopped is not a reason to
+    // refuse. Refusing was a dead end: for an `unregistered` worktree the directory still exists, so
+    // dropping the row is the only action the UI offers, and it failed with a message about terminals
+    // — a problem the user cannot act on, reported instead of the one they asked to fix. The terminal
+    // keeps running against a directory that is still there; the row is what they asked to remove.
+    host.log(`Removing stale worktree ${worktreeId} without backend terminal cleanup: ${error}`)
   }
   host.forgetName(worktreeId)
+  const kept = keepSessions ? state.getSessions(worktreeId) : []
+  // Detach before removing the row: removeWorktree() deletes the sessions that still point at it.
+  for (const session of kept) state.moveSession(session.id, null)
   const orphaned = state.removeWorktree(worktreeId)
-  host.stopDiffs(worktree.path, orphaned)
-  for (const session of orphaned) host.sessions.clearDirectory(session.id)
+  host.stopDiffs(worktree.path, [...orphaned, ...kept])
+  for (const session of [...orphaned, ...kept]) host.sessions.clearDirectory(session.id)
+  for (const session of kept) routeProjectSession(host.sessions, ctx.id, session.id, ctx.root, ctx.generation)
   ctx.stale.delete(worktreeId)
   host.push()
-  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})`)
+  const suffix = kept.length > 0 ? `, kept ${kept.length} session(s) under Local` : ""
+  host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})${suffix}`)
   return null
 }
 

@@ -128,8 +128,11 @@ describe("PRStatusPoller batched GitHub queries", () => {
         headRefOid: exact ? refs.headRefOid : refs.baseRefOid,
       }
       if (args.at(1) === "view") {
-        if (lookup === "tracking" || (lookup === "branch" && args.at(2) === "feature"))
-          return { stdout: JSON.stringify(data), stderr: "" }
+        // Explicit-branch form names the branch; the bare form resolves the tracking ref, which is
+        // the only thing that identifies a fork PR checked out with `gh pr checkout`.
+        const explicit = args.at(2) === "feature"
+        if (lookup === "branch" && explicit) return { stdout: JSON.stringify(data), stderr: "" }
+        if (lookup === "tracking" && !explicit) return { stdout: JSON.stringify(data), stderr: "" }
         throw new Error("no pull requests found for branch")
       }
       const filter = args.at(args.indexOf("--state") + 1)
@@ -138,17 +141,19 @@ describe("PRStatusPoller batched GitHub queries", () => {
 
     const result = await internal.fetchPRForBranch("feature", "/repo")
     expect(result?.state ?? null).toBe(expected)
+    // Explicit branch first: the bare current-branch form has been observed hanging indefinitely in
+    // a worktree, so it is only reached when naming the branch found nothing.
     expect(calls.map((args) => args.slice(0, 3))).toEqual(
-      lookup === "tracking"
-        ? [["pr", "view", "--json"]]
-        : lookup === "branch"
+      lookup === "branch"
+        ? [["pr", "view", "feature"]]
+        : lookup === "tracking"
           ? [
-              ["pr", "view", "--json"],
               ["pr", "view", "feature"],
+              ["pr", "view", "--json"],
             ]
           : [
-              ["pr", "view", "--json"],
               ["pr", "view", "feature"],
+              ["pr", "view", "--json"],
               ["pr", "list", "--state"],
             ],
     )
@@ -252,6 +257,7 @@ describe("PRStatusPoller batched GitHub queries", () => {
     const internal = poller as unknown as {
       fetchOne: (id: string) => Promise<void>
       gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+      quarantine: { clear: (id: string) => void }
     }
     internal.gh = async () => {
       throw new Error("offline")
@@ -260,6 +266,8 @@ describe("PRStatusPoller batched GitHub queries", () => {
     for (const name of ["feature/a", "feature/a", "feature/b", undefined, "feature/c", new Error("offline")]) {
       branch = name
       await expect(internal.fetchOne("wt1")).rejects.toThrow("offline")
+      // Error reporting is independent of failure isolation; quarantine has its own test below.
+      internal.quarantine.clear("wt1")
     }
 
     expect(values).toEqual([
@@ -1576,6 +1584,43 @@ describe("PRStatusPoller batched full sync", () => {
         pr: expect.objectContaining({ number: 7, state: "merged" }),
       }),
     ])
+  })
+
+  it("drops a merged PR of an old branch that a new worktree reuses the name of", async () => {
+    // Agent Manager derives the branch from the session title, so a repeated task
+    // recreates the branch name of an already merged PR. gh's finder returns that
+    // PR by name; the worktree HEAD is unrelated to its head commit.
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const calls: string[][] = []
+    const old = "e".repeat(40)
+    execute.mockImplementation(
+      ghRouter(calls, {
+        ...batchNode,
+        state: "MERGED",
+        mergeStateStatus: "UNKNOWN",
+        headRefOid: old,
+        mergeCommit: { oid: "f".repeat(40) },
+      }),
+    )
+    git.mockImplementation(async (cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return { stdout: `${refs.headRefOid}\n`, stderr: "" }
+      if (cmd === "git" && args[0] === "merge-base") throw new Error(`fatal: Not a valid commit name ${args[2]}`)
+      return { stdout: "", stderr: "" }
+    })
+
+    const internal = bridge.poller as unknown as { fetchAll: () => Promise<void> }
+    await internal.fetchAll()
+
+    expect(calls.filter((args) => args[0] === "pr")).toEqual([])
+    expect(calls.filter((args) => graphQuery(args).includes("mergeCommit { oid }"))).toHaveLength(1)
+    expect(git.mock.calls.map((call) => (call as unknown[])[1])).toContainEqual([
+      "merge-base",
+      "--is-ancestor",
+      old,
+      "HEAD",
+    ])
+    expect(sent).toEqual([expect.objectContaining({ type: "agentManager.prStatus", worktreeId: "wt1", pr: null })])
   })
 
   it("does not attribute a fork PR that only shares the branch name and skips legacy lookups", async () => {

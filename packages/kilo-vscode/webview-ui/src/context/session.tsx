@@ -3078,11 +3078,17 @@ export function useSessionVisibility(visible: Accessor<string | null | undefined
   const session = useSession()
   const vscode = useVSCode()
   const current = createMemo(() => (vscode.active() ? visible() : undefined))
+  // Mark the visible session as a visible stream so the host lifts it out of the throttled background lane.
+  const mark = (id: string, visible: boolean) =>
+    vscode.postMessage({ type: "streamSessionVisible", sessionID: id, visible })
   createEffect(
-    on(current, (id) => {
+    on(current, (id, prev) => {
+      if (prev && prev !== id) mark(prev, false)
+      if (id && id !== prev) mark(id, true)
       if (id) session.acknowledge(id)
     }),
   )
+  onCleanup(() => current() && mark(current()!, false))
 }
 
 export function useSession(): SessionContextValue {

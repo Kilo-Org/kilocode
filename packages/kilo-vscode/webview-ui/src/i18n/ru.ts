@@ -226,7 +226,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
-  "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.start": "Начать голосовой ввод",
   "speechToText.tooltip.shortcut":
     "Коснитесь или нажмите Cmd/Ctrl+K, чтобы начать или остановить запись; удерживайте кнопку во время речи, затем отпустите её, чтобы транскрибировать и отправить.",
   "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
@@ -680,6 +680,7 @@ export const dict = {
   "profile.usage.source.direct": "Напрямую",
   "profile.usage.state.stale": "Показаны последние обновлённые данные об использовании.",
   "profile.usage.state.unavailable": "Данные об использовании недоступны.",
+  "profile.usage.state.empty": "Лимиты использования не указаны.",
   "profile.usage.plan.pastDue": "Тариф: Платёж просрочен",
   "profile.usage.plan.canceling": "Тариф: Отмена в конце периода",
   "profile.usage.plan.unknown": "Тариф: Статус неизвестен",
@@ -896,15 +897,26 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Предоставьте общую доску основному сеансу и его подагентам, выполняющим задачи, включая вложенных подагентов. Используйте её для параллельных попыток найти решение или взаимодополняющей работы, а не для каждой задачи.",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",
   "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
   "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Идентификатор модели, отправляемый в ваш собственный эндпоинт транскрипции, например whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Базовый URL речи в текст",
+  "settings.models.speechToTextBaseUrl.description":
+    "Использовать совместимый с OpenAI API транскрипции вместо Kilo Gateway. Модели читаются из /models, аудио отправляется в /audio/transcriptions. Оставьте пустым, чтобы использовать Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Ключ API речи в текст",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-токен, отправляемый на собственный базовый URL транскрипции. Хранится в файле конфигурации Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text. В настоящее время Speech to Text поддерживается только с Kilo Gateway.",
+    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text, либо укажите ниже свой базовый URL транскрипции.",
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
@@ -1162,9 +1174,12 @@ export const dict = {
   "settings.display.username.description": "Пользовательское имя в разговорах",
   "settings.display.fontSize.title": "Размер шрифта",
   "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
-  "settings.display.reasoningAutoCollapse.description":
-    "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.reasoningDisplay.title": "Блоки рассуждений",
+  "settings.display.reasoningDisplay.description":
+    "Выберите, как отображаются блоки рассуждений при запуске. Развёрнуты показывает полный текст, Предпросмотр ограничивает его коротким прокручиваемым предпросмотром, а Заголовок показывает только заголовок и индикатор потоковой передачи, пока вы не откроете блок.",
+  "settings.display.reasoningDisplay.expanded": "Развёрнуты",
+  "settings.display.reasoningDisplay.preview": "Предпросмотр",
+  "settings.display.reasoningDisplay.headline": "Заголовок",
   "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",

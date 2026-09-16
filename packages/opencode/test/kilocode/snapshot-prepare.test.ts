@@ -283,11 +283,16 @@ it.live(
 
         const hash = yield* snapshot.track().pipe(provideInstance(dir))
         expect(hash).toBeTruthy()
-        // Materialization removes the alternate then the staging directory, so wait for both.
+        // Materialization releases the source pin, then removes the alternate and the staging
+        // directory. The connectivity check renames the alternate away and back before that,
+        // so checking the files alone can observe a window where neither name exists yet.
+        // Waiting for the pin release as well makes the poll independent of that window.
         const wait = pollWithTimeout(
-          Effect.sync(() =>
-            !existsSync(alt) && !existsSync(`${alt}.materializing`) && !existsSync(staging) ? true : undefined,
-          ),
+          Effect.gen(function* () {
+            if (existsSync(alt) || existsSync(`${alt}.materializing`) || existsSync(staging)) return
+            if ((yield* git(["for-each-ref", ref])).trim()) return
+            return true
+          }),
           "snapshot materialization did not finish",
           "5 seconds",
         )

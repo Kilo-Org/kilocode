@@ -10,7 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { hasPopup, isTextControl } from "../../utils/focus"
+import { createHold, hasPopup, hasTextSelection, isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
@@ -79,6 +79,7 @@ import {
   browserDrafts as references,
   clearPendingDraftDiscarded,
   clearSessionDraftDiscarded,
+  contextDrafts,
   drafts,
   finishPendingSend,
   imageDrafts,
@@ -91,6 +92,7 @@ import {
 } from "../../utils/draft-store"
 import { ReviewComments } from "./ReviewComments"
 import { BrowserReferences } from "./BrowserReferences"
+import { CodeContextChips } from "./CodeContextChips"
 import {
   browserFeedbackData,
   formatBrowserFeedback,
@@ -98,6 +100,7 @@ import {
   partFeedback,
   type BrowserReference,
 } from "../../../../src/shared/browser-feedback"
+import { formatCodeContexts, mergeCodeContexts, type CodeContext } from "../../../../src/shared/code-context"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
@@ -343,18 +346,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imgs: ImageAttachment[],
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
     browser: BrowserReference[] = browsers(),
-  ) => savePromptDraft(key, next, comments, imgs, scroll, browser)
+    codeContexts: CodeContext[] = contexts(),
+  ) => savePromptDraft(key, next, comments, imgs, scroll, browser, codeContexts)
   const readDraft = () => ({
     text: text().trim(),
     comments: reviewComments(),
     images: imageAttach.images(),
     browsers: browsers(),
+    contexts: contexts(),
     scroll: textareaRef?.scrollTop ?? scrollDrafts.get(draftKey()) ?? 0,
   })
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [browsers, setBrowsers] = createSignal<BrowserReference[]>([])
+  const [contexts, setContexts] = createSignal<CodeContext[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -522,6 +528,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const clear = () => replace([])
 
+  const replaceContexts = (next: CodeContext[]) => {
+    setContexts(next)
+    if (next.length === 0) {
+      contextDrafts.delete(draftKey())
+      return
+    }
+    contextDrafts.set(draftKey(), next)
+  }
+
+  const removeContext = (id: string) => {
+    if (!readonly()) replaceContexts(contexts().filter((item) => item.id !== id))
+  }
+  const clearContexts = () => replaceContexts([])
+
   const removeReviewComment = (id: string) => {
     if (readonly()) return
     replaceReviewComments(reviewComments().filter((item) => item.id !== id))
@@ -536,8 +556,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const comments = untrack(reviewComments)
         const imgs = untrack(imageAttach.images)
         const browser = untrack(browsers)
-        if (val || comments.length > 0 || imgs.length > 0 || browser.length > 0 || drafts.has(prev)) {
-          saveDraft(prev, val, comments, imgs, undefined, browser)
+        const codeContexts = untrack(contexts)
+        if (
+          val ||
+          comments.length > 0 ||
+          imgs.length > 0 ||
+          browser.length > 0 ||
+          codeContexts.length > 0 ||
+          drafts.has(prev)
+        ) {
+          saveDraft(prev, val, comments, imgs, undefined, browser, codeContexts)
         }
       }
       const draft = drafts.get(key) ?? ""
@@ -552,6 +580,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
       setReviewComments(pending)
       setBrowsers(references.get(key) ?? [])
+      setContexts(contextDrafts.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
       preEnhanceText = null
@@ -597,7 +626,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
     const ownsFocus = () => {
       const active = document.activeElement
-      return hasPopup() || (active !== textareaRef && isTextControl(active))
+      return hasPopup() || (active !== textareaRef && isTextControl(active)) || hasTextSelection()
     }
     const focus = () => {
       if (defer() || ownsFocus()) return
@@ -622,6 +651,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
+
+  const hold = createHold({
+    target: () => textareaRef,
+    busy: () => hasPopup(),
+  })
+  window.addEventListener("focus", hold.reclaim)
+  onCleanup(() => window.removeEventListener("focus", hold.reclaim))
 
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
@@ -662,6 +698,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       draft.images,
       draft.scroll,
       draft.browsers,
+      draft.contexts,
     )
   }
   window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
@@ -704,7 +741,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () =>
-    text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0 || browsers().length > 0
+    text().trim().length > 0 ||
+    imageAttach.images().length > 0 ||
+    reviewComments().length > 0 ||
+    browsers().length > 0 ||
+    contexts().length > 0
+  // Review, browser, and code context all need the composed message instead of
+  // the server slash-command branch, which sends the raw args only.
+  const hasStructuredInput = (data: unknown, browser: unknown) =>
+    data != null || browser != null || contexts().length > 0
   const sendReady = () => !isDisabled() && goalReady() && !terminal.pending() && !git.pending() && !props.blocked?.()
   const canContinue = () => !goal.active() && speech.state() === "idle" && !hasInput() && session.canResume()
   const goalReady = () => !goal.pending() && (!goal.active() || (!enhancing() && !imageAttach.pending()))
@@ -781,7 +826,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         ...(active ? imageAttach.images() : (imageDrafts.get(key) ?? [])),
       ]
       const comments = active ? reviewComments() : (reviewDrafts.get(key) ?? [])
-      savePromptDraft(key, value, comments, images)
+      const codeContexts = active ? contexts() : (contextDrafts.get(key) ?? [])
+      savePromptDraft(key, value, comments, images, undefined, undefined, codeContexts)
       mentionDrafts.set(key, { paths: state.paths, sessions: state.sessions })
       if (!active) return
       enhanceCounter++
@@ -791,6 +837,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       mention.seedFromParts(state.paths, value)
       mention.seedSessions(state.sessions, value)
       replaceReviewComments(comments)
+      setContexts(codeContexts)
       imageAttach.replace(images)
       adjustHeight()
       textareaRef?.focus()
@@ -846,13 +893,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         dataUrl: file.url,
       }))
     if (target !== draftKey()) {
-      saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser)
+      saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser, [])
       return
     }
     // Do not overwrite a new draft the user started while the send was in flight.
-    if (text().trim() || reviewComments().length > 0 || imageAttach.images().length > 0 || browsers().length > 0) return
+    if (
+      text().trim() ||
+      reviewComments().length > 0 ||
+      imageAttach.images().length > 0 ||
+      browsers().length > 0 ||
+      contexts().length > 0
+    )
+      return
     replaceReviewComments(comments)
     replace(browser)
+    clearContexts()
     if (draft) {
       setText(draft)
       mention.seedFromText(draft)
@@ -963,6 +1018,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
+  const appendContext = (message: Extract<ExtensionMessage, { type: "appendChatContext" }>, key = draftKey()) => {
+    if (defer(key, (key) => appendContext(message, key))) return
+    if (key !== draftKey()) {
+      contextDrafts.set(key, mergeCodeContexts(contextDrafts.get(key) ?? [], [message.context]))
+      return
+    }
+    replaceContexts(mergeCodeContexts(contexts(), [message.context]))
+    textareaRef?.focus()
+  }
+
   const appendReviews = (message: Extract<ExtensionMessage, { type: "appendReviewComments" }>, key?: string) => {
     const target =
       key ??
@@ -1007,7 +1072,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       reviewDrafts.delete(source)
     }
     movePromptDraft(
-      { text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references },
+      {
+        text: drafts,
+        comments: reviewDrafts,
+        images: imageDrafts,
+        scrolls: scrollDrafts,
+        browsers: references,
+        contexts: contextDrafts,
+      },
       source,
       target,
     )
@@ -1029,6 +1101,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "appendChatBoxMessage") appendBox(message)
+
+    if (message.type === "appendChatContext") appendContext(message)
 
     if (message.type === "appendReviewComments") appendReviews(message)
 
@@ -1053,6 +1127,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "action" && message.action === "focusInput") {
       textareaRef?.focus()
+    }
+
+    if (message.type === "action" && message.action === "restoreInput") {
+      if (hasPopup()) return
+      const active = document.activeElement
+      if (active && active !== textareaRef && isTextControl(active)) return
+      textareaRef?.focus({ preventScroll: true })
     }
 
     if (message.type === "enhancePromptResult") {
@@ -1467,11 +1548,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setMemoryText(memory)
       clearReviewComments()
       clear()
+      clearContexts()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
+      contextDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
@@ -1492,11 +1575,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setText("")
       clearReviewComments()
       clear()
+      clearContexts()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
+      contextDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
@@ -1512,7 +1597,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const push = pushInstruction(pending, settings()["agentManager.pushFixes"] !== false)
     const browserData = browserFeedbackData(browsers())
     const browserText = browserData ? formatBrowserFeedback(browserData.references) : ""
-    const message = [review, push, browserText, draft].filter(Boolean).join("\n\n")
+    const contextText = formatCodeContexts(contexts())
+    const message = [review, browserText, push, contextText, draft].filter(Boolean).join("\n\n")
     if (canSendContinue()) {
       session.resume()
       return
@@ -1582,7 +1668,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     // Server-side slash command (cmdMatch/matched already computed above)
-    if (matched && !data && !browserData) {
+    if (matched && !hasStructuredInput(data, browserData)) {
       const args = draft.slice(cmdMatch![0].length).trim()
       const accepted = session.sendCommand(
         matched.name,
@@ -1623,6 +1709,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     drafts.delete(key)
     reviewDrafts.delete(key)
     references.delete(key)
+    contextDrafts.delete(key)
     imageDrafts.delete(key)
     mentionDrafts.delete(key)
     scrollDrafts.delete(key)
@@ -1632,6 +1719,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     setText("")
     clearReviewComments()
     setBrowsers([])
+    clearContexts()
     imageAttach.clear()
     mention.closeMention()
     slash.close()
@@ -1671,6 +1759,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           onCancel={() => {
             goal.cancel()
             textareaRef?.focus()
+          }}
+        />
+      </Show>
+      <Show when={contexts().length > 0}>
+        <CodeContextChips
+          contexts={contexts()}
+          sessionID={sid()}
+          onRemove={removeContext}
+          onClear={() => {
+            if (!readonly()) clearContexts()
           }}
         />
       </Show>
@@ -1918,10 +2016,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onPaste={handlePaste}
             onClick={syncGhost}
             onFocus={() => {
+              hold.claim()
               syncGhost()
               props.onFocusChange?.(true)
             }}
             onBlur={() => {
+              hold.release()
               syncGhost()
               props.onFocusChange?.(false)
             }}

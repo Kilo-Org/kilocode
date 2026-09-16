@@ -51,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "새 worktree에서 agent가 시작하기 전에 실행합니다.",
   "agentManager.settings.setupScript.create": "script 만들기",
   "agentManager.settings.setupScript.edit": "script 편집",
-  "agentManager.project.add": "프로젝트 추가",
+  "agentManager.project.add": "프로젝트 추가...",
   "agentManager.project.remove": "Agent Manager에서 제거",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
+  "agentManager.project.settings": "프로젝트 설정",
   "agentManager.project.restricted":
     "현재 VS Code 작업 영역이 홈 폴더 또는 파일 시스템 루트입니다. Agent Manager를 사용하려면 VS Code에서 특정 프로젝트 폴더를 여세요.",
   "agentManager.notGitRepo": "git 저장소가 아닙니다",
@@ -135,6 +136,12 @@ export const dict = {
     "이 리포지토리는 Git LFS를 사용하지만 git-lfs를 찾을 수 없습니다. Git LFS를 설치하세요.",
   "agentManager.setup.error.no_commits":
     "이 리포지토리에는 아직 커밋이 없습니다. worktrees를 사용하기 전에 초기 커밋을 생성하세요.",
+  "agentManager.setup.error.worktree_missing":
+    "이 worktree의 폴더가 더 이상 없습니다. 브랜치에서 복원하거나 worktree를 제거하세요.",
+  "agentManager.setup.error.worktree_unregistered":
+    "git이 이 폴더를 worktree로 추적하지 않습니다. 제거한 뒤 새 worktree를 만드세요.",
+  "agentManager.setup.error.git_timeout":
+    "Git이 제때 응답하지 않았습니다. 저장소에 접근할 수 있는지 확인하고 다시 시도하세요.",
   "agentManager.shortcuts.title": "키보드 단축키",
   "agentManager.shortcuts.category.sidebar": "사이드바",
   "agentManager.shortcuts.category.tabs": "탭",
@@ -309,6 +316,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "오래됨",
   "agentManager.pr.comment.sent": "전송됨",
   "agentManager.pr.comment.copy": "댓글 복사",
+  "agentManager.pr.comment.copyLink": "댓글 링크 복사",
   "agentManager.pr.comment.openOnGitHub": "GitHub에서 열기",
   "agentManager.pr.comment.showInDiff": "diff에서 보기",
   "agentManager.pr.comment.unplaced": "현재 diff에 없는 댓글",
@@ -459,4 +467,27 @@ export const dict = {
   "agentManager.intro.guide": "가이드 읽기",
   "agentManager.intro.dismiss": "소개 건너뛰기",
   "agentManager.intro.reopen": "Agent Manager 작동 방식",
+  "agentManager.worktree.health.absent-restorable": "폴더 삭제됨",
+  "agentManager.worktree.health.absent-restorableNote":
+    "폴더는 없지만 브랜치 {{branch}}는 남아 있습니다. 복원하면 계속 작업할 수 있습니다.",
+  "agentManager.worktree.health.absent-gone": "폴더와 브랜치 삭제됨",
+  "agentManager.worktree.health.absent-goneNote":
+    "폴더와 브랜치가 모두 없습니다. 항목을 제거해 정리하세요. 세션은 로컬에 보존됩니다.",
+  "agentManager.worktree.health.unregistered": "git worktree 아님",
+  "agentManager.worktree.health.unregisteredNote":
+    "폴더는 있지만 git이 더 이상 worktree로 추적하지 않아 상태를 읽을 수 없습니다.",
+  "agentManager.worktree.health.unavailable": "상태를 확인할 수 없음",
+  "agentManager.worktree.health.unavailableNote":
+    "Git 또는 GitHub CLI가 제때 응답하지 않았습니다. 이 worktree의 폴링을 일시 중지했으며 다시 시도합니다.",
+  "agentManager.worktree.restore": "worktree 복원",
+  "agentManager.worktree.removeKeepSessions": "제거하고 세션 유지",
+  "agentManager.orphans.title": "남은 worktree 폴더",
+  "agentManager.orphans.summary": ".kilo/worktrees 아래 폴더 {{count}}개가 git worktree가 아닙니다.",
+  "agentManager.orphans.clean": "남은 폴더 정리",
+  "agentManager.orphans.confirm": "이 폴더를 영구히 삭제할까요? git이 추적하는 항목은 없습니다.",
+  "agentManager.orphans.cancel": "취소",
+  "agentManager.orphans.checkout": "git 체크아웃이 남아 있음",
+  "agentManager.orphans.confirmCheckout":
+    "이 폴더를 영구적으로 삭제할까요? {{count}}개에 아직 git 체크아웃이 남아 있어 커밋되지 않은 변경이 있을 수 있습니다.",
+  "agentManager.error.title": "Agent Manager 오류",
 }

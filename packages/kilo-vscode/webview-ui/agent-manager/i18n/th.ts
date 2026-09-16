@@ -51,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "เรียกใช้ก่อนที่ agent จะเริ่มทำงานใน worktree ใหม่",
   "agentManager.settings.setupScript.create": "สร้าง script",
   "agentManager.settings.setupScript.edit": "แก้ไข script",
-  "agentManager.project.add": "เพิ่มโปรเจกต์",
+  "agentManager.project.add": "เพิ่มโปรเจกต์...",
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
   "agentManager.project.missing": "ไม่พบ Repository",
+  "agentManager.project.settings": "การตั้งค่าโปรเจกต์",
   "agentManager.project.restricted":
     "พื้นที่ทำงาน VS Code ปัจจุบันของคุณคือโฟลเดอร์บ้านหรือรากของระบบไฟล์ เปิดโฟลเดอร์โครงการที่เจาะจงใน VS Code เพื่อใช้ Agent Manager",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",
@@ -132,6 +133,11 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "เปิดโฟลเดอร์ที่มีที่เก็บ git เพื่อใช้ worktrees",
   "agentManager.setup.error.lfs_missing": "ที่เก็บนี้ใช้ Git LFS แต่ไม่พบ git-lfs โปรดติดตั้ง Git LFS",
   "agentManager.setup.error.no_commits": "ที่เก็บนี้ยังไม่มีการคอมมิต สร้างการคอมมิตเริ่มต้นก่อนใช้ worktrees",
+  "agentManager.setup.error.worktree_missing":
+    "โฟลเดอร์ของ worktree นี้ไม่มีอยู่แล้ว กู้คืนจากแบรนช์ หรือลบ worktree นี้",
+  "agentManager.setup.error.worktree_unregistered":
+    "git ไม่ติดตามโฟลเดอร์นี้เป็น worktree อีกแล้ว ลบออกแล้วสร้าง worktree ใหม่",
+  "agentManager.setup.error.git_timeout": "Git ไม่ตอบกลับทันเวลา ตรวจสอบว่าเข้าถึงที่เก็บโค้ดได้ แล้วลองอีกครั้ง",
   "agentManager.shortcuts.title": "ปุ่มลัดแป้นพิมพ์",
   "agentManager.shortcuts.category.sidebar": "แถบด้านข้าง",
   "agentManager.shortcuts.category.tabs": "แท็บ",
@@ -305,6 +311,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "ล้าสมัย",
   "agentManager.pr.comment.sent": "ส่งแล้ว",
   "agentManager.pr.comment.copy": "คัดลอกความคิดเห็น",
+  "agentManager.pr.comment.copyLink": "คัดลอกลิงก์ความคิดเห็น",
   "agentManager.pr.comment.openOnGitHub": "เปิดบน GitHub",
   "agentManager.pr.comment.showInDiff": "แสดงใน diff",
   "agentManager.pr.comment.unplaced": "ความคิดเห็นนอก diff ปัจจุบัน",
@@ -457,4 +464,27 @@ export const dict = {
   "agentManager.intro.guide": "อ่านคู่มือ",
   "agentManager.intro.dismiss": "ข้ามบทนำ",
   "agentManager.intro.reopen": "Agent Manager ทำงานอย่างไร",
+  "agentManager.worktree.health.absent-restorable": "โฟลเดอร์ถูกลบ",
+  "agentManager.worktree.health.absent-restorableNote":
+    "โฟลเดอร์หายไปแล้ว แต่แบรนช์ {{branch}} ยังอยู่ กู้คืนเพื่อทำงานต่อที่นี่",
+  "agentManager.worktree.health.absent-gone": "โฟลเดอร์และแบรนช์ถูกลบ",
+  "agentManager.worktree.health.absent-goneNote":
+    "ทั้งโฟลเดอร์และแบรนช์ไม่มีอยู่แล้ว ลบรายการเพื่อจัดระเบียบได้ เซสชันจะถูกเก็บไว้ใต้ Local",
+  "agentManager.worktree.health.unregistered": "ไม่ใช่ git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "โฟลเดอร์ยังอยู่ แต่ git ไม่ติดตามเป็น worktree อีกแล้ว จึงอ่านสถานะไม่ได้",
+  "agentManager.worktree.health.unavailable": "ไม่ทราบสถานะ",
+  "agentManager.worktree.health.unavailableNote":
+    "Git หรือ GitHub CLI ไม่ตอบกลับทันเวลา การตรวจสอบ worktree นี้ถูกหยุดชั่วคราวและจะลองใหม่",
+  "agentManager.worktree.restore": "กู้คืน worktree",
+  "agentManager.worktree.removeKeepSessions": "ลบแต่เก็บเซสชันไว้",
+  "agentManager.orphans.title": "โฟลเดอร์ worktree ที่ตกค้าง",
+  "agentManager.orphans.summary": "มี {{count}} โฟลเดอร์ใน .kilo/worktrees ที่ไม่ใช่ git worktree",
+  "agentManager.orphans.clean": "ล้างโฟลเดอร์ที่ตกค้าง",
+  "agentManager.orphans.confirm": "ลบโฟลเดอร์เหล่านี้อย่างถาวรหรือไม่? ไม่มีสิ่งใดที่ git ติดตามอยู่",
+  "agentManager.orphans.cancel": "ยกเลิก",
+  "agentManager.orphans.checkout": "มี git checkout อยู่",
+  "agentManager.orphans.confirmCheckout":
+    "ลบโฟลเดอร์เหล่านี้อย่างถาวรหรือไม่? {{count}} รายการยังมี git checkout ที่อาจมีการแก้ไขที่ยังไม่ได้คอมมิต",
+  "agentManager.error.title": "ข้อผิดพลาด Agent Manager",
 }

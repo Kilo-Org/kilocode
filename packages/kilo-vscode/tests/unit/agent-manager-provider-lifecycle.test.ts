@@ -189,7 +189,10 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     expect(client.session.delete).not.toHaveBeenCalled()
   })
 
-  it("preserves a stale entry and reports terminal cleanup failure when its directory still exists", async () => {
+  it("removes a stale entry whose terminals cannot be stopped, keeping its directory", async () => {
+    // Nothing on this path deletes files, so a terminal that cannot be stopped is not a reason to
+    // refuse. Refusing was a dead end: for an unregistered worktree the directory still exists, so
+    // dropping the row is the only action offered, and it failed with a message about terminals.
     const id = state.getWorktrees().at(0)!.id
     ctx.stale.add(id)
     host.acquirePtyCleanup = async () => {
@@ -198,9 +201,12 @@ describe("Agent Manager worktree deletion lifecycle", () => {
 
     await removeStaleLifecycleWorktree(ctx, host, id)
 
-    expect(state.getWorktree(id)).toBeDefined()
-    expect(ctx.stale.has(id)).toBe(true)
-    expect(calls).toEqual(["run:remove", "run:clear", "post:error"])
+    expect(state.getWorktree(id)).toBeUndefined()
+    expect(ctx.stale.has(id)).toBe(false)
+    expect(calls).not.toContain("post:error")
+    expect(calls).toContain("push")
+    // The row is gone; the files and the terminal running in them are untouched.
+    expect(calls).not.toContain("disk")
     expect(fs.existsSync(worktree)).toBe(true)
   })
 

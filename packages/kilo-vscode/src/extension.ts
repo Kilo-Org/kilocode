@@ -598,8 +598,8 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand(
       "kilo-code.new.openSubAgentViewer",
-      (sessionID: string, title?: string, directory?: string, background?: boolean) => {
-        subAgentViewerProvider.openPanel(sessionID, title, directory, background)
+      (sessionID: string, title?: string, directory?: string) => {
+        subAgentViewerProvider.openPanel(sessionID, title, directory)
       },
     ),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
@@ -619,6 +619,13 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTerminal", () => {
       agentManagerProvider.postMessage({ type: "action", action: "terminalNext" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.diagnostics", () => {
+      // diagnose() spawns git/gh probes and writes to the output channel; a rejection (disposed
+      // channel, disposed context mid-probe) would otherwise be an invisible unhandled rejection.
+      void agentManagerProvider.diagnose().catch((err: unknown) => {
+        console.error("[Kilo New] Agent Manager diagnostics failed:", err)
+      })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.search", () => {
       agentManagerProvider.postMessage({ type: "action", action: "search" })
