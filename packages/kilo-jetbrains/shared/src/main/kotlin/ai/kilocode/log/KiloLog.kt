@@ -30,7 +30,8 @@ import java.util.logging.LogRecord
  * which writes to the standard IDE log file, and to rotated `kilo.log*` files inside the IDE log directory.
  *
  * In sandbox mode (i.e. when running via `./gradlew runIde`, detected via the `idea.plugin.in.sandbox.mode`
- * system property), output is written only to `kilo.log*`.
+ * system property), output is written only to `kilo.log*`, and each process starts a new `kilo.log`
+ * so a Run tool window `log_file` tab shows exactly one run. Installed builds keep appending.
  *
  * Usage:
  * ```kotlin
@@ -133,7 +134,10 @@ internal class FileLog(cls: Class<*>) : KiloLog {
             val path = dir.resolve("kilo.log")
             IntellijLog(FileLog::class.java).info("Kilo diagnostic log directory: $dir")
             deleteLegacyLogs(dir)
-            val h = RotatingLogHandler(path, LIMIT, ROTATIONS)
+            // Sandbox runs start a new file so a Run tool window `log_file` tab shows just this run;
+            // the previous run stays readable as kilo.log.0. Installed builds keep appending, so a
+            // user's bug report is not truncated by an IDE restart.
+            val h = RotatingLogHandler(path, LIMIT, ROTATIONS, fresh = KiloLog.sandbox())
             h.formatter = KiloFormatter()
             h
         }
@@ -194,6 +198,7 @@ internal class RotatingLogHandler(
     private val path: Path,
     private val limit: Int,
     private val count: Int,
+    fresh: Boolean = false,
 ) : Handler() {
     // The stream stays open across records; it is reopened only after a rotation. `size` tracks the
     // current file length in memory so the hot logging path avoids per-record open/close and stat calls.
@@ -202,6 +207,9 @@ internal class RotatingLogHandler(
 
     init {
         Files.createDirectories(path.parent)
+        // `fresh` rolls a non-empty file aside so this process owns the whole file from its first
+        // record. A tailing reader sees the shrink and reopens from offset 0 on its own.
+        if (fresh && count > 0 && runCatching { Files.size(path) }.getOrDefault(0L) > 0L) rotate()
     }
 
     @Synchronized

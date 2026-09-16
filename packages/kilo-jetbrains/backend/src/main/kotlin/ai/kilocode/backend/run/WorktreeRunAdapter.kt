@@ -4,8 +4,10 @@ import ai.kilocode.log.KiloLog
 import com.intellij.execution.CommonProgramRunConfigurationParameters
 import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
+import com.intellij.execution.configurations.LogFileOptions
 import com.intellij.execution.configurations.ModuleBasedConfiguration
 import com.intellij.execution.configurations.RunConfiguration
+import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.openapi.externalSystem.model.ProjectSystemId
 import com.intellij.openapi.externalSystem.model.execution.ExternalSystemTaskExecutionSettings
 import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunConfiguration
@@ -22,6 +24,8 @@ import java.nio.file.Path
  * - Command-line style configurations implementing [CommonProgramRunConfigurationParameters]:
  *   the clone's working directory is mapped onto the worktree and WORKTREE_PATH/REPO_PATH env
  *   vars are injected (same contract as the VS Code Agent Manager run scripts).
+ *
+ * Both kinds additionally get their `<log_file>` tabs mapped onto the worktree; see [rebaseLogs].
  *
  * Paths are rebased rather than replaced, because both fields commonly point at a subproject
  * (`<repo>/packages/kilo-jetbrains`) rather than the repository root; see [rebase].
@@ -108,9 +112,41 @@ internal object WorktreeRunAdapter {
                 clone.envs = clone.envs + env(worktree, repo)
             }
         }
+        // Log-file tabs live on RunConfigurationBase, so neither branch above covers them.
+        if (clone is RunConfigurationBase<*>) rebaseLogs(clone, repo, worktree)
         val result = manager.createConfiguration(clone, settings.factory)
         result.isActivateToolWindowBeforeRun = true
         return result
+    }
+
+    /**
+     * Maps the `<log_file>` tabs of the Run tool window onto the worktree.
+     *
+     * `RunnerAndConfigurationSettingsImpl.readExternal` already expanded `$PROJECT_DIR$` against the
+     * main checkout, so an unrebased clone makes `LogFilesManager` tail the main checkout's files.
+     * Those files usually exist from an earlier run there, so the tabs appear and then stay empty
+     * forever while the worktree writes elsewhere.
+     *
+     * Entries are replaced rather than mutated: [RunConfigurationBase.clone] copies the `logFiles`
+     * list shallowly (`CollectionStoredProperty` does `clear()` + `addAll()`), so the clone shares
+     * [LogFileOptions] instances with the user's own configuration. Only the external-system clone,
+     * which round-trips through XML, gets fresh ones.
+     *
+     * Predefined log files are left alone — the configuration type derives them from state this
+     * adapter does not own.
+     */
+    private fun rebaseLogs(config: RunConfigurationBase<*>, repo: String, worktree: String) {
+        val logs = config.logFiles
+        if (logs.isEmpty()) return
+        val moved = logs.map { log ->
+            // A blank pattern has to stay blank: rebase() maps empty input to the worktree root.
+            val raw = log.pathPattern.orEmpty()
+            val path = if (raw.isBlank()) log.pathPattern else rebase(raw, repo, worktree)
+            LogFileOptions(log.name, path, log.charset, log.isEnabled, log.isSkipContent, log.isShowAll)
+        }
+        logs.clear()
+        logs.addAll(moved)
+        LOG.info("worktree run: rebased ${moved.size} log file(s) onto $worktree")
     }
 
     /** Whether [system] has a known build task mapping, i.e. whether its roots can be built. */

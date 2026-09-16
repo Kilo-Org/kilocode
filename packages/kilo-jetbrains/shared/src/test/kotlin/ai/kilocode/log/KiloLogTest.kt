@@ -59,6 +59,48 @@ class KiloLogTest {
     }
 
     @Test
+    fun `fresh handler rolls a previous run aside so the file holds only this run`() {
+        val dir = createTempDirectory("kilo-log")
+        val log = dir.resolve("kilo.log")
+        log.writeText("previous run\n")
+
+        val handler = RotatingLogHandler(log, 10_000, 2, fresh = true)
+        handler.formatter = LineFormatter()
+        handler.publish(LogRecord(Level.INFO, "this run"))
+
+        assertEquals("this run\n", log.readText())
+        assertEquals("previous run\n", dir.resolve("kilo.log.0").readText())
+    }
+
+    @Test
+    fun `fresh handler keeps an empty file in place`() {
+        val dir = createTempDirectory("kilo-log")
+        val log = dir.resolve("kilo.log")
+        log.writeText("")
+
+        val handler = RotatingLogHandler(log, 10_000, 2, fresh = true)
+        handler.formatter = LineFormatter()
+        handler.publish(LogRecord(Level.INFO, "first"))
+
+        assertEquals("first\n", log.readText())
+        assertFalse(dir.resolve("kilo.log.0").exists())
+    }
+
+    @Test
+    fun `appending handler keeps the previous run in the same file`() {
+        val dir = createTempDirectory("kilo-log")
+        val log = dir.resolve("kilo.log")
+        log.writeText("previous run\n")
+
+        val handler = RotatingLogHandler(log, 10_000, 2)
+        handler.formatter = LineFormatter()
+        handler.publish(LogRecord(Level.INFO, "this run"))
+
+        assertEquals("previous run\nthis run\n", log.readText())
+        assertFalse(dir.resolve("kilo.log.0").exists())
+    }
+
+    @Test
     fun `file log startup deletes legacy dev logs`() {
         val dir = createTempDirectory("kilo-log")
         val current = dir.resolve("kilo.log")

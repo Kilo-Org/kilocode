@@ -170,8 +170,18 @@ Where to find the log files:
 - Frontend log file: `<sandbox log dir>/kilo-frontend/kilo.log`
 - Backend log file: `<sandbox log dir>/kilo-backend/kilo.log`
 - Rotated files use numbered suffixes: `kilo.log.0`, `kilo.log.1`.
+- Each sandbox process starts a new `kilo.log`, so the file holds exactly one run and the previous run stays readable as `kilo.log.0`. Installed builds keep appending instead.
 - In practice these sit under the current `log_run*` sandbox logs for the active run.
 - If you are unsure of the exact sandbox root, open the IDE log directory from the running sandbox instance and then look for the `kilo-frontend/` and `kilo-backend/` subdirectories.
+
+### Reading the logs in the Run tool window
+
+The checked-in IDE run configurations attach both files as `<log_file>` tabs ("Backend Kilo", "Frontend Kilo"). Two IntelliJ defaults are worth knowing:
+
+- `skipped` defaults to `true`, which makes the tab open the file at its current end offset and show nothing that was already written. The checked-in configurations set `skipped="false"`. The `show_all` attribute is unrelated — it only selects "every glob match" over "the newest match" for pattern paths.
+- The tab's log level filter defaults to **Show errors and warnings**, and Kilo's dev logs are almost entirely `INFO`/`DEBUG`, so a correctly wired tab still looks empty. Open the tab's filter control (funnel icon) and pick **Show all**. This is a per-project setting stored in `.idea/workspace.xml` under `LogFilters`, so it cannot ship with the run configuration.
+
+Runs started from the Agent Manager against a git worktree get their log paths rebased onto that worktree, because `$PROJECT_DIR$` was already expanded against the main checkout when the configuration was read (`WorktreeRunAdapter.rebaseLogs`).
 
 Recommended combinations:
 

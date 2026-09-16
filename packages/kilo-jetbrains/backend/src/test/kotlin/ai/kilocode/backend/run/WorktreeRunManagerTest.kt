@@ -16,6 +16,7 @@ import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationPerRunnerSettings
 import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.execution.configurations.ConfigurationTypeBase
+import com.intellij.execution.configurations.LogFileOptions
 import com.intellij.execution.configurations.ModuleBasedConfiguration
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunConfigurationBase
@@ -173,6 +174,48 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         // Cloning an external-system config must not mutate the user's own configuration.
         assertEquals("$repo/packages/kilo-jetbrains", source.settings.externalProjectPath)
         assertTrue(source.settings.env.isEmpty())
+    }
+
+    fun testGradleLogFileTabsAreRebasedOntoWorktree() = runBlocking {
+        val type = register(esType("kilo.test.es.logs"))
+        val settings = add(type, "runIdeSplitMode")
+        val source = settings.configuration as ExternalSystemRunConfiguration
+        val repo = requireNotNull(project.basePath)
+        val sandbox = "packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains"
+        source.addLogFile("$repo/$sandbox/kilo-backend/kilo.log", "Backend Kilo", true, false, false)
+        source.addLogFile("/var/log/shared/audit.log", "Audit", true, true, false)
+        val wt = "$repo/.kilo/worktrees/logs-wt"
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as ExternalSystemRunConfiguration
+        val logs = logs(cfg)
+        assertEquals(2, logs.size)
+        // Without this the Run tool window tails the main checkout's stale file and never fills in.
+        assertEquals(Path.of("$wt/$sandbox/kilo-backend/kilo.log").toString(), logs.first().pathPattern)
+        assertEquals("Backend Kilo", logs.first().name)
+        assertFalse(logs.first().isSkipContent)
+        assertTrue(logs.first().isEnabled)
+        // Outside the repository, so not part of the transplanted tree.
+        assertEquals("/var/log/shared/audit.log", logs.last().pathPattern)
+        assertTrue(logs.last().isSkipContent)
+        // The user's own configuration must stay untouched.
+        assertEquals("$repo/$sandbox/kilo-backend/kilo.log", logs(source).first().pathPattern)
+    }
+
+    fun testParamsLogFileTabsAreRebasedWithoutMutatingTheSource() = runBlocking {
+        // RunConfigurationBase.clone() copies the logFiles list shallowly, so a rebase that mutated
+        // entries in place would rewrite the shared .run.xml this configuration came from.
+        val type = register(paramsType("kilo.test.params.logs"))
+        val settings = add(type, "dev")
+        val source = settings.configuration as ParamsConfig
+        val repo = requireNotNull(project.basePath)
+        source.addLogFile("$repo/build/app.log", "App", true, false, false)
+        val wt = "$repo/.kilo/worktrees/params-logs-wt"
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as ParamsConfig
+        assertEquals(Path.of("$wt/build/app.log").toString(), logs(cfg).single().pathPattern)
+        assertEquals("$repo/build/app.log", logs(source).single().pathPattern)
     }
 
     fun testRunRejectsUnknownAndUnsupported() = runBlocking {
@@ -666,6 +709,9 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     }
 
     private fun manager() = WorktreeRunManager(project, cs) { launched += it }
+
+    /** `ExternalSystemRunConfiguration` erases its base type argument, so `logFiles` arrives raw. */
+    private fun logs(config: RunConfiguration): List<LogFileOptions> = (config as RunConfigurationBase<*>).logFiles
 
     /** Publishes the platform's `processStarted` for [clone], as a real launch would. */
     private fun <T : ProcessHandler> start(clone: RunnerAndConfigurationSettings, handler: T): T {
