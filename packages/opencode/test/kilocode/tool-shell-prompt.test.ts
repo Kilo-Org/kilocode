@@ -1,14 +1,14 @@
-// kilocode_change - new file
 import { afterAll, describe, expect, test } from "bun:test"
 import fs from "node:fs/promises"
 import os from "os"
 import path from "path"
 import { ShellPrompt } from "../../src/tool/shell/prompt"
 
-// kilocode_change start - cloud sessions allowlist a session-scoped temp dir, so the
-// bash tool description must name a path the injected external_directory rules permit
+// Cloud sessions allowlist a session-scoped temp dir, so the bash tool
+// description must name a path the injected external_directory rules permit.
+// The allowlist root is the literal `/tmp`, not `os.tmpdir()`.
 const sharedTmp = path.join(os.tmpdir(), "kilo")
-const sessionTmp = path.join(os.tmpdir(), "agent_test-session_1")
+const sessionTmp = path.join("/tmp", "agent_test-session_1")
 
 const withEnv = (env: Record<string, string | undefined>, run: () => void) => {
   const saved = Object.entries(env).map(([key]) => [key, process.env[key]] as const)
@@ -31,7 +31,7 @@ const renderBash = () => ShellPrompt.render("bash", "linux", { maxLines: 100, ma
 describe("tool.shell prompt tmp", () => {
   afterAll(async () => {
     await fs.rm(sessionTmp, { recursive: true, force: true })
-    await fs.rm(path.join(os.tmpdir(), "agent_symlink-test"), { force: true })
+    await fs.rm(path.join("/tmp", "agent_symlink-test"), { force: true })
   })
 
   test("names the shared temp dir outside cloud sessions", () => {
@@ -48,6 +48,12 @@ describe("tool.shell prompt tmp", () => {
 
   test("accepts truthy KILO_CLOUD_AGENT case-insensitively", () => {
     withEnv({ KILO_CLOUD_AGENT: "TRUE", SESSION_ID: "agent_test-session_1" }, () => {
+      expect(renderBash()).toContain(`Use \`${sessionTmp}\` for temporary work`)
+    })
+  })
+
+  test("derives the session dir from the allowlist root even when TMPDIR is overridden", () => {
+    withEnv({ KILO_CLOUD_AGENT: "1", SESSION_ID: "agent_test-session_1", TMPDIR: "/custom-tmp" }, () => {
       expect(renderBash()).toContain(`Use \`${sessionTmp}\` for temporary work`)
     })
   })
@@ -74,7 +80,7 @@ describe("tool.shell prompt tmp", () => {
 
   test("falls back to the shared temp dir when the session path is a symlink", async () => {
     if (process.platform === "win32") return
-    const link = path.join(os.tmpdir(), "agent_symlink-test")
+    const link = path.join("/tmp", "agent_symlink-test")
     await fs.symlink(sharedTmp, link)
     try {
       withEnv({ KILO_CLOUD_AGENT: "1", SESSION_ID: "agent_symlink-test" }, () => {
@@ -85,4 +91,3 @@ describe("tool.shell prompt tmp", () => {
     }
   })
 })
-// kilocode_change end
