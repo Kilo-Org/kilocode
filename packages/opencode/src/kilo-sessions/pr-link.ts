@@ -158,7 +158,7 @@ function urlRepo(link: PrLink) {
     return undefined
   }
   // `platformFromHost` ignores a leading `www.`; a link host must fold it too or
-  // `https://www.github.com/...` never matches a `github.com` worktree.
+  // a `www.`-prefixed GitHub URL never matches a bare `github.com` worktree.
   const host = url.hostname.toLowerCase().replace(/^www\./, "")
   const path = url.pathname
 
@@ -197,13 +197,13 @@ function positiveFor(worktree: string, branch: string | undefined) {
 }
 
 // Parse any remote form git can hold into its host, project path and platform:
-// `git@host:path(.git)`, `ssh://git@host[:port]/path.git`, `https://host/path(.git)`
-// and `git://host/path.git`. The host is lowercased with a leading `www.` and
-// the port stripped, and the path has any trailing slash then `.git` removed, so
-// a `…/proj.git/` remote yields the `proj` project, not `proj.git`. The platform
-// comes from the host, so a self-hosted GitLab host behaves exactly like
-// gitlab.com. `owner`/`repo` stay the last two path segments for the `gh` REST
-// call.
+// scp-style `git@host:path(.git)`, `ssh://git@host[:port]/path.git`, an HTTPS
+// clone URL, and `git://host/path.git`. The host is lowercased with a leading
+// `www.` and the port stripped, and the path has any trailing slash then `.git`
+// removed, so a `…/proj.git/` remote yields the `proj` project, not `proj.git`.
+// The platform comes from the host, so a self-hosted GitLab host behaves exactly
+// like gitlab.com. `owner`/`repo` stay the last two path segments for the `gh`
+// REST call.
 function remoteRepo(raw: string) {
   const value = raw.trim()
   if (!value) return undefined
