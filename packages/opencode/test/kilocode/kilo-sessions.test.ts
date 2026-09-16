@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import * as Log from "@opencode-ai/core/util/log"
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
 import * as fs from "fs/promises"
@@ -1858,6 +1859,40 @@ describe("KiloSessions remote session log lifecycle", () => {
 
     expect(started.map(([message]) => message)).toEqual(["remote session started"])
     expect(later).toEqual([])
+  })
+
+  // The HTTP `remote/disable` endpoint (the VS Code status bar toggle and the
+  // `/remote` TUI command both call it) stops hosting while the process stays
+  // up, so the sessions it closes must be reported as disabled, not as a
+  // process shutdown.
+  test("the user-initiated disable reports the disabled reason", async () => {
+    const writes: string[] = []
+    const original = process.stderr.write
+    process.stderr.write = ((chunk: unknown) => {
+      writes.push(String(chunk))
+      return true
+    }) as typeof process.stderr.write
+
+    const id = SessionID.make("ses_disable_remote_reason")
+    await using tmp = await tmpdir({ git: true })
+    try {
+      await Log.init({ print: true, level: "INFO" })
+      const log = Log.create({ service: "kilo-sessions" })
+      await provide({
+        directory: tmp.path,
+        fn: async () => {
+          RemoteSessionLog.start(log, { sessionID: id, directory: tmp.path })
+          // Exactly what the `remote/disable` handler calls.
+          KiloSessions.disableRemote()
+        },
+      })
+    } finally {
+      process.stderr.write = original
+    }
+
+    const end = writes.find((line) => line.includes("remote session ended") && line.includes(String(id)))
+    expect(end).toBeDefined()
+    expect(end).toContain("reason=disabled")
   })
 
   // Regression: `mock.restore()` cannot undo a raw `globalThis.fetch = mock(...)`

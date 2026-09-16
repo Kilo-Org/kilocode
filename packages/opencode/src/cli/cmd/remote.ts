@@ -42,7 +42,7 @@ export const RemoteCommand = cmd({
       const shutdown = async () => {
         try {
           await context.provide(instance, async () => {
-            KiloSessions.disableRemote()
+            KiloSessions.disableRemote("shutdown")
             await InstanceRuntime.disposeInstance(instance)
           })
         } catch (err) {

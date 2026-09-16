@@ -744,7 +744,7 @@ export namespace KiloSessions {
           yield* Effect.addFinalizer(() =>
             Effect.sync(() => {
               statusSyncs.clear()
-              disableRemote()
+              disableRemote("shutdown")
             }),
           )
         }),
@@ -1031,9 +1031,11 @@ export namespace KiloSessions {
     return enabling
   }
 
-  // `reason` names why this run stopped hosting: "disconnected" when the relay
-  // connection went away, "shutdown" for the process/instance teardown.
-  export function disableRemote(reason = "shutdown") {
+  // `reason` names why this run stopped hosting: "disabled" for the
+  // user-initiated `remote/disable` (the default — the caller turned remote off
+  // while the process stays up), "disconnected" when the relay connection went
+  // away, and "shutdown" for the process/instance teardown.
+  export function disableRemote(reason = "disabled") {
     // kilocode_change - the attached state is cleared below, so this is the
     // last moment this run hosts these sessions. Pair every open start line
     // here; otherwise the entry survives the disconnect and a later `endAll`
