@@ -22,6 +22,7 @@ import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { escapeHtml } from "@/util/html"
 import { trustedInProject } from "../kilocode/skill/trust" // kilocode_change
+import * as SkillPaths from "../kilocode/skill/paths" // kilocode_change
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -273,15 +274,16 @@ const discoverSkills = Effect.fnUntraced(function* (
   const cfg = yield* config.get()
   for (const item of cfg.skills?.paths ?? []) {
     const expanded = item.startsWith("~/") ? path.join(global.home, item.slice(2)) : item
-    const dir = path.isAbsolute(expanded) ? expanded : path.join(directory, expanded)
+    const dir = yield* SkillPaths.resolve(expanded, directory, fsys.isDir) // kilocode_change - "/x" falls back to the project root
     if (!(yield* fsys.isDir(dir))) {
       yield* Effect.logWarning("skill path not found", { path: dir })
       continue
     }
 
     // kilocode_change start - trust follows the config source that declared the path, never the selected path.
+    // A "/x" entry that fell back to the project root is project content and stays untrusted.
     const origin = cfg.skill_path_origins?.[item]
-    const trusted = origin?.trusted === true && path.isAbsolute(expanded)
+    const trusted = origin?.trusted === true && path.isAbsolute(expanded) && dir === expanded
     yield* scan(state, dir, SKILL_PATTERN, {
       trusted,
       root: trusted ? undefined : (origin?.root ?? projectRoot),

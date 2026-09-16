@@ -156,14 +156,14 @@ describe("per-mode model memory", () => {
     expect(getAgentModel(store, env(), "ask")).toEqual(gpt)
   })
 
-  it("ignores stale remembered selections when a configured mode model is user-set", () => {
+  it("keeps an explicit remembered model ahead of the configured mode default", () => {
     const configured: ResolveEnv = {
       ...env(),
       getModeModel: (name) => (name === "code" ? claude : null),
     }
     const store = { ...emptyStore(), modelSelections: { code: gpt } }
 
-    expect(getAgentModel(store, configured, "code", true)).toEqual(claude)
+    expect(getAgentModel(store, configured, "code", true)).toEqual(gpt)
   })
 
   it("applyModel in a session writes only to sessionOverrides", () => {
@@ -174,7 +174,7 @@ describe("per-mode model memory", () => {
     expect(result.modelSelections["code"]).toBeUndefined()
   })
 
-  it("switching modes falls back to default after session override is cleared", () => {
+  it("keeps a session override when its selected mode changes", () => {
     let store = emptyStore()
     const e = env()
 
@@ -182,10 +182,8 @@ describe("per-mode model memory", () => {
     const result = applyModel(store, "code", claude, "session-a")
     store = { ...store, ...result }
 
-    // Simulate mode switch: clear session override (like selectAgent does)
-    const cleared = { ...store, sessionOverrides: {} }
-
-    expect(getSelected(cleared, e, "session-a", "code")).toEqual(KILO_AUTO)
+    const switched = { ...store, agentSelections: { "session-a": "ask" } }
+    expect(getSessionModel(switched, e, "session-a", "code")).toEqual(claude)
   })
 
   it("different modes remember their own model independently", () => {
@@ -234,7 +232,7 @@ describe("per-mode model memory", () => {
     expect(Object.keys(result.sessionOverrides)).toHaveLength(0)
   })
 
-  it("switching from plan to implementation uses implementation config after clearing stale memory", () => {
+  it("keeps a plan session's explicit model when switching to configured implementation mode", () => {
     let store = emptyStore()
     const configured: ResolveEnv = {
       ...env(),
@@ -252,11 +250,9 @@ describe("per-mode model memory", () => {
     const switched: ModelStore = {
       ...store,
       agentSelections: { "session-a": "code" },
-      sessionOverrides: {},
-      modelSelections: { ...store.modelSelections, code: null },
     }
 
-    expect(getSelected(switched, configured, "session-a", "code")).toEqual(gpt)
+    expect(getSelected(switched, configured, "session-a", "code")).toEqual(claude)
   })
 })
 
@@ -338,10 +334,10 @@ describe("organization model store", () => {
     expect(getSessionModel(store, { ...organization, connected: [] }, "session-a", "code")).toEqual(recommendation)
   })
 
-  it("keeps Agent Manager mode configuration precedence without destroying the manual choice", () => {
+  it("honors the same explicit choice in Agent Manager and the chat picker", () => {
     const store = { ...emptyStore(), modelSelections: { code: KILO_AUTO }, userSetAgents: { code: true } }
     const configured = { ...organization, getModeModel: () => first, getGlobalModel: () => gpt }
-    expect(getAgentModel(store, configured, "code")).toEqual(first)
+    expect(getAgentModel(store, configured, "code")).toEqual(KILO_AUTO)
     expect(getSelected(store, configured, undefined, "code")).toEqual(KILO_AUTO)
     expect(store.modelSelections.code).toEqual(KILO_AUTO)
     expect(getAgentModel(store, organization, "code")).toEqual(KILO_AUTO)
@@ -351,5 +347,25 @@ describe("organization model store", () => {
     const store = { ...emptyStore(), modelSelections: { code: KILO_AUTO } }
     expect(getAgentModel(store, { ...organization, getModeModel: () => first }, "code")).toEqual(first)
     expect(getSelected(store, { ...organization, getGlobalModel: () => gpt }, undefined, "code")).toEqual(gpt)
+  })
+
+  it("uses the latest explicit default across modes without changing a session override", () => {
+    const store: ModelStore = {
+      ...emptyStore(),
+      preferred: gpt,
+      modelSelections: { code: KILO_AUTO, ask: first },
+      userSetAgents: { code: true, ask: true },
+      sessionOverrides: { active: claude },
+    }
+    const configured = { ...organization, getModeModel: () => first, getGlobalModel: () => KILO_AUTO }
+    for (const agent of ["code", "ask"]) {
+      expect(getAgentModel(store, configured, agent)).toEqual(gpt)
+      expect(getSelected(store, configured, undefined, agent)).toEqual(gpt)
+      expect(getSelected(store, configured, "active", agent)).toEqual(claude)
+    }
+    const unavailable = { ...configured, connected: ["kilo"] }
+    expect(getAgentModel(store, unavailable, "code")).toEqual(KILO_AUTO)
+    expect(getAgentModel(store, configured, "code")).toEqual(gpt)
+    expect(store.preferred).toEqual(gpt)
   })
 })

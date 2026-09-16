@@ -262,7 +262,10 @@ class GhStatusCoordinator(
         if (next == GhAvailability.OK) {
             notified = false
         } else if (!notified) {
-            notified = true
+            // TIMEOUT pops nothing (see [notify]), so it must not consume the one-shot either.
+            // `notified` only clears on a return to OK, so marking it here would silence an
+            // actionable MISSING/UNAUTH reached directly from TIMEOUT.
+            if (next != GhAvailability.TIMEOUT) notified = true
             notify(project, next)
         }
         schedule()
@@ -399,10 +402,16 @@ class GhStatusCoordinator(
         GhAvailability.MISSING -> SLOW
         GhAvailability.GIT_MISSING -> SLOW
         GhAvailability.RATE_LIMITED -> LIMITED
+        // A gh that does not answer is asked again rarely: each attempt costs a full budget, and the
+        // fast cadence is what turned one hanging command into a permanent stall.
+        GhAvailability.TIMEOUT -> SLOW
     }
 
     @RequiresEdt
     private fun notify(project: Project?, value: GhAvailability) {
+        // Nothing for the user to do about a slow gh, and a popup per stall would be pure noise. The
+        // banner still explains the degraded state.
+        if (value == GhAvailability.TIMEOUT) return
         val target = project ?: ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
         if (value == GhAvailability.GIT_MISSING) {
             KiloNotifications.suggestion(
