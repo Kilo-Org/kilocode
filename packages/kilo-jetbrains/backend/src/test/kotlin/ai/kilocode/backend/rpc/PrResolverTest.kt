@@ -13,12 +13,14 @@ import kotlin.test.assertTrue
 class PrResolverTest {
     private val path = "/repo/.kilo/worktrees/feature-x"
     private val calls = mutableListOf<List<String>>()
+    /** Timeout budget each `gh` call was given, so the short probe budget stays verifiable. */
+    private val budgets = mutableListOf<Int>()
 
     /** The checkout the command in flight runs in, so a test can answer differently per repository. */
     private var dir = ""
 
     @Test
-    fun `resolves through branch config without falling back`() {
+    fun `resolves through the branch selector without falling back`() {
         val resolver = resolver(view = { pr(7, "OPEN") })
 
         val lookup = resolver.resolve(path, "feature/x", base = "main")
@@ -27,9 +29,11 @@ class PrResolverTest {
         assertEquals(7, pull.number)
         assertEquals(path, pull.path)
         assertEquals(GhState.OPEN, pull.state)
-        // The config-driven form answered, so the branch selector and the search never run. The review
-        // conversations follow, which no `--json` field can answer.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), graphql()), calls)
+        // Naming the branch is the first strategy — the selector-less form is the one that has been
+        // seen hanging — so nothing else runs but the review conversations, which no `--json` field
+        // can answer.
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()), calls)
+        assertEquals(listOf(GH_READ_TIMEOUT_MS, GH_READ_TIMEOUT_MS), budgets)
     }
 
     @Test
@@ -47,10 +51,7 @@ class PrResolverTest {
         // Without the retry this reads as "no PR here", and the row loses a PR it has always shown.
         assertEquals(7, assertNotNull(lookup.pr, "the scalar retry must still resolve the PR").number)
         assertEquals(GhAvailability.OK, lookup.availability)
-        assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS), graphql()),
-            calls,
-        )
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
     }
 
     @Test
@@ -109,10 +110,7 @@ class PrResolverTest {
 
         resolver.resolve(path, "feature/x", base = "main")
 
-        assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS), graphql()),
-            calls,
-        )
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
     }
 
     @Test
@@ -130,7 +128,58 @@ class PrResolverTest {
 
         // The downgrade latches, so the fallback costs one extra call in total rather than one per
         // checkout on every poll.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_FIELDS), graphql()), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
+    }
+
+    @Test
+    fun `keeps asking for review and ci fields after a checkout vanished mid-poll`() {
+        // A worktree deleted while a poll is in flight fails the spawn, not the query. The message
+        // carries "does not exist", so it used to read as a rejected field name and latch the downgrade
+        // for the whole backend: every row kept its PR number and silently lost its approved and checks
+        // badges until the IDE restarted.
+        val vanished = "$path-deleted"
+        val resolver = resolver(
+            view = { if (dir == vanished) gone(vanished) else pr(7, "OPEN") },
+            list = { if (dir == vanished) gone(vanished) else ok("[]") },
+            api = { if (dir == vanished) gone(vanished) else threads() },
+        )
+
+        val lost = resolver.resolve(vanished, "feature/x", base = "main")
+        calls.clear()
+        val live = resolver.resolve(path, "feature/x", base = "main")
+
+        assertNull(lost.pr, "a checkout that no longer exists has no pull request to report")
+        assertEquals(GhAvailability.OK, lost.availability, "a deleted worktree is not a gh problem")
+        assertEquals(7, assertNotNull(live.pr).number)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()), calls)
+    }
+
+    @Test
+    fun `keeps asking about review conversations after a checkout vanished mid-poll`() {
+        // The same race one call later: the view answered, then the delete landed, so only the thread
+        // query fails to spawn. Latching there costs every other worktree its conversation badge.
+        val vanished = "$path-deleted"
+        val resolver = resolver(
+            view = { pr(7, "OPEN") },
+            api = { if (dir == vanished) gone(vanished) else threads(unresolved = 2) },
+        )
+
+        val lost = resolver.resolve(vanished, "feature/x", base = "main")
+        val live = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.OK, lost.availability)
+        assertEquals(0, lost.pr?.comments?.unresolved)
+        assertEquals(2, live.pr?.comments?.unresolved, "the query must still run for a live checkout")
+    }
+
+    @Test
+    fun `does not read a vanished working directory as a refused field`() {
+        // Both shapes of the same race: the platform refusing to spawn into a gone directory, and git
+        // losing the directory after it started.
+        assertNull(richRefusal("Cannot start a process, the working directory '$path' does not exist"))
+        assertNull(richRefusal("fatal: Unable to read current working directory: No such file or directory"))
+        // The wordings that really are a refused field must still latch.
+        assertEquals(RichRefusal.FIELD, richRefusal("""Unknown JSON field: "reviewDecision""""))
     }
 
     @Test
@@ -144,18 +193,22 @@ class PrResolverTest {
     }
 
     @Test
-    fun `falls back to the branch selector when config resolves nothing`() {
-        val resolver = resolver(view = { args -> if (args.contains("feature/x")) pr(8, "DRAFT") else missing() })
+    fun `falls back to branch config when the branch selector resolves nothing`() {
+        // A fork PR checked out with `gh pr checkout`: the branch name matches nothing, and only the
+        // selector-less form resolves it through `branch.<name>.merge`.
+        val resolver = resolver(view = { args -> if (args.contains("feature/x")) missing() else pr(8, "DRAFT") })
 
         val lookup = resolver.resolve(path, "feature/x", base = "main")
 
         assertEquals(8, assertNotNull(lookup.pr).number)
         assertEquals(GhState.DRAFT, lookup.pr?.state)
         assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()),
+            listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_RICH_FIELDS), graphql()),
             calls,
-            "the head search should not run once the branch selector answered",
+            "the head search should not run once branch config answered",
         )
+        // The hanging form runs on the short probe budget, not the ordinary read budget.
+        assertEquals(listOf(GH_READ_TIMEOUT_MS, GH_PROBE_TIMEOUT_MS, GH_READ_TIMEOUT_MS), budgets)
     }
 
     @Test
@@ -253,7 +306,7 @@ class PrResolverTest {
         resolver.resolve(path, "feature/x", base = "main")
 
         // The scalar form is refused just as readily, so the field-support fallback must not fire.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
     }
 
     @Test
@@ -280,7 +333,7 @@ class PrResolverTest {
             val pull = assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr)
 
             assertEquals(0, pull.comments.unresolved, "for: $state")
-            assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls, "for: $state")
+            assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls, "for: $state")
         }
     }
 
@@ -306,6 +359,19 @@ class PrResolverTest {
     }
 
     @Test
+    fun `reports a timed-out review conversation lookup without a pull request`() {
+        // A killed process flushes no stderr, so the rate-limit and refusal tests both miss it. Left to
+        // fall through, the PR would carry the default count — "every conversation settled" — and blank a
+        // badge over a query that never ran.
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { CmdOut(-1, "", "", timeout = true) })
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.TIMEOUT, lookup.availability)
+        assertNull(lookup.pr, "a PR carrying a zeroed count would blank a conversation badge already shown")
+    }
+
+    @Test
     fun `keeps the pull request and latches when gh rejects the review conversation field`() {
         // The one failure that is true of every repository this process sees, so it may latch.
         val resolver = resolver(
@@ -321,7 +387,7 @@ class PrResolverTest {
         assertEquals(GhAvailability.OK, first.availability, "a refusal is not a reason to hold every badge")
         assertEquals(7, assertNotNull(second.pr).number)
         // Latched, so a gh that cannot read threads costs one call in total rather than one per poll.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
     }
 
     @Test
@@ -372,7 +438,7 @@ class PrResolverTest {
         )
 
         assertEquals(7, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).number)
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
     }
 
     @Test
@@ -390,9 +456,10 @@ class PrResolverTest {
         list: (List<String>) -> CmdOut = { ok("[]") },
         api: (List<String>) -> CmdOut = { threads() },
     ): PrResolver = PrResolver(
-        gh = { at, args ->
+        gh = { at, args, ms ->
             dir = at.toString()
             calls.add(args)
+            budgets.add(ms)
             when {
                 args.firstOrNull() == "api" -> api(args)
                 args.getOrNull(1) == "list" -> list(args)
@@ -426,6 +493,9 @@ class PrResolverTest {
     private fun ok(stdout: String) = CmdOut(0, stdout, "")
 
     private fun missing() = CmdOut(1, "", "no pull requests found for branch \"feature/x\"")
+
+    /** The spawn failure a checkout deleted mid-poll produces: no process, so no `gh` stderr at all. */
+    private fun gone(at: String) = CmdOut(-1, "", "Cannot start a process, the working directory '$at' does not exist")
 
     private companion object {
         const val SHA = "1111111111111111111111111111111111111111"

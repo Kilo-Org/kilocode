@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.6.3
+
+### Patch Changes
+
+- [#13889](https://github.com/Kilo-Org/kilocode/pull/13889) [`a30a196`](https://github.com/Kilo-Org/kilocode/commit/a30a1962db25356fdffbdef6e77793dcf69af4be) - Fold large pasted text into a `[Pasted ~N lines]` placeholder you can click to unfold and fold back from the gutter. Each paste folds independently, and sent messages fold the same way in the transcript.
+
 ## 7.6.0
 
 ### Minor Changes
@@ -447,6 +453,33 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.7-rc.1] - 2026-09-15
+
+### Added
+
+- Fold and unfold large pasted text blocks directly from the prompt input and transcript.
+
+### Fixed
+
+- Pause the working timer while waiting on a permission prompt or a question.
+- Prevent snapshot progress from hanging a session.
+- Keep diagnostics edits responsive during large edits.
+- Warn when posting to the shared board targets a stopped subagent.
+- Keep a session goal running when a new message arrives instead of dropping it.
+- Only route auxiliary tasks to `kilo-auto/small` when using Kilo credentials.
+- Stop looping on repeated malformed tool calls.
+- Keep Keep Awake active while a wakeup is scheduled, and clear it when a session with pending wakeups is deleted.
+- Speed up local recall searches and improve match ranking.
+- Link sessions to their pull requests without a slow, timed `gh pr view` probe.
+- Submit and cancel custom answers correctly in the question dialog.
+- Format detailed code review findings as distinct sections.
+
+### Changed
+
+- Speed up the first worktree snapshot by skipping unnecessary re-hashing of the checkout.
+- Skip resolving the source project when moving sessions without changes, for faster session moves.
+- Bump the bundled CLI to v7.7.2.
 
 ## [7.1.6] - 2026-09-08
 

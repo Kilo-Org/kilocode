@@ -36,6 +36,14 @@ describe("resolveVersionModels", () => {
 })
 
 describe("buildInitialMessages", () => {
+  test.each(["high", ""])("preserves model, agent, and effort %s without an initial prompt", (variant) => {
+    const model = { providerID: "a", modelID: "m1" }
+    const messages = buildInitialMessages(created(1), [], model, undefined, "plan", variant)
+    expect(messages.at(0)).toEqual({ sessionId: "ses-0", worktreeId: "wt-0", ...model, agent: "plan", variant })
+    const comparisons = buildInitialMessages(created(1), [{ ...model, variant }], {}, "", "plan", "low")
+    expect(comparisons.at(0)).toEqual(messages.at(0))
+  })
+
   test("per-allocation variant wins over the dialog-level variant", () => {
     const models = resolveVersionModels(
       [

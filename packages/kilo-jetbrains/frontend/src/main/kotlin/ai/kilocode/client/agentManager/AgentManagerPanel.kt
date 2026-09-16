@@ -116,6 +116,7 @@ class AgentManagerPanel(
             controller.suggestName(),
             controller.defaultBranch,
             controller.branches,
+            controller.origin,
         )
     },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {

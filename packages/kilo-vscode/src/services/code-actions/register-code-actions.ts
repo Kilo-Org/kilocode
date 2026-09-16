@@ -86,15 +86,18 @@ export function registerCodeActions(
     vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
-      const prompt = createPrompt("ADD_TO_CONTEXT", {
-        filePath: ctx.filePath,
-        startLine: String(ctx.startLine),
-        endLine: String(ctx.endLine),
-        selectedText: ctx.selectedText,
-      })
       const view = target()
       if (!(await revealTarget(view))) return
-      view.postMessage({ type: "appendChatBoxMessage", text: prompt })
+      view.postMessage({
+        type: "appendChatContext",
+        context: {
+          id: crypto.randomUUID(),
+          filePath: ctx.filePath,
+          startLine: ctx.startLine,
+          endLine: ctx.endLine,
+          text: ctx.selectedText,
+        },
+      })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.focusChatInput", async () => {

@@ -119,7 +119,7 @@ Agent Manager PTY WebSocket URL uses `auth_token=<base64 kilo:password>` query m
 | Config owner | Examples |
 |---|---|
 | VS Code settings | `kilo-code.new.*` extension UI, proxy, autocomplete, and integration settings |
-| CLI config | Global and project `kilo.jsonc`, `kilo.json`, compatible OpenCode files, provider auth, tools, permissions, modes |
+| CLI config | Global and project `kilo.jsonc`, `kilo.json`, compatible OpenCode files, provider auth, tools, permissions, agents |
 
 Extension-specific behavior belongs in VS Code settings. Agent runtime behavior belongs in CLI config so TUI, Console, VS Code, and JetBrains can share it.
 

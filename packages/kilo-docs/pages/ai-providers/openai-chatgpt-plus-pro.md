@@ -13,7 +13,7 @@ If you already pay for ChatGPT Plus or Pro, you can use that subscription to run
 - **Flat-rate access to OpenAI models:** Your subscription covers usage without pay-as-you-go API costs.
 - **OAuth login — no API keys:** Click "Sign in to OpenAI Codex," authenticate in your browser, and you're done.
 - **Full agentic workflows:** Generate, refactor, debug, edit files, and run terminal commands inside Kilo Code.
-- **Multiple AI modes:** Switch between Code, Plan, Debug, and Ask modes for different tasks.
+- **Specialized agents:** Switch between the Code, Plan, Debug, and Ask agents for different tasks.
 
 {% callout type="note" %}
 Your ChatGPT subscription works with Kilo Code's core functionality (VS Code extension and CLI), but does **not** include cloud features such as Cloud Agents or Kilo Deploy. To use GPT models in those features, use the [Kilo Gateway](/docs/gateway).

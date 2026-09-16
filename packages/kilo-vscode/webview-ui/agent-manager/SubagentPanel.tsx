@@ -11,7 +11,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { createEffect, createMemo, on, type Accessor, type Component } from "solid-js"
 import { DataBridge } from "../src/App"
 import { ChatView } from "../src/components/chat"
-import { children, backgroundChildren } from "../src/components/chat/background-agents"
+import { children } from "../src/components/chat/background-agents"
 import { useLanguage } from "../src/context/language"
 import { SessionProvider, useSession, useSessionVisibility } from "../src/context/session"
 import { description, label, type Activity } from "../src/utils/session-activity"
@@ -32,7 +32,7 @@ interface Props {
   onClosePanel: () => void
 }
 
-const SubagentChat: Component<{ active: Accessor<string | undefined>; capped: Accessor<boolean> }> = (props) => {
+const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props) => {
   const session = useSession()
 
   createEffect(
@@ -44,19 +44,13 @@ const SubagentChat: Component<{ active: Accessor<string | undefined>; capped: Ac
 
   return (
     <DataBridge>
-      <ChatView
-        readonly
-        interactivePrompts={false}
-        reasoningCapped={props.capped()}
-        promptBoxId="agent-manager:subagent"
-      />
+      <ChatView readonly interactivePrompts={false} promptBoxId="agent-manager:subagent" />
     </DataBridge>
   )
 }
 
 interface ContentProps extends Props {
   activity: (id: string) => Activity
-  background: Accessor<ReadonlySet<string>>
 }
 
 const SubagentContent: Component<ContentProps> = (props) => {
@@ -141,7 +135,7 @@ const SubagentContent: Component<ContentProps> = (props) => {
         }}
       />
       <div class="am-subagent-chat">
-        <SubagentChat active={props.active} capped={() => props.background().has(props.active() ?? "")} />
+        <SubagentChat active={props.active} />
       </div>
     </section>
   )
@@ -155,15 +149,10 @@ export const SubagentPanel: Component<Props> = (props) => {
     const id = session.currentSessionID()
     return id ? children(session.getSessionToolParts(id)) : []
   })
-  // Background subagent transcripts show reasoning as a compact capped preview.
-  const background = createMemo(() => {
-    const id = session.currentSessionID()
-    return id ? backgroundChildren(session.getSessionToolParts(id)) : new Set<string>()
-  })
   return (
     <AgentAvatarPalette ids={siblings()}>
       <SessionProvider>
-        <SubagentContent {...props} activity={session.activityFor} background={background} />
+        <SubagentContent {...props} activity={session.activityFor} />
       </SessionProvider>
     </AgentAvatarPalette>
   )
