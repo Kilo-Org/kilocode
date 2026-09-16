@@ -27,9 +27,10 @@ describe("SystemPrompt.provider", () => {
       "gpt-6",
       "gpt-6-astra",
       "gpt-6.0-astra",
+      "gpt-6.1",
+      "gpt-6.1-astra",
       "openai/gpt-6-astra-pro",
       "~openai/gpt-astra-latest",
-      "gpt-6-codex",
       "gpt-7",
       "provider/GPT-10.2",
     ])("selects the dedicated prompt for %s", (id) => {
