@@ -34,7 +34,7 @@ import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
-import { useSlashCommand } from "../../hooks/useSlashCommand"
+import { useSlashCommand, skill as isSkill } from "../../hooks/useSlashCommand"
 import { useGoalComposer } from "./goal/useGoalComposer"
 import { GoalHeader } from "./goal/GoalHeader"
 import { useGhostText } from "../../hooks/useGhostText"
@@ -1861,56 +1861,43 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             {(() => {
               const all = slash.results()
               const actions = all.filter((c) => c.action)
-              const server = all.filter((c) => !c.action)
-              const offset = actions.length
+              const commands = all.filter((c) => !c.action && !isSkill(c))
+              const skills = all.filter(isSkill)
+              // results() is ordered actions, commands, skills; keyboard indexes follow that order.
+              const groups = [
+                { label: "Actions", items: actions, offset: 0 },
+                { label: "Commands", items: commands, offset: actions.length },
+                { label: "Skills", items: skills, offset: actions.length + commands.length },
+              ].filter((group) => group.items.length > 0)
               return (
-                <>
-                  <Show when={actions.length > 0}>
-                    <div class="slash-command-group-label">Actions</div>
-                    <For each={actions}>
-                      {(cmd, idx) => (
-                        <div
-                          class="slash-command-item"
-                          classList={{ "slash-command-item--active": idx() === slash.index() }}
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
-                          }}
-                          onMouseEnter={() => slash.setIndex(idx())}
-                        >
-                          <span class="slash-command-name">/{cmd.name}</span>
-                          <Show when={cmd.description}>
-                            <span class="slash-command-desc">{cmd.description}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                  <Show when={server.length > 0}>
-                    <Show when={actions.length > 0}>
-                      <div class="slash-command-separator" />
-                    </Show>
-                    <div class="slash-command-group-label">Commands</div>
-                    <For each={server}>
-                      {(cmd, idx) => (
-                        <div
-                          class="slash-command-item"
-                          classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
-                          }}
-                          onMouseEnter={() => slash.setIndex(idx() + offset)}
-                        >
-                          <span class="slash-command-name">/{cmd.name}</span>
-                          <Show when={cmd.description}>
-                            <span class="slash-command-desc">{cmd.description}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </>
+                <For each={groups}>
+                  {(group, g) => (
+                    <>
+                      <Show when={g() > 0}>
+                        <div class="slash-command-separator" />
+                      </Show>
+                      <div class="slash-command-group-label">{group.label}</div>
+                      <For each={group.items}>
+                        {(cmd, idx) => (
+                          <div
+                            class="slash-command-item"
+                            classList={{ "slash-command-item--active": idx() + group.offset === slash.index() }}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                            }}
+                            onMouseEnter={() => slash.setIndex(idx() + group.offset)}
+                          >
+                            <span class="slash-command-name">/{cmd.name}</span>
+                            <Show when={cmd.description}>
+                              <span class="slash-command-desc">{cmd.description}</span>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </>
+                  )}
+                </For>
               )
             })()}
           </Show>
