@@ -34,6 +34,19 @@ export function applySandboxStates(current: Record<string, SandboxState>, next: 
   return { ...current, [next.sessionID]: state }
 }
 
+// VS Code's webview preload intercepts Ctrl/Cmd+Z and Ctrl+Y and forwards them
+// to the workbench, which can undo an unrelated editor (#13724). Callers must
+// stop propagation, and because a webview keypress has no native undo default
+// action on macOS, perform the edit with document.execCommand (#14191).
+// Match keyCode like VS Code does so non-Latin layouts stay in lockstep.
+export function undoKey(e: KeyboardEvent): "undo" | "redo" | undefined {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+  const z = e.keyCode === 90 || e.key.toLowerCase() === "z"
+  const y = e.keyCode === 89 || e.key.toLowerCase() === "y"
+  if (z) return e.shiftKey ? "redo" : "undo"
+  if (y && !e.shiftKey) return "redo"
+}
+
 export function fileName(path: string): string {
   const normalized = path.replaceAll("\\", "/").replace(/\/+$/, "")
   return normalized.split("/").pop() ?? normalized

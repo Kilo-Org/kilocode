@@ -44,7 +44,7 @@ import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToTex
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
-import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
@@ -451,8 +451,14 @@ export const NewWorktreeDialog: Component<{
   }
 
   const undo = (e: KeyboardEvent) => {
-    if (e.key !== "z" || (!e.metaKey && !e.ctrlKey) || e.shiftKey || prior === null) return
+    const action = undoKey(e)
+    if (!action) return
+    e.stopPropagation()
     e.preventDefault()
+    if (action === "redo" || prior === null) {
+      document.execCommand(action)
+      return
+    }
     const restored = prior
     cancel()
     setPrompt(restored)

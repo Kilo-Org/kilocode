@@ -60,6 +60,7 @@ import {
   memoryRest,
   type SandboxDefaultState,
   type SandboxState,
+  undoKey,
 } from "./prompt-input-utils"
 import { sandboxMessages } from "./prompt-sandbox-messages"
 import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
@@ -1307,6 +1308,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return true
   }
 
+  // Native undo/redo. Plain undo falls through to handleKeyDown when an
+  // Enhance result can be reverted first.
+  const undo = (e: KeyboardEvent): boolean => {
+    const action = undoKey(e)
+    if (!action) return false
+    e.stopPropagation()
+    if (action === "undo" && preEnhanceText !== null) return false
+    e.preventDefault()
+    if (readonly()) return true
+    document.execCommand(action)
+    return true
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (goal.pending()) {
       escape(e)
@@ -1314,7 +1328,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
     if (locked()) return
     // Undo enhanced prompt with Ctrl+Z / ⌘Z
-    if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
+    if (undoKey(e) === "undo" && preEnhanceText !== null) {
       e.preventDefault()
       const restored = preEnhanceText
       const pastes = preEnhancePastes
@@ -2086,10 +2100,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onInput={handleInput}
             onKeyDown={(e) => {
               if (speechDown(e)) return
-              const key = e.key.toLowerCase()
-              if ((e.ctrlKey || e.metaKey) && !e.altKey && (key === "z" || (key === "y" && !e.shiftKey))) {
-                e.stopPropagation()
-              }
+              if (undo(e)) return
               handleKeyDown(e)
             }}
             onKeyUp={(e) => {
