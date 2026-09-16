@@ -40,6 +40,12 @@ describe("Agent Manager New Worktree project targeting", () => {
     expect(css).toContain('[data-component="dialog"]:has(.am-nv-project-inline [data-component="popover-content"])')
   })
 
+  it("keeps project skills available in the worktree prompt", () => {
+    expect(dialog).toContain("WORKTREE_PROMPT_COMMAND_SOURCES")
+    expect(dialog).toContain('new Set<NonNullable<SlashCommandInfo["source"]>>(["skill"])')
+    expect(dialog).toContain("WORKTREE_PROMPT_COMMAND_SOURCES,\n  )")
+  })
+
   it("keeps project activation separate from accordion expansion", () => {
     const header = readFileSync(join(root, "webview-ui", "agent-manager", "SidebarSectionHeader.tsx"), "utf8")
     const projects = readFileSync(join(root, "webview-ui", "agent-manager", "ProjectsSection.tsx"), "utf8")
