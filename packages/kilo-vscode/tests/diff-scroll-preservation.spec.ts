@@ -370,6 +370,71 @@ test("keeps the inline diff position stable while scrolling upward", async ({ pa
   expect(result.range).toBeLessThanOrEqual(1)
 })
 
+test("keeps the inline diff position stable when the row width changes", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 760 })
+  await page.goto(inlineStoryUrl(), { waitUntil: "load" })
+  await disableAnimations(page)
+  await page.waitForSelector(".am-diff-content diffs-container", { state: "attached" })
+
+  const scroll = page.locator(".am-diff-content")
+  // Materialize every row at the wider layout so each row records its height.
+  const mounted = await scroll.evaluate(async (el) => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+    const initial = Array.from(el.querySelectorAll("[data-file-path]"), (row) => row.getAttribute("data-file-path"))
+    while (el.scrollTop < el.scrollHeight - el.clientHeight - 1) {
+      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
+      await frame()
+    }
+    for (let index = 0; index < 30; index++) await frame()
+    return initial
+  })
+
+  // A width change (panel resize or scrollbar toggle) leaves the measured
+  // heights on a different width, so a remounted row must reuse the last
+  // measured height instead of collapsing to the capped estimate.
+  await page.setViewportSize({ width: 880, height: 760 })
+
+  const result = await scroll.evaluate(async (el, initial) => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+    const settle = async (count: number) => {
+      for (let index = 0; index < count; index++) await frame()
+    }
+    const seen = new Set(initial)
+    let remounts = 0
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue
+          const rows = node.matches("[data-file-path]") ? [node] : Array.from(node.querySelectorAll("[data-file-path]"))
+          for (const row of rows) {
+            const file = row.getAttribute("data-file-path")
+            if (seen.has(file)) remounts++
+            seen.add(file)
+          }
+        }
+      }
+    })
+    observer.observe(el, { childList: true, subtree: true })
+
+    let correction = 0
+    let range = 0
+    while (el.scrollTop > 0) {
+      const height = el.scrollHeight
+      const intended = Math.max(0, el.scrollTop - 80)
+      el.scrollTop = intended
+      await settle(2)
+      correction = Math.max(correction, Math.abs(el.scrollTop - intended))
+      range = Math.max(range, Math.abs(el.scrollHeight - height))
+    }
+    observer.disconnect()
+    return { correction, range, remounts }
+  }, mounted)
+
+  expect(result.remounts).toBeGreaterThan(0)
+  expect(result.correction).toBeLessThanOrEqual(1)
+  expect(result.range).toBeLessThanOrEqual(1)
+})
+
 test("keeps cached worktree reviews visible on every switch frame", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 760 })
   await page.goto(`/iframe.html?id=${CACHE_STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })

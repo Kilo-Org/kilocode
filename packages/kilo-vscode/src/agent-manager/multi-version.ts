@@ -96,12 +96,12 @@ export function buildInitialMessages(
       worktreeId: entry.worktreeId,
       providerID: pid,
       modelID: mid,
+      agent,
+      // A per-allocation effort pick wins even when preparing an empty session.
+      variant: model?.variant ?? variant,
     }
     if (prompt) {
       msg.text = prompt
-      msg.agent = agent
-      // A per-allocation effort pick wins over the dialog-level variant.
-      msg.variant = model?.variant ?? variant
       msg.files = files
     }
     return msg

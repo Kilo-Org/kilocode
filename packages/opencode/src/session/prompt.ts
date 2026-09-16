@@ -146,6 +146,7 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID, scope?: KiloSessionControl.AbortScope) => Effect.Effect<void> // kilocode_change
+  readonly paused: (sessionID: SessionID) => Effect.Effect<boolean> // kilocode_change - wakeup resume refuses a paused session instead of dropping its turn
   readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
@@ -2569,6 +2570,7 @@ export const layer = Layer.effect(
 
     return Service.of({
       cancel,
+      paused: (id) => control.paused(id), // kilocode_change - wakeup resume reads it before forking a turn
       prompt,
       loop: (input) => loop(input).pipe(Effect.orDie),
       shell,

@@ -3,12 +3,16 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.diff.GIT_COMMAND_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
+import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
@@ -93,8 +97,11 @@ class KiloWorktreeRpcApiImpl(
         private const val PR_TTL = 90_000L
         // The rename+prune path returns long before this ever matters; it only bounds the fallback
         // `git worktree remove --force`, which recursively deletes the checkout synchronously and
-        // therefore needs far more headroom than the 30s default query timeout.
+        // therefore needs far more headroom than the default query timeout.
         private const val REMOVE_TIMEOUT_MS = 600_000
+        // Total git/gh processes this service will run at once for one repository. Each poll used to
+        // create its own Semaphore(4), so stats + dirty + PR polls could fan out three times that.
+        private const val PROCESS_BUDGET = 4
         // Above this, a caller waiting on the per-repo mutation lock is worth a log line — most waits
         // are a few ms and would just be noise.
         private const val LOCK_WAIT_LOG_THRESHOLD_MS = 200L
@@ -105,9 +112,11 @@ class KiloWorktreeRpcApiImpl(
         }
     }
 
+    /** Shared across every polling path in this service; see [parallel]. */
+    private val budget = Semaphore(PROCESS_BUDGET)
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
-    private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
+    private val resolver = PrResolver(gh = { dir, args, ms -> runGh(dir, args, ms) }, git = ::runGit)
     private val ghLock = Any()
     // Serializes the git-mutating operations (create/import/remove/rename/adopt/reorder/session-list)
     // for one repository, keyed by its main worktree's real path, so concurrent calls cannot interleave
@@ -122,21 +131,20 @@ class KiloWorktreeRpcApiImpl(
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
-        val res = runGit(base, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreeListDto()
-        val all = parseWorktreeList(res.stdout)
-        val items = managedWorktrees(all)
-        val alive = live(items.filter { it.main || Files.isDirectory(Path.of(it.path)) })
+        // Same reconcile the stats/dirty polls use, so the rows and their status can never disagree
+        // about which worktrees exist.
+        val reconciled = reconcile(base) ?: return@withContext WorktreeListDto()
+        val alive = reconciled.items
         val store = worktreeNameStore(alive)
         val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
         // Cheap and non-blocking: sweeps orphaned `.kilo-delete-*` directories left by an interrupted
         // delete (this plugin's or the VS Code extension's) every time the list is polled, so they do
         // not require a fresh remove() to be cleaned up.
-        all.firstOrNull { it.main }?.let {
+        alive.firstOrNull { it.main }?.let {
             trash?.sweep(Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize())
         }
-        WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
+        WorktreeListDto(orderWorktrees(named, state.worktreeOrder), orphans = reconciled.orphans)
     }
 
     override suspend fun open(directory: String): Boolean {
@@ -194,12 +202,14 @@ class KiloWorktreeRpcApiImpl(
         val refs = runGit(base, "for-each-ref", "--format=%(refname:short)", "refs/heads")
         val branches = if (!refs.ok) emptyList() else refs.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val current = runGit(base, "branch", "--show-current").stdout.trim().takeIf { it.isNotEmpty() }
-        WorktreeBranchesDto(branches, current)
+        val remote = runGit(base, "remote", "get-url", "origin")
+        val origin = if (remote.ok) parseRepoSlug(remote.stdout) else null
+        WorktreeBranchesDto(branches, current, origin)
     }
 
     override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val items = sync(root) ?: return@withContext WorktreeStatsListDto()
+        val items = sync(root) ?: return@withContext WorktreeStatsListDto(unavailable = true)
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> statsSafe(item, fallback) })
     }
@@ -212,7 +222,7 @@ class KiloWorktreeRpcApiImpl(
      */
     override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
+        val items = sync(root) ?: return@withContext WorktreeDirtyListDto(unavailable = true)
         WorktreeDirtyListDto(parallel(items) { item -> dirtySafe(item) })
     }
 
@@ -227,7 +237,12 @@ class KiloWorktreeRpcApiImpl(
      * `$GIT_DIR/worktrees` bookkeeping for a checkout it finds missing, never any files, and never a
      * locked worktree (the documented guard for worktrees on unmounted volumes).
      */
-    private fun sync(root: Path): List<WorktreeDto>? {
+    private fun sync(root: Path): List<WorktreeDto>? = reconcile(root)?.items
+
+    /** Managed worktrees of one repository, plus directories nothing claims. */
+    internal data class Reconciled(val items: List<WorktreeDto>, val orphans: List<String>)
+
+    private fun reconcile(root: Path): Reconciled? {
         if (!Files.isDirectory(root)) {
             LOG.info("worktree sync skipped, directory does not exist: $root")
             return null
@@ -236,16 +251,83 @@ class KiloWorktreeRpcApiImpl(
         if (!res.ok) return null
         val raw = parseWorktreeList(res.stdout)
         val stale = staleWorktrees(raw, trash)
-        val synced = if (stale.isEmpty()) managedWorktrees(raw) else {
+        val all = if (stale.isEmpty()) raw else {
             LOG.info("worktree sync pruning stale managed worktrees: ${stale.joinToString(", ") { it.path }}")
-            val prune = runGit(root, "worktree", "prune", "-v")
-            if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
-            if (prune.ok && prune.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(prune.stdout)}")
-            val again = runGit(root, "worktree", "list", "--porcelain")
-            if (!again.ok) return null
-            managedWorktrees(parseWorktreeList(again.stdout))
+            // Pruning rewrites the same `$GIT_DIR/worktrees` bookkeeping create/import/remove/rename
+            // are serialised on, and `git worktree add` registers a worktree before it has finished
+            // writing the checkout — so a poll that pruned mid-add would delete the metadata of a
+            // worktree being created. The most frequent caller in the backend must not be the one
+            // path that skips that mutex.
+            val pruned = exclusive(main(raw), "prune") { prune(root) }
+            // Not pruning is harmless: the entry is still stale on the next poll, and this pass
+            // simply reports what git reported. Waiting for the mutation instead would park every
+            // status poll behind a `git worktree add` on a large repository.
+            if (pruned == null) raw
+            else {
+                val again = runGit(root, "worktree", "list", "--porcelain")
+                if (!again.ok) return null
+                parseWorktreeList(again.stdout)
+            }
         }
-        return live(synced.filter { Files.isDirectory(Path.of(it.path)) })
+        val items = live(managedWorktrees(all).filter { Files.isDirectory(Path.of(it.path)) })
+        return Reconciled(items, orphanDirs(all, main(all)))
+    }
+
+    private fun main(all: List<WorktreeDto>): Path? =
+        all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
+
+    /**
+     * `git worktree prune`, on a budget short enough to bound how long a mutation waits for a poll.
+     *
+     * See [GIT_PRUNE_TIMEOUT_MS]: this runs holding the repository's mutation lock, so the write
+     * budget would let one wedged prune park a user-initiated create for three minutes.
+     */
+    private fun prune(root: Path): Boolean {
+        val res = runGit(root, listOf("worktree", "prune", "-v"), GIT_PRUNE_TIMEOUT_MS)
+        if (!res.ok) LOG.warn("worktree prune during sync failed: exit=${res.exit} stderr=${snippet(res.stderr)}")
+        if (res.ok && res.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(res.stdout)}")
+        return res.ok
+    }
+
+    /**
+     * Runs [block] holding this repository's mutation lock, or answers null when a mutation holds it.
+     *
+     * Keyed exactly like [lock], so a poll and a mutation on the same repository contend on the same
+     * mutex. A null [main] means git did not name a main working tree, and a prune needs one.
+     */
+    private fun <T> exclusive(main: Path?, op: String, block: () -> T): T? {
+        val key = (main ?: return null).toString()
+        return exclusive(locks.computeIfAbsent(key) { Mutex() }, op, key, block)
+    }
+
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track.
+     *
+     * Reported, never removed: a leftover directory can still hold files that exist nowhere else, so
+     * deleting one is a user's decision. They are worth naming because they accumulate silently — an
+     * interrupted delete or a hand-removed `.git/worktrees` entry leaves one behind every time.
+     */
+    private fun orphanDirs(all: List<WorktreeDto>, base: Path?): List<String> {
+        val dir = base?.resolve(".kilo")?.resolve("worktrees")?.normalize() ?: return emptyList()
+        if (!Files.isDirectory(dir)) return emptyList()
+        val tracked = all.map { Path.of(it.path).normalize().toString() }.toSet()
+        val orphans = runCatching {
+            Files.list(dir).use { stream ->
+                stream.filter { Files.isDirectory(it) }
+                    .map { it.normalize() }
+                    .filter { it.fileName.toString().startsWith(".kilo-delete-").not() }
+                    .filter { it.toString() !in tracked }
+                    .map { it.toString() }
+                    .toList()
+            }
+        }.getOrElse { err ->
+            LOG.info("worktree orphan scan skipped dir=$dir reason=${err.message}")
+            emptyList()
+        }
+        if (orphans.isNotEmpty()) {
+            LOG.info("worktree orphan directories (not removed): ${orphans.joinToString(", ")}")
+        }
+        return orphans
     }
 
     override suspend fun ghStatus(directory: String, github: Boolean, maxAge: Long?): GhAvailability = withContext(Dispatchers.IO) {
@@ -489,6 +571,28 @@ class KiloWorktreeRpcApiImpl(
         withContext(Dispatchers.IO) {
             val base = Path.of(directory).normalize()
             val ref = parsePrUrl(url) ?: return@withContext CreateWorktreeResultDto(error = "Enter a valid GitHub pull request URL")
+            // `gh pr view` resolves against the URL's own repo, but every fetch below targets this
+            // checkout's local `origin` — so a foreign PR URL either fails obscurely or, if the local
+            // origin happens to have a PR sharing that number, silently imports the wrong PR. Catch it
+            // before spawning `gh` at all. A null origin (no remote, non-GitHub remote, GitHub
+            // Enterprise) skips the guard rather than blocking an import we cannot verify.
+            //
+            // The comparison is by remote URL, so an origin left stale by a GitHub rename or transfer
+            // reads as foreign even though it still reaches the same repository through GitHub's
+            // redirect. Resolving the canonical name needs a network round trip on every import to
+            // repair one stale remote, so the message names the remote as the other possible cause
+            // instead.
+            val slug = "${ref.owner}/${ref.repo}"
+            val remote = runGit(base, "remote", "get-url", "origin")
+            val origin = if (remote.ok) parseRepoSlug(remote.stdout) else null
+            if (foreignPr(slug, origin)) {
+                LOG.warn("pr import rejected: url=$url pr=$slug origin=$origin")
+                return@withContext CreateWorktreeResultDto(
+                    error = "This pull request belongs to $slug, but this project's origin is $origin. " +
+                        "Open a project on $slug to import it there, or update this project's origin " +
+                        "remote if it is out of date.",
+                )
+            }
             lock(base, "import") {
                 when (ghAvailable(base)) {
                     GhAvailability.GIT_MISSING -> return@lock CreateWorktreeResultDto(error = "Git is not installed")
@@ -498,6 +602,11 @@ class KiloWorktreeRpcApiImpl(
                     // fail anyway, so say why instead of leaving a half-made worktree behind.
                     GhAvailability.RATE_LIMITED -> return@lock CreateWorktreeResultDto(
                         error = "GitHub is rate limiting this token. Try again later.",
+                    )
+                    // Same reasoning as a spent budget: several gh calls follow, and a gh that just
+                    // failed to answer within its budget would strand the import part-way.
+                    GhAvailability.TIMEOUT -> return@lock CreateWorktreeResultDto(
+                        error = "GitHub CLI (gh) did not respond in time. Try again.",
                     )
                     GhAvailability.OK -> Unit
                 }
@@ -509,10 +618,12 @@ class KiloWorktreeRpcApiImpl(
                 }
                 val head = parsePrHead(view.stdout)
                 val branch = prBranchName(head, ref.number)
-                val failure = fetchPrBranch({ args -> runGit(base, args) }, ref.number, head, branch)
+                // Write budget: `git fetch` talks to the remote, and the read budget turns a slow
+                // network into a reported failure.
+                val failure = fetchPrBranch({ args -> runGit(base, args, GIT_WRITE_TIMEOUT_MS) }, ref.number, head, branch)
                 if (failure != null) {
-                    LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()}")
-                    return@lock CreateWorktreeResultDto(error = failure.stderr.ifBlank { "Failed to check out the pull request branch" })
+                    LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()} timeout=${failure.timeout}")
+                    return@lock CreateWorktreeResultDto(error = fetchReason(failure, branch))
                 }
                 addWorktree(base, branch, existing = true, baseRef = null)
             }
@@ -542,8 +653,8 @@ class KiloWorktreeRpcApiImpl(
         LOG.info("worktree add requested: branch=$branch existing=$existing base=${baseRef ?: "(current)"} dir=$dir")
         val res = add(base, args)
         if (!res.ok) {
-            LOG.warn("worktree add failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()}")
-            return CreateWorktreeResultDto(error = res.stderr.ifBlank { "git worktree add failed" })
+            LOG.warn("worktree add failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()} timeout=${res.timeout}")
+            return CreateWorktreeResultDto(error = reason(res, "git worktree add failed"))
         }
         LOG.info("worktree created: branch=$branch dir=$dir")
         invalidate()
@@ -801,25 +912,33 @@ class KiloWorktreeRpcApiImpl(
 
     private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
 
-    private fun runGh(base: Path, args: List<String>): CmdOut {
+    private fun runGh(base: Path, args: List<String>, timeoutMs: Int = GH_READ_TIMEOUT_MS): CmdOut {
         return try {
             val cmd = GeneralCommandLine(listOf("gh") + args)
                 .withWorkDirectory(base.toFile())
                 .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
-            val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            if (out.isTimeout) LOG.warn("gh command timed out: dir=$base args=${args.joinToString(" ")} ms=30000")
+            val out = CapturingProcessHandler(cmd).runProcess(timeoutMs)
+            if (out.isTimeout) {
+                LOG.warn("gh command timed out: dir=$base args=${args.joinToString(" ")} ms=$timeoutMs")
+            }
             CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr, out.isTimeout)
         } catch (e: Exception) {
             CmdOut(-1, "", e.message ?: "gh failed")
         }
     }
 
+    /**
+     * `git worktree add`, with one prune-and-retry when a stale registration is in the way.
+     *
+     * Runs on the write budget: checking out a working tree is not a metadata query, and the read
+     * budget cuts off perfectly healthy adds on large repositories.
+     */
     private fun add(base: Path, args: List<String>): CmdOut {
-        val first = runGit(base, *args.toTypedArray())
+        val first = runGit(base, args, GIT_WRITE_TIMEOUT_MS)
         if (first.ok || !stale(first.stderr)) return first
-        val prune = runGit(base, "worktree", "prune")
+        val prune = runGit(base, listOf("worktree", "prune"), GIT_WRITE_TIMEOUT_MS)
         if (!prune.ok) LOG.warn("worktree prune before retry failed: exit=${prune.exit} stderr=${prune.stderr.trim()}")
-        return runGit(base, *args.toTypedArray())
+        return runGit(base, args, GIT_WRITE_TIMEOUT_MS)
     }
 
     private fun stale(text: String): Boolean {
@@ -828,9 +947,15 @@ class KiloWorktreeRpcApiImpl(
             text.contains("missing but already registered worktree", ignoreCase = true)
     }
 
+    /**
+     * Run [block] for every item, bounded by one service-wide process budget.
+     *
+     * The budget is shared across stats, dirty, and PR polling on purpose: those loops run on the
+     * same cadence, and a per-call semaphore let them multiply into a process storm where even
+     * `git --version` timed out.
+     */
     private suspend fun <T, R> parallel(items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
-        val sem = Semaphore(4)
-        items.map { item -> async { sem.withPermit { block(item) } } }.map { it.await() }
+        items.map { item -> async { budget.withPermit { block(item) } } }.map { it.await() }
     }
 
     /**
@@ -843,12 +968,16 @@ class KiloWorktreeRpcApiImpl(
         stats(item, fallback)
     }.getOrElse { err ->
         if (err is CancellationException) throw err
-        if (badDir(err.message.orEmpty())) {
+        val gone = badDir(err.message.orEmpty())
+        if (gone) {
             LOG.info("worktree poll skipped: op=stats path=${item.path} reason=gone")
         } else {
             LOG.warn("worktree poll failed: op=stats path=${item.path} message=${err.message}", err)
         }
-        WorktreeStatsDto(item.path)
+        // A directory that is gone has genuinely nothing to report; anything else is unknown, and
+        // zeros would read as "clean" in the UI.
+        if (gone) WorktreeStatsDto(item.path)
+        else WorktreeStatsDto(item.path, unavailable = true, reason = err.message.orEmpty())
     }
 
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
@@ -872,12 +1001,14 @@ class KiloWorktreeRpcApiImpl(
         dirty(item)
     }.getOrElse { err ->
         if (err is CancellationException) throw err
-        if (badDir(err.message.orEmpty())) {
+        val gone = badDir(err.message.orEmpty())
+        if (gone) {
             LOG.info("worktree poll skipped: op=dirty path=${item.path} reason=gone")
         } else {
             LOG.warn("worktree poll failed: op=dirty path=${item.path} message=${err.message}", err)
         }
-        WorktreeDirtyDto(item.path)
+        if (gone) WorktreeDirtyDto(item.path)
+        else WorktreeDirtyDto(item.path, unavailable = true, reason = err.message.orEmpty())
     }
 
     private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
@@ -965,7 +1096,7 @@ class KiloWorktreeRpcApiImpl(
             return@synchronized GhAvailability.OK
         }
         val res = runGh(root, "auth", "status")
-        val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
+        val value = if (res.ok) GhAvailability.OK else classifyGhError(res)
         ghCache = Timed(System.currentTimeMillis(), value)
         LOG.info("gh probe result reason=$reason value=$value exit=${res.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(res.stderr)}")
         value
@@ -987,6 +1118,38 @@ class KiloWorktreeRpcApiImpl(
     internal fun reason(res: CmdOut, fallback: String): String {
         if (res.timeout) return "timed out"
         return res.stderr.ifBlank { fallback }
+    }
+
+    /** Import-specific wording for a failed PR fetch of [branch]. Raw git output stays in the log. */
+    internal fun fetchReason(res: CmdOut, branch: String): String {
+        if (res.timeout) return "Fetching the pull request timed out. Check your connection and try again."
+        if (refConflict(res)) {
+            // Only the summary form of the conflict is guaranteed; when git named the blocking ref,
+            // say which branch to deal with rather than leaving the user to find it.
+            val blocking = conflictBranch(res)
+            if (blocking == null || blocking == branch) {
+                return "Another branch name blocks \"$branch\". " +
+                    "Delete or rename the conflicting branch, then import again."
+            }
+            return "Another branch named \"$blocking\" blocks \"$branch\". " +
+                "Delete or rename that branch, then import again."
+        }
+        if (res.stderr.contains("find remote ref")) {
+            return "This pull request's head is no longer on the remote. Reopen or re-push the branch, then import again."
+        }
+        val text = snippet(res.stderr)
+        return if (text.isBlank()) "Couldn't check out the pull request branch." else "Couldn't check out the pull request branch: $text"
+    }
+
+    /**
+     * The ref git reported as blocking the fetch, trimmed to a branch-like name, or null when git
+     * printed only the summary form. Both namespaces appear here: the tracking fetches collide under
+     * `refs/remotes/origin/`, while the cross-repo pull-ref fetch and the closing `branch --force`
+     * write `refs/heads/`.
+     */
+    private fun conflictBranch(res: CmdOut): String? {
+        val match = Regex("'([^']+)' exists; cannot create").find(res.stderr) ?: return null
+        return match.groupValues[1].removePrefix("refs/remotes/origin/").removePrefix("refs/heads/")
     }
 
 }
@@ -1016,6 +1179,37 @@ internal fun badDir(text: String): Boolean {
     val msg = text.lowercase()
     if (msg.contains("working directory") && (msg.contains("does not exist") || msg.contains("not a directory"))) return true
     return msg.contains("unable to read current working directory")
+}
+
+/**
+ * Runs [block] holding [mutex], or answers null without waiting when something else holds it.
+ *
+ * The suspending per-repository lock cannot be used from a polling path: a poll that waited would
+ * queue behind mutations budgeted in minutes, and it is reached from plain functions. [Mutex.tryLock]
+ * gives the mutual exclusion without the wait, and callers treat a refusal as "not this pass" —
+ * correct for work that is only ever opportunistic, like pruning stale worktree metadata.
+ */
+internal fun <T> exclusive(mutex: Mutex, op: String, path: String, block: () -> T): T? {
+    if (!mutex.tryLock()) {
+        KiloWorktreeRpcApiImpl.LOG.info("worktree poll skipped: op=$op path=$path reason=mutating")
+        return null
+    }
+    return try {
+        block()
+    } finally {
+        mutex.unlock()
+    }
+}
+
+/**
+ * Classifies a failing `gh` command, using the timeout flag rather than guessing from text.
+ *
+ * A timed-out command has no stderr to classify, so text-only classification fell through to [OK] —
+ * which told the probe loop everything was fine and reset its backoff.
+ */
+internal fun classifyGhError(out: CmdOut): GhAvailability {
+    if (out.timeout) return GhAvailability.TIMEOUT
+    return classifyGhError(out.stderr.ifBlank { out.stdout })
 }
 
 internal fun classifyGhError(text: String): GhAvailability {
@@ -1172,26 +1366,52 @@ internal fun prBranchName(head: PrHead, number: Int): String {
 }
 
 /**
+ * Git's ref directory/file conflict: a branch deleted upstream leaves a stale remote-tracking ref
+ * that occupies the path a nested head needs (`origin/docs/auto-sync` vs
+ * `origin/docs/auto-sync/jetbrains`).
+ *
+ * Two forms are matched because git does not always print both. The detail line names the blocking
+ * ref, in either direction:
+ *   'refs/remotes/origin/a' exists; cannot create 'refs/remotes/origin/a/b'
+ *   cannot lock ref 'refs/remotes/origin/a': 'refs/remotes/origin/a/b' exists; cannot create 'refs/remotes/origin/a'
+ * Some builds emit only the summary `fetch` writes for this specific failure — the one naming
+ * `git remote prune` as the fix. Matching the detail line alone made the recovery depend on the git
+ * build: it is absent on the Linux CI image, where the fetch reported nothing but that summary.
+ */
+internal fun refConflict(out: CmdOut): Boolean =
+    out.stderr.contains("exists; cannot create") || out.stderr.contains("old, conflicting branches")
+
+/**
  * Fetches the PR head into [branch] and records which PR it belongs to, mirroring `gh pr checkout`:
  * a same-repo PR gets an ordinary upstream (so `git push`/`git pull` work in the imported worktree),
  * while a fork PR is tracked through `refs/pull/<number>/head`, which `gh` resolves back to the PR
  * by number. [run] executes git in the repository. Returns the failing command, or null on success.
  */
 internal fun fetchPrBranch(run: (List<String>) -> CmdOut, number: Int, head: PrHead, branch: String): CmdOut? {
+    // Git names its own fix for a stale remote-tracking ref blocking a fetch (`git remote prune
+    // origin`); take it once rather than reporting a wall of git output. This prunes every stale
+    // ref under origin, not just the blocking one — acceptable, since "stale" already means gone
+    // upstream, and it only runs after a confirmed conflict.
+    val fetch = fun(args: List<String>): CmdOut {
+        val first = run(args)
+        if (first.ok || !refConflict(first)) return first
+        run(listOf("remote", "prune", "origin"))
+        return run(args)
+    }
     val pull = "refs/pull/$number/head"
     // A fork head lives in a repository we may have no remote for. The pull ref reaches it without
     // adding one, and '+' force-updates a stale branch left by an earlier import attempt.
     if (head.cross || head.ref.isBlank()) {
-        val fetch = run(listOf("fetch", "origin", "+$pull:$branch"))
-        if (!fetch.ok) return fetch
+        val result = fetch(listOf("fetch", "origin", "+$pull:$branch"))
+        if (!result.ok) return result
         recordPrBranch(run, branch, pull)
         return null
     }
     val tracking = "refs/remotes/origin/${head.ref}"
-    val direct = run(listOf("fetch", "origin", "+refs/heads/${head.ref}:$tracking"))
+    val direct = fetch(listOf("fetch", "origin", "+refs/heads/${head.ref}:$tracking"))
     if (!direct.ok) {
         // The head branch is gone — merged PR, or the author deleted it — but the pull ref survives.
-        val fallback = run(listOf("fetch", "origin", "+$pull:$tracking"))
+        val fallback = fetch(listOf("fetch", "origin", "+$pull:$tracking"))
         if (!fallback.ok) return fallback
     }
     val point = run(listOf("branch", "--force", branch, tracking))

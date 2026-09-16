@@ -705,6 +705,22 @@ export interface RemoveStaleWorktreeRequest {
   type: "agentManager.removeStaleWorktree"
   projectId?: string
   worktreeId: string
+  /** Move the worktree's sessions to Local instead of dropping them with the entry. */
+  keepSessions?: boolean
+}
+
+// Re-create a worktree folder that was deleted outside Agent Manager, from its branch
+export interface RestoreWorktreeRequest {
+  type: "agentManager.restoreWorktree"
+  projectId?: string
+  worktreeId: string
+}
+
+// Delete folders under .kilo/worktrees that no worktree claims
+export interface CleanOrphanDirectoriesRequest {
+  type: "agentManager.cleanOrphanDirectories"
+  projectId?: string
+  paths: string[]
 }
 
 // Promote a session: create a worktree and move the session into it
@@ -1270,8 +1286,6 @@ export interface OpenSubAgentViewerRequest {
   sessionID: string
   title?: string
   parentSessionID?: string
-  /** True for async background agents, whose reasoning shows a capped preview. */
-  background?: boolean
 }
 
 // Preview an image attachment in VS Code's built-in image viewer
@@ -1478,12 +1492,13 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Per-mode model selection persistence (webview → extension)
+// Explicit preferred and per-mode model selection persistence (webview → extension)
 export interface PersistModelSelectionRequest {
   type: "persistModelSelection"
   agent: string
   providerID: string
   modelID: string
+  variant?: string
 }
 
 export interface RequestModelSelectionsMessage {
@@ -1693,6 +1708,8 @@ export type WebviewMessage =
   | CreateWorktreeRequest
   | DeleteWorktreeRequest
   | RemoveStaleWorktreeRequest
+  | RestoreWorktreeRequest
+  | CleanOrphanDirectoriesRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
   | OpenSessionLocallyRequest
