@@ -7,7 +7,7 @@
  * and content area.
  */
 
-import { Show } from "solid-js"
+import { Show, createMemo } from "solid-js"
 import type { Accessor, JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
@@ -16,7 +16,9 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { SortableTab, SortableReviewTab } from "./sortable-tab"
 import type { TerminalStateControls } from "./terminal"
 import { isTerminalTabId, renderTerminalTab } from "./terminal"
+import { closeOthers } from "./close-others"
 import type { SessionInfo } from "../src/types/messages"
+import type { Activity } from "../src/utils/session-activity"
 import { parseBindingTokens } from "./keybind-tokens"
 
 interface FocusTabDeps {
@@ -72,7 +74,8 @@ export interface TabRenderDeps {
    *  getter so Solid tracks its reactivity inside rendered JSX. */
   visibleTabId: () => string | undefined
   isPending: (id: string) => boolean
-  isBusy: (id: string) => boolean
+  activityFor: (id: string) => Activity
+  stateLabel: (state: Activity) => string
   tabLookup: () => Map<string, SessionInfo>
   adjacentHint: (id: string, activeId: string, ids: string[], prev: string, next: string) => string
   // Handlers
@@ -164,6 +167,7 @@ function renderReviewTab(deps: TabRenderDeps): JSX.Element {
 
 function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
   const pending = deps.isPending(s.id)
+  const state = createMemo(() => deps.activityFor(s.id))
   const active = () =>
     !deps.terms.activeId() &&
     (pending ? s.id === deps.activePendingId() && !deps.currentSessionID() : s.id === deps.currentSessionID())
@@ -181,7 +185,8 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
     <SortableTab
       tab={s}
       active={active() && !deps.reviewActive()}
-      busy={deps.isBusy(s.id)}
+      state={state()}
+      stateLabel={deps.stateLabel(state())}
       role="tab"
       selected={deps.visibleTabId() === s.id}
       tabIndex={deps.visibleTabId() === s.id ? 0 : -1}
@@ -198,26 +203,6 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
       onFork={pending ? undefined : () => deps.sessionFork(s.id)}
     />
   )
-}
-
-function closeOthers(target: string, deps: TabRenderDeps) {
-  for (const id of deps.tabIds()) {
-    if (id === target) continue
-    if (isTerminalTabId(id)) {
-      deps.closeTerminal(id)
-      continue
-    }
-    if (id === deps.REVIEW_TAB_ID) {
-      deps.closeReview()
-      continue
-    }
-    deps.sessionClose(id)
-  }
-  if (isTerminalTabId(target)) {
-    deps.activateTerminal(target)
-    return
-  }
-  deps.selectSessionTab(target, deps.isPending(target))
 }
 
 // Terminal-specific renderers (layer + add button) live in `./terminal/render.tsx`
@@ -268,9 +253,14 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
           />
         </TooltipKeybind>
         <DropdownMenu gutter={4} placement="bottom-end">
-          <DropdownMenu.Trigger class="am-split-arrow" aria-label={deps.moreOptionsLabel}>
-            <Icon name="chevron-down" size="small" />
-          </DropdownMenu.Trigger>
+          <DropdownMenu.Trigger
+            as={IconButton}
+            icon="chevron-down"
+            size="small"
+            variant="ghost"
+            class="am-split-arrow"
+            aria-label={deps.moreOptionsLabel}
+          />
           <DropdownMenu.Portal>
             <DropdownMenu.Content class="am-split-menu">
               <DropdownMenu.Item onSelect={deps.onNewSession}>

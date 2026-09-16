@@ -6,11 +6,15 @@
  */
 
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { AgentAvatar, AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { createEffect, type Accessor, type Component } from "solid-js"
+import { createEffect, createMemo, on, type Accessor, type Component } from "solid-js"
 import { DataBridge } from "../src/App"
 import { ChatView } from "../src/components/chat"
-import { SessionProvider, useSession } from "../src/context/session"
+import { children } from "../src/components/chat/background-agents"
+import { useLanguage } from "../src/context/language"
+import { SessionProvider, useSession, useSessionVisibility } from "../src/context/session"
+import { description, label, type Activity } from "../src/utils/session-activity"
 import { SortableClosableTab } from "./ClosableTab"
 import { InspectorTabStrip } from "./InspectorTabStrip"
 import type { SubagentTab } from "./subagent-tabs"
@@ -31,26 +35,33 @@ interface Props {
 const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props) => {
   const session = useSession()
 
-  createEffect(() => {
-    const id = props.active()
-    if (!id) return
-    session.selectSession(id, { focus: false })
-  })
+  createEffect(
+    on(props.active, (id) => {
+      if (!id) return
+      session.selectSession(id, { focus: false })
+    }),
+  )
 
   return (
     <DataBridge>
-      <ChatView readonly promptBoxId="agent-manager:subagent" />
+      <ChatView readonly interactivePrompts={false} promptBoxId="agent-manager:subagent" />
     </DataBridge>
   )
 }
 
-const SubagentContent: Component<Props> = (props) => {
+interface ContentProps extends Props {
+  activity: (id: string) => Activity
+}
+
+const SubagentContent: Component<ContentProps> = (props) => {
   const session = useSession()
+  const language = useLanguage()
   const ids = () => props.tabs().map((tab) => tab.id)
   const title = (id: string) => props.tabs().find((tab) => tab.id === id)?.title ?? "Sub-agent"
-  const close = (id: string, focus: { restore: () => void }) => {
+  const close = (id: string, focus: { restore: () => void }, release: () => void) => {
     props.onClose(id)
     session.releaseSession(id)
+    requestAnimationFrame(release)
     if (ids().length > 0) focus.restore()
   }
   const closeOthers = (id: string) => {
@@ -89,13 +100,19 @@ const SubagentContent: Component<Props> = (props) => {
         onSelect={props.onSelect}
         onReorder={props.onReorder}
         renderTab={(id, api) => {
-          const label = title(id)
+          const name = title(id)
+          const state = createMemo(() => props.activity(id))
           return (
             <SortableClosableTab
               id={id}
-              label={label}
-              tooltip={label}
+              label={name}
+              tooltip={() => (state() === "idle" ? name : `${name}: ${language.t(description(state()))}`)}
               icon="task"
+              iconNode={
+                <AgentAvatar id={id} status={state() === "busy" || state() === "retry" ? "running" : undefined} />
+              }
+              state={state()}
+              stateLabel={state() === "idle" ? undefined : language.t(label(state()))}
               showKeybind={false}
               keybind={props.active() === id ? "" : props.nextKeybind}
               closeKeybind={props.closeKeybind}
@@ -109,9 +126,9 @@ const SubagentContent: Component<Props> = (props) => {
                 if (event.button !== 1) return
                 event.preventDefault()
                 event.stopPropagation()
-                close(id, api.focus)
+                close(id, api.focus, api.release)
               }}
-              onClose={() => close(id, api.focus)}
+              onClose={() => close(id, api.focus, api.release)}
               onCloseOthers={() => closeOthers(id)}
             />
           )
@@ -124,8 +141,19 @@ const SubagentContent: Component<Props> = (props) => {
   )
 }
 
-export const SubagentPanel: Component<Props> = (props) => (
-  <SessionProvider>
-    <SubagentContent {...props} />
-  </SessionProvider>
-)
+export const SubagentPanel: Component<Props> = (props) => {
+  const session = useSession()
+  useSessionVisibility(() => (props.visible() ? props.active() : undefined))
+  // Colors follow the parent's spawn order so tabs match the parent transcript.
+  const siblings = createMemo(() => {
+    const id = session.currentSessionID()
+    return id ? children(session.getSessionToolParts(id)) : []
+  })
+  return (
+    <AgentAvatarPalette ids={siblings()}>
+      <SessionProvider>
+        <SubagentContent {...props} activity={session.activityFor} />
+      </SessionProvider>
+    </AgentAvatarPalette>
+  )
+}

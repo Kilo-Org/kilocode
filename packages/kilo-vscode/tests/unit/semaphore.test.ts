@@ -69,6 +69,29 @@ describe("Semaphore", () => {
     expect(order).toEqual([1, 2, 3])
   })
 
+  it("runs interactive work before queued background tasks while preserving priority order", async () => {
+    const sem = new Semaphore(1)
+    const order: string[] = []
+    let release: () => void = () => {}
+    const held = sem.run(
+      () =>
+        new Promise<void>((resolve) => {
+          order.push("running")
+          release = resolve
+        }),
+    )
+    await Promise.resolve()
+
+    const first = sem.run(async () => order.push("background-1"))
+    const second = sem.run(async () => order.push("background-2"))
+    const urgent = sem.run(async () => order.push("interactive-1"), undefined, true)
+    const next = sem.run(async () => order.push("interactive-2"), undefined, true)
+
+    release()
+    await Promise.all([held, first, second, urgent, next])
+    expect(order).toEqual(["running", "interactive-1", "interactive-2", "background-1", "background-2"])
+  })
+
   it("removes an aborted task from the pending queue", async () => {
     const sem = new Semaphore(1)
     let release: () => void = () => {}
@@ -83,6 +106,23 @@ describe("Semaphore", () => {
 
     expect(await next).toBe("next")
     await first
+  })
+
+  it("removes aborted interactive work without delaying background tasks", async () => {
+    const sem = new Semaphore(1)
+    let release: () => void = () => {}
+    const held = sem.run(() => new Promise<void>((resolve) => (release = resolve)))
+    await Promise.resolve()
+    const background = sem.run(async () => "background")
+    const controller = new AbortController()
+    const urgent = sem.run(async () => "interactive", controller.signal, true)
+
+    controller.abort(new Error("cancelled"))
+    await expect(urgent).rejects.toThrow("cancelled")
+    release()
+
+    expect(await background).toBe("background")
+    await held
   })
 
   it("allows full concurrency when limit exceeds task count", async () => {

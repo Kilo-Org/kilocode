@@ -58,10 +58,28 @@ export const anacondaDesktopDict = {
 type Keys = keyof typeof en
 
 export const dict = {
+  "session.goal.complete": "완료 (모델 보고)",
+  "session.goal.blocked": "차단됨",
+  "session.goal.restart": "목표 다시 시작",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "보드",
+  "task.swarm.refresh": "새로 고침",
+  "task.swarm.reset": "보드 초기화",
+  "task.swarm.resetTitle": "이 보드를 초기화할까요?",
+  "task.swarm.resetDescription":
+    "표시된 메시지를 지울까요? 대화와 실행 중인 작업은 변경되지 않습니다. 에이전트는 새 메시지를 게시할 수 있습니다.",
+  "task.swarm.loading": "보드 로딩 중...",
+  "task.swarm.failed": "보드를 불러오거나 초기화할 수 없습니다. 새로 고침을 시도하세요.",
 
   "command.provider.connect": "공급자 연결",
+
+  "session.activity.waiting": "답변 또는 승인을 기다리는 중입니다.",
+  "session.activity.error": "오류 또는 연결 끊김.",
+  "session.activity.retry": "자동으로 재시도하는 중입니다.",
+  "session.activity.busy": "진행 중입니다.",
+  "session.activity.done": "턴이 완료되었습니다.",
+  "session.activity.idle": "실행 중이 아닙니다.",
 
   "command.session.new": "새 세션",
   "command.session.show.changes": "변경 사항 보기",
@@ -177,12 +195,16 @@ export const dict = {
   "common.saving": "저장 중...",
   "common.default": "기본값",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.send": "전송",
+  "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
+  "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
   "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
@@ -208,7 +230,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
 
-  "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
+  "speechToText.tooltip.start": "음성 입력 시작",
   "speechToText.tooltip.shortcut":
     "탭하거나 Cmd/Ctrl+K를 눌러 녹음을 시작하거나 중지하고, 말하는 동안에는 누르고 있다가 놓으면 음성을 텍스트로 변환해 제출합니다.",
   "speechToText.tooltip.starting": "마이크를 시작하는 중... 잠시 후 말씀해 주세요.",
@@ -250,6 +272,9 @@ export const dict = {
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
   "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 Git 작업을 허용할까요?",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
+  "ui.permission.reject": "거부",
+  "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
+  "ui.permission.feedbackHint": "Enter로 거부, Esc로 취소",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
   "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
   "ui.permission.rule.addToAllowed": "허용 목록에 추가",
@@ -398,6 +423,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "사용자 정의 공급자",
   "settings.providers.connected.environmentDescription": "환경 변수에서 연결됨",
   "settings.providers.action.signInChatGPT": "ChatGPT로 로그인",
+  "settings.providers.action.changeApiKey": "API 키 변경",
   "settings.providers.custom.description": "기본 URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
@@ -611,6 +637,7 @@ export const dict = {
   "profile.usage.source.direct": "직접",
   "profile.usage.state.stale": "마지막으로 업데이트된 사용량을 표시합니다.",
   "profile.usage.state.unavailable": "사용량을 확인할 수 없습니다.",
+  "profile.usage.state.empty": "보고된 사용량 한도가 없습니다.",
   "profile.usage.plan.pastDue": "요금제: 결제 기한 지남",
   "profile.usage.plan.canceling": "요금제: 기간 종료 시 취소",
   "profile.usage.plan.unknown": "요금제: 상태 알 수 없음",
@@ -736,6 +763,14 @@ export const dict = {
   "session.outcome.interrupted": "턴이 중단되었습니다",
   "session.outcome.error": "턴이 실패했습니다",
   "session.outcome.finish": "종료 이유: {{reason}}",
+  "session.goal.label": "목표",
+  "prompt.goal.set": "목표 설정",
+  "prompt.goal.start": "목표 시작",
+  "session.goal.active": "활성",
+  "session.goal.paused": "일시 중지됨",
+  "session.goal.pause": "일시 중지",
+  "session.goal.resume": "재개",
+  "session.goal.clear": "목표 지우기",
   "session.costAlert.header": "세션 비용 알림",
   "session.costAlert.continue": "계속",
   "session.costAlert.question": "이 세션이 세션별 알림 기준 {{limit}}을 방금 넘었고 비용은 {{cost}}입니다. 계속할까요?",
@@ -804,7 +839,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "스킬",
 
   "settings.browser.description":
-    "활성화하면 AI 에이전트가 웹 페이지와 상호작용할 수 있습니다 — 탐색, 클릭, 입력, 스크린샷 촬영. Chrome 창이 열려 에이전트의 작업을 확인할 수 있습니다.",
+    "Playwright 기반의 내장 브라우저 자동화를 구성합니다. Kilo는 세션에서 웹 페이지를 탐색하고 상호 작용하며 스크린샷을 찍을 수 있습니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
   "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
@@ -829,7 +864,17 @@ export const dict = {
   "settings.notifications.enable.title": "소리 알림 활성화",
   "settings.notifications.enable.description":
     "세션이 완료되거나 오류가 발생하거나 사용자 입력이 필요할 때 소리를 재생합니다",
+  "settings.notifications.workbench.title": "VS Code 알림 활성화",
+  "settings.notifications.workbench.description":
+    "Kilo가 작업을 완료하거나 사용자 입력이 필요할 때 VS Code 알림을 표시합니다",
+  "settings.notifications.os.title": "OS 알림 활성화",
+  "settings.notifications.os.description":
+    "VS Code가 활성화되어 있지 않을 때 Kilo가 작업을 완료하거나 사용자 입력이 필요하면 기본 운영 체제 알림을 표시합니다.",
   "settings.notifications.testSound": "테스트",
+  "settings.notifications.testOS": "테스트",
+  "settings.notifications.testOS.testing": "테스트 알림을 보내는 중…",
+  "settings.notifications.testOS.success": "테스트 알림을 보냈습니다.",
+  "settings.notifications.testOS.error": "테스트 알림을 보내지 못했습니다",
   "settings.notifications.sound.default": "기본값",
   "settings.notifications.sound.system": "시스템",
   "settings.notifications.sound.description":
@@ -847,12 +892,26 @@ export const dict = {
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "메인 세션과 해당 세션의 작업을 맡은 하위 에이전트(중첩된 하위 에이전트 포함)가 보드를 공유합니다. 모든 작업에 사용하지 말고, 해결책을 병렬로 시도하거나 서로 보완하는 작업을 수행할 때 사용하세요.",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",
   "settings.experimental.imageGenerationModel.description": "이미지 생성 모델",
   "settings.experimental.imageGenerationModel.placeholder": "기본값 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "사용자 지정 변환 엔드포인트로 전송되는 모델 ID입니다. 예: whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "음성 텍스트 변환 기본 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Kilo Gateway 대신 OpenAI 호환 변환 API를 사용합니다. 모델은 /models에서 읽고 오디오는 /audio/transcriptions로 전송됩니다. 비워 두면 Kilo Gateway를 사용합니다.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "음성 텍스트 변환 API 키",
+  "settings.models.speechToTextApiKey.description":
+    "사용자 지정 변환 기본 URL로 전송되는 베어러 토큰입니다. Kilo 설정 파일에 저장됩니다.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
+    "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하거나, 아래에서 사용자 지정 변환 기본 URL을 설정하세요.",
   "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
@@ -872,8 +931,14 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
+  "settings.experimental.claudeMigration.description":
+    "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
+  "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
+  "settings.experimental.taskModelSelection.description":
+    "Task 하위 에이전트에 대해 모델, 제공자 및 추론 수준을 명시적으로 선택합니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -982,6 +1047,9 @@ export const dict = {
     "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
+  "settings.agentBehaviour.pushFixes.title": "풀 리퀘스트 수정 사항 푸시",
+  "settings.agentBehaviour.pushFixes.description":
+    "풀 리퀘스트의 CI 실패나 리뷰 댓글을 에이전트에게 보내거나 worktree를 기본 브랜치에서 업데이트할 때, 풀 리퀘스트가 업데이트되도록 커밋과 푸시를 요청합니다. 권한 확인은 계속 적용됩니다. 직접 커밋하려면 끄세요.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1042,6 +1110,11 @@ export const dict = {
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",
+  "settings.context.compactionModel.title": "압축 모델",
+  "settings.context.compactionModel.description":
+    "자동 및 수동 압축에 사용하는 모델입니다. 채팅 모델을 사용하려면 설정하지 않은 상태로 두세요. 비용, 속도 및 요약 품질은 모델에 따라 달라집니다.",
+  "settings.context.compactionModel.useChatModel": "채팅 모델 사용",
+  "settings.context.compactionModel.hint": "압축에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
@@ -1085,9 +1158,12 @@ export const dict = {
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.fontSize.title": "글꼴 크기",
   "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
-  "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
-  "settings.display.reasoningAutoCollapse.description":
-    "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
+  "settings.display.reasoningDisplay.title": "추론 블록",
+  "settings.display.reasoningDisplay.description":
+    "추론 블록의 시작 표시 방식을 선택합니다. 펼침은 전체 텍스트를 표시하고, 미리보기는 짧은 스크롤 미리보기로 제한하며, 헤드라인은 열기 전까지 제목과 스트리밍 표시기만 표시합니다.",
+  "settings.display.reasoningDisplay.expanded": "펼침",
+  "settings.display.reasoningDisplay.preview": "미리보기",
+  "settings.display.reasoningDisplay.headline": "헤드라인",
   "settings.display.shiftTabCycle.title": "Shift+Tab으로 추론 강도 전환",
   "settings.display.shiftTabCycle.description":
     "프롬프트 입력란에서 Shift+Tab을 눌러 다음 추론 강도 수준으로 전환합니다. Shift+Tab을 키보드 포커스 탐색에 사용하려면 비활성화하세요.",
@@ -1132,58 +1208,16 @@ export const dict = {
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
   "common.review": "검토",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "레거시 버전에서 마이그레이션",
-  "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
   "settings.aboutKiloCode.rooImport.description": "Roo Code 설치에서 대화 기록을 가져옵니다.",
   "settings.aboutKiloCode.rooImport.button": "Roo Code에서 세션 가져오기",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code의 새로운 기능",
-  "migration.whatsNew.subtitle": "더 빠르고 효율적인 기반 위에 확장 프로그램을 재구축했습니다.",
-  "migration.whatsNew.features.performance.title": "더 빠른 에이전트 성능",
-  "migration.whatsNew.features.performance.detail":
-    "병렬 도구 호출과 하위 에이전트를 통해 에이전트가 더 많은 작업을 동시에 처리할 수 있습니다 — 대기 시간은 줄이고 작업 효율은 높입니다.",
-  "migration.whatsNew.features.interface.title": "간소화된 인터페이스",
-  "migration.whatsNew.features.interface.detail": "불필요한 요소를 줄여 더 쉽고 빠르게 읽을 수 있습니다.",
-  "migration.whatsNew.features.agentManager.title": "에이전트 관리자",
-  "migration.whatsNew.features.agentManager.detail":
-    "여러 에이전트를 각자의 작업 트리에서 병렬로 실행할 수 있는 통합 인터페이스 — 진행 상황 모니터링, 컨텍스트 전환, 변경 사항 검토를 한 곳에서 수행합니다.",
-  "migration.whatsNew.features.foundation.title": "공유 기반",
-  "migration.whatsNew.features.foundation.detail":
-    "모든 Kilo 제품에 걸쳐 하나의 작고 효율적인 코어. 어떤 방식으로 작업하든 익숙한 경험을 제공합니다.",
-  "migration.whatsNew.blogLink": "전체 공지 읽기",
-  "migration.whatsNew.docsLink": "새로운 기능 및 자주 묻는 질문",
-  "migration.whatsNew.continue": "계속",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "설정 마이그레이션",
-  "migration.migrate.subtitle": "이전 설치에서 설정을 찾았습니다. 가져올 수 있는 항목은 다음과 같습니다.",
+  "migration.roo.button": "세션 가져오기",
+  "migration.roo.empty": "Roo Code 세션을 찾을 수 없습니다.",
   "migration.migrate.selectLabel": "마이그레이션할 항목 선택",
   "migration.migrate.chatHistory": "채팅 세션 및 기록",
-  "migration.migrate.button": "설정 마이그레이션",
-  "migration.migrate.skip": "건너뛰기",
-  "migration.migrate.keysDetected": "{{count}}개의 키 감지됨",
-  "migration.migrate.serversConfigured": "{{count}}개의 서버 구성됨",
-  "migration.migrate.modesFound": "{{count}}개의 모드 발견됨",
-  "migration.migrate.nothingToMigrate": "레거시 설정에서 마이그레이션할 항목을 찾지 못했습니다.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "공급자 API 키",
-  "migration.select.mcpServers": "MCP 서버",
-  "migration.select.customModes": "사용자 지정 모드 / 에이전트",
-  "migration.select.defaultModel": "기본 모델",
-  "migration.select.autoApproval": "자동 승인",
-  "migration.select.language": "UI 언어",
-  "migration.select.autocomplete": "자동 완성 설정",
 
   // Migrate — completion
   "migration.complete.summary": "{{total}}개 중 {{success}}개 항목이 성공적으로 마이그레이션되었습니다.",
-  "migration.complete.cleanup": "레거시 설정 데이터 제거",
-  "migration.complete.cleanupDescription":
-    "이 작업은 VS Code 저장소에서 이전 설정을 제거합니다. 이 마이그레이션을 다시 실행할 수 없게 됩니다.",
   "migration.complete.done": "완료",
   "migration.migrate.sessionsDetected": "{{count}}개의 세션이 감지되었습니다",
   "migration.error.continue": "계속",
@@ -1217,7 +1251,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "알 수 없는 날짜",
   "migration.sessionFormat.unknown": "알 수 없음",
   "migration.sessionFormat.unknownError": "알 수 없는 오류",
-  // legacy-migration end
 
   "error.details.show": "상세 정보",
 
@@ -1225,7 +1258,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} 할 일 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
+  "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
+  "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
@@ -1238,6 +1273,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "취소됨",
   "task.backgroundAgents.status.error": "오류",
   "task.backgroundAgents.untitled": "백그라운드 에이전트",
+  "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",
@@ -1265,6 +1301,18 @@ export const dict = {
     "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "로컬에 저장",
+  "diffViewer.comment.sendToAgent": "에이전트로 보내기",
+  "diffViewer.comment.postToGithub": "GitHub에 게시",
+  "diffViewer.comment.loadFailed": "풀 리퀘스트 변경 사항을 불러올 수 없습니다.",
+  "diffViewer.comment.unavailable": "이 줄은 현재 풀 리퀘스트 스냅샷에서 사용할 수 없습니다.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "풀 리퀘스트 열기",
+  "diffViewer.comment.localChanges": "로컬 변경 사항",
+  "diffViewer.comment.prChanges": "PR 변경 사항",
+  "diffViewer.comment.sendToKilo": "Kilo로 보내기",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}}로 보내기",
+  "diffViewer.comment.chooseDestination": "대상 선택",
   "diffViewer.notice.snapshotsDisabled":
     "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 
@@ -1286,5 +1334,11 @@ export const dict = {
   "chat.search.close": "검색 닫기",
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
+  "settings.experimental.browserAutomation.title": "통합 브라우저",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager에서 로컬 애플리케이션 미리보기를 표시하고 browser_open 도구를 Agent Manager 세션에 노출합니다.",
+  "settings.experimental.browserAutomation.systemChrome.title": "시스템 Chrome 사용",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "통합 브라우저에 설치된 Google Chrome을 사용합니다. 호환되는 Playwright Chromium 브라우저가 이미 설치된 경우에만 비활성화하세요.",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
 }

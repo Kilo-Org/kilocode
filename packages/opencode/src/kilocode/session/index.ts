@@ -4,6 +4,8 @@ import { Cause, Effect, Schema } from "effect"
 import { Bus } from "@/bus"
 import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { EffectBridge } from "@/effect/bridge"
+import { InstanceRef } from "@/effect/instance-ref"
+import { InstanceState } from "@/effect/instance-state"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
 import { and, desc, eq, gte, inArray, isNull, like, lt, or, type SQL } from "drizzle-orm"
@@ -58,7 +60,7 @@ export namespace KiloSession {
       }
     })
     if (!ctx) return
-    Bus.publish(ctx, Event.QueueChanged, input).catch(err => log.warn("queue changed publish failed", { err }))
+    Bus.publish(ctx, Event.QueueChanged, input).catch((err) => log.warn("queue changed publish failed", { err }))
   }
 
   // ---------------------------------------------------------------------------
@@ -137,16 +139,29 @@ export namespace KiloSession {
     rows: Array<Pick<typeof ProjectTable.$inferSelect, "id" | "worktree" | "sandboxes">>,
     directories: string[] = [],
   ): string[] {
+    const resolve = (dir: string) => {
+      try {
+        return Filesystem.resolve(dir)
+      } catch (err) {
+        const code = typeof err === "object" && err !== null && "code" in err ? err.code : undefined
+        if (code !== "EPERM" && code !== "EACCES") throw err
+        log.warn("Ignoring inaccessible saved project directory", { dir, code })
+        return undefined
+      }
+    }
     const current = rows.find((row) => row.id === id)
-    const root = current?.worktree ? Filesystem.resolve(current.worktree) : undefined
+    const root = current?.worktree ? resolve(current.worktree) : undefined
     // Combine the stored root with Git's current sibling worktrees.
     const roots = new Set([...(root && root !== "/" ? [root] : []), ...directories.map(Filesystem.resolve)])
     if (roots.size === 0) return [id]
 
     // Match both each project's recorded root and its saved worktrees.
     const ids = rows.flatMap((row) => {
-      const dirs = [row.worktree, ...row.sandboxes].map(Filesystem.resolve)
-      return dirs.some((dir) => roots.has(dir)) ? [row.id] : []
+      const match = [row.worktree, ...row.sandboxes].some((dir) => {
+        const value = resolve(dir)
+        return value !== undefined && roots.has(value)
+      })
+      return match ? [row.id] : []
     })
     // Always keep the requested ID and remove duplicates.
     return [...new Set([id, ...ids])]
@@ -170,7 +185,8 @@ export namespace KiloSession {
    *
    * Supports the following internal transports:
    *   1. OpenRouter chat completions  -> `metadata.openrouter.usage.cost`
-   *                                      (`costDetails.upstreamInferenceCost` for Kilo)
+   *                                      (`costDetails.upstreamInferenceCost` for Kilo
+   *                                      and for BYOK-routed requests)
    *   2. Anthropic Messages or OpenAI Responses via OpenRouter
    *                                   -> `usage.providerMetadata.aiSdk.cost_details`
    *   3. Anthropic Messages or OpenAI Responses via Vercel AI Gateway
@@ -179,6 +195,12 @@ export namespace KiloSession {
    * Kilo does not charge end users a per-request fee, so for the Kilo provider the
    * top-level `cost` field (the gateway/marketplace fee) would understate the user's
    * actual upstream spend. Always prefer the upstream/market cost when present.
+   *
+   * For OpenRouter BYOK routing, `cost` is what OpenRouter charged the account ($0,
+   * or only its routing fee) and `upstreamInferenceCost` is billed to the user's own
+   * key. True spend is the sum. A non-BYOK response always bills the account at least
+   * the upstream cost, so summing only when upstream exceeds the billed amount never
+   * changes non-BYOK sessions.
    *
    * Returns `undefined` when no provider cost is available, so the caller
    * should fall back to the standard token-based calculation.
@@ -208,9 +230,15 @@ export namespace KiloSession {
       const regular = num(orUsage.cost)
       // Kilo doesn't charge a fee on top of the upstream inference cost, so for Kilo
       // prefer the upstream cost (the user's true spend). For the OpenRouter provider
-      // itself, the regular `cost` field is what the user is billed.
-      const cost = isKilo && upstream !== undefined ? upstream : regular
-      if (cost !== undefined) return cost
+      // itself, the regular `cost` field is what the user is billed — except when the
+      // request routes through a BYOK provider key: then OpenRouter bills the account
+      // $0 or only its routing fee, and the user's own key is billed the upstream
+      // inference cost. True spend is the sum. A non-BYOK response always bills at
+      // least the upstream cost, so summing only when upstream exceeds the billed
+      // amount never changes non-BYOK sessions.
+      if (isKilo && upstream !== undefined) return upstream
+      if (upstream !== undefined && upstream > (regular ?? -Infinity)) return upstream + (regular ?? 0)
+      if (regular !== undefined) return regular
     }
 
     // 2. Anthropic Messages or OpenAI Responses via OpenRouter. The Kilo Gateway wrapper
@@ -261,6 +289,28 @@ export namespace KiloSession {
     const [app, state] = await Promise.all([import("@/effect/app-runtime"), import("@/session/run-state")])
     const { SessionID } = await import("@/session/schema")
     await app.AppRuntime.runPromise(state.SessionRunState.Service.use((svc) => svc.cancel(SessionID.make(id))))
+  }
+
+  // Stop a removed session's wakeups so they stop holding Keep Awake and can never
+  // resume a session that no longer exists. This crosses into AppRuntime, which does
+  // not inherit the caller's instance reference, so the captured context is passed
+  // along to keep the published `session.wakeup` event on the session's directory and
+  // project instead of falling back to "global".
+  export function cancelWakeups(id: SessionID) {
+    return Effect.gen(function* () {
+      const inst = yield* InstanceState.context
+      yield* Effect.tryPromise(async () => {
+        const [app, wake] = await Promise.all([import("@/effect/app-runtime"), import("@/kilocode/wakeup")])
+        await app.AppRuntime.runPromise(
+          wake.Wakeup.Service.use((svc) => svc.cancelSession(id)).pipe(Effect.provideService(InstanceRef, inst)),
+        )
+      })
+    }).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logWarning("wakeup cancel on session remove failed", { sessionID: id, cause }),
+      ),
+      Effect.forkDetach,
+    )
   }
 
   // ---------------------------------------------------------------------------

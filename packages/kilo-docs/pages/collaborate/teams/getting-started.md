@@ -5,7 +5,7 @@ description: "Set up your Kilo Code team account"
 
 # Get Started with Kilo Seats in 10 Minutes
 
-seats for Kilo in the Teams or Enterprise subscription brings transparent AI coding to your entire engineering organization. No markup on AI costs, no vendor lock-in, complete usage visibility.
+Seats for Kilo in the Teams or Enterprise subscription bring transparent AI coding to your entire engineering organization. Model inference is charged at provider rates with no markup, while credit purchases have a separate 5% payment-processing fee.
 
 ## Before You Begin
 
@@ -66,7 +66,7 @@ Team members receive invitation emails with these steps:
 ## First Steps for Your Team
 
 1. **Try basic tasks** - code generation, debugging, documentation
-2. **Explore different modes** - Code, Architect, Ask, Debug
+2. **Explore different agents** - Code, Plan, Ask, Debug
 3. **Set personal preferences** - model selection, auto-approval settings
 4. **Review usage patterns** in the dashboard after first week
 

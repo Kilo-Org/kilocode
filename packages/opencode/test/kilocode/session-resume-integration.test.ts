@@ -44,6 +44,7 @@ import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { SessionResume } from "../../src/kilocode/session-resume"
+import { SessionResumeImport } from "../../src/kilocode/session-resume/import"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer, TestInstance, disposeAllInstances } from "../fixture/fixture"
@@ -219,16 +220,21 @@ const root = LayerNode.group([
   serverNode,
 ])
 
-const replacements = [
+const base = [
   [SessionSummary.node, summary],
-  [AgentSvc.node, fastAgents],
   [LSP.node, lsp],
   [MCP.node, mcp],
   [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
   [KiloSessions.node, KiloSessions.testLayer],
 ] as const
 
+const replacements = [...base, [AgentSvc.node, fastAgents]] as const
+
 const it = testEffect(LayerNode.compile(root, replacements))
+
+// Same stack but with the real Agent service, so agent resolution behaves like
+// production (unknown names resolve to undefined instead of the mocked agent).
+const itAgents = testEffect(LayerNode.compile(root, base))
 
 const picker = Layer.mock(Question.Service, {
   ask: (input) =>
@@ -1046,6 +1052,582 @@ it.instance(
           }
         }
       }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+// ── SessionResumeImport.fromContent (shared endpoint logic) ───────────────
+//
+// The HTTP endpoint (POST /kilocode/migrate/sessions) passes raw JSONL content
+// straight to SessionResumeImport.fromContent. These tests exercise that shared
+// entry point directly — no file discovery, no slash command — since that is the
+// path every thin client (VS Code, CLI) uses through the server.
+
+it.instance(
+  "fromContent imports raw Claude JSONL into an empty session",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = yield* Effect.promise(() => claudeFixture())
+
+      const result = yield* SessionResumeImport.fromContent({
+        sessionID: chat.id,
+        content,
+        agent: "build",
+      })
+
+      expect(result.format).toBe("claude")
+      expect(result.messages).toBeGreaterThanOrEqual(10)
+      expect(typeof result.messageID).toBe("string")
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBeGreaterThanOrEqual(10)
+      expect(msgs[0].info.role).toBe("user")
+
+      const last = msgs[msgs.length - 1]
+      expect(last.info.role).toBe("assistant")
+      expect(last.info.id).toBe(result.messageID)
+      const notice = last.parts.find((p) => p.type === "text")
+      expect(notice?.type === "text" && notice.text).toContain("imported from an external session")
+
+      // Imported tool parts must decode through the canonical SessionV1 schema.
+      const tools = msgs.flatMap((m) => m.parts.filter((p) => p.type === "tool"))
+      expect(tools.length).toBeGreaterThan(0)
+      for (const part of tools) {
+        const decoded = Schema.decodeUnknownSync(SessionV1.ToolPart)(part)
+        expect(decoded.type).toBe("tool")
+      }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent imports raw Codex JSONL into an empty session",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = yield* Effect.promise(() => codexFixture())
+
+      const result = yield* SessionResumeImport.fromContent({
+        sessionID: chat.id,
+        content,
+        agent: "build",
+      })
+
+      expect(result.format).toBe("codex")
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBeGreaterThanOrEqual(8)
+      expect(msgs[0].info.role).toBe("user")
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects a nonempty session and writes nothing",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { sessions, chat } = yield* boot()
+      const content = yield* Effect.promise(() => claudeFixture())
+
+      const seeded = yield* sessions.updateMessage({
+        id: MessageID.ascending(),
+        role: "user",
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        time: { created: Date.now() },
+      })
+
+      const exit = yield* Effect.exit(SessionResumeImport.fromContent({ sessionID: chat.id, content, agent: "build" }))
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("new Kilo session")
+      }
+
+      const msgs = yield* sessions.messages({ sessionID: chat.id })
+      expect(msgs.length).toBe(1)
+      expect(msgs[0].info.id).toBe(seeded.id)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects a transcript with no user messages",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = [
+        '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}',
+      ].join("\n")
+
+      const exit = yield* Effect.exit(SessionResumeImport.fromContent({ sessionID: chat.id, content, agent: "build" }))
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("no user messages")
+      }
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects a session that does not exist and creates nothing",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      const missing = SessionID.make("ses_missing_import_target")
+
+      const exit = yield* Effect.exit(SessionResumeImport.fromContent({ sessionID: missing, content, agent: "build" }))
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("Session not found")
+      }
+
+      // The import must not have conjured the session into existence.
+      expect(Exit.isFailure(yield* Effect.exit(sessions.get(missing)))).toBe(true)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+itAgents.instance(
+  "fromContent rejects an unknown agent and writes nothing",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = yield* Effect.promise(() => claudeFixture())
+
+      const exit = yield* Effect.exit(
+        SessionResumeImport.fromContent({ sessionID: chat.id, content, agent: "no-such-agent" }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("Agent not found")
+      }
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects unparseable transcript content",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+
+      const exit = yield* Effect.exit(
+        SessionResumeImport.fromContent({ sessionID: chat.id, content: "{not json", agent: "build" }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("Failed to parse session transcript")
+      }
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+// ── SessionResumeImport.discover (discovery endpoint logic) ───────────────
+//
+// The HTTP endpoint (POST /kilocode/migrate/sessions/discover) delegates to
+// SessionResumeImport.discover. These tests drive that shared entry point
+// directly with fixtures written under redirected discovery roots (via the
+// ResumeRoots test seam), the same seam the slash-command picker uses. Discovery
+// must never write to any session.
+
+it.instance(
+  "discover enumerates a Claude transcript with a preview",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+
+      expect(result.sessions.length).toBe(1)
+      const entry = result.sessions[0]
+      expect(entry.id).toBe(fixtureUUID)
+      expect(entry.format).toBe("claude")
+      expect(entry.path).toContain(`${fixtureUUID}.jsonl`)
+      expect(entry.messages).toBeGreaterThanOrEqual(10)
+      expect(entry.version).toBe(SessionResume.SUPPORTED_CLAUDE_MAJOR)
+      expect(typeof entry.title).toBe("string")
+      expect((entry.title ?? "").length).toBeGreaterThan(0)
+      expect(entry.mtime).toBeGreaterThan(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover enumerates a Codex transcript with a preview",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* codexFixtureForCwdAt(dir)
+      yield* withCodexFixtureAt(roots.codex, content, fixtureUUID)
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir, formats: ["codex"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { codex: roots.codex }),
+      )
+
+      expect(result.sessions.length).toBe(1)
+      const entry = result.sessions[0]
+      expect(entry.id).toBe(fixtureUUID)
+      expect(entry.format).toBe("codex")
+      expect(entry.messages).toBeGreaterThanOrEqual(8)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover returns both formats sorted most-recent-first",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const claude = yield* Effect.promise(() => claudeFixture())
+      const codex = yield* codexFixtureForCwdAt(dir)
+
+      const claudeID = "11111111-1111-4111-8111-111111111111"
+      const codexID = "22222222-2222-4222-8222-222222222222"
+
+      yield* withClaudeFixtureAt(roots.claude, dir, claude, claudeID)
+      // Make the Codex transcript newer so it sorts first.
+      const codexFile = yield* withCodexFixtureAt(roots.codex, codex, codexID)
+      yield* Effect.sync(() => {
+        const now = Date.now()
+        fs.utimesSync(codexFile, new Date(now), new Date(now))
+      })
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude, codex: roots.codex }),
+      )
+
+      const ids = result.sessions.map((s) => s.id)
+      expect(ids).toContain(claudeID)
+      expect(ids).toContain(codexID)
+      // Sorted descending by mtime.
+      for (let i = 1; i < result.sessions.length; i++) {
+        expect(result.sessions[i - 1].mtime).toBeGreaterThanOrEqual(result.sessions[i].mtime)
+      }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover returns an empty list when no transcripts exist",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude, codex: roots.codex }),
+      )
+
+      expect(result.sessions.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover skips unparseable transcripts and reports them as dropped, writing nothing",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const roots = yield* tmpRoots()
+
+      const goodID = "33333333-3333-4333-8333-333333333333"
+      const badID = "44444444-4444-4444-8444-444444444444"
+      const good = yield* Effect.promise(() => claudeFixture())
+
+      yield* withClaudeFixtureAt(roots.claude, dir, good, goodID)
+      yield* withClaudeFixtureAt(roots.claude, dir, claudeInvalidVersion, badID)
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+
+      const ids = result.sessions.map((s) => s.id)
+      expect(ids).toContain(goodID)
+      expect(ids).not.toContain(badID)
+      expect(result.dropped.some((d) => d.includes(badID))).toBe(true)
+
+      // Discovery is read-only: the caller's session stays empty.
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+// ── SessionResumeImport.migrate (migration endpoint logic) ────────────────
+//
+// The HTTP endpoint (POST /kilocode/migrate/sessions) delegates to
+// SessionResumeImport.migrate, which re-discovers server-side, creates one Kilo
+// session per transcript, and records the source on the created session so a
+// second call skips it. These tests drive it through the ResumeRoots seam.
+
+const migrateAt = (roots: { claude: string; codex: string }, input: SessionResumeImport.MigrateInput) =>
+  SessionResumeImport.migrate(input).pipe(
+    Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude, codex: roots.codex }),
+  )
+
+it.instance(
+  "migrate creates a session per discovered transcript and records the source",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      expect(result.migrated).toBe(1)
+      expect(result.skipped).toBe(0)
+      const entry = result.sessions[0]
+      expect(entry.id).toBe(fixtureUUID)
+      expect(entry.format).toBe("claude")
+      expect(entry.skipped).toBe(false)
+      expect(entry.error).toBeUndefined()
+      expect(entry.messages).toBeGreaterThanOrEqual(10)
+
+      // The transcript landed in the session the result points at.
+      expect(entry.sessionID).toBeString()
+      const created = SessionID.make(entry.sessionID ?? "")
+      const msgs = yield* sessionMessages(created)
+      expect(msgs.length).toBeGreaterThanOrEqual(10)
+      expect(msgs[0].info.role).toBe("user")
+      expect(entry.messageID).toBe(msgs.at(-1)?.info.id)
+
+      // Provenance is persisted on the session, which is what makes a rerun a no-op.
+      const info = yield* sessions.get(created)
+      expect(info.metadata?.migrate).toMatchObject({ format: "claude", id: fixtureUUID })
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate is a no-op on the second call",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const first = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      expect(first.migrated).toBe(1)
+      const before = (yield* sessions.list()).length
+
+      const second = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      expect(second.migrated).toBe(0)
+      expect(second.skipped).toBe(1)
+      expect(second.sessions[0].skipped).toBe(true)
+      // Points at the session from the first run rather than a new one.
+      expect(second.sessions[0].sessionID).toBe(first.sessions[0].sessionID)
+      expect((yield* sessions.list()).length).toBe(before)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate still skips a source once its session falls outside the recent-session page",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const first = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      expect(first.migrated).toBe(1)
+
+      // Session.list pages to the 100 most recently updated sessions. Push the
+      // migrated session out of that window; the marker must still be found or
+      // the transcript gets migrated a second time.
+      for (let i = 0; i < 101; i++) {
+        yield* sessions.create({ title: `filler ${i}` })
+      }
+
+      const found = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+      expect(found.sessions[0].sessionID).toBe(first.sessions[0].sessionID)
+
+      const second = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      expect(second.migrated).toBe(0)
+      expect(second.skipped).toBe(1)
+      expect(second.sessions[0].sessionID).toBe(first.sessions[0].sessionID)
+    }),
+  { config: cfg },
+  60_000,
+)
+
+it.instance(
+  "migrate with force re-migrates an already migrated source",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const first = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      const before = (yield* sessions.list()).length
+
+      const forced = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build", force: true })
+
+      expect(forced.migrated).toBe(1)
+      expect(forced.skipped).toBe(0)
+      expect(forced.sessions[0].sessionID).not.toBe(first.sessions[0].sessionID)
+      expect((yield* sessions.list()).length).toBe(before + 1)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover marks sources that were already migrated",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const before = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+      expect(before.sessions[0].sessionID).toBeUndefined()
+
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      const after = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+      expect(after.sessions[0].sessionID).toBe(result.sessions[0].sessionID)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate only touches the requested ids and rejects unknown ones",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* Effect.promise(() => claudeFixture())
+      const wanted = "55555555-5555-4555-8555-555555555555"
+      const other = "66666666-6666-4666-8666-666666666666"
+      yield* withClaudeFixtureAt(roots.claude, dir, content, wanted)
+      yield* withClaudeFixtureAt(roots.claude, dir, content, other)
+
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build", ids: [wanted] })
+      expect(result.sessions.length).toBe(1)
+      expect(result.sessions[0].id).toBe(wanted)
+
+      const exit = yield* Effect.exit(
+        migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build", ids: ["not-a-known-id"] }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("No Claude Code or OpenAI Codex session found")
+      }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate reports a bad transcript per entry and leaves no session behind",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const good = yield* Effect.promise(() => claudeFixture())
+      const goodID = "77777777-7777-4777-8777-777777777777"
+      const badID = "88888888-8888-4888-8888-888888888888"
+
+      yield* withClaudeFixtureAt(roots.claude, dir, good, goodID)
+      // Parses as Claude but carries no user text, so it is rejected before any write.
+      yield* withClaudeFixtureAt(
+        roots.claude,
+        dir,
+        '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}',
+        badID,
+      )
+
+      const before = (yield* sessions.list()).length
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      expect(result.migrated).toBe(1)
+      const bad = result.sessions.find((item) => item.id === badID)
+      expect(bad?.error).toContain("no user messages")
+      expect(bad?.sessionID).toBeUndefined()
+      // Exactly one new session: the good transcript, nothing for the bad one.
+      expect((yield* sessions.list()).length).toBe(before + 1)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate is a no-op when nothing is discovered",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const before = (yield* sessions.list()).length
+
+      const result = yield* migrateAt(roots, { cwd: dir, agent: "build" })
+
+      expect(result.sessions.length).toBe(0)
+      expect(result.migrated).toBe(0)
+      expect(result.skipped).toBe(0)
+      expect((yield* sessions.list()).length).toBe(before)
     }),
   { config: cfg },
   30_000,

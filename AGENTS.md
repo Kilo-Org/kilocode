@@ -87,11 +87,14 @@ Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributi
 
 - Keep things in one function unless composable or reusable
 - Avoid unnecessary destructuring. Instead of `const { a, b } = obj`, use `obj.a` and `obj.b` to preserve context
+- Avoid possibly out-of-bounds array access. Instead of `array[index] ?? {}`, use `array.at(index) ?? {}`. Instead of `array[array.length - 1]`, use `array.at(-1)`
 - Avoid `try`/`catch` where possible
 - Avoid using the `any` type
 - Prefer single word variable names where possible
 - Use Bun APIs when possible, like `Bun.file()`
 - Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
+- Always use `Promise.withResolvers<T>()` to create deferred promises; all supported runtimes provide it. Never capture `resolve` and `reject` from a `new Promise` executor in external variables or object properties.
+- Use `ref == null` to check for both `null` and `undefined` instead of `ref === undefined || ref === null`.
 
 ### Avoid let statements
 

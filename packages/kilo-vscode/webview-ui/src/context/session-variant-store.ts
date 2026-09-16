@@ -39,11 +39,13 @@ export function getVariant(
   variants: string[],
   agent: string,
   session?: string,
+  configured?: string,
+  preferred?: string,
 ) {
   if (variants.length === 0) return undefined
-  const key = variantKey(sel, agent, session)
-  const fallback = session ? store[variantKey(sel, agent)] : undefined
-  const stored = store[key] ?? fallback ?? store[legacyVariantKey(sel)]
+  const scoped = session ? store[variantKey(sel, agent, session)] : undefined
+  const preset = configured && variants.includes(configured) ? configured : undefined
+  const stored = scoped ?? preferred ?? store[variantKey(sel, agent)] ?? store[legacyVariantKey(sel)] ?? preset
   if (stored === undefined || stored === DEFAULT_VARIANT) return undefined
   return preserveVariant(stored, variants)
 }
@@ -53,9 +55,11 @@ export function getAgentVariant(
   sel: ModelSelection,
   model: { variants?: Record<string, unknown> } | undefined,
   agent: string,
+  configured?: string,
+  preferred?: string,
 ) {
   if (!model?.variants) return undefined
-  return getVariant(store, sel, Object.keys(model.variants), agent)
+  return getVariant(store, sel, Object.keys(model.variants), agent, undefined, configured, preferred)
 }
 
 /**

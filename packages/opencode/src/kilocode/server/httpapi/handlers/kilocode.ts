@@ -1,4 +1,14 @@
-import { Effect } from "effect"
+import { Cause, Effect, Scope } from "effect"
+import { NamedError } from "@opencode-ai/core/util/error"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { KiloSessionContinuation } from "@/kilocode/session/continuation"
+import { Suggestion } from "@/kilocode/suggestion"
+import { Permission } from "@/permission"
+import { Question } from "@/question"
+import { Session } from "@/session/session"
+import { SessionPrompt } from "@/session/prompt"
+import { SessionStatus } from "@/session/status"
+import { mapStorageNotFound } from "@/server/routes/instance/httpapi/handlers/session-errors"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as KiloAgent from "@/kilocode/agent"
 import { CommandFiles } from "@/kilocode/command-files"
@@ -14,18 +24,39 @@ import { AgentManager } from "@/kilocode/agent-manager/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
+import * as MarketplaceApi from "@/kilocode/marketplace/api"
+import * as MarketplaceDetection from "@/kilocode/marketplace/detection"
+import * as MarketplaceInstaller from "@/kilocode/marketplace/installer"
+import {
+  MarketplaceInstallPayload,
+  MarketplaceRemovePayload,
+  type MarketplaceRemoveResult,
+} from "@/kilocode/marketplace/schema"
 import { ProviderUsage } from "@opencode-ai/core/kilocode/provider-usage"
 import { Location } from "@opencode-ai/core/location"
 import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
+import { ConflictError, InvalidRequestError, UnknownError } from "@/server/routes/instance/httpapi/errors"
+import { Database } from "@opencode-ai/core/database/database"
+import { BoardStore } from "@/kilocode/board/store"
 import { Skill } from "@/skill"
 import { BackgroundJob } from "@/background/job"
 import { SessionRunState } from "@/session/run-state"
+import { SessionDrain } from "@/kilocode/session/drain"
+import { Wakeup } from "@/kilocode/wakeup"
+import { Drained } from "@opencode-ai/schema/kilocode/session-drain"
 import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
+import { clearPtys } from "@/kilocode/worktree/pty-cleanup"
+import { Snapshot } from "@/snapshot"
+import { KiloSnapshotPrepare } from "@/kilocode/snapshot/prepare"
+import { Global } from "@opencode-ai/core/global"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import path from "path"
 import {
   AgentManagerRejectPayload,
   AgentManagerReplyPayload,
@@ -34,8 +65,14 @@ import {
   RemoveAgentPayload,
   RemoveCommandPayload,
   RemoveSkillPayload,
+  RemoveSnapshotPayload,
+  TeardownWorktreePayload,
+  ResumeSessionPayload,
+  DrainSessionPayload,
   BackgroundJobInfo,
   BackgroundJobsQuery,
+  SessionBoardQuery,
+  ResetSessionBoardPayload,
 } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -49,8 +86,117 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const notebook = yield* Notebook.Service
     const background = yield* BackgroundJob.Service
     const runState = yield* SessionRunState.Service
+    const drain = yield* SessionDrain.Service
+    const wake = yield* Wakeup.Service
     const flags = yield* RuntimeFlags.Service
     const locations = yield* LocationServiceMap.Service
+    const fs = yield* FSUtil.Service
+    const flock = yield* EffectFlock.Service
+    const sessions = yield* Session.Service
+    const prompt = yield* SessionPrompt.Service
+    const status = yield* SessionStatus.Service
+    const permission = yield* Permission.Service
+    const question = yield* Question.Service
+    const events = yield* EventV2Bridge.Service
+    const database = yield* Database.Service
+    const scope = yield* Scope.Scope
+    const snapshot = yield* Snapshot.Service
+
+    const board = <A>(work: Effect.Effect<A, BoardStore.Error | BoardStore.Conflict, Database.Service>) =>
+      work.pipe(
+        Effect.provideService(Database.Service, database),
+        Effect.mapError((error) =>
+          error instanceof BoardStore.Conflict
+            ? new ConflictError({ message: error.message })
+            : error.kind === "storage"
+              ? new UnknownError({ message: error.message })
+              : new InvalidRequestError({ message: error.message }),
+        ),
+      )
+
+    const sessionBoard = Effect.fn("KilocodeHttpApi.sessionBoard")(function* (ctx: {
+      params: { sessionID: SessionID }
+      query: typeof SessionBoardQuery.Type
+    }) {
+      yield* mapStorageNotFound(sessions.get(ctx.params.sessionID))
+      return yield* board(
+        BoardStore.observe({
+          ...ctx.query,
+          sessionID: ctx.params.sessionID,
+          directory: yield* InstanceState.directory,
+        }),
+      )
+    })
+
+    const resetSessionBoard = Effect.fn("KilocodeHttpApi.resetSessionBoard")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof ResetSessionBoardPayload.Type
+    }) {
+      yield* mapStorageNotFound(sessions.get(ctx.params.sessionID))
+      return yield* board(
+        BoardStore.reset({
+          sessionID: ctx.params.sessionID,
+          revision: ctx.payload.revision,
+          directory: yield* InstanceState.directory,
+        }),
+      )
+    })
+
+    const drainSession = Effect.fn("KilocodeHttpApi.drainSession")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof DrainSessionPayload.Type
+    }) {
+      yield* mapStorageNotFound(sessions.get(ctx.params.sessionID))
+      yield* drain.wait(ctx.params.sessionID)
+      yield* events.publish(Drained, { sessionID: ctx.params.sessionID, token: ctx.payload.token })
+      return true
+    })
+
+    const resumeSession = Effect.fn("KilocodeHttpApi.resumeSession")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof ResumeSessionPayload.Type
+    }) {
+      const id = ctx.params.sessionID
+      const session = yield* mapStorageNotFound(sessions.get(id))
+      const blocked = new InvalidRequestError({ message: "This session cannot be resumed in its current state." })
+      if (session.revert || session.time.archived) return yield* blocked
+      yield* runState.assertNotBusy(id).pipe(Effect.mapError(() => blocked))
+      if ((yield* status.get(id)).type !== "idle") return yield* blocked
+      const pending = [
+        ...(yield* permission.list()),
+        ...(yield* question.list()),
+        ...(yield* Effect.promise(() => Suggestion.list())),
+      ]
+      if (pending.length > 0) {
+        const family = new Set([id])
+        for (const parent of family) {
+          for (const child of yield* sessions.children(parent)) family.add(child.id)
+        }
+        if (pending.some((request) => family.has(request.sessionID))) return yield* blocked
+      }
+      const messages = yield* mapStorageNotFound(sessions.messages({ sessionID: id }))
+      if (KiloSessionContinuation.target(messages) !== ctx.payload.messageID) return yield* blocked
+      yield* prompt
+        .loop({
+          sessionID: id,
+          resume: ctx.payload.messageID,
+          snapshotInitialization: ctx.payload.snapshotInitialization,
+        })
+        .pipe(
+          Effect.catchCause((cause) => {
+            if (Cause.hasInterruptsOnly(cause)) return Effect.void
+            return Effect.gen(function* () {
+              yield* Effect.logError("session resume failed", { sessionID: id, cause })
+              yield* events.publish(Session.Event.Error, {
+                sessionID: id,
+                error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
+              })
+            })
+          }),
+          Effect.forkIn(scope, { startImmediately: true }),
+        )
+      return true
+    })
 
     // Location-scoped services, keyed by the request's directory and workspace.
     const located = Effect.fnUntraced(function* <A, E, R>(effect: Effect.Effect<A, E, R>) {
@@ -137,6 +283,138 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       )
       yield* store.dispose(instance)
       return true
+    })
+
+    const marketplaceList = Effect.fn("KilocodeHttpApi.marketplaceList")(function* () {
+      const started = Date.now()
+      const instance = yield* InstanceState.context
+      yield* Effect.logInfo("marketplace request", { endpoint: "list", directory: instance.directory })
+      const items = yield* Effect.promise(() => MarketplaceApi.fetchAll())
+      const entries = yield* skills.all()
+      const installed = yield* Effect.promise(() =>
+        MarketplaceDetection.detect({ directory: instance.directory, worktree: instance.worktree, skills: entries }),
+      )
+      yield* Effect.logInfo("marketplace request complete", {
+        endpoint: "list",
+        directory: instance.directory,
+        outcome: "success",
+        count: items.items.length,
+        errors: items.errors.length,
+        durationMs: Date.now() - started,
+      })
+      return {
+        items: items.items,
+        installed,
+        ...(items.errors.length > 0 ? { errors: items.errors } : {}),
+      }
+    })
+
+    const marketplaceInstall = Effect.fn("KilocodeHttpApi.marketplaceInstall")(function* (ctx: {
+      payload: typeof MarketplaceInstallPayload.Type
+    }) {
+      const started = Date.now()
+      const instance = yield* InstanceState.context
+      const target = ctx.payload.target ?? "project"
+      yield* Effect.logInfo("marketplace request", {
+        endpoint: "install",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        target,
+        parameterKeys: Object.keys(ctx.payload.parameters ?? {}),
+        parameterCount: Object.keys(ctx.payload.parameters ?? {}).length,
+      })
+      const result = yield* MarketplaceInstaller.install(
+        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        ctx.payload,
+      )
+      if (result.success) yield* store.dispose(instance)
+      yield* Effect.logInfo("marketplace request complete", {
+        endpoint: "install",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        target,
+        outcome: result.success ? "success" : "failure",
+        error: result.error,
+        durationMs: Date.now() - started,
+      })
+      return result
+    })
+
+    const marketplaceRemove = Effect.fn("KilocodeHttpApi.marketplaceRemove")(function* (ctx: {
+      payload: typeof MarketplaceRemovePayload.Type
+    }) {
+      const started = Date.now()
+      const instance = yield* InstanceState.context
+      yield* Effect.logInfo("marketplace request", {
+        endpoint: "remove",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        scope: ctx.payload.scope,
+      })
+      const result: MarketplaceRemoveResult = yield* MarketplaceInstaller.remove(
+        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        ctx.payload.item,
+        ctx.payload.scope,
+      )
+      if (result.success) yield* store.dispose(instance)
+      yield* Effect.logInfo("marketplace request complete", {
+        endpoint: "remove",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        scope: ctx.payload.scope,
+        outcome: result.success ? "success" : "failure",
+        error: result.error,
+        durationMs: Date.now() - started,
+      })
+      return result
+    })
+
+    const removeSnapshot = Effect.fn("KilocodeHttpApi.removeSnapshot")(function* (ctx: {
+      payload: typeof RemoveSnapshotPayload.Type
+    }) {
+      const instance = yield* InstanceState.context
+      return yield* KiloSnapshotCleanup.remove({
+        root: path.join(Global.Path.data, "snapshot"),
+        project: instance.project.id,
+        directory: instance.worktree,
+        worktree: ctx.payload.worktree,
+        fs,
+        flock,
+      }).pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+    })
+
+    // Agent Manager deletes a worktree through the project root instance. Listing PTYs or
+    // disposing through the worktree's own `directory` would boot an instance for a directory
+    // that is about to disappear, which costs close to a second in large repositories.
+    const teardownWorktree = Effect.fn("KilocodeHttpApi.teardownWorktree")(function* (ctx: {
+      payload: typeof TeardownWorktreePayload.Type
+    }) {
+      const instance = yield* InstanceState.context
+      // Lexical checks only, like KiloSnapshotCleanup.remove: a symlinked `.kilo/worktrees` in an
+      // untrusted repository must not widen the directories this endpoint can tear down.
+      // `contains` rejects `..` and absolute escapes; one component rejects nested paths.
+      const managed = path.resolve(instance.worktree, ".kilo", "worktrees")
+      const worktree = path.resolve(ctx.payload.worktree)
+      const child = path.relative(managed, worktree).split(path.sep).filter(Boolean)
+      if (!path.isAbsolute(ctx.payload.worktree) || !FSUtil.contains(managed, worktree) || child.length !== 1)
+        return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      // disposeDirectory follows symlinks, so a symlinked `.kilo`, `.kilo/worktrees`, or worktree
+      // could reach an instance outside the project. The project root itself is already canonical.
+      const links = yield* Effect.forEach([path.dirname(managed), managed, worktree], (target) =>
+        fs.readLink(target).pipe(
+          Effect.as(true),
+          Effect.catch(() => Effect.succeed(false)),
+        ),
+      )
+      if (links.some(Boolean)) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      yield* clearPtys(worktree, yield* WorkspaceRef)
+      const loaded = (yield* store.list()).some((item) => path.resolve(item.directory) === worktree)
+      yield* store.disposeDirectory(worktree)
+      return { disposed: loaded }
     })
 
     const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
@@ -246,12 +524,33 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return promoted !== undefined
     })
 
+    const wakeups = Effect.fn("KilocodeHttpApi.wakeups")(function* () {
+      const directory = yield* InstanceState.directory
+      return yield* wake.pending(directory)
+    })
+
     return handlers
+      .handle("resumeSession", resumeSession)
+      .handle("drainSession", drainSession)
+      .handle("sessionBoard", sessionBoard)
+      .handle("resetSessionBoard", resetSessionBoard)
       .handle("heapSnapshot", heapSnapshot)
       .handle("commandFiles", commandFiles)
       .handle("removeCommand", removeCommand)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
+      .handle("marketplaceList", marketplaceList)
+      .handle("marketplaceInstall", marketplaceInstall)
+      .handle("marketplaceRemove", marketplaceRemove)
+      .handle("removeSnapshot", removeSnapshot)
+      .handle("teardownWorktree", teardownWorktree)
+      .handle("prepareSnapshot", () =>
+        Effect.gen(function* () {
+          const started = performance.now()
+          const prepared = yield* KiloSnapshotPrepare.run(snapshot)
+          return { prepared, durationMs: performance.now() - started }
+        }),
+      )
       .handle("providerUsage", providerUsage)
       .handle("providerUsageRefresh", providerUsageRefresh)
       .handle("notebookList", notebookList)
@@ -264,5 +563,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("backgroundJobs", backgroundJobs)
       .handle("backgroundJobCancel", backgroundJobCancel)
       .handle("backgroundJobPromote", backgroundJobPromote)
+      .handle("wakeups", wakeups)
   }),
 )

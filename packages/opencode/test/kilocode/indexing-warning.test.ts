@@ -41,3 +41,11 @@ test("indexingWarningKey includes the warning code and message", () => {
     "qdrant.version-unavailable\u0000warning",
   )
 })
+
+test("indexingWarningKey preserves empty messages and embedded delimiters", () => {
+  for (const code of ["qdrant.version-unavailable", "qdrant.version-incompatible"] as const) {
+    for (const message of ["", "\0", "warning\0detail", "null", "undefined", "警告"]) {
+      expect(indexingWarningKey({ code, message })).toBe(`${code}\0${message}`)
+    }
+  }
+})

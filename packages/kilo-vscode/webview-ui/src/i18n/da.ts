@@ -54,10 +54,28 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fuldført (rapporteret af modellen)",
+  "session.goal.blocked": "Blokeret",
+  "session.goal.restart": "Genstart mål",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Opdater",
+  "task.swarm.reset": "Nulstil tavle",
+  "task.swarm.resetTitle": "Nulstil denne tavle?",
+  "task.swarm.resetDescription":
+    "Ryd synlige beskeder? Samtaler og igangværende opgaver ændres ikke. Agenter kan sende nye beskeder.",
+  "task.swarm.loading": "Indlæser tavle...",
+  "task.swarm.failed": "Tavlen kunne ikke indlæses eller nulstilles. Prøv at opdatere den.",
 
   "command.provider.connect": "Tilslut udbyder",
+
+  "session.activity.waiting": "Venter på et svar eller en godkendelse.",
+  "session.activity.error": "Fejl eller mistet forbindelse.",
+  "session.activity.retry": "Prøver automatisk igen.",
+  "session.activity.busy": "I gang.",
+  "session.activity.done": "Tur afsluttet.",
+  "session.activity.idle": "Kører ikke.",
 
   "command.session.new": "Ny session",
   "command.session.show.changes": "Vis ændringer",
@@ -174,12 +192,16 @@ export const dict = {
   "common.saving": "Gemmer...",
   "common.default": "Standard",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Søg i Worktrees",
   "prompt.thinking.tooltip": "Ræsonnementsindsats",
   "prompt.action.send": "Send",
+  "prompt.action.continue": "Fortsæt",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
   "prompt.action.send.recording": "Transskriber og send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Forbedr prompt",
+  "prompt.paste.expand": "Klik for at udvide den indsatte tekst",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkendelse",
   "prompt.action.autoApprove.disable": "Deaktiver automatisk godkendelse",
   "prompt.action.autoApprove.enabled":
@@ -207,7 +229,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
-  "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.start": "Start stemmeinput",
   "speechToText.tooltip.shortcut":
     "Tryk på knappen eller brug Cmd/Ctrl+K til at starte eller stoppe optagelsen; hold knappen nede, mens du taler, og slip den for at transskribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med at tale.",
@@ -249,6 +271,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
   "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
+  "ui.permission.reject": "Afvis",
+  "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
+  "ui.permission.feedbackHint": "Enter for at afvise, Esc for at annullere",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
   "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
   "ui.permission.rule.addToAllowed": "Tilføj til tilladelseslisten",
@@ -441,6 +466,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Brugerdefineret udbyder",
   "settings.providers.connected.environmentDescription": "Forbundet fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Log ind med ChatGPT",
+  "settings.providers.action.changeApiKey": "Skift API-nøgle",
   "settings.providers.custom.description": "Tilføj en brugerdefineret udbyder via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodel",
   "settings.providers.subagentModel.description":
@@ -656,6 +682,7 @@ export const dict = {
   "profile.usage.source.direct": "Direkte",
   "profile.usage.state.stale": "Viser de senest opdaterede forbrugsdata.",
   "profile.usage.state.unavailable": "Forbrugsdata er ikke tilgængelige.",
+  "profile.usage.state.empty": "Ingen forbrugsgrænser rapporteret.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling forfalden",
   "profile.usage.plan.canceling": "Abonnement: Opsiges ved periodens udgang",
   "profile.usage.plan.unknown": "Abonnement: Status ukendt",
@@ -740,6 +767,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angiv mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Sat på pause",
+  "session.goal.pause": "Sæt på pause",
+  "session.goal.resume": "Genoptag",
+  "session.goal.clear": "Ryd mål",
   "session.costAlert.header": "Advarsel om sessionsomkostning",
   "session.costAlert.continue": "Fortsæt",
   "session.costAlert.question":
@@ -811,7 +846,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Færdigheder",
 
   "settings.browser.description":
-    "Når aktiveret kan AI-agenten interagere med websider — navigere, klikke, skrive og tage skærmbilleder. Et Chrome-vindue åbnes, så du kan se agenten arbejde.",
+    "Konfigurér indbygget browserautomatisering drevet af Playwright. Kilo kan navigere, interagere med og tage skærmbilleder af websider i dine sessioner.",
   "settings.browser.enable.title": "Aktivér browserautomatisering",
   "settings.browser.enable.description": "Registrér Playwright MCP-serveren hos CLI-backend'en.",
   "settings.browser.systemChrome.title": "Brug system-Chrome",
@@ -838,7 +873,17 @@ export const dict = {
   "settings.notifications.enable.title": "Aktivér lydnotifikationer",
   "settings.notifications.enable.description":
     "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.workbench.title": "Aktivér VS Code-notifikationer",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-notifikationer, når Kilo fuldfører en opgave eller har brug for input fra dig",
+  "settings.notifications.os.title": "Aktivér OS-notifikationer",
+  "settings.notifications.os.description":
+    "Vis oprindelige OS-notifikationsadvarsler, når Kilo fuldfører en opgave eller har brug for input fra dig, mens VS Code ikke er aktiv.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sender testnotifikation…",
+  "settings.notifications.testOS.success": "Testnotifikation sendt.",
+  "settings.notifications.testOS.error": "Testnotifikation mislykkedes",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -856,12 +901,26 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "Del et board mellem en hovedsession og dens underagenter til opgaveløsning, herunder indlejrede underagenter. Brug det til parallelle løsningsforsøg eller arbejdsopgaver, der supplerer hinanden, ikke til alle opgaver.",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
   "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Model-id, der sendes til dit eget transskriptionsendpoint, for eksempel whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Tale til tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Brug en OpenAI-kompatibel transskriptions-API i stedet for Kilo Gateway. Modeller læses fra /models, og lyd sendes til /audio/transcriptions. Lad feltet stå tomt for at bruge Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Tale til tekst-API-nøgle",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token, der sendes til den egne transskriptions-basis-URL. Gemmes i din Kilo-konfigurationsfil.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
+    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text, eller angiv en egen transskriptions-basis-URL nedenfor.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
@@ -881,8 +940,14 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
+  "settings.experimental.claudeMigration.description":
+    "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
+  "settings.experimental.taskModelSelection.title": "Valg af Task-underagentmodel",
+  "settings.experimental.taskModelSelection.description":
+    "Tillad eksplicit valg af model, udbyder og ræsonnementsindsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -993,6 +1058,9 @@ export const dict = {
     "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
+  "settings.agentBehaviour.pushFixes.title": "Push pull request-rettelser",
+  "settings.agentBehaviour.pushFixes.description":
+    "Når du sender CI-fejl eller review-kommentarer fra en pull request til agenten, eller opdaterer et worktree fra dets base, bedes agenten committe og pushe, så pull requesten opdateres. Tilladelsesprompter gælder stadig. Slå fra for at committe manuelt.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1059,6 +1127,12 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
   "settings.context.compaction.title": "Komprimering",
+  "settings.context.compactionModel.title": "Komprimeringsmodel",
+  "settings.context.compactionModel.description":
+    "Model, der bruges til automatisk og manuel komprimering. Lad feltet være tomt for at bruge chatmodellen. Omkostninger, hastighed og kvaliteten af opsummeringen afhænger af modellen.",
+  "settings.context.compactionModel.useChatModel": "Brug chatmodel",
+  "settings.context.compactionModel.hint":
+    "For at vælge hvilken model der bruges til komprimering, se Modelindstillinger.",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
@@ -1103,9 +1177,12 @@ export const dict = {
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
-  "settings.display.reasoningAutoCollapse.description":
-    "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
+  "settings.display.reasoningDisplay.title": "Ræsonnementsblokke",
+  "settings.display.reasoningDisplay.description":
+    "Vælg, hvordan ræsonnementsblokke starter. Foldet ud viser hele teksten, Forhåndsvisning begrænser den til en kort rulbar forhåndsvisning, og Overskrift viser kun titlen og streamingindikatoren, indtil du åbner den.",
+  "settings.display.reasoningDisplay.expanded": "Foldet ud",
+  "settings.display.reasoningDisplay.preview": "Forhåndsvisning",
+  "settings.display.reasoningDisplay.headline": "Overskrift",
   "settings.display.shiftTabCycle.title": "Skift ræsonnementsindsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Tryk på Shift+Tab i et promptindtastningsfelt for at skifte til næste niveau af ræsonnementsindsats. Deaktivér for at beholde Shift+Tab til tastaturnavigation af fokus.",
@@ -1152,59 +1229,16 @@ export const dict = {
   "question.summary": "{{n}} af {{total}} spørgsmål",
   "common.review": "Gennemgå",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrer fra legacy-version",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy-migrering",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrer indstillinger fra en tidligere installation af Kilo Code, herunder udbyder API-nøgler og standardmodel.",
   "settings.aboutKiloCode.rooImport.description": "Importer samtalehistorik fra en installation af Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Importer sessioner fra Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Nyheder i Kilo Code",
-  "migration.whatsNew.subtitle": "Vi har genopbygget udvidelsen på et hurtigere og mere effektivt fundament.",
-  "migration.whatsNew.features.performance.title": "Hurtigere agentydelse",
-  "migration.whatsNew.features.performance.detail":
-    "Parallelle værktøjskald og underagenter lader din agent tackle mere på én gang — så du bruger mindre tid på at vente og mere tid på at levere.",
-  "migration.whatsNew.features.interface.title": "Strømlinet brugerflade",
-  "migration.whatsNew.features.interface.detail": "Færre distraktioner, nemmere og hurtigere at læse.",
-  "migration.whatsNew.features.agentManager.title": "Agentstyring",
-  "migration.whatsNew.features.agentManager.detail":
-    "En samlet brugerflade til at køre flere agenter parallelt, hver på sit eget worktree — overvåg fremskridt, skift kontekst og gennemgå ændringer ét sted.",
-  "migration.whatsNew.features.foundation.title": "Fælles fundament",
-  "migration.whatsNew.features.foundation.detail":
-    "Én lille, effektiv kerne på tværs af alle Kilo-produkter. En velkendt oplevelse uanset hvordan du vælger at arbejde.",
-  "migration.whatsNew.blogLink": "Læs den fulde meddelelse",
-  "migration.whatsNew.docsLink": "Nyheder og ofte stillede spørgsmål",
-  "migration.whatsNew.continue": "Fortsæt",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrer dine indstillinger",
-  "migration.migrate.subtitle":
-    "Vi har fundet indstillinger fra din tidligere installation. Her er, hvad vi kan overføre.",
+  "migration.roo.button": "Importér sessioner",
+  "migration.roo.empty": "Ingen Roo Code-sessioner fundet.",
   "migration.migrate.selectLabel": "Vælg hvad der skal migreres",
   "migration.migrate.chatHistory": "Chatsessioner og historik",
-  "migration.migrate.button": "Migrer indstillinger",
-  "migration.migrate.skip": "Spring over",
-  "migration.migrate.keysDetected": "{{count}} nøgler fundet",
-  "migration.migrate.serversConfigured": "{{count}} server(e) konfigureret",
-  "migration.migrate.modesFound": "{{count}} tilstand(e) fundet",
-  "migration.migrate.nothingToMigrate": "Der blev ikke fundet noget at migrere i legacy-indstillingerne.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Udbyder API-nøgler",
-  "migration.select.mcpServers": "MCP-servere",
-  "migration.select.customModes": "Brugerdefinerede tilstande / Agenter",
-  "migration.select.defaultModel": "Standardmodel",
-  "migration.select.autoApproval": "Automatisk godkendelse",
-  "migration.select.language": "UI-sprog",
-  "migration.select.autocomplete": "Indstillinger for autofuldførelse",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} af {{total}} elementer blev migreret med succes.",
-  "migration.complete.cleanup": "Fjern legacy-indstillingsdata",
-  "migration.complete.cleanupDescription":
-    "Dette fjerner de gamle indstillinger fra VS Code-lageret. Du vil ikke kunne køre denne migrering igen.",
   "migration.complete.done": "Færdig",
   "migration.migrate.sessionsDetected": "{{count}} sessioner fundet",
   "migration.error.continue": "Fortsæt",
@@ -1238,7 +1272,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Ukendt dato",
   "migration.sessionFormat.unknown": "Ukendt",
   "migration.sessionFormat.unknownError": "Ukendt fejl",
-  // legacy-migration end
 
   "error.details.show": "Detaljer",
 
@@ -1246,7 +1279,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} opgaver udført",
   "task.backgroundAgents.running.one": "1 baggrundsagent",
   "task.backgroundAgents.running.many": "{{count}} baggrundsagenter",
+  "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åbn baggrundsagent",
+  "task.backgroundAgents.openAll": "Åbn alle baggrundsagenter",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
@@ -1259,6 +1294,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Annulleret",
   "task.backgroundAgents.status.error": "Fejl",
   "task.backgroundAgents.untitled": "Baggrundsagent",
+  "task.backgroundAgents.stopAll": "Stop alle ({{count}})",
   "settings.saveBar.unsavedChanges": "Ikke-gemte ændringer",
   "settings.saveBar.discard": "Kassér",
   "settings.saveBar.save": "Gem",
@@ -1286,6 +1322,18 @@ export const dict = {
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Gem lokalt",
+  "diffViewer.comment.sendToAgent": "Send til agent",
+  "diffViewer.comment.postToGithub": "Udgiv på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke indlæse ændringerne i pull requesten.",
+  "diffViewer.comment.unavailable": "Denne linje er ikke tilgængelig i det aktuelle snapshot af pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åbn PR",
+  "diffViewer.comment.localChanges": "Lokale ændringer",
+  "diffViewer.comment.prChanges": "PR-ændringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Vælg destination",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 
@@ -1307,5 +1355,11 @@ export const dict = {
   "chat.search.close": "Luk søgning",
   "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
   "chat.search.noResults": "Ingen resultater",
+  "settings.experimental.browserAutomation.title": "Integreret browser",
+  "settings.experimental.browserAutomation.description":
+    "Vis forhåndsvisninger af lokale applikationer i Agent Manager, og gør værktøjet browser_open tilgængeligt for Agent Manager-sessioner.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Brug system-Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Brug den installerede Google Chrome til den integrerede browser. Deaktivér kun, når en kompatibel Playwright Chromium-browser allerede er installeret.",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
 }

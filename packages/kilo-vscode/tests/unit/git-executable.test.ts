@@ -2,6 +2,112 @@ import { describe, expect, it } from "bun:test"
 import { createGitExecutable } from "../../src/util/git-executable"
 
 describe("createGitExecutable", () => {
+  it("uses the configured Git executable on Windows", async () => {
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => "C:\\Program Files\\Git\\cmd\\git.exe",
+    })
+
+    expect(await git()).toBe("C:\\Program Files\\Git\\cmd\\git.exe")
+  })
+
+  it("falls back to PATH when the preferred Windows executable is missing", async () => {
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => undefined,
+    })
+
+    expect(await git()).toBe("git")
+  })
+
+  it("logs and falls back to PATH when preferred Windows resolution fails", async () => {
+    const messages: string[] = []
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => {
+        throw new Error("Git API unavailable")
+      },
+      log: (message) => messages.push(message),
+    })
+
+    expect(await git()).toBe("git")
+    expect(messages).toEqual(["Unable to resolve the preferred Git executable, using PATH: Error: Git API unavailable"])
+  })
+
+  it("falls back to PATH when preferred Windows resolution hangs", async () => {
+    const messages: string[] = []
+    let calls = 0
+    const git = createGitExecutable({
+      platform: "win32",
+      timeout: 10,
+      preferred: () => {
+        calls++
+        return new Promise<string>(() => undefined)
+      },
+      log: (message) => messages.push(message),
+    })
+
+    expect(await Promise.all([git(), git(), git()])).toEqual(["git", "git", "git"])
+    expect(await git()).toBe("git")
+    expect(calls).toBe(1)
+    expect(messages).toEqual([
+      "Unable to resolve the preferred Git executable, using PATH: Error: VS Code Git activation timed out after 10ms",
+    ])
+  }, 1_000)
+
+  it("keeps the PATH fallback when preferred Windows resolution rejects after timeout", async () => {
+    const messages: string[] = []
+    let reject!: (error: Error) => void
+    const pending = new Promise<string>((_, fail) => {
+      reject = fail
+    })
+    const git = createGitExecutable({
+      platform: "win32",
+      timeout: 10,
+      preferred: () => pending,
+      log: (message) => messages.push(message),
+    })
+
+    expect(await git()).toBe("git")
+    reject(new Error("Late Git activation failure"))
+    await Bun.sleep(0)
+    expect(await git()).toBe("git")
+    expect(messages).toHaveLength(1)
+  }, 1_000)
+
+  it("keeps the preferred Windows executable after its timeout deadline", async () => {
+    const messages: string[] = []
+    const git = createGitExecutable({
+      platform: "win32",
+      timeout: 10,
+      preferred: async () => "C:\\Program Files\\Git\\cmd\\git.exe",
+      log: (message) => messages.push(message),
+    })
+
+    expect(await git()).toBe("C:\\Program Files\\Git\\cmd\\git.exe")
+    await Bun.sleep(20)
+    expect(await git()).toBe("C:\\Program Files\\Git\\cmd\\git.exe")
+    expect(messages).toEqual([])
+  })
+
+  it("caches the preferred Windows executable", async () => {
+    let calls = 0
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => {
+        calls++
+        return "C:\\Git\\git.exe"
+      },
+    })
+
+    expect(await Promise.all([git(), git(), git()])).toEqual([
+      "C:\\Git\\git.exe",
+      "C:\\Git\\git.exe",
+      "C:\\Git\\git.exe",
+    ])
+    expect(calls).toBe(1)
+  })
+
   it("preserves PATH lookup on other platforms", async () => {
     const git = createGitExecutable({
       platform: "linux",

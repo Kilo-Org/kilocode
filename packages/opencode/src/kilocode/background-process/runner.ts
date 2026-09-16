@@ -1,5 +1,4 @@
 import { KiloPtySelfCommand } from "@/kilocode/pty/self-command"
-import { PowerShell } from "@/kilocode/shell/shell"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
 import { isRecord } from "@/util/record"
@@ -12,7 +11,6 @@ export namespace BackgroundProcessRunner {
   const MODE = 0o600
   const MAX = 1024 * 1024
   const KEEP = 200 * 1024
-  const pwsh = PowerShell.pwsh() ?? "powershell.exe"
 
   export type Input = {
     token: string
@@ -98,7 +96,7 @@ export namespace BackgroundProcessRunner {
   async function descendants(root: number, seen: Map<number, string>, active: boolean) {
     const query =
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
-    const out = await Process.text([pwsh, "-NoProfile", "-NonInteractive", "-Command", query], {
+    const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
       abort: AbortSignal.timeout(2_000),
       timeout: 2_000,

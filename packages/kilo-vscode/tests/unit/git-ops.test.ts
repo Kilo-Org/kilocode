@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as nodePath from "path"
-import { GitOps } from "../../src/agent-manager/GitOps"
+import { GitOps, parseConflictPaths } from "../../src/agent-manager/GitOps"
 import { Semaphore } from "../../src/agent-manager/semaphore"
 
 function ops(handler: (args: string[], cwd: string) => Promise<string>, semaphore?: Semaphore): GitOps {
@@ -54,6 +54,39 @@ describe("GitOps", () => {
 
       expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
       expect(calls).toBe(1)
+    })
+  })
+
+  it("passes stdin to binary Git commands without decoding their output", async () => {
+    await withRepo(async (cwd) => {
+      const git = new GitOps({ log: () => undefined, binary: async () => "git" })
+      const value = "before\u0000after"
+      const object = await git.execGit(["hash-object", "-w", "--stdin"], cwd, { stdin: value })
+      const result = await git.execGitBuffer(["cat-file", "--batch"], cwd, {
+        stdin: `${object.stdout.trim()}\n`,
+      })
+      expect(result.code).toBe(0)
+      expect(result.stdout.includes(Buffer.from(value))).toBe(true)
+      git.dispose()
+    })
+  })
+
+  it("uses an explicit Git executable path with spaces", async () => {
+    await withRepo(async (cwd) => {
+      const real = Bun.which("git")
+      if (!real) throw new Error("Git is required for this test")
+
+      const dir = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-gitops executable-"))
+      const binary = process.platform === "win32" ? real : nodePath.join(dir, "git")
+      try {
+        if (process.platform !== "win32") await fs.symlink(real, binary)
+
+        const git = new GitOps({ log: () => undefined, binary })
+        expect(git.path).toBe(binary)
+        expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      } finally {
+        await fs.rm(dir, { recursive: true, force: true })
+      }
     })
   })
 
@@ -687,6 +720,21 @@ describe("GitOps", () => {
       git.dispose()
       expect(git.disposed).toBe(true)
     })
+
+    it("stops waiting for executable discovery when its request signal aborts", async () => {
+      let release!: (value: string) => void
+      const gate = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      const git = new GitOps({ log: () => undefined, binary: () => gate })
+      const ctl = new AbortController()
+      const pending = git.execGit(["status"], "/repo", { signal: ctl.signal })
+      ctl.abort()
+      const result = await pending
+      expect(result.code).not.toBe(0)
+      release("git")
+      git.dispose()
+    })
   })
 
   describe("semaphore integration", () => {
@@ -719,6 +767,51 @@ describe("GitOps", () => {
 
       await Promise.all(Array.from({ length: 4 }, () => git.currentBranch("/repo")))
       expect(peak).toBe(4)
+    })
+  })
+})
+
+describe("GitOps conflicts", () => {
+  it("rejects non-OID conflict revisions before invoking Git", async () => {
+    const git = new GitOps({ log: () => undefined })
+    await expect(git.conflicts("/repo", "origin", "refs/heads/main", "head")).rejects.toThrow(
+      "Invalid pull request commit ID",
+    )
+    git.dispose()
+  })
+
+  it("parses merge-tree name-only output", () => {
+    expect(
+      parseConflictPaths("treeoid\na.txt\nb.txt\n\nAuto-merging a.txt\nCONFLICT (content): Merge conflict in a.txt"),
+    ).toEqual(["a.txt", "b.txt"])
+    expect(parseConflictPaths("treeoid\n")).toEqual([])
+  })
+
+  it("lists conflicting files for divergent commits without changing the worktree", async () => {
+    await withRepo(async (cwd) => {
+      runGit(cwd, ["config", "user.email", "test@example.com"])
+      runGit(cwd, ["config", "user.name", "Test"])
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "base\n")
+      runGit(cwd, ["add", "."])
+      runGit(cwd, ["commit", "-m", "base"])
+      const branch = runGit(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])
+      runGit(cwd, ["checkout", "-b", "feature"])
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "feature\n")
+      runGit(cwd, ["commit", "-am", "feature"])
+      const head = runGit(cwd, ["rev-parse", "HEAD"])
+      runGit(cwd, ["checkout", branch])
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "main\n")
+      runGit(cwd, ["commit", "-am", "main"])
+      const base = runGit(cwd, ["rev-parse", "HEAD"])
+
+      const git = new GitOps({ log: () => undefined })
+      expect(await git.conflicts(cwd, "origin", base, head)).toEqual(["a.txt"])
+      expect(await git.conflicts(cwd, "origin", base, head)).toEqual(["a.txt"])
+      expect((git as unknown as { conflictCache: Map<string, unknown> }).conflictCache.size).toBe(1)
+      expect(await fs.readFile(nodePath.join(cwd, "a.txt"), "utf8")).toBe("main\n")
+      expect(runGit(cwd, ["status", "--porcelain"])).toBe("")
+      git.dispose()
+      expect((git as unknown as { conflictCache: Map<string, unknown> }).conflictCache.size).toBe(0)
     })
   })
 })

@@ -4,6 +4,7 @@ import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
 import DESCRIPTION from "./agent-manager-models.txt"
+import { Config } from "@/config/config"
 
 const Params = Schema.Struct({
   query: Schema.optional(Schema.String).annotate({
@@ -61,39 +62,49 @@ function view(entry: Entry) {
 export const AgentManagerModelsTool = Tool.define<
   typeof Params,
   { count: number; total: number },
-  Provider.Service,
+  Provider.Service | Config.Service,
   "agent_manager_models"
 >(
   "agent_manager_models",
   Effect.gen(function* () {
     const provider = yield* Provider.Service
-    return {
-      description: DESCRIPTION,
-      parameters: Params,
-      execute: (params) =>
-        Effect.gen(function* () {
-          const providers = yield* provider.list()
-          const all = entries(providers)
-          const query = params.query?.trim()
-          const matches = query ? all.filter((entry) => matchesQuery([entry.name, ...entry.ids], query)) : all
-          const offset = params.offset ?? 0
-          const limit = Math.min(params.limit ?? MAX_LIMIT, MAX_LIMIT)
-          const models = matches.slice(offset, offset + limit).map(view)
-          const nextOffset = offset + models.length < matches.length ? offset + models.length : undefined
-          return {
-            title: query
-              ? `${matches.length} model${matches.length === 1 ? "" : "s"} matching "${params.query?.trim()}"`
-              : `${matches.length} available models`,
-            output: JSON.stringify({
-              models,
-              offset,
-              total: matches.length,
-              nextOffset,
-              hint: "Pass a model name (or one of its providers/IDs) as the agent_manager task `model`. Add the task `provider` to force one of the listed providers; otherwise Agent Manager prefers the provider used by the current turn.",
+    const config = yield* Config.Service
+    return () =>
+      Effect.gen(function* () {
+        const cfg = yield* config.get()
+        const selection = cfg.experimental?.task_model_selection === true
+        return {
+          description: selection
+            ? `${DESCRIPTION}\n\nExperimental Task model selection is enabled. Also use this tool before choosing model, provider, or variant for the task subagent tool. You may choose these settings to suit the subagent task without creating an Agent Manager session.`
+            : DESCRIPTION,
+          parameters: Params,
+          execute: (params) =>
+            Effect.gen(function* () {
+              const providers = yield* provider.list()
+              const all = entries(providers)
+              const query = params.query?.trim()
+              const matches = query ? all.filter((entry) => matchesQuery([entry.name, ...entry.ids], query)) : all
+              const offset = params.offset ?? 0
+              const limit = Math.min(params.limit ?? MAX_LIMIT, MAX_LIMIT)
+              const models = matches.slice(offset, offset + limit).map(view)
+              const nextOffset = offset + models.length < matches.length ? offset + models.length : undefined
+              return {
+                title: query
+                  ? `${matches.length} model${matches.length === 1 ? "" : "s"} matching "${params.query?.trim()}"`
+                  : `${matches.length} available models`,
+                output: JSON.stringify({
+                  models,
+                  offset,
+                  total: matches.length,
+                  nextOffset,
+                  hint: selection
+                    ? "Pass a model name as `model`, a listed provider ID as `provider`, and a supported reasoning effort as `variant` to task or agent_manager. Task selection is experimental and does not create Agent Manager sessions."
+                    : "Pass a model name (or one of its providers/IDs) as the agent_manager task `model`. Add the task `provider` to force one of the listed providers; otherwise Agent Manager prefers the provider used by the current turn.",
+                }),
+                metadata: { count: models.length, total: matches.length },
+              }
             }),
-            metadata: { count: models.length, total: matches.length },
-          }
-        }),
-    }
+        }
+      })
   }),
 )

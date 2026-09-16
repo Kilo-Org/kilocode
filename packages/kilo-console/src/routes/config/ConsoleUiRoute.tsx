@@ -10,6 +10,7 @@ import {
   type ConsoleDiffStyle,
   useConsoleUiSettings,
 } from "./state/console"
+import "../../styles/cli-ui.css"
 
 const styles = [
   { value: "unified", label: "Unified" },

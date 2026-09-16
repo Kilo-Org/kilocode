@@ -31,6 +31,32 @@ describe("project session live state", () => {
         title: "Restore worktree metadata",
         worktreeId: "worktree-1",
       })
+      expect(live.current()).toEqual(live().project!)
+      dispose()
+    })
+  })
+
+  it("returns only the active project and keeps the legacy source when disabled", () => {
+    createRoot((dispose) => {
+      const state = { pid: "second" as string | undefined, enabled: true, store: [] as SessionInfo[] }
+      const first = { ...session("same"), title: "First project" }
+      const second = { ...session("same"), title: "Second project" }
+      const live = createProjectSessionsLive({
+        base: () => ({ first: [first], second: [second] }),
+        pid: () => state.pid,
+        enabled: () => state.enabled,
+        store: () => state.store,
+        managed: () => [],
+        locals: () => new Set(),
+      })
+      expect(live.current()).toEqual([second])
+      state.pid = "first"
+      expect(live.current()).toEqual([first])
+      state.pid = undefined
+      expect(live.current()).toEqual([])
+      state.enabled = false
+      state.store = [first]
+      expect(live.current()).toEqual([first])
       dispose()
     })
   })

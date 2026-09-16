@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -206,13 +207,15 @@ class KiloBackendSessionManager(
     }
 
     /**
-     * Fork session [id] into [dir] via `POST /session/{id}/fork?directory={dir}` with an empty body.
+     * Fork session [id] into [dir] via `POST /session/{id}/fork?directory={dir}`. Without [messageId]
+     * the request carries no body at all and the whole transcript is copied; with one the CLI
+     * truncates the fork at that message.
      *
      * Uses raw HTTP for the same reason as [create]: the generated client sends a malformed empty
      * body. The CLI accepts a bodyless fork and `?directory=` overrides the source session directory
      * (see packages/opencode/src/kilocode/server/httpapi/session-fork.ts and fork-routing.ts).
      */
-    fun fork(id: String, dir: String): SessionDto {
+    fun fork(id: String, dir: String, messageId: String? = null): SessionDto {
         val h = http ?: throw IllegalStateException("Session manager not started")
         val url = base ?: throw IllegalStateException("Session manager not started")
         val target = url.toHttpUrl().newBuilder()
@@ -221,10 +224,13 @@ class KiloBackendSessionManager(
             .addPathSegment("fork")
             .addQueryParameter("directory", dir)
             .build()
-        log.info("Forking session: POST $target")
+        log.info("Forking session: POST $target message=${messageId != null}")
+        val body = messageId
+            ?.let { KiloCliDataParser.buildForkJson(it).toRequestBody("application/json".toMediaType()) }
+            ?: ByteArray(0).toRequestBody(null)
         val request = Request.Builder()
             .url(target)
-            .post(ByteArray(0).toRequestBody(null))
+            .post(body)
             .build()
 
         h.newCall(request).execute().use { response ->
@@ -280,6 +286,45 @@ class KiloBackendSessionManager(
                 throw RuntimeException("Session rename failed: HTTP ${response.code} — $raw")
             }
             val dto = KiloCliDataParser.parseSession(raw!!)
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
+    /**
+     * Share session [id] via `POST /session/{id}/share?directory={dir}` with an empty body, returning
+     * the updated session carrying `share.url`.
+     *
+     * Raw HTTP for the same reason as [fork]. The CLI requires Kilo credentials and refuses when
+     * `share` is disabled by config, but it maps every cause to a bare HTTP 500 with no body detail,
+     * so the message thrown here is all the UI can report.
+     */
+    fun share(id: String, dir: String): SessionDto = shareCall(id, dir, on = true)
+
+    /** Revoke a session share via `DELETE /session/{id}/share?directory={dir}`. */
+    fun unshare(id: String, dir: String): SessionDto = shareCall(id, dir, on = false)
+
+    private fun shareCall(id: String, dir: String, on: Boolean): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("share")
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Session share: on=$on $target")
+        val builder = Request.Builder().url(target)
+        val request = (if (on) builder.post(ByteArray(0).toRequestBody(null)) else builder.delete()).build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session share failed: on=$on HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session share failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session share=${dto.share != null} code=${response.code}")
             owned[dto.id] = dto.directory
             return dto
         }
@@ -370,6 +415,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(s: ai.kilocode.jetbrains.api.model.Session1) = dto(
@@ -384,6 +430,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(s: GlobalSession) = dto(
@@ -398,6 +445,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(
@@ -412,6 +460,7 @@ class KiloBackendSessionManager(
         archived: Double?,
         summary: SessionSummaryDto?,
         revert: SessionRevertDto?,
+        share: String?,
     ): SessionDto {
         owned[id] = dir
         return SessionDto(
@@ -428,6 +477,7 @@ class KiloBackendSessionManager(
             ),
             summary = summary,
             revert = revert,
+            share = share?.takeIf { it.isNotBlank() }?.let(::SessionShareDto),
         )
     }
 

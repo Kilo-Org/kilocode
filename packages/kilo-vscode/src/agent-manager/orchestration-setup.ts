@@ -20,6 +20,7 @@ export interface OrchestrationBridgeDeps {
   getPrs: () => Map<string, PRStatus>
   pushState: (ctx?: ProjectContext) => void
   hasPanelSession: (id: string) => boolean
+  routeSession: (id: string, directory: string) => void
   closeSession: (id: string) => Promise<unknown>
   postSessionClosed: (id: string, projectId?: string) => void
   log: (...args: unknown[]) => void
@@ -45,15 +46,37 @@ export function createOrchestrationBridge(deps: OrchestrationBridgeDeps): AgentM
       const ctx = dir ? deps.contexts.byDirectory(dir) : undefined
       deps.pushState(ctx)
     },
+    resolve: (id, dir) => {
+      const ctx = dir ? deps.contexts.byDirectory(dir) : undefined
+      const state = ctx?.peekState()
+      if (state?.isSessionClosed(id)) return undefined
+      const stored = state?.getSession(id)
+      if (stored) return stored
+      if (!ctx) return undefined
+      const live = ctx.sessions().find((session) => session.id === id)
+      if (!live?.worktreeId || !state?.getWorktree(live.worktreeId)) return undefined
+      return { id, worktreeId: live.worktreeId, createdAt: live.createdAt }
+    },
     managed: (id, dir) => {
       const ctx = dir ? deps.contexts.byDirectory(dir) : undefined
-      if (ctx) return ctx.hasLiveSession(id) || !!ctx.peekState()?.getSession(id)
+      if (ctx) {
+        const state = ctx.peekState()
+        return !state?.isSessionClosed(id) && (!!state?.getSession(id) || ctx.hasLiveSession(id))
+      }
       return deps.hasPanelSession(id) || !!deps.getState()?.getSession(id)
     },
     close: async (id, dir) => {
       const ctx = dir ? deps.contexts.byDirectory(dir) : undefined
       if (ctx) {
+        const state = ctx.peekState()
+        const stored = state?.getSession(id)
+        const live = ctx.sessions().find((session) => session.id === id)
+        const wt = live?.worktreeId ? state?.getWorktree(live.worktreeId) : undefined
+        if (wt && !stored) deps.routeSession(id, wt.path)
         await deps.projectScope.run(ctx, () => deps.closeSession(id))
+        state?.closeSession(id, wt?.id ?? stored?.worktreeId ?? null)
+        await state?.flush()
+        ctx.removeLiveSession(id)
       } else {
         await deps.closeSession(id)
       }

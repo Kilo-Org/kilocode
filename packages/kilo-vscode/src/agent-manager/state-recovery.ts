@@ -22,7 +22,7 @@ export function restoreWorktrees(state: WorktreeStateManager, infos: WorktreeInf
       })
 
     if (!existing) result.worktrees++
-    if (!info.sessionId) continue
+    if (!info.sessionId || state.isSessionClosed(info.sessionId)) continue
 
     const session = state.getSession(info.sessionId)
     if (!session) {

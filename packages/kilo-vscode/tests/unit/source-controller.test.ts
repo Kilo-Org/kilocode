@@ -183,6 +183,107 @@ describe("SourceController.activate", () => {
   })
 })
 
+describe("SourceController.setVisible", () => {
+  it("defers hidden activation and refreshes when shown without rebuilding", async () => {
+    let fetches = 0
+    let disposed = 0
+    const source: DiffSource = {
+      descriptor: WORKSPACE_DESC,
+      async fetch() {
+        fetches++
+        return { diffs: [] }
+      },
+      dispose() {
+        disposed++
+      },
+    }
+    const { controller } = make({ workspace: source })
+    controller.setContext({ workspaceRoot: "/repo" })
+    try {
+      await controller.setVisible(false)
+      await controller.activate("workspace")
+      await controller.refresh()
+      expect(fetches).toBe(0)
+      expect(controller.isPolling).toBe(false)
+      expect(controller.currentId).toBe("workspace")
+
+      await controller.setVisible(true)
+      await controller.setVisible(true)
+      expect(fetches).toBe(1)
+      expect(controller.isPolling).toBe(true)
+
+      await controller.setVisible(false)
+      await controller.refresh()
+      expect(controller.isPolling).toBe(false)
+      expect(fetches).toBe(1)
+      await controller.setVisible(true)
+      expect(fetches).toBe(2)
+      expect(disposed).toBe(0)
+    } finally {
+      controller.stop()
+    }
+  })
+
+  it("does not restart polling when an in-flight fetch finishes hidden", async () => {
+    const gate = Promise.withResolvers<void>()
+    let fetches = 0
+    const { controller } = make({
+      workspace: {
+        descriptor: WORKSPACE_DESC,
+        async fetch() {
+          fetches++
+          await gate.promise
+          return { diffs: [] }
+        },
+      },
+    })
+    controller.setContext({ workspaceRoot: "/repo" })
+    try {
+      const activation = controller.activate("workspace")
+      await controller.setVisible(false)
+      gate.resolve()
+      await activation
+      expect(controller.isPolling).toBe(false)
+      expect(fetches).toBe(1)
+      await controller.setVisible(true)
+      expect(fetches).toBe(2)
+      expect(controller.isPolling).toBe(true)
+    } finally {
+      gate.resolve()
+      controller.stop()
+    }
+  })
+
+  it.each([{ poll: false }, { fetch: false }])("preserves activation options %j when shown", async (options) => {
+    let fetches = 0
+    const { controller } = make({
+      workspace: {
+        descriptor: WORKSPACE_DESC,
+        async fetch() {
+          fetches++
+          return { diffs: [] }
+        },
+      },
+    })
+    controller.setContext({ workspaceRoot: "/repo" })
+    try {
+      await controller.setVisible(false)
+      await controller.activate("workspace", options)
+      await controller.setVisible(true)
+      expect(fetches).toBe("fetch" in options ? 0 : 1)
+      expect(controller.isPolling).toBe(false)
+      await controller.setVisible(false)
+      controller.stop()
+      await controller.setVisible(true)
+      expect(controller.currentId).toBeUndefined()
+      expect(controller.isPolling).toBe(false)
+      expect(fetches).toBe("fetch" in options ? 0 : 1)
+    } finally {
+      controller.stop()
+    }
+  })
+})
+
 describe("SourceController.stop", () => {
   it("disposes the active source", async () => {
     let disposed = 0
@@ -340,8 +441,8 @@ describe("SourceController.requestFile", () => {
     posted.length = 0
     await controller.requestFile("foo.ts")
 
-    const files = byType(posted, "diffViewer.diffFile")
-    expect(files[0]!.diff).toEqual(detail)
+    await controller.requestFile("missing.ts")
+    expect(byType(posted, "diffViewer.diffFile").map((msg) => msg.diff)).toEqual([detail, null])
 
     controller.stop()
   })
@@ -364,7 +465,7 @@ describe("SourceController.requestFile", () => {
         return { diffs: [] }
       },
     }
-    const { controller } = make({ workspace, "session:s1": session })
+    const { controller, posted } = make({ workspace, "session:s1": session })
 
     controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
     await controller.activate("workspace")
@@ -373,41 +474,38 @@ describe("SourceController.requestFile", () => {
     await request
 
     expect(details).toBe(0)
+    expect(byType(posted, "diffViewer.diffFile")).toEqual([])
     controller.stop()
   })
 
-  it("posts null when a pending fetchFile result is invalidated by stop", async () => {
-    let release: () => void = () => {}
+  it.each(["stop", "switch", "reactivate"])("drops pending detail after %s", async (mode) => {
+    const entered = Promise.withResolvers<void>()
+    const wait = Promise.withResolvers<void>()
     const workspace: DiffSource = {
       descriptor: WORKSPACE_DESC,
       async fetch() {
         return { diffs: [] }
       },
       async fetchFile() {
-        await new Promise<void>((resolve) => (release = resolve))
-        return {
-          file: "foo.ts",
-          before: "a",
-          after: "b",
-          additions: 1,
-          deletions: 1,
-        }
+        entered.resolve()
+        await wait.promise
+        return { file: "foo.ts", before: "a", after: "b", additions: 1, deletions: 1 }
       },
     }
-    const { controller, posted } = make({ workspace })
+    const { controller, posted } = make({ workspace, "session:s1": { ...workspace, descriptor: SESSION_DESC } })
 
     controller.setContext({ workspaceRoot: "/repo" })
     await controller.activate("workspace")
-    posted.length = 0
     const request = controller.requestFile("foo.ts")
-    controller.stop()
-    release()
+    await entered.promise
+    if (mode === "stop") controller.stop()
+    if (mode === "switch") await controller.activate("session:s1")
+    if (mode === "reactivate") await controller.reactivate()
+    wait.resolve()
     await request
-
-    const files = byType(posted, "diffViewer.diffFile")
-    expect(files).toHaveLength(1)
-    expect(files[0]!.file).toBe("foo.ts")
-    expect(files[0]!.diff).toBeNull()
+    controller.stop()
+    await controller.requestFile("foo.ts")
+    expect(byType(posted, "diffViewer.diffFile")).toEqual([])
   })
 })
 

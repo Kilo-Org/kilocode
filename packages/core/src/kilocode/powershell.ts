@@ -1,24 +1,6 @@
-import { statSync } from "fs"
-import path from "path"
-import { which } from "../util/which"
-
 export function args(command: string) {
   return ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script(command)]
 }
-
-export const locations = (env: NodeJS.ProcessEnv = process.env) =>
-  [
-    env["ProgramFiles"] && path.join(env["ProgramFiles"], "PowerShell", "7"),
-    env["ProgramFiles(x86)"] && path.join(env["ProgramFiles(x86)"], "PowerShell", "7"),
-    env["LOCALAPPDATA"] && path.join(env["LOCALAPPDATA"], "Microsoft", "WindowsApps"),
-  ]
-    .filter((item): item is string => Boolean(item))
-    .map((root) => path.join(root, "pwsh.exe"))
-
-export const probe = (env: NodeJS.ProcessEnv = process.env) =>
-  locations(env).filter((file) => statSync(file, { throwIfNoEntry: false })?.isFile())
-
-export const pwsh = (env: NodeJS.ProcessEnv = process.env) => which("pwsh", env) ?? probe(env)[0]
 
 const setup = `[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false);
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false);
@@ -141,4 +123,4 @@ function block(command: string, start: number, open: string, close: string) {
   }
 }
 
-export const PowerShell = { args, locations, probe, pwsh }
+export const PowerShell = { args }

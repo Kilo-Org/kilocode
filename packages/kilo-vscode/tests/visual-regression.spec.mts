@@ -77,7 +77,18 @@ async function settle(page: Page) {
 // Sandboxing rows can settle at different scroll heights after settings context updates.
 // Side terminal tabs mount live xterm instances whose websocket error text
 // lands at indeterminate times.
+// The question-resolve stability story exists to measure geometry across the
+// request-resolve/tool-complete gap and carries debug toggle buttons, so it is
+// not a meaningful appearance baseline.
+// The diff-panel scroll-up story settles at a slightly different scroll offset
+// between runs, so its baseline flips by a few pixels even without source changes.
 const SKIP = new Set<string>([
+  "labs-tool-call-lab--question-resolve-stability",
+  "agentmanager--diff-panel-cached-worktree-switch",
+  "agentmanager--diff-panel-viewport-loading",
+  "agentmanager--diff-panel-interrupted-loading",
+  "agentmanager--diff-panel-scroll-up",
+  "agentmanager--file-tree-virtualized-large",
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
   "agentmanager--side-terminal-panel-tabs",

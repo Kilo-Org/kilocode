@@ -1,6 +1,6 @@
 import { createMemo, createSignal } from "solid-js"
 import type { Model, Provider } from "@kilocode/sdk/v2/client"
-import { saveModelState, type ModelRef } from "../../../client"
+import { saveModelState, type ModelRef, type Snapshot } from "../../../client"
 import { useConfig } from "../../../context/config"
 import { hasGateway, visible } from "./privacy"
 
@@ -52,6 +52,33 @@ function same(item: Item, ref: ModelRef) {
   return item.model.providerID === ref.providerID && item.model.id === ref.modelID
 }
 
+export function available(data?: Snapshot) {
+  if (!data) return []
+  const ids = new Set([...Object.keys(data.effective.provider ?? {}), ...data.providers.connected])
+  return data.providers.all
+    .filter((provider) => ids.has(provider.id))
+    .filter((provider) => Object.keys(provider.models).length > 0)
+    .sort(order)
+}
+
+export function choices(search: string, items: Item[], fav: (item: Item) => boolean) {
+  const term = search.trim().toLowerCase()
+  return items
+    .filter((item) => {
+      if (!term) return true
+      return `${item.id} ${item.model.name} ${item.provider.name}`.toLowerCase().includes(term)
+    })
+    .sort((a, b) => {
+      const ranked = Number(fav(b)) - Number(fav(a))
+      if (ranked !== 0) return ranked
+      const named = a.model.name.localeCompare(b.model.name)
+      if (named !== 0) return named
+      const provider = a.provider.name.localeCompare(b.provider.name)
+      if (provider !== 0) return provider
+      return a.id.localeCompare(b.id)
+    })
+}
+
 export function useModelSettings() {
   const ctx = useConfig()
   const snap = () => ctx.data()
@@ -69,15 +96,7 @@ export function useModelSettings() {
   const [picker, setPicker] = createSignal("")
   const [choice, setChoice] = createSignal("")
 
-  const providers = createMemo(() => {
-    const data = snap()
-    if (!data) return []
-    const ids = new Set([...Object.keys(data.effective.provider ?? {}), ...data.providers.connected])
-    return data.providers.all
-      .filter((provider) => ids.has(provider.id))
-      .filter((provider) => Object.keys(provider.models).length > 0)
-      .sort(order)
-  })
+  const providers = createMemo(() => available(snap()))
 
   const all = createMemo(() => {
     return providers().flatMap((provider) =>
@@ -125,23 +144,7 @@ export function useModelSettings() {
       })
   })
 
-  const options = createMemo(() => {
-    const term = picker().trim().toLowerCase()
-    return all()
-      .filter((item) => {
-        if (!term) return true
-        return `${item.id} ${item.model.name} ${item.provider.name}`.toLowerCase().includes(term)
-      })
-      .sort((a, b) => {
-        const ranked = Number(fav(b)) - Number(fav(a))
-        if (ranked !== 0) return ranked
-        const named = a.model.name.localeCompare(b.model.name)
-        if (named !== 0) return named
-        const provider = a.provider.name.localeCompare(b.provider.name)
-        if (provider !== 0) return provider
-        return a.id.localeCompare(b.id)
-      })
-  })
+  const options = createMemo(() => choices(picker(), all(), fav))
 
   const label = createMemo(() => (field() === "model" ? "Default model" : "Small model"))
 

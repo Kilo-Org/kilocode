@@ -13,6 +13,13 @@ data class SessionDto(
     val time: SessionTimeDto,
     val summary: SessionSummaryDto? = null,
     val revert: SessionRevertDto? = null,
+    val share: SessionShareDto? = null,
+)
+
+/** Public share link for a session. Present only while the session is shared. */
+@Serializable
+data class SessionShareDto(
+    val url: String,
 )
 
 @Serializable

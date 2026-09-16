@@ -762,6 +762,10 @@ describe("session prompt queue", () => {
         fn: async () =>
           scoped(tmp.path, async (prompt) => {
             const session = await sessions.create({ title: "Queued cancel regression" })
+            const closed = Promise.withResolvers<KiloSession.CloseReason>()
+            const off = Bus.subscribe(KiloSession.Event.TurnClose, (event) => {
+              if (event.properties.sessionID === session.id) closed.resolve(event.properties.reason)
+            })
             const first = Effect.runPromise(
               prompt.prompt({
                 sessionID: session.id,
@@ -804,6 +808,7 @@ describe("session prompt queue", () => {
             // not leak as an unhandled rejection, but still require rejects to be
             // interrupt-shaped (not an unrelated provider/session failure).
             const settled = await Promise.allSettled([first, second, third])
+            expect(await closed.promise.finally(off)).toBe("interrupted")
             for (const r of settled) {
               if (r.status === "rejected") expect(String(r.reason)).toMatch(/interrupt/i)
             }

@@ -101,6 +101,7 @@ abstract class SessionHost(
         activity = { activity() },
         titles = { titles() },
         timers = timers,
+        newWorktree = if (supportsNewWorktree) ({ newWorktree() }) else null,
     )
 
     @RequiresEdt

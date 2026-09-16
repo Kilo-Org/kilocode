@@ -11,6 +11,8 @@ interface GitExecutableOptions {
   run?: (cmd: string, args: string[]) => Promise<{ stdout: string }>
   access?: (file: string, mode: number) => Promise<void>
   realpath?: (file: string) => Promise<string>
+  preferred?: () => Promise<string | undefined>
+  timeout?: number
   log?: (message: string) => void
 }
 
@@ -29,6 +31,27 @@ export function createGitExecutable(options: GitExecutableOptions = {}): GitExec
 
   return (): Promise<string> => {
     cached ??= (async () => {
+      if (platform === "win32") {
+        const timeout = options.timeout ?? 3_000
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          return (
+            (await Promise.race([
+              options.preferred?.(),
+              new Promise<never>((_, reject) => {
+                timer = setTimeout(() => {
+                  reject(new Error(`VS Code Git activation timed out after ${timeout}ms`))
+                }, timeout)
+              }),
+            ])) ?? "git"
+          )
+        } catch (err) {
+          log(`Unable to resolve the preferred Git executable, using PATH: ${err}`)
+          return "git"
+        } finally {
+          if (timer !== undefined) clearTimeout(timer)
+        }
+      }
       if (platform !== "darwin") return "git"
 
       try {

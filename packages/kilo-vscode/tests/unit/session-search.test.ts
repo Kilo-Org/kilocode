@@ -35,7 +35,7 @@ describe("handleSessionSearch", () => {
       post: (msg) => posted.push(msg),
     })
 
-    expect(calls).toEqual([{ worktrees: true, roots: true, directory: "/repo/.kilo/worktrees/wt-1", limit: 50 }])
+    expect(calls).toEqual([{ worktrees: true, roots: true, directory: "/repo/.kilo/worktrees/wt-1", limit: 5_000 }])
     expect(posted).toEqual([
       {
         type: "sessionSearchResult",
@@ -87,6 +87,24 @@ describe("handleSessionSearch", () => {
     })
 
     expect(posted[0]?.sessions.map((s) => s.id)).toEqual(["ses_keep"])
+  })
+
+  it.each(["/repo", "/repo/.kilo/worktrees/branch"])("loads older chats in one request from %s", async (dir) => {
+    const recent = Array.from({ length: 60 }, (_, index) => session(`ses_${index}`, `Recent ${index}`, 2, "branch"))
+    const source = session("ses_old", "Older chat", 1, "main")
+    const api = stub([...recent, source])
+    const posted: Array<{ sessions: Array<{ id: string }> }> = []
+
+    await handleSessionSearch({
+      client: api.client as never,
+      message: { requestId: "all", sessionID: "ses_current" },
+      dir: (id) => (id === "ses_current" ? dir : "/wrong-project"),
+      post: (msg) => posted.push(msg as never),
+    })
+
+    expect(api.calls).toEqual([{ worktrees: true, roots: true, directory: dir, limit: 5_000 }])
+    expect(posted).toHaveLength(1)
+    expect(posted[0]?.sessions.map((item) => item.id)).toEqual([...recent.map((item) => item.id), source.id])
   })
 
   it("posts an empty result when the client is missing or the list fails", async () => {

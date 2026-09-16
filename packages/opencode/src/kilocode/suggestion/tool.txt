@@ -25,7 +25,9 @@ Do NOT suggest a review when:
 - A local code review suggestion has already been made in the current session
 
 Choosing the right review prompt for the action prompt:
+- Use `/review worktree` only as the action prompt for an existing Agent Manager managed worktree session. This reviews committed, staged, unstaged, and untracked worktree changes regardless of whether the changes were committed.
+- Never suggest `/review worktree` in the CLI/TUI, an ordinary sidebar session, Agent Manager Local, an unassigned session, or an unmanaged Git worktree. A Git worktree or worktree metadata alone does not establish Agent Manager management.
 - Use `/review uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)
 - Use `/review unpushed` as the action prompt for committed changes ahead of upstream
 - Use `/review branch` as the action prompt for branch-level changes against base
-- Prefer `/review uncommitted` when the work you just did has not been committed yet
+- Prefer `/review worktree` only in an existing Agent Manager managed worktree session regardless of commit status. In every other environment, prefer `/review uncommitted` when the work you just did has not been committed yet

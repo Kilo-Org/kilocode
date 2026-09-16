@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.rowLines
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.util.edtWait
@@ -19,7 +20,6 @@ import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
@@ -115,11 +115,10 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
             val comp = list.cellRenderer.getListCellRendererComponent(list, row, idx, true, true)
             comp.setSize(520, list.fixedCellHeight)
             layout(comp)
-            val title = components(comp).filterIsInstance<SimpleColoredComponent>().single()
-            val labels = components(comp).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text }
+            val (title, desc) = rowLines(comp)
 
             assertEquals("/plan  $CUSTOM", title.toString())
-            assertTrue(labels.contains("Plan work"))
+            assertEquals("Plan work", desc.toString())
             true
         }
     }

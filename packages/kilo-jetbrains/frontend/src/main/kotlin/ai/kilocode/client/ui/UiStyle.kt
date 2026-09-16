@@ -17,25 +17,58 @@ import javax.swing.UIManager
 /** Shared Swing style tokens that are not tied to one session component. */
 object UiStyle {
 
-    /** DPI-aware spacing primitives used across custom Swing layouts. */
+    /**
+     * DPI-aware spacing primitives used across custom Swing layouts.
+     *
+     * The functions return pixels for the current scale and suit manual layout and painting. The
+     * constants are the raw steps and belong in APIs that scale what they are handed — notably
+     * [JBUI.Borders] and [JBUI.insets], whose `JBInsets` re-applies the user scale on every read.
+     * Passing a function result there scales twice, which stays invisible at 100% and drifts as
+     * soon as the IDE is zoomed.
+     */
     object Gap {
-        fun xs() = JBUI.scale(2)
+        const val XS = 2
 
-        fun sm() = JBUI.scale(4)
+        const val SM = 4
 
-        fun md() = JBUI.scale(6)
+        const val MD = 6
 
-        fun lg() = JBUI.scale(8)
+        const val LG = 8
 
-        fun pad() = JBUI.scale(12)
+        const val PAD = 12
 
-        fun xl() = JBUI.scale(16)
+        const val XL = 16
+
+        fun xs() = JBUI.scale(XS)
+
+        fun sm() = JBUI.scale(SM)
+
+        fun md() = JBUI.scale(MD)
+
+        fun lg() = JBUI.scale(LG)
+
+        fun pad() = JBUI.scale(PAD)
+
+        fun xl() = JBUI.scale(XL)
     }
 
     /** Theme-aware component geometry tokens. */
     object Arc {
         /** Standard component corner arc, matching the platform's `Component.arc` key. */
         fun component() = com.intellij.util.ui.JBValue.UIInteger("Component.arc", 8).get()
+    }
+
+    /** Geometry of the trailing band over which clipped single-line text dissolves into its backdrop. */
+    object Fade {
+        /**
+         * Unscaled width of the band, wider than the 10 the platform defaults
+         * `ide.editor.tabs.fadeout.width` to. A tab fades its own trailing padding, where a few pixels
+         * are enough; this band has to cover the glyph the cut runs through, or the cut stays visible at
+         * the point the fade is still opaque.
+         */
+        private const val WIDTH = 16
+
+        fun width() = JBUI.scale(WIDTH)
     }
 
     /** Platform balloon styling used by lightweight contextual overlays. */

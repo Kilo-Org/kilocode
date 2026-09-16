@@ -2,7 +2,6 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -21,6 +20,8 @@ import javax.swing.ScrollPaneConstants
 class SessionOutcomeView(
     selection: SessionSelection? = null,
     focus: (() -> Unit)? = null,
+    private val retry: (() -> Unit)? = null,
+    private val retryable: (() -> Boolean)? = null,
 ) : DialogView(selection, focus), SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
@@ -35,35 +36,104 @@ class SessionOutcomeView(
 
     @RequiresEdt
     fun showError(message: String, kind: String?) {
+        setOutlined(true)
         setHeaderIcon(AllIcons.General.Error, kind ?: KiloBundle.message("session.error.title"))
-        setHeader(KiloBundle.message("session.error.title"))
+        setHeader(KiloBundle.message("session.error.title"), kind)
         error.text = message
         setContentPadding(left = false, right = false)
         setContent(error.scroll)
+        syncRetry(true)
         isVisible = true
         refresh()
     }
 
+    /**
+     * Failure footer for a failure the transcript already explains: the action only, no message.
+     *
+     * The failed message renders its own card with the provider's reason, so repeating that text here
+     * would print the same sentence twice. Retry stays in the footer rather than moving onto that card
+     * because it always continues the session tail, and the card scrolls out of reach.
+     *
+     * Hides itself when the tail cannot be continued — a header with no reason and no action says
+     * nothing that the card above has not already said.
+     */
     @RequiresEdt
-    fun showOutcome(outcome: Outcome, tone: OutcomeTone) {
-        val title = when (outcome) {
-            Outcome.INTERRUPTED -> KiloBundle.message("session.outcome.interrupted.title")
-            Outcome.FAILED -> KiloBundle.message("session.outcome.failed.title")
+    fun showRetry() {
+        if (retry == null || retryable?.invoke() == false) {
+            hideView()
+            return
         }
-        val desc = when (outcome) {
-            Outcome.INTERRUPTED -> KiloBundle.message("session.outcome.interrupted.description")
-            Outcome.FAILED -> KiloBundle.message("session.outcome.failed.description")
+        val title = KiloBundle.message("session.outcome.failed.title")
+        setOutlined(true)
+        setHeaderIcon(AllIcons.General.Error, title)
+        setHeader(title, null)
+        setContentPadding()
+        setContent(null)
+        syncRetry(true)
+        isVisible = true
+        refresh()
+    }
+
+    /**
+     * A user-initiated stop is not a failure: it renders as one muted line with no icon and no card
+     * outline. Only a model/provider failure gets the error card treatment.
+     */
+    @RequiresEdt
+    fun showOutcome(outcome: Outcome, finish: String? = null) {
+        when (outcome) {
+            Outcome.INTERRUPTED -> {
+                setOutlined(false)
+                setHeaderIcon(null)
+                setHeader("", KiloBundle.message("session.outcome.interrupted.note"))
+                syncRetry(false)
+            }
+
+            Outcome.FAILED -> {
+                val title = KiloBundle.message("session.outcome.failed.title")
+                setOutlined(true)
+                setHeaderIcon(AllIcons.General.Error, title)
+                setHeader(title, KiloBundle.message("session.outcome.failed.description"))
+                syncRetry(true)
+            }
+
+            Outcome.INCOMPLETE -> {
+                val title = KiloBundle.message("session.outcome.incomplete.title")
+                val tip = finish?.let { KiloBundle.message("session.outcome.incomplete.reason", it) } ?: title
+                setOutlined(true)
+                setHeaderIcon(AllIcons.General.Warning, tip)
+                setHeader(title, KiloBundle.message("session.outcome.incomplete.description"))
+                syncRetry(false)
+            }
         }
-        val icon = when (tone) {
-            OutcomeTone.WARNING -> AllIcons.General.Warning
-            OutcomeTone.CRITICAL -> AllIcons.General.Error
-        }
-        setHeaderIcon(icon, title)
-        setHeader(title, desc)
         setContentPadding()
         setContent(null)
         isVisible = true
         refresh()
+    }
+
+    /**
+     * Retry belongs to failures only; a user-initiated stop stays a plain note with no controls.
+     *
+     * [retryable] is asked on every show because the answer depends on the transcript tail, not on the
+     * outcome alone: a session-level error that arrived after a completed turn has nothing to replay.
+     */
+    @RequiresEdt
+    private fun syncRetry(show: Boolean) {
+        val run = retry
+        if (run == null || !show || retryable?.invoke() == false) {
+            setActions(emptyList())
+            return
+        }
+        setActions(
+            listOf(
+                Action(
+                    id = RETRY_ACTION,
+                    text = KiloBundle.message("session.outcome.retry"),
+                    primary = true,
+                    handler = run,
+                ),
+            ),
+        )
     }
 
     @RequiresEdt
@@ -77,6 +147,10 @@ class SessionOutcomeView(
     override fun applyStyle(style: SessionEditorStyle) {
         super.applyStyle(style)
         error.applyStyle(style)
+    }
+
+    private companion object {
+        const val RETRY_ACTION = "retry"
     }
 }
 

@@ -1,10 +1,12 @@
 import { describe, expect } from "bun:test"
 import fs from "node:fs/promises"
 import path from "node:path"
-import { Effect, Fiber, Layer } from "effect"
+import { Cause, Deferred, Effect, Fiber, Layer } from "effect"
+import * as TestClock from "effect/testing/TestClock"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { RipgrepBinary } from "@opencode-ai/core/ripgrep/binary"
+import { RelativePath } from "@opencode-ai/core/schema"
 import { tmpdir } from "../fixture/tmpdir"
 import { it } from "../lib/effect"
 
@@ -72,15 +74,96 @@ const fixture = async (dir: string, source: string) => {
   return binary
 }
 
-const layer = (binary: string) =>
+const layer = (binary: string, filepath = Effect.succeed(binary)) =>
   LayerNode.compile(Ripgrep.node, [
-    [
-      RipgrepBinary.node,
-      Layer.succeed(RipgrepBinary.Service, RipgrepBinary.Service.of({ filepath: Effect.succeed(binary) })),
-    ],
+    [RipgrepBinary.node, Layer.succeed(RipgrepBinary.Service, RipgrepBinary.Service.of({ filepath }))],
   ] as const)
 
 describe("Kilo ripgrep settlement", () => {
+  it.effect(
+    "starts the glob deadline after cached binary initialization",
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        Effect.gen(function* () {
+          const binary = yield* Effect.promise(() => fixture(tmp.path, 'process.stdout.write("fixture.ts\\n")'))
+          const started = yield* Deferred.make<void>()
+          const release = yield* Deferred.make<void>()
+          const state = { initialized: 0 }
+          const filepath = yield* Effect.cached(
+            Effect.gen(function* () {
+              state.initialized++
+              yield* Deferred.succeed(started, undefined)
+              yield* Deferred.await(release)
+              return binary
+            }),
+          )
+
+          yield* Effect.gen(function* () {
+            const ripgrep = yield* Ripgrep.Service
+            const first = yield* ripgrep.glob({ cwd: tmp.path, pattern: "*.ts", limit: 100 }).pipe(Effect.forkScoped)
+            yield* Deferred.await(started)
+            yield* TestClock.adjust(120_001)
+            expect(first.pollUnsafe()).toBeUndefined()
+            yield* Deferred.succeed(release, undefined)
+
+            const result = yield* Fiber.join(first)
+            const retry = yield* ripgrep.glob({ cwd: tmp.path, pattern: "*.ts", limit: 100 })
+            expect(result.items.map((item) => item.path)).toEqual([RelativePath.make("fixture.ts")])
+            expect(retry.items).toEqual(result.items)
+            expect(state.initialized).toBe(1)
+          }).pipe(Effect.provide(layer(binary, filepath)))
+        }),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+    10_000,
+  )
+
+  it.effect(
+    "times out a glob after two minutes despite partial matches and continuous errors",
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        Effect.gen(function* () {
+          const ready = path.join(tmp.path, "ready.pid")
+          const source = `const { writeFileSync, writeSync } = require("node:fs")
+const error = "readdir: Invalid argument\\n".repeat(512)
+writeSync(1, "partial.ts\\n")
+writeSync(2, error)
+writeFileSync(${JSON.stringify(ready)}, String(process.pid))
+setInterval(() => writeSync(2, error), 10)
+setTimeout(() => process.exit(1), 30_000)
+`
+          const binary = yield* Effect.promise(() => fixture(tmp.path, source))
+          const fiber = yield* Ripgrep.Service.pipe(
+            Effect.flatMap((ripgrep) => ripgrep.glob({ cwd: tmp.path, pattern: "*.ts", limit: 100 })),
+            Effect.provide(layer(binary)),
+            Effect.exit,
+            Effect.forkScoped,
+          )
+          const pid = Number(yield* Effect.promise(() => read(ready)))
+
+          yield* TestClock.adjust(119_999)
+          expect(fiber.pollUnsafe()).toBeUndefined()
+          expect(alive(pid)).toBe(true)
+          yield* TestClock.adjust(1)
+          const exit = yield* Fiber.join(fiber)
+
+          if (exit._tag !== "Failure") throw new Error("Glob unexpectedly completed")
+          expect(Cause.prettyErrors(exit.cause).map((err) => err.message)).toContain(
+            "Glob search timed out after 2 minutes. Narrow the search path or pattern.",
+          )
+          expect(alive(pid)).toBe(false)
+        }),
+      (tmp) =>
+        Effect.promise(async () => {
+          await cleanup(path.join(tmp.path, "ready.pid"))
+          await tmp[Symbol.asyncDispose]()
+        }),
+    ),
+    10_000,
+  )
+
   it.live(
     "settles a bounded parameterized grep when inherited output stays open",
     Effect.acquireUseRelease(
@@ -167,8 +250,53 @@ writeSync(1, ${JSON.stringify(output)})
     10_000,
   )
 
+  for (const tool of ["glob", "grep"] as const) {
+    it.live(
+      `force kills a ${tool} that does not exit after cancellation`,
+      Effect.acquireUseRelease(
+        Effect.promise(() => tmpdir()),
+        (tmp) =>
+          Effect.gen(function* () {
+            const ready = path.join(tmp.path, "ready.pid")
+            const source = `const { writeFileSync } = require("node:fs")
+if (process.platform !== "win32") process.on("SIGTERM", () => {})
+writeFileSync(${JSON.stringify(ready)}, String(process.pid))
+setInterval(() => {}, 10_000)
+setTimeout(() => process.exit(1), 30_000)
+`
+            const binary = yield* Effect.promise(() => fixture(tmp.path, source))
+
+            const controller = new AbortController()
+            const fiber = yield* Ripgrep.Service.pipe(
+              Effect.flatMap((ripgrep) => {
+                const input = { cwd: tmp.path, pattern: "needle", limit: 1, signal: controller.signal }
+                return tool === "glob"
+                  ? ripgrep.glob(input).pipe(Effect.asVoid)
+                  : ripgrep.grep({ ...input, context: 1 }).pipe(Effect.asVoid)
+              }),
+              Effect.provide(layer(binary)),
+              Effect.exit,
+              Effect.forkScoped,
+            )
+            const pid = Number(yield* Effect.promise(() => read(ready)))
+            controller.abort()
+            const exit = yield* Fiber.join(fiber).pipe(Effect.timeout("5 seconds"))
+
+            expect(exit._tag).toBe("Failure")
+            expect(alive(pid)).toBe(false)
+          }),
+        (tmp) =>
+          Effect.promise(async () => {
+            await cleanup(path.join(tmp.path, "ready.pid"))
+            await tmp[Symbol.asyncDispose]()
+          }),
+      ),
+      10_000,
+    )
+  }
+
   it.live(
-    "force kills a bounded grep that does not exit after cancellation",
+    "force kills a glob when its fiber is interrupted",
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
@@ -178,23 +306,17 @@ writeSync(1, ${JSON.stringify(output)})
 if (process.platform !== "win32") process.on("SIGTERM", () => {})
 writeFileSync(${JSON.stringify(ready)}, String(process.pid))
 setInterval(() => {}, 10_000)
+setTimeout(() => process.exit(1), 30_000)
 `
           const binary = yield* Effect.promise(() => fixture(tmp.path, source))
-
-          const controller = new AbortController()
           const fiber = yield* Ripgrep.Service.pipe(
-            Effect.flatMap((ripgrep) =>
-              ripgrep.grep({ cwd: tmp.path, pattern: "needle", context: 1, limit: 1, signal: controller.signal }),
-            ),
+            Effect.flatMap((ripgrep) => ripgrep.glob({ cwd: tmp.path, pattern: "*.ts", limit: 100 })),
             Effect.provide(layer(binary)),
-            Effect.exit,
             Effect.forkScoped,
           )
           const pid = Number(yield* Effect.promise(() => read(ready)))
-          controller.abort()
-          const exit = yield* Fiber.join(fiber).pipe(Effect.timeout("5 seconds"))
 
-          expect(exit._tag).toBe("Failure")
+          yield* Fiber.interrupt(fiber).pipe(Effect.timeout("5 seconds"))
           expect(alive(pid)).toBe(false)
         }),
       (tmp) =>

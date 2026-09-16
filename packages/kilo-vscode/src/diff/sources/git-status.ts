@@ -3,7 +3,7 @@
 
 import * as fs from "fs/promises"
 import type { GitOps } from "../../agent-manager/GitOps"
-import { generatedLike } from "../../agent-manager/local-diff"
+import { classifyGenerated, generatedLike, gitGeneratedFiles } from "../shared/git-attributes"
 import { imageMime, readImageFile } from "../shared/image"
 import { resolveInside } from "../shared/path"
 import type { DiffFile } from "../types"
@@ -19,7 +19,41 @@ export interface FileEntry {
   deletions: number
   tracked: boolean
   binary: boolean
+  generatedLike?: boolean
   stamp?: string
+}
+
+export async function applyGeneratedAttributes(
+  git: GitOps,
+  dir: string,
+  entries: FileEntry[],
+  cached = false,
+): Promise<FileEntry[]> {
+  const configured = await gitGeneratedFiles(
+    git,
+    dir,
+    entries.map((entry) => entry.file),
+    { cached },
+  )
+  return entries.map((entry) => ({
+    ...entry,
+    generatedLike: classifyGenerated(entry.file, configured),
+  }))
+}
+
+export function createFileEntry(
+  item: { file: string; status: Status },
+  stats: Map<string, { additions: number; deletions: number; binary: boolean }>,
+): FileEntry {
+  const stat = stats.get(item.file)
+  return {
+    file: item.file,
+    status: item.status,
+    additions: stat?.additions ?? 0,
+    deletions: stat?.deletions ?? 0,
+    tracked: true,
+    binary: stat?.binary ?? false,
+  }
 }
 
 /** Parse `git diff --name-status` output into entries (status code + path). */
@@ -85,7 +119,7 @@ export function summarize(entry: FileEntry): DiffFile {
     deletions: entry.deletions,
     status: entry.status,
     tracked: entry.tracked,
-    generatedLike: generatedLike(entry.file),
+    generatedLike: entry.generatedLike ?? generatedLike(entry.file),
     // Binary metadata is complete because no deferred text body exists.
     // Images are the exception: their encoded sides load lazily on expansion.
     summarized: image || !entry.binary,

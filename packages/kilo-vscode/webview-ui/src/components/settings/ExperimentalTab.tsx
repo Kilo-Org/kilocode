@@ -217,6 +217,60 @@ const ExperimentalTab: Component = () => {
           </Switch>
         </SettingsRow>
 
+        <SettingsRow
+          title={language.t("settings.experimental.claudeMigration.title")}
+          description={language.t("settings.experimental.claudeMigration.description")}
+        >
+          <Switch
+            checked={settings().claudeMigration === true}
+            onChange={(checked) => applySetting("claudeMigration", checked, "experimental.claudeMigration")}
+            hideLabel
+          >
+            {language.t("settings.experimental.claudeMigration.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.title")}
+          description={language.t("settings.experimental.browserAutomation.description")}
+        >
+          <Switch
+            checked={settings().browserAutomation === true}
+            onChange={(checked) => applySetting("browserAutomation", checked, "experimental.browserAutomation")}
+            hideLabel
+          >
+            {language.t("settings.experimental.browserAutomation.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.systemChrome.title")}
+          description={language.t("settings.experimental.browserAutomation.systemChrome.description")}
+        >
+          <Switch
+            checked={settings().agentManagerBrowserUseSystemChrome !== false}
+            onChange={(checked) =>
+              applySetting("agentManagerBrowserUseSystemChrome", checked, "agentManager.browser.useSystemChrome")
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.browserAutomation.systemChrome.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.taskModelSelection.title")}
+          description={language.t("settings.experimental.taskModelSelection.description")}
+        >
+          <Switch
+            checked={experimental().task_model_selection ?? false}
+            onChange={(checked) => updateExperimental("task_model_selection", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.taskModelSelection.title")}
+          </Switch>
+        </SettingsRow>
+
         {/* MCP timeout */}
         <SettingsRow
           title={language.t("settings.experimental.mcpTimeout.title")}

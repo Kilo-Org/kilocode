@@ -108,6 +108,15 @@ export const dict = {
   "ui.messagePart.diagnostic.error": "Erro",
   "ui.messagePart.mcp.input": "Entrada",
   "ui.messagePart.mcp.output": "Saída",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Ler mensagens dos agentes",
+  "ui.messagePart.board.all": "Todos os agentes",
+  "ui.messagePart.board.primary": "Agente principal",
+  "ui.messagePart.board.agent": "Agente",
+  "ui.messagePart.board.route": "{{from}} para {{to}}",
+  "ui.messagePart.board.empty": "Nenhuma mensagem dos agentes",
+  "ui.messagePart.board.stored": "Apenas armazenada. A entrega e a leitura não foram confirmadas.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Editar",
   "ui.messagePart.title.write": "Escrever",
   "ui.messagePart.option.typeOwnAnswer": "Digite sua própria resposta",

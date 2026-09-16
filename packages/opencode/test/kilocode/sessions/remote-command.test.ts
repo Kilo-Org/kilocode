@@ -12,6 +12,36 @@ describe("RemoteCommand", () => {
     expect(RemoteCommand.ListRequest.safeParse({ protocolVersion: 1, extra: true }).success).toBe(false)
   })
 
+  test("validates list_directories requests and responses", () => {
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1 }).success).toBe(true)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1, path: "sub/dir" }).success).toBe(true)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 2 }).success).toBe(false)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1, extra: true }).success).toBe(false)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1, path: "" }).success).toBe(false)
+    expect(
+      RemoteCommand.ListDirectoriesRequest.safeParse({
+        protocolVersion: 1,
+        path: "x".repeat(RemoteCommand.MAX_STRING_LENGTH + 1),
+      }).success,
+    ).toBe(false)
+
+    expect(
+      RemoteCommand.ListDirectoriesResponse.safeParse({
+        protocolVersion: 1,
+        path: "",
+        directories: [{ name: "src", path: "src" }],
+      }).success,
+    ).toBe(true)
+    expect(
+      RemoteCommand.ListDirectoriesResponse.safeParse({
+        protocolVersion: 1,
+        path: "",
+        directories: [],
+        extra: true,
+      }).success,
+    ).toBe(false)
+  })
+
   test("validates strict exit CLI requests", () => {
     expect(RemoteCommand.ExitRequest.safeParse({ protocolVersion: 1 }).success).toBe(true)
     expect(RemoteCommand.ExitRequest.safeParse({}).success).toBe(false)

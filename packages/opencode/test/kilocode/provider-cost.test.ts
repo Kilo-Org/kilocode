@@ -9,10 +9,11 @@ function createModel(opts: {
   input?: number
   cost?: Provider.Model["cost"]
   npm?: string
+  providerID?: string
 }): Provider.Model {
   return {
     id: "test-model",
-    providerID: "test",
+    providerID: opts.providerID ?? "test",
     name: "Test",
     limit: {
       context: opts.context,
@@ -120,6 +121,109 @@ describe("KiloSession.providerCost — Vercel AI Gateway", () => {
     })
 
     expect(result.cost).toBe(fallback)
+  })
+})
+
+describe("KiloSession.providerCost — OpenRouter chat completions", () => {
+  const openrouterModel = () =>
+    createModel({
+      context: 100_000,
+      output: 32_000,
+      npm: "@openrouter/ai-sdk-provider",
+      providerID: "openrouter",
+    })
+
+  test("uses upstream_inference_cost when OpenRouter reports $0 for BYOK routing", () => {
+    const result = SessionNs.getUsage({
+      model: openrouterModel(),
+      usage: baseUsage,
+      metadata: {
+        openrouter: {
+          usage: {
+            // Raw OpenRouter payload for a BYOK key: { cost: 0, is_byok: true,
+            // cost_details: { upstream_inference_cost: 0.00000445 } }. The AI SDK
+            // normalizes cost_details -> costDetails. `cost` is what OpenRouter
+            // charged the account ($0 by definition for BYOK); true spend is
+            // upstream plus that account charge.
+            cost: 0,
+            costDetails: { upstreamInferenceCost: 0.00000445 },
+          },
+        },
+      },
+    })
+
+    expect(result.cost).toBe(0.00000445)
+  })
+
+  test("adds upstream_inference_cost to the BYOK routing fee", () => {
+    const result = SessionNs.getUsage({
+      model: openrouterModel(),
+      usage: baseUsage,
+      metadata: {
+        openrouter: {
+          usage: {
+            // Observed BYOK shape in kilo-gateway fixtures: `cost` is OpenRouter's
+            // routing fee; upstream is billed to the user's own key. True spend is
+            // the sum.
+            cost: 0.0032093125,
+            costDetails: { upstreamInferenceCost: 0.06418625 },
+          },
+        },
+      },
+    })
+
+    expect(result.cost).toBe(0.0032093125 + 0.06418625)
+  })
+
+  test("keeps usage.cost for a non-BYOK OpenRouter response", () => {
+    const result = SessionNs.getUsage({
+      model: openrouterModel(),
+      usage: baseUsage,
+      metadata: {
+        openrouter: {
+          usage: {
+            // Non-BYOK: `cost` is the full account charge (upstream + fee), the
+            // value surfaced today. It must not change.
+            cost: 0.0123,
+            costDetails: { upstreamInferenceCost: 0.0117 },
+          },
+        },
+      },
+    })
+
+    expect(result.cost).toBe(0.0123)
+  })
+
+  test("keeps usage.cost when no cost_details are reported", () => {
+    const result = SessionNs.getUsage({
+      model: openrouterModel(),
+      usage: baseUsage,
+      metadata: {
+        openrouter: {
+          usage: { cost: 0.0123 },
+        },
+      },
+    })
+
+    expect(result.cost).toBe(0.0123)
+  })
+
+  test("prefers upstream_inference_cost for the Kilo provider", () => {
+    const result = SessionNs.getUsage({
+      model: model(),
+      provider: kilo,
+      usage: baseUsage,
+      metadata: {
+        openrouter: {
+          usage: {
+            cost: 0.5,
+            costDetails: { upstreamInferenceCost: 0.879694 },
+          },
+        },
+      },
+    })
+
+    expect(result.cost).toBe(0.879694)
   })
 })
 

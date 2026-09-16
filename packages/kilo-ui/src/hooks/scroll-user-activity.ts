@@ -1,6 +1,7 @@
 interface UserActivityOptions {
   grace: number
-  onWheelUp: () => void
+  onUp: () => void
+  onSelect?: () => void
 }
 
 type Kind = "pointer" | "mouse" | "touch"
@@ -87,26 +88,54 @@ export const createUserActivity = (options: UserActivityOptions) => {
     mark()
   }
 
+  // A drag that selects text never scrolls, so nothing pauses auto-follow and
+  // the next content update snaps the view to the bottom and unmounts the
+  // rows that hold the selection. Report a finished selection gesture.
+  // Diffs render inside a shadow root, so walk host boundaries instead of
+  // relying on light-DOM containment.
+  const inside = (node: Node | null) => {
+    if (!node || !scroll) return false
+    let current: Node | null = node
+    while (current) {
+      if (scroll.contains(current)) return true
+      const root: Node | undefined = typeof current.getRootNode === "function" ? current.getRootNode() : undefined
+      current = root && "host" in root ? (root as ShadowRoot).host : null
+    }
+    return false
+  }
+
+  const selected = () => {
+    if (!doc || !scroll || typeof doc.getSelection !== "function") return false
+    const selection = doc.getSelection()
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return false
+    const range = selection.getRangeAt(0)
+    return inside(range.startContainer) || inside(range.endContainer)
+  }
+
   const end = (event: Event, kind: Kind) => {
     if (!doc || !scroll || gestures.get(doc) !== scroll || !match(event, kind)) return
     mark()
     gesture = undefined
     gestures.delete(doc)
+    if (selected()) options.onSelect?.()
+  }
+
+  const clear = () => {
+    marked = false
+    time = 0
   }
 
   const reset = () => {
     if (doc && scroll && gestures.get(doc) === scroll) gestures.delete(doc)
-    marked = false
-    time = 0
+    clear()
     gesture = undefined
   }
 
   const wheel = (event: WheelEvent) => {
-    if (!isPotentialScrollInput(event)) return
     if (!scroll || scroll.scrollHeight - scroll.clientHeight <= 1) return
     if (event.deltaY >= 0 || scroll.scrollTop <= 0) return
-    mark(event)
-    options.onWheelUp()
+    mark()
+    options.onUp()
   }
 
   const key = (event: KeyboardEvent) => {
@@ -125,6 +154,7 @@ export const createUserActivity = (options: UserActivityOptions) => {
     })
     if (deepest(matches) !== scroll) return
     mark(event)
+    if (up) options.onUp()
   }
 
   return {
@@ -179,6 +209,10 @@ export const createUserActivity = (options: UserActivityOptions) => {
       return value
     },
     isRecent: () => gesture !== undefined || (time > 0 && performance.now() - time < options.grace),
+    // True while a pointer or touch gesture is still in progress, including a
+    // text-selection drag that has not scrolled yet.
+    isDragging: () => gesture !== undefined,
+    clear,
     reset,
   }
 }

@@ -9,13 +9,17 @@ import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -164,7 +168,6 @@ class KiloBackendAppServiceTest {
         assertNull(svc.profile)
         assertNull(svc.config)
         assertTrue(svc.notifications.isEmpty())
-        assertTrue(svc.warnings.isEmpty())
         assertEquals(1, server.disposeCount)
     }
 
@@ -315,47 +318,7 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
-    fun `config warnings are loaded without blocking Ready`() = runBlocking {
-        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
-        val svc = create()
-        svc.connect()
-
-        ready(svc)
-
-        val ready = svc.appState.value as KiloAppState.Ready
-        assertEquals(1, ready.data.warnings.size)
-        assertEquals(".kilo/kilo.json", ready.data.warnings.first().path)
-        assertEquals("Invalid JSON", ready.data.warnings.first().message)
-    }
-
-    @Test
-    fun `retry refreshes warnings while Ready`() = runBlocking {
-        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
-        val svc = create()
-        svc.connect()
-
-        ready(svc)
-
-        val before = svc.appState.value as KiloAppState.Ready
-        assertEquals(1, before.data.warnings.size)
-
-        mock.warnings = "[]"
-        svc.retry()
-
-        withTimeout(5_000) {
-            while ((svc.appState.value as? KiloAppState.Ready)?.data?.warnings?.isNotEmpty() == true) {
-                delay(100)
-            }
-        }
-
-        val ready = svc.appState.value as KiloAppState.Ready
-        assertTrue(ready.data.warnings.isEmpty())
-        assertTrue(svc.warnings.isEmpty())
-    }
-
-    @Test
-    fun `retry restarts app when warnings remain after refresh`() = runBlocking {
-        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+    fun `retry does not restart or refetch config when app is Ready`() = runBlocking {
         val svc = create()
         svc.connect()
 
@@ -363,15 +326,10 @@ class KiloBackendAppServiceTest {
 
         val before = mock.requestCount("/global/config")
         svc.retry()
+        delay(500)
 
-        withTimeout(15_000) {
-            while (mock.requestCount("/global/config") <= before) {
-                delay(100)
-            }
-        }
-
-        assertTrue(mock.requestCount("/global/config") > before)
-        assertTrue(log.messages.any { it.contains("retry: restarted connection") })
+        assertEquals(before, mock.requestCount("/global/config"))
+        assertFalse(log.messages.any { it.contains("retry: restarted connection") })
     }
 
     @Test
@@ -509,20 +467,6 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
-    fun `warning state emits final warn log`() = runBlocking {
-        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
-        val svc = create()
-        svc.connect()
-
-        val state = ready(svc)
-        assertTrue(state.data.warnings.any { it.path == ".kilo/kilo.json" })
-
-        assertTrue(log.awaitMessage {
-            it.contains("App warnings:") && it.contains(".kilo/kilo.json: Invalid JSON")
-        })
-    }
-
-    @Test
     fun `app load error emits final warn log`() = runBlocking {
         mock.configStatus = 500
         mock.config = """{"error":"internal"}"""
@@ -647,24 +591,6 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
-    fun `hung warnings do not prevent Ready`() = runBlocking {
-        val gate = CountDownLatch(1)
-        mock.warningsGate = gate
-        val svc = create(loadTimeoutMs = 300L)
-
-        try {
-            svc.connect()
-
-            val state = ready(svc)
-
-            assertTrue(state.data.warnings.isEmpty())
-            assertTrue(svc.warnings.isEmpty())
-        } finally {
-            gate.countDown()
-        }
-    }
-
-    @Test
     fun `restart during Loading cancels stale load and reaches Ready`() = runBlocking {
         val gate = CountDownLatch(1)
         mock.responseGate = gate
@@ -746,31 +672,6 @@ class KiloBackendAppServiceTest {
         assertEquals("updated", svc.config?.model)
     }
 
-    @Test
-    fun `SSE config updated refreshes warnings`() = runBlocking {
-        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
-        val svc = create()
-        svc.connect()
-
-        ready(svc)
-
-        assertEquals(1, (svc.appState.value as KiloAppState.Ready).data.warnings.size)
-
-        mock.warnings = "[]"
-        val before = mock.requestCount("/config/warnings")
-        mock.awaitSseConnection()
-        mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
-
-        assertTrue(mock.awaitRequestCount("/config/warnings", before + 1))
-        withTimeout(5_000) {
-            svc.appState.first { state ->
-                state is KiloAppState.Ready && state.data.warnings.isEmpty()
-            }
-        }
-
-        assertTrue((svc.appState.value as KiloAppState.Ready).data.warnings.isEmpty())
-    }
-
     // ------ Auth mapping tests ------
 
     @Test
@@ -834,6 +735,87 @@ class KiloBackendAppServiceTest {
 
         assertIs<KiloAppState.Ready>(svc.appState.value)
         assertNotNull(svc.config)
+    }
+
+    /**
+     * Disposing an instance cancels every runner it owns, and the CLI reports that as the same
+     * `MessageAbortedError` a user Stop produces. Naming the cause here is the only thing that lets the
+     * UI explain the lost turn instead of reporting it as "Stopped" — three sessions once died to a
+     * config reload with no trace the user could see.
+     */
+    @Test
+    fun `disposal while a session is busy names the reason for that session`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        mock.awaitSseConnection()
+
+        mock.pushEvent("session.status", """{"sessionID":"ses_abc","status":{"type":"busy","message":"Running..."}}""")
+        withTimeout(5_000) { svc.sessions.statuses.first { it["ses_abc"]?.type == "busy" } }
+
+        val received = scope.async(start = CoroutineStart.UNDISPATCHED) {
+            svc.chat.events.first { it is ChatEventDto.SessionInterrupted }
+        }
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+
+        val event = assertIs<ChatEventDto.SessionInterrupted>(withTimeout(15_000) { received.await() })
+        assertEquals("ses_abc", event.sessionID)
+        assertEquals(ChatEventDto.SessionInterrupted.RELOAD, event.reason)
+    }
+
+    /**
+     * The reload a disposal triggers restarts the activity collector, so the badge has to be recorded in
+     * a way that survives it — otherwise a worktree row rests as if its cancelled turn had finished.
+     */
+    @Test
+    fun `disposal badges the cancelled session after the reload settles`() = runBlocking {
+        // A badge needs a resolvable directory, which a status event alone does not carry.
+        mock.sessions = """[{"id":"ses_abc","slug":"abc","projectID":"prj_test","directory":"/test/project","title":"Work","version":"1.0.0","time":{"created":1000,"updated":1000}}]"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        mock.awaitSseConnection()
+        svc.sessions.list("/test/project")
+
+        mock.pushEvent("session.status", """{"sessionID":"ses_abc","status":{"type":"busy","message":"Running..."}}""")
+        withTimeout(5_000) { svc.sessions.statuses.first { it["ses_abc"]?.type == "busy" } }
+
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        // Disposal badges the session and then reloads, and the reload is what restarts the activity
+        // collector — so the restart proves the badge was already taken, and waiting for it is what
+        // makes the assertion below about surviving the restart instead of racing it. Reporting idle
+        // before that point would race too: the status map is fed by a separate collector that can
+        // reach it before the disposal watcher runs, leaving the cancelled turn looking finished.
+        assertTrue(
+            log.awaitMessage(20_000, count = 2) { it == "INFO: Activity manager started" },
+            "Disposal must reload the app and restart the activity collector; logs=${log.messages}",
+        )
+
+        // The cancelled turn then reports idle, which is what lets the badge show: live work
+        // deliberately outranks a past error so a resumed row keeps spinning instead.
+        mock.pushEvent("session.status", """{"sessionID":"ses_abc","status":{"type":"idle"}}""")
+
+        val badged = withTimeoutOrNull(20_000) {
+            svc.activity.activity.first { it["ses_abc"]?.kind == SessionActivityKindDto.ERROR }
+        }
+        assertNotNull(badged, "Disposal must leave a badge on the session it cancelled; logs=${log.messages}")
+        assertEquals("/test/project", badged["ses_abc"]?.directory)
+    }
+
+    @Test
+    fun `disposal with no busy session names nothing`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        mock.awaitSseConnection()
+
+        val received = scope.async(start = CoroutineStart.UNDISPATCHED) {
+            svc.chat.events.first { it is ChatEventDto.SessionInterrupted }
+        }
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+
+        assertNull(withTimeoutOrNull(2_000) { received.await() })
+        received.cancel()
     }
 
     @Test

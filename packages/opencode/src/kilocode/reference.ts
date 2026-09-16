@@ -2,7 +2,10 @@ import path from "path"
 import { ConfigReference } from "@opencode-ai/core/config/reference"
 import { Global } from "@opencode-ai/core/global"
 import { parseRepositoryReference, repositoryCachePath, type RemoteReference } from "@/util/repository"
-import { Effect } from "effect"
+import { type Context, Effect, RcMap } from "effect"
+import { Location } from "@opencode-ai/core/location"
+import type { LocationServiceMap } from "@opencode-ai/core/location-services"
+import { PluginV2 } from "@opencode-ai/core/plugin"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { Reference } from "@opencode-ai/core/reference"
 import { AbsolutePath } from "@opencode-ai/core/schema"
@@ -188,4 +191,18 @@ export const sync = Effect.fn("KiloReference.sync")(function* (input: {
   const current = new Map((yield* service.list()).map((item) => [item.name, item.source]))
   if (current.size === sources.length && sources.every(([name, source]) => same(current.get(name), source))) return
   yield* service.replace(sources)
+})
+
+export const list = Effect.fn("KiloReference.list")(function* (
+  input: { references: ConfigReference.Info; directory: string; worktree: string },
+  locations: Context.Service.Shape<typeof LocationServiceMap.Service>,
+) {
+  const location = Location.Ref.make({ directory: AbsolutePath.make(input.directory) })
+  const configured = Object.keys(input.references).length > 0
+  if (!configured && !(yield* RcMap.has(locations.rcMap, location))) return []
+  return yield* Effect.gen(function* () {
+    if (configured) yield* (yield* PluginV2.Service).wait(PluginV2.ID.make("core/config-reference"))
+    yield* sync(input)
+    return yield* (yield* Reference.Service).list()
+  }).pipe(Effect.provide(locations.get(location)))
 })

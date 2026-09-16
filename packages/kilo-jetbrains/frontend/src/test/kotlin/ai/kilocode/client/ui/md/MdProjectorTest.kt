@@ -45,7 +45,7 @@ class MdProjectorTest : BasePlatformTestCase() {
     fun `test partial opener renders empty code block`() {
         val out = projector.project("``")
 
-        assertEquals(listOf(Desc.Code("", Kind.Source(PlainTextFileType.INSTANCE))), out.blocks)
+        assertEquals(listOf(Desc.Code("", Kind.Source(PlainTextFileType.INSTANCE), open = true)), out.blocks)
         assertEquals("<pre><code></code></pre>\n", out.html)
         assertNull(out.open)
     }
@@ -55,6 +55,7 @@ class MdProjectorTest : BasePlatformTestCase() {
         val code = out.blocks.single() as Desc.Code
 
         assertEquals("print(1)\n", code.text)
+        assertTrue(code.open)
         assertFalse(out.html.contains("python"))
         assertEquals('`', out.open!!.char)
     }
@@ -64,9 +65,11 @@ class MdProjectorTest : BasePlatformTestCase() {
         val complete = projector.project("```python\nprint(1)\n```\n\nafter")
 
         assertEquals("print(1)\n", (partial.blocks.single() as Desc.Code).text)
+        assertTrue((partial.blocks.single() as Desc.Code).open)
         assertNull(partial.open)
         assertEquals(2, complete.blocks.size)
         assertEquals("print(1)\n", (complete.blocks[0] as Desc.Code).text)
+        assertFalse((complete.blocks[0] as Desc.Code).open)
         assertTrue((complete.blocks[1] as Desc.Html).body.contains("after"))
     }
 }

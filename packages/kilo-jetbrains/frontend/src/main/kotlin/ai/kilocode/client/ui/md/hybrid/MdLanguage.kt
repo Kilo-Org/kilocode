@@ -8,6 +8,7 @@ import com.intellij.openapi.fileTypes.UnknownFileType
 internal sealed class Kind {
     data class Source(val file: FileType, val highlight: Highlight = Highlight.None) : Kind()
     data class Terminal(val stream: Stream, val mode: Mode) : Kind()
+    data class Diagram(val file: FileType) : Kind()
 }
 
 internal enum class Stream { Stdout, Stderr }
@@ -69,6 +70,7 @@ internal object MdLanguage {
         terms[key]?.let { return it }
         if (key == "shell script") return Kind.Source(type("sh"))
         val single = key.substringBefore(' ')
+        if (key == "mermaid" || key == "mmd" || single == "mermaid" || single == "mmd") return Kind.Diagram(type("mmd"))
         if (key in pure || single in pure) return Kind.Source(PlainTextFileType.INSTANCE, Highlight.DiffPure)
         if (key in diffs || single in diffs) return Kind.Source(PlainTextFileType.INSTANCE, Highlight.Diff)
         terms[single]?.let { return it }
@@ -78,7 +80,7 @@ internal object MdLanguage {
         return Kind.Source(type(single))
     }
 
-    private fun type(ext: String): FileType {
+    internal fun type(ext: String): FileType {
         val type = FileTypeRegistry.getInstance().getFileTypeByExtension(ext)
         if (type == UnknownFileType.INSTANCE) return PlainTextFileType.INSTANCE
         return type

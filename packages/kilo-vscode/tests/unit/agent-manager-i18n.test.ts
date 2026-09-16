@@ -25,6 +25,7 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BrowserPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx"),

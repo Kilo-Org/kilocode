@@ -19,6 +19,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { BackgroundAgents } from "./BackgroundAgents"
+import { SwarmBoard } from "./SwarmBoard"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
@@ -30,6 +31,7 @@ import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
+  projectId?: string
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -130,7 +132,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   )
 
   const toggle = () => {
-    if (props.readonly) return
     const next = !expanded()
     setExpanded(next)
     vscode.postMessage({ type: "updateSetting", key: "showTaskTimeline", value: next })
@@ -240,6 +241,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               </Tooltip>
             )}
           </Show>
+          <SwarmBoard readonly={props.readonly} projectId={props.projectId} />
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton
@@ -265,20 +267,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 aria-pressed={search.active()}
               />
             </Tooltip>
-            <Show when={!props.readonly}>
-              <button
-                data-slot="task-header-expand"
-                onClick={toggle}
-                aria-expanded={expanded()}
-                aria-label="Toggle timeline"
-              >
-                <Icon
-                  name="chevron-down"
-                  size="small"
-                  style={expanded() ? { transform: "rotate(180deg)" } : undefined}
-                />
-              </button>
-            </Show>
+            <IconButton
+              icon="chevron-down"
+              size="small"
+              variant="ghost"
+              data-slot="task-header-expand"
+              onClick={toggle}
+              aria-expanded={expanded()}
+              aria-label="Toggle timeline"
+            />
           </Show>
         </div>
       </div>
@@ -290,14 +287,45 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <TranscriptSearch />
         </div>
       </Show>
-      {/* Expanded graph section: timeline + context bar + token breakdown */}
-      <Show when={expanded() && hasTimeline()}>
+      {/* Expanded graph section: timeline + context bar + token breakdown.
+          The section always reserves the height of all three rows, so the
+          header keeps one height as a turn streams and the transcript never
+          moves on a turn boundary. A row with no data shows a skeleton only
+          while a turn is running; otherwise it stays empty. */}
+      <Show when={expanded()}>
         <div data-component="task-header-graph">
-          <TaskTimeline />
+          <Show
+            when={hasTimeline()}
+            fallback={
+              <div class="task-header-skeleton-chart" aria-hidden="true">
+                <Show when={busy()}>
+                  <For each={[14, 22, 10, 18, 8]}>
+                    {(h, i) => (
+                      <div
+                        class="task-header-skeleton"
+                        style={{ height: `${h}px`, "animation-delay": `${i() * 80}ms` }}
+                      />
+                    )}
+                  </For>
+                </Show>
+              </div>
+            }
+          >
+            <TaskTimeline />
+          </Show>
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
+          <Show when={!tokens()}>
+            <div class="task-header-tokens" aria-hidden="true">
+              <Show when={busy()}>
+                <div class="task-header-skeleton" style={{ width: "42px" }} />
+                <div class="task-header-skeleton" style={{ width: "36px" }} />
+                <div class="task-header-skeleton" style={{ width: "28px" }} />
+              </Show>
+            </div>
+          </Show>
         </div>
       </Show>
       <BackgroundAgents readonly={props.readonly} />

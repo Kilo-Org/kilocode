@@ -75,7 +75,7 @@ export type ServerSentEventsResult<TData = unknown, TReturn = void, TNext = unkn
   stream: AsyncGenerator<TData extends Record<string, unknown> ? TData[keyof TData] : TData, TReturn, TNext>
 }
 
-export const createSseClient = <TData = unknown>({
+export function createSseClient<TData = unknown>({
   onRequest,
   onSseError,
   onSseEvent,
@@ -87,7 +87,7 @@ export const createSseClient = <TData = unknown>({
   sseSleepFn,
   url,
   ...options
-}: ServerSentEventsOptions): ServerSentEventsResult<TData> => {
+}: ServerSentEventsOptions): ServerSentEventsResult<TData> {
   let lastEventId: string | undefined
 
   const sleep = sseSleepFn ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)))
@@ -151,8 +151,7 @@ export const createSseClient = <TData = unknown>({
             const { done, value } = await reader.read()
             if (done) break
             buffer += value
-            // Normalize line endings: CRLF -> LF, then CR -> LF
-            buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+            buffer = buffer.replace(/\r\n?/g, "\n") // normalize line endings
 
             const chunks = buffer.split("\n\n")
             buffer = chunks.pop() ?? ""

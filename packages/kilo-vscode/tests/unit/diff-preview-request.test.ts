@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import path from "node:path"
+import { build } from "esbuild"
+import { solidPlugin } from "esbuild-plugin-solid"
 
 const WEBVIEW = path.resolve(import.meta.dir, "../../webview-ui")
 const PASS = "DIFF_PREVIEW_REQUEST_PASS"
@@ -101,6 +103,78 @@ const SCRIPT = `
     fail("did not request after existing loading state cleared " + JSON.stringify(blocked))
   }
   disposeBlocked()
+
+  const lazy = []
+  const entries = Array.from({ length: 85 }, (_, index) => ({
+    ...summary,
+    file: "src/file-" + index + ".ts",
+  }))
+  let request
+  const disposeLazy = createRoot((dispose) => {
+    request = createDiffRequests({
+      key: () => "review-lazy",
+      diffs: () => entries,
+      open: () => entries.map((item) => item.file),
+      loading: () => undefined,
+      send: () => (file) => lazy.push(file),
+      eager: false,
+    })
+    return dispose
+  })
+
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  if (lazy.length !== 0) fail("offscreen diffs requested eagerly " + JSON.stringify(lazy))
+  request(entries[0])
+  request(entries[1])
+  request(entries[0], () => { throw new Error("Repeated requests must not measure layout") })
+  request(entries[80], () => false)
+  if (lazy.length !== 2 || lazy[0] !== entries[0].file || lazy[1] !== entries[1].file) {
+    fail("visible diff requests were not lazy and deduplicated " + JSON.stringify(lazy))
+  }
+  request(entries[80])
+  if (lazy.length !== 3 || lazy[2] !== entries[80].file) {
+    fail("newly mounted distant diff was not requested " + JSON.stringify(lazy))
+  }
+  disposeLazy()
+
+  const { mergeWorktreeDiffs, resolveDiffFile } = await import("./diff-viewer/diff-state.ts")
+  const retried = []
+  const [results, setResults] = createSignal([summary])
+  const [pending, setPending] = createSignal(new Set())
+  let retry
+  const release = createRoot((dispose) => {
+    retry = createDiffRequests({
+      key: () => "review-retry",
+      diffs: results,
+      open: () => [summary.file],
+      loading: pending,
+      send: () => (file) => {
+        retried.push(file)
+        setPending(new Set([file]))
+      },
+    })
+    return dispose
+  })
+   if (retried.length !== 1 || !pending().has(summary.file)) fail("initial detail was not requested")
+   setPending(new Set())
+   if (retried.length !== 2 || !pending().has(summary.file)) fail("cancelled detail was not requested again")
+   setResults(resolveDiffFile(results(), summary.file, null))
+   setPending(new Set())
+   setResults(mergeWorktreeDiffs(results(), [{ ...summary }]).diffs)
+   retry(results().at(0))
+   if (retried.length !== 2 || !results().at(0).failed) fail("failed detail retried automatically")
+   retry(results().at(0), undefined, true)
+   retry(results().at(0), undefined, true)
+   if (retried.length !== 3 || !pending().has(summary.file)) fail("explicit retry was not deduplicated")
+   if (!results().at(0).failed) fail("retry hid failed fallback comments")
+   setResults(resolveDiffFile(results(), summary.file, { ...summary }))
+   setPending(new Set())
+   if (retried.length !== 3) fail("another summary started an automatic retry loop")
+   retry(results().at(0), undefined, true)
+   setResults(resolveDiffFile(results(), summary.file, { ...summary, after: "loaded", summarized: false }))
+   setPending(new Set())
+   if (retried.length !== 4 || results().at(0).failed || results().at(0).summarized) fail("successful retry did not settle")
+  release()
   console.log("${PASS}")
 `
 
@@ -125,4 +199,170 @@ describe("diff preview detail requests", () => {
     expect(result.exitCode, output).toBe(0)
     expect(output).toContain(PASS)
   })
+
+  it("discards cancelled standalone details and recovers real failures through the message handler", async () => {
+    const child = await renderSurface(`
+          import assert from "node:assert/strict"
+          import { createRoot } from "solid-js"
+          import { SourceController } from "../src/diff/SourceController"
+          import { DiffViewerApp } from "./diff-viewer/DiffViewerApp"
+          import { state } from "probe:surface"
+          globalThis.window = new EventTarget()
+          const dispose = createRoot((dispose) => { DiffViewerApp({}); return dispose })
+          const summary = { file: "a.ts", before: "", after: "", additions: 1, deletions: 0, summarized: true }
+          const entered = Promise.withResolvers()
+          const wait = Promise.withResolvers()
+          const current = () => state.view.diffs.at(0)
+          const controller = new SourceController((id) => ({
+            descriptor: { id, type: "workspace", group: "Git", capabilities: { comments: true, revert: true } },
+            fetch: async () => ({ diffs: [{ ...summary }] }),
+            fetchFile: async () => { entered.resolve(); await wait.promise; return null },
+          }), () => [], state.receive)
+          controller.setContext({ workspaceRoot: "/repo" })
+          void (async () => {
+            await controller.activate("workspace", { poll: false })
+            state.view.onRequestDiff(summary.file)
+            const pending = controller.requestFile(summary.file)
+            await entered.promise
+            state.receive({ type: "diffViewer.loading", loading: true })
+            assert.equal(state.view.loadingFiles.has(summary.file), true)
+            await controller.activate("workspace", { poll: false })
+            assert.equal(state.view.loadingFiles.size, 0)
+            state.view.onRequestDiff(summary.file)
+            wait.resolve()
+            await pending
+            assert.equal(current().failed, undefined)
+            assert.equal(state.view.loadingFiles.has(summary.file), true)
+            await controller.requestFile(summary.file)
+            assert.equal(current().failed, true)
+            assert.equal(state.view.loadingFiles.size, 0)
+            state.receive({ type: "diffViewer.diffs", diffs: [{ ...summary }] })
+            assert.equal(current().failed, true)
+            state.view.onRequestDiff(summary.file)
+            state.receive({
+              type: "diffViewer.diffFile", file: summary.file,
+              diff: { ...summary, after: "loaded", summarized: false },
+            })
+            assert.equal(current().failed, undefined)
+            assert.equal(current().after, "loaded")
+            assert.equal(state.view.loadingFiles.size, 0)
+            controller.dispose()
+            dispose()
+          })().catch((err) => { console.error(err); process.exitCode = 1 })
+        `)
+    expectPass(child)
+  })
+
+  it("reloads the PR snapshot on a ref-only refresh", async () => {
+    const child = await renderSurface(`
+          import assert from "node:assert/strict"
+          import { createRoot } from "solid-js"
+          import { DiffViewerApp } from "./diff-viewer/DiffViewerApp"
+          import { state } from "probe:surface"
+          globalThis.window = new EventTarget()
+          const dispose = createRoot((dispose) => { DiffViewerApp({}); return dispose })
+          const target = (head) => ({
+            projectId: "p",
+            worktreeId: "diff",
+            prNumber: 7,
+            prUrl: "https://github.com/o/r/pull/7",
+            baseRefOid: "base",
+            headRefOid: head,
+          })
+          state.receive({ type: "diffViewer.prComments", comments: [], target: target("a"), threads: [] })
+          assert.equal(state.requests.length, 1, "initial target loads the snapshot")
+          assert.equal(state.requests[0].headRefOid, "a")
+          state.receive({ type: "diffViewer.prComments", comments: [], target: target("b"), threads: [] })
+          assert.equal(state.requests.length, 2, "ref-only refresh reloads the snapshot")
+          assert.equal(state.requests[1].headRefOid, "b")
+          dispose()
+        `)
+    expectPass(child)
+  })
 })
+
+async function renderSurface(script: string) {
+  const solid = path.dirname(Bun.resolveSync("solid-js/package.json", WEBVIEW))
+  const result = await build({
+    stdin: {
+      contents: script,
+      resolveDir: WEBVIEW,
+      sourcefile: "review-surface.ts",
+      loader: "ts",
+    },
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    write: false,
+    logLevel: "silent",
+    plugins: [
+      {
+        name: "review-surface",
+        setup(ctx) {
+          ctx.onResolve({ filter: /^solid-js$/ }, () => ({ path: path.join(solid, "dist/solid.js") }))
+          ctx.onResolve({ filter: /^solid-js\/web$/ }, () => ({ path: path.join(solid, "web/dist/server.js") }))
+          ctx.onResolve({ filter: /.*/ }, (args) => {
+            if (
+              args.path !== "probe:surface" &&
+              (!args.importer.endsWith("/DiffViewerApp.tsx") || ["solid-js", "./diff-state"].includes(args.path))
+            )
+              return
+            return { path: "surface", namespace: "probe" }
+          })
+          ctx.onLoad({ filter: /.*/, namespace: "probe" }, () => ({
+            contents: `
+              export const state = { posted: [], requests: [] }
+              export const useVSCode = () => ({ onMessage(receive) { state.receive = receive; return () => {} } })
+              export const getVSCodeAPI = () => ({ postMessage: (message) => state.posted.push(message) })
+              export const useLanguage = () => ({ t: (key) => key })
+              export const useServer = () => ({})
+              export const FullScreenDiffView = (props) => { state.view = props; return "" }
+              export const Toast = { Region: () => "" }
+              export const reviewRequest = (request) => { state.requests.push(request) }
+              export const createPRDiffs = () => []
+              export const createDiffCommentForms = () => ({ mount: () => () => {} })
+              ${[
+                "DialogProvider",
+                "CodeComponentProvider",
+                "DiffComponentProvider",
+                "FileComponentProvider",
+                "MarkedProvider",
+                "ThemeProvider",
+                "LanguageProvider",
+                "ServerProvider",
+                "ConfigProvider",
+                "ProviderProvider",
+                "VSCodeProvider",
+                "SpeechToTextModelsProvider",
+                "SpeechToTextPrewarm",
+                "Code",
+                "Diff",
+                "File",
+                "Icon",
+                "IconButton",
+                "Button",
+                "Spinner",
+                "DiffPickerHeader",
+                "BaseBranchPicker",
+                "DiffViewerNotice",
+              ]
+                .map((name) => `export const ${name} = (props) => props.children`)
+                .join("\n")}
+            `,
+            loader: "js",
+          }))
+        },
+      },
+      solidPlugin({ solid: { generate: "ssr" } }),
+    ],
+  })
+  return Bun.spawnSync(["bun", "-e", result.outputFiles.at(0)!.text], {
+    cwd: WEBVIEW,
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+}
+
+function expectPass(child: ReturnType<typeof Bun.spawnSync>) {
+  expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
+}

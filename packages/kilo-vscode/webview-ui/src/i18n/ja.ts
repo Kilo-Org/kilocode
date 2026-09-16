@@ -54,10 +54,28 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完了（モデルによる報告）",
+  "session.goal.blocked": "ブロック中",
+  "session.goal.restart": "目標を再開",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "ボード",
+  "task.swarm.refresh": "更新",
+  "task.swarm.reset": "ボードをリセット",
+  "task.swarm.resetTitle": "このボードをリセットしますか？",
+  "task.swarm.resetDescription":
+    "表示されているメッセージを消去しますか？会話と実行中のタスクは変更されません。エージェントは新しいメッセージを投稿できます。",
+  "task.swarm.loading": "ボードを読み込み中...",
+  "task.swarm.failed": "ボードを読み込むかリセットできませんでした。更新を試してください。",
 
   "command.provider.connect": "プロバイダーに接続",
+
+  "session.activity.waiting": "回答または承認を待っています。",
+  "session.activity.error": "エラーまたは接続切断。",
+  "session.activity.retry": "自動的に再試行中。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "ターン完了。",
+  "session.activity.idle": "実行されていません。",
 
   "command.session.new": "新しいセッション",
   "command.session.show.changes": "変更を表示",
@@ -174,12 +192,16 @@ export const dict = {
   "common.saving": "保存中...",
   "common.default": "デフォルト",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.send": "送信",
+  "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
@@ -207,7 +229,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
-  "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
+  "speechToText.tooltip.start": "音声入力を開始",
   "speechToText.tooltip.shortcut":
     "タップまたは Cmd/Ctrl+K を押して録音を開始／停止し、話している間は押し続け、離すと文字起こしして送信します。",
   "speechToText.tooltip.starting": "マイクを起動中... まだ話さないでください。",
@@ -249,6 +271,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
   "notification.permission.titleSandboxEscalation": "サンドボックス外での Git 操作を許可しますか？",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.reject": "拒否",
+  "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
+  "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
   "ui.permission.rule.addToAllowed": "許可リストに追加",
@@ -437,6 +462,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "カスタムプロバイダー",
   "settings.providers.connected.environmentDescription": "環境変数から接続されています",
   "settings.providers.action.signInChatGPT": "ChatGPT でサインイン",
+  "settings.providers.action.changeApiKey": "APIキーを変更",
   "settings.providers.custom.description": "ベース URL でカスタムプロバイダーを追加します。",
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
@@ -651,6 +677,7 @@ export const dict = {
   "profile.usage.source.direct": "直接",
   "profile.usage.state.stale": "最後に更新された使用状況を表示しています。",
   "profile.usage.state.unavailable": "使用状況を取得できません。",
+  "profile.usage.state.empty": "使用量の上限は報告されていません。",
   "profile.usage.plan.pastDue": "プラン：支払い期限切れ",
   "profile.usage.plan.canceling": "プラン：期間終了時に解約",
   "profile.usage.plan.unknown": "プラン：ステータス不明",
@@ -735,6 +762,14 @@ export const dict = {
   "session.outcome.interrupted": "ターンが中断されました",
   "session.outcome.error": "ターンが失敗しました",
   "session.outcome.finish": "終了理由: {{reason}}",
+  "session.goal.label": "目標",
+  "prompt.goal.set": "目標を設定",
+  "prompt.goal.start": "目標を開始",
+  "session.goal.active": "実行中",
+  "session.goal.paused": "一時停止中",
+  "session.goal.pause": "一時停止",
+  "session.goal.resume": "再開",
+  "session.goal.clear": "目標をクリア",
   "session.costAlert.header": "セッションコストアラート",
   "session.costAlert.continue": "続行",
   "session.costAlert.question":
@@ -806,7 +841,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "スキル",
 
   "settings.browser.description":
-    "有効にすると、AIエージェントがWebページを操作できるようになります — ナビゲーション、クリック、入力、スクリーンショットの撮影。Chromeウィンドウが開き、エージェントの作業を確認できます。",
+    "Playwrightを利用した組み込みブラウザ自動化を設定します。Kiloはセッション内でWebページのナビゲーション、操作、スクリーンショット撮影を行えます。",
   "settings.browser.enable.title": "ブラウザ自動化を有効にする",
   "settings.browser.enable.description": "Playwright MCPサーバーをCLIバックエンドに登録します。",
   "settings.browser.systemChrome.title": "システムChromeを使用",
@@ -832,7 +867,17 @@ export const dict = {
   "settings.notifications.enable.title": "サウンド通知を有効にする",
   "settings.notifications.enable.description":
     "セッションの完了時、エラーの発生時、またはユーザー入力が必要なときにサウンドを再生します",
+  "settings.notifications.workbench.title": "VS Code 通知を有効にする",
+  "settings.notifications.workbench.description":
+    "Kilo がタスクを完了したとき、またはユーザー入力が必要なときに VS Code の通知を表示します",
+  "settings.notifications.os.title": "OS 通知を有効にする",
+  "settings.notifications.os.description":
+    "VS Code が非アクティブのときに Kilo がタスクを完了した場合、またはユーザー入力が必要な場合にネイティブ OS 通知を表示します。",
   "settings.notifications.testSound": "テスト",
+  "settings.notifications.testOS": "テスト",
+  "settings.notifications.testOS.testing": "テスト通知を送信しています…",
+  "settings.notifications.testOS.success": "テスト通知を送信しました。",
+  "settings.notifications.testOS.error": "テスト通知の送信に失敗しました",
   "settings.notifications.sound.default": "デフォルト",
   "settings.notifications.sound.system": "システム",
   "settings.notifications.sound.description":
@@ -850,12 +895,26 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "メインセッションと、そのタスクを担当するサブエージェント（ネストされたサブエージェントを含む）の間でボードを共有します。すべてのタスクで使うのではなく、並行して解決策を試す場合や、互いに補完し合う作業に使用してください。",
   "settings.experimental.imageGenerationModel.title": "画像モデル",
   "settings.experimental.imageGenerationModel.description": "画像生成モデル",
   "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "カスタム文字起こしエンドポイントに送信するモデル ID です。例: whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "音声認識ベース URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Kilo Gateway の代わりに OpenAI 互換の文字起こし API を使用します。モデルは /models から読み込まれ、音声は /audio/transcriptions に送信されます。空欄にすると Kilo Gateway を使用します。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "音声認識 API キー",
+  "settings.models.speechToTextApiKey.description":
+    "カスタム文字起こしベース URL に送信するベアラートークンです。Kilo の設定ファイルに保存されます。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインしてください。現在、Speech to Text は Kilo Gateway でのみサポートされています。",
+    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインするか、下でカスタム文字起こしベース URL を設定してください。",
   "settings.models.speechToTextModel.title": "音声認識モデル",
   "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
@@ -875,8 +934,14 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 移行",
+  "settings.experimental.claudeMigration.description":
+    "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
+  "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
+  "settings.experimental.taskModelSelection.description":
+    "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -988,6 +1053,9 @@ export const dict = {
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.pushFixes.title": "プルリクエストの修正をプッシュ",
+  "settings.agentBehaviour.pushFixes.description":
+    "プルリクエストの CI 失敗やレビューコメントをエージェントに送信したとき、またはベースから worktree を更新したときに、プルリクエストが更新されるようにコミットとプッシュを依頼します。権限の確認は引き続き行われます。手動でコミットしたい場合はオフにしてください。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1053,6 +1121,11 @@ export const dict = {
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",
+  "settings.context.compactionModel.title": "圧縮モデル",
+  "settings.context.compactionModel.description":
+    "自動および手動の圧縮に使用するモデル。チャットモデルを使用するには未設定のままにしてください。コスト、速度、要約の品質はモデルによって異なります。",
+  "settings.context.compactionModel.useChatModel": "チャットモデルを使用",
+  "settings.context.compactionModel.hint": "圧縮に使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
@@ -1096,9 +1169,12 @@ export const dict = {
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
   "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
-  "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
-  "settings.display.reasoningAutoCollapse.description":
-    "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
+  "settings.display.reasoningDisplay.title": "推論ブロック",
+  "settings.display.reasoningDisplay.description":
+    "推論ブロックの開始時の表示方法を選択します。展開では全文を表示し、プレビューでは短いスクロール可能なプレビューに制限し、見出しではブロックを開くまでタイトルとストリーミングインジケーターのみを表示します。",
+  "settings.display.reasoningDisplay.expanded": "展開",
+  "settings.display.reasoningDisplay.preview": "プレビュー",
+  "settings.display.reasoningDisplay.headline": "見出し",
   "settings.display.shiftTabCycle.title": "Shift+Tab で推論の強度を切り替える",
   "settings.display.shiftTabCycle.description":
     "プロンプト入力欄で Shift+Tab を押すと、次の推論の強度レベルに切り替わります。Shift+Tab をキーボードフォーカスの移動に使用する場合は、無効にしてください。",
@@ -1145,58 +1221,16 @@ export const dict = {
   "question.summary": "{{total}} 問中 {{n}} 問目",
   "common.review": "確認",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "レガシーバージョンからの移行",
-  "settings.aboutKiloCode.legacyMigration.title": "レガシー移行",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "プロバイダーのAPIキーやデフォルトモデルなど、以前にインストールしたKilo Codeから設定を移行します。",
   "settings.aboutKiloCode.rooImport.description": "インストールしたRoo Codeから会話履歴を移行します。",
   "settings.aboutKiloCode.rooImport.button": "Roo Codeからセッションをインポート",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Codeの新機能",
-  "migration.whatsNew.subtitle": "より高速で効率的な基盤上に拡張機能を再構築しました。",
-  "migration.whatsNew.features.performance.title": "高速なエージェントパフォーマンス",
-  "migration.whatsNew.features.performance.detail":
-    "並列ツール呼び出しとサブエージェントにより、エージェントがより多くのタスクを同時に処理できます — 待ち時間が減り、作業効率が向上します。",
-  "migration.whatsNew.features.interface.title": "洗練されたインターフェース",
-  "migration.whatsNew.features.interface.detail": "不要な要素を排除し、より読みやすく素早く操作できます。",
-  "migration.whatsNew.features.agentManager.title": "エージェントマネージャー",
-  "migration.whatsNew.features.agentManager.detail":
-    "複数のエージェントを並列実行するための統合インターフェース。それぞれ独自のワークツリー上で動作し、進捗の確認、コンテキストの切り替え、変更のレビューを一箇所で行えます。",
-  "migration.whatsNew.features.foundation.title": "共通基盤",
-  "migration.whatsNew.features.foundation.detail":
-    "すべてのKilo製品で共有される小さく効率的なコア。どのような作業スタイルでも馴染みのある体験を提供します。",
-  "migration.whatsNew.blogLink": "完全なアナウンスを読む",
-  "migration.whatsNew.docsLink": "新機能とよくある質問",
-  "migration.whatsNew.continue": "続行",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "設定の移行",
-  "migration.migrate.subtitle": "以前のインストールから設定が見つかりました。移行可能な項目は以下の通りです。",
+  "migration.roo.button": "セッションをインポート",
+  "migration.roo.empty": "Roo Codeのセッションが見つかりませんでした。",
   "migration.migrate.selectLabel": "移行する項目を選択",
   "migration.migrate.chatHistory": "チャットセッションと履歴",
-  "migration.migrate.button": "設定を移行",
-  "migration.migrate.skip": "スキップ",
-  "migration.migrate.keysDetected": "{{count}}個のキーを検出",
-  "migration.migrate.serversConfigured": "{{count}}個のサーバーが設定済み",
-  "migration.migrate.modesFound": "{{count}}個のモードが見つかりました",
-  "migration.migrate.nothingToMigrate": "レガシー設定に移行する項目が見つかりませんでした。",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "プロバイダーのAPIキー",
-  "migration.select.mcpServers": "MCPサーバー",
-  "migration.select.customModes": "カスタムモード / エージェント",
-  "migration.select.defaultModel": "デフォルトモデル",
-  "migration.select.autoApproval": "自動承認",
-  "migration.select.language": "UI言語",
-  "migration.select.autocomplete": "オートコンプリート設定",
 
   // Migrate — completion
   "migration.complete.summary": "{{total}}個中{{success}}個の項目が正常に移行されました。",
-  "migration.complete.cleanup": "レガシー設定データを削除する",
-  "migration.complete.cleanupDescription":
-    "VS Codeのストレージから古い設定を削除します。この移行を再度実行することはできなくなります。",
   "migration.complete.done": "完了",
   "migration.migrate.sessionsDetected": "{{count}} 件のセッションが見つかりました",
   "migration.error.continue": "続行",
@@ -1230,7 +1264,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "不明な日付",
   "migration.sessionFormat.unknown": "不明",
   "migration.sessionFormat.unknownError": "不明なエラー",
-  // legacy-migration end
 
   "error.details.show": "詳細",
 
@@ -1238,7 +1271,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} タスク完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
+  "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
+  "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
@@ -1251,6 +1286,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "キャンセル済み",
   "task.backgroundAgents.status.error": "エラー",
   "task.backgroundAgents.untitled": "バックグラウンドエージェント",
+  "task.backgroundAgents.stopAll": "すべて停止 ({{count}})",
   "settings.saveBar.unsavedChanges": "未保存の変更",
   "settings.saveBar.discard": "破棄",
   "settings.saveBar.save": "保存",
@@ -1278,6 +1314,18 @@ export const dict = {
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ローカルに保存",
+  "diffViewer.comment.sendToAgent": "エージェントに送信",
+  "diffViewer.comment.postToGithub": "GitHubに投稿",
+  "diffViewer.comment.loadFailed": "プルリクエストの変更を読み込めませんでした。",
+  "diffViewer.comment.unavailable": "この行は現在のプルリクエストのスナップショットでは利用できません。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "プルリクエストを開く",
+  "diffViewer.comment.localChanges": "ローカルの変更",
+  "diffViewer.comment.prChanges": "PRの変更",
+  "diffViewer.comment.sendToKilo": "Kiloに送信",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}}に送信",
+  "diffViewer.comment.chooseDestination": "送信先を選択",
   "diffViewer.notice.snapshotsDisabled":
     "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
 
@@ -1299,5 +1347,11 @@ export const dict = {
   "chat.search.close": "検索を閉じる",
   "chat.search.invalidRegex": "正規表現が無効です",
   "chat.search.noResults": "見つかりませんでした",
+  "settings.experimental.browserAutomation.title": "統合ブラウザー",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager でローカルアプリケーションのプレビューを表示し、browser_open ツールを Agent Manager セッションに公開します。",
+  "settings.experimental.browserAutomation.systemChrome.title": "システムChromeを使用",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
 }

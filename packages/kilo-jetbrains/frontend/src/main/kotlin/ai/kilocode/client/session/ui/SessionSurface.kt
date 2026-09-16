@@ -31,13 +31,13 @@ internal object SessionSurface {
     }
 
     /** Runs [paint] with the graphics clipped to the rounded block, keeping opaque content rounded. */
-    inline fun clipped(g: Graphics, width: Int, height: Int, paint: (Graphics) -> Unit) {
+    inline fun <T> clipped(g: Graphics, width: Int, height: Int, paint: (Graphics) -> T): T {
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val arc = arc().toFloat()
             g2.clip(RoundRectangle2D.Float(0f, 0f, width.toFloat(), height.toFloat(), arc, arc))
-            paint(g2)
+            return paint(g2)
         } finally {
             g2.dispose()
         }

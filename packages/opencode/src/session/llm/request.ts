@@ -220,7 +220,7 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
     })
   }
 
-  const kiloProjectID = input.model.providerID.startsWith("kilo") // kilocode_change
+  const opencodeProjectID = input.model.providerID.startsWith("opencode")
     ? (yield* InstanceState.context).project.id
     : undefined
 
@@ -231,12 +231,12 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
     params,
     messageTransformOptions: options,
     headers: {
-      ...(input.model.providerID.startsWith("kilo") // kilocode_change
+      ...(input.model.providerID.startsWith("opencode")
         ? {
-            ...(kiloProjectID ? { "x-kilo-project": kiloProjectID } : {}),
-            "x-kilo-session": input.sessionID,
-            "x-kilo-request": input.user.id,
-            "x-kilo-client": input.flags.client,
+            ...(opencodeProjectID ? { "x-opencode-project": opencodeProjectID } : {}),
+            "x-opencode-session": input.sessionID,
+            "x-opencode-request": input.user.id,
+            "x-opencode-client": input.flags.client,
             "User-Agent": USER_AGENT,
           }
         : {

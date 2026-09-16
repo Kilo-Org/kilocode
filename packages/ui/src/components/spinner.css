@@ -4,3 +4,9 @@
   width: 18px;
   aspect-ratio: 1;
 }
+
+/* kilocode_change start */
+[data-component="spinner"][data-paused] > rect {
+  animation: none !important;
+}
+/* kilocode_change end */

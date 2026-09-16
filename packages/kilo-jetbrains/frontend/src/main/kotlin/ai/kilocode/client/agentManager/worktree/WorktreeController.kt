@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.MoveStage
@@ -20,6 +21,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+enum class CreateKind { CREATE, BRANCH, PR }
+
+data class CreateFailure(val error: String?, val kind: CreateKind, val branch: String)
+
 /**
  * Owns the worktree list model and drives the [KiloWorktreeService] off the EDT. Model mutations
  * are marshalled back onto the EDT via [edt]. Mirrors the History stack's controller shape.
@@ -32,12 +37,26 @@ class WorktreeController(
     private val abort: suspend (String, String) -> Unit = { _, _ -> },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
+    companion object {
+        private val LOG = KiloLog.create(WorktreeController::class.java)
+    }
+
     val model = CollectionListModel<WorktreeDto>()
     private val pending = LinkedHashMap<String, WorktreeDto>()
     private val tasks = LinkedHashMap<String, String>()
     private val moves = LinkedHashSet<String>()
     var onSelect: ((String) -> Unit)? = null
-    var onCreateFailure: ((String?) -> Unit)? = null
+
+    /** Fired on the EDT once a worktree exists, so callers can refresh state git just changed. */
+    var onCreated: ((WorktreeDto) -> Unit)? = null
+
+    /**
+     * Fired on the EDT after a reload settled. Replacing the model only notifies list listeners when
+     * the rows actually changed, so a repo whose sole worktree is the main one would otherwise never
+     * render its [current] row.
+     */
+    var onReload: (() -> Unit)? = null
+    var onCreateFailure: ((CreateFailure) -> Unit)? = null
     var onMoveFailure: ((String?) -> Unit)? = null
     var onRemoveSuccess: ((WorktreeDto, Int) -> Unit)? = null
     var onActivityChanged: (() -> Unit)? = null
@@ -46,6 +65,14 @@ class WorktreeController(
     private var kinds: Map<String, SessionActivityKind> = emptyMap()
 
     init {
+        // The New Worktree dialog rejects a pull request from another repository using [origin], and
+        // it can open before any reload has run — the chat dock and worktree editor actions call
+        // configure() directly, and only selecting the Agent Manager tab triggers a reload. Resolve
+        // it here so the check is armed on every entry path, not just the tab one.
+        cs.launch {
+            val info = service.listBranches(directory)
+            edt { origin = info.origin }
+        }
         cs.launch {
             activity.collect { snap ->
                 edt {
@@ -75,6 +102,11 @@ class WorktreeController(
     @Volatile
     private var known: Set<String> = emptySet()
 
+    /** `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. */
+    @Volatile
+    var origin: String? = null
+        private set
+
     fun isPending(id: String): Boolean = id in pending
 
     fun progress(id: String): String? = tasks[id]
@@ -97,6 +129,8 @@ class WorktreeController(
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
+                origin = branchInfo.origin
+                onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
         }
@@ -109,13 +143,19 @@ class WorktreeController(
     fun quickCreate() = create(suggestName(), defaultBranch)
 
     /** Imports a worktree that checks out an existing local branch. */
-    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true)
+    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH)
 
     /**
      * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
      * editor auto-sends it once it opens with its picked mode/model (see [PendingWorktreePrompt]).
      */
-    fun create(branch: String, base: String?, existingBranch: Boolean = false, prompt: PendingPrompt? = null) {
+    fun create(
+        branch: String,
+        base: String?,
+        existingBranch: Boolean = false,
+        prompt: PendingPrompt? = null,
+        kind: CreateKind = CreateKind.CREATE,
+    ) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
@@ -126,7 +166,7 @@ class WorktreeController(
         }
         cs.launch {
             val result = service.create(directory, CreateWorktreeRequestDto(branch, base, existingBranch))
-            finishCreate(temp, branch, prompt, result)
+            finishCreate(temp, branch, prompt, result, kind)
         }
     }
 
@@ -141,7 +181,7 @@ class WorktreeController(
         }
         cs.launch {
             val result = service.importPr(directory, url)
-            finishCreate(temp, "pr", null, result)
+            finishCreate(temp, "pr", null, result, CreateKind.PR)
         }
     }
 
@@ -150,6 +190,7 @@ class WorktreeController(
         branch: String,
         prompt: PendingPrompt?,
         result: CreateWorktreeResultDto,
+        kind: CreateKind,
     ) {
         val created = result.worktree
         edt {
@@ -161,12 +202,13 @@ class WorktreeController(
                 cache().put(created)
                 prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }
                 onSelect?.invoke(created.id)
+                onCreated?.invoke(created)
                 telemetry("Worktree Created", mapOf("branch" to branch))
                 return@edt
             }
             if (idx >= 0) model.remove(temp)
             telemetry("Worktree Create Failed", mapOf("branch" to branch))
-            onCreateFailure?.invoke(result.error)
+            onCreateFailure?.invoke(CreateFailure(result.error, kind, branch))
         }
     }
 
@@ -185,8 +227,14 @@ class WorktreeController(
         tasks[dto.id] = KiloBundle.message("common.deleting")
         edt { refresh(dto) }
         cs.launch {
+            val start = System.currentTimeMillis()
+            // Stop anything the worktree run popup started here first, so git can remove the
+            // directory without orphaning a process left running against a deleted working tree.
+            service<KiloRunService>().release(directory, dto.path)
             val result = service.remove(directory, dto.path, dto.branch, force)
+            val ms = System.currentTimeMillis() - start
             if (result.ok) {
+                LOG.info("worktree delete: path=${dto.path} force=$force ok=true ms=$ms")
                 edt {
                     tasks.remove(dto.id)
                     val index = model.getElementIndex(dto)
@@ -200,6 +248,7 @@ class WorktreeController(
             }
             // Removal failed: git still tracks the worktree. Keep the row and reconcile with
             // ground truth so a stale optimistic delete can't make the entry reappear later.
+            LOG.warn("worktree delete: path=${dto.path} force=$force ok=false locked=${result.locked} ms=$ms error=${result.error}")
             edt {
                 tasks.remove(dto.id)
                 refresh(dto)
@@ -216,9 +265,12 @@ class WorktreeController(
     /**
      * Copies working-tree changes into a new worktree. When [sessionId] is set, the source session is
      * also forked into the worktree; otherwise the opened worktree starts with a fresh session.
+     * [surface] is reported only on the "Continue in Worktree" telemetry event, so callers other than
+     * the sidebar chat dock (e.g. the worktree editor's session list or its own action toolbar) can be
+     * told apart.
      */
     @RequiresEdt
-    fun move(sessionId: String?, source: String = directory) {
+    fun move(sessionId: String?, source: String = directory, surface: String = "sidebar") {
         val key = sessionId ?: source
         if (!moves.add(key)) return
         val branch = suggestName()
@@ -249,9 +301,10 @@ class WorktreeController(
                                 // open; the tab's identity stays the worktree path alone.
                                 event.session?.let { service<PendingWorktreeSession>().put(worktree.path, it) }
                                 onSelect?.invoke(worktree.id)
+                                onCreated?.invoke(worktree)
                                 telemetry(
                                     "Continue in Worktree",
-                                    mapOf("surface" to "sidebar", "session" to (sessionId != null).toString()),
+                                    mapOf("surface" to surface, "session" to (sessionId != null).toString()),
                                 )
                             }
                             MoveStage.ERROR -> failMove(key, temp, event.error, stage)

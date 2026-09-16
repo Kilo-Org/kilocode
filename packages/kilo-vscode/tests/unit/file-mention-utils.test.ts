@@ -7,10 +7,11 @@ import {
   buildMentionResults,
   buildSessionAttachments,
   filterMentionResults,
+  filterSessions,
   getMentionRemovalRange,
-  getPastChatsMentionResult,
   isCursorAtMentionEnd,
   findMentionRange,
+  mentionSettled,
   sessionMentionFilename,
   sessionMentionText,
   sessionMentionToken,
@@ -19,7 +20,15 @@ import {
   PAST_CHATS_RESULT,
   TERMINAL_RESULT,
   GIT_CHANGES_RESULT,
+  WORKTREES_RESULT,
+  MODEL_RESULT,
+  modelReferenceToken,
+  filePickerNamed,
+  defaultMentionIndex,
 } from "../../webview-ui/src/hooks/file-mention-utils"
+import type { MentionResult } from "../../webview-ui/src/hooks/file-mention-utils"
+import { TERMINAL_MENTION } from "../../webview-ui/src/hooks/terminal-context-utils"
+import { GIT_CHANGES_MENTION } from "../../webview-ui/src/hooks/git-changes-context-utils"
 
 describe("AT_PATTERN", () => {
   it("matches @mention at start of string", () => {
@@ -39,6 +48,26 @@ describe("AT_PATTERN", () => {
     expect(match?.[1]).toBe("path/to/file.ts")
   })
 
+  it("captures spaces in an in-progress mention query", () => {
+    const match = "hello @my report".match(AT_PATTERN)
+    expect(match?.[1]).toBe("my report")
+  })
+
+  it("starts a new query at the latest mention instead of swallowing an earlier one", () => {
+    const match = "see @src/a.ts and @my rep".match(AT_PATTERN)
+    expect(match?.[1]).toBe("my rep")
+  })
+
+  it("keeps an @ that is part of a scoped path inside the query", () => {
+    const match = "@node_modules/@types/node".match(AT_PATTERN)
+    expect(match?.[1]).toBe("node_modules/@types/node")
+  })
+
+  it("does not span a newline", () => {
+    const match = "@src/a.ts\nnext line".match(AT_PATTERN)
+    expect(match).toBeNull()
+  })
+
   it("matches empty @", () => {
     expect(AT_PATTERN.test("@")).toBe(true)
   })
@@ -48,12 +77,18 @@ describe("buildMentionResults", () => {
   it("includes special mentions for empty mention query", () => {
     const result = buildMentionResults("", [])
     expect(result[0]).toEqual({
+      type: "model",
+      value: "model",
+      label: "Model",
+      description: "Reference a model for subagents",
+    })
+    expect(result[1]).toEqual({
       type: "terminal",
       value: "terminal",
       label: "Terminal",
       description: "Active terminal output",
     })
-    expect(result[1]).toEqual({
+    expect(result[2]).toEqual({
       type: "git-changes",
       value: "git-changes",
       label: "Git changes",
@@ -61,13 +96,19 @@ describe("buildMentionResults", () => {
     })
   })
 
-  it("includes terminal for matching prefix", () => {
-    const result = buildMentionResults("term", ["src/terminal.ts"])
+  it("offers the model reference entry for its label and aliases", () => {
+    expect(buildMentionResults("model", [])).toContainEqual(MODEL_RESULT)
+    expect(buildMentionResults("models", [])).toContainEqual(MODEL_RESULT)
+    expect(buildMentionResults("llm", [])).toContainEqual(MODEL_RESULT)
+  })
+
+  it("ranks terminal above a file the query fits less well", () => {
+    const result = buildMentionResults("term", ["src/terminal-view-model.ts"])
     expect(result.map((item) => item.type)).toEqual(["terminal", "file", "file-picker"])
   })
 
-  it("includes git changes for matching prefix", () => {
-    const result = buildMentionResults("git", ["src/git.ts"])
+  it("ranks git changes above a file the query fits less well", () => {
+    const result = buildMentionResults("git changes", ["src/git.ts"])
     expect(result.map((item) => item.type)).toEqual(["git-changes", "file", "file-picker"])
   })
 
@@ -91,15 +132,67 @@ describe("buildMentionResults", () => {
     expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }, FILE_PICKER_RESULT])
   })
 
-  it("always includes file picker result at the end of the list", () => {
+  it("keeps the menu order for a bare @, entries above the files", () => {
     const result = buildMentionResults("", ["src/index.ts"])
     expect(result).toEqual([
+      MODEL_RESULT,
       TERMINAL_RESULT,
       GIT_CHANGES_RESULT,
       PAST_CHATS_RESULT,
-      { type: "file", value: "src/index.ts" },
       FILE_PICKER_RESULT,
+      { type: "file", value: "src/index.ts" },
     ])
+  })
+
+  it("keeps browse files on offer whatever the query matches", () => {
+    expect(buildMentionResults("src", ["src/index.ts"])).toContainEqual(FILE_PICKER_RESULT)
+    expect(buildMentionResults("zzz", [])).toEqual([FILE_PICKER_RESULT])
+    expect(buildMentionResults("browse files", [])).toEqual([FILE_PICKER_RESULT])
+  })
+
+  it("keeps browse files last among the entries of a bare @", () => {
+    const result = buildMentionResults("", ["src/index.ts"], true, true)
+    const types = result.map((item) => item.type)
+    expect(types.indexOf("file-picker")).toBe(types.indexOf("worktrees") + 1)
+    expect(types.indexOf("file-picker")).toBe(types.indexOf("file") - 1)
+  })
+
+  it("ranks a literal filename match above chats the query only scatters", () => {
+    const weak = { id: "ses_a", title: "500 character novel generation", updated: 1 }
+    const result = buildMentionResults("chevron", ["resources/icons/chevron-down.svg"], true, false, [
+      { type: "session", value: weak.title, session: weak },
+    ])
+    expect(result).toEqual([{ type: "file", value: "resources/icons/chevron-down.svg" }, FILE_PICKER_RESULT])
+  })
+
+  it("ranks a chat above the files when the title fits the query best", () => {
+    const session = { id: "ses_a", title: "Fix auth bug", updated: 1 }
+    const result = buildMentionResults("fix auth", ["src/authenticate.ts"], true, false, [
+      { type: "session", value: session.title, session },
+    ])
+    expect(result.at(0)).toMatchObject({ type: "session", value: "Fix auth bug" })
+  })
+
+  it.each([
+    ["past chats", PAST_CHATS_RESULT],
+    ["past ch", PAST_CHATS_RESULT],
+    ["git changes", GIT_CHANGES_RESULT],
+    ["git ch", GIT_CHANGES_RESULT],
+  ])("finds the %s entry from a spaced query", (query, expected) => {
+    expect(buildMentionResults(query as string, [])).toContainEqual(expected)
+  })
+
+  it("finds worktree references from a spaced query", () => {
+    const result = buildMentionResults("search work", [], true, true)
+    expect(result).toContainEqual(WORKTREES_RESULT)
+  })
+
+  it("ranks a matching past chat above what the query does not fit", () => {
+    const session = { id: "ses_a", title: "Fix auth bug", updated: 1 }
+    const result = buildMentionResults("fix auth", ["src/auth.ts"], true, false, [
+      { type: "session", value: "Fix auth bug", session },
+    ])
+    expect(result.map((item) => item.type)).toEqual(["session", "file", "file-picker"])
   })
 })
 
@@ -108,14 +201,59 @@ describe("filterMentionResults", () => {
     const result = filterMentionResults("gi", [
       { type: "file", value: "README.md" },
       { type: "file", value: "src/git.ts" },
-      FILE_PICKER_RESULT,
     ])
-    expect(result).toEqual([{ type: "file", value: "src/git.ts" }, FILE_PICKER_RESULT])
+    expect(result).toEqual([{ type: "file", value: "src/git.ts" }])
   })
 
   it("always preserves file picker result regardless of query", () => {
-    const result = filterMentionResults("zz", [FILE_PICKER_RESULT])
-    expect(result).toEqual([FILE_PICKER_RESULT])
+    expect(filterMentionResults("browse", [FILE_PICKER_RESULT])).toEqual([FILE_PICKER_RESULT])
+    expect(filterMentionResults("zz", [FILE_PICKER_RESULT])).toEqual([FILE_PICKER_RESULT])
+  })
+
+  it("keeps the special entries for spaced queries that spell their labels", () => {
+    const items = [TERMINAL_RESULT, GIT_CHANGES_RESULT, PAST_CHATS_RESULT, WORKTREES_RESULT]
+    expect(filterMentionResults("git changes", items)).toEqual([GIT_CHANGES_RESULT])
+    expect(filterMentionResults("past chats", items)).toEqual([PAST_CHATS_RESULT])
+  })
+
+  it("matches past chats by title, ignoring separator differences", () => {
+    const session = { id: "ses_a", title: "Fix auth bug", updated: 1 }
+    const items: MentionResult[] = [{ type: "session", value: "Fix auth bug", session }]
+    expect(filterMentionResults("auth bug", items)).toEqual(items)
+    expect(filterMentionResults("nothing", items)).toEqual([])
+  })
+})
+
+describe("filterSessions", () => {
+  const sessions = Array.from({ length: 60 }, (_, index) => ({
+    id: `ses_${index}`,
+    title: `Recent session ${index}`,
+    updated: 60 - index,
+    worktreeName: "branch",
+  }))
+
+  it("shows the first 50 sessions in their existing order without a query", () => {
+    expect(filterSessions(sessions, "")).toEqual(sessions.slice(0, 50))
+  })
+
+  it("limits broad search results to 50 matches", () => {
+    expect(filterSessions(sessions, "recent")).toHaveLength(50)
+  })
+
+  it.each(["ORCHID", "old-branch"])("finds older sessions beyond the display limit by %s", (query) => {
+    const source = { id: "ses_old", title: "Orchid reference source", updated: 0, worktreeName: "old-branch" }
+    expect(filterSessions([...sessions, source], query)).toEqual([source])
+  })
+
+  it("ranks an older exact match before newer partial matches", () => {
+    const source = { id: "ses_old", title: "Recent", updated: 0 }
+    const matches = filterSessions([...sessions, source], "recent")
+    expect(matches).toHaveLength(50)
+    expect(matches[0]).toBe(source)
+  })
+
+  it("returns no results when nothing matches", () => {
+    expect(filterSessions(sessions, "zzzz")).toEqual([])
   })
 })
 
@@ -569,19 +707,27 @@ describe("session mentions", () => {
     { id: "ses_c", title: "Refactor cache layer", updated: now - 2000 },
   ]
 
-  describe("getPastChatsMentionResult", () => {
-    it("offers the past-chats picker for an empty query", () => {
-      expect(getPastChatsMentionResult("")).toEqual([PAST_CHATS_RESULT])
+  describe("past chats entry", () => {
+    const offered = (query: string) => buildMentionResults(query, []).some((item) => item.type === "past-chats")
+
+    it("is offered for an empty query", () => {
+      expect(offered("")).toBe(true)
     })
 
-    it("offers the picker for alias prefixes", () => {
-      expect(getPastChatsMentionResult("pas")).toEqual([PAST_CHATS_RESULT])
-      expect(getPastChatsMentionResult("sess")).toEqual([PAST_CHATS_RESULT])
-      expect(getPastChatsMentionResult("hist")).toEqual([PAST_CHATS_RESULT])
+    it("is offered for its aliases", () => {
+      expect(offered("pas")).toBe(true)
+      expect(offered("sess")).toBe(true)
+      expect(offered("hist")).toBe(true)
     })
 
-    it("hides the picker for unrelated queries", () => {
-      expect(getPastChatsMentionResult("index")).toEqual([])
+    it("is offered for its spaced label", () => {
+      expect(offered("past chats")).toBe(true)
+      expect(offered("Past Ch")).toBe(true)
+    })
+
+    it("is dropped for unrelated queries", () => {
+      expect(offered("index")).toBe(false)
+      expect(offered("past chats and more")).toBe(false)
     })
   })
 
@@ -612,9 +758,103 @@ describe("session mentions", () => {
   describe("buildMentionResults", () => {
     it("offers the past-chats picker alongside the other special mentions", () => {
       const result = buildMentionResults("", [])
-      expect(result[0]).toEqual(TERMINAL_RESULT)
+      expect(result[0]).toEqual(MODEL_RESULT)
       expect(result).toContainEqual(PAST_CHATS_RESULT)
-      expect(result[result.length - 1]).toEqual(FILE_PICKER_RESULT)
+      expect(result).toContainEqual(FILE_PICKER_RESULT)
+    })
+  })
+
+  describe("defaultMentionIndex", () => {
+    const file: MentionResult = { type: "file", value: "src/index.ts" }
+
+    it("starts on the first candidate below the entries", () => {
+      expect(defaultMentionIndex([TERMINAL_RESULT, FILE_PICKER_RESULT, file])).toBe(2)
+    })
+
+    it("starts on a matching chat when it outranks the files", () => {
+      const session = { id: "ses_a", title: "Fix auth bug", updated: 1 }
+      const items: MentionResult[] = [FILE_PICKER_RESULT, { type: "session", value: "Fix auth bug", session }, file]
+      expect(defaultMentionIndex(items)).toBe(1)
+    })
+
+    it("falls back to browse files when nothing else was found", () => {
+      expect(defaultMentionIndex([FILE_PICKER_RESULT])).toBe(0)
+    })
+
+    it("falls back to the first entry rather than stealing it from a match", () => {
+      expect(defaultMentionIndex([TERMINAL_RESULT, FILE_PICKER_RESULT])).toBe(0)
+    })
+
+    it("handles an empty list", () => {
+      expect(defaultMentionIndex([])).toBe(0)
+    })
+  })
+
+  describe("filePickerNamed", () => {
+    it("recognises the entry being spelled out", () => {
+      expect(filePickerNamed("browse files")).toBe(true)
+      expect(filePickerNamed("browse fi")).toBe(true)
+      expect(filePickerNamed("Browse")).toBe(true)
+      expect(filePickerNamed("file picker")).toBe(true)
+    })
+
+    it("recognises the label typed in full, dots included", () => {
+      expect(filePickerNamed("browse files...")).toBe(true)
+      expect(filePickerNamed("Browse files...")).toBe(true)
+      expect(filePickerNamed("browse files..")).toBe(true)
+    })
+
+    it("does not treat the fallback as named", () => {
+      expect(filePickerNamed("")).toBe(false)
+      expect(filePickerNamed("README.md and then")).toBe(false)
+      expect(filePickerNamed("browsers")).toBe(false)
+    })
+  })
+
+  describe("mentionSettled", () => {
+    const tokens = new Set(["my file.txt", "src/a.ts"])
+
+    it("reports a mention followed by prose", () => {
+      expect(mentionSettled("my file.txt and then", tokens)).toBe(true)
+    })
+
+    it("reports a mention followed by a single space", () => {
+      expect(mentionSettled("src/a.ts ", tokens)).toBe(true)
+    })
+
+    it("treats a prefix of a mention as an edit in progress", () => {
+      expect(mentionSettled("my file", tokens)).toBe(false)
+    })
+
+    it("treats the exact mention as an edit in progress", () => {
+      expect(mentionSettled("my file.txt", tokens)).toBe(false)
+    })
+
+    it("does not report a longer path that merely starts like a mention", () => {
+      expect(mentionSettled("src/a.tsx", tokens)).toBe(false)
+    })
+
+    it("reports nothing when no token answers to this @", () => {
+      expect(mentionSettled("notes.md and then", tokens)).toBe(false)
+    })
+
+    it("keeps searching while the query still grows toward a longer token", () => {
+      const known = new Set(["my", "my report.txt"])
+      expect(mentionSettled("my report", known)).toBe(false)
+    })
+
+    it("settles once the query passes every token it could complete", () => {
+      const known = new Set(["my", "my report.txt"])
+      expect(mentionSettled("my report.txt and then", known)).toBe(true)
+    })
+
+    it("reports builtin mentions", () => {
+      expect(mentionSettled("terminal what failed", new Set([TERMINAL_MENTION]))).toBe(true)
+      expect(mentionSettled("git-changes review", new Set([GIT_CHANGES_MENTION]))).toBe(true)
+    })
+
+    it("reports nothing for an unrelated query", () => {
+      expect(mentionSettled("some other thing", tokens)).toBe(false)
     })
   })
 
@@ -666,5 +906,18 @@ describe("session mentions", () => {
       expect(attachments.map((item) => item.url)).toEqual(["session:ses_a", "session:ses_b"])
       expect(attachments.map((item) => item.source?.text.value)).toEqual(["@Fix auth bug", "@Fix auth bug (2)"])
     })
+  })
+})
+
+describe("modelReferenceToken", () => {
+  it("builds the provider/model inline token", () => {
+    expect(modelReferenceToken("anthropic", "claude-sonnet-4")).toBe("anthropic/claude-sonnet-4")
+    expect(modelReferenceToken("openrouter", "anthropic/claude-sonnet-4")).toBe("openrouter/anthropic/claude-sonnet-4")
+  })
+
+  it("is rediscovered by syncMentionedPaths as a mention token", () => {
+    const token = modelReferenceToken("anthropic", "claude-sonnet-4")
+    const kept = syncMentionedPaths(new Set([token]), `use @${token} for the subagent`)
+    expect(kept.has(token)).toBe(true)
   })
 })

@@ -2,10 +2,12 @@ import { For, createEffect, createMemo, createSignal, type Accessor, type Compon
 import type { WorktreeFileDiff } from "../src/types/messages"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { ReviewComposer } from "../diff-viewer/review-annotations"
+import type { PRComment } from "./pr/pr-types"
+import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { DiffPanel } from "./DiffPanel"
 import { diffDataKey } from "./worktree-diffs"
 
-const CACHE_SIZE = 4
+const CACHE_SIZE = 16
 
 interface Entry {
   key: string
@@ -26,6 +28,13 @@ interface Props {
   loadingFiles: (key: string) => Set<string>
   notice: (key: string) => string | undefined
   comments: (ctx: string) => ReviewComment[]
+  remoteComments?: (ctx: string) => PRComment[]
+  remoteTarget?: (ctx: string, comment: PRComment) => import("../../src/shared/pr-comment-actions").PRTarget | undefined
+  prTarget?: (ctx: string) => PRTarget | undefined
+  prSnapshot?: (ctx: string) => PRDiffSnapshot | undefined
+  prLoading?: (ctx: string) => boolean
+  prError?: (ctx: string) => string | undefined
+  focusedComment?: (key: string) => { id: string; file: string } | undefined
   setComments: (ctx: string, comments: ReviewComment[]) => void
   composer: (key: string) => ReviewComposer
   lead: () => JSX.Element
@@ -100,7 +109,9 @@ export const DiffPanelCache: Component<Props> = (props) => {
               loading={props.loading(entry.key)}
               active={active()}
               loadingFiles={props.loadingFiles(entry.key)}
-              sessionKey={entry.key}
+              sessionKey={entry.cacheKey}
+              projectId={props.project()}
+              worktreeId={entry.ctx}
               notice={props.notice(entry.key)}
               lead={active() ? props.lead() : undefined}
               canRevert={props.canRevert}
@@ -109,6 +120,17 @@ export const DiffPanelCache: Component<Props> = (props) => {
               markdownRender={props.markdownRender}
               onMarkdownRenderChange={props.onMarkdownRenderChange}
               comments={props.comments(entry.key)}
+              remoteComments={props.remoteComments?.(entry.ctx)}
+              remoteTarget={(comment) =>
+                entry.cacheKey === `${props.project() ?? "single"}\0${entry.key}`
+                  ? props.remoteTarget?.(entry.ctx, comment)
+                  : undefined
+              }
+              prTarget={props.prTarget?.(entry.ctx)}
+              prSnapshot={props.prSnapshot?.(entry.ctx)}
+              prLoading={props.prLoading?.(entry.ctx)}
+              prError={props.prError?.(entry.ctx)}
+              focusedComment={active() ? props.focusedComment?.(entry.key) : undefined}
               onCommentsChange={(comments) => props.setComments(entry.key, comments)}
               composer={props.composer(entry.cacheKey)}
               onSendClick={props.onSendClick}

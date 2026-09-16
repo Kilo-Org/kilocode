@@ -23,6 +23,7 @@ import { DialogIndexing } from "./components/dialog-indexing.js"
 import { DialogProviderUsage } from "./components/dialog-provider-usage.js"
 import { indexingEnabled } from "./indexing-feature"
 import { refreshBalance } from "./balance-refresh"
+import { showAboutDialog } from "./cli/cmd/tui/component/dialog-about.js"
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any
@@ -338,6 +339,18 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
           } catch (error) {
             dialog.replace(() => <DialogAlert title="Error" message={`Failed to fetch teams: ${error}`} />)
           }
+        },
+      },
+
+      // /about command
+      {
+        name: "kilo.about",
+        title: "About",
+        desc: "Show version, environment, and diagnostic info",
+        category: "Kilo",
+        slashName: "about",
+        run: () => {
+          showAboutDialog(dialog)
         },
       },
     ].map((command) => ({

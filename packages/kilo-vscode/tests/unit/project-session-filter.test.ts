@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test"
-import { rootSessions } from "../../webview-ui/agent-manager/project/session-filter"
+import {
+  rootSessions,
+  worktreeSessionIds,
+  worktreeSessions,
+} from "../../webview-ui/agent-manager/project/session-filter"
 import type { ProjectSessionInfo } from "../../webview-ui/src/types/messages"
 
 const session = (id: string, worktreeId: string | null, parentID: string | null): ProjectSessionInfo => ({
@@ -22,5 +26,20 @@ describe("rootSessions", () => {
     const sessions = [session("child", null, "root"), session("root", null, null)]
 
     expect(rootSessions(sessions, null).map((item) => item.id)).toEqual(["root"])
+  })
+
+  it("preserves managed membership, chronological fallback, and custom tab order", () => {
+    const rows = [
+      { ...session("new", "wt-1", null), createdAt: "2026-01-02T00:00:00.000Z" },
+      session("old", "wt-1", null),
+      session("child", "wt-1", "old"),
+      session("other", "wt-2", null),
+    ]
+    const managed = rows.map((item) => ({ id: item.id, worktreeId: item.worktreeId, createdAt: item.createdAt }))
+    expect([...worktreeSessionIds("wt-1", managed)]).toEqual(["new", "old", "child"])
+    expect(worktreeSessions("wt-1", managed, rows, undefined).map((item) => item.id)).toEqual(["old", "new"])
+    expect(worktreeSessions("wt-1", managed, rows, ["missing", "new"]).map((item) => item.id)).toEqual(["new", "old"])
+    expect(rows.map((item) => item.id)).toEqual(["new", "old", "child", "other"])
+    expect(worktreeSessions("missing", managed, rows, undefined)).toEqual([])
   })
 })

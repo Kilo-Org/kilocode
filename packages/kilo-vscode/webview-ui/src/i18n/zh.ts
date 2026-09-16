@@ -55,10 +55,27 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完成（模型报告）",
+  "session.goal.blocked": "受阻",
+  "session.goal.restart": "重新开始目标",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "刷新",
+  "task.swarm.reset": "重置看板",
+  "task.swarm.resetTitle": "重置此看板？",
+  "task.swarm.resetDescription": "清除可见消息？对话和正在运行的任务不会改变。智能体可以发布新消息。",
+  "task.swarm.loading": "正在加载看板...",
+  "task.swarm.failed": "无法加载或重置看板。请尝试刷新。",
 
   "command.provider.connect": "连接提供商",
+
+  "session.activity.waiting": "正在等待回复或批准。",
+  "session.activity.error": "错误或连接已断开。",
+  "session.activity.retry": "正在自动重试。",
+  "session.activity.busy": "进行中。",
+  "session.activity.done": "回合已完成。",
+  "session.activity.idle": "未运行。",
 
   "command.session.new": "新建会话",
   "command.session.show.changes": "显示更改",
@@ -169,6 +186,8 @@ export const dict = {
   "common.saving": "保存中...",
   "common.default": "默认",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "搜索 Worktree",
   "prompt.thinking.tooltip": "推理强度",
   "prompt.action.indexing": "索引设置",
   "prompt.action.autoApprove.enable": "启用自动审批",
@@ -176,10 +195,12 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "自动审批已启用。权限请求将自动获批。",
   "prompt.action.autoApprove.disabled": "自动审批已禁用。点击以自动批准权限请求。",
   "prompt.action.send": "发送",
+  "prompt.action.continue": "继续",
   "prompt.action.send.blocked": "请先回答或忽略待处理的问题",
   "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "优化提示词",
+  "prompt.paste.expand": "点击展开粘贴的文本",
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
   "prompt.action.sandbox.enable": "启用沙盒",
@@ -199,7 +220,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
-  "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
+  "speechToText.tooltip.start": "开始语音输入",
   "speechToText.tooltip.shortcut": "点击或按下 Cmd/Ctrl+K 开始或停止录音；说话时按住，松开后即可转录并提交。",
   "speechToText.tooltip.starting": "正在启动麦克风... 请稍后再说。",
   "speechToText.tooltip.stop": "停止捕获音频",
@@ -237,6 +258,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
   "notification.permission.titleSandboxEscalation": "要允许在沙盒外执行 Git 操作吗？",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
+  "ui.permission.reject": "拒绝",
+  "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",
+  "ui.permission.feedbackHint": "按 Enter 拒绝，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
   "ui.permission.doomLoop.rule": "继续调用 {{tool}}",
   "ui.permission.rule.addToAllowed": "添加到允许列表",
@@ -423,6 +447,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "自定义提供商",
   "settings.providers.connected.environmentDescription": "从您的环境变量连接",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登录",
+  "settings.providers.action.changeApiKey": "更改 API 密钥",
   "settings.providers.custom.description": "通过基础 URL 添加自定义提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的默认模型和推理工作量。留空以继承调用代理的模型。",
@@ -632,6 +657,7 @@ export const dict = {
   "profile.usage.source.direct": "直接",
   "profile.usage.state.stale": "正在显示上次更新的用量。",
   "profile.usage.state.unavailable": "用量数据不可用。",
+  "profile.usage.state.empty": "未报告任何用量限制。",
   "profile.usage.plan.pastDue": "套餐：付款逾期",
   "profile.usage.plan.canceling": "套餐：将在周期结束时取消",
   "profile.usage.plan.unknown": "套餐：状态未知",
@@ -715,6 +741,14 @@ export const dict = {
   "session.outcome.interrupted": "回合已中断",
   "session.outcome.error": "回合失败",
   "session.outcome.finish": "结束原因：{{reason}}",
+  "session.goal.label": "目标",
+  "prompt.goal.set": "设置目标",
+  "prompt.goal.start": "开始目标",
+  "session.goal.active": "运行中",
+  "session.goal.paused": "已暂停",
+  "session.goal.pause": "暂停",
+  "session.goal.resume": "继续",
+  "session.goal.clear": "清除目标",
   "session.costAlert.header": "会话费用提醒",
   "session.costAlert.continue": "继续",
   "session.costAlert.question": "此会话刚刚超过每会话提醒阈值 {{limit}}，当前费用为 {{cost}}。是否继续？",
@@ -780,7 +814,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "技能",
 
   "settings.browser.description":
-    "启用后，AI 代理可以与网页交互 — 导航、点击、输入和截取屏幕截图。Chrome 窗口将打开，以便您观察代理的工作。",
+    "配置由 Playwright 提供支持的内置浏览器自动化。Kilo 可在你的会话中浏览网页、与网页交互并截取屏幕截图。",
   "settings.browser.enable.title": "启用浏览器自动化",
   "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端。",
   "settings.browser.systemChrome.title": "使用系统 Chrome",
@@ -804,7 +838,16 @@ export const dict = {
   "settings.notifications.sounds": "声音",
   "settings.notifications.enable.title": "启用声音通知",
   "settings.notifications.enable.description": "在会话完成、遇到错误或需要你输入时播放声音",
+  "settings.notifications.workbench.title": "启用 VS Code 通知",
+  "settings.notifications.workbench.description": "在 Kilo 完成任务或需要你输入时显示 VS Code 通知",
+  "settings.notifications.os.title": "启用操作系统通知",
+  "settings.notifications.os.description":
+    "在 VS Code 未处于活动状态时，如果 Kilo 完成任务或需要你输入，则显示原生操作系统通知提醒。",
   "settings.notifications.testSound": "测试",
+  "settings.notifications.testOS": "测试",
+  "settings.notifications.testOS.testing": "正在发送测试通知…",
+  "settings.notifications.testOS.success": "测试通知已发送。",
+  "settings.notifications.testOS.error": "测试通知发送失败",
   "settings.notifications.sound.default": "默认",
   "settings.notifications.sound.system": "系统",
   "settings.notifications.sound.description":
@@ -822,12 +865,25 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "让主会话与负责其任务的子智能体共享看板，包括嵌套的子智能体。用于并行尝试解决方案或开展相互补充的工作，而不是用于每一项任务。",
   "settings.experimental.imageGenerationModel.title": "图像模型",
   "settings.experimental.imageGenerationModel.description": "图像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "默认 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription": "发送到自定义转录端点的模型 ID，例如 whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "语音转文本基础 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "使用兼容 OpenAI 的转录 API 代替 Kilo Gateway。模型从 /models 读取，音频发送到 /audio/transcriptions。留空则使用 Kilo Gateway。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "语音转文本 API 密钥",
+  "settings.models.speechToTextApiKey.description":
+    "发送到自定义转录基础 URL 的 Bearer 令牌。保存在你的 Kilo 配置文件中。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "启用并登录 Kilo 提供商以使用 Speech to Text。Speech to Text 目前仅支持通过 Kilo Gateway 使用。",
+    "启用并登录 Kilo 提供商以使用 Speech to Text，或在下方设置自定义转录基础 URL。",
   "settings.models.speechToTextModel.title": "语音转文本模型",
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
@@ -846,8 +902,13 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 迁移",
+  "settings.experimental.claudeMigration.description":
+    "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
+  "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
+  "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -949,6 +1010,9 @@ export const dict = {
     "规则是指导代理行为的指令文件。它们会被包含在每次对话的系统提示词中。在下方添加文件路径以包含额外的规则。",
   "settings.agentBehaviour.instructionFiles": "附加指令文件",
   "settings.agentBehaviour.instructionFiles.description": "包含在系统提示词中的附加指令文件路径",
+  "settings.agentBehaviour.pushFixes.title": "推送拉取请求修复",
+  "settings.agentBehaviour.pushFixes.description":
+    "当你将拉取请求的 CI 失败或评审评论发送给智能体，或从基础分支更新 worktree 时，请求智能体提交并推送，以便更新拉取请求。权限确认仍然适用。关闭后可手动提交。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 兼容性",
   "settings.agentBehaviour.claudeCompat.title": "加载 Claude Code 文件",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1003,6 +1067,11 @@ export const dict = {
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compaction.title": "压缩",
+  "settings.context.compactionModel.title": "压缩模型",
+  "settings.context.compactionModel.description":
+    "用于自动和手动压缩的模型。留空以使用聊天模型。成本、速度和摘要质量取决于模型。",
+  "settings.context.compactionModel.useChatModel": "使用聊天模型",
+  "settings.context.compactionModel.hint": "若要选择用于压缩的模型，请参阅模型设置。",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
   "settings.context.prune.title": "修剪旧输出",
@@ -1044,9 +1113,12 @@ export const dict = {
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.fontSize.title": "字体大小",
   "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
-  "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
-  "settings.display.reasoningAutoCollapse.description":
-    "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",
+  "settings.display.reasoningDisplay.title": "推理块",
+  "settings.display.reasoningDisplay.description":
+    "选择推理块的起始显示方式。展开会显示完整文本，预览会将其限制为简短的可滚动预览，标题仅显示标题和流式指示器，直到你打开它。",
+  "settings.display.reasoningDisplay.expanded": "展开",
+  "settings.display.reasoningDisplay.preview": "预览",
+  "settings.display.reasoningDisplay.headline": "标题",
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切换推理强度",
   "settings.display.shiftTabCycle.description":
     "在提示输入框中按 Shift+Tab 可切换到下一个推理强度等级。禁用此选项可将 Shift+Tab 用于键盘焦点导航。",
@@ -1090,57 +1162,16 @@ export const dict = {
   "question.summary": "第 {{n}} / {{total}} 个问题",
   "common.review": "审查",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "从旧版迁移",
-  "settings.aboutKiloCode.legacyMigration.title": "旧版迁移",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "从旧版 Kilo Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
   "settings.aboutKiloCode.rooImport.description": "从 Roo Code 安装导入对话历史记录。",
   "settings.aboutKiloCode.rooImport.button": "从 Roo Code 导入会话",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code 新功能",
-  "migration.whatsNew.subtitle": "我们在更快、更高效的基础上重新构建了扩展。",
-  "migration.whatsNew.features.performance.title": "更快的智能体性能",
-  "migration.whatsNew.features.performance.detail":
-    "并行工具调用和子智能体让你的智能体可以同时处理更多任务——减少等待时间，更快交付成果。",
-  "migration.whatsNew.features.interface.title": "简洁的界面",
-  "migration.whatsNew.features.interface.detail": "更少干扰，更易阅读，更快上手。",
-  "migration.whatsNew.features.agentManager.title": "代理管理器",
-  "migration.whatsNew.features.agentManager.detail":
-    "一个统一的界面，可以并行运行多个智能体，每个智能体各自使用独立的 worktree——在同一个地方监控进度、切换上下文和审查变更。",
-  "migration.whatsNew.features.foundation.title": "共享基础",
-  "migration.whatsNew.features.foundation.detail":
-    "所有 Kilo 产品共享一个小巧高效的核心。无论你选择哪种方式工作，都能获得熟悉的体验。",
-  "migration.whatsNew.blogLink": "阅读完整公告",
-  "migration.whatsNew.docsLink": "新功能与常见问题",
-  "migration.whatsNew.continue": "继续",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "迁移你的设置",
-  "migration.migrate.subtitle": "我们发现了你之前安装的设置。以下是可以迁移的内容。",
+  "migration.roo.button": "导入会话",
+  "migration.roo.empty": "未找到 Roo Code 会话。",
   "migration.migrate.selectLabel": "选择要迁移的内容",
   "migration.migrate.chatHistory": "聊天会话和历史记录",
-  "migration.migrate.button": "迁移设置",
-  "migration.migrate.skip": "跳过",
-  "migration.migrate.keysDetected": "检测到 {{count}} 个密钥",
-  "migration.migrate.serversConfigured": "已配置 {{count}} 个服务器",
-  "migration.migrate.modesFound": "发现 {{count}} 个模式",
-  "migration.migrate.nothingToMigrate": "在旧版设置中未找到要迁移的内容。",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "提供商 API 密钥",
-  "migration.select.mcpServers": "MCP 服务器",
-  "migration.select.customModes": "自定义模式 / 代理",
-  "migration.select.defaultModel": "默认模型",
-  "migration.select.autoApproval": "自动审批",
-  "migration.select.language": "界面语言",
-  "migration.select.autocomplete": "自动补全设置",
 
   // Migrate — completion
   "migration.complete.summary": "成功迁移 {{success}}/{{total}} 项。",
-  "migration.complete.cleanup": "清除旧版设置数据",
-  "migration.complete.cleanupDescription": "此操作将从 VS Code 存储中删除旧版设置。您将无法再次运行此迁移。",
   "migration.complete.done": "完成",
   "migration.migrate.sessionsDetected": "检测到 {{count}} 个会话",
   "migration.error.continue": "继续",
@@ -1173,7 +1204,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "未知日期",
   "migration.sessionFormat.unknown": "未知",
   "migration.sessionFormat.unknownError": "未知错误",
-  // legacy-migration end
 
   "error.details.show": "详细信息",
 
@@ -1181,7 +1211,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} 个待办已完成",
   "task.backgroundAgents.running.one": "1 个后台智能体",
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
+  "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
+  "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
@@ -1194,6 +1226,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "已取消",
   "task.backgroundAgents.status.error": "错误",
   "task.backgroundAgents.untitled": "后台智能体",
+  "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
   "settings.saveBar.unsavedChanges": "未保存的更改",
   "settings.saveBar.discard": "放弃",
   "settings.saveBar.save": "保存",
@@ -1218,6 +1251,18 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "保存到本地",
+  "diffViewer.comment.sendToAgent": "发送给智能体",
+  "diffViewer.comment.postToGithub": "发布到 GitHub",
+  "diffViewer.comment.loadFailed": "无法加载拉取请求的更改。",
+  "diffViewer.comment.unavailable": "此行在当前拉取请求快照中不可用。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "打开拉取请求",
+  "diffViewer.comment.localChanges": "本地更改",
+  "diffViewer.comment.prChanges": "PR 更改",
+  "diffViewer.comment.sendToKilo": "发送到 Kilo",
+  "diffViewer.comment.sendToGithub": "发送到 GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "选择目标",
   "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
 
   "diffViewer.baseBranch.auto": "默认",
@@ -1238,5 +1283,11 @@ export const dict = {
   "chat.search.close": "关闭搜索",
   "chat.search.invalidRegex": "正则表达式无效",
   "chat.search.noResults": "无结果",
+  "settings.experimental.browserAutomation.title": "集成浏览器",
+  "settings.experimental.browserAutomation.description":
+    "在 Agent Manager 中显示本地应用预览，并向 Agent Manager 会话公开 browser_open 工具。",
+  "settings.experimental.browserAutomation.systemChrome.title": "使用系统 Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "为集成浏览器使用已安装的 Google Chrome。仅在已安装兼容的 Playwright Chromium 浏览器时才禁用。",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
 } satisfies Partial<Record<Keys, string>>

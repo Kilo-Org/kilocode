@@ -10,7 +10,7 @@ import { useLanguage } from "../../context/language"
 import { useMemory } from "../../context/memory"
 import SettingsRow from "./SettingsRow"
 
-const ContextTab: Component = () => {
+const ContextTab: Component<{ onNavigateToModels?: () => void }> = (props) => {
   const { config, updateConfig } = useConfig()
   const memory = useMemory()
   const language = useLanguage()
@@ -172,6 +172,30 @@ const ContextTab: Component = () => {
           </Switch>
         </SettingsRow>
       </Card>
+      <p
+        data-slot="context-models-hint"
+        style={{
+          "margin-top": "8px",
+          "font-size": "var(--kilo-font-size-12)",
+          "text-align": "right",
+          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+        }}
+      >
+        <a
+          href="#"
+          style={{
+            color: "var(--vscode-textLink-foreground)",
+            "text-decoration": "none",
+            cursor: "pointer",
+          }}
+          onClick={(e) => {
+            e.preventDefault()
+            props.onNavigateToModels?.()
+          }}
+        >
+          {language.t("settings.context.compactionModel.hint")}
+        </a>
+      </p>
 
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.context.watcherPatterns")}</h4>
 

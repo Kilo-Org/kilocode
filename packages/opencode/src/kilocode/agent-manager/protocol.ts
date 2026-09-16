@@ -96,7 +96,9 @@ export const PromptRequest = Schema.Struct({
   ...Base,
   operation: Schema.Literal("prompt"),
   targetSessionID: SessionID,
+  sourceSessionID: Schema.optional(SessionID),
   prompt: Prompt,
+  replyTo: Schema.optional(RequestID),
 }).annotate({ identifier: "AgentManagerPromptRequest" })
 
 export const StopRequest = Schema.Struct({
@@ -126,9 +128,11 @@ export const AnswerRequest = Schema.Struct({
   answers: Answers,
 }).annotate({ identifier: "AgentManagerAnswerRequest" })
 
-export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest, AnswerRequest]).annotate({
-  identifier: "AgentManagerRequest",
-})
+export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest, AnswerRequest]).annotate(
+  {
+    identifier: "AgentManagerRequest",
+  },
+)
 export type Request = Schema.Schema.Type<typeof Request>
 
 export const OverviewResult = Schema.Struct({

@@ -55,8 +55,23 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Board",
+  "task.swarm.refresh": "Refresh",
+  "task.swarm.reset": "Reset board",
+  "task.swarm.resetTitle": "Reset this board?",
+  "task.swarm.resetDescription":
+    "Clear visible messages? Conversations and running tasks stay unchanged. Agents can post new messages.",
+  "task.swarm.loading": "Loading board...",
+  "task.swarm.failed": "Could not load or reset the board. Try refreshing it.",
 
   "command.provider.connect": "Connect provider",
+
+  "session.activity.waiting": "Waiting for an answer or approval.",
+  "session.activity.error": "Error or connection lost.",
+  "session.activity.retry": "Retrying automatically.",
+  "session.activity.busy": "In progress.",
+  "session.activity.done": "Turn completed.",
+  "session.activity.idle": "Not running.",
 
   "command.session.new": "New session",
   "command.session.show.changes": "Show Changes",
@@ -174,12 +189,16 @@ export const dict = {
   "common.saving": "Saving...",
   "common.default": "Default",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Search worktrees",
   "prompt.thinking.tooltip": "Reasoning effort",
   "prompt.action.send": "Send",
+  "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.paste.expand": "Click to expand pasted text",
   "prompt.action.indexing": "Indexing settings",
   "prompt.action.autoApprove.enable": "Enable auto-approve",
   "prompt.action.autoApprove.disable": "Disable auto-approve",
@@ -205,7 +224,7 @@ export const dict = {
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
-  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.start": "Start voice input",
   "speechToText.tooltip.shortcut":
     "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
@@ -247,6 +266,9 @@ export const dict = {
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
   "notification.permission.titleSandboxEscalation": "Allow Git operation outside the sandbox?",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.reject": "Reject",
+  "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
+  "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
   "ui.permission.rule.addToAllowed": "Add to allowed list",
@@ -363,6 +385,7 @@ export const dict = {
   "settings.providers.tag.other": "Other",
   "settings.providers.connected.environmentDescription": "Connected from your environment variables",
   "settings.providers.action.signInChatGPT": "Sign in with ChatGPT",
+  "settings.providers.action.changeApiKey": "Change API key",
   "settings.providers.custom.description": "Add a custom provider by base URL.",
 
   "provider.custom.title": "Custom provider",
@@ -567,6 +590,7 @@ export const dict = {
   "profile.usage.source.direct": "Direct",
   "profile.usage.state.stale": "Showing last updated usage.",
   "profile.usage.state.unavailable": "Usage unavailable.",
+  "profile.usage.state.empty": "No usage limits reported.",
   "profile.usage.plan.pastDue": "Plan: Past due",
   "profile.usage.plan.canceling": "Plan: Cancels at period end",
   "profile.usage.plan.unknown": "Plan: Status unknown",
@@ -686,6 +710,17 @@ export const dict = {
   "session.outcome.interrupted": "Turn interrupted.",
   "session.outcome.error": "Turn failed.",
   "session.outcome.finish": "Technical finish reason: {{reason}}",
+  "session.goal.label": "Goal",
+  "prompt.goal.set": "Set goal",
+  "prompt.goal.start": "Start goal",
+  "session.goal.active": "Active",
+  "session.goal.complete": "Complete (model-reported)",
+  "session.goal.blocked": "Blocked",
+  "session.goal.restart": "Restart goal",
+  "session.goal.paused": "Paused",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Resume",
+  "session.goal.clear": "Clear goal",
   "session.costAlert.header": "Session Cost Alert",
   "session.costAlert.continue": "Continue",
   "session.costAlert.question":
@@ -785,12 +820,12 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "When enabled, the AI agent can interact with web pages — navigating, clicking, typing, and taking screenshots. A Chrome window will open so you can watch the agent work.",
+    "Configure built-in browser automation powered by Playwright. Kilo can navigate, interact with, and screenshot web pages in your sessions.",
   "settings.browser.enable.title": "Enable Browser Automation",
   "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
   "settings.browser.systemChrome.title": "Use System Chrome",
   "settings.browser.systemChrome.description":
-    "Use your installed Chrome browser instead of a separate Chromium instance.",
+    "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.browser.headless.title": "Headless Mode",
   "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
 
@@ -815,7 +850,17 @@ export const dict = {
   "settings.notifications.enable.title": "Enable Sound Notifications",
   "settings.notifications.enable.description":
     "Play sounds when sessions complete, encounter an error, or need your input",
+  "settings.notifications.workbench.title": "Enable VS Code Notifications",
+  "settings.notifications.workbench.description":
+    "Show VS Code notifications when Kilo completes a task or needs your input",
+  "settings.notifications.os.title": "Enable OS Notifications",
+  "settings.notifications.os.description":
+    "Show native OS notification alerts when Kilo completes a task or needs your input while VS Code is not active.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sending test notification…",
+  "settings.notifications.testOS.success": "Test notification sent.",
+  "settings.notifications.testOS.error": "Test notification failed",
   "settings.notifications.sound.default": "Default",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -834,14 +879,29 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "Share a board between a main session and its task subagents, including nested subagents. Use it for parallel solution attempts or complementary work, not every task.",
   "settings.experimental.imageGenerationModel.title": "Image Model",
   "settings.experimental.imageGenerationModel.description": "Image Generation Model",
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
 
   "settings.models.speechToText.disabledDescription":
-    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
+    "Kilo Gateway is selected. Enable and sign in to the Kilo provider to choose a supported model, or enter a custom transcription base URL above.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
-  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.description":
+    "Kilo Gateway is the active speech-to-text source. Choose its transcription model for voice input.",
+  "settings.models.speechToTextModel.customDescription":
+    "Model ID sent to your custom transcription endpoint, for example whisper-1. Voice input is unavailable until you set one.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Speech to Text Base URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Use an OpenAI-compatible transcription API instead of Kilo Gateway. Models are read from /models and audio is sent to /audio/transcriptions. Leave empty to use Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Speech to Text API Key",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer token sent to the custom transcription base URL. Stored in your Kilo config file.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
@@ -863,6 +923,18 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
+  "settings.experimental.browserAutomation.title": "Integrated Browser",
+  "settings.experimental.browserAutomation.description":
+    "Show local application previews in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
+  "settings.experimental.claudeMigration.title": "Claude Code Migration",
+  "settings.experimental.claudeMigration.description":
+    "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",
+  "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
+  "settings.experimental.taskModelSelection.description":
+    "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -916,6 +988,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
     "Paths to additional instruction files that are included in the system prompt",
+  "settings.agentBehaviour.pushFixes.title": "Push Pull Request Fixes",
+  "settings.agentBehaviour.pushFixes.description":
+    "When you send pull request CI failures or review comments to the agent, or update a worktree from its base, ask it to commit and push so the pull request updates. Permission prompts still apply. Turn off to keep commits manual.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
   "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1036,6 +1111,11 @@ export const dict = {
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
   "settings.context.compaction.title": "Compaction",
+  "settings.context.compactionModel.title": "Compaction model",
+  "settings.context.compactionModel.description":
+    "Model used for automatic and manual compaction. Leave unset to use the chat model. Cost, speed, and summary quality depend on the model.",
+  "settings.context.compactionModel.useChatModel": "Use chat model",
+  "settings.context.compactionModel.hint": "To choose which model is used for compaction, see the Models settings.",
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
@@ -1078,9 +1158,12 @@ export const dict = {
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
-  "settings.display.reasoningAutoCollapse.description":
-    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.reasoningDisplay.title": "Reasoning Blocks",
+  "settings.display.reasoningDisplay.description":
+    "Choose how reasoning blocks start. Expanded shows the full text, Preview caps it to a short scrolling preview, and Headline shows only the title and streaming indicator until you open it.",
+  "settings.display.reasoningDisplay.expanded": "Expanded",
+  "settings.display.reasoningDisplay.preview": "Preview",
+  "settings.display.reasoningDisplay.headline": "Headline",
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",
@@ -1137,59 +1220,14 @@ export const dict = {
   "question.summary": "{{n}} of {{total}} questions",
   "common.review": "Review",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrate from Legacy Version",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy Migration",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrate settings from a previous installation of Kilo Code, including provider API keys and default model.",
   "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
   "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
-
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "What's New in Kilo Code",
-  "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
-  "migration.whatsNew.features.performance.title": "Faster Agent Performance",
-  "migration.whatsNew.features.performance.detail":
-    "Parallel tool calls and subagents let your agent tackle more at once — so you spend less time watching and more time shipping.",
-  "migration.whatsNew.features.interface.title": "Streamlined Interface",
-  "migration.whatsNew.features.interface.detail": "Fewer distractions, easier and quicker to read.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
-  "migration.whatsNew.features.agentManager.detail":
-    "A unified interface for running multiple agents in parallel, each on its own worktree — monitor progress, switch context, and review changes in one place.",
-  "migration.whatsNew.features.foundation.title": "Shared Foundation",
-  "migration.whatsNew.features.foundation.detail":
-    "One small, efficient core across every Kilo product. A familiar experience however you choose to work.",
-  "migration.whatsNew.blogLink": "Read the full announcement",
-  "migration.whatsNew.docsLink": "What's new & FAQ",
-  "migration.whatsNew.continue": "Continue",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrate Your Settings",
-  "migration.migrate.subtitle": "We found settings from your previous installation. Here's what we can bring over.",
+  "migration.roo.button": "Import Sessions",
+  "migration.roo.empty": "No Roo Code sessions found.",
   "migration.migrate.selectLabel": "Select what to migrate",
   "migration.migrate.chatHistory": "Chat Sessions & History",
-  "migration.migrate.button": "Migrate Settings",
-  "migration.migrate.skip": "Skip",
-  "migration.migrate.keysDetected": "{{count}} keys detected",
-  "migration.migrate.serversConfigured": "{{count}} server(s) configured",
-  "migration.migrate.modesFound": "{{count}} mode(s) found",
   "migration.migrate.sessionsDetected": "{{count}} sessions detected",
-  "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Provider API Keys",
-  "migration.select.mcpServers": "MCP Servers",
-  "migration.select.customModes": "Custom Modes / Agents",
-  "migration.select.defaultModel": "Default Model",
-  "migration.select.autoApproval": "Auto-Approval",
-  "migration.select.language": "UI Language",
-  "migration.select.autocomplete": "Autocomplete Settings",
-
-  // Migrate — completion
   "migration.complete.summary": "{{success}} of {{total}} items migrated successfully.",
-  "migration.complete.cleanup": "Remove legacy settings data",
-  "migration.complete.cleanupDescription":
-    "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
   "migration.error.continue": "Continue",
   "migration.sessionSummary.title": "Summary:",
@@ -1221,7 +1259,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Unknown date",
   "migration.sessionFormat.unknown": "Unknown",
   "migration.sessionFormat.unknownError": "Unknown error",
-  // legacy-migration end
 
   "error.details.show": "Details",
 
@@ -1231,6 +1268,7 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 background agent",
   "task.backgroundAgents.running.many": "{{count}} background agents",
   "task.backgroundAgents.open": "Open background agent",
+  "task.backgroundAgents.openAll": "Open all background agents",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Continue in background",
   "task.backgroundAgents.waiting": "A background agent needs your input",
@@ -1238,11 +1276,13 @@ export const dict = {
   "task.backgroundAgents.dismiss": "Dismiss",
   "task.backgroundAgents.clearFinished": "Clear finished",
   "task.backgroundAgents.summary": "{{running}} of {{total}} background agents running",
+  "task.backgroundAgents.more": "+{{count}} more",
   "task.backgroundAgents.status.running": "Running",
   "task.backgroundAgents.status.completed": "Done",
   "task.backgroundAgents.status.cancelled": "Cancelled",
   "task.backgroundAgents.status.error": "Error",
   "task.backgroundAgents.untitled": "Background agent",
+  "task.backgroundAgents.stopAll": "Stop all ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",
@@ -1275,6 +1315,18 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
+  "diffViewer.comment.saveLocal": "Save local",
+  "diffViewer.comment.sendToAgent": "Send to agent",
+  "diffViewer.comment.postToGithub": "Post to GitHub",
+  "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
+  "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Open pull request",
+  "diffViewer.comment.localChanges": "Local changes",
+  "diffViewer.comment.prChanges": "PR changes",
+  "diffViewer.comment.sendToKilo": "Send to Kilo",
+  "diffViewer.comment.sendToGithub": "Send to GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choose destination",
 
   "diffViewer.baseBranch.auto": "Default",
   "diffViewer.baseBranch.default": "Default",

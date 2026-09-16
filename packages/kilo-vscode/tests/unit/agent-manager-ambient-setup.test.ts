@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { LOCAL } from "../../webview-ui/agent-manager/navigate"
+import { SidePanel } from "../../webview-ui/agent-manager/side-panel-layout"
+import { createSidePanel } from "../../webview-ui/agent-manager/side-panel-state"
 import {
   ambientDecision,
   createAmbientSetup,
@@ -68,11 +70,35 @@ describe("ambientDecision", () => {
 })
 
 describe("createAmbientSetup tracking", () => {
+  it("does not auto-close a selected terminal concealed by History or Review", () => {
+    createRoot((dispose) => {
+      const selection = () => "worktree"
+      const panels = createSidePanel({
+        project: () => "project",
+        selection,
+        current: () => "parent",
+        visible: () => false,
+      })
+      panels.open(SidePanel.Terminal)
+      const ambient = createAmbientSetup({
+        terms: createTerminalState(selection),
+        selection,
+        sidePanel: panels.selected,
+        close: () => panels.close(SidePanel.Terminal),
+      })
+      expect(panels.panel()).toBeNull()
+      ambient.reveal("worktree", "script:setup")
+      expect(ambient.pending()).toBeUndefined()
+      expect(panels.selected()).toBe(SidePanel.Terminal)
+      dispose()
+    })
+  })
+
   function scene(panelOpen: boolean) {
     const [selection] = createSignal<string | null>("wt-1")
-    const [panel] = createSignal<"diff" | "terminal" | null>(panelOpen ? "terminal" : null)
+    const [panel] = createSignal<SidePanel | null>(panelOpen ? SidePanel.Terminal : null)
     const terms = createTerminalState(selection)
-    const ambient = createAmbientSetup({ terms, selection, sidePanel: panel, setSidePanel: () => undefined })
+    const ambient = createAmbientSetup({ terms, selection, sidePanel: panel, close: () => undefined })
     return ambient
   }
 

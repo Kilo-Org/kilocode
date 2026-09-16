@@ -54,10 +54,28 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Завершено (за повідомленням моделі)",
+  "session.goal.blocked": "Заблоковано",
+  "session.goal.restart": "Перезапустити ціль",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Дошка",
+  "task.swarm.refresh": "Оновити",
+  "task.swarm.reset": "Скинути дошку",
+  "task.swarm.resetTitle": "Скинути цю дошку?",
+  "task.swarm.resetDescription":
+    "Очистити видимі повідомлення? Розмови й поточні завдання залишаться без змін. Агенти можуть публікувати нові повідомлення.",
+  "task.swarm.loading": "Завантаження дошки...",
+  "task.swarm.failed": "Не вдалося завантажити або скинути дошку. Спробуйте оновити її.",
 
   "command.provider.connect": "Підключити провайдера",
+
+  "session.activity.waiting": "Очікується відповідь або підтвердження.",
+  "session.activity.error": "Помилка або втрата з'єднання.",
+  "session.activity.retry": "Автоматична повторна спроба.",
+  "session.activity.busy": "Виконується.",
+  "session.activity.done": "Хід завершено.",
+  "session.activity.idle": "Не запущено.",
 
   "command.session.new": "Нова сесія",
   "command.session.show.changes": "Показати зміни",
@@ -175,12 +193,16 @@ export const dict = {
   "common.saving": "Збереження...",
   "common.default": "За замовчуванням",
 
+  "prompt.worktrees.title": "Робочі дерева",
+  "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
   "prompt.action.send": "Надіслати",
+  "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
   "prompt.action.enhance": "Покращити запит",
+  "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.action.indexing": "Налаштування індексування",
   "prompt.action.autoApprove.enable": "Увімкнути автоматичне схвалення",
   "prompt.action.autoApprove.disable": "Вимкнути автоматичне схвалення",
@@ -207,7 +229,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
-  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.start": "Почати голосове введення",
   "speechToText.tooltip.shortcut":
     "Торкніться кнопки або натисніть Cmd/Ctrl+K, щоб почати чи зупинити запис; утримуйте кнопку під час мовлення, а потім відпустіть її, щоб транскрибувати й надіслати.",
   "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
@@ -251,6 +273,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.reject": "Відхилити",
+  "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
+  "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
   "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
@@ -400,6 +425,7 @@ export const dict = {
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
   "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Змінити API-ключ",
   "settings.providers.custom.description": "Додати власного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",
@@ -608,6 +634,7 @@ export const dict = {
   "profile.usage.source.direct": "Напряму",
   "profile.usage.state.stale": "Показано останні оновлені дані про використання.",
   "profile.usage.state.unavailable": "Дані про використання недоступні.",
+  "profile.usage.state.empty": "Про обмеження використання не повідомлено.",
   "profile.usage.plan.pastDue": "План: Платіж прострочено",
   "profile.usage.plan.canceling": "План: Скасування наприкінці періоду",
   "profile.usage.plan.unknown": "План: Статус невідомий",
@@ -728,6 +755,14 @@ export const dict = {
   "session.outcome.interrupted": "Хід перервано",
   "session.outcome.error": "Хід не вдався",
   "session.outcome.finish": "Причина завершення: {{reason}}",
+  "session.goal.label": "Мета",
+  "prompt.goal.set": "Задати мету",
+  "prompt.goal.start": "Почати роботу над метою",
+  "session.goal.active": "Активна",
+  "session.goal.paused": "Призупинена",
+  "session.goal.pause": "Пауза",
+  "session.goal.resume": "Продовжити",
+  "session.goal.clear": "Очистити мету",
   "session.costAlert.header": "Сповіщення про вартість сесії",
   "session.costAlert.continue": "Продовжити",
   "session.costAlert.question":
@@ -799,7 +834,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навички",
 
   "settings.browser.description":
-    "Після увімкнення агент ШІ може взаємодіяти з веб-сторінками — навігація, натискання, введення тексту та знімки екрана. Відкриється вікно Chrome, щоб ви могли стежити за роботою агента.",
+    "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
   "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
@@ -828,7 +863,17 @@ export const dict = {
   "settings.notifications.enable.title": "Увімкнути звукові сповіщення",
   "settings.notifications.enable.description":
     "Відтворювати звуки, коли сеанси завершуються, виникає помилка або потрібна ваша відповідь",
+  "settings.notifications.workbench.title": "Увімкнути сповіщення VS Code",
+  "settings.notifications.workbench.description":
+    "Показувати сповіщення VS Code, коли Kilo завершує завдання або потрібна ваша відповідь",
+  "settings.notifications.os.title": "Увімкнути сповіщення операційної системи",
+  "settings.notifications.os.description":
+    "Показувати нативні сповіщення операційної системи, коли Kilo завершує завдання або потрібна ваша відповідь, а VS Code неактивний.",
   "settings.notifications.testSound": "Тест",
+  "settings.notifications.testOS": "Тест",
+  "settings.notifications.testOS.testing": "Надсилання тестового сповіщення…",
+  "settings.notifications.testOS.success": "Тестове сповіщення надіслано.",
+  "settings.notifications.testOS.error": "Не вдалося надіслати тестове сповіщення",
   "settings.notifications.sound.default": "За замовчуванням",
   "settings.notifications.sound.system": "Системний",
   "settings.notifications.sound.description":
@@ -847,12 +892,26 @@ export const dict = {
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "Надайте спільну дошку головному сеансу та його субагентам, які виконують завдання, включно з вкладеними субагентами. Використовуйте її для паралельних спроб знайти розв'язання або взаємодоповнювальної роботи, а не для кожного завдання.",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
   "settings.experimental.imageGenerationModel.description": "Модель генерації зображень",
   "settings.experimental.imageGenerationModel.placeholder": "За замовчуванням (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Ідентифікатор моделі, який надсилається до вашої власної кінцевої точки транскрипції, наприклад whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Базова URL-адреса мовлення в текст",
+  "settings.models.speechToTextBaseUrl.description":
+    "Використовуйте сумісний з OpenAI API транскрипції замість Kilo Gateway. Моделі читаються з /models, а аудіо надсилається на /audio/transcriptions. Залиште порожнім, щоб використовувати Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Ключ API мовлення в текст",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-токен, який надсилається на власну базову URL-адресу транскрипції. Зберігається у вашому файлі конфігурації Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
+    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text, або вкажіть нижче власну базову URL-адресу транскрипції.",
   "settings.models.speechToTextModel.title": "Модель мовлення в текст",
   "settings.models.speechToTextModel.description": "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
   "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
@@ -872,8 +931,14 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
+  "settings.experimental.claudeMigration.title": "Міграція Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
+  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
+  "settings.experimental.taskModelSelection.description":
+    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -938,6 +1003,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Додаткові файли інструкцій",
   "settings.agentBehaviour.instructionFiles.description":
     "Шляхи до додаткових файлів інструкцій, що включаються до системного запиту",
+  "settings.agentBehaviour.pushFixes.title": "Надсилати виправлення запиту на злиття",
+  "settings.agentBehaviour.pushFixes.description":
+    "Коли ви надсилаєте агенту помилки CI або коментарі ревʼю із запиту на злиття або оновлюєте робоче дерево з базової гілки, попросити його зробити коміт і push, щоб запит на злиття оновився. Запити дозволів і далі діють. Вимкніть, щоб робити коміти вручну.",
   "settings.agentBehaviour.claudeCompat.heading": "Сумісність з Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Завантажувати файли Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1018,6 +1086,11 @@ export const dict = {
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
   "settings.context.compaction.title": "Стискання",
+  "settings.context.compactionModel.title": "Модель стискання",
+  "settings.context.compactionModel.description":
+    "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
+  "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
+  "settings.context.compactionModel.hint": "Щоб вибрати модель для стискання, див. Налаштування моделей.",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1062,9 +1135,12 @@ export const dict = {
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
-  "settings.display.reasoningAutoCollapse.description":
-    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.reasoningDisplay.title": "Блоки міркувань",
+  "settings.display.reasoningDisplay.description":
+    "Виберіть, як починаються блоки міркувань. Розгорнуті показує повний текст, Попередній перегляд обмежує його коротким прокручуваним переглядом, а Заголовок показує лише заголовок та індикатор потокового передавання, доки ви не відкриєте його.",
+  "settings.display.reasoningDisplay.expanded": "Розгорнуті",
+  "settings.display.reasoningDisplay.preview": "Попередній перегляд",
+  "settings.display.reasoningDisplay.headline": "Заголовок",
   "settings.display.shiftTabCycle.title": "Перемикати зусилля міркування за допомогою Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Натисніть Shift+Tab у полі введення запиту, щоб перейти до наступного рівня зусиль міркування. Вимкніть цю опцію, щоб зберегти Shift+Tab для навігації фокусом за допомогою клавіатури.",
@@ -1124,59 +1200,16 @@ export const dict = {
   "question.summary": "{{n}} з {{total}} питань",
   "common.review": "Переглянути",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Перенести зі старої версії",
-  "settings.aboutKiloCode.legacyMigration.title": "Перенесення зі старої версії",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Перенести налаштування з попередньої версії Kilo Code, включаючи API-ключі провайдерів та стандартну модель.",
   "settings.aboutKiloCode.rooImport.description": "Імпортувати історію розмов з інсталяції Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Імпортувати сесії з Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Що нового в Kilo Code",
-  "migration.whatsNew.badge": "Бета",
-  "migration.whatsNew.subtitle": "Ми відбудували розширення на більш швидкій та ефективній основі.",
-  "migration.whatsNew.features.performance.title": "Швидша продуктивність агента",
-  "migration.whatsNew.features.performance.detail":
-    "Паралельні виклики інструментів і підагенти дозволяють агенту робити більше одночасно — щоб ви більше створювали, а менше спостерігали.",
-  "migration.whatsNew.features.interface.title": "Спрощений інтерфейс",
-  "migration.whatsNew.features.interface.detail": "Менше відволікань, легше і швидше читати.",
-  "migration.whatsNew.features.agentManager.title": "Менеджер агентів",
-  "migration.whatsNew.features.agentManager.detail":
-    "Єдиний інтерфейс для запуску кількох агентів паралельно, кожен у власному робочому дереві — стежте за прогресом, перемикайте контекст і переглядайте зміни з одного місця.",
-  "migration.whatsNew.features.foundation.title": "Спільна основа",
-  "migration.whatsNew.features.foundation.detail":
-    "Малий та ефективний ядерний модуль у кожному продукті Kilo. Знайомий досвід незалежно від того, як ви вважаєте за краще працювати.",
-  "migration.whatsNew.blogLink": "Читати повне оголошення",
-  "migration.whatsNew.docsLink": "Що нового та часті запитання",
-  "migration.whatsNew.continue": "Продовжити",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Перенесіть свої налаштування",
-  "migration.migrate.subtitle": "Ми знайшли налаштування з попередньої версії. Ось що можна перенести.",
+  "migration.roo.button": "Імпортувати сесії",
+  "migration.roo.empty": "Сесій Roo Code не знайдено.",
   "migration.migrate.selectLabel": "Вибрати для перенесення",
   "migration.migrate.chatHistory": "Сесії чату та історія",
-  "migration.migrate.button": "Перенести налаштування",
-  "migration.migrate.skip": "Пропустити",
-  "migration.migrate.keysDetected": "Виявлено {{count}} ключів",
-  "migration.migrate.serversConfigured": "Налаштовано {{count}} серверів",
-  "migration.migrate.modesFound": "Знайдено {{count}} режимів",
-  "migration.migrate.nothingToMigrate": "У старих налаштуваннях нічого для перенесення не знайдено.",
-
-  // Migrate — item labels
-  "migration.select.providers": "API-ключі провайдерів",
-  "migration.select.mcpServers": "MCP-сервери",
-  "migration.select.customModes": "Власні режими / агенти",
-  "migration.select.defaultModel": "Стандартна модель",
-  "migration.select.autoApproval": "Автоматичне схвалення",
-  "migration.select.language": "Мова інтерфейсу",
-  "migration.select.autocomplete": "Налаштування автодоповнення",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} з {{total}} елементів успішно перенесено.",
-  "migration.complete.cleanup": "Видалити старі дані налаштувань",
-  "migration.complete.cleanupDescription":
-    "Це видалить старі налаштування зі сховища VS Code. Ви не зможете повторно запустити це перенесення.",
   "migration.complete.done": "Готово",
   "migration.migrate.sessionsDetected": "Знайдено {{count}} сесій",
   "migration.error.continue": "Продовжити",
@@ -1210,7 +1243,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Невідома дата",
   "migration.sessionFormat.unknown": "Невідомо",
   "migration.sessionFormat.unknownError": "Невідома помилка",
-  // legacy-migration end
 
   "error.details.show": "Деталі",
 
@@ -1218,7 +1250,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} завдань виконано",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
+  "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
+  "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
@@ -1231,6 +1265,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Скасовано",
   "task.backgroundAgents.status.error": "Помилка",
   "task.backgroundAgents.untitled": "Фоновий агент",
+  "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",
@@ -1302,6 +1337,18 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Зберегти локально",
+  "diffViewer.comment.sendToAgent": "Надіслати агенту",
+  "diffViewer.comment.postToGithub": "Опублікувати на GitHub",
+  "diffViewer.comment.loadFailed": "Не вдалося завантажити зміни пул-реквесту.",
+  "diffViewer.comment.unavailable": "Цей рядок недоступний у поточному знімку пул-реквесту.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Відкрити PR",
+  "diffViewer.comment.localChanges": "Локальні зміни",
+  "diffViewer.comment.prChanges": "Зміни PR",
+  "diffViewer.comment.sendToKilo": "Надіслати до Kilo",
+  "diffViewer.comment.sendToGithub": "Надіслати до GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Вибрати призначення",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 
@@ -1323,5 +1370,11 @@ export const dict = {
   "chat.search.close": "Закрити пошук",
   "chat.search.invalidRegex": "Недійсний регулярний вираз",
   "chat.search.noResults": "Немає результатів",
+  "settings.experimental.browserAutomation.title": "Вбудований браузер",
+  "settings.experimental.browserAutomation.description":
+    "Показуйте попередній перегляд локальних застосунків в Agent Manager і надавайте інструмент browser_open сесіям Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Використовувати системний Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Використовувати встановлений Google Chrome для вбудованого браузера. Вимкніть лише якщо сумісний браузер Playwright Chromium уже встановлено.",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
 }

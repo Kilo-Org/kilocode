@@ -10,23 +10,27 @@ import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import javax.swing.JPanel
 
 internal class MessageToolbar(
     text: () -> String?,
+    image: () -> BufferedImage? = { null },
     actions: List<ToolbarButtonAction> = emptyList(),
     tooltip: String = KiloBundle.message("session.copy.hover"),
 ) : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
-    constructor(text: () -> String?, revert: (() -> Unit)?) : this(
+    /** The hover toolbar of a user prompt bubble: fork this message, roll back to it, copy it. */
+    constructor(text: () -> String?, revert: (() -> Unit)?, fork: (() -> Unit)? = null) : this(
         text,
-        revert?.let {
-            listOf(ToolbarButtonAction(AllIcons.Actions.Rollback, KiloBundle.message("revert.message.rollback"), it))
-        }.orEmpty(),
-        KiloBundle.message("session.copy.prompt"),
+        actions = listOfNotNull(
+            fork?.let { ToolbarButtonAction(AllIcons.Vcs.Branch, KiloBundle.message("session.fork.message"), it) },
+            revert?.let { ToolbarButtonAction(AllIcons.Actions.Rollback, KiloBundle.message("revert.message.rollback"), it) },
+        ),
+        tooltip = KiloBundle.message("session.copy.prompt"),
     )
 
-    private val copy = SessionCopyButton(text = text, tooltip = tooltip)
+    private val copy = SessionCopyButton(text = text, image = image, tooltip = tooltip)
     private val button = copy.button
     private val buttons = actions.map(::toolbarButton)
     private val row = Stack.horizontal(UiStyle.Gap.xs()).apply {

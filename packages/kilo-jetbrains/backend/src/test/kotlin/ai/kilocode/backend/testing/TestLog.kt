@@ -12,10 +12,11 @@ class TestLog : KiloLog {
         get() = synchronized(lock) { items.toList() }
     override var isDebugEnabled: Boolean = true
 
-    fun awaitMessage(timeout: Long = 5_000, predicate: (String) -> Boolean): Boolean {
+    /** Wait until at least [count] captured messages match [predicate]. */
+    fun awaitMessage(timeout: Long = 5_000, count: Int = 1, predicate: (String) -> Boolean): Boolean {
         val end = System.currentTimeMillis() + timeout
         synchronized(lock) {
-            while (items.none(predicate)) {
+            while (items.count(predicate) < count) {
                 val wait = end - System.currentTimeMillis()
                 if (wait <= 0) return false
                 lock.wait(wait)

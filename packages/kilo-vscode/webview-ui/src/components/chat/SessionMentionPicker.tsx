@@ -3,6 +3,7 @@
 import { onMount } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { List } from "@kilocode/kilo-ui/list"
+import { filterSessions } from "../../hooks/file-mention-utils"
 import type { SessionSearchItem } from "../../types/messages"
 import { formatRelativeDate } from "../../utils/date"
 
@@ -40,9 +41,9 @@ export function SessionMentionPicker(props: Props) {
       }}
     >
       <List<SessionSearchItem>
-        items={props.sessions}
+        items={(query) => filterSessions(props.sessions, query)}
         key={(item) => item.id}
-        filterKeys={["title", "worktreeName"]}
+        skipFilter={() => true}
         search={{ placeholder: "Search sessions", autofocus: true }}
         onSelect={(item) => {
           if (item) props.onSelect(item)
