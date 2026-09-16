@@ -24,7 +24,6 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     permission: { list: ReturnType<typeof mock> }
     question: { list: ReturnType<typeof mock> }
     backgroundProcess: { stopSession: ReturnType<typeof mock> }
-    instance: { dispose: ReturnType<typeof mock> }
     experimental: { session: { list: ReturnType<typeof mock> }; controlPlane: { moveSession: ReturnType<typeof mock> } }
     kilocode: { removeSnapshot: ReturnType<typeof mock> }
   }
@@ -43,7 +42,10 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       state: () => state,
       worktrees: () =>
         ({
-          removeWorktree: mock(async () => calls.push("disk")),
+          detachWorktree: mock(async () => {
+            calls.push("disk")
+            return { done: Promise.resolve() }
+          }),
         }) as never,
     })
     ctx.stateManager().addWorktree({ branch: "feature", path: worktree, parentBranch: "main" })
@@ -57,11 +59,6 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       backgroundProcess: {
         stopSession: mock(async ({ sessionID }: { sessionID: string }) => {
           calls.push(`process:${sessionID}`)
-        }),
-      },
-      instance: {
-        dispose: mock(async () => {
-          calls.push("instance")
         }),
       },
       experimental: {
@@ -239,9 +236,10 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     const id = state.getWorktrees().at(0)!.id
     const post = mock(host.post)
     host.post = post
-    ctx.worktreeManager().removeWorktree = async () => {
+    ctx.worktreeManager().detachWorktree = async () => {
       entered.resolve()
       await disk.promise
+      return { done: Promise.resolve() }
     }
     const pending = deleteWorktree()
     await entered.promise
@@ -327,7 +325,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     const id = state.getWorktrees().at(0)!.id
     const post = mock(host.post)
     host.post = post
-    ctx.worktreeManager().removeWorktree = mock(async () => {
+    ctx.worktreeManager().detachWorktree = mock(async () => {
       calls.push("disk")
       throw new Error("directory busy")
     })
@@ -344,6 +342,8 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     expect(calls).toContain("stats:unskip")
     expect(calls.at(-1)).toBe("pty:release")
     expect(calls).not.toContain("post:agentManager.worktreeDeleted")
+    // The worktree survives, so its conversations must stay where they are.
+    expect(client.experimental.controlPlane.moveSession).not.toHaveBeenCalled()
     expect(client.kilocode.removeSnapshot).not.toHaveBeenCalled()
     expect(state.getWorktrees()).toHaveLength(1)
   })
@@ -355,6 +355,8 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     client.kilocode.removeSnapshot.mockRejectedValue(new Error("checkpoint cleanup failed"))
 
     await deleteWorktree()
+    // Checkpoint cleanup finishes after the row is removed.
+    await new Promise((resolve) => setImmediate(resolve))
 
     expect(notify).toHaveBeenCalledWith(
       "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
@@ -384,16 +386,22 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     expect(client.session.delete).not.toHaveBeenCalled()
   })
 
-  it("does not discard checkpoints when persistent session relocation fails", async () => {
-    state.addSession("retained", state.getWorktrees()[0]!.id)
+  it("completes the deletion and reports when session relocation fails", async () => {
+    const session = state.addSession("retained", state.getWorktrees()[0]!.id)
     client.experimental.controlPlane.moveSession.mockRejectedValue(new Error("move failed"))
 
     await deleteWorktree()
 
+    // The directory is already gone at this point, so failing would leave an undeletable row.
     expect(calls).toContain("disk")
-    expect(calls).toContain("post:error")
-    expect(client.kilocode.removeSnapshot).not.toHaveBeenCalled()
-    expect(state.getWorktrees()).toHaveLength(1)
+    expect(calls).not.toContain("post:error")
+    expect(calls).toContain("post:agentManager.worktreeDeleted")
+    expect(calls).toContain(
+      "notify:The worktree was deleted, but some conversations could not be moved to Local. Conversation history is preserved.",
+    )
+    expect(client.kilocode.removeSnapshot).toHaveBeenCalled()
+    expect(state.getWorktrees()).toHaveLength(0)
+    expect(routes.map((route) => route.sessionID)).toEqual([session.id])
     expect(client.session.delete).not.toHaveBeenCalled()
   })
 
@@ -412,20 +420,18 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       `process:${first.id}`,
       `process:${second.id}`,
       "pty",
-      "instance",
       "disk",
       `move:${first.id}`,
       `move:${second.id}`,
-      "snapshots",
       "pr",
       "name",
       `directory:${first.id}:${ctx.root}`,
       `directory:${second.id}:${ctx.root}`,
       "post:agentManager.worktreeDeleted",
       "push",
+      "snapshots",
       "pty:release",
     ])
-    expect(client.instance.dispose).toHaveBeenCalledWith({ directory: worktree }, { throwOnError: true })
     for (const session of [first, second]) {
       expect(client.backgroundProcess.stopSession).toHaveBeenCalledWith({ sessionID: session.id, directory: worktree })
     }
@@ -445,9 +451,11 @@ describe("Agent Manager worktree deletion lifecycle", () => {
         { sessionID: session.id, destination: { directory: ctx.root }, moveChanges: false },
         { throwOnError: true },
       )
+      // Moves start only after the directory is gone and finish before sessions are re-routed.
       expect(calls.indexOf(`move:${session.id}`)).toBeGreaterThan(calls.indexOf("disk"))
-      expect(calls.indexOf(`move:${session.id}`)).toBeLessThan(calls.indexOf("snapshots"))
+      expect(calls.indexOf(`move:${session.id}`)).toBeLessThan(calls.indexOf(`directory:${session.id}:${ctx.root}`))
     }
+    expect(calls.indexOf("snapshots")).toBeGreaterThan(calls.indexOf("post:agentManager.worktreeDeleted"))
     expect(client.kilocode.removeSnapshot).toHaveBeenCalledWith(
       { directory: ctx.root, worktree },
       { throwOnError: true },

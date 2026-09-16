@@ -135,6 +135,8 @@ export class WorktreeManager {
   private readonly binary: string
   private readonly log: (msg: string) => void
   private readonly pool: WorktreePool
+  /** Deferred git bookkeeping from `detachWorktree`, flushed by `settle()`. */
+  private readonly pending = new Set<Promise<void>>()
   /**
    * Delay before a claimed slot is replaced. The replacement checkout competes for disk
    * and CPU with the first prompt of the new session (snapshot seed, backend warm-up),
@@ -785,15 +787,9 @@ export class WorktreeManager {
       return
     }
 
-    this.pool.release(worktreePath)
-
-    // 1. Atomic rename — makes the worktree instantly invisible to git and pollers.
-    //    rename() is near-instant on the same filesystem (same parent dir guarantees this).
-    const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
-    try {
-      await fs.promises.rename(worktreePath, temp)
-    } catch (err) {
-      this.log(`Rename failed, falling back to force remove: ${worktreePath}: ${err}`)
+    const temp = await this.detach(worktreePath)
+    if (!temp) {
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
       await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch((error: unknown) => {
         this.log(`Git worktree removal failed for ${worktreePath}: ${error}`)
       })
@@ -805,6 +801,64 @@ export class WorktreeManager {
       return
     }
 
+    await this.finishRemoval(worktreePath, temp, branch)
+  }
+
+  /**
+   * Release the pool slot and atomically rename the worktree directory away so git and pollers
+   * stop seeing it instantly. rename() is near-instant on the same filesystem (same parent dir
+   * guarantees this). Returns the temp path, or undefined when the rename failed.
+   */
+  private async detach(worktreePath: string): Promise<string | undefined> {
+    this.pool.release(worktreePath)
+    const temp = path.join(path.dirname(worktreePath), `${TEMP_PREFIX}${randomUUID()}`)
+    return fs.promises.rename(worktreePath, temp).then(
+      () => temp,
+      (err: unknown) => {
+        this.log(`Rename failed for ${worktreePath}: ${err}`)
+        return undefined
+      },
+    )
+  }
+
+  /**
+   * Remove a worktree directory now and finish the git bookkeeping afterwards.
+   *
+   * The rename needs no repo git lock, so deletion stays instant while a pool refill or another
+   * creation holds the lock (a `git worktree add` takes seconds in large repositories). The
+   * returned `done` promise settles once the metadata prune and branch deletion ran under the
+   * lock; it never rejects. Pending bookkeeping is awaited by `settle()` on dispose. Callers that
+   * need the bookkeeping first use `removeWorktree`.
+   */
+  async detachWorktree(worktreePath: string, branch?: string): Promise<{ done: Promise<void> }> {
+    if (!fs.existsSync(worktreePath) || !this.isManagedPath(worktreePath))
+      return { done: this.defer(worktreePath, this.removeWorktree(worktreePath, branch)) }
+
+    const temp = await this.detach(worktreePath)
+    if (!temp) {
+      await this.removeWorktree(worktreePath, branch)
+      return { done: Promise.resolve() }
+    }
+    const done = this.withGitLock(() => this.finishRemoval(worktreePath, temp, branch))
+    return { done: this.defer(worktreePath, done) }
+  }
+
+  /** Track deferred bookkeeping so `settle()` can flush it. Never rejects. */
+  private defer(worktreePath: string, task: Promise<void>): Promise<void> {
+    const tracked = task
+      .catch((err: unknown) => this.log(`Deferred worktree bookkeeping failed for ${worktreePath}: ${err}`))
+      .finally(() => this.pending.delete(tracked))
+    this.pending.add(tracked)
+    return tracked
+  }
+
+  /** Wait for deferred git bookkeeping from `detachWorktree` so a dispose does not orphan branches. */
+  async settle(): Promise<void> {
+    await Promise.all([...this.pending])
+  }
+
+  /** Git bookkeeping after a worktree directory was renamed away. Runs under the git lock. */
+  private async finishRemoval(worktreePath: string, temp: string, branch?: string): Promise<void> {
     // 2. Prune git metadata now that the directory is gone from the expected path
     await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
     this.log(`Removed worktree (rename+prune): ${worktreePath}`)

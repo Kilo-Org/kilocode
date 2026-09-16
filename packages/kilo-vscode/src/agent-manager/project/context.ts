@@ -232,6 +232,7 @@ export class ProjectContext {
     this.phase = "disposing"
     await this.init?.catch((err) => this.deps.log(`dispose: initialization failed: ${err}`))
     await this.mutation.catch((err) => this.deps.log(`dispose: mutation failed: ${err}`))
+    await this.worktrees?.settle().catch((err) => this.deps.log(`dispose: worktree bookkeeping failed: ${err}`))
     await this.state?.flush().catch((err) => this.deps.log(`dispose: state flush failed: ${err}`))
     this.live.clear()
     this.phase = "disposed"

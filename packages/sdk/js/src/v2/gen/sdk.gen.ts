@@ -229,6 +229,8 @@ import type {
   KilocodeSessionModelUsageResponses,
   KilocodeSnapshotPrepareErrors,
   KilocodeSnapshotPrepareResponses,
+  KilocodeTeardownWorktreeErrors,
+  KilocodeTeardownWorktreeResponses,
   KilocodeWakeupsErrors,
   KilocodeWakeupsResponses,
   KiloEditErrors,
@@ -8757,6 +8759,47 @@ export class Kilocode extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/snapshot/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Tear down backend state for a managed worktree
+   *
+   * Kill the PTYs rooted in an Agent Manager worktree and dispose its backend instance when one is loaded, without booting an instance for the directory.
+   */
+  public teardownWorktree<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      worktree: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "worktree" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeTeardownWorktreeResponses,
+      KilocodeTeardownWorktreeErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/worktree/teardown",
       ...options,
       ...params,
       headers: {
