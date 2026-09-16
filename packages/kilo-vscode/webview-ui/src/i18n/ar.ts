@@ -315,7 +315,6 @@ export const dict = {
   "sidebar.topBar.newTask": "مهمة جديدة",
   "sidebar.topBar.history": "السجل",
   "sidebar.topBar.agentManager": "مدير الوكلاء",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "المتجر",
   "sidebar.topBar.profile": "الملف الشخصي",
   "sidebar.topBar.settings": "الإعدادات",

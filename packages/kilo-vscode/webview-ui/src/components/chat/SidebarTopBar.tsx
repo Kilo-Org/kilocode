@@ -1,5 +1,5 @@
 /**
- * Renders New Task, History, Agent Manager, KiloClaw, Marketplace, Profile, and
+ * Renders New Task, History, Agent Manager, Marketplace, Profile, and
  * Settings inside the webview, as a fallback for Cursor only (see isCursorHost()
  * in src/utils.ts). Cursor's Secondary Side Bar support is unreliable for
  * extension-contributed `view/title` toolbars, which render outside the webview
@@ -23,7 +23,7 @@ export interface SidebarTopBarProps {
 
 interface Action {
   key: string
-  icon: "plus" | "history" | "organization" | "comment" | "extensions" | "user" | "settings-gear"
+  icon: "plus" | "history" | "organization" | "extensions" | "user" | "settings-gear"
   button: string
   run: () => void
 }
@@ -41,14 +41,13 @@ export const SidebarTopBar: Component<SidebarTopBarProps> = (props) => {
     })
 
   const open = (
-    type: "openAgentManager" | "openKiloClaw" | "openMarketplacePanel" | "openProfilePanel" | "openSettingsPanel",
+    type: "openAgentManager" | "openMarketplacePanel" | "openProfilePanel" | "openSettingsPanel",
   ) => vscode.postMessage({ type })
 
   const actions: Action[] = [
     { key: "newTask", icon: "plus", button: "new_task", run: () => props.onNewTask() },
     { key: "history", icon: "history", button: "history", run: () => props.onHistory() },
     { key: "agentManager", icon: "organization", button: "agent_manager", run: () => open("openAgentManager") },
-    { key: "kiloClaw", icon: "comment", button: "kiloclaw", run: () => open("openKiloClaw") },
     { key: "marketplace", icon: "extensions", button: "marketplace", run: () => open("openMarketplacePanel") },
     { key: "profile", icon: "user", button: "profile", run: () => open("openProfilePanel") },
     { key: "settings", icon: "settings-gear", button: "settings", run: () => open("openSettingsPanel") },

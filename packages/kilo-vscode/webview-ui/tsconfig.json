@@ -15,7 +15,6 @@
   "include": [
     "src/**/*",
     "agent-manager/**/*",
-    "kiloclaw/**/*",
     "marketplace/**/*",
     "diff-viewer/**/*",
     "diff-virtual/**/*"
