@@ -740,14 +740,17 @@ export class WorktreeManager {
    * Delete a directory under `.kilo/worktrees/` that git no longer tracks.
    *
    * Only ever called for a user-confirmed cleanup of an orphaned directory: there is no worktree
-   * left to remove, so this is a plain recursive delete behind the managed-path guard.
+   * left to remove, so this stages the same rename-then-background-reap `detachWorktree` uses
+   * instead of a blocking `fs.rm` — a large `.kilo-dev`/`node_modules` tree cannot freeze the caller.
+   * Guards are identical to the ones `removeWorktree` relies on for a real worktree: a managed-path
+   * check, then a fail-closed `git worktree list` re-check immediately before the rename, because the
+   * worktree pool creates and removes slot checkouts on a timer and a stale webview orphan list must
+   * never be trusted over what git says right now.
    */
-  async removeOrphanDirectory(target: string): Promise<void> {
+  async detachOrphanDirectory(target: string): Promise<{ done: Promise<void> }> {
     if (!this.isManagedPath(target)) {
       throw new Error(`Refusing to remove a path outside the worktrees directory: ${target}`)
     }
-    // Fail closed: an unanswerable `git worktree list` is not evidence the path is orphaned, and
-    // this is the only re-check between a stale webview orphan list and a recursive delete.
     const registered = await this.registeredPaths()
     if (!registered) {
       throw new Error(`Refusing to remove a worktree directory while git cannot list worktrees: ${target}`)
@@ -755,8 +758,29 @@ export class WorktreeManager {
     if (registered.has(pathKey(target))) {
       throw new Error(`Refusing to remove a live worktree: ${target}`)
     }
-    await fs.promises.rm(target, RM_OPTS)
-    this.log(`Removed orphaned worktree directory: ${target}`)
+    const temp = await this.detach(target)
+    if (!temp) throw new Error(`Refusing to remove ${target}: rename failed`)
+    return { done: this.defer(target, this.reapOrphan(target, temp)) }
+  }
+
+  /**
+   * Background reap for a staged orphan directory, with one reappearance retry.
+   *
+   * A dev backend or the worktree pool can recreate a directory moments after it was renamed away
+   * (e.g. `.kilo-dev` from a running JetBrains dev instance). One retry self-heals that race without
+   * looping forever: anything that survives the retry simply reappears in the next reconcile.
+   */
+  private async reapOrphan(original: string, temp: string): Promise<void> {
+    await fs.promises.rm(temp, RM_OPTS).catch((err: unknown) => {
+      this.log(`Background cleanup failed for ${temp}: ${err}`)
+    })
+    if (!fs.existsSync(original)) return
+    this.log(`Orphaned directory reappeared after removal, retrying once: ${original}`)
+    const retry = await this.detach(original)
+    if (!retry) return
+    await fs.promises.rm(retry, RM_OPTS).catch((err: unknown) => {
+      this.log(`Background cleanup failed for ${retry}: ${err}`)
+    })
   }
 
   /**

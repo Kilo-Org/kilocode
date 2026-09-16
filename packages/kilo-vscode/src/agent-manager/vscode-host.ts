@@ -344,6 +344,27 @@ export class VscodeHost implements Host {
     void vscode.window.showErrorMessage(msg)
   }
 
+  notify(kind: "info" | "warning" | "error", msg: string): void {
+    if (kind === "info") void vscode.window.showInformationMessage(msg)
+    else if (kind === "warning") void vscode.window.showWarningMessage(msg)
+    else void vscode.window.showErrorMessage(msg)
+  }
+
+  revealInOS(path: string): void {
+    if (vscode.env.remoteName) {
+      console.warn(`[Kilo New] Cannot reveal ${path} in the OS file manager on a remote workspace`)
+      return
+    }
+    void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(path))
+  }
+
+  async withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T> {
+    return await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title, cancellable: true },
+      (_progress, token) => task(() => token.isCancellationRequested),
+    )
+  }
+
   async openDocument(path: string): Promise<void> {
     try {
       const doc = await vscode.workspace.openTextDocument(path)

@@ -28,7 +28,9 @@ import { beginPromptMentionDrop, endPromptMentionDrop } from "../src/utils/promp
 import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { OrphanNotice } from "./OrphanNotice"
+import { OrphanDialog } from "./OrphanDialog"
 import type { OrphanDirectory } from "./project/store"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
@@ -114,7 +116,20 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
     buildTopLevelItems(props.sections(), ungrouped(), sorted(), props.sidebarWorktreeOrder()),
   )
   const vscode = useVSCode()
+  const dialog = useDialog()
   const updateBase = useBaseUpdate()
+  const openOrphanDialog = () =>
+    dialog.show(() => (
+      <OrphanDialog
+        orphans={props.orphanDirectories?.() ?? []}
+        onReveal={(path) => vscode.postMessage({ type: "agentManager.revealPath", path })}
+        onDelete={(paths) => {
+          vscode.postMessage({ type: "agentManager.cleanOrphanDirectories", paths })
+          dialog.close()
+        }}
+        onClose={() => dialog.close()}
+      />
+    ))
   const localState = () => props.activityFor(null)
   // Captured at worktree drag start so a release outside the sidebar, or a drop
   // on the prompt, can undo a reorder applied while passing over sibling rows.
@@ -497,10 +512,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               </Show>
             </Show>
           </Show>
-          <OrphanNotice
-            orphans={props.orphanDirectories?.() ?? []}
-            onClean={(paths) => vscode.postMessage({ type: "agentManager.cleanOrphanDirectories", paths })}
-          />
+          <OrphanNotice orphans={props.orphanDirectories?.() ?? []} onResolve={openOrphanDialog} />
         </div>
       </div>
     </>

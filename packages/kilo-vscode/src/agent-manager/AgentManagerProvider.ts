@@ -16,6 +16,7 @@ import {
   closeLifecycleSession,
   createLifecycleWorktree,
   deleteLifecycleWorktree,
+  lifecycleSessions,
   promoteLifecycleSession,
   removeStaleLifecycleWorktree,
   removeWorktreeSnapshot,
@@ -36,7 +37,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { discardWorktree as discard } from "./discard-worktree"
-import { acquirePtyCleanup } from "./pty-cleanup"
+import { acquirePtyCleanup, teardown } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
 import { runLifecycleSetup } from "./provider-lifecycle"
 import { RunController } from "./run/controller"
@@ -92,7 +93,7 @@ import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler, applyPresence, healthPayload, needsReconcile, staleForState } from "./worktree-health"
-import { broken } from "./worktree-reconcile"
+import { broken, type WorktreeHealthReport } from "./worktree-reconcile"
 import { handleRecovery, type RecoveryMessage } from "./worktree-recovery"
 import { runDoctor } from "./worktree-doctor"
 import type { BrowserBroker } from "../services/browser-automation"
@@ -131,7 +132,7 @@ export class AgentManagerProvider implements Disposable {
   /** Scratch set returned when no active context exists; mutations are discarded. */
   private readonly staleScratch = new Set<string>()
   private readonly healthScheduler = new HealthScheduler<ProjectContext>(async (ctx) => {
-    await reconcileProject(ctx, (...args: unknown[]) => this.log(...args))
+    await this.reconcileAndPush(ctx)
     if (this.contexts.active()?.id === ctx.id) this.pushState(ctx)
   })
   private unsubDestination: (() => void) | undefined
@@ -604,6 +605,7 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m)
     if (m.type === "agentManager.restoreWorktree") return this.recover(m)
     if (m.type === "agentManager.cleanOrphanDirectories") return this.recover(m)
+    if (m.type === "agentManager.revealPath") return this.recover(m)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId, m.sessionId)
     if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId, m.messageId)
@@ -1169,16 +1171,26 @@ export class AgentManagerProvider implements Disposable {
     return removeStaleLifecycleWorktree(ctx, this.lifecycleHost, m.worktreeId, m.keepSessions === true)
   }
 
+  private reconcileAndPush(ctx: ProjectContext): Promise<WorktreeHealthReport | undefined> {
+    return reconcileProject(
+      ctx,
+      (...args: unknown[]) => this.log(...args),
+      () => this.pushState(ctx),
+    )
+  }
+
   private recover(m: RecoveryMessage): Promise<null> {
     return handleRecovery(m, this.context, {
       post: (message) => this.postToWebview(message),
       push: () => this.pushState(),
       log: (...args) => this.log(...args),
-      reconcile: (ctx) => reconcileProject(ctx, (...args: unknown[]) => this.log(...args)),
-      refresh: (worktreeId) => {
-        this.prBridge.poller.refresh(worktreeId, true)
-        this.statsPoller.revive(worktreeId)
-      },
+      reconcile: (ctx) => this.reconcileAndPush(ctx),
+      refresh: (worktreeId) => (this.prBridge.poller.refresh(worktreeId, true), this.statsPoller.revive(worktreeId)),
+      reveal: (path) => this.host.revealInOS(path),
+      teardown: (root, path) => teardown((dir) => this.connectionService.getClientAsync(dir), root, path),
+      removeSnapshot: (root, path) => removeWorktreeSnapshot(this.lifecycleHost, root, path),
+      withProgress: (title, task) => this.host.withProgress(title, task),
+      notifyResult: (kind, message) => this.host.notify(kind, message),
     })
   }
 
@@ -1448,18 +1460,7 @@ export class AgentManagerProvider implements Disposable {
       createSession: (dir, branch, id, boot, timing) =>
         this.createSessionInWorktree(dir, branch, id, undefined, boot, timing),
       notifyReady: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
-      sessions: {
-        register: (session) => this.panel?.sessions.registerSession(session),
-        clearDirectory: (sid) => (this.browserLifecycle?.close(sid), this.panel?.sessions.clearSessionDirectory(sid)),
-        setSessionDirectory: (sid, dir) => (
-          this.browserLifecycle?.close(sid),
-          this.panel?.sessions.setSessionDirectory(sid, dir)
-        ),
-        registerSessionRoute: (ref, dir, gen) => this.panel?.sessions.registerSessionRoute?.(ref, dir, gen),
-        directories: () => this.panel?.sessions.getSessionDirectories(),
-        abort: (ids) => this.panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
-        forget: (sid) => void this.panelSessions.delete(sid),
-      },
+      sessions: lifecycleSessions(this.panel, this.browserLifecycle, this.panelSessions),
       push: () => this.pushState(),
       register: (sid, dir) => this.registerWorktreeSession(sid, dir),
       skipStats: (id) => this.statsPoller.skipWorktree(id),

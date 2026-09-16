@@ -6,6 +6,8 @@ import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.MoveProgressDto
+import ai.kilocode.rpc.dto.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.RemoveOrphansResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -25,6 +27,8 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val listed = CopyOnWriteArrayList<WorktreeDto>()
+    /** Orphan directories [list] reports, alongside [listed]. See [ai.kilocode.rpc.dto.OrphanDto]. */
+    var orphans: List<ai.kilocode.rpc.dto.OrphanDto> = emptyList()
     val branchesList = CopyOnWriteArrayList<String>()
     var statsResult = WorktreeStatsListDto()
     var dirtyResult = WorktreeDirtyListDto()
@@ -88,6 +92,16 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     }
     var openResult: (String) -> Boolean = { true }
     var removeResult: (String, String?, Boolean) -> RemoveWorktreeResultDto = { _, _, _ -> RemoveWorktreeResultDto(ok = true) }
+    val orphanSizeCalls = CopyOnWriteArrayList<Pair<String, List<String>>>()
+    var orphanSizesResult: (List<String>) -> Map<String, Long> = { emptyMap() }
+    /** Gate for holding an [orphanSizes] answer open, so a test can observe the "calculating" state. */
+    var beforeOrphanSizes: suspend () -> Unit = {}
+    val removeOrphansCalls = CopyOnWriteArrayList<Pair<String, List<String>>>()
+    var removeOrphansResult: (List<String>) -> RemoveOrphansResultDto = { paths ->
+        RemoveOrphansResultDto(paths.map { OrphanRemoveResultDto(it, ok = true) })
+    }
+    val revealPaths = CopyOnWriteArrayList<String>()
+    var revealPathResult: (String) -> Boolean = { true }
     var renameResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
         val idx = listed.indexOfFirst { it.path == path }
         if (idx < 0) RenameWorktreeResultDto(error = "missing") else {
@@ -99,7 +113,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun list(directory: String): WorktreeListDto {
         assertNotEdt("list")
-        return WorktreeListDto(listed.toList())
+        return WorktreeListDto(listed.toList(), orphans = orphans)
     }
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto {
@@ -217,5 +231,24 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         sessionListThrows?.let { throw it }
         sessionLists[directory] = visible
         return true
+    }
+
+    override suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> {
+        assertNotEdt("orphanSizes")
+        orphanSizeCalls.add(directory to paths)
+        beforeOrphanSizes()
+        return orphanSizesResult(paths)
+    }
+
+    override suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto {
+        assertNotEdt("removeOrphans")
+        removeOrphansCalls.add(directory to paths)
+        return removeOrphansResult(paths)
+    }
+
+    override suspend fun revealPath(path: String): Boolean {
+        assertNotEdt("revealPath")
+        revealPaths.add(path)
+        return revealPathResult(path)
     }
 }

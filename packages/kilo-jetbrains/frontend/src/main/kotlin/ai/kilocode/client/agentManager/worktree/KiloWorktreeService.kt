@@ -9,6 +9,8 @@ import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.MoveProgressDto
+import ai.kilocode.rpc.dto.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.RemoveOrphansResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -184,6 +186,28 @@ class KiloWorktreeService internal constructor(
         call { setSessionList(directory, visible) }
     } catch (e: Exception) {
         LOG.warn("worktree session list state write failed for $directory", e)
+        false
+    }
+
+    /** Apparent size of every orphan in [paths]. A failed lookup answers empty, never a partial throw. */
+    suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> = try {
+        call { orphanSizes(directory, paths) }
+    } catch (e: Exception) {
+        LOG.warn("worktree orphan sizes failed for $directory", e)
+        emptyMap()
+    }
+
+    suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto = try {
+        call { removeOrphans(directory, paths) }
+    } catch (e: Exception) {
+        LOG.warn("worktree orphan remove failed for $directory", e)
+        RemoveOrphansResultDto(paths.map { OrphanRemoveResultDto(it, ok = false, error = e.message) })
+    }
+
+    suspend fun revealPath(path: String): Boolean = try {
+        call { revealPath(path) }
+    } catch (e: Exception) {
+        LOG.warn("worktree reveal failed for $path", e)
         false
     }
 }

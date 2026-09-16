@@ -633,6 +633,13 @@ interface CleanOrphanDirectoriesIn {
   paths: string[]
 }
 
+/** Reveal an orphaned directory in the OS file manager. */
+interface RevealPathIn {
+  type: "agentManager.revealPath"
+  projectId?: string
+  path: string
+}
+
 interface PromoteSessionIn {
   type: "agentManager.promoteSession"
   projectId?: string
@@ -1200,6 +1207,7 @@ export type AgentManagerInMessage =
   | RemoveStaleWorktreeIn
   | RestoreWorktreeIn
   | CleanOrphanDirectoriesIn
+  | RevealPathIn
   | PromoteSessionIn
   | OpenLocallyIn
   | OpenSessionLocallyIn

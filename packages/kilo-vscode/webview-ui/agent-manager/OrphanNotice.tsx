@@ -1,79 +1,50 @@
 /**
- * Notice for leftover folders under `.kilo/worktrees/` that no git worktree claims.
+ * Warning banner for leftover folders under `.kilo/worktrees/` that no git worktree claims.
  *
- * Deleting files is never automatic, so the only way these folders go away is this notice: it names
- * how many there are, shows their paths before anything is removed, and requires a second click.
- *
- * Not every orphan is empty. A `broken` one still holds a git checkout — an ex-worktree whose
- * registration is gone — so it can contain work that exists nowhere else. Those are marked in the
- * list and get a confirmation that says so, because reaching this notice takes two clicks from a
- * worktree row and the generic "nothing here is tracked by git" would be a false reassurance.
+ * Deleting files is never automatic, so the only action here is opening `OrphanDialog` — the banner
+ * itself only ever names how many there are and their total size. Size is asynchronous (a background
+ * fs walk), so it is shown once every orphan's size has landed and a calculating affordance is shown
+ * until then rather than a wrong or stale number.
  */
-import { Component, For, Show, createSignal } from "solid-js"
+import { Component, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../src/context/language"
+import { formatOrphanBytes, orphanTotalBytes } from "./orphan-dialog-logic"
 import type { OrphanDirectory } from "./project/store"
 
 export const OrphanNotice: Component<{
   orphans: OrphanDirectory[]
-  onClean: (paths: string[]) => void
+  onResolve: () => void
 }> = (props) => {
   const { t } = useLanguage()
-  const [confirming, setConfirming] = createSignal(false)
-  const checkouts = () => props.orphans.filter((orphan) => orphan.kind === "broken").length
+  const total = () => orphanTotalBytes(props.orphans)
 
   return (
     <Show when={props.orphans.length > 0}>
       <div class="am-orphan-notice" data-orphan-count={props.orphans.length}>
         <div class="am-orphan-notice-head">
           <Icon name="warning" size="small" />
-          <span class="am-orphan-notice-title">{t("agentManager.orphans.title")}</span>
-        </div>
-        <div class="am-orphan-notice-body">{t("agentManager.orphans.summary", { count: props.orphans.length })}</div>
-        <Show
-          when={confirming()}
-          fallback={
-            <div class="am-orphan-notice-actions">
-              <Button variant="ghost" size="small" onClick={() => setConfirming(true)}>
-                {t("agentManager.orphans.clean")}
-              </Button>
-            </div>
-          }
-        >
-          <ul class="am-orphan-notice-paths">
-            <For each={props.orphans}>
-              {(orphan) => (
-                <li title={orphan.path} data-orphan-kind={orphan.kind}>
-                  {orphan.path}
-                  <Show when={orphan.kind === "broken"}>
-                    <span class="am-orphan-notice-kind">{t("agentManager.orphans.checkout")}</span>
-                  </Show>
-                </li>
-              )}
-            </For>
-          </ul>
-          <div class="am-orphan-notice-body">
-            {checkouts() > 0
-              ? t("agentManager.orphans.confirmCheckout", { count: checkouts() })
-              : t("agentManager.orphans.confirm")}
-          </div>
-          <div class="am-orphan-notice-actions">
-            <Button variant="ghost" size="small" onClick={() => setConfirming(false)}>
-              {t("agentManager.orphans.cancel")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => {
-                setConfirming(false)
-                props.onClean(props.orphans.map((orphan) => orphan.path))
-              }}
+          <span class="am-orphan-notice-title">
+            <Show
+              when={total() !== undefined}
+              fallback={t("agentManager.orphans.summaryCount", { count: props.orphans.length })}
             >
-              {t("agentManager.orphans.clean")}
-            </Button>
-          </div>
-        </Show>
+              {t("agentManager.orphans.summarySize", {
+                count: props.orphans.length,
+                size: formatOrphanBytes(total() ?? 0),
+              })}
+            </Show>
+          </span>
+          <Show when={total() === undefined}>
+            <span class="am-orphan-notice-calculating">{t("agentManager.orphans.calculating")}</span>
+          </Show>
+        </div>
+        <div class="am-orphan-notice-actions">
+          <Button variant="ghost" size="small" onClick={props.onResolve}>
+            {t("agentManager.orphans.resolve")}
+          </Button>
+        </div>
       </div>
     </Show>
   )

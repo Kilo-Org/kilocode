@@ -24,6 +24,7 @@ import { WorktreeManager } from "../WorktreeManager"
 import { SetupScriptService } from "../SetupScriptService"
 import type { GitOps } from "../GitOps"
 import type { WorktreeHealthReport } from "../worktree-reconcile"
+import { disposeOrphanSizes } from "../orphan-sizing"
 import type { ProjectSessionView } from "./session-view"
 
 export interface ProjectContextDeps {
@@ -230,6 +231,7 @@ export class ProjectContext {
     if (this.phase === "disposed") return
     this.version++
     this.phase = "disposing"
+    disposeOrphanSizes(this)
     await this.init?.catch((err) => this.deps.log(`dispose: initialization failed: ${err}`))
     await this.mutation.catch((err) => this.deps.log(`dispose: mutation failed: ${err}`))
     await this.worktrees?.settle().catch((err) => this.deps.log(`dispose: worktree bookkeeping failed: ${err}`))

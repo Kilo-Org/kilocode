@@ -41,11 +41,27 @@ describe("worktree recovery", () => {
       post: (message) => calls.push(`post:${message.type}`),
       push: () => calls.push("push"),
       log: () => undefined,
+      // Mirrors real usage: `host.reconcile` returns the current `ctx.report`, which the tests set
+      // up before calling `cleanOrphans` — the "fresh" reconcile agrees with the stale one unless a
+      // test deliberately swaps `ctx.report` out from under it to exercise revalidation.
       reconcile: async () => {
         calls.push("reconcile")
-        return undefined
+        return ctx.report
       },
       refresh: (worktreeId) => calls.push(`refresh:${worktreeId}`),
+      reveal: (path) => calls.push(`reveal:${path}`),
+      teardown: async (_root, path) => {
+        calls.push(`teardown:${path}`)
+      },
+      removeSnapshot: async (_root, path) => {
+        calls.push(`removeSnapshot:${path}`)
+        return true
+      },
+      withProgress: async (title, task) => {
+        calls.push(`progress:${title}`)
+        return task(() => false)
+      },
+      notifyResult: (kind) => calls.push(`notify:${kind}`),
     }
   })
 
@@ -96,7 +112,19 @@ describe("worktree recovery", () => {
 
     expect(fs.existsSync(orphan)).toBe(false)
     expect(fs.existsSync(unknown)).toBe(true)
-    expect(calls).toEqual(["reconcile", "push"])
+    // Deletion runs behind a progress notification, teardown before the directory is staged,
+    // removeSnapshot after, then a second reconcile + push so the banner recomputes.
+    expect(calls).toEqual([
+      "progress:Removing leftover worktree folders",
+      "reconcile",
+      `teardown:${orphan}`,
+      `removeSnapshot:${orphan}`,
+      "reconcile",
+      "push",
+      // One of the two requested paths was not a known orphan (the fresh reconcile never listed
+      // it), so the completion notification reports a partial result even though nothing failed.
+      "notify:warning",
+    ])
   })
 
   it("refuses to delete a live worktree even when it is listed as an orphan", async () => {
@@ -111,6 +139,56 @@ describe("worktree recovery", () => {
     await cleanOrphans(ctx, host, [target])
 
     expect(fs.existsSync(target)).toBe(true)
-    expect(calls).toEqual(["post:error"])
+    expect(calls).toEqual([
+      "progress:Removing leftover worktree folders",
+      "reconcile",
+      `teardown:${target}`,
+      "post:error",
+      "notify:error",
+    ])
+  })
+
+  it("re-validates against a fresh reconcile, not the possibly-stale ctx.report", async () => {
+    const orphan = path.join(root, ".kilo", "worktrees", "leftover")
+    fs.mkdirSync(orphan, { recursive: true })
+    // ctx.report (built before the dialog was shown) still lists it, but the fresh reconcile the
+    // host returns from inside cleanOrphans no longer does — e.g. the pool just claimed it.
+    ctx.report = {
+      entries: [],
+      orphans: [{ path: orphan, kind: "leftover" }],
+      dropped: [],
+      pruned: false,
+      degraded: false,
+    }
+    host.reconcile = async () => {
+      calls.push("reconcile")
+      return { entries: [], orphans: [], dropped: [], pruned: false, degraded: false }
+    }
+
+    await cleanOrphans(ctx, host, [orphan])
+
+    expect(fs.existsSync(orphan)).toBe(true)
+    expect(calls).toEqual(["progress:Removing leftover worktree folders", "reconcile", "notify:error"])
+  })
+
+  it("stages the directory (rename) instead of a blocking recursive delete", async () => {
+    const orphan = path.join(root, ".kilo", "worktrees", "leftover")
+    fs.mkdirSync(path.join(orphan, "nested"), { recursive: true })
+    ctx.report = {
+      entries: [],
+      orphans: [{ path: orphan, kind: "leftover" }],
+      dropped: [],
+      pruned: false,
+      degraded: false,
+    }
+
+    await cleanOrphans(ctx, host, [orphan])
+
+    expect(fs.existsSync(orphan)).toBe(false)
+    // Nothing named .kilo-delete-* should survive once the background reap this awaits internally
+    // (via detachOrphanDirectory's `done`) has had a chance to run.
+    await ctx.worktreeManager().settle()
+    const leftovers = fs.readdirSync(path.dirname(orphan)).filter((name) => name.startsWith(".kilo-delete-"))
+    expect(leftovers).toEqual([])
   })
 })

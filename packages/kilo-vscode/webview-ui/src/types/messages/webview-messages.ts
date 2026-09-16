@@ -715,6 +715,13 @@ export interface CleanOrphanDirectoriesRequest {
   paths: string[]
 }
 
+// Reveal an orphaned directory in the OS file manager
+export interface RevealPathRequest {
+  type: "agentManager.revealPath"
+  projectId?: string
+  path: string
+}
+
 // Promote a session: create a worktree and move the session into it
 export interface PromoteSessionRequest {
   type: "agentManager.promoteSession"
@@ -1700,6 +1707,7 @@ export type WebviewMessage =
   | RemoveStaleWorktreeRequest
   | RestoreWorktreeRequest
   | CleanOrphanDirectoriesRequest
+  | RevealPathRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
   | OpenSessionLocallyRequest

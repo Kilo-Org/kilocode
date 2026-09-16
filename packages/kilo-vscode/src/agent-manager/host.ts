@@ -170,6 +170,15 @@ export interface Host {
   /** Show an error notification. */
   showError(msg: string): void
 
+  /** Show an info, warning, or error notification. */
+  notify(kind: "info" | "warning" | "error", msg: string): void
+
+  /** Reveal a path in the OS file manager. A no-op (logged) on a remote workspace. */
+  revealInOS(path: string): void
+
+  /** Run a cancellable background task behind a progress notification. */
+  withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T>
+
   /** Open a text document in an editor (e.g. setup script). */
   openDocument(path: string): Promise<void>
 

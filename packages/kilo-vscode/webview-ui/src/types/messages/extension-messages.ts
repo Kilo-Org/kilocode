@@ -902,7 +902,7 @@ export interface AgentManagerStateMessage {
    * `broken` still holds a git checkout, so it can contain work that exists nowhere else; `leftover`
    * is a bare directory. The notice says which, because the two do not deserve the same warning.
    */
-  orphanDirectories?: { path: string; kind: "broken" | "leftover" }[]
+  orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number }[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean

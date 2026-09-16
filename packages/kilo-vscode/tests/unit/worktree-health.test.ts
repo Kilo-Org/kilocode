@@ -46,6 +46,25 @@ describe("healthPayload", () => {
   it("sends nothing before the first reconcile", () => {
     expect(healthPayload(undefined, [{ id: "a" }])).toEqual({})
   })
+
+  // `bytes` is filled in asynchronously by orphan-sizing.ts, mutated onto the same orphan objects
+  // this function reads — it must ride along without healthPayload needing to know sizing exists.
+  it("carries the orphan byte size through once a size pass has landed", () => {
+    const payload = healthPayload(
+      report({
+        orphans: [
+          { path: "/o", kind: "leftover", bytes: 1024 },
+          { path: "/b", kind: "broken" },
+        ],
+      }),
+      [],
+    )
+
+    expect(payload.orphanDirectories).toEqual([
+      { path: "/o", kind: "leftover", bytes: 1024 },
+      { path: "/b", kind: "broken" },
+    ])
+  })
 })
 
 describe("applyPresence", () => {

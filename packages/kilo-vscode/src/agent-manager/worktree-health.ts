@@ -26,7 +26,9 @@ export function healthPayload(
   // Paths, not just a count: the confirmation dialog has to show exactly what will be deleted, and
   // the host re-validates every path against the current orphan set before removing anything. The
   // kind travels with them because "nothing here is tracked by git" is only true for a `leftover`: a
-  // `broken` orphan still holds a checkout, and its files can exist nowhere else.
+  // `broken` orphan still holds a checkout, and its files can exist nowhere else. `bytes` rides along
+  // too, filled in asynchronously by orphan-sizing.ts — absent until that pass lands, at which point
+  // a fresh push carries it to the webview without this function needing to know sizing exists.
   return { worktreeHealth: health, orphanDirectories: report.orphans }
 }
 
