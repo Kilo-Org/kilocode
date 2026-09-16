@@ -218,7 +218,12 @@ for (const width of [340, 532, 720, 1400]) {
     expect(bounds.x).toBe(baseline.x)
     expect(bounds.width).toBe(baseline.width)
     expect(bounds.height).toBe(baseline.height)
-    expect(await geometry(page)).toEqual(idle)
+    // The dock hugs the visible state, so a wrapped actions row hands its extra
+    // height back to the transcript viewport; the composer itself never moves.
+    const working = await geometry(page)
+    expect(working.dock).toBeLessThanOrEqual(idle.dock)
+    expect(working.viewport - idle.viewport).toBe(idle.dock - working.dock)
+    expect(working.transcriptBottom - idle.transcriptBottom).toBe(idle.dock - working.dock)
     await expect(status.locator("svg circle")).toHaveCount(3)
     if (width >= 532) {
       await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
@@ -336,9 +341,6 @@ test.describe("status swap", () => {
 
     // The width is animated rather than reassigned.
     expect(swap.duration).not.toBe("0s")
-    // In the frame of the swap the box still holds the outgoing width, so the
-    // spinner starts from exactly where it was instead of teleporting.
-    expect(Math.abs(swap.frames[0]!.left - swap.start)).toBeLessThanOrEqual(1)
     expect(swap.frames[0]!.width).not.toBe("")
     // Both labels are mounted for the crossfade.
     expect(swap.frames[0]!.lines).toBe(2)
@@ -356,6 +358,18 @@ test.describe("status swap", () => {
       .locator('.working-indicator [data-component="spinner"]')
       .evaluate((el) => el.getBoundingClientRect().left)
     expect(settled).toBeLessThan(swap.start)
+
+    // The width lock is applied in the frame of the swap, but the first frame
+    // this observer can measure is not guaranteed to be that same frame: it
+    // drifts by a frame or two between machines, and each frame of drift is one
+    // step of the glide. So assert the shape of the motion rather than one exact
+    // frame. A teleport covers the whole distance in the first observed frame,
+    // while the glide only covers a fraction of it and is still travelling when
+    // the sampled frames end.
+    const glide = swap.start - settled
+    expect(glide).toBeGreaterThan(1)
+    expect(swap.start - swap.frames[0]!.left).toBeLessThan(glide * 0.5)
+    expect(swap.frames.at(-1)!.left).toBeGreaterThan(settled)
   })
 
   test("reduced motion cuts to the new status instead of animating it", async ({ page }) => {
@@ -377,6 +391,90 @@ test.describe("status swap", () => {
 
     expect(swap.glide).toBe("0s")
     expect(["absent", "none"]).toContain(swap.old)
+  })
+
+  /**
+   * The truncation fade marks a label the box has not opened up for yet. It used
+   * to be judged from the box's own `scrollWidth`, which the outgoing copy still
+   * contributes while it holds the width lock: on a shrink that copy is wider
+   * than the box for the whole glide, so the fade landed on a shorter incoming
+   * label that already fit and cut its tail off.
+   */
+  test("the truncation fade only marks a label the box has not opened up for", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await openStory(page, true)
+    await page.getByTestId("toggle-busy").click()
+    await expect(page.locator(".working-status")).toBeVisible()
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+
+    const sample = () =>
+      page.evaluate(async () => {
+        const box = document.querySelector(".working-status")
+        const next = document.querySelector('[data-testid="next-status"]')
+        if (!(box instanceof HTMLElement) || !(next instanceof HTMLElement)) throw new Error("indicator missing")
+        next.click()
+        const frames: { swap: boolean; clip: boolean; box: number; live: number }[] = []
+        for (let i = 0; i < 12; i++) {
+          await new Promise((resolve) => requestAnimationFrame(resolve))
+          const line = box.querySelector(".working-status-line:not([data-old])")
+          frames.push({
+            swap: box.hasAttribute("data-swap"),
+            clip: box.hasAttribute("data-clip"),
+            box: box.clientWidth,
+            live: line?.getBoundingClientRect().width ?? 0,
+          })
+        }
+        return frames
+      })
+
+    // "Thinking…" to "Searching the codebase": the box opens from the narrower
+    // label, so the cut is faded until it has caught up.
+    const grow = await sample()
+    expect(grow.some((frame) => frame.swap)).toBe(true)
+    expect(grow.some((frame) => frame.clip)).toBe(true)
+
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+    // "Making edits" to "Thinking…": the box starts wider than the incoming
+    // label and only ever narrows toward it, so the label always fits and no
+    // frame may fade it.
+    await page.getByTestId("next-status").click()
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+    const shrink = await sample()
+    expect(shrink.some((frame) => frame.swap)).toBe(true)
+    expect(shrink.filter((frame) => frame.clip)).toEqual([])
+    for (const frame of shrink) expect(frame.live).toBeLessThanOrEqual(frame.box + 1)
+  })
+
+  /**
+   * The outgoing copy is kept mounted after its exit animation so the width lock
+   * is not released early. It holds no opacity by then, but it still painted its
+   * own tail past the shrunken box, which read as a faded fragment beside the
+   * new label.
+   */
+  test("the outgoing label stops painting once its exit lands", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await openStory(page, true)
+    await page.getByTestId("toggle-busy").click()
+    await expect(page.locator(".working-status")).toBeVisible()
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+
+    const lines = await page.evaluate(async () => {
+      const box = document.querySelector(".working-status")
+      const next = document.querySelector('[data-testid="next-status"]')
+      if (!(box instanceof HTMLElement) || !(next instanceof HTMLElement)) throw new Error("indicator missing")
+      next.click()
+      const seen: { mounted: boolean; visibility: string }[] = []
+      for (let i = 0; i < 24; i++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+        const old = box.querySelector(".working-status-line[data-old]")
+        seen.push({ mounted: old !== null, visibility: old ? getComputedStyle(old).visibility : "unmounted" })
+      }
+      return seen
+    })
+
+    const mounted = lines.filter((line) => line.mounted)
+    expect(mounted.length).toBeGreaterThan(0)
+    expect(mounted.at(-1)!.visibility).toBe("hidden")
   })
 })
 
@@ -401,13 +499,63 @@ test("a wrapped narrow-sidebar actions row is not clipped", async ({ page }) => 
   expect(wrapped.dock).toBeGreaterThanOrEqual(wrapped.row)
   expect(wrapped.overflowBelow).toBeLessThanOrEqual(0)
 
-  // The swap still leaves the transcript untouched at this width.
-  const idle = await geometry(page)
+  // The wrapped row grows the dock only while it is shown. While a turn runs
+  // the dock is exactly the indicator, not the taller hidden actions row.
+  await page.getByTestId("toggle-busy").click()
+  const indicator = page.locator('[data-component="session-dock"] .working-indicator')
+  await expect(indicator).toBeVisible()
+  const working = await geometry(page)
+  const box = await indicator.boundingBox()
+  if (!box) throw new Error("indicator missing")
+
+  expect(working.dock).toBeLessThan(wrapped.dock)
+  // Within the one-line floor that keeps unwrapped surfaces free of sub-pixel
+  // shifts across the swap.
+  expect(working.dock - box.height).toBeGreaterThanOrEqual(0)
+  expect(working.dock - box.height).toBeLessThanOrEqual(1)
+})
+
+/**
+ * The hidden state used to reserve the wrapped narrow-sidebar actions height,
+ * so the spinner floated in an empty band whose size depended on the sidebar
+ * width. The dock now hugs the indicator, so the spinner keeps the same small
+ * distance from the composer at every width.
+ */
+test("the working indicator hugs the composer at every width", async ({ page }) => {
+  await openStory(page)
+  const measure = async () => {
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    return page.evaluate(() => {
+      const dock = document.querySelector('[data-component="session-dock"]')
+      const indicator = document.querySelector(".working-indicator")
+      const spinner = document.querySelector('.working-indicator [data-component="spinner"]')
+      const prompt = document.querySelector(".chat-input > .prompt-input-container")
+      if (
+        !(dock instanceof HTMLElement) ||
+        !(indicator instanceof HTMLElement) ||
+        !(spinner instanceof Element) ||
+        !(prompt instanceof HTMLElement)
+      )
+        throw new Error("missing")
+      return {
+        slack: dock.getBoundingClientRect().height - indicator.getBoundingClientRect().height,
+        gap: prompt.getBoundingClientRect().top - spinner.getBoundingClientRect().bottom,
+      }
+    })
+  }
+
   await page.getByTestId("toggle-busy").click()
   await expect(page.locator('[data-component="session-dock"] .working-indicator')).toBeVisible()
-  const working = await geometry(page)
+  const wide = await measure()
 
-  expect(working.dock).toBe(idle.dock)
-  expect(working.viewport).toBe(idle.viewport)
-  expect(working.transcriptBottom).toBe(idle.transcriptBottom)
+  // 340px wraps the actions row, which used to make the reserved dock (and the
+  // floating spinner gap) much taller than the indicator itself.
+  await page.setViewportSize({ width: 340, height: 640 })
+  const narrow = await measure()
+
+  // Only the one-line floor remains around the indicator, never the wrapped row.
+  expect(wide.slack).toBeLessThanOrEqual(1)
+  expect(narrow.slack).toBeLessThanOrEqual(1)
+  expect(narrow.gap).toBeLessThanOrEqual(12)
+  expect(narrow.gap).toBe(wide.gap)
 })

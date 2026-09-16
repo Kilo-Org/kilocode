@@ -25,6 +25,8 @@ export interface Disposable {
 
 export interface OutputHandle {
   appendLine(msg: string): void
+  /** Reveal the channel, e.g. after writing a report the user asked for. */
+  show?(): void
   dispose(): void
 }
 
@@ -135,6 +137,12 @@ export interface Host {
   /** Whether the experimental multi-project Agent Manager mode is enabled. */
   multiProject(): boolean
   browserAutomation(): boolean
+
+  /** Whether background worktree pre-warming is enabled. */
+  worktreePool(): boolean
+
+  /** Listen for changes to the worktree pre-warming setting. */
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable
 
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown

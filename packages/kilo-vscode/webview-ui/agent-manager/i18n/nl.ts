@@ -43,6 +43,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Branchprefix",
   "agentManager.settings.branchPrefix.description":
     "Prefix voor automatisch benoemde branches in alle projecten, bijvoorbeeld feature/. Geldt niet voor expliciete branchnamen. Laat leeg om geen prefix te gebruiken.",
+  "agentManager.settings.worktreePool.title": "Worktrees vooraf opwarmen",
+  "agentManager.settings.worktreePool.description":
+    "Bereid op de achtergrond een kant-en-klare worktree voor, zodat nieuwe Agent Manager-sessies sneller starten. Gebruikt extra schijfruimte voor één checkout per geopend project.",
   "agentManager.settings.project.title": "Project",
   "agentManager.settings.project.description": "Kies de repository waarvan je de worktree-instellingen wilt bewerken.",
   "agentManager.settings.project.empty": "Er zijn geen Agent Manager-projecten beschikbaar.",
@@ -51,9 +54,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Uitvoeren voordat een agent in een nieuwe worktree start.",
   "agentManager.settings.setupScript.create": "script maken",
   "agentManager.settings.setupScript.edit": "script bewerken",
-  "agentManager.project.add": "Project toevoegen",
+  "agentManager.project.add": "Project toevoegen...",
   "agentManager.project.remove": "Verwijderen uit Agent Manager",
   "agentManager.project.missing": "Repository niet gevonden",
+  "agentManager.project.settings": "Projectinstellingen",
   "agentManager.project.restricted":
     "Je huidige VS Code-werkruimte is je thuismap of de hoofdmap van het bestandssysteem. Open een specifieke projectmap in VS Code om Agent Manager te gebruiken.",
   "agentManager.notGitRepo": "Geen git repository",
@@ -140,6 +144,12 @@ export const dict = {
     "Deze repository gebruikt Git LFS, maar git-lfs is niet gevonden. Installeer Git LFS.",
   "agentManager.setup.error.no_commits":
     "Deze repository heeft nog geen commits. Maak een initiële commit voordat je worktrees gebruikt.",
+  "agentManager.setup.error.worktree_missing":
+    "De map van deze worktree bestaat niet meer. Herstel hem vanaf zijn branch of verwijder de worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git volgt deze map niet meer als worktree. Verwijder hem en maak een nieuwe worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git antwoordde niet op tijd. Controleer of de repository bereikbaar is en probeer het opnieuw.",
   "agentManager.shortcuts.title": "Sneltoetsen",
   "agentManager.shortcuts.category.sidebar": "Zijbalk",
   "agentManager.shortcuts.category.tabs": "Tabbladen",
@@ -239,6 +249,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Alles naar chat sturen ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "{{count}} naar GitHub #{{number}} sturen",
+  "agentManager.review.sendAllToGithubFailed": "Verzenden gestopt door een GitHub-fout: {{error}}",
   "agentManager.review.inlineCount": "Lokale opmerkingen ({{count}})",
   "agentManager.review.prCount": "PR-opmerkingen ({{count}})",
   "agentManager.review.fileCount": "{{count}} bestanden",
@@ -313,6 +325,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Verouderd",
   "agentManager.pr.comment.sent": "Verzonden",
   "agentManager.pr.comment.copy": "Opmerking kopiëren",
+  "agentManager.pr.comment.copyLink": "Link naar opmerking kopiëren",
   "agentManager.pr.comment.openOnGitHub": "Openen op GitHub",
   "agentManager.pr.comment.showInDiff": "In diff weergeven",
   "agentManager.pr.comment.unplaced": "Opmerkingen buiten de huidige diff",
@@ -423,7 +436,7 @@ export const dict = {
   "agentManager.caffeination.active": "Computer wordt wakker gehouden terwijl Kilo-agents werken",
   "agentManager.caffeination.unavailable":
     "De modus om de computer wakker te houden is niet beschikbaar op dit platform",
-  "agentManager.browser.title": "Browser",
+  "agentManager.browser.title": "Geïntegreerde browser",
   "agentManager.browser.url": "URL van lokale applicatie",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Openen",
@@ -432,7 +445,8 @@ export const dict = {
   "agentManager.browser.refresh": "Browser vernieuwen",
   "agentManager.browser.close": "Browser sluiten",
   "agentManager.browser.empty": "Open een lokale applicatie om deze hier te bekijken.",
-  "agentManager.browser.noSession": "Selecteer eerst een sessie in Agent Manager.",
+  "agentManager.browser.noSession":
+    "Start of selecteer een sessie in Agent Manager om een lokale applicatie te bekijken.",
   "agentManager.browser.screenshotAlt": "Huidige browserpagina",
   "agentManager.browser.errors": "Browserproblemen: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnostiek",
@@ -468,4 +482,27 @@ export const dict = {
   "agentManager.intro.guide": "Lees de handleiding",
   "agentManager.intro.dismiss": "Introductie overslaan",
   "agentManager.intro.reopen": "Hoe Agent Manager werkt",
+  "agentManager.worktree.health.absent-restorable": "Map verwijderd",
+  "agentManager.worktree.health.absent-restorableNote":
+    "De map is weg, maar branch {{branch}} bestaat nog. Herstel hem om hier verder te werken.",
+  "agentManager.worktree.health.absent-gone": "Map en branch verwijderd",
+  "agentManager.worktree.health.absent-goneNote":
+    "Noch de map noch de branch bestaat nog. Verwijder het item om op te ruimen; sessies blijven onder Lokaal.",
+  "agentManager.worktree.health.unregistered": "Geen git-worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "De map bestaat, maar git volgt hem niet meer als worktree. De status is niet te lezen.",
+  "agentManager.worktree.health.unavailable": "Status niet beschikbaar",
+  "agentManager.worktree.health.unavailableNote":
+    "Git of GitHub CLI antwoordde niet op tijd. Het pollen van deze worktree is gepauzeerd en wordt opnieuw geprobeerd.",
+  "agentManager.worktree.restore": "Worktree herstellen",
+  "agentManager.worktree.removeKeepSessions": "Verwijderen, sessies behouden",
+  "agentManager.orphans.title": "Achtergebleven worktree-mappen",
+  "agentManager.orphans.summary": "{{count}} map(pen) in .kilo/worktrees zijn geen git-worktrees.",
+  "agentManager.orphans.clean": "Achtergebleven mappen opruimen",
+  "agentManager.orphans.confirm": "Deze mappen definitief verwijderen? Niets hiervan wordt door git gevolgd.",
+  "agentManager.orphans.cancel": "Annuleren",
+  "agentManager.orphans.checkout": "bevat een git-checkout",
+  "agentManager.orphans.confirmCheckout":
+    "Deze mappen permanent verwijderen? {{count}} bevatten nog een git-checkout die niet-gecommitte wijzigingen kan hebben.",
+  "agentManager.error.title": "Agent Manager-fout",
 }

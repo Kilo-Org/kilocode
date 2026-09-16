@@ -80,18 +80,28 @@ class KiloWorktreeService internal constructor(
         }
     }
 
+    /**
+     * `unavailable = true` on failure, not the default `false`: callers merge this against their
+     * previous values and only drop a row when the poll actually answered (see
+     * `WorktreeStatusService.merge`), so a swallowed RPC failure must not read as "no worktrees".
+     */
     suspend fun stats(directory: String): WorktreeStatsListDto = try {
         call { stats(directory) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree stats failed for $directory", e)
-        WorktreeStatsListDto()
+        WorktreeStatsListDto(unavailable = true)
     }
 
+    /** See [stats] for why a failure reports `unavailable = true` instead of an empty, "clean" list. */
     suspend fun dirty(directory: String): WorktreeDirtyListDto = try {
         call { dirty(directory) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree dirty failed for $directory", e)
-        WorktreeDirtyListDto()
+        WorktreeDirtyListDto(unavailable = true)
     }
 
     /**

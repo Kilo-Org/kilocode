@@ -339,6 +339,8 @@ html[data-theme="kilo-vscode"]
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* Grow so the footer below stays pinned while this list scrolls. */
+  flex: 1 1 auto;
   overflow-y: auto;
   /* Pull out of .am-sidebar's 8px padding to an even 4px gutter on both sides,
      so a selected row's rounded background is inset symmetrically. 4px on the
@@ -348,14 +350,49 @@ html[data-theme="kilo-vscode"]
   margin-right: -4px;
 }
 
-.am-project-actions {
+/* Add-project footer. It is a sibling of the scrolling list, so flex layout
+   keeps it visible no matter how many projects are open. The negative side and
+   bottom margins pull it into .am-sidebar's 8px padding so the button sits an
+   even 4px from the list above and from the sidebar edges, matching the row
+   gutter. */
+.am-projects-footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* The project row needs 20px + 24px + 20px; the worktree row uses the
-     remaining space for its split-button and settings gap. */
-  width: 64px;
-  gap: 0;
+  flex-shrink: 0;
+  margin: 0 -4px -4px;
+  padding: 4px 0 0;
+}
+
+/* Full-width call to action styled like a raised sidebar control: subtle
+   surface, thin border, centered icon and label, and a soft hover lift. */
+.am-projects-footer .am-project-add[data-component="button"] {
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset-base);
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+  font-weight: 500;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.am-projects-footer .am-project-add[data-component="button"] [data-component="icon"] {
+  color: inherit;
+}
+
+.am-projects-footer .am-project-add[data-component="button"]:hover:not(:disabled) {
+  background: var(--surface-inset-base-hover);
+  border-color: var(--border-base);
+  color: var(--text-base);
+}
+
+.am-projects-footer .am-project-add[data-component="button"]:active:not(:disabled) {
+  opacity: 0.85;
 }
 
 .am-project {
@@ -376,6 +413,12 @@ html[data-theme="kilo-vscode"]
      .am-worktree-item both use a 6px inset), so the tree reads as one line. */
   padding: 6px 6px;
   box-sizing: border-box;
+  /* Pin the project row with its New worktree control while its body scrolls.
+     The opaque sidebar background hides the rows passing underneath. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-base);
 }
 
 .am-project-item:hover {
@@ -876,9 +919,74 @@ html[data-theme="kilo-vscode"]
   color: currentColor;
 }
 
+/* "Health could not be determined" is not a warning: nothing is known to be wrong yet. */
+.am-worktree-stale-badge[data-health="unavailable"],
+.am-worktree-item-active .am-worktree-stale-badge[data-health="unavailable"] {
+  color: var(--text-weak);
+}
+
 .am-tooltip-wrap {
   max-width: 240px;
   white-space: normal;
+}
+
+/* Leftover worktree folders: informational until the user asks for the cleanup. */
+.am-orphan-notice {
+  margin: 6px 8px 2px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in oklab, var(--text-warning, #f59e0b) 35%, transparent);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--text-warning, #f59e0b) 8%, transparent);
+  font-size: var(--font-size-small);
+}
+
+.am-orphan-notice-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-warning, #f59e0b);
+}
+
+.am-orphan-notice-title {
+  font-weight: 600;
+}
+
+.am-orphan-notice-body {
+  margin-top: 2px;
+  color: var(--text-muted, inherit);
+}
+
+.am-orphan-notice-paths {
+  margin: 4px 0 0;
+  padding-left: 14px;
+  max-height: 88px;
+  overflow-y: auto;
+  color: var(--text-muted, inherit);
+}
+
+.am-orphan-notice-paths li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+.am-orphan-notice-paths li[data-orphan-kind="broken"] {
+  color: var(--text-warning, #f59e0b);
+}
+
+.am-orphan-notice-kind {
+  margin-left: 4px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.am-orphan-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .am-worktree-spinner {
@@ -2468,6 +2576,44 @@ body.am-wt-dragging-active * {
   font-size: inherit;
   color: var(--text-weak);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.am-annotation-draft[data-mounted] {
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--font-size-base);
+  padding: 8px;
+  gap: 4px;
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
+}
+
+.am-annotation-draft[data-mounted]:focus-within {
+  border-color: var(--border-focus);
+}
+
+.am-annotation-form {
+  min-width: 0;
+}
+
+.am-diff-pr-context,
+.am-review-pr-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.am-diff-pr-context svg,
+.am-review-pr-context svg {
+  flex: 0 0 auto;
 }
 
 .am-annotation-textarea {
@@ -2654,6 +2800,15 @@ body.am-wt-dragging-active * {
   color: var(--text-weak);
 }
 
+.am-review-send-error {
+  margin: 0 8px;
+  font-size: var(--font-size-small);
+  color: var(--vscode-testing-iconFailed, #f87171);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Setup overlay */
 
 .am-setup-overlay {
@@ -2808,7 +2963,7 @@ body.am-wt-dragging-active * {
 .am-split-button[data-variant="primary"] > [data-component="button"] {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 26px;
+  min-height: 24px;
   border: 0;
   border-radius: 2px 0 0 2px;
   background: transparent;
@@ -2826,7 +2981,7 @@ body.am-wt-dragging-active * {
   width: 32px;
   min-width: 32px;
   height: auto;
-  min-height: 26px;
+  min-height: 24px;
   padding: 0;
   border: 0;
   border-radius: 0 2px 2px 0;
@@ -2897,7 +3052,7 @@ body.am-wt-dragging-active * {
   min-width: 250px;
 }
 
-/* Per-project row actions (history, remove) */
+/* Per-project row actions (new worktree, overflow menu) */
 
 .am-project-actions-row {
   display: flex;
@@ -2914,6 +3069,19 @@ body.am-wt-dragging-active * {
 
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
+}
+
+/* Two explicit send-all actions; only the chat action shows the shortcut. */
+.am-send-all-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.am-send-all-actions [data-component="spinner"] {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
 }
 
 .am-worktree-menu-gap {
@@ -3592,6 +3760,10 @@ body.am-wt-dragging-active * {
   gap: 6px;
   color: var(--text-warning, #f59e0b);
   font-weight: 600;
+}
+
+.am-hover-card-stale-pill[data-health="unavailable"] {
+  color: var(--text-weak);
 }
 
 .am-hover-card-note {

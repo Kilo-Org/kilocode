@@ -1,7 +1,15 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.diff.GIT_PROBE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_READ_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
+import ai.kilocode.backend.diff.failure
+import ai.kilocode.backend.diff.gitBudget
 import ai.kilocode.backend.worktree.WorktreeTrash
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
+import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
@@ -26,6 +34,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
@@ -67,6 +76,90 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `git budgets separate cheap metadata from content reads`() {
+        // One 30s budget for everything let a wedged `git --version` hold a poll slot as long as a
+        // diff of a huge worktree legitimately needs.
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("--version")))
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("rev-parse", "HEAD")))
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("worktree", "list", "--porcelain")))
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("diff", "--numstat")))
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("show", "HEAD:file")))
+        // A status scans the working tree, so its cost follows the checkout, not `.git`. On the probe
+        // budget a large or cold worktree reported unavailable for a measurement that would have
+        // succeeded — the failure these budgets exist to report, caused by the budget itself.
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("status", "--porcelain=v2")))
+        assertTrue(GIT_PROBE_TIMEOUT_MS < GIT_READ_TIMEOUT_MS)
+    }
+
+    @Test
+    fun `the prune a poll runs is budgeted as metadata, not as a write`() {
+        // This prune is the one command a poll runs while holding the repository's mutation lock, so
+        // its budget is also the longest a user-initiated create or remove can be made to wait. A
+        // prune rewrites `$GIT_DIR/worktrees` bookkeeping and nothing else, so it belongs with the
+        // metadata probes rather than with `worktree add` and `fetch`.
+        assertEquals(GIT_PROBE_TIMEOUT_MS, GIT_PRUNE_TIMEOUT_MS)
+        assertTrue(GIT_PRUNE_TIMEOUT_MS < GIT_WRITE_TIMEOUT_MS)
+    }
+
+    @Test
+    fun `a failed command says whether it timed out`() {
+        // `Git comparison failed (exit=-1):` with empty stderr is what a timeout used to look like.
+        val timedOut = CmdOut(-1, "", "", timeout = true).failure()
+        assertTrue(timedOut.contains("timed out"), "a timeout must say so: $timedOut")
+        assertFalse(timedOut.contains("exit=-1"), "an unexplained exit code is not a reason: $timedOut")
+
+        val failed = CmdOut(128, "", "fatal: not a git repository").failure()
+        assertTrue(failed.contains("exit=128"), failed)
+        assertTrue(failed.contains("not a git repository"), failed)
+
+        // An empty stderr still has to read as something.
+        assertTrue(CmdOut(1, "", "").failure().contains("no stderr output"))
+    }
+
+    @Test
+    fun `gh classification separates a timeout from a healthy gh`() {
+        // Reported as OK, a timeout reset the probe's failure counter and defeated its own backoff.
+        assertEquals(GhAvailability.TIMEOUT, classifyGhError(CmdOut(-1, "", "", timeout = true)))
+        assertEquals(GhAvailability.OK, classifyGhError(CmdOut(1, "", "no pull requests found")))
+        assertEquals(GhAvailability.MISSING, classifyGhError(CmdOut(-1, "", "Cannot run program \"gh\"")))
+        assertEquals(GhAvailability.UNAUTH, classifyGhError(CmdOut(1, "", "gh auth login required")))
+    }
+
+    @Test
+    fun `list reports leftover directories under the worktrees folder without removing them`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val leftover = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(leftover.resolve(".kilo-dev"))
+
+        val listed = api.list(repo.toString())
+
+        // Orphan paths are resolved the way git reports worktree paths (realpath), so they compare
+        // equal to the other DTOs' paths on a symlinked temp dir.
+        assertEquals(listOf(leftover.toRealPath().toString()), listed.orphans)
+        assertTrue(listed.worktrees.any { it.path == created.path }, "a live worktree is not an orphan")
+        // Reported, never deleted: a leftover directory can hold files that exist nowhere else.
+        assertTrue(Files.isDirectory(leftover.resolve(".kilo-dev")))
+    }
+
+    @Test
+    fun `list and the polls agree on which worktrees exist`() = runBlocking {
+        initRepo()
+        val kept = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("kept")).worktree)
+        val removed = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("gone")).worktree)
+        delete(Path.of(removed.path))
+
+        // list() used to reconcile differently from the stats/dirty polls, so a row could exist that
+        // nothing would ever report status for.
+        val listed = api.list(repo.toString()).worktrees.map { it.path }.toSet()
+        val dirty = api.dirty(repo.toString()).items.map { it.path }.toSet()
+
+        assertTrue(listed.contains(kept.path))
+        assertFalse(listed.contains(removed.path), "a directory that is gone must not be listed")
+        assertEquals(listed, dirty, "rows and polled paths must not disagree")
+    }
+
+    @Test
     fun `a cache entry is usable only within both the ttl and the caller ceiling`() {
         assertTrue(usable(time = 0, now = 89_999, ttl = 90_000, maxAge = null))
         assertFalse(usable(time = 0, now = 90_000, ttl = 90_000, maxAge = null))
@@ -90,6 +183,78 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("timed out", api.reason(CmdOut(-1, "", "", timeout = true), "git worktree remove failed"))
         assertEquals("boom", api.reason(CmdOut(1, "", "boom"), "git worktree remove failed"))
         assertEquals("git worktree remove failed", api.reason(CmdOut(1, "", ""), "git worktree remove failed"))
+    }
+
+    @Test
+    fun `fetchReason turns known git failures into actionable text instead of raw stderr`() {
+        val timeout = CmdOut(-1, "", "", timeout = true)
+        assertTrue(api.fetchReason(timeout, "feature/x").contains("timed out"))
+
+        val conflict = CmdOut(
+            1,
+            "",
+            "error: 'refs/remotes/origin/docs/auto-sync' exists; cannot create 'refs/remotes/origin/docs/auto-sync/jetbrains'",
+        )
+        val conflictText = api.fetchReason(conflict, "docs/auto-sync/jetbrains")
+        assertTrue(conflictText.contains("docs/auto-sync"), conflictText)
+        assertTrue(conflictText.contains("docs/auto-sync/jetbrains"), conflictText)
+        assertFalse(conflictText.contains("refs/remotes"), "should read as a branch name, not a raw ref path")
+
+        val missing = CmdOut(1, "", "fatal: couldn't find remote ref refs/pull/7/head")
+        assertTrue(api.fetchReason(missing, "feature/x").contains("no longer on the remote"))
+
+        val unknown = CmdOut(1, "", "fatal: something unexpected happened")
+        assertTrue(api.fetchReason(unknown, "feature/x").contains("something unexpected happened"))
+    }
+
+    @Test
+    fun `refConflict matches the summary form some git builds report on its own`() {
+        // Verbatim stderr from the Linux CI image, where the fetch printed no "exists; cannot create"
+        // detail line at all. Matching only that line made the prune recovery platform-dependent.
+        val summaryOnly = CmdOut(
+            1,
+            "",
+            "From /tmp/kilo-origin123\n" +
+                " * [new ref]         refs/pull/7/head -> origin/docs/auto-sync/jetbrains\n" +
+                "error: some local refs could not be updated; try running\n" +
+                " 'git remote prune origin' to remove any old, conflicting branches\n",
+        )
+        val detail = CmdOut(
+            1,
+            "",
+            "error: 'refs/remotes/origin/docs/auto-sync' exists; cannot create 'refs/remotes/origin/docs/auto-sync/jetbrains'",
+        )
+
+        assertTrue(refConflict(summaryOnly), "the prune advice alone identifies the conflict")
+        assertTrue(refConflict(detail))
+        assertFalse(refConflict(CmdOut(1, "", "fatal: unable to access remote: Could not resolve host")))
+    }
+
+    @Test
+    fun `fetchReason falls back to unnamed wording when git did not name the blocking ref`() {
+        val summaryOnly = CmdOut(1, "", "error: some local refs could not be updated; try running\n 'git remote prune origin' to remove any old, conflicting branches")
+
+        val text = api.fetchReason(summaryOnly, "docs/auto-sync/jetbrains")
+
+        // Naming the imported branch as its own blocker would read as nonsense.
+        assertFalse(text.contains("named"), text)
+        assertTrue(text.contains("blocks \"docs/auto-sync/jetbrains\""), text)
+    }
+
+    @Test
+    fun `fetchReason names a blocking local branch without its ref namespace`() {
+        // The cross-repo pull-ref fetch and the closing `branch --force` both write refs/heads/, so
+        // a conflict there must read as a branch name too, not as the raw ref path.
+        val local = CmdOut(
+            1,
+            "",
+            "error: 'refs/heads/alice/feature' exists; cannot create 'refs/heads/alice/feature/login'",
+        )
+
+        val text = api.fetchReason(local, "alice/feature/login")
+
+        assertTrue(text.contains("\"alice/feature\""), text)
+        assertFalse(text.contains("refs/heads"), text)
     }
 
     @Test
@@ -216,6 +381,40 @@ class KiloWorktreeRpcApiImplTest {
         assertTrue(badDir("fatal: Unable to read current working directory: No such file or directory"))
         assertFalse(badDir("fatal: index file corrupt"))
         assertFalse(badDir("fatal: not a git repository (or any of the parent directories): .git"))
+    }
+
+    @Test
+    fun `a poll skips its prune while a mutation holds the repository lock`() {
+        // `git worktree prune` rewrites the same `$GIT_DIR/worktrees` bookkeeping create/import/remove
+        // are serialised on, and `git worktree add` registers a worktree before its checkout is
+        // written — so a poll that pruned mid-add would delete the metadata of a worktree being
+        // created. Polls take the lock only when it is free: never waiting behind a mutation budgeted
+        // in minutes, never pruning underneath one.
+        val mutex = Mutex()
+        var ran = 0
+
+        assertEquals(1, exclusive(mutex, "prune", "/repo") { ++ran })
+        assertEquals(1, ran, "a free lock must run the block")
+
+        assertTrue(mutex.tryLock(), "the helper must release the lock it took")
+        assertNull(exclusive(mutex, "prune", "/repo") { ++ran }, "a held lock must answer null, not wait")
+        assertEquals(1, ran, "the block must not run while a mutation holds the lock")
+        mutex.unlock()
+
+        assertEquals(2, exclusive(mutex, "prune", "/repo") { ++ran })
+    }
+
+    @Test
+    fun `a poll still prunes stale metadata once the mutation lock is free`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/prune")).worktree)
+        delete(Path.of(created.path))
+
+        // Nothing holds the lock here, so the opportunistic prune must actually happen — the skip is a
+        // deferral, not a new permanent behavior.
+        assertTrue(api.stats(repo.toString()).items.none { it.path == created.path })
+        val listed = output(repo, "worktree", "list", "--porcelain")
+        assertFalse(listed.contains(created.path), "a poll with a free lock should prune: $listed")
     }
 
     @Test
@@ -844,6 +1043,43 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `listBranches reports the origin repo slug`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
+
+        assertEquals("Kilo-Org/kilocode", api.listBranches(repo.toString()).origin)
+    }
+
+    @Test
+    fun `listBranches reports no origin when the repo has no remote`() = runBlocking {
+        initRepo()
+
+        assertNull(api.listBranches(repo.toString()).origin)
+    }
+
+    @Test
+    fun `importPr rejects a pull request url from a different repository`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
+
+        val result = api.importPr(repo.toString(), "https://github.com/other/repo/pull/7")
+
+        assertNull(result.worktree, "a foreign pull request must not create a worktree")
+        val error = assertNotNull(result.error)
+        assertTrue(error.contains("other/repo"), error)
+        assertTrue(error.contains("Kilo-Org/kilocode"), error)
+    }
+
+    @Test
+    fun `foreignPr ignores slug case and an unknown origin`() {
+        // Driving this through importPr would fall past the guard into gh and `git fetch`, making the
+        // assertion depend on the machine's network and credentials rather than on the comparison.
+        assertFalse(foreignPr("kilo-org/KiloCode", "Kilo-Org/kilocode"), "GitHub slugs are case-insensitive")
+        assertFalse(foreignPr("other/repo", null), "an unknown origin is not evidence of a mismatch")
+        assertTrue(foreignPr("other/repo", "Kilo-Org/kilocode"))
+    }
+
+    @Test
     fun `stats reports committed diff against the base branch`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
@@ -988,7 +1224,7 @@ class KiloWorktreeRpcApiImplTest {
      * unlike [dirty]'s working-tree comparison used below.
      */
     @Test
-    fun `dirty reports a neutral entry for a worktree whose index is corrupted instead of failing the whole call`() = runBlocking {
+    fun `dirty reports an unavailable entry for a worktree whose index is corrupted instead of failing the whole call`() = runBlocking {
         initRepo()
         val healthy = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("healthy")).worktree)
         val broken = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("broken")).worktree)
@@ -1003,8 +1239,13 @@ class KiloWorktreeRpcApiImplTest {
 
         val healthyItem = assertNotNull(dto.items.singleOrNull { it.path == healthy.path })
         assertEquals(1, healthyItem.files, "a healthy sibling must still be reported correctly")
+        assertFalse(healthyItem.unavailable, "a worktree that answered is not unavailable")
         val brokenItem = assertNotNull(dto.items.singleOrNull { it.path == broken.path })
-        assertEquals(WorktreeDirtyDto(broken.path), brokenItem, "a broken worktree gets a neutral entry, not an exception")
+        // Isolated (no exception escapes) but not silent: zeros alone would render as a clean worktree
+        // and quietly replace whatever the row was showing.
+        assertTrue(brokenItem.unavailable, "a failed measurement must not read as a clean worktree")
+        assertTrue(brokenItem.reason.isNotBlank(), "the failure reason belongs in the DTO")
+        assertEquals(WorktreeDirtyDto(broken.path, unavailable = true, reason = brokenItem.reason), brokenItem)
     }
 
     /** Overwrites [dir]'s own worktree index with garbage so `git diff`/`ls-files` fail well after
@@ -1048,6 +1289,34 @@ class KiloWorktreeRpcApiImplTest {
 
         assertNull(parsePrUrl("https://github.com/Kilo-Org/kilocode/issues/1"))
         assertNull(parsePrUrl("not a url"))
+    }
+
+    @Test
+    fun `parseRepoSlug reads owner repo from ssh and https remotes`() {
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("git@github.com:Kilo-Org/kilocode.git"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode.git"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode/"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("ssh://git@github.com:22/Kilo-Org/kilocode.git"))
+        // A subdomain is still GitHub. Returning null here would read as "cannot tell" and disable
+        // the cross-repo guard for that checkout entirely.
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://www.github.com/Kilo-Org/kilocode.git"))
+        assertNull(parseRepoSlug("https://gitlab.com/Kilo-Org/kilocode.git"))
+        // A host that merely ends in github.com is a different server, so the guard must skip it
+        // rather than compare this checkout against a slug it never published.
+        assertNull(parseRepoSlug("https://notgithub.com/Kilo-Org/kilocode.git"))
+        // The host must be the authority, not a path segment that happens to end in it.
+        assertNull(parseRepoSlug("https://gitlab.com/team/x.github.com/owner/repo.git"))
+        assertNull(parseRepoSlug("/tmp/local-origin"))
+        assertNull(parseRepoSlug("not a url"))
+    }
+
+    @Test
+    fun `parsePrUrl requires a github host boundary`() {
+        assertNull(parsePrUrl("https://notgithub.com/Kilo-Org/kilocode/pull/7"))
+        assertNull(parsePrUrl("https://gitlab.com/team/x.github.com/Kilo-Org/kilocode/pull/7"))
+        assertEquals(7, parsePrUrl("ssh://git@github.com:22/Kilo-Org/kilocode/pull/7")?.number)
+        assertEquals(7, parsePrUrl("https://www.github.com/Kilo-Org/kilocode/pull/7")?.number)
     }
 
     @Test
@@ -1163,6 +1432,45 @@ class KiloWorktreeRpcApiImplTest {
 
         assertNotNull(failure, "a repo without origin cannot fetch a pull request")
         assertFalse(failure.ok)
+    }
+
+    @Test
+    fun `fetchPrBranch prunes a stale remote-tracking ref and retries`() {
+        initRepo()
+        val origin = originWith(pull = 7, head = "docs/auto-sync/jetbrains")
+        // A branch deleted upstream ("docs/auto-sync") leaves this local tracking ref behind. It
+        // occupies the path a nested head ("docs/auto-sync/jetbrains") needs, the exact directory/
+        // file ref conflict reported against PR imports.
+        git(repo, "update-ref", "refs/remotes/origin/docs/auto-sync", "HEAD")
+
+        val failure = fetchPrBranch(runner(repo), 7, PrHead("docs/auto-sync/jetbrains"), "docs/auto-sync/jetbrains")
+
+        assertNull(failure, "a stale remote-tracking ref should be pruned and the fetch retried")
+        assertEquals(
+            head(origin, "refs/heads/docs/auto-sync/jetbrains"),
+            head(repo, "refs/heads/docs/auto-sync/jetbrains"),
+        )
+    }
+
+    @Test
+    fun `fetchPrBranch does not prune for a failure unrelated to a ref conflict`() {
+        // A repository cannot hold both `refs/heads/docs/auto-sync` and
+        // `refs/heads/docs/auto-sync/jetbrains` at once — the blocking side of a directory/file
+        // conflict against a single remote is therefore always stale relative to that remote's
+        // current state, so pruning always recovers it (see the test above). What still needs
+        // covering is that an unrelated failure (e.g. no network) is reported as-is, without
+        // speculatively running `remote prune` first.
+        val calls = mutableListOf<List<String>>()
+        val run = fun(args: List<String>): CmdOut {
+            calls += args
+            return if (args.first() == "fetch") CmdOut(1, "", "fatal: unable to access remote: Could not resolve host") else CmdOut(0, "", "")
+        }
+
+        val failure = fetchPrBranch(run, 7, PrHead("feature/login"), "feature/login")
+
+        assertNotNull(failure, "a network failure should be reported")
+        assertFalse(refConflict(failure), "this failure is not a ref conflict")
+        assertTrue(calls.none { it.firstOrNull() == "remote" }, "prune must only run after a confirmed ref conflict: $calls")
     }
 
     @Test

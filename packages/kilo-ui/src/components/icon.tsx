@@ -1,5 +1,5 @@
 import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
-import { splitProps } from "solid-js"
+import { Show, splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
   "circle-x-outline": {
@@ -133,31 +133,38 @@ export interface IconProps extends Omit<Props, "name"> {
 
 export function Icon(props: IconProps) {
   const [local, others] = splitProps(props, ["name", "size", "class", "classList"])
-  if (!((local.name as Name) in icons)) {
-    return (
-      <Upstream
-        {...others}
-        name={local.name as Props["name"]}
-        size={local.size}
-        class={local.class}
-        classList={local.classList}
-      />
-    )
-  }
+  // Read the table reactively: `name` can switch between a kilo-ui icon and an
+  // upstream icon after mount (for example PR badge status changes).
+  const icon = () => icons[local.name as Name]
   return (
-    <div data-component="icon" data-size={local.size || "normal"}>
-      <svg
-        classList={{
-          ...local.classList,
-          [local.class ?? ""]: !!local.class,
-        }}
-        data-slot="icon-svg"
-        fill="none"
-        viewBox={icons[local.name as Name].viewBox}
-        innerHTML={icons[local.name as Name].path}
-        aria-hidden="true"
-        {...others}
-      />
-    </div>
+    <Show
+      when={icon()}
+      fallback={
+        <Upstream
+          {...others}
+          name={local.name as Props["name"]}
+          size={local.size}
+          class={local.class}
+          classList={local.classList}
+        />
+      }
+    >
+      {(entry) => (
+        <div data-component="icon" data-size={local.size || "normal"}>
+          <svg
+            classList={{
+              ...local.classList,
+              [local.class ?? ""]: !!local.class,
+            }}
+            data-slot="icon-svg"
+            fill="none"
+            viewBox={entry().viewBox}
+            innerHTML={entry().path}
+            aria-hidden="true"
+            {...others}
+          />
+        </div>
+      )}
+    </Show>
   )
 }

@@ -45,6 +45,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Préfixe de branche",
   "agentManager.settings.branchPrefix.description":
     "Préfixe des branches nommées automatiquement dans tous les projets, par exemple feature/. Ne s’applique pas aux noms de branches explicites. Laissez vide pour ne pas utiliser de préfixe.",
+  "agentManager.settings.worktreePool.title": "Préchauffer les worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prépare en arrière-plan un worktree prêt à l'emploi afin que les nouvelles sessions Agent Manager démarrent plus vite. Utilise de l'espace disque supplémentaire pour un checkout par projet ouvert.",
   "agentManager.settings.project.title": "Projet",
   "agentManager.settings.project.description":
     "Choisissez le repository dont vous souhaitez modifier les paramètres du worktree.",
@@ -54,9 +57,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Exécuter avant qu'un agent ne démarre dans un nouveau worktree.",
   "agentManager.settings.setupScript.create": "Créer script",
   "agentManager.settings.setupScript.edit": "Modifier script",
-  "agentManager.project.add": "Ajouter un projet",
+  "agentManager.project.add": "Ajouter un projet...",
   "agentManager.project.remove": "Retirer d'Agent Manager",
   "agentManager.project.missing": "Dépôt introuvable",
+  "agentManager.project.settings": "Paramètres du projet",
   "agentManager.project.restricted":
     "Votre espace de travail VS Code actuel est votre dossier personnel ou la racine du système de fichiers. Ouvrez un dossier de projet spécifique dans VS Code pour utiliser Agent Manager.",
   "agentManager.notGitRepo": "Ce n'est pas un dépôt git",
@@ -140,6 +144,12 @@ export const dict = {
     "Ce dépôt utilise Git LFS, mais git-lfs n'a pas été trouvé. Veuillez installer Git LFS.",
   "agentManager.setup.error.no_commits":
     "Ce dépôt n'a pas encore de commits. Créez un commit initial avant d'utiliser les worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Le dossier de ce worktree n'existe plus. Restaurez-le depuis sa branche ou supprimez le worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git ne suit plus ce dossier comme worktree. Supprimez-le et créez un nouveau worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git n'a pas répondu à temps. Vérifiez que le dépôt est accessible et réessayez.",
   "agentManager.shortcuts.title": "Raccourcis clavier",
   "agentManager.shortcuts.category.sidebar": "Barre latérale",
   "agentManager.shortcuts.category.tabs": "Onglets",
@@ -239,6 +249,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Tout envoyer au chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Envoyer {{count}} à GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Envoi interrompu en raison d’une erreur GitHub : {{error}}",
   "agentManager.review.inlineCount": "Commentaires locaux ({{count}})",
   "agentManager.review.prCount": "Commentaires du PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} fichiers",
@@ -313,6 +325,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Obsolète",
   "agentManager.pr.comment.sent": "Envoyé",
   "agentManager.pr.comment.copy": "Copier le commentaire",
+  "agentManager.pr.comment.copyLink": "Copier le lien du commentaire",
   "agentManager.pr.comment.openOnGitHub": "Ouvrir sur GitHub",
   "agentManager.pr.comment.showInDiff": "Afficher dans le diff",
   "agentManager.pr.comment.unplaced": "Commentaires en dehors du diff actuel",
@@ -421,7 +434,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Mode anti-veille activé pour les agents Kilo ; cliquez pour désactiver",
   "agentManager.caffeination.active": "Ordinateur maintenu éveillé pendant que les agents Kilo travaillent",
   "agentManager.caffeination.unavailable": "Le mode veille active n'est pas disponible sur cette plateforme",
-  "agentManager.browser.title": "Navigateur",
+  "agentManager.browser.title": "Navigateur intégré",
   "agentManager.browser.url": "URL de l'application locale",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Ouvrir",
@@ -430,7 +443,8 @@ export const dict = {
   "agentManager.browser.refresh": "Actualiser le navigateur",
   "agentManager.browser.close": "Fermer le navigateur",
   "agentManager.browser.empty": "Ouvrez une application locale pour l'afficher ici en aperçu.",
-  "agentManager.browser.noSession": "Sélectionnez d'abord une session dans Agent Manager.",
+  "agentManager.browser.noSession":
+    "Démarrez ou sélectionnez une session dans Agent Manager pour parcourir une application locale.",
   "agentManager.browser.screenshotAlt": "Page actuelle du navigateur",
   "agentManager.browser.errors": "Problèmes du navigateur : {{count}}",
   "agentManager.browser.diagnostics": "Diagnostics du navigateur",
@@ -468,4 +482,27 @@ export const dict = {
   "agentManager.intro.guide": "Lire le guide",
   "agentManager.intro.dismiss": "Ignorer l'introduction",
   "agentManager.intro.reopen": "Fonctionnement d'Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Dossier supprimé",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Le dossier a disparu, mais la branche {{branch}} existe toujours. Restaurez-le pour continuer à travailler ici.",
+  "agentManager.worktree.health.absent-gone": "Dossier et branche supprimés",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ni le dossier ni la branche n'existent plus. Supprimez l'entrée pour faire le ménage ; les sessions sont conservées dans Local.",
+  "agentManager.worktree.health.unregistered": "Pas un worktree git",
+  "agentManager.worktree.health.unregisteredNote":
+    "Le dossier existe, mais git ne le suit plus comme worktree. Son état est illisible.",
+  "agentManager.worktree.health.unavailable": "État indisponible",
+  "agentManager.worktree.health.unavailableNote":
+    "Git ou GitHub CLI n'a pas répondu à temps. L'interrogation de ce worktree est suspendue et sera réessayée.",
+  "agentManager.worktree.restore": "Restaurer le worktree",
+  "agentManager.worktree.removeKeepSessions": "Supprimer en gardant les sessions",
+  "agentManager.orphans.title": "Dossiers de worktree résiduels",
+  "agentManager.orphans.summary": "{{count}} dossier(s) sous .kilo/worktrees ne sont pas des worktrees git.",
+  "agentManager.orphans.clean": "Nettoyer les dossiers résiduels",
+  "agentManager.orphans.confirm": "Supprimer définitivement ces dossiers ? Rien ici n'est suivi par git.",
+  "agentManager.orphans.cancel": "Annuler",
+  "agentManager.orphans.checkout": "contient un checkout git",
+  "agentManager.orphans.confirmCheckout":
+    "Supprimer définitivement ces dossiers ? {{count}} contiennent encore un checkout git pouvant avoir des modifications non commitées.",
+  "agentManager.error.title": "Erreur Agent Manager",
 }

@@ -202,6 +202,7 @@ export const dict = {
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.action.indexing": "تنظیمات ایندکس‌گذاری",
   "prompt.action.autoApprove.enable": "فعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.disable": "غیرفعال‌سازی تأیید خودکار",
@@ -226,7 +227,7 @@ export const dict = {
     "برای محدود کردن نوشتن در سیستم فایل کلیک کنید. دسترسی به شبکه طبق تنظیمات sandbox شما مجاز است.",
   "prompt.action.enhanceDescription":
     "دکمه «بهبود پرامپت» با ارائه زمینه بیشتر، توضیح یا بازنویسی، به بهتر کردن پرامپت شما کمک می‌کند. یک پرامپت تایپ کنید و دوباره روی دکمه کلیک کنید تا نحوه عملکرد آن را ببینید.",
-  "speechToText.tooltip.start": "شروع ورودی صوتی با Kilo Gateway",
+  "speechToText.tooltip.start": "شروع ورودی صوتی",
   "speechToText.tooltip.shortcut":
     "برای شروع یا توقف ضبط، روی دکمه ضربه بزنید یا Cmd/Ctrl+K را فشار دهید؛ هنگام صحبت دکمه را نگه دارید و سپس رها کنید تا گفتار به متن تبدیل و ارسال شود.",
   "speechToText.tooltip.starting": "در حال راه‌اندازی میکروفون... منتظر بمانید.",
@@ -268,6 +269,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
   "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
+  "ui.permission.reject": "رد",
+  "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
+  "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
   "ui.permission.rule.addToAllowed": "افزودن به لیست مجاز",
@@ -385,6 +389,7 @@ export const dict = {
   "settings.providers.tag.other": "سایر",
   "settings.providers.connected.environmentDescription": "از متغیرهای محیطی شما متصل شده است",
   "settings.providers.action.signInChatGPT": "ورود با ChatGPT",
+  "settings.providers.action.changeApiKey": "تغییر کلید API",
   "settings.providers.custom.description": "یک ارائه‌دهنده سفارشی از طریق URL پایه اضافه کنید.",
 
   "provider.custom.title": "ارائه‌دهنده سفارشی",
@@ -591,6 +596,7 @@ export const dict = {
   "profile.usage.source.direct": "مستقیم",
   "profile.usage.state.stale": "آخرین میزان استفاده به‌روزشده نمایش داده می‌شود.",
   "profile.usage.state.unavailable": "میزان استفاده در دسترس نیست.",
+  "profile.usage.state.empty": "هیچ محدودیتی برای استفاده گزارش نشده است.",
   "profile.usage.plan.pastDue": "طرح: سررسید گذشته",
   "profile.usage.plan.canceling": "طرح: در پایان دوره لغو می‌شود",
   "profile.usage.plan.unknown": "طرح: وضعیت نامشخص",
@@ -821,7 +827,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "مهارت‌ها",
 
   "settings.browser.description":
-    "وقتی فعال است، عامل هوش مصنوعی می‌تواند با صفحات وب تعامل داشته باشد — پیمایش، کلیک، تایپ و گرفتن اسکرین‌شات. یک پنجره Chrome باز می‌شود تا بتوانید عملکرد عامل را مشاهده کنید.",
+    "پیکربندی اتوماسیون مرورگر داخلی با پشتیبانی Playwright. Kilo می‌تواند در جلسات شما در صفحات وب پیمایش کند، با آن‌ها تعامل داشته باشد و اسکرین‌شات بگیرد.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
   "settings.browser.enable.description": "سرور Playwright MCP را با بک‌اند CLI ثبت کنید.",
   "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
@@ -879,15 +885,26 @@ export const dict = {
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "یک برد را بین یک جلسهٔ اصلی و عامل‌های فرعی مسئول وظایف آن، از جمله عامل‌های فرعی تودرتو، به اشتراک بگذارید. از آن برای تلاش‌های موازی جهت یافتن راه‌حل یا کارهای مکمل استفاده کنید، نه برای هر وظیفه.",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
   "settings.experimental.imageGenerationModel.description": "مدل تولید تصویر",
   "settings.experimental.imageGenerationModel.placeholder": "پیش‌فرض (مسیریاب خودکار)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "شناسه مدلی که به نقطه پایانی رونویسی دلخواه شما فرستاده می‌شود، برای نمونه whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "نشانی پایه تبدیل گفتار به متن",
+  "settings.models.speechToTextBaseUrl.description":
+    "به‌جای Kilo Gateway از یک API رونویسی سازگار با OpenAI استفاده کنید. مدل‌ها از /models خوانده می‌شوند و صدا به /audio/transcriptions فرستاده می‌شود. برای استفاده از Kilo Gateway خالی بگذارید.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "کلید API تبدیل گفتار به متن",
+  "settings.models.speechToTextApiKey.description":
+    "توکن Bearer که به نشانی پایه رونویسی دلخواه فرستاده می‌شود. در فایل پیکربندی Kilo شما ذخیره می‌شود.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "برای استفاده از تبدیل گفتار به متن، ارائه‌دهنده Kilo را فعال کرده و وارد شوید. تبدیل گفتار به متن در حال حاضر فقط از طریق Kilo Gateway پشتیبانی می‌شود.",
+    "برای استفاده از تبدیل گفتار به متن، ارائه‌دهنده Kilo را فعال کرده و وارد شوید، یا در پایین یک نشانی پایه رونویسی دلخواه تعیین کنید.",
   "settings.models.speechToTextModel.title": "مدل تبدیل گفتار به متن",
   "settings.models.speechToTextModel.description": "مدل رونویسی Kilo Gateway را برای ورودی صوتی انتخاب کنید.",
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
@@ -1101,6 +1118,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "مدل مورد استفاده برای فشرده‌سازی خودکار و دستی. برای استفاده از مدل چت، خالی بگذارید. هزینه، سرعت و کیفیت خلاصه به مدل بستگی دارند.",
   "settings.context.compactionModel.useChatModel": "استفاده از مدل چت",
+  "settings.context.compactionModel.hint": "برای انتخاب مدل مورد استفاده در فشرده‌سازی، به تنظیمات مدل‌ها مراجعه کنید.",
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",
@@ -1144,9 +1162,12 @@ export const dict = {
   "settings.display.username.description": "نام کاربری سفارشی که در مکالمات نمایش داده می‌شود",
   "settings.display.fontSize.title": "اندازه قلم",
   "settings.display.fontSize.description": "اندازه قلم رابط کاربری وب‌ویو Kilo را مستقل از VS Code تنظیم کنید.",
-  "settings.display.reasoningAutoCollapse.title": "جمع‌شدن خودکار استدلال",
-  "settings.display.reasoningAutoCollapse.description":
-    "بلوک‌های استدلال را پس از اتمام نوشتن توسط عامل جمع می‌کند. برای نگه داشتن استدلال در حالت باز، این گزینه را خاموش بگذارید مگر اینکه خودتان آن را جمع کنید.",
+  "settings.display.reasoningDisplay.title": "بلوک‌های استدلال",
+  "settings.display.reasoningDisplay.description":
+    "انتخاب کنید که بلوک‌های استدلال چگونه شروع شوند. باز متن کامل را نشان می‌دهد، پیش‌نمایش آن را به یک پیش‌نمایش کوتاه قابل اسکرول محدود می‌کند، و عنوان تنها عنوان و نشانگر پخش جریانی را تا زمانی که آن را باز کنید نمایش می‌دهد.",
+  "settings.display.reasoningDisplay.expanded": "باز",
+  "settings.display.reasoningDisplay.preview": "پیش‌نمایش",
+  "settings.display.reasoningDisplay.headline": "عنوان",
   "settings.display.shiftTabCycle.title": "چرخش سطح استدلال با Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "در ورودی پرامپت، Shift+Tab را فشار دهید تا به سطح تلاش استدلال بعدی بروید. برای حفظ عملکرد Shift+Tab جهت ناوبری فوکوس صفحه‌کلید، این گزینه را غیرفعال کنید.",
@@ -1300,6 +1321,18 @@ export const dict = {
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ذخیرهٔ محلی",
+  "diffViewer.comment.sendToAgent": "ارسال به عامل",
+  "diffViewer.comment.postToGithub": "انتشار در GitHub",
+  "diffViewer.comment.loadFailed": "بارگذاری تغییرات درخواست ادغام ممکن نشد.",
+  "diffViewer.comment.unavailable": "این خط در تصویر لحظه‌ای فعلی درخواست ادغام موجود نیست.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "باز کردن درخواست ادغام",
+  "diffViewer.comment.localChanges": "تغییرات محلی",
+  "diffViewer.comment.prChanges": "تغییرات PR",
+  "diffViewer.comment.sendToKilo": "ارسال به Kilo",
+  "diffViewer.comment.sendToGithub": "ارسال به GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "انتخاب مقصد",
   "diffViewer.notice.snapshotsDisabled":
     "عکس‌های فوری برای این مخزن غیرفعال هستند. لطفاً فایل‌های پیکربندی خود را ویرایش کنید تا تغییرات جلسه نمایش داده شوند.",
 
@@ -1322,5 +1355,11 @@ export const dict = {
   "chat.search.close": "بستن جستجو",
   "chat.search.invalidRegex": "عبارت منظم نامعتبر",
   "chat.search.noResults": "نتیجه‌ای یافت نشد",
+  "settings.experimental.browserAutomation.title": "مرورگر یکپارچه",
+  "settings.experimental.browserAutomation.description":
+    "پیش‌نمایش برنامه‌های محلی را در Agent Manager نشان دهید و ابزار browser_open را در اختیار جلسات Agent Manager قرار دهید.",
+  "settings.experimental.browserAutomation.systemChrome.title": "استفاده از Chrome سیستم",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
 }

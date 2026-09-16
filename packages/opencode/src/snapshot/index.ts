@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } from "effect"
-import { Struct } from "effect" // kilocode_change
+import { Struct, Fiber } from "effect" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
@@ -17,7 +17,7 @@ import { Info } from "@opencode-ai/schema/file-diff"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { DiffFull } from "../kilocode/snapshot/diff-full"
 import { KiloSnapshotTrack } from "../kilocode/snapshot/track"
-import { KiloSnapshotSeed } from "../kilocode/snapshot/seed"
+import { KiloSnapshotPrepare } from "../kilocode/snapshot/prepare"
 import { KiloSnapshotMaterialize } from "../kilocode/snapshot/materialize"
 import type { MessageID, SessionID } from "../session/schema"
 import { withStatics } from "@opencode-ai/core/schema"
@@ -55,7 +55,7 @@ interface GitResult {
 
 export const MAX_DIFF_SIZE = 256 * 1024 // kilocode_change
 
-type State = Omit<Interface, "init">
+type State = Omit<Interface, "init"> & { prepare: () => Effect.Effect<boolean> } // kilocode_change
 
 export interface Interface {
   readonly init: () => Effect.Effect<void>
@@ -315,21 +315,43 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             yield* sync(Array.from(block))
             // Stage only the allowed candidate paths so snapshot updates stay scoped.
             // kilocode_change start - initial seeded writes stay protected by the source pin
+            // A large candidate set with nothing filtered out is the whole worktree, so one
+            // bulk add is equivalent and avoids quadratic pathspec matching.
+            const bulk = allow.length > 1000 && !ignored.size && !block.size && state.directory === state.worktree
             yield* stage(
               allow.filter((item) => !block.has(item)),
-              opts,
+              { ...opts, root: opts?.root || bulk },
             )
           })
 
-          const materialize = Effect.fnUntraced(function* () {
-            yield* locked(KiloSnapshotMaterialize.run({ gitdir: state.gitdir, git, fs }).pipe(Effect.orDie)).pipe(
-              Effect.timeout("5 minutes"),
-              Effect.catchCause((cause) =>
-                Effect.logError("snapshot materialization failed", { cause: Cause.pretty(cause) }),
+          // Materialization repacks every borrowed object under the snapshot lock. After a
+          // snapshot it waits until the repository has been quiet, so the tool steps of the
+          // running turn are not blocked behind it; every new snapshot restarts the wait.
+          const scheduled = { fiber: undefined as Fiber.Fiber<void> | undefined, running: false }
+          const materialize = Effect.fnUntraced(function* (idle = 0) {
+            if (scheduled.running) return
+            if (scheduled.fiber) yield* Fiber.interrupt(scheduled.fiber)
+            const work = Effect.gen(function* () {
+              yield* Effect.sleep(Duration.millis(idle))
+              // Nothing to resume for a repository that does not exist yet; taking the lock
+              // here would only race the first snapshot and then repack right behind it.
+              if (!(yield* exists(state.gitdir))) return
+              scheduled.running = true
+              yield* locked(KiloSnapshotPrepare.resume({ gitdir: state.gitdir, git, fs }).pipe(Effect.orDie)).pipe(
+                Effect.timeout("5 minutes"),
+                Effect.catchCause((cause) =>
+                  Effect.logError("snapshot materialization failed", { cause: Cause.pretty(cause) }),
+                ),
+              )
+            }).pipe(
+              Effect.ensuring(
+                Effect.sync(() => {
+                  scheduled.running = false
+                  scheduled.fiber = undefined
+                }),
               ),
-              Effect.forkDetach,
-              Effect.asVoid,
             )
+            scheduled.fiber = yield* Effect.forkDetach(work)
           })
           // kilocode_change end
 
@@ -355,37 +377,42 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
-          // kilocode_change start
+          // kilocode_change start - share locked initialization without creating a tracking ref
+          const initialize = (prepare = false) =>
+            KiloSnapshotPrepare.initialize(
+              {
+                dir: state.directory,
+                worktree: state.worktree,
+                gitdir: state.gitdir,
+                limit,
+                git,
+                fs,
+              },
+              prepare,
+            )
+
+          const prepare = Effect.fnUntraced(function* () {
+            if (yield* exists(state.gitdir)) return false
+            return yield* locked(
+              Effect.gen(function* () {
+                if (!(yield* enabled())) return false
+                if ((yield* initialize(true)) === undefined) return false
+                // Reconcile the working tree now so the first snapshot only records later changes.
+                yield* add({ root: state.directory === state.worktree })
+                return true
+              }),
+            )
+          })
+
           const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) {
             // kilocode_change end
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return
-                const existed = yield* exists(state.gitdir)
-                const seeded: { value?: KiloSnapshotSeed.Output } = {} // kilocode_change
-                yield* fs.ensureDir(state.gitdir).pipe(Effect.orDie)
-                if (!existed) {
-                  yield* git(["init"], {
-                    env: { GIT_DIR: state.gitdir, GIT_WORK_TREE: state.worktree },
-                  })
-                  yield* git(["--git-dir", state.gitdir, "config", "core.autocrlf", "false"])
-                  yield* git(["--git-dir", state.gitdir, "config", "core.longpaths", "true"])
-                  yield* git(["--git-dir", state.gitdir, "config", "core.symlinks", "true"])
-                  yield* git(["--git-dir", state.gitdir, "config", "core.fsmonitor", "false"])
-                  // kilocode_change start - seed all eligible new snapshots from the worktree index
-                  seeded.value = yield* KiloSnapshotSeed.seed({
-                    dir: state.directory,
-                    worktree: state.worktree,
-                    gitdir: state.gitdir,
-                    limit,
-                    git,
-                    fs,
-                  })
-                  // kilocode_change end
-                  yield* Effect.logInfo("initialized")
-                }
                 // kilocode_change start - pin every snapshot before background materialization
-                const seed = seeded.value?.source
+                const seeded = yield* initialize()
+                const existed = seeded === undefined
+                const seed = seeded?.source
                 const env = seed
                   ? {
                       GIT_OBJECT_DIRECTORY: seed.staging,
@@ -417,7 +444,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   return
                 if (!(yield* KiloSnapshotMaterialize.pin({ gitdir: state.gitdir, git, fs }, hash))) return
                 const alt = path.join(state.gitdir, "objects", "info", "alternates")
-                if (yield* exists(alt)) yield* materialize()
+                if (yield* exists(alt)) yield* materialize(KiloSnapshotMaterialize.idle())
                 // kilocode_change end
                 yield* Effect.logInfo("tracking", { hash, cwd: state.directory, git: state.gitdir })
                 return hash
@@ -912,7 +939,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           })
           // kilocode_change end
 
-          return { cleanup, track, patch, restore, revert, diff, diffFull, diffFile } // kilocode_change - diffFile
+          return { cleanup, prepare, track, patch, restore, revert, diff, diffFull, diffFile } // kilocode_change
         }),
       )
 
@@ -922,7 +949,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
       const max = 100
       // kilocode_change end
 
-      return Service.of({
+      // kilocode_change - bind preparation without changing the shared service interface
+      const service = Service.of({
         init: Effect.fn("Snapshot.init")(function* () {
           yield* InstanceState.get(state)
         }),
@@ -998,6 +1026,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
         }),
         // kilocode_change end
       })
+      return KiloSnapshotPrepare.bind(service, () => InstanceState.useEffect(state, (s) => s.prepare())) // kilocode_change
     }),
   )
 

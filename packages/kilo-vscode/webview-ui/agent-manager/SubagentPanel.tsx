@@ -49,7 +49,11 @@ const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props
   )
 }
 
-const SubagentContent: Component<Props & { activity: (id: string) => Activity }> = (props) => {
+interface ContentProps extends Props {
+  activity: (id: string) => Activity
+}
+
+const SubagentContent: Component<ContentProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const ids = () => props.tabs().map((tab) => tab.id)
