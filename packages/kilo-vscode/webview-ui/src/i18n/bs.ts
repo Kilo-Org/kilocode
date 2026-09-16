@@ -202,6 +202,7 @@ export const dict = {
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
+  "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
   "prompt.action.autoApprove.disable": "Isključi automatsko odobravanje",
   "prompt.action.autoApprove.enabled":

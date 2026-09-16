@@ -202,6 +202,7 @@ export const dict = {
   "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
+  "prompt.paste.expand": "Haz clic para expandir el texto pegado",
   "prompt.action.autoApprove.enable": "Activar aprobación automática",
   "prompt.action.autoApprove.disable": "Desactivar aprobación automática",
   "prompt.action.autoApprove.enabled":

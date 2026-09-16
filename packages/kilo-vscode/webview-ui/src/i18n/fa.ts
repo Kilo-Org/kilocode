@@ -202,6 +202,7 @@ export const dict = {
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.action.indexing": "تنظیمات ایندکس‌گذاری",
   "prompt.action.autoApprove.enable": "فعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.disable": "غیرفعال‌سازی تأیید خودکار",

@@ -201,6 +201,7 @@ export const dict = {
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
