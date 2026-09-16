@@ -33,7 +33,6 @@ import type {
   RunStatus,
   PRStatus,
   AgentManagerPRStatusMessage,
-  AgentManagerPRErrorMessage,
   AgentManagerProjectsMessage,
   AgentProjectSnapshot,
   ManagedSessionState,
@@ -80,6 +79,7 @@ import { createModeRouter } from "./mode-router"
 import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
+import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
@@ -143,6 +143,7 @@ import {
   addPendingTab as addLocalPendingTab,
   nextTabAfterClose,
   openSessionTab,
+  pruneClosed,
   reconcileTrackedTabs,
   replacePendingTab,
   restoreTrackedTabs,
@@ -304,6 +305,7 @@ const AgentManagerContent: Component = () => {
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
   })
+  onCleanup(session.trackScopes(registry.scopes))
   const defaultBase = (id: string) =>
     projectDefaultBase(registry.ensure(id), id === activeProjectId(), repoDetectedBranch())
   const localSessionIDs = () => registry.active().tabs.ids()
@@ -311,6 +313,19 @@ const AgentManagerContent: Component = () => {
   /** Remove a session ID from the local tab (no-op if absent). */
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
+  // Local sessions the user closed while a host state push can still list them.
+  // Keyed per project so switching projects cannot prune another project's
+  // suppression entry. Kept until the host stops tracking the id so a stale push
+  // cannot resurrect the tab; see `restoreTrackedTabs` in the state handler.
+  const closedLocals = new Map<string, Set<string>>()
+  const closedSet = () => {
+    const key = currentProjectId() ?? "single"
+    const existing = closedLocals.get(key)
+    if (existing) return existing
+    const set = new Set<string>()
+    closedLocals.set(key, set)
+    return set
+  }
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const sidebar = createSidebarCollapse(vscode, { initial: persisted?.sidebarCollapsed })
   const sidebarCollapsed = sidebar.collapsed
@@ -723,6 +738,7 @@ const AgentManagerContent: Component = () => {
     return id
   }
   const placeLocal = (id: string, pending: string | undefined, active: string | undefined) => {
+    closedSet().delete(id)
     const existing = localSessionIDs().includes(id)
     const next = pending
       ? replacePendingTab({ ids: localSessionIDs(), active }, pending, id)
@@ -1188,12 +1204,16 @@ const AgentManagerContent: Component = () => {
       if (ms?.worktreeId) setSelection(ms.worktreeId)
     }
     // Restore local session IDs from persisted state (sessions with no worktreeId)
+    const tracked = trackedSessionInventory(state.sessions, session.sessions())
+    const closed = closedSet()
+    pruneClosed(closed, state.sessions)
     const restored = restoreTrackedTabs(
-      trackedSessionInventory(state.sessions, session.sessions()),
+      tracked,
       localSessionIDs(),
       state.tabOrder?.[LOCAL],
       isPending,
       applyTabOrder,
+      closed,
     )
     if (restored) setLocalSessionIDs(restored)
     if (switched === "switched" && needsLocalDraft(localSessionIDs(), terms.forSelection(nsKey(LOCAL)))) addPendingTab()
@@ -1604,15 +1624,7 @@ const AgentManagerContent: Component = () => {
         managedSession: focusManagedSession,
       })
 
-      if (msg.type === "agentManager.prError") {
-        if (!isCurrent(msg, currentProjectId())) return
-        const ev = msg as AgentManagerPRErrorMessage
-        showToast({
-          variant: "error",
-          title: t(`agentManager.pr.error.${ev.error}.title`),
-          description: t(`agentManager.pr.error.${ev.error}.description`),
-        })
-      }
+      if (reportFailure(msg, { toast: showToast, t, project: currentProjectId() }) === "stale") return
 
       if (projectLive.apply(msg)) return
     })
@@ -1703,6 +1715,7 @@ const AgentManagerContent: Component = () => {
   })
   const prDiffComments = createPRDiffCommentState({
     post: vscode.postMessage,
+    onMessage: vscode.onMessage,
     project: activeProjectId,
     statuses: prStatuses,
   })
@@ -1999,6 +2012,7 @@ const AgentManagerContent: Component = () => {
     }
     forgetSessionFocus(sessionId)
     if (pending || localSet().has(sessionId)) {
+      if (!pending) closedSet().add(sessionId)
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
     }
     if (pending) {
@@ -2350,6 +2364,12 @@ const AgentManagerContent: Component = () => {
             busy={(id) => busyWorktrees().has(id)}
             blocked={activity.blocked}
             isStaleWorktree={(id) => staleWorktreeIds().has(id)}
+            worktreeHealth={(id) => registry.active().worktreeHealth()[id]}
+            orphanDirectories={() => registry.active().orphanDirectories()}
+            onRestoreWorktree={(id) => vscode.postMessage({ type: "agentManager.restoreWorktree", worktreeId: id })}
+            onRemoveStaleKeepSessions={(id) =>
+              vscode.postMessage({ type: "agentManager.removeStaleWorktree", worktreeId: id, keepSessions: true })
+            }
             shortcutMap={shortcutMap}
             worktreeStats={worktreeStats}
             prStatuses={prStatuses}

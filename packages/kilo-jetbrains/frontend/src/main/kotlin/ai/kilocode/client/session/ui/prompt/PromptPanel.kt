@@ -20,6 +20,7 @@ import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
 import ai.kilocode.log.ChatLogSummary
@@ -50,6 +51,7 @@ import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
@@ -166,6 +168,7 @@ class PromptPanel(
     }
     private val attachments = mutableListOf<PromptAttachment>()
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var lookupBus: MessageBusConnection? = null
@@ -197,6 +200,7 @@ class PromptPanel(
             ed.settings.setBlockCursor(false)
             SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.putUserData(PROMPT_TEXT_PASTE_HANDLER_KEY, PromptTextPasteHandler { handlePastedText(ed, it) })
             ed.setHorizontalScrollbarVisible(false)
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -205,6 +209,7 @@ class PromptPanel(
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
             syncHighlights()
+            folds.install(ed)
             ed.caretModel.addCaretListener(object : CaretListener {
                 override fun caretPositionChanged(e: CaretEvent) {
                     val provider = completion ?: return
@@ -322,6 +327,7 @@ class PromptPanel(
                     onChange()
                     return
                 }
+                folds.sync()
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
@@ -584,6 +590,7 @@ class PromptPanel(
     @RequiresEdt
     fun clear() {
         editor.text = ""
+        folds.clear()
         attachments.clear()
         completion?.clearMentions()
         completion?.prewarm()
@@ -923,6 +930,31 @@ class PromptPanel(
         return processAttachments("prompt-paste", "editor", null, transferable, 0)
     }
 
+    /**
+     * Handles a paste large enough to collapse ([collapsible]) by inserting it and folding it behind
+     * a placeholder. Every such paste becomes its own fold, so a second one never disturbs the
+     * first even when the text is identical.
+     */
+    @RequiresEdt
+    private fun handlePastedText(ed: EditorEx, raw: String) {
+        val text = normalizePaste(raw)
+        val sel = ed.selectionModel
+        val start = if (sel.hasSelection()) sel.selectionStart else ed.caretModel.offset
+        val end = if (sel.hasSelection()) sel.selectionEnd else start
+        // Inserting can expand a neighbouring fold on its own; quiet keeps that from reading as the
+        // reader unfolding it.
+        folds.quiet {
+            WriteCommandAction.runWriteCommandAction(project) {
+                ed.document.replaceString(start, end, text)
+                ed.caretModel.moveToOffset(start + text.length)
+            }
+        }
+        folds.fold(ed, start, start + text.length, placeholder(text))
+        syncEditorHeight()
+    }
+
+    private fun normalizePaste(text: String): String = text.replace("\r\n", "\n").replace('\r', '\n')
+
     private fun processAttachments(
         kind: String,
         area: String,
@@ -1121,6 +1153,7 @@ class PromptPanel(
         ApplicationManager.getApplication().invokeLater {
             deferred = false
             if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            folds.sync()
             syncEditorHeight()
             syncHighlights()
             syncButton()

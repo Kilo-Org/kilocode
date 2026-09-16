@@ -96,12 +96,12 @@ export const BoardReadTool = Tool.define<
           const cfg = yield* config.get()
           if (
             !BoardEnabled.resolve({
-              config: cfg.experimental?.shared_agent_board,
+              config: cfg.shared_agent_board,
               flag: flags.experimentalSharedAgentBoard,
             })
           ) {
             return yield* Effect.fail(
-              new Error("The shared agent board is disabled. Enable it in Experimental settings."),
+              new Error("The shared agent board is disabled. Enable Kilo Swarm in Agent Behaviour settings."),
             )
           }
           yield* ctx.ask({ permission: "board_read", patterns: ["*"], always: ["*"], metadata: {} })
@@ -165,12 +165,12 @@ export const BoardPostTool = Tool.define<
           const cfg = yield* config.get()
           if (
             !BoardEnabled.resolve({
-              config: cfg.experimental?.shared_agent_board,
+              config: cfg.shared_agent_board,
               flag: flags.experimentalSharedAgentBoard,
             })
           ) {
             return yield* Effect.fail(
-              new Error("The shared agent board is disabled. Enable it in Experimental settings."),
+              new Error("The shared agent board is disabled. Enable Kilo Swarm in Agent Behaviour settings."),
             )
           }
           yield* ctx.ask({

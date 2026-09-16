@@ -15,6 +15,7 @@ import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
+import { BUDGET, isTimeout } from "./command-budget"
 import { WorktreePool, type PoolStart } from "./worktree-pool"
 import {
   parsePRUrl,
@@ -26,9 +27,12 @@ import {
   classifyPRError,
   validateGitRef,
   normalizePath,
+  unregisteredWorktree,
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
+import { pathKey } from "./project/paths"
+import { Semaphore } from "./semaphore"
 
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
@@ -47,6 +51,19 @@ function directory(branch: string): string {
   const hash = createHash("sha256").update(branch).digest("hex").slice(0, 16)
   return `${slug}-${hash}`
 }
+
+/** Why a directory under `.kilo/worktrees/` could not be used as a worktree. */
+export type WorktreeProbeReason =
+  /** No `.git` file — a directory that outlived its worktree, e.g. holding only `.kilo-dev/`. */
+  | "leftover"
+  /** Has a `.git` file but git does not track the path. */
+  | "unregistered"
+  /** A pool slot, not a user worktree. */
+  | "pooled"
+  /** git could not answer for this path. */
+  | "probe-failed"
+
+export type WorktreeProbe = { ok: true; info: WorktreeInfo } | { ok: false; path: string; reason: WorktreeProbeReason }
 
 export interface WorktreeInfo {
   branch: string
@@ -118,6 +135,8 @@ export class WorktreeManager {
   private readonly binary: string
   private readonly log: (msg: string) => void
   private readonly pool: WorktreePool
+  /** Deferred git bookkeeping from `detachWorktree`, flushed by `settle()`. */
+  private readonly pending = new Set<Promise<void>>()
   /**
    * Delay before a claimed slot is replaced. The replacement checkout competes for disk
    * and CPU with the first prompt of the new session (snapshot seed, backend warm-up),
@@ -125,6 +144,11 @@ export class WorktreeManager {
    */
   rewarmDelay = 8_000
   private migrated = false
+  /**
+   * Gate for discovery fan-out only. Deliberately not the poller semaphore: startup discovery must
+   * not queue behind PR polling, and polling must not stall behind a directory scan.
+   */
+  private readonly scanGate = new Semaphore(4)
 
   constructor(
     root: string,
@@ -173,7 +197,29 @@ export class WorktreeManager {
   private static fetchCache = new Map<string, number>()
   private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
   private gitAvailable = false
+  private probeFailed = false
   private lfsAvailable: boolean | undefined
+  /** When the last negative git-lfs probe ran, so a later install is picked up. */
+  private lfsProbed = 0
+  private static readonly LFS_PROBE_TTL = 300_000
+
+  /** Repository root this manager operates on. */
+  get repo(): string {
+    return this.root
+  }
+
+  /** Absolute `.kilo/worktrees` directory this manager owns. */
+  get worktreesDir(): string {
+    return this.dir
+  }
+
+  /**
+   * True only when a `git --version` probe failed to spawn. Callers use this to decide whether a
+   * downstream `ENOENT` really means "git is missing" instead of "that directory is gone".
+   */
+  get gitProbeFailed(): boolean {
+    return this.probeFailed
+  }
 
   private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
     const key = this.root
@@ -336,11 +382,15 @@ export class WorktreeManager {
   private async ensureGitAvailable(): Promise<void> {
     if (this.gitAvailable) return
     try {
-      await execWithShellEnv(this.binary, ["--version"])
+      // Bounded: an unbounded probe turns a wedged git into a hang with no error to report.
+      await execWithShellEnv(this.binary, ["--version"], { timeout: BUDGET.probe })
       this.gitAvailable = true
+      this.probeFailed = false
     } catch (error) {
       this.gitAvailable = false
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+        // The probe runs without a cwd, so ENOENT here can only mean the binary is missing.
+        this.probeFailed = true
         throw new Error(
           "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
         )
@@ -517,15 +567,18 @@ export class WorktreeManager {
     if (!fs.existsSync(worktreePath)) return worktreePath
     if (!branch) throw new Error(`Worktree path already exists: ${worktreePath}`)
     const entries = parseWorktreeList(await this.git.raw(["worktree", "list", "--porcelain"]))
-    const canonical = normalizePath(await fs.promises.realpath(worktreePath))
-    const entry = entries.find((entry) => normalizePath(entry.path) === canonical)
+    // pathKey, not a lexical compare: git reports realpaths, and on a case-insensitive filesystem a
+    // registration only differing in case would read as "this path is free" — then `worktree add`
+    // fails on a directory this function was called to make usable.
+    const registered = new Set(entries.map((entry) => pathKey(entry.path)))
+    const canonical = pathKey(worktreePath)
+    const entry = entries.find((entry) => pathKey(entry.path) === canonical)
     if (entry && (entry.branch !== branch || entry.detached || entry.bare)) {
       // A literal branch can match another ref's hashed directory name.
       const parent = await fs.promises.realpath(path.dirname(worktreePath))
       for (let suffix = 2; ; suffix++) {
         const candidate = `${worktreePath}-${suffix}`
-        const canonical = normalizePath(path.join(parent, path.basename(candidate)))
-        if (!fs.existsSync(candidate) && !entries.some((entry) => normalizePath(entry.path) === canonical)) {
+        if (!fs.existsSync(candidate) && !registered.has(pathKey(path.join(parent, path.basename(candidate))))) {
           return candidate
         }
       }
@@ -613,13 +666,97 @@ export class WorktreeManager {
    * worktree was created despite a non-zero exit code (e.g., hook failure).
    */
   private async worktreeRegistered(wtPath: string): Promise<boolean> {
+    const registered = await this.registeredPaths()
+    return registered?.has(pathKey(wtPath)) ?? false
+  }
+
+  /**
+   * Normalized paths git currently tracks as worktrees, or undefined when the listing failed.
+   *
+   * One call answers "is this directory still a worktree?" for every directory at once, which is
+   * what keeps discovery from spawning a `rev-parse` per directory.
+   */
+  async registeredPaths(): Promise<Set<string> | undefined> {
     try {
       const raw = await this.git.raw(["worktree", "list", "--porcelain"])
-      const normalized = normalizePath(wtPath)
-      return parseWorktreeList(raw).some((e) => normalizePath(e.path) === normalized)
-    } catch {
-      return false
+      return new Set(parseWorktreeList(raw).map((entry) => pathKey(entry.path)))
+    } catch (err) {
+      this.log(`registeredPaths: worktree list failed: ${err}`)
+      return undefined
     }
+  }
+
+  /** Drop git metadata for worktrees whose directory is gone. */
+  async pruneWorktrees(): Promise<void> {
+    await this.withGitLock(async () => {
+      await this.git.raw(["worktree", "prune"]).catch((err: unknown) => {
+        this.log(`pruneWorktrees: prune failed: ${err}`)
+      })
+    })
+  }
+
+  /**
+   * Directory names directly under `.kilo/worktrees/`, excluding in-flight deletions.
+   *
+   * Sorted: `readdir` order is filesystem-dependent (ext4 does not return alphabetical order the way
+   * APFS/HFS+ tend to), and an orphan list that reorders itself between reconciles for no reason a
+   * user can see is confusing in the UI and flaky in tests that assert on it.
+   */
+  async worktreeDirs(): Promise<string[]> {
+    if (!fs.existsSync(this.dir)) return []
+    const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
+    return entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX))
+      .map((e) => e.name)
+      .sort()
+  }
+
+  /**
+   * Re-create a worktree directory that was deleted outside Agent Manager, reusing its branch.
+   *
+   * The branch still holds the work, so this is a recovery rather than a new worktree: same path,
+   * same branch, no new branch created.
+   */
+  async restoreWorktree(worktreePath: string, branch: string): Promise<void> {
+    if (!this.isManagedPath(worktreePath)) {
+      throw new Error(`Refusing to restore a path outside the worktrees directory: ${worktreePath}`)
+    }
+    if (fs.existsSync(worktreePath)) throw new Error(`Path already exists: ${worktreePath}`)
+    validateGitRef(branch, "branch")
+    await this.ensureGitAvailable()
+    await this.withGitLock(async () => {
+      await this.ensureDir()
+      // Prune first: a leftover registration for this path would fail the add. A failed prune is not
+      // fatal, but it is the likely cause of any add failure that follows, so make it visible.
+      await this.git
+        .raw(["worktree", "prune"])
+        .catch((err: unknown) => this.log(`restoreWorktree: prune failed: ${err}`))
+      await this.git.raw(["worktree", "add", worktreePath, branch])
+    })
+    this.log(`Restored worktree ${worktreePath} from branch ${branch}`)
+  }
+
+  /**
+   * Delete a directory under `.kilo/worktrees/` that git no longer tracks.
+   *
+   * Only ever called for a user-confirmed cleanup of an orphaned directory: there is no worktree
+   * left to remove, so this is a plain recursive delete behind the managed-path guard.
+   */
+  async removeOrphanDirectory(target: string): Promise<void> {
+    if (!this.isManagedPath(target)) {
+      throw new Error(`Refusing to remove a path outside the worktrees directory: ${target}`)
+    }
+    // Fail closed: an unanswerable `git worktree list` is not evidence the path is orphaned, and
+    // this is the only re-check between a stale webview orphan list and a recursive delete.
+    const registered = await this.registeredPaths()
+    if (!registered) {
+      throw new Error(`Refusing to remove a worktree directory while git cannot list worktrees: ${target}`)
+    }
+    if (registered.has(pathKey(target))) {
+      throw new Error(`Refusing to remove a live worktree: ${target}`)
+    }
+    await fs.promises.rm(target, RM_OPTS)
+    this.log(`Removed orphaned worktree directory: ${target}`)
   }
 
   /**
@@ -650,15 +787,9 @@ export class WorktreeManager {
       return
     }
 
-    this.pool.release(worktreePath)
-
-    // 1. Atomic rename — makes the worktree instantly invisible to git and pollers.
-    //    rename() is near-instant on the same filesystem (same parent dir guarantees this).
-    const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
-    try {
-      await fs.promises.rename(worktreePath, temp)
-    } catch (err) {
-      this.log(`Rename failed, falling back to force remove: ${worktreePath}: ${err}`)
+    const temp = await this.detach(worktreePath)
+    if (!temp) {
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
       await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch((error: unknown) => {
         this.log(`Git worktree removal failed for ${worktreePath}: ${error}`)
       })
@@ -670,6 +801,64 @@ export class WorktreeManager {
       return
     }
 
+    await this.finishRemoval(worktreePath, temp, branch)
+  }
+
+  /**
+   * Release the pool slot and atomically rename the worktree directory away so git and pollers
+   * stop seeing it instantly. rename() is near-instant on the same filesystem (same parent dir
+   * guarantees this). Returns the temp path, or undefined when the rename failed.
+   */
+  private async detach(worktreePath: string): Promise<string | undefined> {
+    this.pool.release(worktreePath)
+    const temp = path.join(path.dirname(worktreePath), `${TEMP_PREFIX}${randomUUID()}`)
+    return fs.promises.rename(worktreePath, temp).then(
+      () => temp,
+      (err: unknown) => {
+        this.log(`Rename failed for ${worktreePath}: ${err}`)
+        return undefined
+      },
+    )
+  }
+
+  /**
+   * Remove a worktree directory now and finish the git bookkeeping afterwards.
+   *
+   * The rename needs no repo git lock, so deletion stays instant while a pool refill or another
+   * creation holds the lock (a `git worktree add` takes seconds in large repositories). The
+   * returned `done` promise settles once the metadata prune and branch deletion ran under the
+   * lock; it never rejects. Pending bookkeeping is awaited by `settle()` on dispose. Callers that
+   * need the bookkeeping first use `removeWorktree`.
+   */
+  async detachWorktree(worktreePath: string, branch?: string): Promise<{ done: Promise<void> }> {
+    if (!fs.existsSync(worktreePath) || !this.isManagedPath(worktreePath))
+      return { done: this.defer(worktreePath, this.removeWorktree(worktreePath, branch)) }
+
+    const temp = await this.detach(worktreePath)
+    if (!temp) {
+      await this.removeWorktree(worktreePath, branch)
+      return { done: Promise.resolve() }
+    }
+    const done = this.withGitLock(() => this.finishRemoval(worktreePath, temp, branch))
+    return { done: this.defer(worktreePath, done) }
+  }
+
+  /** Track deferred bookkeeping so `settle()` can flush it. Never rejects. */
+  private defer(worktreePath: string, task: Promise<void>): Promise<void> {
+    const tracked = task
+      .catch((err: unknown) => this.log(`Deferred worktree bookkeeping failed for ${worktreePath}: ${err}`))
+      .finally(() => this.pending.delete(tracked))
+    this.pending.add(tracked)
+    return tracked
+  }
+
+  /** Wait for deferred git bookkeeping from `detachWorktree` so a dispose does not orphan branches. */
+  async settle(): Promise<void> {
+    await Promise.all([...this.pending])
+  }
+
+  /** Git bookkeeping after a worktree directory was renamed away. Runs under the git lock. */
+  private async finishRemoval(worktreePath: string, temp: string, branch?: string): Promise<void> {
     // 2. Prune git metadata now that the directory is gone from the expected path
     await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
     this.log(`Removed worktree (rename+prune): ${worktreePath}`)
@@ -711,18 +900,28 @@ export class WorktreeManager {
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
+    const probes = await this.scanWorktrees()
+    return probes.flatMap((probe) => (probe.ok ? [probe.info] : []))
+  }
+
+  /**
+   * Probe every directory under `.kilo/worktrees/`, keeping the reason a directory was skipped.
+   *
+   * Bounded on purpose: this used to fan out one `git rev-parse` per directory in a single
+   * `Promise.all`, so a repository with dozens of leftover directories opened dozens of git
+   * processes at startup — the same storm that makes every command look like it timed out.
+   */
+  async scanWorktrees(): Promise<WorktreeProbe[]> {
     await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
     await markNoIndex(this.dir, this.log)
 
-    const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
+    const names = await this.worktreeDirs()
     this.cleanupOrphanedTempDirs()
-    const results = await Promise.all(
-      entries
-        .filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX))
-        .map((e) => this.worktreeInfo(path.join(this.dir, e.name))),
+    const registered = await this.registeredPaths()
+    return await Promise.all(
+      names.map((name) => this.scanGate.run(() => this.worktreeInfo(path.join(this.dir, name), registered))),
     )
-    return results.filter((info): info is WorktreeInfo => info !== undefined)
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
@@ -898,16 +1097,26 @@ export class WorktreeManager {
     await markNoIndex(this.dir, this.log)
   }
 
-  private async worktreeInfo(wtPath: string): Promise<WorktreeInfo | undefined> {
+  /**
+   * Probe one directory. The failure reason is part of the result so callers can tell a leftover
+   * directory from a broken worktree from a git that would not answer.
+   */
+  private async worktreeInfo(wtPath: string, registered?: Set<string>): Promise<WorktreeProbe> {
     const gitFile = path.join(wtPath, ".git")
-    if (!fs.existsSync(gitFile)) return undefined
+    if (!fs.existsSync(gitFile)) return { ok: false, path: wtPath, reason: "leftover" }
 
     try {
       const stat = await fs.promises.stat(gitFile)
-      if (!stat.isFile()) return undefined
+      if (!stat.isFile()) return { ok: false, path: wtPath, reason: "leftover" }
     } catch {
       // .git path inaccessible — not a valid worktree
-      return undefined
+      return { ok: false, path: wtPath, reason: "leftover" }
+    }
+
+    // Cheap and decisive: git already told us which paths it tracks, so a directory missing from
+    // that list is broken and does not deserve a git process of its own.
+    if (registered && !registered.has(pathKey(wtPath))) {
+      return { ok: false, path: wtPath, reason: "unregistered" }
     }
 
     try {
@@ -918,7 +1127,7 @@ export class WorktreeManager {
         this.readMetadata(wtPath),
       ])
       // Pooled slots are internal warm-up worktrees, not user sessions.
-      if (meta?.pooled) return undefined
+      if (meta?.pooled) return { ok: false, path: wtPath, reason: "pooled" }
       // Use persisted metadata if available, fall back to resolveBaseBranch.
       // Backward compat: old metadata may store "origin/main" in parentBranch without
       // a separate remote field. Try to detect this by checking if the prefix is a known remote.
@@ -936,16 +1145,23 @@ export class WorktreeManager {
           return { branch: meta.parentBranch }
         })()) ?? (await this.resolveBaseBranch())
       return {
-        branch: branch.trim(),
-        path: wtPath,
-        parentBranch: base.branch,
-        remote: base.remote,
-        createdAt: stat.birthtimeMs,
-        sessionId: meta?.sessionId,
+        ok: true,
+        info: {
+          branch: branch.trim(),
+          path: wtPath,
+          parentBranch: base.branch,
+          remote: base.remote,
+          createdAt: stat.birthtimeMs,
+          sessionId: meta?.sessionId,
+        },
       }
     } catch (error) {
-      this.log(`Failed to get info for worktree ${wtPath}: ${error}`)
-      return undefined
+      const msg = error instanceof Error ? error.message : String(error)
+      // Downgraded from a bare failure log: an unregistered worktree is an expected state with a
+      // recovery path, not an unexplained error.
+      const reason = unregisteredWorktree(msg) ? "unregistered" : "probe-failed"
+      this.log(`Worktree ${wtPath} unavailable (${reason}): ${msg}`)
+      return { ok: false, path: wtPath, reason }
     }
   }
 
@@ -1118,12 +1334,15 @@ export class WorktreeManager {
 
   async checkLfsAvailable(): Promise<boolean> {
     if (this.lfsAvailable) return true
+    // A negative verdict expires: installing git-lfs mid-session used to require a window reload.
+    if (this.lfsAvailable === false && Date.now() - this.lfsProbed < WorktreeManager.LFS_PROBE_TTL) return false
     try {
-      await execWithShellEnv(this.binary, ["lfs", "version"], { cwd: this.root, timeout: 5000 })
+      await execWithShellEnv(this.binary, ["lfs", "version"], { cwd: this.root, timeout: BUDGET.probe })
       this.lfsAvailable = true
       return true
     } catch {
       this.lfsAvailable = false
+      this.lfsProbed = Date.now()
       // git-lfs not installed
       return false
     }
@@ -1293,11 +1512,15 @@ export class WorktreeManager {
           "--json",
           "headRefName,baseRefName,headRepositoryOwner,isCrossRepository,title",
         ],
-        30000,
+        BUDGET.gh,
       )
       return JSON.parse(json) as PRInfo
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      // A killed process flushes no message classifyPRError can read, so without this a `gh` that
+      // hung is reported as an unexplained import failure — the same defect the poller's ladder was
+      // fixed for, on the path a user hits by pasting a PR url.
+      if (isTimeout(error)) throw new Error("GitHub CLI (gh) did not respond in time. Try again.")
       const kind = classifyPRError(msg)
       if (kind === "not_found") throw new Error(`PR #${parsed.number} not found in ${parsed.owner}/${parsed.repo}`)
       if (kind === "gh_missing")

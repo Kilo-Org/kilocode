@@ -13,6 +13,7 @@
         <applicationService serviceImplementation="ai.kilocode.client.onboarding.KiloOnboardingService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
         <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
+        <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptTextPasteProvider"/>
 
         <notificationGroup id="Kilo Code"
                            displayType="BALLOON"
@@ -392,12 +393,13 @@
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
-            <reference ref="Kilo.Worktree.CopyPrRef"/>
+            <separator/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
             <reference ref="Kilo.Worktree.OpenLocalDiff"/>
             <separator/>
             <reference ref="Kilo.Worktree.CopyBranchName"/>
             <reference ref="Kilo.Worktree.CopyBranchPath"/>
+            <reference ref="Kilo.Worktree.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>

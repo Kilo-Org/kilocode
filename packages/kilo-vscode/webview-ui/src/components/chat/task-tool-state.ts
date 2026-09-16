@@ -14,6 +14,20 @@ export function taskAutoOpen(status: string | undefined, background: boolean) {
 }
 
 /**
+ * The open state to persist for a card the user has not controlled, or
+ * undefined to leave the stored value alone. A running foreground card opens
+ * and stays open when the virtualizer remounts it after completion. A
+ * promoted background card collapses and must stay collapsed, so that
+ * collapse is stored too instead of leaving the earlier open value behind.
+ */
+export function taskStoredOpen(auto: boolean, background: boolean, touched: boolean) {
+  if (touched) return undefined
+  if (auto) return true
+  if (background) return false
+  return undefined
+}
+
+/**
  * Avatar state for a Task card. The child session's live status wins, because
  * a background Task tool part completes as soon as the child is started while
  * the child keeps working. Finished and waiting children keep a static glyph.

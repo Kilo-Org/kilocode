@@ -198,6 +198,7 @@ export const dict = {
   "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.paste.expand": "Click to expand pasted text",
   "prompt.action.indexing": "Indexing settings",
   "prompt.action.autoApprove.enable": "Enable auto-approve",
   "prompt.action.autoApprove.disable": "Disable auto-approve",
@@ -223,7 +224,7 @@ export const dict = {
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
-  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.start": "Start voice input",
   "speechToText.tooltip.shortcut":
     "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
@@ -589,6 +590,7 @@ export const dict = {
   "profile.usage.source.direct": "Direct",
   "profile.usage.state.stale": "Showing last updated usage.",
   "profile.usage.state.unavailable": "Usage unavailable.",
+  "profile.usage.state.empty": "No usage limits reported.",
   "profile.usage.plan.pastDue": "Plan: Past due",
   "profile.usage.plan.canceling": "Plan: Cancels at period end",
   "profile.usage.plan.unknown": "Plan: Status unknown",
@@ -818,15 +820,14 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Configure the browser runtime used by the experimental Agent Manager browser. The page preview stays in Agent Manager.",
+    "Configure built-in browser automation powered by Playwright. Kilo can navigate, interact with, and screenshot web pages in your sessions.",
   "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Enable the session-scoped Agent Manager browser for local applications.",
+  "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
   "settings.browser.systemChrome.title": "Use System Chrome",
   "settings.browser.systemChrome.description":
     "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.browser.headless.title": "Headless Mode",
-  "settings.browser.headless.description":
-    "Agent Manager always runs the browser headlessly. The page preview appears in the Browser panel.",
+  "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',
@@ -878,17 +879,29 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Share a board between a main session and its task subagents, including nested subagents. Use it for parallel solution attempts or complementary work, not every task.",
   "settings.experimental.imageGenerationModel.title": "Image Model",
   "settings.experimental.imageGenerationModel.description": "Image Generation Model",
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
 
   "settings.models.speechToText.disabledDescription":
-    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
+    "Kilo Gateway is selected. Enable and sign in to the Kilo provider to choose a supported model, or enter a custom transcription base URL above.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
-  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.description":
+    "Kilo Gateway is the active speech-to-text source. Choose its transcription model for voice input.",
+  "settings.models.speechToTextModel.customDescription":
+    "Model ID sent to your custom transcription endpoint, for example whisper-1. Voice input is unavailable until you set one.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Speech to Text Base URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Use an OpenAI-compatible transcription API instead of Kilo Gateway. Models are read from /models and audio is sent to /audio/transcriptions. Leave empty to use Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Speech to Text API Key",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer token sent to the custom transcription base URL. Stored in your Kilo config file.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
@@ -910,6 +923,12 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
+  "settings.experimental.browserAutomation.title": "Integrated Browser",
+  "settings.experimental.browserAutomation.description":
+    "Show local application previews in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",
@@ -1139,9 +1158,12 @@ export const dict = {
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
-  "settings.display.reasoningAutoCollapse.description":
-    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.reasoningDisplay.title": "Reasoning Blocks",
+  "settings.display.reasoningDisplay.description":
+    "Choose how reasoning blocks start. Expanded shows the full text, Preview caps it to a short scrolling preview, and Headline shows only the title and streaming indicator until you open it.",
+  "settings.display.reasoningDisplay.expanded": "Expanded",
+  "settings.display.reasoningDisplay.preview": "Preview",
+  "settings.display.reasoningDisplay.headline": "Headline",
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",
