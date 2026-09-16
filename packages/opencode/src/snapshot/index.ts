@@ -914,7 +914,14 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
-          yield* materialize() // kilocode_change - resume interrupted snapshot object materialization
+          // kilocode_change start - resume an interrupted materialization from a previous
+          // run. Only when the snapshot repository already exists: on a fresh project the
+          // first track creates it, and a detached fiber forked here with the default 0ms
+          // idle could wake after that track seeded the repository and repack ahead of the
+          // quiet period track had just configured. Use the same quiet period as track so
+          // a resume cannot block the running turn either.
+          if (yield* exists(state.gitdir)) yield* materialize(KiloSnapshotMaterialize.idle())
+          // kilocode_change end
 
           yield* cleanup().pipe(
             Effect.catchCause((cause) => Effect.logError("cleanup loop failed", { cause: Cause.pretty(cause) })),
