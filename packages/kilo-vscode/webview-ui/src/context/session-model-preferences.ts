@@ -62,6 +62,8 @@ export function createModelPreferences(options: {
     const model = options.store.sessionOverrides[id] ?? options.defaults(options.agent(id)) ?? options.selected(id)
     if (!model) return
     const key = variantKey(model, options.agent(id), id)
+    // Freeze this draft's displayed Default before another scope changes shared preferences.
+    // Otherwise leave unset effort available for mode defaults, rather than inventing a choice.
     const value = options.variant(id, model) ?? (freeze ? DEFAULT_VARIANT : undefined)
     if (options.store.variantSelections[key] === undefined && value !== undefined) options.set(key, value)
     // Copy inherited models so updates to a mode's store cannot mutate the session.

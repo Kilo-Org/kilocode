@@ -2298,7 +2298,8 @@ export const SessionProvider: ParentComponent = (props) => {
     const scope = effectiveDraftID ?? sid
     if (!sid && !draftID && effectiveDraftID) {
       agentDrafts.seed(effectiveDraftID)
-      // Generated drafts have no history to load; initialize before applying mode overrides.
+      // This UUID is a known-new draft, not unopened history. Initialize it so a mode-only
+      // command retains the outgoing model/effort together instead of mixing two modes.
       setStore("messages", effectiveDraftID, [])
     }
 
