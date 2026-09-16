@@ -409,12 +409,18 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
     }
   }
 
-  // Only GitHub has a REST lookup here (`gh api .../pulls`). A GitLab or
-  // Bitbucket identity must not spawn `gh`; its link comes from the session's
-  // own output (or the manual override) only. A remote with a single path
-  // segment (`git@github.com:repo.git`) has no owner, and `repos//repo/pulls`
-  // could only fail and arm the backoff, so it is skipped too.
-  if (identity.platform !== "github" || !identity.owner || !identity.repo) return undefined
+  // Only GitHub has a REST lookup here (`gh api .../pulls`), and only on the
+  // canonical host. `platform` is the host's first label, so it also reads as
+  // `github` for a GitHub Enterprise remote (`github.mycorp.example`);
+  // `gh api` resolves its host to `api.github.com` (the remote's own host is
+  // not inferred), so such a lookup fails against the default host, warns and
+  // arms the backoff — or, with github.com auth, answers with the same-named
+  // github.com repository. A GitLab or Bitbucket identity must not spawn `gh`
+  // either; its link comes from the session's own output (or the manual
+  // override) only. A remote with a single path segment
+  // (`git@github.com:repo.git`) has no owner, and `repos//repo/pulls` could
+  // only fail and arm the backoff, so it is skipped too.
+  if (identity.host !== "github.com" || !identity.owner || !identity.repo) return undefined
 
   const now = Date.now()
   const existing = restCache.get(worktree)

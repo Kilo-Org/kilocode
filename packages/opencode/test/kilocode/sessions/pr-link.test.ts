@@ -347,6 +347,21 @@ describe("detectPrLink", () => {
     expect(ghCalls().length).toBe(0)
   })
 
+  // The repro for the GitHub Enterprise lookup: `platform` is the host's first
+  // label, so `github.mycorp.example` also reads as `github` and the REST
+  // lookup ran for it. `gh api` resolves its host to `api.github.com` (the
+  // remote's enterprise host is not inferred), so the call fails against the
+  // default host and arms the 15-minute backoff; with github.com auth it could
+  // even answer with the same-named github.com repository. Only `github.com`
+  // may reach the lookup.
+  test("a GitHub Enterprise remote spawns no gh REST lookup", async () => {
+    const dir = await makeRepo("feature/ghe", "git@github.mycorp.example:owner/repo.git")
+    outcome = { code: 1, text: "HTTP 401" }
+
+    expect(await restoreWorktree(dir, () => detectPrLink())).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
+  })
+
   // The repro for the dropped session-output link: a PR URL the session itself
   // printed must survive a later commit on the same branch. The recorded branch
   // identity is head-independent, so the new head still returns it locally.
@@ -651,6 +666,24 @@ describe("recordPrLinkText", () => {
       prNumber: 5,
     })
     expect(await restoreWorktree(dir, () => detectPrLink())).toEqual(link)
+  })
+
+  // A GitHub Enterprise worktree still links the PR URL its session printed,
+  // without `gh`: the REST lookup is github.com's alone, the session output is
+  // not.
+  test("a GitHub Enterprise remote still records its own session-output PR URL", async () => {
+    const dir = await makeRepo("feature/ghe", "git@github.mycorp.example:owner/repo.git")
+    await restoreWorktree(dir, () => detectPrLink())
+    expect(ghCalls().length).toBe(0)
+
+    const link = recordPrLinkText(dir, "Opened https://github.mycorp.example/owner/repo/pull/7")
+    expect(link).toEqual({
+      platform: "github",
+      prUrl: "https://github.mycorp.example/owner/repo/pull/7",
+      prNumber: 7,
+    })
+    expect(await restoreWorktree(dir, () => detectPrLink())).toEqual(link)
+    expect(ghCalls().length).toBe(0)
   })
 
   test("non-PR URLs stay unlinked", async () => {
