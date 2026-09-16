@@ -197,6 +197,7 @@ export const dict = {
   "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.paste.expand": "انقر لتوسيع النص الملصق",
   "prompt.action.autoApprove.enable": "تفعيل الموافقة التلقائية",
   "prompt.action.autoApprove.disable": "تعطيل الموافقة التلقائية",
   "prompt.action.autoApprove.enabled": "الموافقة التلقائية مفعلة. ستتم الموافقة على طلبات الأذونات تلقائياً.",

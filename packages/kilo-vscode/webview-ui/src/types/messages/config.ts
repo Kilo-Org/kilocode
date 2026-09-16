@@ -60,6 +60,7 @@ export interface ExperimentalConfig {
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
+  disable_paste_summary?: boolean
 }
 
 export interface SandboxConfig {

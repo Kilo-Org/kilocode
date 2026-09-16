@@ -200,6 +200,7 @@ export const dict = {
   "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "优化提示词",
+  "prompt.paste.expand": "点击展开粘贴的文本",
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
   "prompt.action.sandbox.enable": "启用沙盒",

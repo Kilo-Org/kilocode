@@ -195,6 +195,7 @@ export const dict = {
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
+  "prompt.paste.expand": "點擊展開貼上的文字",
   "prompt.action.autoApprove.enable": "啟用自動核准",
   "prompt.action.autoApprove.disable": "停用自動核准",
   "prompt.action.autoApprove.enabled": "自動核准已啟用。權限請求將自動獲准。",
