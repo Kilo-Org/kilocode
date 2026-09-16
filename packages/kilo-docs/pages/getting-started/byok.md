@@ -44,7 +44,6 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 
 - BytePlus Coding Plan
 - Chutes BYOK
-- CrofAI
 - Inceptron BYOK
 - Kimi Code
 - Martian

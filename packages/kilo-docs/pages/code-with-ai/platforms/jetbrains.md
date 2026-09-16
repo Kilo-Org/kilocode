@@ -28,6 +28,12 @@ Use **Chat** for the current workspace and **Agents** to manage parallel tasks i
 - Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it and drag worktree rows to reorder them.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
 
+### Pasting large text
+
+Pasting a large block of text (five or more lines, or over 800 characters) into the prompt folds it behind a `[Pasted ~N lines]` placeholder instead of inserting the raw text. Click the placeholder to unfold the block, or use the gutter icon to fold it back. Each paste folds independently, even when several land on the same line.
+
+The same block stays folded in the sent transcript, so log lines and URLs in pasted text are not rendered as Markdown. Rolling back a sent prompt restores the draft with its pastes folded again.
+
 ### Worktree setup scripts
 
 Add a setup script to install dependencies or prepare configuration in new worktrees. Kilo starts it automatically in a terminal, but **does not wait for it to finish before starting the session**. Wait for setup to complete before asking the agent to use those dependencies or generated files.

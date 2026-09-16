@@ -254,7 +254,7 @@ For review threads and comments:
 - **Edit** or **Delete** your own comments and replies. You need the matching GitHub permission.
 - **React** with the GitHub reaction set. Click a reaction pill to toggle it, or use the reaction picker.
 - **Fix with Kilo** sends a thread to the current agent as review context. **Fix N with Kilo** sends the unresolved threads together, up to the panel limit. With an active Agent Manager terminal, the label becomes **Send to terminal** or **Send N unresolved to terminal** and the threads go to that terminal instead.
-- **Copy** copies the formatted thread. **Show in diff**, **Open file**, and **Open on GitHub** jump to the comment location.
+- **Copy** copies the formatted thread. **Copy comment link** copies the comment's permalink when it has one. **Show in diff**, **Open file**, and **Open on GitHub** jump to the comment location.
 
 Outdated threads show an **Outdated** label. Unresolved threads appear first, and resolved threads move into the **Resolved** group and are collapsed by default.
 
@@ -276,7 +276,7 @@ The conversation lists the pull request description and history in one timeline:
 
 Use a comment card's **Fix with Kilo** action to hand it to the agent. **Dismiss** hides a comment from the next send, and **Restore** brings it back. **Fix N with Kilo** or **Send N to terminal** sends the actionable comments together.
 
-Batch sends skip bot comments, dismissed comments, and comments already sent. Use **Add comment** to post a new discussion comment to GitHub, or **Copy comment** to copy an existing one as Markdown.
+Batch sends skip bot comments, dismissed comments, and comments already sent. Use **Add comment** to post a new discussion comment to GitHub, or **Copy comment** to copy an existing one as Markdown. **Copy comment link** copies the comment's permalink when it has one.
 
 #### Reviewers
 

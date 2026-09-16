@@ -139,6 +139,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
 | `/caffeinate` | `/caffenate` | Toggle Keep Awake: prevent system sleep while Kilo sessions run |
 | `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
+| `/usage` | `/plans`, `/quota` | View provider plans and quota |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
 `/reload` reloads every instance of the project, including the main checkout and sibling worktrees. Kilo refuses the reload while any session in the project is running; wait for it to finish or abort it first.
