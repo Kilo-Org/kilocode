@@ -2,6 +2,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
+import { Global } from "@opencode-ai/core/global"
 import * as fs from "fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "../fixture/fixture"
@@ -1651,6 +1652,57 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
             prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
             prNumber: 3,
           })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  // The repro for the lost durability: a storage write failure must not skip the
+  // immediate `session_pr_link` ingest and must not drop the record — the
+  // watcher persists on every part that carries a PR URL, so the next one
+  // retries and the next `kilo pr status` process finds it.
+  test("a failed record write does not skip the ingest and is retried", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+          await clearStaleIngest()
+
+          const url = "https://gitlab.example.com/group/sub/proj/-/merge_requests/3"
+          const target = join(Global.Path.data, "storage", ...PrLink.recordedKey(Instance.worktree)) + ".json"
+          // A directory where the record file belongs fails the write the way a
+          // transient storage error does.
+          await fs.mkdir(target, { recursive: true })
+          try {
+            emitPart(id, textPart(id, "p-fail", `Merged ${url}`))
+            await new Promise((r) => setTimeout(r, 1200))
+
+            const payload = await capturedGetSessions()()
+            expect(payload.sessions.find((s) => s.id === id)?.prLink).toEqual({
+              platform: "gitlab",
+              prUrl: url,
+              prNumber: 3,
+            })
+            expect(prLinkItems().length).toBe(1)
+          } finally {
+            await fs.rm(target, { recursive: true, force: true })
+          }
+
+          expect(await PrLink.readRecordedPrLink(Instance.worktree)).toBeUndefined()
+
+          emitPart(id, textPart(id, "p-retry", `Still ${url}`))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const stored = await PrLink.readRecordedPrLink(Instance.worktree)
+          expect(stored?.link).toEqual({ platform: "gitlab", prUrl: url, prNumber: 3 })
         } finally {
           await runtime.dispose()
         }

@@ -107,6 +107,11 @@ type Known = { branch: string; owner: string; repo: string; platform: string; ho
 type Positive = { branch: string | undefined; link: PrLink }
 
 const recordedLinks = new Map<string, Recorded>()
+// The record last written to disk per worktree (keyed by its serialized value),
+// so an output part that carries an already-persisted link does not rewrite it.
+// A failed write leaves no entry, so the next part retries instead of the record
+// being lost.
+const persistedRecords = new Map<string, string>()
 const restCache = new Map<string, CacheEntry>()
 const backoffUntil = new Map<string, number>()
 const knownIdentity = new Map<string, Known>()
@@ -406,8 +411,10 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
 
   // Only GitHub has a REST lookup here (`gh api .../pulls`). A GitLab or
   // Bitbucket identity must not spawn `gh`; its link comes from the session's
-  // own output (or the manual override) only.
-  if (identity.platform !== "github") return undefined
+  // own output (or the manual override) only. A remote with a single path
+  // segment (`git@github.com:repo.git`) has no owner, and `repos//repo/pulls`
+  // could only fail and arm the backoff, so it is skipped too.
+  if (identity.platform !== "github" || !identity.owner || !identity.repo) return undefined
 
   const now = Date.now()
   const existing = restCache.get(worktree)
@@ -468,13 +475,24 @@ export async function readPrLinkOverride(worktree: string): Promise<PrLinkOverri
 // Persist the link this process recorded from the session's own output, so a
 // later CLI process can return it. `recordedLinks` dies with the process; a
 // GitLab/Bitbucket link has no REST lookup to recover it, so the write here is
-// what keeps `kilo pr status` showing it after the session exits. A no-op when
-// this process recorded nothing.
+// what keeps `kilo pr status` showing it after the session exits. Callers invoke
+// this for every output part that carries a PR URL: an unchanged record already
+// on disk is a no-op, and a failed write is logged and retried on the next part
+// instead of rejecting into the caller — the session watcher awaits this before
+// the immediate `session_pr_link` ingest, and `recordPrLinkText` reports an
+// unchanged URL only once, so a lost write would never be attempted again. The
+// dedup entry is dropped by `forgetRecordedPrLink`, so a record detection
+// removed is written again by the next persist.
 export async function persistRecordedPrLink(worktree: string) {
   const recorded = recordedLinks.get(worktree)
   if (!recorded) return
+  const value = JSON.stringify(recorded)
+  if (persistedRecords.get(worktree) === value) return
   const { AppRuntime } = await import("@/effect/app-runtime")
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(recordedKey(worktree), recorded)))
+  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(recordedKey(worktree), recorded))).then(
+    () => remember(persistedRecords, worktree, value),
+    (err) => log.warn("recording the session PR link failed; retrying on the next output part", { worktree, err }),
+  )
 }
 
 export async function readRecordedPrLink(worktree: string): Promise<Recorded | undefined> {
@@ -485,6 +503,10 @@ export async function readRecordedPrLink(worktree: string): Promise<Recorded | u
 }
 
 export async function forgetRecordedPrLink(worktree: string) {
+  // Drop the write-dedup entry as well: it mirrors the on-disk record, and a
+  // later persist of that same link must rewrite the record this call removed
+  // instead of being skipped as an unchanged write.
+  persistedRecords.delete(worktree)
   const { AppRuntime } = await import("@/effect/app-runtime")
   return AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(recordedKey(worktree)))).catch(() => undefined)
 }
