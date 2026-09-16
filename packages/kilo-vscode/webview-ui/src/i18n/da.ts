@@ -322,7 +322,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Ny Opgave",
   "sidebar.topBar.history": "Historik",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Markedsplads",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Indstillinger",

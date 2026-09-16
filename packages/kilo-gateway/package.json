@@ -23,8 +23,7 @@
     "./edit-prompt": "./src/edit-prompt.ts",
     "./provider-usage": "./src/provider-usage.ts",
     "./event-service": "./src/event-service/client.ts",
-    "./tui": "./src/tui.ts",
-    "./claw": "./src/claw/index.ts"
+    "./tui": "./src/tui.ts"
   },
   "files": [
     "dist"
