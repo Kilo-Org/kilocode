@@ -67,6 +67,22 @@ When the Kilo provider is enabled and you are signed in, choose the transcriptio
 }
 ```
 
+### Voice Transcription Source
+
+By default both the model list and the audio go to Kilo Gateway. Set **Models** > **Speech to Text Base URL** to send them to any OpenAI-compatible transcription API instead, with an optional bearer token:
+
+```json
+{
+  "experimental": {
+    "speech_to_text_base_url": "https://api.openai.com/v1",
+    "speech_to_text_api_key": "sk-...",
+    "speech_to_text_model": "whisper-1"
+  }
+}
+```
+
+Models are read from `{base_url}/models` and audio is posted to `{base_url}/audio/transcriptions`. Leave the base URL empty to use Kilo Gateway. See [Voice Transcription](/docs/code-with-ai/features/speech-to-text) for details.
+
 ### Prompt-Training Model Visibility
 
 Enable **Hide Prompt-Training Models** under **Models** to remove Kilo Gateway models whose providers may use your prompts for training from model lists. Models from other providers and models without explicit prompt-training metadata remain visible. The setting is disabled by default.
@@ -79,15 +95,39 @@ You can also enable it in `kilo.jsonc`:
 }
 ```
 
-### Reasoning Blocks
+### Compaction Model
 
-Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
+Choose the model used for automatic and manual compaction under **Models** > **Compaction Model**. Leave it unset to use the chat model. The Compaction section in **Settings → Context** links to this selector.
+
+This stores `agent.compaction.model` in `kilo.jsonc`:
 
 ```json
 {
-  "auto_collapse_reasoning": true
+  "agent": {
+    "compaction": {
+      "model": "anthropic/claude-haiku-4-5"
+    }
+  }
 }
 ```
+
+### Reasoning Blocks
+
+Reasoning blocks show the agent's thinking. Choose a mode for **Reasoning Blocks** in the Display tab, or set `reasoning_display` in `kilo.jsonc`:
+
+```json
+{
+  "reasoning_display": "preview"
+}
+```
+
+- `expanded`: The full reasoning text stays open.
+- `preview`: A short scrolling preview shows while the agent is writing and stays compact after it finishes. Blocks from earlier sessions start collapsed.
+- `headline`: Only the header and streaming indicator show until you open the block.
+
+Valid values are `expanded`, `preview`, and `headline`. The default is `expanded`.
+
+Older configs that set `auto_collapse_reasoning: true` map to `preview`. That boolean is deprecated, so use `reasoning_display` instead.
 
 ### Terminal Command Blocks
 
@@ -173,6 +213,25 @@ On macOS and Linux, the VS Code extension includes a dedicated **Sandboxing** se
 
 See [Sandboxing](/docs/getting-started/settings/sandboxing) for setup instructions, the exact filesystem and network boundaries, and platform limitations.
 
+## Kilo Swarm
+
+Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
+
+Kilo Swarm is on by default. Turn it off in the VS Code **Agent Behaviour** settings, or set `shared_agent_board` to `false` in `kilo.jsonc`.
+
+Use it when agents can benefit from discoveries during work:
+
+- **Search races:** agents try independent approaches to the same problem and share useful findings.
+- **Complementary teams:** agents work on different parts of a feature and share constraints or results.
+
+Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
+
+**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+
+All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
+
+When a main session has board messages, open the **Board** icon in its task header to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+
 ## Experimental Features
 
 {% tabs %}
@@ -214,25 +273,6 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 {% /tab %}
 {% /tabs %}
-
-### Kilo Swarm
-
-Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
-
-Kilo Swarm is on by default. Turn it off in the VS Code **Agent Behaviour** settings, or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
-
-Use it when agents can benefit from discoveries during work:
-
-- **Search races:** agents try independent approaches to the same problem and share useful findings.
-- **Complementary teams:** agents work on different parts of a feature and share constraints or results.
-
-Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
-
-**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
-
-All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
-
-When a main session has board messages, open the **Board** icon in its task header to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
 
 ### Task subagent model selection
 

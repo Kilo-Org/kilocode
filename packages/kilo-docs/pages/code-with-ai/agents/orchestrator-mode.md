@@ -30,4 +30,4 @@ Now, **subagent support is built into agents that have full tool access** (Code,
 
 Agents can launch multiple subagent sessions concurrently for parallel work.
 
-[Kilo Swarm](/docs/getting-started/settings#kilo-swarm) lets a main session and its task descendants exchange findings on a shared board. It works with your current agent and does not require the deprecated Orchestrator mode. Swarm is on by default; turn it off in **Settings > Agent Behaviour** or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. For separate branches and checkouts, use [Agent Manager worktree sessions](/docs/automate/agent-manager#orchestration-model) instead.
+[Kilo Swarm](/docs/getting-started/settings#kilo-swarm) lets a main session and its task descendants exchange findings on a shared board. It works with your current agent and does not require the deprecated Orchestrator mode. Swarm is on by default; turn it off in **Settings > Agent Behaviour** or set `shared_agent_board` to `false` in `kilo.jsonc`. For separate branches and checkouts, use [Agent Manager worktree sessions](/docs/automate/agent-manager#orchestration-model) instead.

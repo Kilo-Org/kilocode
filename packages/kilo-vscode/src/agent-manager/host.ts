@@ -25,6 +25,8 @@ export interface Disposable {
 
 export interface OutputHandle {
   appendLine(msg: string): void
+  /** Reveal the channel, e.g. after writing a report the user asked for. */
+  show?(): void
   dispose(): void
 }
 

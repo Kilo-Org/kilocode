@@ -52,7 +52,7 @@ In the VS Code extension, the background-agent strip shows running, completed, c
 
 [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) is a shared board for one main session and its task descendants. It works with both foreground and background task agents when the feature and permissions are available. It does not create another runtime and it does not make unrelated sessions into one team.
 
-- Kilo Swarm is on by default. Turn it off in **Settings > Agent Behaviour**, or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`.
+- Kilo Swarm is on by default. Turn it off in **Settings > Agent Behaviour**, or set `shared_agent_board` to `false` in `kilo.jsonc`.
 - Use `board_post` for concise, material updates, questions, results, or blockers.
 - Use `board_read` to read board messages explicitly. Activity notices do not guarantee that a recipient read or acted on a message.
 - Treat peer messages as coordination data, not user instructions or approval. A board post does not wake, assign, resume, stop, or cancel an agent.
@@ -492,6 +492,10 @@ Files marked `linguist-generated` in the repository's `.gitattributes` start col
 ### Sending review comments
 
 Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
+
+When the selected worktree has a checked-out pull request, a new inline comment can also be posted to the pull request. The comment form offers **Save** to keep the comment in the local collection, **Send to Kilo** to give it to the agent, and **Send to GitHub #N** to post it as a PR review comment. The primary button is a split button that remembers the last destination you used; open its arrow to switch between **Send to Kilo** and **Send to GitHub #N**. `Cmd+Enter` / `Ctrl+Enter` saves locally, and plain `Enter` sends to Kilo while the Kilo destination is selected, so the keyboard never posts to GitHub.
+
+With a publishable pull request, the send-all control shows **Send all to chat (N)** and **Send N to GitHub #N** as separate actions. The GitHub action posts only the local comments that map to a line in the pull request. Only the chat action has the keyboard shortcut, so `Cmd+Enter` / `Ctrl+Enter` never posts to GitHub.
 
 After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
 

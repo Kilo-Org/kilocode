@@ -42,7 +42,7 @@ const it = testEffect(
     ]),
   ),
 )
-const options = { config: { experimental: { shared_agent_board: true }, snapshot: false } }
+const options = { config: { shared_agent_board: true, snapshot: false } }
 
 const seed = Effect.fn("BoardToolTest.seed")(function* (title: string) {
   const sessions = yield* Session.Service
@@ -403,7 +403,7 @@ describe("shared board tools", () => {
           if (Exit.isFailure(result)) expect(Cause.pretty(result.cause)).toContain("shared agent board is disabled")
           expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(0)
         }),
-      { config: { experimental: { shared_agent_board: false } } },
+      { config: { shared_agent_board: false } },
     ),
   )
 
@@ -466,7 +466,7 @@ describe("shared board tools", () => {
           expect(Exit.isFailure(result)).toBe(true)
         }),
       {
-        config: { experimental: { shared_agent_board: true }, permission: { board_read: "deny", board_post: "deny" } },
+        config: { shared_agent_board: true, permission: { board_read: "deny", board_post: "deny" } },
       },
     ),
   )

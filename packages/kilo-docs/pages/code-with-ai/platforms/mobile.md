@@ -7,8 +7,8 @@ description: "Using Kilo Code on iOS and Android"
 
 Use Kilo Code from your phone to keep coding sessions moving while you are away from your desk. The mobile app connects to Cloud Agents and remote sessions from your local CLI or editor extensions.
 
-{% callout type="info" title="Android app available now" %}
-Install Kilo Code for Android from [Google Play](https://play.google.com/store/apps/details?id=com.kilocode.kiloapp).
+{% callout type="info" title="Available on iOS and Android" %}
+Install Kilo Code for [iOS](https://apps.apple.com/app/id6761193135) and [Android](https://play.google.com/store/apps/details?id=com.kilocode.kiloapp).
 {% /callout %}
 
 ## What you can do
@@ -20,6 +20,7 @@ The mobile app lets you:
 - Monitor and view all non-remote sessions in one place.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
 - Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Track a session's [goal](/docs/code-with-ai/agents/goals) from a fixed section under the session header, and start or control one with `/goal`.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
@@ -37,7 +38,7 @@ You can review or change your decision at any time in **Settings**. Declining op
 
 ### App lock
 
-Turn on **Unlock with biometrics** in **Settings > Preferences** to protect the app on this device. It asks you to unlock at launch and after five minutes in the background, with your device passcode available as a fallback. Locking hides your sessions and open sheets without discarding drafts or navigation.
+Turn on **Unlock with biometrics** in **Settings > Preferences** to protect the app on this device. It asks you to unlock at launch and after five minutes in the background, with your device passcode available as a fallback. Locking hides your sessions and open sheets without discarding drafts or navigation. The switch shows progress while it updates and is disabled during an unlock or a setting change. If device security is unavailable or an unlock fails, the unlock screen offers Retry and explains the problem.
 
 ### Links and images in chat
 
@@ -72,7 +73,7 @@ On Android, you can buy, restore, and change Kilo Pass tiers through Google Play
 The new-session screen includes a **Run on** picker that chooses where your session runs:
 
 - **Cloud Agent** — the managed cloud environment (the default).
-- **A connected CLI instance**: a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
+- **A connected instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account under **Remotes** and **Terminals** groups, each with its own icon. Each connection shows its branch and start date and time when available.
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. Use **Folder** to choose a child folder, including nested folders, before starting. If the CLI cannot list folders, the app explains this and starts in the launch directory instead. In organization context, the new session belongs to that organization.
 
@@ -84,6 +85,24 @@ Open a finished session and tap **Continue** to copy its conversation into a new
 
 The CLI must support importing sessions. If it does not, the app explains why and disables **Start** rather than creating an empty session. An unavailable model or repository also prevents starting until you choose an available option.
 
+## Live session counts
+
+When an organization is selected, the **Agents** screen shows how many of its sessions are live above the title, and the **Agents** tab shows a matching badge that stays visible from other tabs. The count disappears while sessions are loading, after an error, and when no sessions are live.
+
+## Auto-approve for a session
+
+The session context sheet has an **Auto-approve** row at the top. Turn it on to approve that session's permission asks automatically: the permission card is skipped, and an ask that is already waiting is resolved. Turn it off to make the next permission ask show its card again.
+
+Auto-approve applies to one session only, so other sessions keep prompting. Clarification questions always show their card and are never auto-answered. The row shows whether auto-approve is on, off, or unavailable, and warns that tools then run without a prompt; sessions that cannot auto-approve, such as read-only sessions, show the row disabled with the reason.
+
+The toggle is kept in memory for the session and never changes your global auto-approve configuration. Signing out or switching accounts turns auto-approve off for every session.
+
+## Hiding thinking details
+
+Turn on **Hide thinking details** in **Settings → Preferences → General** to remove thinking rows, collapsed thinking items, and thinking text from the session page, including streaming and loaded sessions and the subagent sheet. The setting is off by default and is remembered across app launches.
+
+While a model streams reasoning, the composer and subagent spinners still read **Thinking**. With the setting off, the session page behaves exactly as before.
+
 ## Queueing follow-up messages
 
 The composer stays editable while the agent is working, so you don't have to wait for a session to finish before sending your next message. Type your follow-up and press **Send** to add it to the session's queue; queued messages are processed in order. While a session is streaming, **Stop** appears only when the composer is empty — with text entered, Send takes its place.
@@ -92,9 +111,16 @@ A queued message shows a subtle **Queued** badge on its bubble. The badge clears
 
 ## Voice input
 
-Use the microphone in the composer to dictate a prompt. By default, the app uses your operating system's speech recognizer. To transcribe through your Kilo account instead, turn on **Gateway transcription** in **Preferences** and choose a transcription model. Your model choice is remembered across launches.
+Dictate prompts with the microphone in the composer. Voice input uses one of two engines:
 
-The selected engine handles the whole dictation; the app does not fall back to the other engine. Tap the microphone to cancel an in-progress transcription.
+- **On-device (default)** — the operating system's speech recognizer.
+- **Kilo Gateway** — turn on **Gateway transcription** in **Preferences** to transcribe through your Kilo account.
+
+The switch is a two-way choice, not a fallback: the selected engine owns the whole dictation and the other engine is never called. The choice applies to every voice dictation in the app.
+
+With gateway transcription on, dictation uses the transcription model you pick in the transcription settings. If you have not chosen a model, the app uses the first model the gateway offers. The chosen model persists across app launches. Gateway transcriptions respect your organization's provider allow-list and data-collection policy.
+
+While the gateway transcribes, the composer shows **Transcribing...** and the microphone button cancels the upload. An unreachable gateway, an unavailable model, no speech, and a timeout each show their own message; an unavailable or unset model opens the transcription settings.
 
 ## Attachments in remote sessions
 
@@ -117,7 +143,7 @@ While the CLI is connected, the agent can deliver a file to your phone with the 
 
 Open a pull request from a PR link to review it without leaving the app:
 
-- **Overview**: PR state and CI checks at a glance.
+- **Overview** — PR state and CI checks, plus sidebar metadata: when the pull request opened and last moved, its labels, the reviewers and each one's state (approved, changes requested, commented, dismissed, or awaiting review), assignees, the linked issues it closes, and a comment-count badge on the **Discussion** tab. Sections that GitHub reports nothing for are hidden.
 - **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
 - **Discussion** — review threads with replies, resolve/unresolve, and reactions.
 
@@ -152,6 +178,6 @@ The Android app is available now on Google Play.
 
 ## iOS App
 
-The iOS app is in review with the App Store team and will be available soon. You can already sign up for the iOS waitlist to be notified when it launches.
+The iOS app is available now on the App Store.
 
-[Join the iOS app waitlist →](https://kilo.ai/features/ios-app)
+[Install the iOS app →](https://apps.apple.com/app/id6761193135)
