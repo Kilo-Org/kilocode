@@ -2,6 +2,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
+import { Global } from "@opencode-ai/core/global"
 import * as fs from "fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "../fixture/fixture"
@@ -1562,6 +1563,146 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
           const links = prLinkItems()
           expect(links.length).toBe(1)
           expect(links[0]!.data).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/7", prNumber: 7 })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("text part GitLab and Bitbucket PR URLs advertises prLink and enqueue one item each", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, textPart(id, "p-gitlab", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const gitlab = await capturedGetSessions()()
+          expect(gitlab.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const first = prLinkItems()
+          expect(first.length).toBe(1)
+          expect(first[0]!.data).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+
+          emitPart(id, textPart(id, "p-bitbucket", "Opened https://bitbucket.org/team/repo/pull-requests/9"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const bitbucket = await capturedGetSessions()()
+          expect(bitbucket.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "bitbucket",
+            prUrl: "https://bitbucket.org/team/repo/pull-requests/9",
+            prNumber: 9,
+          })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const links = prLinkItems()
+          expect(links.length).toBe(2)
+          expect(links[1]!.data).toEqual({
+            platform: "bitbucket",
+            prUrl: "https://bitbucket.org/team/repo/pull-requests/9",
+            prNumber: 9,
+          })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  // The write side the CLI's next process depends on: a GitLab MR URL in the
+  // session's own output is persisted under `recordedKey`, so a later
+  // `kilo pr status` process (which has no in-process record and no REST
+  // lookup for GitLab) can read it back.
+  test("session-output link is persisted for the next process", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          emitPart(id, textPart(id, "p-persist", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const stored = await PrLink.readRecordedPrLink(Instance.worktree)
+          expect(stored?.link).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  // The repro for the lost durability: a storage write failure must not skip the
+  // immediate `session_pr_link` ingest and must not drop the record — the
+  // watcher persists on every part that carries a PR URL, so the next one
+  // retries and the next `kilo pr status` process finds it.
+  test("a failed record write does not skip the ingest and is retried", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+          await clearStaleIngest()
+
+          const url = "https://gitlab.example.com/group/sub/proj/-/merge_requests/3"
+          const target = join(Global.Path.data, "storage", ...PrLink.recordedKey(Instance.worktree)) + ".json"
+          // A directory where the record file belongs fails the write the way a
+          // transient storage error does.
+          await fs.mkdir(target, { recursive: true })
+          try {
+            emitPart(id, textPart(id, "p-fail", `Merged ${url}`))
+            await new Promise((r) => setTimeout(r, 1200))
+
+            const payload = await capturedGetSessions()()
+            expect(payload.sessions.find((s) => s.id === id)?.prLink).toEqual({
+              platform: "gitlab",
+              prUrl: url,
+              prNumber: 3,
+            })
+            expect(prLinkItems().length).toBe(1)
+          } finally {
+            await fs.rm(target, { recursive: true, force: true })
+          }
+
+          expect(await PrLink.readRecordedPrLink(Instance.worktree)).toBeUndefined()
+
+          emitPart(id, textPart(id, "p-retry", `Still ${url}`))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const stored = await PrLink.readRecordedPrLink(Instance.worktree)
+          expect(stored?.link).toEqual({ platform: "gitlab", prUrl: url, prNumber: 3 })
         } finally {
           await runtime.dispose()
         }
