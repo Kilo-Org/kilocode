@@ -3,15 +3,56 @@
    ============================================ */
 
 .kilo-logo {
+  position: relative;
   width: 48px;
   height: 48px;
   opacity: 0.85;
+  overflow: hidden;
+  transition: transform 0.3s ease-in-out;
 }
 
-.kilo-logo img {
+.kilo-logo-hover {
+  transform: rotate(90deg);
+}
+
+.kilo-logo-layer {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.kilo-logo-static {
+  opacity: 1;
+}
+
+.kilo-logo-animated {
+  opacity: 0;
+}
+
+.kilo-logo-hover .kilo-logo-static {
+  opacity: 0;
+}
+
+.kilo-logo-hover .kilo-logo-animated {
+  opacity: 1;
+  transform: rotate(270deg);
+}
+
+.kilo-logo img,
+.kilo-logo-lottie {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kilo-logo,
+  .kilo-logo-layer {
+    transition: none;
+  }
 }
 
 .kilo-about-text {
