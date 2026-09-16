@@ -10,6 +10,16 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 
+/**
+ * Budgets for `gh` reads.
+ *
+ * [GH_READ_TIMEOUT_MS] bounds an ordinary lookup; [GH_PROBE_TIMEOUT_MS] bounds the selector-less
+ * `gh pr view`, which has been observed hanging indefinitely inside a worktree. Both replace a single
+ * 30s budget that let one hanging command occupy a poll slot for an entire poll interval.
+ */
+internal const val GH_READ_TIMEOUT_MS = 10_000
+internal const val GH_PROBE_TIMEOUT_MS = 5_000
+
 /** Result of running a `git`/`gh` command. */
 internal data class CmdOut(
     val exit: Int,
@@ -83,6 +93,12 @@ internal enum class RichRefusal {
  * org policies answer with a scope or forbidden error.
  */
 internal fun richRefusal(stderr: String): RichRefusal? {
+    // A checkout deleted mid-poll fails before `gh` runs, with `Cannot start a process, the working
+    // directory '...' does not exist` — which the field test below reads as a rejected field name. That
+    // is a race against one directory, not something this `gh` cannot do, and both callers latch on
+    // FIELD: one lost `gh` call would strip review, CI, and conversation state from every worktree in
+    // the IDE until it restarted. Agent Manager deletes worktrees routinely, so it happens for real.
+    if (badDir(stderr)) return null
     val text = stderr.lowercase()
     if (text.contains("unknown json field")) return RichRefusal.FIELD
     if (text.contains("doesn't exist") || text.contains("does not exist")) return RichRefusal.FIELD
@@ -106,7 +122,7 @@ internal fun richRefusal(stderr: String): RichRefusal? {
  * Commands are injected so the strategy ladder is testable without `gh` or network access.
  */
 internal class PrResolver(
-    private val gh: (Path, List<String>) -> CmdOut,
+    private val gh: (Path, List<String>, Int) -> CmdOut,
     private val git: (Path, List<String>) -> CmdOut,
 ) {
     // Volatile because prStatus resolves several checkouts concurrently. Two threads racing to clear it
@@ -127,12 +143,27 @@ internal class PrResolver(
         return comments(dir, find(dir, path, branch, base))
     }
 
-    /** The strategy ladder, answering with the PR alone — no review conversations yet. */
+    /**
+     * The strategy ladder, answering with the PR alone — no review conversations yet.
+     *
+     * Naming the branch comes first: the selector-less form is the one observed hanging indefinitely
+     * in a worktree, and for an Agent Manager worktree the branch is always known. The selector-less
+     * form still runs afterwards, on a short budget, because it is the only one that resolves a fork
+     * PR through `branch.<name>.merge`.
+     */
     private fun find(dir: Path, path: String, branch: String, base: String?): PrLookup {
-        view(dir, path, null)?.let { return it }
-        view(dir, path, branch)?.let { return it }
-        if (branch == base) return PrLookup()
-        return search(dir, path) ?: PrLookup()
+        val slow = Timeouts()
+        view(dir, path, branch, GH_READ_TIMEOUT_MS, slow)?.let { return it }
+        view(dir, path, null, GH_PROBE_TIMEOUT_MS, slow)?.let { return it }
+        if (branch != base) search(dir, path, slow)?.let { return it }
+        // Nothing answered. A ladder that timed out has not established that there is no PR, so it
+        // must not report one absent — the frontend keeps the previous answer for an unavailable gh.
+        return if (slow.hit) PrLookup(availability = GhAvailability.TIMEOUT) else PrLookup()
+    }
+
+    /** Records whether any strategy in one ladder run exceeded its budget. */
+    private class Timeouts {
+        var hit = false
     }
 
     /**
@@ -157,8 +188,12 @@ internal class PrResolver(
         val pr = found.pr ?: return found
         if (pr.state != GhState.OPEN && pr.state != GhState.DRAFT) return found
         if (!threads || found.node.isEmpty()) return found
-        val out = gh(dir, listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=${found.node}"))
+        val out = gh(dir, listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=${found.node}"), GH_READ_TIMEOUT_MS)
         if (out.ok) return found.copy(pr = pr.copy(comments = parseThreads(out.stdout)))
+        // A killed process flushes no stderr, so neither the rate-limit nor the refusal test below can
+        // see a timeout. Left to fall through it would return `found` with the default count, reading
+        // as "every conversation settled" — the same position as a refusal, so reported the same way.
+        if (out.timeout) return PrLookup(availability = GhAvailability.TIMEOUT)
         if (rateLimited(out.stderr.lowercase())) return PrLookup(availability = GhAvailability.RATE_LIMITED)
         if (richRefusal(out.stderr) == RichRefusal.FIELD) {
             threads = false
@@ -170,8 +205,8 @@ internal class PrResolver(
     }
 
     /** Null means "no PR here, keep looking"; a value is terminal (a PR, or gh being unusable). */
-    private fun view(dir: Path, path: String, branch: String?): PrLookup? {
-        val out = query(dir) { fields ->
+    private fun view(dir: Path, path: String, branch: String?, timeoutMs: Int, slow: Timeouts): PrLookup? {
+        val out = query(dir, timeoutMs) { fields ->
             buildList {
                 add("pr")
                 add("view")
@@ -180,7 +215,7 @@ internal class PrResolver(
                 add(fields)
             }
         }
-        if (!out.ok) return unusable(out.stderr)
+        if (!out.ok) return unusable(out, slow)
         return parsePr(path, out.stdout)?.let { PrLookup(it, node = parsePrNodeId(out.stdout)) }
     }
 
@@ -194,9 +229,9 @@ internal class PrResolver(
      * for the repository that reported it, so latching would strip review/CI from every other
      * checkout until the IDE restarts.
      */
-    private fun query(dir: Path, command: (String) -> List<String>): CmdOut {
+    private fun query(dir: Path, timeoutMs: Int = GH_READ_TIMEOUT_MS, command: (String) -> List<String>): CmdOut {
         val wanted = if (rich) PR_RICH_FIELDS else PR_FIELDS
-        val out = gh(dir, command(wanted))
+        val out = gh(dir, command(wanted), timeoutMs)
         if (out.ok || wanted == PR_FIELDS) return out
         // A spent budget refuses the scalar form just as readily, so retrying only burns another call.
         if (rateLimited(out.stderr.lowercase())) return out
@@ -205,16 +240,16 @@ internal class PrResolver(
             rich = false
             LOG.info("gh cannot answer review/CI fields, falling back to scalars: ${out.stderr.trim()}")
         }
-        return gh(dir, command(PR_FIELDS))
+        return gh(dir, command(PR_FIELDS), timeoutMs)
     }
 
-    private fun search(dir: Path, path: String): PrLookup? {
+    private fun search(dir: Path, path: String, slow: Timeouts): PrLookup? {
         val head = git(dir, listOf("rev-parse", "HEAD")).stdout.trim()
         if (head.isEmpty()) return null
         val out = query(dir) { fields ->
             listOf("pr", "list", "--state", "all", "--search", "$head is:pr", "--limit", "5", "--json", "$fields,headRefOid")
         }
-        if (!out.ok) return unusable(out.stderr)
+        if (!out.ok) return unusable(out, slow)
         val items = runCatching { json.parseToJsonElement(out.stdout) as? JsonArray }.getOrNull() ?: return null
         for (item in items) {
             val obj = item as? JsonObject ?: continue
@@ -226,8 +261,16 @@ internal class PrResolver(
         return null
     }
 
-    private fun unusable(stderr: String): PrLookup? {
-        val status = prError(stderr)
+    /**
+     * A timed-out lookup is not evidence that the PR does not exist, so it does not end the ladder —
+     * but it is recorded, so a ladder that never answers reports a timeout instead of "no PR".
+     */
+    private fun unusable(out: CmdOut, slow: Timeouts): PrLookup? {
+        if (out.timeout) {
+            slow.hit = true
+            return null
+        }
+        val status = prError(out.stderr)
         return if (status == GhAvailability.OK) null else PrLookup(availability = status)
     }
 }

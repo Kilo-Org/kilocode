@@ -8,15 +8,15 @@ const PACKAGE = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as 
 }
 
 describe("Agent Manager settings navigation", () => {
-  const actions = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectActions.tsx"), "utf8")
-  const project = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectSidebarBody.tsx"), "utf8")
+  const actions = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectRowActions.tsx"), "utf8")
+  const list = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectList.tsx"), "utf8")
   const settings = readFileSync(join(ROOT, "webview-ui", "src", "components", "settings", "Settings.tsx"), "utf8")
   const branchDialog = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectBranchDialog.tsx"), "utf8")
 
   it("opens the project settings tab with the owning project id", () => {
     expect(actions).toContain("onClick={props.onSettings}")
-    expect(project).toContain('tab: "agentManager"')
-    expect(project).toContain("projectId: props.project.id")
+    expect(list).toContain('tab: "agentManager"')
+    expect(list).toContain("projectId")
   })
 
   it("renders a project selector and project-scoped settings controls", () => {

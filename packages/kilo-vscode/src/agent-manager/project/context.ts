@@ -23,6 +23,7 @@ import { WorktreeStateManager } from "../WorktreeStateManager"
 import { WorktreeManager } from "../WorktreeManager"
 import { SetupScriptService } from "../SetupScriptService"
 import type { GitOps } from "../GitOps"
+import type { WorktreeHealthReport } from "../worktree-reconcile"
 import type { ProjectSessionView } from "./session-view"
 
 export interface ProjectContextDeps {
@@ -43,6 +44,8 @@ export interface ProjectInitResult {
   ok: boolean
   refsFixed: number
   current: boolean
+  /** Worktree health from the startup reconcile, when it ran. */
+  health?: WorktreeHealthReport
 }
 
 export class ProjectContext {
@@ -58,6 +61,11 @@ export class ProjectContext {
   private listed = 0
   private views: readonly ProjectSessionView[] = []
   readonly stale = new Set<string>()
+  /**
+   * Latest worktree-health reconcile. Read by the pollers to skip worktrees that cannot answer and
+   * by the diagnostics report; refreshed by {@link initContextState} and by an explicit repair.
+   */
+  report: WorktreeHealthReport | undefined
 
   constructor(
     readonly id: string,
@@ -224,6 +232,7 @@ export class ProjectContext {
     this.phase = "disposing"
     await this.init?.catch((err) => this.deps.log(`dispose: initialization failed: ${err}`))
     await this.mutation.catch((err) => this.deps.log(`dispose: mutation failed: ${err}`))
+    await this.worktrees?.settle().catch((err) => this.deps.log(`dispose: worktree bookkeeping failed: ${err}`))
     await this.state?.flush().catch((err) => this.deps.log(`dispose: state flush failed: ${err}`))
     this.live.clear()
     this.phase = "disposed"

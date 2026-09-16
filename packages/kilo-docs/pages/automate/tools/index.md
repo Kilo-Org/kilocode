@@ -94,7 +94,9 @@ Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 
 ### Browser Tools
 
-The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Browser panel and returns a screenshot and diagnostics. Enable **Browser Automation** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium.
+The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in **Settings → Web Tools → Browser Automation**. When enabled, it registers an MCP server named `kilo-playwright` and exposes browser tools that follow the same permission model as all MCP tools.
+
+The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Integrated Browser panel and returns a screenshot and diagnostics. Enable **Integrated Browser** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium. It is independent from Playwright MCP.
 
 The `browser_open` automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` only, and blocks resources from other origins. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback.
 
@@ -116,7 +118,7 @@ These tools help manage the conversation and task flow:
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 - `open_plan` - Opens a saved plan for review in the VS Code extension
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
-- `board_post` / `board_read` - Exchange messages on the experimental Kilo Swarm board
+- `board_post` / `board_read` - Exchange messages on the Kilo Swarm board
 
 ### Task tool
 
@@ -146,7 +148,7 @@ Background subagents are available when the server exposes the background capabi
 
 ### Kilo Swarm board tools
 
-Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `experimental.shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
+Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
 
 - `board_post` stores a concise material update for another participant. Use it for findings, questions, results, blockers, or corrections.
 - `board_read` reads board messages explicitly. Use the cursor from the previous read for incremental reads instead of polling.

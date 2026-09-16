@@ -19,6 +19,7 @@ import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -85,6 +86,9 @@ internal class NewWorktreeDialog(
     private val suggestedName: String,
     private val defaultBase: String,
     private val branches: List<String>,
+    // `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. Used to
+    // reject a pull request URL that belongs to a different repository before it is ever fetched.
+    private val origin: String? = null,
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
 ) : DialogWrapper(parent, false), NewWorktreeHandle {
@@ -332,8 +336,16 @@ internal class NewWorktreeDialog(
             url.requestFocusInWindow()
             return
         }
-        if (parsePrUrl(value) == null) {
+        val ref = parsePrUrl(value)
+        if (ref == null) {
             setErrorText(KiloBundle.message("worktree.import.pr.invalid"), url)
+            url.requestFocusInWindow()
+            url.selectAll()
+            return
+        }
+        val slug = "${ref.owner}/${ref.repo}"
+        if (foreignPr(slug, origin)) {
+            setErrorText(KiloBundle.message("worktree.import.pr.foreign", slug, origin.orEmpty()), url)
             url.requestFocusInWindow()
             url.selectAll()
             return
