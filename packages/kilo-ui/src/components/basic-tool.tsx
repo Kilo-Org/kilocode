@@ -16,6 +16,19 @@ export interface BasicToolProps extends BaseProps {
 
 type OpenProps = Pick<BasicToolProps, "tool" | "callID" | "partID" | "forceOpen" | "defaultOpen">
 
+// Cards that have mounted open at least once. Only gates the deferred body on
+// remount; never read as an open preference.
+const MOUNTED_MAX = 2000
+const mounted = new Set<string>()
+function remember(key: string | undefined) {
+  if (!key) return
+  if (!mounted.has(key) && mounted.size >= MOUNTED_MAX) {
+    const first = mounted.values().next().value
+    if (first) mounted.delete(first)
+  }
+  mounted.add(key)
+}
+
 export function initialOpen(props: OpenProps) {
   return props.forceOpen ? true : readToolOpen(toolOpenKey(props), props.defaultOpen)
 }
@@ -44,6 +57,21 @@ export function shouldRenderApprovalInBody(placement: BasicToolProps["approvalPl
 export function BasicTool(props: BasicToolProps) {
   const key = () => toolOpenKey(props)
   const initial = () => initialOpen(props)
+  // A deferred card that mounts open paints one frame without its body (the
+  // trigger only, about 24px) and grows to full size a frame later. On the
+  // first mount that is a cheap streaming trade-off. On a remount (virtualizer
+  // handoff, scrolling back into range) it is a collapse-and-expand flash of
+  // the full diff height that moves the pinned transcript, shifts the
+  // virtualizer's range and can remount the row again in a loop. Track cards
+  // that already mounted open, separately from the user preference map so the
+  // display setting and search `forceOpen` are not turned into a preference,
+  // and mount the body in the same frame when such a card comes back open.
+  const seen = () => {
+    const id = key()
+    return id !== undefined && mounted.has(id)
+  }
+  const defer = () => props.defer && !(seen() && initial())
+  if (initial() && !props.forceOpen) remember(key())
   const approval = useToolApproval()
   const inBody = () => shouldRenderApprovalInBody(props.approvalPlacement, approval() !== undefined)
   const change = (open: boolean) => {
@@ -63,15 +91,24 @@ export function BasicTool(props: BasicToolProps) {
   // BashHighlightedOutput instances per render). Memoize eager tools so repeated
   // reads reuse one subtree. Deferred tools must stay lazy: createMemo runs
   // eagerly, which would build a collapsed body before the card opens.
-  const details = props.defer ? buildDetails : createMemo(buildDetails)
+  const details = defer() ? buildDetails : createMemo(buildDetails)
   // A <Show>, not a plain `if`: inBody() tracks the visibility toggle, which can
   // flip after mount (Settings), so the branch must stay reactive.
   return (
     <Show
       when={"children" in props || inBody()}
-      fallback={<Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} />}
+      fallback={
+        <Base {...props} defer={defer()} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} />
+      }
     >
-      <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} hasDetails={inBody()}>
+      <Base
+        {...props}
+        defer={defer()}
+        defaultOpen={initial()}
+        retainDetails={props.defer}
+        onOpenChange={change}
+        hasDetails={inBody()}
+      >
         {details()}
       </Base>
     </Show>

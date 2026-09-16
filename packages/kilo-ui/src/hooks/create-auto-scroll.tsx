@@ -130,8 +130,12 @@ export function createAutoScroll(options: AutoScrollOptions) {
       // the same frame. The shrink makes the browser clamp the pin away, and
       // because the final content size is unchanged no resize entry follows, so
       // the correction has to happen here or the transcript stays parked below
-      // its bottom until the next content update.
-      if (active()) bottom()
+      // its bottom until the next content update. The same applies to the
+      // virtualizer's jump compensation when handed-over rows re-measure: the
+      // scroll event fires before paint, so pinning here hides the jump. This
+      // must not depend on the working state: a session waiting on a permission
+      // reports idle while its transcript still changes.
+      bottom()
       return
     }
 
@@ -162,17 +166,28 @@ export function createAutoScroll(options: AutoScrollOptions) {
   // waiting for it lets the browser paint one frame with the new content hanging
   // below the viewport, which reads as the transcript twitching as it streams.
   const onContentMutate = () => {
-    if (!scroll || !active()) return
+    if (!scroll) return
     if (store.userScrolled || userActivity.isRecent()) return
     if (!canScroll(scroll)) return
+
+    // While idle (including a pending permission) content still changes: tool
+    // output lands, docks mount. Keep the bottom when the user has not left it,
+    // matching onContentResize so both observers agree.
+    if (!active()) {
+      if (distanceFromBottom(scroll) > threshold()) bottom()
+      return
+    }
 
     follow()
   }
 
+  // A viewport resize (composer growing, a dock mounting, the panel being
+  // resized) is never a scroll gesture, so a recent click must not block the
+  // re-pin. Only an explicit scroll away from the bottom releases it.
   const onViewportResize = () => {
     if (!scroll) return
     if (!canScroll(scroll)) return
-    if (store.userScrolled || userActivity.isRecent()) return
+    if (store.userScrolled) return
     bottom()
   }
 
