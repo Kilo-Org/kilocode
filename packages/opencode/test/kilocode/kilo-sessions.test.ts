@@ -1569,6 +1569,95 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
     })
   }, 30000)
 
+  test("text part GitLab and Bitbucket PR URLs advertises prLink and enqueue one item each", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, textPart(id, "p-gitlab", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const gitlab = await capturedGetSessions()()
+          expect(gitlab.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const first = prLinkItems()
+          expect(first.length).toBe(1)
+          expect(first[0]!.data).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+
+          emitPart(id, textPart(id, "p-bitbucket", "Opened https://bitbucket.org/team/repo/pull-requests/9"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const bitbucket = await capturedGetSessions()()
+          expect(bitbucket.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "bitbucket",
+            prUrl: "https://bitbucket.org/team/repo/pull-requests/9",
+            prNumber: 9,
+          })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const links = prLinkItems()
+          expect(links.length).toBe(2)
+          expect(links[1]!.data).toEqual({
+            platform: "bitbucket",
+            prUrl: "https://bitbucket.org/team/repo/pull-requests/9",
+            prNumber: 9,
+          })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  // The write side the CLI's next process depends on: a GitLab MR URL in the
+  // session's own output is persisted under `recordedKey`, so a later
+  // `kilo pr status` process (which has no in-process record and no REST
+  // lookup for GitLab) can read it back.
+  test("session-output link is persisted for the next process", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          emitPart(id, textPart(id, "p-persist", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const stored = await PrLink.readRecordedPrLink(Instance.worktree)
+          expect(stored?.link).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
   test("repeated identical URL enqueues no second item", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
