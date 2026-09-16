@@ -44,6 +44,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Префікс гілки",
   "agentManager.settings.branchPrefix.description":
     "Префікс автоматично іменованих гілок у всіх проєктах, наприклад feature/. Не застосовується до явно заданих назв гілок. Залиште порожнім, щоб не використовувати префікс.",
+  "agentManager.settings.worktreePool.title": "Попереднє прогрівання worktree",
+  "agentManager.settings.worktreePool.description":
+    "Готувати worktree заздалегідь у фоновому режимі, щоб нові сесії Agent Manager запускалися швидше. Використовує додатковий простір на диску для одного checkout на кожен відкритий проєкт.",
   "agentManager.settings.project.title": "Проєкт",
   "agentManager.settings.project.description": "Виберіть repository, налаштування worktree якого потрібно змінити.",
   "agentManager.settings.project.empty": "Немає доступних проєктів Agent Manager.",
@@ -52,9 +55,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Запускайте перед початком роботи agent у новому worktree.",
   "agentManager.settings.setupScript.create": "Створити script",
   "agentManager.settings.setupScript.edit": "Редагувати script",
-  "agentManager.project.add": "Додати проєкт",
+  "agentManager.project.add": "Додати проєкт...",
   "agentManager.project.remove": "Видалити з Agent Manager",
   "agentManager.project.missing": "Репозиторій не знайдено",
+  "agentManager.project.settings": "Налаштування проєкту",
   "agentManager.project.restricted":
     "Поточна робоча область VS Code є домашньою папкою або коренем файлової системи. Відкрийте певну папку проєкту у VS Code, щоб використовувати Agent Manager.",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
@@ -143,6 +147,12 @@ export const dict = {
     "Цей репозиторій використовує Git LFS, але git-lfs не знайдено. Будь ласка, встановіть Git LFS.",
   "agentManager.setup.error.no_commits":
     "У цьому репозиторії ще немає коммітів. Створіть початковий комміт перед використанням worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Теки цього worktree більше немає. Відновіть її з гілки або вилучіть worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git більше не відслідковує цю теку як worktree. Вилучіть її та створіть новий worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git не відповів вчасно. Перевірте доступність репозиторію й спробуйте ще раз.",
   "agentManager.shortcuts.title": "Клавіатурні скорочення",
   "agentManager.shortcuts.category.sidebar": "Бічна панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",
@@ -243,6 +253,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Надіслати все до чату ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Надіслати {{count}} до GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Надсилання зупинено через помилку GitHub: {{error}}",
   "agentManager.review.inlineCount": "Локальні коментарі ({{count}})",
   "agentManager.review.prCount": "Коментарі PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} файлів",
@@ -317,6 +329,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Застарілий",
   "agentManager.pr.comment.sent": "Надіслано",
   "agentManager.pr.comment.copy": "Копіювати коментар",
+  "agentManager.pr.comment.copyLink": "Копіювати посилання на коментар",
   "agentManager.pr.comment.openOnGitHub": "Відкрити на GitHub",
   "agentManager.pr.comment.showInDiff": "Показати в diff",
   "agentManager.pr.comment.unplaced": "Коментарі поза поточним diff",
@@ -425,7 +438,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Режим запобігання сну ввімкнено для агентів Kilo; натисніть, щоб вимкнути",
   "agentManager.caffeination.active": "Комп'ютер не переходить у режим сну, доки працюють агенти Kilo",
   "agentManager.caffeination.unavailable": "Режим запобігання сну недоступний на цій платформі",
-  "agentManager.browser.title": "Браузер",
+  "agentManager.browser.title": "Вбудований браузер",
   "agentManager.browser.url": "URL локальної програми",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Відкрити",
@@ -434,7 +447,7 @@ export const dict = {
   "agentManager.browser.inspect": "Вибрати елемент",
   "agentManager.browser.devtoolsTitle": "Інструменти розробника",
   "agentManager.browser.empty": "Відкрийте локальну програму, щоб переглянути її тут.",
-  "agentManager.browser.noSession": "Спочатку виберіть сесію Agent Manager.",
+  "agentManager.browser.noSession": "Запустіть або виберіть сесію в Agent Manager, щоб відкрити локальний застосунок.",
   "agentManager.browser.screenshotAlt": "Поточна сторінка браузера",
   "agentManager.browser.errors": "Проблеми браузера: {{count}}",
   "agentManager.browser.diagnostics": "Діагностика браузера",
@@ -470,4 +483,27 @@ export const dict = {
   "agentManager.intro.guide": "Читати посібник",
   "agentManager.intro.dismiss": "Пропустити вступ",
   "agentManager.intro.reopen": "Як працює Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Теку видалено",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Теки немає, але гілка {{branch}} збереглася. Відновіть її, щоб продовжити роботу тут.",
+  "agentManager.worktree.health.absent-gone": "Теку й гілку видалено",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ні теки, ні гілки більше немає. Приберіть запис для порядку; сеанси залишаться в розділі «Локально».",
+  "agentManager.worktree.health.unregistered": "Не є git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Тека існує, але git більше не відслідковує її як worktree. Стан прочитати не вдається.",
+  "agentManager.worktree.health.unavailable": "Стан недоступний",
+  "agentManager.worktree.health.unavailableNote":
+    "Git або GitHub CLI не відповів вчасно. Опитування цього worktree припинено й буде повторено.",
+  "agentManager.worktree.restore": "Відновити worktree",
+  "agentManager.worktree.removeKeepSessions": "Видалити, зберігши сеанси",
+  "agentManager.orphans.title": "Залишені теки worktree",
+  "agentManager.orphans.summary": "{{count}} тек(и) у .kilo/worktrees не є git worktree.",
+  "agentManager.orphans.clean": "Очистити залишені теки",
+  "agentManager.orphans.confirm": "Видалити ці теки безповоротно? Git тут нічого не відслідковує.",
+  "agentManager.orphans.cancel": "Скасувати",
+  "agentManager.orphans.checkout": "містить робочу копію git",
+  "agentManager.orphans.confirmCheckout":
+    "Видалити ці теки безповоротно? {{count}} усе ще містять робочу копію git із можливими незакоміченими змінами.",
+  "agentManager.error.title": "Помилка Agent Manager",
 }

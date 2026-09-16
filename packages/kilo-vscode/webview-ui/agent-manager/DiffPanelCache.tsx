@@ -3,6 +3,7 @@ import type { WorktreeFileDiff } from "../src/types/messages"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { ReviewComposer } from "../diff-viewer/review-annotations"
 import type { PRComment } from "./pr/pr-types"
+import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { DiffPanel } from "./DiffPanel"
 import { diffDataKey } from "./worktree-diffs"
 
@@ -29,6 +30,10 @@ interface Props {
   comments: (ctx: string) => ReviewComment[]
   remoteComments?: (ctx: string) => PRComment[]
   remoteTarget?: (ctx: string, comment: PRComment) => import("../../src/shared/pr-comment-actions").PRTarget | undefined
+  prTarget?: (ctx: string) => PRTarget | undefined
+  prSnapshot?: (ctx: string) => PRDiffSnapshot | undefined
+  prLoading?: (ctx: string) => boolean
+  prError?: (ctx: string) => string | undefined
   focusedComment?: (key: string) => { id: string; file: string } | undefined
   setComments: (ctx: string, comments: ReviewComment[]) => void
   composer: (key: string) => ReviewComposer
@@ -121,6 +126,10 @@ export const DiffPanelCache: Component<Props> = (props) => {
                   ? props.remoteTarget?.(entry.ctx, comment)
                   : undefined
               }
+              prTarget={props.prTarget?.(entry.ctx)}
+              prSnapshot={props.prSnapshot?.(entry.ctx)}
+              prLoading={props.prLoading?.(entry.ctx)}
+              prError={props.prError?.(entry.ctx)}
               focusedComment={active() ? props.focusedComment?.(entry.key) : undefined}
               onCommentsChange={(comments) => props.setComments(entry.key, comments)}
               composer={props.composer(entry.cacheKey)}

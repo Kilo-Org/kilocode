@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
-import { worktreeReferences } from "../../webview-ui/agent-manager/worktree-references"
+import { worktreeDropReference, worktreeReferences } from "../../webview-ui/agent-manager/worktree-references"
 import { createProjectStore } from "../../webview-ui/agent-manager/project/store"
 import {
   buildMentionResults,
@@ -68,6 +68,30 @@ function reply(scope: ReturnType<typeof harness>, paths: string[] = []) {
 }
 
 describe("Agent Manager worktree references", () => {
+  it("drops a worktree card as the same reference shape the picker builds", () => {
+    const ref = worktreeDropReference(
+      tree("drop", {
+        label: "Feature",
+        branch: "feature/drop",
+        path: "/repo/.kilo/worktrees/drop",
+        parentBranch: "develop",
+      }),
+      "Feature",
+      [{ id: "ses_drop", title: "Fix login" }],
+      true,
+    )
+
+    expect(ref).toEqual({
+      id: "drop",
+      name: "Feature",
+      branch: "feature/drop",
+      path: "/repo/.kilo/worktrees/drop",
+      base: "develop",
+      sessions: [{ id: "ses_drop", title: "Fix login" }],
+      disabled: true,
+    })
+  })
+
   it("uses sidebar names and includes all sessions without selecting a transcript", () => {
     const state = createProjectStore("project")
     state.setWorktrees([tree("named", { label: "Custom name" }), tree("ordered"), tree("empty")])

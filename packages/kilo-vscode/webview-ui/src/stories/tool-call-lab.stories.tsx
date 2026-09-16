@@ -1,5 +1,6 @@
 /** @jsxImportSource solid-js */
 import { createEffect, createSignal, For } from "solid-js"
+import { createStore } from "solid-js/store"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type {
   AssistantMessage as SDKAssistantMessage,
@@ -1462,6 +1463,66 @@ export const SearchPreviews: Story = {
               </div>
             </section>
           </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+/**
+ * A question resolves before it completes: the backend publishes
+ * question.replied first, then the tool result lands. "Resolve" drops the live
+ * request while the tool part is still running, so the row must keep rendering
+ * the interactive dock (held) instead of unmounting to an empty row and
+ * snapping the transcript for a frame.
+ */
+export const QuestionResolveStability: Story = {
+  render: () => {
+    const request: QuestionRequest = {
+      ...blockQuestions[0]!,
+      id: "matrix-question-resolve",
+      tool: { messageID: MID, callID: "matrix-call-question-resolve" },
+    }
+    const [asked, setAsked] = createSignal(true)
+    // A store keeps the part proxy stable across the status flip, so the row
+    // reconciles in place the same way a streaming part does.
+    const [part, setPart] = createStore<ToolPart>({
+      id: "matrix-question-resolve-part",
+      sessionID: SID,
+      messageID: MID,
+      type: "tool",
+      callID: "matrix-call-question-resolve",
+      tool: "question",
+      state: running({ questions: request.questions }, "Ask design question"),
+    })
+    const session = {
+      ...mockSessionValue({ id: SID, status: "busy", questions: [request] }),
+      questions: () => (asked() ? [request] : []),
+      messages: () => [base],
+    }
+    return (
+      <StoryProviders data={defaultMockData} sessionID={SID} status="busy" questions={[request]}>
+        <SessionContext.Provider value={session as any}>
+          <button data-testid="resolve-question" onClick={() => setAsked(false)}>
+            resolve question
+          </button>
+          <button
+            data-testid="complete-question"
+            onClick={() =>
+              setPart(
+                "state",
+                completed(
+                  { questions: request.questions },
+                  "Question answered",
+                  'User has answered your questions: "Which visual family should this new block follow?"="Tool row".',
+                  { answers: [["Tool row"]] },
+                ),
+              )
+            }
+          >
+            complete question
+          </button>
+          <AssistantMessage message={base} parts={[part]} />
         </SessionContext.Provider>
       </StoryProviders>
     )

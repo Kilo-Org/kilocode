@@ -349,6 +349,10 @@
   border-style: dashed;
 }
 
+.prompt-input-container--mention-drop {
+  border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
+}
+
 .prompt-input-wrapper {
   display: flex;
   gap: 8px;
@@ -438,6 +442,36 @@
 .prompt-input-file-mention--file:hover {
   background-color: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 25%, transparent);
   box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 40%, transparent);
+  text-decoration: underline;
+}
+
+/* Collapsed large paste. The text is identical to the textarea's placeholder, so
+   the overlay stays aligned; only the chip decoration is added here. */
+.prompt-input-paste {
+  color: var(--vscode-textPreformat-foreground, var(--vscode-foreground));
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 12%,
+    transparent
+  );
+  border-radius: 3px;
+  box-shadow: 0 0 0 0.5px
+    color-mix(in srgb, var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 30%, transparent);
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.prompt-input-paste:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 22%,
+    transparent
+  );
+  box-shadow: 0 0 0 0.5px
+    color-mix(in srgb, var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 45%, transparent);
   text-decoration: underline;
 }
 

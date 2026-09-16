@@ -29,6 +29,7 @@ import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-s
 // kilocode_change start: Mermaid rendering and morphdom guards for highlighted blocks
 import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid"
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight"
+import { patchCodeTokens } from "../kilocode/markdown-code-tokens"
 // kilocode_change end
 
 type Entry = {
@@ -746,11 +747,17 @@ function updateCodeBlock(
     const prior = reset ? [] : previous!.unstable
     const prefix = prior.findIndex((token, index) => !sameToken(token, tail[index]))
     const keep = stableCount + (prefix < 0 ? Math.min(prior.length, tail.length) : prefix)
-    while (code.children.length > keep) code.lastElementChild?.remove()
-    tail
-      .slice(keep - stableCount)
-      .map(createTokenSpan)
-      .forEach((span) => code.appendChild(span))
+    // kilocode_change start: a reset re-tokenizes the whole block; patch the
+    // spans in place instead of recreating them so a selection survives.
+    if (reset && previous) patchCodeTokens(code, tail, createTokenSpan)
+    else {
+      while (code.children.length > keep) code.lastElementChild?.remove()
+      tail
+        .slice(keep - stableCount)
+        .map(createTokenSpan)
+        .forEach((span) => code.appendChild(span))
+    }
+    // kilocode_change end
     renderedCodeTokens.set(next, {
       language: block.language,
       generation: block.generation,
