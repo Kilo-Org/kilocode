@@ -734,7 +734,6 @@ export const dict = {
   "sidebar.topBar.newTask": "وظیفه جدید",
   "sidebar.topBar.history": "تاریخچه",
   "sidebar.topBar.agentManager": "مدیر عامل‌ها",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "بازارچه",
   "sidebar.topBar.profile": "پروفایل",
   "sidebar.topBar.settings": "تنظیمات",

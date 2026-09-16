@@ -307,7 +307,6 @@ export const dict = {
   "sidebar.topBar.newTask": "新建任務",
   "sidebar.topBar.history": "歷史記錄",
   "sidebar.topBar.agentManager": "代理管理器",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "市集",
   "sidebar.topBar.profile": "個人資料",
   "sidebar.topBar.settings": "設定",
