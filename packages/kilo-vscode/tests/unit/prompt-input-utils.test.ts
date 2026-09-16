@@ -13,6 +13,7 @@ import {
   applySandboxState,
   applySandboxStates,
   memoryRest,
+  undoKey,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 import { parseMemoryCommand } from "../../webview-ui/src/utils/memory-command"
 
@@ -359,5 +360,41 @@ describe("memoryRest", () => {
     // remember/correct/forget/auto/purge consume their text, so nothing remains.
     expect(memoryRest(parseMemoryCommand("/memory remember hello")!)).toBe("")
     expect(memoryRest(parseMemoryCommand("/memory auto on")!)).toBe("")
+  })
+})
+
+describe("undoKey", () => {
+  const chord = (
+    key: string,
+    init: { code?: number; ctrl?: boolean; meta?: boolean; shift?: boolean; alt?: boolean } = {},
+  ) =>
+    ({
+      key,
+      keyCode: init.code ?? 0,
+      ctrlKey: !!init.ctrl,
+      metaKey: !!init.meta,
+      shiftKey: !!init.shift,
+      altKey: !!init.alt,
+    }) as unknown as KeyboardEvent
+
+  it("maps Ctrl and Meta z to undo", () => {
+    expect(undoKey(chord("z", { code: 90, ctrl: true }))).toBe("undo")
+    expect(undoKey(chord("z", { code: 90, meta: true }))).toBe("undo")
+  })
+
+  it("maps Shift+z and y to redo", () => {
+    expect(undoKey(chord("Z", { code: 90, meta: true, shift: true }))).toBe("redo")
+    expect(undoKey(chord("y", { code: 89, ctrl: true }))).toBe("redo")
+  })
+
+  it("matches non-Latin layouts by keyCode", () => {
+    expect(undoKey(chord("ז", { code: 90, meta: true }))).toBe("undo")
+  })
+
+  it("ignores alt, missing modifiers, and unsupported chords", () => {
+    expect(undoKey(chord("z", { code: 90, meta: true, alt: true }))).toBeUndefined()
+    expect(undoKey(chord("z", { code: 90 }))).toBeUndefined()
+    expect(undoKey(chord("Y", { code: 89, ctrl: true, shift: true }))).toBeUndefined()
+    expect(undoKey(chord("c", { code: 67, meta: true }))).toBeUndefined()
   })
 })
