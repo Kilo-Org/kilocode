@@ -6,7 +6,7 @@
 // injected logger for the create/exit wire commands, `RemoteSessionLog.endAll`
 // for the process-exit path), so a wiring regression fails here.
 
-import { describe, expect, test } from "bun:test"
+import { beforeEach, describe, expect, test } from "bun:test"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -153,6 +153,15 @@ function lineOf(lines: Line[], message: string) {
 }
 
 describe("kilo remote session log (two lines per session)", () => {
+  // The tracker is process-wide (one process = one run), so a case that starts
+  // a session without ending it (e.g. a failed detach) would otherwise leak its
+  // start date into whichever case runs next. Draining it through the same
+  // public API production uses to close a run keeps the suite order-independent
+  // without a test-only seam in the module under test.
+  beforeEach(() => {
+    RemoteSessionLog.endAll(captureLogger([]), "test-drain")
+  })
+
   test("logs a start line and an end line with the id, the start date, the model, the directory and the duration", async () => {
     const { lines } = capture()
     const id = SessionID.make("ses_remote_log_pair")
@@ -277,10 +286,6 @@ describe("kilo remote session log (two lines per session)", () => {
     const first = SessionID.make("ses_remote_log_shutdown_a")
     const second = SessionID.make("ses_remote_log_shutdown_b")
     const log = captureLogger(lines)
-
-    // The tracker is process-wide (one process = one run); drain anything an
-    // earlier case left open so this case observes only its own sessions.
-    RemoteSessionLog.endAll(captureLogger([]), "test_setup")
 
     RemoteSessionLog.start(log, { sessionID: first, model: "kilo/claude-sonnet-4", directory: "/workspace/a" })
     RemoteSessionLog.start(log, { sessionID: second, directory: "/workspace/b" })

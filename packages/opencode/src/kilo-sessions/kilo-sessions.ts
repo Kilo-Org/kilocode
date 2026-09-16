@@ -108,7 +108,16 @@ export namespace KiloSessions {
   function isPermanentHttpStatus(reason: string): boolean {
     const match = reason.match(/^http_(\d+)$/)
     if (!match) return false
-    const status = parseInt(match[1], 10)
+    return refusedByRelay(parseInt(match[1], 10))
+  }
+
+  /**
+   * A status the relay answered with is a definitive refusal: a permanent
+   * client error (4xx) other than 408 (Request Timeout) and 429 (Too Many
+   * Requests). Everything else — 5xx, 408, 429, a network failure — is
+   * transient and leaves the request retryable.
+   */
+  function refusedByRelay(status: number): boolean {
     return status >= 400 && status < 500 && status !== 408 && status !== 429
   }
 
@@ -125,9 +134,19 @@ export namespace KiloSessions {
   // text without re-throwing. `skipped` marks a bootstrap that never reached
   // the relay (no credentials / ingest disabled) so the create_session gate
   // below can tell "the relay refused this session" from "there was nothing to
-  // refuse".
-  type BootstrapOutcome = { ok: true; ingestPath: string } | { ok: false; reason: string; skipped?: true }
+  // refuse". `refused` marks the explicit refusal itself: only that outcome may
+  // fail hosting, a transient failure must stay retryable.
+  type BootstrapOutcome =
+    | { ok: true; ingestPath: string }
+    | { ok: false; reason: string; skipped?: true; refused?: true }
   const bootstrapInflight = new Map<string, Promise<BootstrapOutcome>>()
+
+  // kilocode_change - `bootstrap` rejects with this when the relay answered the
+  // ingest POST with a definitive refusal (a permanent 4xx). `trackBootstrap`
+  // marks the outcome `refused` from this type, and only a refused outcome may
+  // fail the create_session command: a transient failure (5xx/408/429 or a
+  // network error) leaves the session hosted and retried on the next attempt.
+  class RelayRefusal extends Error {}
 
   function clearCache() {
     clearInFlightCache(tokenKey)
@@ -943,7 +962,7 @@ export namespace KiloSessions {
           // Restore the directory context before dispatching an async remote message.
           void provide({ directory, fn: () => sender.handle(msg) })
         },
-        onClose: () => disableRemote(),
+        onClose: () => disableRemote("disconnected"),
       })
 
       const sender = RemoteSender.create({
@@ -1012,7 +1031,14 @@ export namespace KiloSessions {
     return enabling
   }
 
-  export function disableRemote() {
+  // `reason` names why this run stopped hosting: "disconnected" when the relay
+  // connection went away, "shutdown" for the process/instance teardown.
+  export function disableRemote(reason = "shutdown") {
+    // kilocode_change - the attached state is cleared below, so this is the
+    // last moment this run hosts these sessions. Pair every open start line
+    // here; otherwise the entry survives the disconnect and a later `endAll`
+    // reports a stale end line whose duration spans the disconnected period.
+    RemoteSessionLog.endAll(log, reason)
     remoteSeq += 1
     const pending = !!enabling
     enabling = undefined
@@ -1073,22 +1099,35 @@ export namespace KiloSessions {
   // means something once the relay accepted its ingest bootstrap (POST
   // /api/session). `create` coalesces onto the POST the Session.Event.Created
   // watcher already started, so a healthy create_session adds no second
-  // request; a relay refusal (e.g. 409) surfaces here so the command rolls the
-  // local session back instead of advertising and logging a session the relay
-  // never accepted. A bootstrap that never reached the relay (no credentials,
-  // ingest disabled) resolves like a success: only an explicit refusal blocks
+  // request; an explicit relay refusal (e.g. 409) surfaces here so the command
+  // rolls the local session back instead of advertising and logging a session
+  // the relay never accepted. A bootstrap that never reached the relay (no
+  // credentials, ingest disabled) resolves like a success, and so does a
+  // transient failure (5xx/408/429/network): only an explicit refusal blocks
   // hosting.
   export async function ensureSharedSession(sessionId: string): Promise<void> {
     const inflight = bootstrapInflight.get(sessionId)
     if (inflight) {
-      const outcome = await inflight
-      if (!outcome.ok && !outcome.skipped) throw new Error(outcome.reason)
+      assertShared(await inflight)
       return
     }
     // Owner path: `create` registers the in-flight bootstrap synchronously, so
-    // a concurrent watcher call joins this same POST. It rejects when the relay
-    // refuses the request; a skipped bootstrap resolves with an empty id.
-    await create(sessionId)
+    // a concurrent watcher call joins this same POST. It rejects on every
+    // bootstrap failure — the import path depends on that — but its rejection
+    // cannot tell a refusal from a transient error, so read the tracked
+    // outcome instead.
+    const created = create(sessionId)
+    const tracked = bootstrapInflight.get(sessionId)
+    void created.catch(() => undefined)
+    if (tracked) assertShared(await tracked)
+  }
+
+  // kilocode_change - only an explicit relay refusal fails hosting. A skipped
+  // bootstrap (never reached the relay) or a transient failure resolves like a
+  // success so the session stays hosted locally.
+  function assertShared(outcome: BootstrapOutcome): void {
+    if (outcome.ok || outcome.skipped || !outcome.refused) return
+    throw new Error(outcome.reason)
   }
 
   // Duplicate-safe single-session attach used by the remote create_session command. Delegates to
@@ -1180,7 +1219,10 @@ export namespace KiloSessions {
       .catch((error: unknown): BootstrapOutcome => {
         const reason = error instanceof Error ? error.message : String(error)
         log.warn("session bootstrap failed", { sessionId, reason })
-        return { ok: false, reason }
+        // kilocode_change - only a definitive refusal is marked. A transient
+        // failure (5xx/408/429/network) stays retryable and must not fail the
+        // create_session command (see ensureSharedSession).
+        return error instanceof RelayRefusal ? { ok: false, reason, refused: true } : { ok: false, reason }
       })
 
     // Register synchronously before any async work starts so concurrent
@@ -1217,7 +1259,11 @@ export namespace KiloSessions {
     })
 
     if (!response.ok) {
-      throw new Error(`Unable to create session ${sessionId}: ${response.status} ${response.statusText}`)
+      const message = `Unable to create session ${sessionId}: ${response.status} ${response.statusText}`
+      // kilocode_change - a permanent 4xx is the relay's answer and blocks
+      // hosting; 5xx/408/429 is transient and retried rather than rolled back.
+      if (refusedByRelay(response.status)) throw new RelayRefusal(message)
+      throw new Error(message)
     }
 
     const result = (await response.json()) as { id: string; ingestPath: string }
