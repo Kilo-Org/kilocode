@@ -1638,3 +1638,115 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
     })
   }, 30000)
 })
+
+// The create_session command hosts a session on the relay, so the relay must
+// first accept that session's ingest bootstrap (POST /api/session). A refused
+// bootstrap must fail the attach, so the command rolls the local session back
+// instead of advertising and logging a session the relay never accepted.
+describe("KiloSessions create_session share gate", () => {
+  let sessionStatus = 200
+
+  beforeEach(() => {
+    process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    process.env["KILO_API_KEY"] = "tok"
+    reset("tok")
+    KiloSessions.resetInstanceAdvertisementForTests()
+    sessionStatus = 200
+
+    spyOn(RemoteSender, "create").mockImplementation(
+      () =>
+        ({
+          handle() {},
+          dispose() {},
+        }) as RemoteSender.Sender,
+    )
+    spyOn(RemoteWS, "connect").mockImplementation(
+      (options) =>
+        ({
+          connectionId: "test-conn",
+          send() {},
+          heartbeat: () => options.getSessions().then(() => undefined),
+          close() {},
+          get connected() {
+            return true
+          },
+        }) as RemoteWS.Connection,
+    )
+
+    clearInFlightCache("kilo-sessions:token")
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    globalThis.fetch = mock(async (input) => {
+      const url = String(input)
+      if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+      if (url.endsWith("/api/session")) {
+        if (sessionStatus === 409) {
+          return new Response(JSON.stringify({ error: "session already contained" }), {
+            status: 409,
+            headers: { "content-type": "application/json" },
+          })
+        }
+        return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+      }
+      return new Response("{}", { status: 200 })
+    }) as unknown as typeof fetch
+  })
+
+  afterEach(async () => {
+    const pub = spyOn(Bus, "publish").mockResolvedValue(undefined as never)
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        KiloSessions.disableRemote()
+      },
+    })
+    pub.mockRestore()
+    mock.restore()
+    delete process.env["KILO_DISABLE_SESSION_INGEST"]
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    delete process.env["KILO_PLATFORM"]
+    delete process.env["KILO_API_KEY"]
+    reset("tok")
+  })
+
+  async function setupSession() {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const { Session } = await import("@/session/session")
+    const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+    return chat.id
+  }
+
+  test("requireShare fails and leaves the session unattached when the relay refuses the ingest bootstrap", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        // The relay now answers POST /api/session with 409 Conflict.
+        sessionStatus = 409
+
+        await expect(KiloSessions.attachRemoteSession(id, { requireShare: true })).rejects.toThrow(/409/)
+
+        expect(KiloSessions.hasRemoteSession(id)).toBe(false)
+      },
+    })
+  }, 30000)
+
+  test("requireShare attaches once the relay accepts the ingest bootstrap", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+
+        await KiloSessions.attachRemoteSession(id, { requireShare: true })
+
+        expect(KiloSessions.hasRemoteSession(id)).toBe(true)
+      },
+    })
+  }, 30000)
+})

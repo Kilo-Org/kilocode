@@ -32,6 +32,7 @@ import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertiseme
 import { detectPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
 import type { PrLink } from "@/kilo-sessions/pr-link"
 import { AttachedState } from "@/kilo-sessions/attached-state"
+import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import {
   clear as clearRenameMarks,
   consumeAutoTitle,
@@ -121,8 +122,11 @@ export namespace KiloSessions {
   // single POST /api/session call. Entries resolve to the same share record or
   // a thrown error; on bootstrap failure the rejection is captured as a
   // `{ ok:false, reason }` outcome so callers can map it to the tool's failure
-  // text without re-throwing.
-  type BootstrapOutcome = { ok: true; ingestPath: string } | { ok: false; reason: string }
+  // text without re-throwing. `skipped` marks a bootstrap that never reached
+  // the relay (no credentials / ingest disabled) so the create_session gate
+  // below can tell "the relay refused this session" from "there was nothing to
+  // refuse".
+  type BootstrapOutcome = { ok: true; ingestPath: string } | { ok: false; reason: string; skipped?: true }
   const bootstrapInflight = new Map<string, Promise<BootstrapOutcome>>()
 
   function clearCache() {
@@ -266,6 +270,11 @@ export namespace KiloSessions {
     (err) => log.warn("ingest drain failed", { err }),
   )
   KiloShutdown.register(drainIngest)
+
+  // Process-level, like the ingest drain: every exit path (Ctrl-C on
+  // `kilo remote`, TUI quit) closes the remote sessions this run started and
+  // still hosts, so a finished run always leaves an end line for what ran.
+  KiloShutdown.register(() => RemoteSessionLog.endAll(log, "shutdown"))
 
   export async function drainIngestForShutdown() {
     await drainIngest()
@@ -600,6 +609,9 @@ export namespace KiloSessions {
             clearRenameMarks(sessionID)
             // kilocode_change - detach a locally announced session on dispose.
             void detachLocalSession(sessionID)
+            // The row is gone, so this run stops hosting it. No-op unless this
+            // run started the session (see RemoteSessionLog.end).
+            RemoteSessionLog.end(log, { sessionID, reason: "deleted" })
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -942,7 +954,7 @@ export namespace KiloSessions {
         // back to KiloSessions. The sender does NOT spawn a process per
         // session — concurrent remote sessions share this CLI process with
         // per-directory InstanceRef isolation.
-        attachSession: (id) => KiloSessions.attachRemoteSession(id),
+        attachSession: (id, opts) => KiloSessions.attachRemoteSession(id, opts),
         detachSession: (id) => KiloSessions.detachRemoteSession(id),
         hasSession: (id) => KiloSessions.hasRemoteSession(id),
         ownedCount: () => KiloSessions.ownedRemoteSessionCount(),
@@ -1057,11 +1069,40 @@ export namespace KiloSessions {
     instanceAdvertisement = undefined
   }
 
+  // kilocode_change - create_session gate: hosting a session on the relay only
+  // means something once the relay accepted its ingest bootstrap (POST
+  // /api/session). `create` coalesces onto the POST the Session.Event.Created
+  // watcher already started, so a healthy create_session adds no second
+  // request; a relay refusal (e.g. 409) surfaces here so the command rolls the
+  // local session back instead of advertising and logging a session the relay
+  // never accepted. A bootstrap that never reached the relay (no credentials,
+  // ingest disabled) resolves like a success: only an explicit refusal blocks
+  // hosting.
+  export async function ensureSharedSession(sessionId: string): Promise<void> {
+    const inflight = bootstrapInflight.get(sessionId)
+    if (inflight) {
+      const outcome = await inflight
+      if (!outcome.ok && !outcome.skipped) throw new Error(outcome.reason)
+      return
+    }
+    // Owner path: `create` registers the in-flight bootstrap synchronously, so
+    // a concurrent watcher call joins this same POST. It rejects when the relay
+    // refuses the request; a skipped bootstrap resolves with an empty id.
+    await create(sessionId)
+  }
+
   // Duplicate-safe single-session attach used by the remote create_session command. Delegates to
   // the two-set state so the announcement is preserved across a concurrent presence replacement
   // and a heartbeat failure rolls back only the entry this call added (a presence-owned id is never
   // reachable here because the factory guards it).
-  export async function attachRemoteSession(id: string) {
+  //
+  // `opts.requireShare` is set by the create_session path: the session was just
+  // created for the relay, so the relay must have accepted its ingest bootstrap
+  // before this CLI announces it (see ensureSharedSession). The clone path and
+  // locally started sessions pass no opts — their session already exists on the
+  // relay or was never created for it.
+  export async function attachRemoteSession(id: string, opts?: { requireShare?: boolean }) {
+    if (opts?.requireShare) await ensureSharedSession(id)
     await attachedState.announce(id)
   }
 
@@ -1133,7 +1174,7 @@ export namespace KiloSessions {
     const task = start()
     const tracked: Promise<BootstrapOutcome> = task
       .then((value): BootstrapOutcome => {
-        if (!value) return { ok: false, reason: "not_connected" }
+        if (!value) return { ok: false, reason: "not_connected", skipped: true }
         return { ok: true, ingestPath: value.ingestPath }
       })
       .catch((error: unknown): BootstrapOutcome => {
