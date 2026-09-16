@@ -23,7 +23,7 @@ The mobile app lets you:
 - Track a session's [goal](/docs/code-with-ai/agents/goals) from a fixed section under the session header, and start or control one with `/goal`.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
-- Review GitHub pull requests end to end — diffs, checks, comments, and merging.
+- Review GitHub pull requests, GitLab merge requests, and Bitbucket pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
 ## Finding sessions
@@ -139,19 +139,21 @@ Attaching files from the phone is the mobile flow — this is separate from `kil
 
 While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.
 
-## Reviewing GitHub pull requests
+## Reviewing pull requests and merge requests
 
-Open a pull request from a PR link to review it without leaving the app:
+Open a pull request or merge request from a link to review it without leaving the app. GitHub pull requests, GitLab merge requests, and Bitbucket pull requests use the same review layout, with each provider's own wording for states and checks:
 
-- **Overview** — PR state and CI checks, plus sidebar metadata: when the pull request opened and last moved, its labels, the reviewers and each one's state (approved, changes requested, commented, dismissed, or awaiting review), assignees, the linked issues it closes, and a comment-count badge on the **Discussion** tab. Sections that GitHub reports nothing for are hidden.
+- **Overview** — request state and CI checks, plus sidebar metadata for the details the provider reports, such as when the request opened and last moved, its labels, reviewers and each one's state, assignees, and the linked issues it closes. A comment-count badge on the **Discussion** tab shows the unresolved threads, and sections the provider reports nothing for are hidden.
 - **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
 - **Discussion** — review threads with replies, resolve/unresolve, and reactions.
 
-Comments you leave on diffs are collected into a pending review on your device and submitted to GitHub as a single review. To post a regular conversation comment instead, tap **Comment on this pull request** at the bottom of **Discussion**. These comments appear directly in the discussion and are not part of a review.
+Comments you leave on diffs are collected into a pending review on your device and submitted as a single review. To post a regular conversation comment instead, tap **Comment on this pull request** at the bottom of **Discussion**. These comments appear directly in the discussion and are not part of a review, and they work on GitHub pull requests, GitLab merge requests, and Bitbucket pull requests. The comment sheet header shows the provider's own reference, such as `group/sub/repo!12` on GitLab or `workspace/repo#77` on Bitbucket.
 
-When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch, all from the app.
+When the request is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge where the provider supports it, or update the branch, all from the app. Bitbucket's API has no auto-merge, so the app explains that instead of offering it.
 
-PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
+Reviews use your connected account for that provider; the app asks you to connect it if you have not already. GitLab merge requests work in personal and organization contexts, including self-managed instances. Bitbucket Cloud is available in organization contexts and explains how to proceed from a personal context.
+
+Recents, drafts, viewed-file sets, and pending comments stay separate across providers, accounts, and GitLab instances, so same-named repositories never share state.
 
 ## Session cost and model details
 
