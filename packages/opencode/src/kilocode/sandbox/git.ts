@@ -48,6 +48,51 @@ const MUTATING = new Set([
   "update-index",
 ])
 
+const BRANCH_READ = new Set([
+  "-a",
+  "-l",
+  "-r",
+  "-v",
+  "-vv",
+  "--all",
+  "--column",
+  "--contains",
+  "--format",
+  "--list",
+  "--merged",
+  "--no-merged",
+  "--points-at",
+  "--remotes",
+  "--show-current",
+  "--sort",
+  "--verbose",
+])
+
+const TAG_READ = new Set([
+  "-l",
+  "-n",
+  "-v",
+  "--column",
+  "--contains",
+  "--format",
+  "--list",
+  "--merged",
+  "--no-merged",
+  "--points-at",
+  "--sort",
+  "--verbose",
+])
+
+const REMOTE_READ = new Set(["get-url", "show"])
+const REMOTE_FLAGS = new Set(["-v", "--verbose"])
+const STASH_READ = new Set(["list", "show"])
+const REFLOG_READ = new Set(["exists", "show"])
+const NOTES_READ = new Set(["list", "show"])
+
+function verb(values: string[]) {
+  return values.slice(1).find((value) => !value.startsWith("-"))
+}
+
 function args(text: string) {
   const match = text
     .trim()
@@ -70,24 +115,10 @@ export function mutates(text: string) {
   const subcommand = values[0]?.toLowerCase()
   if (!subcommand) return false
   if (subcommand === "branch") {
-    return (
-      values.length > 1 &&
-      !values
-        .slice(1)
-        .some((value) =>
-          ["-a", "-r", "-l", "--all", "--list", "--show-current", "--contains", "--merged", "--no-merged"].includes(
-            value,
-          ),
-        )
-    )
+    return values.length > 1 && !values.slice(1).some((value) => BRANCH_READ.has(value))
   }
   if (subcommand === "tag") {
-    return (
-      values.length > 1 &&
-      !values
-        .slice(1)
-        .some((value) => ["-l", "--list", "--contains", "--points-at", "--merged", "--no-merged"].includes(value))
-    )
+    return values.length > 1 && !values.slice(1).some((value) => TAG_READ.has(value))
   }
   if (subcommand === "config") {
     if (values.length === 1) return false
@@ -106,6 +137,30 @@ export function mutates(text: string) {
           "--show-names",
         ].includes(value),
       )
+  }
+  if (subcommand === "remote") {
+    if (values.length === 1) return false
+    const name = verb(values)
+    if (name) return !REMOTE_READ.has(name)
+    return values.slice(1).some((value) => !REMOTE_FLAGS.has(value))
+  }
+  if (subcommand === "stash") {
+    const name = verb(values)
+    if (!name) return true
+    return !STASH_READ.has(name)
+  }
+  if (subcommand === "worktree") {
+    return verb(values) !== "list"
+  }
+  if (subcommand === "reflog") {
+    const name = verb(values)
+    if (!name) return false
+    return !REFLOG_READ.has(name)
+  }
+  if (subcommand === "notes") {
+    const name = verb(values)
+    if (!name) return false
+    return !NOTES_READ.has(name)
   }
   if (READONLY.has(subcommand)) return false
   if (MUTATING.has(subcommand)) return true
