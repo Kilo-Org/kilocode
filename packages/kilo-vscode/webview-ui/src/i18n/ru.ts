@@ -1079,6 +1079,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "модель",
   "settings.agentBehaviour.workflows.variant": "вариант",
   "settings.agentBehaviour.workflows.modelDescription": "Глобальное переопределение модели",
+  "settings.experimental.codeMode.title": "Программные вызовы инструментов",
+  "settings.experimental.codeMode.description":
+    "Направляет вызовы инструментов MCP через изолированную среду выполнения JavaScript с обнаружением инструментов по запросу вместо прямого предоставления каждого инструмента MCP. Экономит контекст при подключении множества инструментов MCP.",
   "settings.sandboxing.enabled.title": "Песочница",
   "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",

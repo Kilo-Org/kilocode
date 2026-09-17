@@ -1070,6 +1070,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "모델",
   "settings.agentBehaviour.workflows.variant": "변형",
   "settings.agentBehaviour.workflows.modelDescription": "전역 모델 재정의",
+  "settings.experimental.codeMode.title": "프로그래밍 방식 도구 호출",
+  "settings.experimental.codeMode.description":
+    "각 MCP 도구를 직접 노출하는 대신 주문형 도구 검색을 지원하는 격리된 JavaScript 런타임을 통해 MCP 도구 호출을 라우팅합니다. 많은 MCP 도구가 연결되어 있을 때 컨텍스트를 절약합니다.",
   "settings.sandboxing.enabled.title": "샌드박스",
   "settings.sandboxing.enabled.description":
     "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
