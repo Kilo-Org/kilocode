@@ -89,9 +89,9 @@ export namespace KiloBtw {
     }
     const existing = yield* stored(opt, input.parentID)
     const next = [entry, ...existing].slice(0, MAX_ENTRIES)
-    yield* opt.value.write(key(input.parentID), next).pipe(
-      Effect.catch((err) => Effect.logError("KiloBtw: failed to persist entry", err)),
-    )
+    yield* opt.value
+      .write(key(input.parentID), next)
+      .pipe(Effect.catch((err) => Effect.logError("KiloBtw: failed to persist entry", err)))
     return entry
   })
 
@@ -125,7 +125,7 @@ export namespace KiloBtw {
       Session.Interface,
       "fork" | "remove" | "get" | "touch" | "updateMessage" | "updatePart" | "setPermission"
     >
-    agents: Pick<Agent.Interface, "defaultInfo">
+    agents: Pick<Agent.Interface, "defaultInfo" | "get">
     events: Pick<EventV2.Interface, "publish">
     status: Pick<SessionStatus.Interface, "get" | "set">
     currentModel: (sessionID: SessionID) => Effect.Effect<ModelRef>
@@ -137,27 +137,31 @@ export namespace KiloBtw {
   // never stall on a permission prompt the client cannot see.
   const ALLOWED_TOOLS = ["read", "grep", "glob", "list", "skill", "webfetch", "websearch", "semantic_search"]
 
-  // Deny every tool first, then re-allow read/research tools. Permission
-  // evaluation is last-match-wins, so the allows after the "*" deny win for
-  // those tools. A tool the parent explicitly restricted (deny/ask rules)
-  // keeps the parent's own rules instead of the blanket allow — a side
-  // question can never grant access the parent did not have. Parent "ask"
-  // rules are downgraded to "deny" (the fork cannot surface prompts). A
-  // locked-down parent (a "*" deny rule) suppresses the blanket allows
-  // entirely: the fork can then use only tools the parent explicitly
-  // re-enabled by name.
-  export function forkPermission(parentRules: PermissionV1.Ruleset | undefined): PermissionV1.Ruleset {
-    const rules = parentRules ?? []
-    const restricted = (tool: string) => rules.some((rule) => rule.permission === tool)
-    const lockedDown = rules.some((rule) => rule.permission === "*" && rule.action === "deny")
+  // Deny every tool first, then reproduce the parent's own rules for the
+  // allowlisted tools. Agent rules come first and session rules last, matching
+  // the runtime merge order (Permission.merge(agent.permission, session.permission)),
+  // and evaluation is last-match-wins, so a specific deny such as
+  // `read: { "*.env": "deny" }` still beats that tool's allow. "ask" rules are
+  // downgraded to "deny" because the fork cannot surface prompts. A tool with no
+  // rule anywhere gets a blanket read-only allow, unless the parent ended on a
+  // "*" deny, in which case only explicitly re-enabled tools survive.
+  export function forkPermission(
+    agentRules: PermissionV1.Ruleset | undefined,
+    sessionRules: PermissionV1.Ruleset | undefined,
+  ): PermissionV1.Ruleset {
+    const merged = [...(agentRules ?? []), ...(sessionRules ?? [])]
+    // Last "*" rule wins, mirroring runtime evaluation, so an agent such as
+    // `explore` ({ "*": deny, read: allow, ... }) suppresses blanket allows.
+    const lockedDown = merged.filter((rule) => rule.permission === "*").at(-1)?.action === "deny"
+    const downgrade = (rule: PermissionV1.Rule): PermissionV1.Rule => ({
+      ...rule,
+      action: rule.action === "allow" ? "allow" : "deny",
+    })
     return [
       { permission: "*", action: "deny", pattern: "*" },
       ...ALLOWED_TOOLS.flatMap((tool) => {
-        if (restricted(tool)) {
-          return rules
-            .filter((rule) => rule.permission === tool)
-            .map((rule) => ({ ...rule, action: rule.action === "allow" ? ("allow" as const) : ("deny" as const) }))
-        }
+        const own = merged.filter((rule) => rule.permission === tool).map(downgrade)
+        if (own.length > 0) return own
         if (lockedDown) return []
         return [{ permission: tool, action: "allow" as const, pattern: "*" }]
       }),
@@ -303,15 +307,16 @@ export namespace KiloBtw {
         text: `/btw ${question}`,
       })
 
-      // Run the fork with the session's agent: guardPermissions re-appends
-      // session deny rules after agent rules for ask/plan/architect agents,
-      // which would replay the allowlist's "*" deny last and disable every
-      // tool. Primary-mode agents evaluate the fork's ruleset as-is
-      // (findLast: rules after the "*" deny win), so only the read/research
-      // tools — restricted by the parent's own rules where present — can
-      // ever execute. No MCP tools, no permission stalls.
+      // Run the fork on the agent whose ruleset we can actually enforce. For
+      // ask/plan/architect, guardPermissions re-appends session deny rules
+      // after agent rules, replaying the allowlist's "*" deny last and
+      // disabling every tool, so those switch to the default agent. We then
+      // resolve that agent's ruleset (base defaults + config + user overrides)
+      // and feed it to forkPermission, so an agent- or config-level deny like
+      // `read: { "*.env": "deny" }` still beats the read-only blanket allow.
       const guarded = ["ask", "plan", "architect"]
-      const forkAgent = guarded.includes(agent.toLowerCase()) ? fallback?.name ?? "build" : agent
+      const forkAgent = guarded.includes(agent.toLowerCase()) ? (fallback?.name ?? "build") : agent
+      const rules = (yield* ops.agents.get(forkAgent)).permission
       const variant = model.variant ?? cmdInput.variant
 
       // acquireUseRelease guarantees the fork is removed even if this fiber is
@@ -326,7 +331,7 @@ export namespace KiloBtw {
             .pipe(Effect.orDie)
           setPromptCacheKey(fork.id, parent)
           yield* ops.sessions
-            .setPermission({ sessionID: fork.id, permission: forkPermission(session.permission) })
+            .setPermission({ sessionID: fork.id, permission: forkPermission(rules, session.permission) })
             .pipe(Effect.orDie)
           return fork
         }),
@@ -344,14 +349,14 @@ export namespace KiloBtw {
             ],
           }),
         (fork) =>
-        Effect.gen(function* () {
-          clearPromptCacheKey(fork.id)
-          yield* waitForIdle(ops.status, fork.id)
-          yield* ops.sessions.remove(fork.id).pipe(
-            Effect.catch((err) => Effect.logError("KiloBtw: failed to remove fork", fork.id, err)),
-          )
-        }),
-    )
+          Effect.gen(function* () {
+            clearPromptCacheKey(fork.id)
+            yield* waitForIdle(ops.status, fork.id)
+            yield* ops.sessions
+              .remove(fork.id)
+              .pipe(Effect.catch((err) => Effect.logError("KiloBtw: failed to remove fork", fork.id, err)))
+          }),
+      )
 
       const fail = (message: string) =>
         Effect.gen(function* () {
@@ -359,7 +364,15 @@ export namespace KiloBtw {
             sessionID: parent,
             error: new NamedError.Unknown({ message: `btw: ${message}` }).toObject(),
           })
-          return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text: `BTW failed: ${message}`, errorText: `btw: ${message}` })
+          return yield* emit({
+            ops,
+            cmdInput,
+            userID: user.id,
+            agent,
+            model,
+            text: `BTW failed: ${message}`,
+            errorText: `btw: ${message}`,
+          })
         })
 
       if (Exit.isFailure(exit)) {

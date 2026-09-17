@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { KiloBtw } from "../../../src/kilocode/session/btw"
 import { clearPromptCacheKey, resolvePromptCacheKey, setPromptCacheKey } from "../../../src/kilocode/session/cache-key"
+import { Permission } from "../../../src/permission"
 import * as ProviderTransform from "../../../src/provider/transform"
 import type { Provider } from "../../../src/provider/provider"
 
@@ -51,7 +52,7 @@ describe("KiloBtw fork permissions", () => {
     [...rules].reverse().find((rule) => rule.permission === permission && rule.pattern === pattern)
 
   test("allows read tools when the parent has no restrictions", () => {
-    const rules = KiloBtw.forkPermission([])
+    const rules = KiloBtw.forkPermission([], [])
     expect(last(rules, "read")?.action).toBe("allow")
     // Non-allowlist tools (MCP servers, shell, edits) are only matched by
     // the deny-all rule.
@@ -61,33 +62,43 @@ describe("KiloBtw fork permissions", () => {
   })
 
   test("keeps parent read denies instead of granting access", () => {
-    const rules = KiloBtw.forkPermission([
-      { permission: "read", action: "deny", pattern: "*" },
-    ])
+    const rules = KiloBtw.forkPermission([{ permission: "read", action: "deny", pattern: "*" }], [])
     expect(last(rules, "read")?.action).toBe("deny")
     expect(rules.filter((rule) => rule.permission === "read").every((rule) => rule.action === "deny")).toBe(true)
   })
 
   test("downgrades parent read ask rules to deny (fork cannot prompt)", () => {
-    const rules = KiloBtw.forkPermission([
-      { permission: "read", action: "allow", pattern: "*" },
-      { permission: "read", action: "ask", pattern: "*.env" },
-    ])
+    const rules = KiloBtw.forkPermission(
+      [
+        { permission: "read", action: "allow", pattern: "*" },
+        { permission: "read", action: "ask", pattern: "*.env" },
+      ],
+      [],
+    )
     expect(last(rules, "read", "*")?.action).toBe("allow")
     expect(last(rules, "read", "*.env")?.action).toBe("deny")
     expect(rules.some((rule) => rule.action === "ask")).toBe(false)
   })
 
   test("replaces parent wildcard allows with the deny baseline", () => {
-    const rules = KiloBtw.forkPermission([{ permission: "*", action: "allow", pattern: "*" }])
+    const rules = KiloBtw.forkPermission([{ permission: "*", action: "allow", pattern: "*" }], [])
     expect(last(rules, "*")?.action).toBe("deny")
     expect(rules.filter((rule) => rule.permission === "*").every((rule) => rule.action === "deny")).toBe(true)
   })
 
   test("locked-down parent (wildcard deny) suppresses blanket allows", () => {
-    const rules = KiloBtw.forkPermission([{ permission: "*", action: "deny", pattern: "*" }])
+    const rules = KiloBtw.forkPermission([{ permission: "*", action: "deny", pattern: "*" }], [])
     expect(rules.find((rule) => rule.permission === "read")).toBeUndefined()
     expect(rules.every((rule) => rule.action === "deny")).toBe(true)
+  })
+
+  test("honours agent-level read denies for *.env", () => {
+    const agent = Permission.fromConfig({ "*": "allow", read: { "*": "allow", "*.env": "deny" } })
+    const rules = KiloBtw.forkPermission(agent, [])
+    expect(Permission.evaluate("read", ".env", rules).action).toBe("deny")
+    expect(Permission.evaluate("read", "src/index.ts", rules).action).toBe("allow")
+    expect(Permission.evaluate("bash", "ls", rules).action).toBe("deny")
+    expect(rules.some((rule) => rule.action === "ask")).toBe(false)
   })
 })
 

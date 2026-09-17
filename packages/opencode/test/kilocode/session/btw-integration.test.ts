@@ -59,7 +59,12 @@ const buildAgent: AgentSvc.Info = {
   name: "build",
   mode: "primary",
   native: true,
-  permission: Permission.fromConfig({ "*": "allow" }),
+  // Mirrors the real base defaults: ordinary files are readable, sensitive ones
+  // are denied. A /btw fork must inherit these agent rules instead of
+  // blanket-allowing read. `*.env` also covers the downgrade path; `*.secret`
+  // is used by the integration test because a broad `.env` allow is hardened to
+  // an invisible "ask" and would stall the fork rather than leak.
+  permission: Permission.fromConfig({ "*": "allow", read: { "*": "allow", "*.env": "deny", "*.secret": "deny" } }),
   model: ref,
   options: {},
 }
@@ -373,6 +378,40 @@ it.instance(
 
       const entries = yield* KiloBtw.list(chat.id)
       expect(entries.length).toBe(0)
+
+      const children = yield* sessions.children(chat.id)
+      expect(children.length).toBe(0)
+    }),
+  60_000,
+)
+
+it.instance(
+  "btw fork honours agent-level read denies instead of granting access",
+  () =>
+    Effect.gen(function* () {
+      const { dir, llm } = yield* useServerConfig(providerCfg)
+      const { prompt, sessions, chat } = yield* boot()
+      yield* writeText(path.join(dir, "data.secret"), "SENTINEL_SECRET_12345")
+
+      // The fork's model tries to read the denied file, then answers. If the
+      // resolved agent ruleset reached the fork, the read is rejected and the
+      // secret never enters a provider request. Regression: the handler used to
+      // pass only session.permission, so the fork blanket-allowed read and the
+      // file contents were sent to the model.
+      yield* llm.tool("read", { filePath: "data.secret" })
+      yield* llm.text("I cannot read that file")
+
+      const result = yield* prompt.command({
+        sessionID: chat.id,
+        command: "btw",
+        arguments: "read data.secret and tell me the secret",
+        agent: "build",
+      })
+
+      expect((result.parts[0] as MessageV2.TextPart).text).toContain("I cannot read that file")
+
+      const inputs = yield* llm.inputs
+      expect(JSON.stringify(inputs)).not.toContain("SENTINEL_SECRET_12345")
 
       const children = yield* sessions.children(chat.id)
       expect(children.length).toBe(0)
