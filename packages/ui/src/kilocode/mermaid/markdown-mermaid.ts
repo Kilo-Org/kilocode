@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify"
-import { fnv1a } from "../context/marked"
+import { fnv1a } from "../../context/marked"
 import { mountMermaidActions } from "./markdown-mermaid-actions"
 import { dataUrlToBlob } from "./markdown-mermaid-data-url"
 
@@ -31,6 +31,11 @@ export type MermaidLabels = {
   copyPng: string
   downloadSvg: string
   downloadPng: string
+  zoom: string
+  zoomIn: string
+  zoomOut: string
+  zoomReset: string
+  close: string
 }
 
 const labels: MermaidLabels = {
@@ -46,6 +51,11 @@ const labels: MermaidLabels = {
   copyPng: "Copy PNG",
   downloadSvg: "Download SVG",
   downloadPng: "Download PNG",
+  zoom: "Zoom",
+  zoomIn: "Zoom in",
+  zoomOut: "Zoom out",
+  zoomReset: "Reset zoom",
+  close: "Close",
 }
 
 const cache: { promise?: Promise<Mermaid>; id: number; queue: Promise<void> } = {
@@ -242,6 +252,14 @@ function cleanupActions(el: HTMLElement) {
   actions.delete(el)
 }
 
+// Dispose the mounted action roots for every Mermaid panel inside a block that
+// is about to be rebuilt, so an open zoom viewer does not outlive its diagram.
+export function cleanupMermaidActions(root: ParentNode) {
+  for (const el of root.querySelectorAll('[data-component="markdown-mermaid"]')) {
+    if (el instanceof HTMLElement) cleanupActions(el)
+  }
+}
+
 function serialize(svg: SVGSVGElement) {
   const clone = svg.cloneNode(true) as SVGSVGElement
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")
@@ -358,6 +376,7 @@ function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, 
     el,
     mountMermaidActions(el, {
       labels,
+      svg: sourceSvg,
       onCopySource: () => copyText(sourceText),
       onCopySvg: () => copySvg(svg),
       onCopyPng: () => copyPng(svg),

@@ -1,11 +1,13 @@
-import { createSignal } from "solid-js"
+import { createSignal, Show } from "solid-js"
 import { render } from "solid-js/web"
-import { Button } from "../components/button"
-import { DropdownMenu } from "../components/dropdown-menu"
+import { Button } from "../../components/button"
+import { DropdownMenu } from "../../components/dropdown-menu"
 import type { MermaidLabels } from "./markdown-mermaid"
+import { MermaidZoom } from "./markdown-mermaid-zoom"
 
 type Props = {
   labels: MermaidLabels
+  svg: () => string
   onCopySource: () => Promise<void>
   onCopySvg: () => Promise<void>
   onCopyPng: () => Promise<void>
@@ -23,6 +25,22 @@ function Chevron() {
           stroke-linecap="round"
           stroke-linejoin="round"
           stroke-width="1.6"
+        />
+      </svg>
+    </span>
+  )
+}
+
+function Expand() {
+  return (
+    <span data-slot="markdown-mermaid-expand" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path
+          d="M3.5 6.5V3.5H6.5M9.5 3.5H12.5V6.5M12.5 9.5V12.5H9.5M6.5 12.5H3.5V9.5"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.4"
         />
       </svg>
     </span>
@@ -48,6 +66,7 @@ function Item(props: { label: string; onSelect: () => void }) {
 
 export function MermaidActions(props: Props) {
   const [copied, setCopied] = createSignal(false)
+  const [zoomed, setZoomed] = createSignal(false)
   const copy = (run: () => Promise<void>) => {
     void run()
       .then(() => {
@@ -62,6 +81,10 @@ export function MermaidActions(props: Props) {
 
   return (
     <div data-slot="markdown-mermaid-actions">
+      <Button variant="secondary" size="small" class="markdown-mermaid-trigger" onClick={() => setZoomed(true)}>
+        <span>{props.labels.zoom}</span>
+        <Expand />
+      </Button>
       <DropdownMenu gutter={4} placement="bottom-start">
         <Trigger label={props.labels.copy} copied={copied()} copiedLabel={props.labels.copied} />
         <DropdownMenu.Portal>
@@ -81,6 +104,9 @@ export function MermaidActions(props: Props) {
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu>
+      <Show when={zoomed()}>
+        <MermaidZoom svg={props.svg} labels={props.labels} onClose={() => setZoomed(false)} />
+      </Show>
     </div>
   )
 }
