@@ -16,7 +16,6 @@ import {
   untrack,
   type Component,
 } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
@@ -311,7 +310,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const boxKey = () => props.boxId ?? "prompt:default"
-  const blockedHelpId = () => `${boxKey().replace(/[^a-zA-Z0-9_-]/g, "-")}-blocked-help`
   const rawKey = () =>
     sessionDraftKey(session.currentSessionID()) ??
     pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
