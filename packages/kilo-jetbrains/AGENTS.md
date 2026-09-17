@@ -157,6 +157,19 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - `kotlinx.coroutines` is the one mandatory exception — it is provided by the platform and must not be bundled (the IntelliJ Platform Gradle plugin enforces this automatically).
 - Pin exact versions in `gradle/libs.versions.toml` and reference them via the version catalog (`libs.*`) in `build.gradle.kts`. Never hardcode version strings in `build.gradle.kts`.
 
+### Never Ask a Shared DTO For Its Serializer From `frontend` or `backend`
+
+`shared/` declares no kotlinx-serialization dependency, so its `@Serializable` DTOs bind to the platform's copy. `frontend/` and `backend/` each bundle their own `kotlinx-serialization-json`. Touching a shared DTO's generated serializer from either module therefore resolves `KSerializer` from two different classloaders and fails at runtime with:
+
+```
+java.lang.LinkageError: loader constraint violation: when resolving method
+'kotlinx.serialization.KSerializer ai.kilocode.rpc.dto.SomeDto$Companion.serializer()'
+```
+
+In `frontend/` and `backend/`, do not call `Json.decodeFromString<SharedDto>(...)`, `Json.encodeToString(dto)`, `decodeFromJsonElement<SharedDto>(...)`, or `SharedDto.serializer()`. Parse into a `JsonObject` and construct the shared DTO by hand — see `KiloBackendMarketplaceManager` and `KiloCliDataParser`. Module-local `@Serializable` types (for example `WorktreeNamesFile`) and built-ins like `List<String>` are fine, because the class and the serialization runtime come from the same loader.
+
+**Tests cannot catch this.** Gradle test runs put `shared`, the module under test, and kotlinx-serialization on one flat classpath, so the split only exists in a real IDE. Verify RPC paths that return shared DTOs in a sandbox run (`runIdeSplitMode`), not only under `./gradlew test`.
+
 ## CLI Integration
 
 - CLI process spawning, download, extraction, and lifecycle belong in `backend`.

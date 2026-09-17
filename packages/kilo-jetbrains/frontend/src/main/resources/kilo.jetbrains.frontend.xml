@@ -59,10 +59,18 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.providers"
-                groupWeight="2"
+                groupWeight="3"
                 instance="ai.kilocode.client.settings.providers.ProvidersConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.providers.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.marketplace"
+                groupWeight="2"
+                instance="ai.kilocode.client.settings.marketplace.MarketplaceConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.marketplace.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"

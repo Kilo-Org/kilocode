@@ -4,6 +4,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.fire
@@ -472,7 +473,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         const val DIR = "/test"
     }
 
-    private class TestConfigurable : AgentBehaviorConfigurableBase<JComponent>() {
+    private class TestConfigurable : DirectoryReadyConfigurable<JComponent>() {
         override fun getId() = "test.mcp"
         override fun getDisplayName() = "test"
         override fun create(cs: CoroutineScope, dir: String): JComponent = McpSettingsUi(cs, DIR)
