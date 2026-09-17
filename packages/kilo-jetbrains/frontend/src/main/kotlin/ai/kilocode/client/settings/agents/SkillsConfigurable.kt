@@ -15,6 +15,7 @@ import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.settings.base.settingsChoosePath
 import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
+import ai.kilocode.client.settings.marketplace.marketplaceLink
 import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -140,6 +141,8 @@ internal class SkillsSettingsUi(
     override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.skills.search")
 
     override fun emptyText() = KiloBundle.message("settings.agentBehavior.skills.empty")
+
+    override fun toolbarRight(): JComponent = marketplaceLink()
 
     internal fun updateSources(paths: List<String>, urls: List<String>) {
         state.update { copy(sources = SkillsConfigDto(paths = paths, urls = urls)) }

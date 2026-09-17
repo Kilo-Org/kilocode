@@ -480,11 +480,12 @@
             <reference ref="Kilo.Session.OpenPr"/>
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
+            <reference ref="Kilo.OpenSettings"/>
+            <separator/>
             <reference ref="$Copy"/>
             <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.CopyShareLink"/>
-            <separator/>
             <reference ref="Kilo.Session.Share"/>
             <separator/>
             <reference ref="Kilo.StopSession"/>
@@ -503,9 +504,10 @@
             <reference ref="Kilo.Session.OpenPr"/>
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
+            <reference ref="Kilo.OpenSettings"/>
+            <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.CopyShareLink"/>
-            <separator/>
             <reference ref="Kilo.Session.Share"/>
         </group>
     </actions>

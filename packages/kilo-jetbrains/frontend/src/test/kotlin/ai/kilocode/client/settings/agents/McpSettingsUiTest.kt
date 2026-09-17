@@ -297,6 +297,16 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test toolbar offers a marketplace link`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            assertTrue(text(panel).contains(KiloBundle.message("settings.marketplace.displayName")))
+            true
+        }
+    }
+
     fun `test failed mcp action shows settings error`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }

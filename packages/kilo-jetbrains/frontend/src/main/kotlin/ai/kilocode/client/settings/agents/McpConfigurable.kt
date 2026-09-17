@@ -5,6 +5,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
+import ai.kilocode.client.settings.marketplace.marketplaceLink
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -96,6 +97,7 @@ internal class McpSettingsUi(
         .next(JBLabel(KiloBundle.message("settings.agentBehavior.mcp.addHint")).apply {
             foreground = UIUtil.getContextHelpForeground()
         })
+        .next(marketplaceLink())
 
     private fun item(name: String, cfg: McpConfigDto?, status: McpStatusDto?) = object : ActiveListItem {
         override val key = name

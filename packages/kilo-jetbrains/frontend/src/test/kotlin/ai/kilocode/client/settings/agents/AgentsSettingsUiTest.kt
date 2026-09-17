@@ -103,6 +103,16 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test toolbar offers a marketplace link`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            assertTrue(text(panel).contains(KiloBundle.message("settings.marketplace.displayName")))
+            true
+        }
+    }
+
     fun `test changing default agent saves patch`() {
         val panel = panel()
         flushUntil { rows(panel).size == 6 }

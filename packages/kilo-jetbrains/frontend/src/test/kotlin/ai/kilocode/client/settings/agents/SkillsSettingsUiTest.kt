@@ -4,6 +4,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -28,6 +29,7 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.TitledSeparator
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
@@ -117,6 +119,15 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             assertSame(panel.sources, layout.getLayoutComponent(BorderLayout.SOUTH))
             true
         }
+    }
+
+    fun `test toolbar offers a marketplace link`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        assertTrue(edt {
+            components(panel).filterIsInstance<ActionLink>().any { it.text == KiloBundle.message("settings.marketplace.displayName") }
+        })
     }
 
     fun `test sources section has additional sources title`() {
