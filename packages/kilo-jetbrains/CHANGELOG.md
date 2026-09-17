@@ -471,62 +471,19 @@
 ## [7.1.7-rc.2] - 2026-09-17
 
 ### Added
-- feat: show Codex usage in provider usage center by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/13519
-- feat(vscode): collapse large pastes in the prompt input by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14170
-- feat(vscode): animate the Kilo logo on hover by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14204
-- feat: add Programmatic Tool Calling experimental setting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14230
-- feat(vscode): add fullscreen zoom viewer for Mermaid diagrams by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14233
-- feat(cli): defer session title generation by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14231
-- feat(jetbrains): add Kilo Swarm board support by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14253
-- feat(agent-manager): reclaim disk space from leftover worktree folders by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14255
-- feat(jetbrains): add marketplace settings page by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14252
+
+- Add a Marketplace page to JetBrains settings for browsing, installing, and removing marketplace agents, MCP servers, and skills without leaving the IDE.
+- Add Kilo Swarm support to JetBrains, including an Agent Behavior toggle, readable board tool cards, and a board viewer for session collaboration.
+- Add a cleanup flow for leftover Agent Manager worktree folders, with size reporting, git-checkout warnings, and safe removal from JetBrains.
 
 ### Fixed
-- fix: load leading-slash skill paths and group skills in the slash menu by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14201
-- fix(vscode): restore undo and redo in the chat input by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14200
-- fix(vscode): restore Playwright MCP browser tools by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14049
-- fix(ui): match inline chat diffs to the diff viewer by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14199
-- fix: reduce chat transcript flicker while a turn streams by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14203
-- fix(agent-manager): make worktree deletion near-instant and reliable by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14206
-- fix(jetbrains): match VS Code paste collapse thresholds by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14205
-- fix(vscode): default model not persistent after explicit user choice by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14180
-- fix(vscode): match chat search against message text only by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14210
-- fix(vscode): disable voice input in remote windows by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14221
-- fix(opencode): clear session status before publishing status events by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14225
-- fix(ci): cache and verify Zig downloads with bounded mirror fallback by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14235
-- fix(cli): recover shared board reads from invalid cursors by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14236
-- fix(cli): allow read-only gh commands in the plan guard by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14223
-- fix: explain sandbox escalation prompts accurately by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14226
-- fix(cli): stop escalating read-only git commands in the sandbox by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14222
-- fix(agent-manager): inherit reasoning variant when a task names the invoking model by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14262
+
+- Collapse pasted text in JetBrains only after larger 15-line or 4000-character blocks, matching VS Code and avoiding over-folding ordinary snippets.
+- Recover shared agent board reads when a stale or foreign cursor appears, instead of leaving a sub-agent stuck on repeated tool errors.
+- Clear stopped session status before publishing status events, so reload no longer stays blocked by a session that already finished.
+- Reduce unnecessary sandbox escalation prompts for read-only `git` and `gh` commands while keeping mutating commands protected.
 
 ### Changed
-- docs(kilo-docs): use agent terminology in introductory guidance by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14067
-- docs(kilo-docs): describe custom agent benefits by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14070
-- docs(kilo-docs): use agent terminology in customization overview by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14068
-- docs(kilo-docs): clarify organization-managed agent terminology by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14071
-- release(jetbrains): v7.1.7-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14193
-- chore(vscode): speed up extension launch builds by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14179
-- docs(kilo-docs): fix dead agentic engineering link by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14202
-- refactor(cli): remove deprecated review command aliases by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14208
-- chore: remove dead dev:stats script from root package.json by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14207
-- refactor: remove KiloClaw by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14209
-- perf(vscode): cut session switch and send latency in chat transcript by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14237
-- chore(vscode): remove unused visual regression spec by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14241
-- chore(ui): remove dead mermaid chevron styles by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14243
-- chore(vscode): remove unused planOpens helper by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14242
-- chore(agent-manager): remove dead member methods by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14244
-- chore(vscode): remove unused locals and imports by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14247
-- chore(vscode): remove unused permission title strings by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14246
-- chore(ui): remove unused incremental markdown and fast-path modules by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14245
-- refactor(agent-manager): dedupe pr action helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14248
-- refactor: dedupe spotlight error helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14257
-- refactor(opencode): dedupe board and effect helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14258
-- refactor(vscode): dedupe diff source helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14260
-- refactor(agent-manager): dedupe pr checks tables by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14259
-- refactor(vscode): dedupe webview helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14261
-- Pass x-opencode-session for memory, roll-call, and expand-prompt calls by @intentionally-left-nil in https://github.com/Kilo-Org/kilocode/pull/14015
-
 
 ## [7.1.7-rc.1] - 2026-09-15
 
