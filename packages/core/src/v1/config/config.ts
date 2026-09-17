@@ -149,7 +149,7 @@ export const Info = Schema.Struct({
   }),
   require_approval_for_config_edits: Schema.optional(Schema.Boolean).annotate({
     description:
-      "Require approval before the agent edits Kilo config files. Global config only; an explicit false in the global config disables the extra config-edit restrictions. Project and other non-global values are ignored.",
+      "Require approval before the agent edits protected Kilo config files. Defaults to true. Protection uses the effective project config for files inside the current project boundary and the global config for global config directories and protected config targets outside the project. Set false at project scope to disable protection for that project's files only, or at global scope to disable it outside the project. Other permission rules still apply, and bash commands or scripts can still modify files and bypass the check.",
   }),
   sandbox: Schema.optional(
     Schema.Struct({

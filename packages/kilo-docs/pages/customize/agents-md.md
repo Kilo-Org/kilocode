@@ -87,7 +87,7 @@ The root-level `AGENTS.md` is a **write-protected file** in Kilo Code. This mean
 
 Protection by filename applies to the root-level `AGENTS.md` only: nested `AGENTS.md` files and the `AGENT.md` (singular) fallback are not protected by name alone. Any file inside a protected config directory (project `.kilo/` or `.kilocode/`, or a global Kilo config directory) is still protected by directory, except files in an exempt `plans/` subtree.
 
-Config edit protection is enabled by default. To turn it off, set `require_approval_for_config_edits` to `false` in your global config (`~/.config/kilo/kilo.json` or `kilo.jsonc`). Only global config can disable it, and your regular permission rules still apply. See [Config File Protection](/docs/getting-started/settings/auto-approving-actions#config-file-protection).
+Config edit protection is enabled by default. Set `require_approval_for_config_edits` to `false` in project config to disable it for that project's own files, or in global config to disable it for global config directories and protected config targets outside the project. A project value never weakens protection for global or out-of-project protected targets, and your regular permission rules still apply. See [Config File Protection](/docs/getting-started/settings/auto-approving-actions#config-file-protection).
 
 ## Basic Syntax and Structure
 

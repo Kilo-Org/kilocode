@@ -997,34 +997,51 @@ describe("config overlay routes", () => {
     expect(overlay2.effective?.privacy_mode).toBe(false)
   })
 
-  test.serial("resolves the global-only config-edit approval setting from global scope", async () => {
+  test.serial("resolves the project-scoped config-edit approval setting with normal precedence", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir({ config: { require_approval_for_config_edits: false } })
+    await using fallback = await tmpdir()
     await setGlobal(global.path, { require_approval_for_config_edits: true })
 
-    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    const overridden = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(overridden.fields.require_approval_for_config_edits).toMatchObject({
+      source: "project",
+      value: false,
+      inherited: false,
+      overridden: true,
+      editable: true,
+    })
 
-    expect(body.fields.require_approval_for_config_edits).toMatchObject({
+    const inherited = await json<Overlay>(await req(fallback.path, "/config/overlay?scope=project"))
+    expect(inherited.fields.require_approval_for_config_edits).toMatchObject({
       source: "global",
       value: true,
       inherited: true,
       overridden: false,
-      editable: false,
+      editable: true,
     })
   })
 
-  test.serial("edits the global-only config-edit approval setting only at global scope", async () => {
+  test.serial("edits the project-scoped config-edit approval setting at project scope", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
-    await setGlobal(global.path, { require_approval_for_config_edits: false })
+    await setGlobal(global.path, { require_approval_for_config_edits: true })
 
-    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+    const saved = await json<Overlay>(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { require_approval_for_config_edits: false } }),
+      }),
+    )
+    expect(saved.effective?.require_approval_for_config_edits).toBe(false)
 
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
     expect(body.fields.require_approval_for_config_edits).toMatchObject({
-      source: "global",
+      source: "project",
       value: false,
       inherited: false,
-      overridden: false,
+      overridden: true,
       editable: true,
     })
   })

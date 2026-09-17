@@ -257,7 +257,7 @@ ls -la AGENTS.md
 
 **Important:** Use uppercase `AGENTS.md` (not `agents.md`). Kilo Code also accepts `AGENT.md` (singular) as a fallback.
 
-**Note:** The root-level `AGENTS.md` is a write-protected file in Kilo Code and requires user approval to modify by default. Set `require_approval_for_config_edits` to `false` in your global config to disable it — see [Config File Protection](/docs/getting-started/settings/auto-approving-actions#config-file-protection).
+**Note:** The root-level `AGENTS.md` is a write-protected file in Kilo Code and requires user approval to modify by default. Set `require_approval_for_config_edits` to `false` in your project config to disable it for that project, or in your global config to disable it for global config directories and protected config targets outside the project — see [Config File Protection](/docs/getting-started/settings/auto-approving-actions#config-file-protection).
 
 ## Understanding Mode-Specific Rules
 

@@ -1,7 +1,9 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
+import { $ } from "bun"
 import { Cause, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import fs from "fs/promises"
+import os from "os"
 import path from "path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
@@ -10,7 +12,7 @@ import { Bus } from "../../../src/bus"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { Permission } from "../../../src/permission"
 import { SessionID } from "../../../src/session/schema"
-import { disposeAllInstances, provideTmpdirInstance } from "../../fixture/fixture"
+import { disposeAllInstances, provideInstance, provideTmpdirInstance, tmpdirScoped } from "../../fixture/fixture"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 
 const env = Layer.mergeAll(
@@ -141,41 +143,40 @@ describe("require_approval_for_config_edits", () => {
     ),
   )
 
-  it.live("project false cannot disable the default protection", () =>
+  it.live("project false disables protection for the project's own config files", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
           yield* withGlobal(undefined)
-          const fiber = yield* ask(request("per_project_false")).pipe(Effect.forkScoped)
-          expect(yield* wait(1)).toHaveLength(1)
-          yield* reject("per_project_false")
-          yield* Fiber.await(fiber)
+          const outcome = yield* ask(request("per_project_false"))
+          expect(outcome.manual).toBe(false)
+          expect(yield* list()).toEqual([])
         }),
       { git: true, config: { require_approval_for_config_edits: false } },
     ),
   )
 
-  it.live("global true keeps protection even when the project disables it", () =>
+  it.live("global true with project false disables protection for the project's own files", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
           yield* withGlobal({ require_approval_for_config_edits: true })
-          const fiber = yield* ask(request("per_global_on")).pipe(Effect.forkScoped)
-          expect(yield* wait(1)).toHaveLength(1)
-          yield* reject("per_global_on")
-          yield* Fiber.await(fiber)
+          const outcome = yield* ask(request("per_global_on_project_off"))
+          expect(outcome.manual).toBe(false)
         }),
       { git: true, config: { require_approval_for_config_edits: false } },
     ),
   )
 
-  it.live("global false stays off even when the project sets true", () =>
+  it.live("global false with project true re-enables protection for the project's own files", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
           yield* withGlobal({ require_approval_for_config_edits: false })
-          const outcome = yield* ask(request("per_global_off_project_on"))
-          expect(outcome.manual).toBe(false)
+          const fiber = yield* ask(request("per_global_off_project_on")).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_global_off_project_on")
+          yield* Fiber.await(fiber)
         }),
       { git: true, config: { require_approval_for_config_edits: true } },
     ),
@@ -423,7 +424,7 @@ describe("require_approval_for_config_edits", () => {
     ),
   )
 
-  it.live("KILO_CONFIG_CONTENT false cannot disable protection", () => {
+  it.live("KILO_CONFIG_CONTENT false only disables protection inside the project", () => {
     const previous = process.env["KILO_CONFIG_CONTENT"]
     process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ require_approval_for_config_edits: false })
     const restore = () => {
@@ -434,10 +435,22 @@ describe("require_approval_for_config_edits", () => {
       () =>
         Effect.gen(function* () {
           yield* withGlobal(undefined)
-          const fiber = yield* ask(request("per_env_content", { ruleset: [] })).pipe(Effect.forkScoped)
-          const items = yield* wait(1)
-          expect(items[0]).toMatchObject({ metadata: { disableAlways: true, configProtected: true } })
-          yield* reject("per_env_content")
+          // The env-provided value is a non-global source: it feeds the effective project config,
+          // so it can disable protection for this project's own files...
+          expect((yield* ask(request("per_env_content_local"))).manual).toBe(false)
+
+          // ...but it never changes the global policy for global config files.
+          const file = globalFile()
+          const fiber = yield* ask(
+            request("per_env_content_global", {
+              patterns: [file],
+              metadata: { filepath: file },
+              always: [file],
+              ruleset: [],
+            }),
+          ).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_env_content_global")
           yield* Fiber.await(fiber)
         }).pipe(Effect.ensuring(Effect.sync(restore))),
       { git: true },
@@ -514,7 +527,653 @@ describe("require_approval_for_config_edits", () => {
       { git: true },
     ),
   )
+
+  // --- project boundary scoping ---
+
+  const scoped = (id: string, file: string, over: Partial<Permission.AskInput> = {}): Permission.AskInput =>
+    request(id, { patterns: [file], metadata: { filepath: file }, always: [file], ruleset: [], ...over })
+
+  it.live("project false keeps protection for global config targets", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const file = globalFile()
+          const fiber = yield* ask(scoped("per_proj_off_global", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_off_global")
+          yield* Fiber.await(fiber)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false keeps protection for absolute out-of-project config targets", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const file = path.join(os.tmpdir(), "opencode-test-sibling-absolute", ".kilo", "kilo.json")
+          const fiber = yield* ask(scoped("per_proj_off_sibling", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_off_sibling")
+          yield* Fiber.await(fiber)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false keeps protection for relative traversal into a sibling project", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const file = "../sibling-project/.kilo/kilo.json"
+          const fiber = yield* ask(scoped("per_proj_off_traversal", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_off_traversal")
+          yield* Fiber.await(fiber)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false cannot bypass protection through a symlinked escape", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const outside = path.join(path.dirname(dir), "opencode-test-outside-" + Math.random().toString(36).slice(2))
+          yield* Effect.promise(() => fs.mkdir(outside, { recursive: true }))
+          const link = path.join(dir, "escape")
+          yield* Effect.promise(() => fs.symlink(outside, link, process.platform === "win32" ? "junction" : "dir"))
+
+          const direct = path.join(link, ".kilo", "kilo.json")
+          const first = yield* ask(scoped("per_proj_off_link", direct)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_off_link")
+          yield* Fiber.await(first)
+
+          // Nonexistent leaf under a symlinked parent still resolves to the physical target.
+          const leaf = path.join(link, "nested", ".kilo", "kilo.json")
+          const second = yield* ask(scoped("per_proj_off_link_leaf", leaf)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_off_link_leaf")
+          yield* Fiber.await(second)
+
+          yield* Effect.promise(() => fs.rm(link, { recursive: true, force: true }))
+          yield* Effect.promise(() => fs.rm(outside, { recursive: true, force: true }))
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("treats a global config directory inside the project as global policy", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const link = path.join(dir, "global-link")
+          yield* Effect.promise(() =>
+            fs.symlink(Global.Path.config, link, process.platform === "win32" ? "junction" : "dir"),
+          )
+
+          const file = path.join(link, "kilo.json")
+          const fiber = yield* ask(scoped("per_proj_off_global_link", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_off_global_link")
+          yield* Fiber.await(fiber)
+
+          yield* Effect.promise(() => fs.rm(link, { recursive: true, force: true }))
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false still protects a sibling absolute path with a shared prefix", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const file = path.join(dir + "-evil", ".kilo", "kilo.json")
+          const fiber = yield* ask(scoped("per_proj_off_prefix", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_off_prefix")
+          yield* Fiber.await(fiber)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("falls back to the directory as the boundary for non-git projects", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          // A local config edit uses the project policy...
+          expect((yield* ask(request("per_non_git_local"))).manual).toBe(false)
+          // ...but a path outside the directory is not treated as inside a `/` boundary.
+          const file = path.join(path.dirname(dir), "opencode-test-outside-nongit", ".kilo", "kilo.json")
+          const fiber = yield* ask(scoped("per_non_git_outside", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_non_git_outside")
+          yield* Fiber.await(fiber)
+        }),
+      { config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false allows a nested .kilo edit but not a nested AGENTS.md", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          expect((yield* ask(editRequest("per_nested_kilo", "packages/sub/.kilo/config.json"))).manual).toBe(false)
+          // Nested AGENTS.md is not protected by name, so it is not newly gated by config protection.
+          const outcome = yield* ask(editRequest("per_nested_agents", "src/AGENTS.md"))
+          expect(outcome.manual).toBe(false)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false does not bypass a mixed apply_patch with an outside destination", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const outside = path.join(os.tmpdir(), "opencode-test-move-outside", ".kilo", "moved.json")
+          const files = [{ filePath: path.join(dir, ".kilo", "kilo.json"), movePath: outside, type: "move" }]
+          const fiber = yield* ask({
+            ...request("per_mixed_move", {
+              patterns: [".kilo/kilo.json"],
+              metadata: { filepath: ".kilo/kilo.json", files },
+              always: ["*"],
+              ruleset: [],
+            }),
+          }).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_mixed_move")
+          yield* Fiber.await(fiber)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false allows a local-only apply_patch move", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const inside = { filePath: ".kilo/kilo.json", movePath: ".kilo/kilo.jsonc", type: "move" }
+          const outcome = yield* ask(
+            request("per_mixed_local", {
+              patterns: [".kilo/kilo.json"],
+              metadata: { filepath: ".kilo/kilo.json", files: [inside] },
+              always: ["*"],
+            }),
+          )
+          expect(outcome.manual).toBe(false)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false still honors deny and ask rules", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const denied = yield* ask(
+            request("per_proj_deny", { ruleset: [{ permission: "edit", pattern: "*", action: "deny" }] }),
+          ).pipe(Effect.exit)
+          expect(Exit.isFailure(denied)).toBe(true)
+          if (Exit.isFailure(denied)) expect(Cause.squash(denied.cause)).toBeInstanceOf(Permission.DeniedError)
+
+          const asked = yield* ask(request("per_proj_ask", { ruleset: [] })).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_proj_ask")
+          yield* Fiber.await(asked)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("a project-scoped always rule does not bypass global protection", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const first = yield* ask(request("per_leak_always", { always: ["*"], ruleset: [] })).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reply({ requestID: PermissionV1.ID.make("per_leak_always"), reply: "always" })
+          yield* Fiber.await(first)
+          expect(yield* Effect.promise(stored)).toMatchObject({ permission: { edit: { "*": "allow" } } })
+
+          const file = globalFile()
+          const second = yield* ask(scoped("per_leak_global", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_leak_global")
+          yield* Fiber.await(second)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("YOLO does not clear a protected global request while the project disables local protection", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const file = globalFile()
+          const local = yield* ask(request("per_yolo_local", { ruleset: [] })).pipe(Effect.forkScoped)
+          const global = yield* ask(scoped("per_yolo_global", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(2)).toHaveLength(2)
+
+          yield* allowEverything({ enable: true })
+          yield* Fiber.await(local)
+          expect((yield* list()).map((item) => item.id)).toEqual([PermissionV1.ID.make("per_yolo_global")])
+          yield* reject("per_yolo_global")
+          yield* Fiber.await(global)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project-scoped drain does not auto-resolve a protected global request", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const file = globalFile()
+          const first = yield* ask(request("per_drain_local", { always: ["*"], ruleset: [] })).pipe(Effect.forkScoped)
+          const second = yield* ask(scoped("per_drain_global", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(2)).toHaveLength(2)
+
+          yield* reply({ requestID: PermissionV1.ID.make("per_drain_local"), reply: "always" })
+          yield* Fiber.await(first)
+          expect((yield* list()).map((item) => item.id)).toEqual([PermissionV1.ID.make("per_drain_global")])
+          yield* reject("per_drain_global")
+          yield* Fiber.await(second)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("saveAlwaysRules persists for local targets but not global targets under project false", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const local = yield* ask(request("per_save_local", { ruleset: [] })).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* saveAlwaysRules({
+            requestID: PermissionV1.ID.make("per_save_local"),
+            approvedAlways: [target],
+          })
+          expect(yield* Effect.promise(stored)).toMatchObject({ permission: { edit: { [target]: "allow" } } })
+          yield* reject("per_save_local")
+          yield* Fiber.await(local)
+
+          const file = globalFile()
+          const global = yield* ask(scoped("per_save_global", file)).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* saveAlwaysRules({
+            requestID: PermissionV1.ID.make("per_save_global"),
+            approvedAlways: [file],
+          })
+          expect(yield* Effect.promise(text)).not.toContain(file)
+          yield* reject("per_save_global")
+          yield* Fiber.await(global)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("ordinary saveAlwaysRules drains an unprotected project-config sibling but not a global one", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const ordinary = path.join(dir, "src", "app.ts")
+          const global = yield* ask(scoped("per_save_cross_global", globalFile())).pipe(Effect.forkScoped)
+          const local = yield* ask(request("per_save_cross_local", { ruleset: [] })).pipe(Effect.forkScoped)
+          const normal = yield* ask(scoped("per_save_cross_ordinary", ordinary, { always: ["*"] })).pipe(
+            Effect.forkScoped,
+          )
+          expect(yield* wait(3)).toHaveLength(3)
+
+          // The selected rule comes from an ordinary (non-config) request, but a config-shaped
+          // sibling is pending, so the policy must still be resolved per entry.
+          yield* saveAlwaysRules({
+            requestID: PermissionV1.ID.make("per_save_cross_ordinary"),
+            approvedAlways: ["*"],
+          })
+
+          const pending = new Set((yield* list()).map((item) => item.id))
+          expect(pending.has(PermissionV1.ID.make("per_save_cross_local"))).toBe(false)
+          expect(pending.has(PermissionV1.ID.make("per_save_cross_global"))).toBe(true)
+
+          yield* reject("per_save_cross_global")
+          yield* reject("per_save_cross_ordinary")
+          yield* Fiber.await(local)
+          yield* Fiber.await(global)
+          yield* Fiber.await(normal)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("keeps global skill constraints for global targets when only the project disables protection", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { skill, concrete } = yield* Effect.promise(() => paths("drain-project-off"))
+          yield* withGlobal(undefined)
+          const first = yield* ask(external("per_skill_project_off", concrete, [concrete])).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reply({ requestID: PermissionV1.ID.make("per_skill_project_off"), reply: "always" })
+          yield* Fiber.await(first)
+          // The global skill guard still narrows persistence to the exact skill subtree.
+          const written = yield* Effect.promise(text)
+          expect(written).toContain(skill)
+          expect(written).not.toContain(concrete)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  // --- canonical boundary scoping and direct project config freshness ---
+
+  const link = process.platform === "win32" ? "junction" : "dir"
+
+  it.live("global false with project true protects an outside alias into the project", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const alias = path.join(path.dirname(dir), "opencode-test-alias-in-" + Math.random().toString(36).slice(2))
+          yield* Effect.promise(() => fs.symlink(dir, alias, link))
+          try {
+            yield* withGlobal({ require_approval_for_config_edits: false })
+            const file = path.join(alias, ".kilo", "kilo.json")
+            const fiber = yield* ask(scoped("per_alias_in", file)).pipe(Effect.forkScoped)
+            const items = yield* wait(1)
+            // Config-protected, not an ordinary ask: project scope re-enabled protection.
+            expect(items[0]?.metadata).toMatchObject({ disableAlways: true, configProtected: true })
+            yield* reject("per_alias_in")
+            yield* Fiber.await(fiber)
+          } finally {
+            yield* Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))
+          }
+        }),
+      { git: true, config: { require_approval_for_config_edits: true } },
+    ),
+  )
+
+  it.live("project false still protects an inside alias that escapes the project", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const outside = path.join(path.dirname(dir), "opencode-test-alias-out-" + Math.random().toString(36).slice(2))
+          const escape = path.join(dir, "escape")
+          yield* Effect.promise(() => fs.mkdir(outside, { recursive: true }))
+          yield* Effect.promise(() => fs.symlink(outside, escape, link))
+          try {
+            yield* withGlobal({ require_approval_for_config_edits: true })
+            const file = path.join(escape, ".kilo", "kilo.json")
+            const fiber = yield* ask(scoped("per_alias_out", file)).pipe(Effect.forkScoped)
+            const items = yield* wait(1)
+            expect(items[0]?.metadata).toMatchObject({ disableAlways: true, configProtected: true })
+            yield* reject("per_alias_out")
+            yield* Fiber.await(fiber)
+          } finally {
+            yield* Effect.promise(() => fs.rm(escape, { recursive: true, force: true }))
+            yield* Effect.promise(() => fs.rm(outside, { recursive: true, force: true }))
+          }
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("observes direct project config edits at the permission boundary", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const file = path.join(dir, "kilo.json")
+          const write = (value: object | undefined) =>
+            Effect.promise(async () => {
+              if (value === undefined) await fs.rm(file, { force: true })
+              else await fs.writeFile(file, JSON.stringify(value, null, 2))
+            })
+
+          // No project config: protected under the default.
+          const blocked = yield* ask(request("per_disk_blocked")).pipe(Effect.forkScoped)
+          const initial = yield* wait(1)
+          expect(initial[0]?.metadata).toMatchObject({ disableAlways: true, configProtected: true })
+          yield* reject("per_disk_blocked")
+          yield* Fiber.await(blocked)
+
+          // Direct disk edit (no Config.update) turns protection off for this project.
+          yield* write({ require_approval_for_config_edits: false })
+          expect((yield* ask(request("per_disk_off"))).manual).toBe(false)
+
+          // Direct disk edit turns it back on.
+          yield* write({ require_approval_for_config_edits: true })
+          const reenabled = yield* ask(request("per_disk_on")).pipe(Effect.forkScoped)
+          expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+          yield* reject("per_disk_on")
+          yield* Fiber.await(reenabled)
+
+          // Deleting the file restores the default.
+          yield* write(undefined)
+          const removed = yield* ask(request("per_disk_removed")).pipe(Effect.forkScoped)
+          expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+          yield* reject("per_disk_removed")
+          yield* Fiber.await(removed)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("direct project true re-enables protection when the global value is false", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal({ require_approval_for_config_edits: false })
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              path.join(dir, "kilo.json"),
+              JSON.stringify({ require_approval_for_config_edits: true }, null, 2),
+            ),
+          )
+          const fiber = yield* ask(request("per_disk_reenable")).pipe(Effect.forkScoped)
+          expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+          yield* reject("per_disk_reenable")
+          yield* Fiber.await(fiber)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("project false does not weaken ordinary rules for outside config filenames", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const outside = path.join(
+            dir,
+            "..",
+            "opencode-test-outside-root-" + Math.random().toString(36).slice(2),
+            "AGENTS.md",
+          )
+          const auto = yield* ask(
+            request("per_outside_auto", { patterns: [outside], metadata: { filepath: outside }, always: [outside] }),
+          )
+          expect(auto.manual).toBe(false)
+
+          const asked = yield* ask(
+            request("per_outside_ask", {
+              patterns: [outside],
+              metadata: { filepath: outside },
+              always: [outside],
+              ruleset: [],
+            }),
+          ).pipe(Effect.forkScoped)
+          const items = yield* wait(1)
+          expect(items[0]?.metadata?.configProtected).toBeUndefined()
+          yield* reject("per_outside_ask")
+          yield* Fiber.await(asked)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  // --- symlinked project config and nonstandard source freshness ---
+
+  it.live("protects a project config symlink to an ordinary same-project file", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() => fs.mkdir(path.join(dir, ".kilo"), { recursive: true }))
+          yield* Effect.promise(() => fs.writeFile(path.join(dir, "settings.json"), "{}"))
+          const file = path.join(dir, ".kilo", "kilo.json")
+          yield* Effect.promise(() => fs.symlink(path.join(dir, "settings.json"), file, "file"))
+          try {
+            // Global false, project true: the lexical protected path must still re-enable protection.
+            yield* withGlobal({ require_approval_for_config_edits: false })
+            const fiber = yield* ask(scoped("per_symlink_protected", file)).pipe(Effect.forkScoped)
+            expect((yield* wait(1))[0]?.metadata).toMatchObject({
+              disableAlways: true,
+              configProtected: true,
+            })
+            yield* reject("per_symlink_protected")
+            yield* Fiber.await(fiber)
+          } finally {
+            yield* Effect.promise(() => fs.rm(file, { force: true }))
+          }
+        }),
+      { git: true, config: { require_approval_for_config_edits: true } },
+    ),
+  )
+
+  it.live("applies a project opt-out to a project config symlink to an ordinary file", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() => fs.mkdir(path.join(dir, ".kilo"), { recursive: true }))
+          yield* Effect.promise(() => fs.writeFile(path.join(dir, "settings.json"), "{}"))
+          const file = path.join(dir, ".kilo", "kilo.json")
+          yield* Effect.promise(() => fs.symlink(path.join(dir, "settings.json"), file, "file"))
+          try {
+            const outcome = yield* ask(
+              request("per_symlink_off", { patterns: [file], metadata: { filepath: file }, always: [file] }),
+            )
+            expect(outcome.manual).toBe(false)
+          } finally {
+            yield* Effect.promise(() => fs.rm(file, { force: true }))
+          }
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("observes direct edits to a KILO_CONFIG_DIR config", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const conf = path.join(os.tmpdir(), "opencode-test-confdir-" + Math.random().toString(36).slice(2))
+    process.env["KILO_CONFIG_DIR"] = conf
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          yield* Effect.promise(() => fs.mkdir(conf, { recursive: true }))
+
+          const blocked = yield* ask(request("per_confdir_blocked")).pipe(Effect.forkScoped)
+          expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+          yield* reject("per_confdir_blocked")
+          yield* Fiber.await(blocked)
+
+          yield* Effect.promise(() =>
+            fs.writeFile(path.join(conf, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false })),
+          )
+          expect((yield* ask(request("per_confdir_off"))).manual).toBe(false)
+        }).pipe(Effect.ensuring(Effect.sync(restore))),
+      { git: true },
+    )
+  })
+
+  it.instance("observes direct primary-checkout edits for a linked worktree", () =>
+    Effect.gen(function* () {
+      const primary = yield* tmpdirScoped({ git: true })
+      yield* Effect.promise(() => fs.mkdir(path.join(primary, ".kilo"), { recursive: true }))
+      const config = path.join(primary, ".kilo", "kilo.json")
+      yield* Effect.promise(() => fs.writeFile(config, JSON.stringify({ require_approval_for_config_edits: false })))
+      const branch = "linked-" + Math.random().toString(36).slice(2)
+      const linked = path.join(path.dirname(primary), path.basename(primary) + "-" + branch)
+      yield* Effect.promise(() => $`git worktree add -b ${branch} ${linked}`.cwd(primary).quiet())
+
+      try {
+        yield* withGlobal(undefined)
+        yield* provideInstance(linked)(
+          Effect.gen(function* () {
+            // The linked worktree inherits the primary checkout's project config.
+            expect((yield* ask(request("per_linked_off"))).manual).toBe(false)
+
+            // A direct edit in the primary checkout is observed without Config.update.
+            yield* Effect.promise(() =>
+              fs.writeFile(config, JSON.stringify({ require_approval_for_config_edits: true })),
+            )
+            const fiber = yield* ask(request("per_linked_on")).pipe(Effect.forkScoped)
+            expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+            yield* reject("per_linked_on")
+            yield* Fiber.await(fiber)
+          }),
+        )
+      } finally {
+        yield* Effect.promise(() => $`git worktree remove --force ${linked}`.cwd(primary).quiet().nothrow())
+      }
+    }),
+  )
+
+  it.instance("scopes project config freshness to each project instance", () =>
+    Effect.gen(function* () {
+      const a = yield* tmpdirScoped({ git: true })
+      const b = yield* tmpdirScoped({ git: true })
+      yield* withGlobal(undefined)
+
+      yield* provideInstance(a)(
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            fs.writeFile(path.join(a, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false })),
+          )
+          expect((yield* ask(request("per_scope_a"))).manual).toBe(false)
+        }),
+      )
+
+      // A's project opt-out must not leak into B.
+      yield* provideInstance(b)(
+        Effect.gen(function* () {
+          const fiber = yield* ask(request("per_scope_b")).pipe(Effect.forkScoped)
+          expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+          yield* reject("per_scope_b")
+          yield* Fiber.await(fiber)
+        }),
+      )
+    }),
+  )
 })
+
+const editRequest = (id: string, file: string): Permission.AskInput =>
+  request(id, {
+    patterns: [file],
+    metadata: { filepath: file },
+    always: [file],
+    ruleset: [{ permission: "edit", pattern: "*", action: "allow" }],
+  })
 
 async function paths(name: string) {
   const dir = path.join(Global.Path.config, "skills", name)

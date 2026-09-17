@@ -1,6 +1,8 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
+import { FSUtil } from "@opencode-ai/core/fs-util" // kilocode_change
+import { Git } from "@/git" // kilocode_change
 import * as Config from "@/config/config" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
@@ -14,6 +16,7 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionID } from "@/session/schema" // kilocode_change - used by AllowEverythingInput
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { KilocodeProjectConfigStamp } from "@/kilocode/config/project-stamp"
 import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
@@ -89,6 +92,7 @@ interface PendingEntry {
   ruleset: Ruleset
   hardRuleset?: Ruleset
   saved?: boolean
+  root?: string
   // kilocode_change end
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
@@ -97,6 +101,7 @@ interface State {
   pending: Map<PermissionV1.ID, PendingEntry>
   approved: Rule[]
   session: Record<string, Ruleset> // kilocode_change
+  projectStamp?: string // kilocode_change - last seen project config digest
 }
 
 export function evaluate(permission: string, pattern: string, ...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule {
@@ -143,8 +148,13 @@ function subset(permission: string, ruleset: Ruleset) {
   return ruleset.filter((rule) => Wildcard.match(permission, rule.permission))
 }
 
-function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset, protect: boolean) {
-  if (protect && ConfigProtection.isRequest(entry.info)) return false
+function covered(
+  entry: PendingEntry,
+  approved: Ruleset,
+  local: Ruleset,
+  decide: (entry: { info: Request; root?: string }) => ConfigProtection.Verdict,
+) {
+  if (decide(entry).protect) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
   return entry.info.patterns.every((pattern) => {
@@ -161,6 +171,8 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const events = yield* EventV2Bridge.Service
     const config = yield* Config.Service // kilocode_change
+    const fs = yield* FSUtil.Service // kilocode_change - project config freshness
+    const git = yield* Git.Service // kilocode_change - project config freshness (primary checkout)
     const database = yield* Database.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
@@ -184,6 +196,49 @@ const layer = Layer.effect(
       }),
     )
 
+    // kilocode_change start - config-protection policies. Read the effective project config first:
+    // it observes a global config change and invalidates this instance's cached config, so the
+    // global read below returns the same fresh value instead of consuming the change stamp early.
+    // Before that, compare the project config digest against this instance's last value so a direct
+    // edit to a config file is seen at the next protected request. The digest lives on the
+    // directory-scoped Permission state and participates in normal instance disposal.
+    const loadPolicies = Effect.fnUntraced(function* () {
+      const ctx = yield* InstanceState.context
+      const s = yield* InstanceState.get(state)
+      const digest = yield* KilocodeProjectConfigStamp.digest({
+        fs,
+        git,
+        directory: ctx.directory,
+        worktree: ctx.worktree,
+      })
+      // An unknown digest always reloads so a failed scan cannot pin a stale config; record the
+      // digest only after a successful invalidate so a failure cannot consume the change.
+      if (KilocodeProjectConfigStamp.stale(s.projectStamp, digest)) {
+        yield* config.invalidate()
+        s.projectStamp = digest
+      }
+      const project = yield* config.get()
+      const global = yield* config.getGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
+      return { global, project }
+    })
+
+    // Build the per-request protection decision. When no relevant request is config-shaped the
+    // policy was not loaded, and evaluate() still returns protect:false for non-config requests.
+    const decideWith = (root: string, policy?: { global?: Config.Info; project?: Config.Info }) => {
+      return (entry: { info: Request; root?: string }) =>
+        ConfigProtection.evaluate(entry.info, {
+          root: entry.root ?? root,
+          global: policy?.global,
+          project: policy?.project,
+        })
+    }
+
+    // True when any pending entry is a protected config target, so policy resolution (and its
+    // project config scan) can be skipped for ordinary permission traffic.
+    const anyPendingConfigShaped = (root: string, pending: Map<PermissionV1.ID, PendingEntry>) =>
+      [...pending.values()].some((entry) => ConfigProtection.isRequest(entry.info, entry.root ?? root))
+    // kilocode_change end
+
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       // kilocode_change start
@@ -195,16 +250,20 @@ const layer = Layer.effect(
       let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
       // kilocode_change start - protect config access while honoring explicit global skill trust.
-      // Protection is global-only: project config and other non-global overrides can never disable it.
-      const candidate = ConfigProtection.isRequest(request)
+      // Targets inside the project boundary use the effective project policy; global config dirs and
+      // out-of-boundary targets use the global policy. Non-global sources such as KILO_CONFIG_CONTENT
+      // feed the effective project config, so they only affect this project's own files.
+      const ctx = yield* InstanceState.context
+      const root = ConfigProtection.boundary(ctx)
+      const candidate = ConfigProtection.isRequest(request, root)
       const skillCandidate = ConfigProtection.globalSkillPattern(request)
-      const global =
-        candidate || skillCandidate
-          ? yield* config.getGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
-          : undefined
-      const protect = ConfigProtection.enabled(global)
-      const isProtected = protect && candidate
-      const skill = protect ? skillCandidate : undefined
+      const needsPolicy = candidate || skillCandidate !== undefined
+      const policy = needsPolicy ? yield* loadPolicies() : undefined
+      const global = policy?.global
+      const project = policy?.project
+      const verdict = ConfigProtection.evaluate(request, { root, global, project })
+      const isProtected = verdict.protect
+      const skill = verdict.protect ? verdict.skill : undefined
       const trusted = skill
         ? (() => {
             const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, approved)
@@ -278,7 +337,7 @@ const layer = Layer.effect(
       yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
+      pending.set(id, { info, ruleset, hardRuleset, deferred, root }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
@@ -343,11 +402,17 @@ const layer = Layer.effect(
       yield* Deferred.succeed(existing.deferred, undefined)
       if (input.reply === "once") return
 
-      // kilocode_change start - downgrade "always" to "once" for protected config paths unless an explicit global false disables protection
-      const global = yield* config.getGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
-      const protect = ConfigProtection.enabled(global)
-      if (protect && ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info))
-        return
+      // kilocode_change start - downgrade "always" to "once" for protected config paths. Re-resolve the
+      // per-entry policy at this boundary so project config changes are observed and global skill trust
+      // is preserved. Skip the config scan when neither this reply nor a pending sibling is a config
+      // target: drain must still resolve ordinary entries, which evaluate() handles without policy.
+      const ctx = yield* InstanceState.context
+      const root = ConfigProtection.boundary(ctx)
+      const relevant = ConfigProtection.isRequest(existing.info, root) || anyPendingConfigShaped(root, pending)
+      const policy = relevant ? yield* loadPolicies() : undefined
+      const decide = decideWith(root, policy)
+      const existingVerdict = decide(existing)
+      if (existingVerdict.protect && existingVerdict.skill === undefined) return
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
@@ -365,8 +430,7 @@ const layer = Layer.effect(
         pending as unknown as Map<string, PendingEntry>,
         approved,
         (data) => Effect.asVoid(events.publish(Event.Replied, data)),
-        undefined,
-        protect,
+        decide,
       ) // kilocode_change - drain publishes replies through the same EventV2Bridge channel
 
       if (!existing.saved) {
@@ -395,13 +459,17 @@ const layer = Layer.effect(
       const existing = s.pending.get(input.requestID)
       if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
 
-      // kilocode_change start - config protection is global-only; an explicit global false lets selected always-rules persist
-      const global = yield* config.getGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
-      const protect = ConfigProtection.enabled(global)
-      if (protect && ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info))
-        return
-
-      const skill = protect ? ConfigProtection.globalSkillPattern(existing.info) : undefined
+      // kilocode_change start - protected config paths only persist selected always-rules when their
+      // per-entry policy allows it and the request is not a trusted global skill. Ordinary requests
+      // skip the config scan and use evaluate() without a policy.
+      const ctx = yield* InstanceState.context
+      const root = ConfigProtection.boundary(ctx)
+      const relevant = ConfigProtection.isRequest(existing.info, root) || anyPendingConfigShaped(root, s.pending)
+      const policy = relevant ? yield* loadPolicies() : undefined
+      const decide = decideWith(root, policy)
+      const verdict = decide(existing)
+      if (verdict.protect && verdict.skill === undefined) return
+      const skill = verdict.protect ? verdict.skill : undefined
       // kilocode_change end
       const validRules = new Set(
         skill ? [skill] : [...((existing.info.metadata?.rules as string[] | undefined) ?? []), ...existing.info.always],
@@ -427,8 +495,8 @@ const layer = Layer.effect(
         s.pending as unknown as Map<string, PendingEntry>,
         s.approved,
         (data) => Effect.asVoid(events.publish(Event.Replied, data)),
+        decide,
         input.requestID as unknown as string,
-        protect,
       )
     })
 
@@ -451,14 +519,18 @@ const layer = Layer.effect(
       if (input.sessionID) s.session[input.sessionID] = [rule]
       else s.approved.push(rule)
 
-      // kilocode_change start - YOLO/auto-approve must not silently clear protected config edits unless disabled globally
-      const global = yield* config.getGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
-      const protect = ConfigProtection.enabled(global)
+      // kilocode_change start - YOLO/auto-approve must not silently clear protected config edits
+      // unless the per-entry policy allows it. Skip the config scan when no pending entry is a
+      // config target, so ordinary YOLO traffic stays cheap.
+      const ctx = yield* InstanceState.context
+      const root = ConfigProtection.boundary(ctx)
+      const policy = anyPendingConfigShaped(root, s.pending) ? yield* loadPolicies() : undefined
+      const decide = decideWith(root, policy)
       // kilocode_change end
 
       if (input.requestID) {
         const entry = s.pending.get(input.requestID)
-        const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], protect) : false
+        const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], decide) : false
         if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
           s.pending.delete(input.requestID)
           yield* events.publish(Event.Replied, {
@@ -472,7 +544,7 @@ const layer = Layer.effect(
 
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
-        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], protect)) continue
+        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], decide)) continue
         s.pending.delete(id)
         yield* events.publish(Event.Replied, {
           sessionID: entry.info.sessionID,
@@ -577,7 +649,7 @@ export function visibleTools<T>(tools: Record<string, T>, ruleset: PermissionV1.
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [EventV2Bridge.node, Config.node, Database.node], // kilocode_change
+  deps: [EventV2Bridge.node, Config.node, Database.node, FSUtil.node, Git.node], // kilocode_change
 })
 
 export * as Permission from "."
