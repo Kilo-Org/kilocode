@@ -56,7 +56,7 @@ This returns model information including pricing, context window, and supported 
 
 ### Free models
 
-Several models are available at no cost, subject to rate limits. Availability changes; check the [live model catalog](https://kilo.ai/models) for current free options and model IDs.
+Several models are available at no cost, subject to rate limits. Availability changes; check the [live model catalog](https://kilo.ai/models) for current free options and model IDs. This includes OpenRouter stealth alpha models, whose IDs are in the `stealth/` namespace and end in `-alpha` (for example, `stealth/ox-alpha`).
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
 
