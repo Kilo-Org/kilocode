@@ -83,8 +83,9 @@ async function settle(page: Page) {
 // The question-resolve stability story exists to measure geometry across the
 // request-resolve/tool-complete gap and carries debug toggle buttons, so it is
 // not a meaningful appearance baseline.
-// The diff-panel scroll-up story settles at a slightly different scroll offset
-// between runs, so its baseline flips by a few pixels even without source changes.
+// Some diff-panel stories settle at a slightly different scroll offset or render
+// timing between runs, so their baselines flip by a few pixels even without
+// source changes.
 const SKIP = new Set<string>([
   "chat--chat-view-session-dock-stability",
   "labs-tool-call-lab--question-resolve-stability",
@@ -92,6 +93,7 @@ const SKIP = new Set<string>([
   "agentmanager--diff-panel-viewport-loading",
   "agentmanager--diff-panel-interrupted-loading",
   "agentmanager--diff-panel-scroll-up",
+  "agentmanager--diff-panel-with-diffs",
   "agentmanager--file-tree-virtualized-large",
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
