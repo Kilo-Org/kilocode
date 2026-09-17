@@ -298,6 +298,35 @@ object UiStyle {
 
         fun errorLabelForeground(): Color = JBColor.namedColor("Label.errorForeground", UIUtil.getErrorForeground())
 
+        /**
+         * Per-participant avatar fills for the Kilo Swarm board, keyed by a participant's position in
+         * the board's order. Mirrors `AgentAvatarPalette` in `packages/kilo-ui` so the same subagent
+         * reads the same colour across clients, which is why the fallbacks are exact values; each is
+         * exposed under a semantic key so a theme can still override it.
+         */
+        fun swarmAvatar(index: Int): Color = swarmAvatars[index.mod(swarmAvatars.size)]()
+
+        /** Neutral fill for `main` and for any participant outside the known order. */
+        fun swarmAvatarMain(): Color = JBColor.namedColor(
+            "Kilo.Swarm.avatarMainBackground",
+            JBColor(0x6B7280, 0x9CA3AF),
+        )
+
+        private val swarmAvatars: List<() -> Color> = listOf(
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground1", JBColor(0x3574F0, 0x548AF7)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground2", JBColor(0x1A9E77, 0x2FBE96)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground3", JBColor(0xB5651D, 0xD4813A)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground4", JBColor(0x8957E5, 0xA679F0)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground5", JBColor(0xC74F4F, 0xE06666)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground6", JBColor(0x2E8FB8, 0x4CB4DE)) },
+        )
+
+        /** Initial drawn on top of a swarm avatar fill; the fills are saturated in both themes. */
+        fun swarmAvatarForeground(): Color = JBColor.namedColor(
+            "Kilo.Swarm.avatarForeground",
+            JBColor(Color.WHITE, Color.WHITE),
+        )
+
         fun addedForeground(): Color = JBColor.namedColor(
             "Kilo.DiffStat.addedForeground",
             JBColor(Color(0x1f, 0x9d, 0x66), Color(0x35, 0xd4, 0x9a)),

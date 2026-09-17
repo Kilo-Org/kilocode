@@ -73,6 +73,13 @@ class MockCliServer : AutoCloseable {
     @Volatile var agentBuilderStatus = 200
     @Volatile var lastMcpActionPath: String? = null
     @Volatile var lastAgentRemoveBody: String? = null
+    @Volatile var sessionBoard = """{"ownerSessionID":"ses_root","revision":1,"hasMore":false,"messages":[]}"""
+    @Volatile var sessionBoardStatus = 200
+    @Volatile var resetSessionBoardResponse = """{"ownerSessionID":"ses_root","revision":2,"hasMore":false,"messages":[]}"""
+    @Volatile var resetSessionBoardStatus = 200
+    @Volatile var lastSessionBoardPath: String? = null
+    @Volatile var lastResetSessionBoardPath: String? = null
+    @Volatile var lastResetSessionBoardBody: String? = null
     @Volatile var lastCommandRemoveBody: String? = null
     @Volatile var lastSkillRemoveBody: String? = null
     @Volatile var lastAgentBuilderPath: String? = null
@@ -406,6 +413,15 @@ class MockCliServer : AutoCloseable {
                     lastSkillRemoveBody = body
                     respond(output, skillRemoveStatus, if (skillRemoveStatus == 200) "true" else """{"error":"Skill not found"}""")
                 }
+                bare.matches(Regex("/kilocode/session/ses_[^/]+/board")) && method == "GET" -> {
+                    lastSessionBoardPath = path
+                    respond(output, sessionBoardStatus, sessionBoard)
+                }
+                bare.matches(Regex("/kilocode/session/ses_[^/]+/board/reset")) && method == "POST" -> {
+                    lastResetSessionBoardPath = path
+                    lastResetSessionBoardBody = body
+                    respond(output, resetSessionBoardStatus, resetSessionBoardResponse)
+                }
                 bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
@@ -508,6 +524,7 @@ class MockCliServer : AutoCloseable {
             200 -> "OK"
             401 -> "Unauthorized"
             404 -> "Not Found"
+            409 -> "Conflict"
             500 -> "Internal Server Error"
             else -> "Error"
         }
