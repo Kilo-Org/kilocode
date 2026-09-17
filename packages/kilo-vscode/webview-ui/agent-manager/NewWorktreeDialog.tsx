@@ -45,6 +45,7 @@ import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
+import { GoalHeader } from "../src/components/chat/goal/GoalHeader"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
@@ -720,15 +721,6 @@ export const NewWorktreeDialog: Component<{
               value={name()}
               onInput={(e) => setName(e.currentTarget.value)}
             />
-            <Show when={goalMode()}>
-              <div class="prompt-goal-header">
-                <Icon name="target" size="small" />
-                <span>{t("prompt.goal.set")}</span>
-                <Button variant="ghost" size="small" onClick={() => setGoalMode(false)}>
-                  {t("common.cancel")}
-                </Button>
-              </div>
-            </Show>
             {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
             <div
               ref={containerRef}
@@ -738,6 +730,9 @@ export const NewWorktreeDialog: Component<{
               onDragLeave={imageAttach.handleDragLeave}
               onDrop={imageAttach.handleDrop}
             >
+              <Show when={goalMode()}>
+                <GoalHeader onCancel={() => setGoalMode(false)} />
+              </Show>
               <Show when={slash.show()}>
                 <div class="slash-command-dropdown am-slash-command-dropdown" data-component="popover-content">
                   <Show
