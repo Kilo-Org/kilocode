@@ -27,7 +27,13 @@ import {
 import { markdownBlockKey, type MarkdownToken } from "./markdown-worker-protocol"
 import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-state"
 // kilocode_change start: Mermaid rendering and morphdom guards for highlighted blocks
-import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/mermaid/markdown-mermaid"
+import {
+  cleanupMermaidActions,
+  hasMermaid,
+  preserveMermaid,
+  renderMermaid,
+  type MermaidLabels,
+} from "../kilocode/mermaid/markdown-mermaid"
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight"
 import { patchCodeTokens } from "../kilocode/markdown-code-tokens"
 // kilocode_change end
@@ -719,6 +725,7 @@ function updateCodeBlock(
   // kilocode_change start: mermaid blocks render as a source <pre> for
   // kickMermaid to transform into SVG diagrams, not as Shiki-highlighted code.
   if (block.language === "mermaid") {
+    cleanupMermaidActions(next) // kilocode_change - dispose an open viewer before rebuilding the block
     next.replaceChildren()
     const wrapper = document.createElement("div")
     wrapper.setAttribute("data-component", "markdown-code")

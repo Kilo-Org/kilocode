@@ -8,7 +8,9 @@ export function clampZoom(value: number) {
 }
 
 // Negative delta (wheel up or zoom-in intent) magnifies, positive shrinks.
+// A zero delta (horizontal-only trackpad movement) is a no-op.
 export function zoomBy(value: number, delta: number) {
+  if (delta === 0) return clampZoom(value)
   return clampZoom(delta < 0 ? value * ZOOM_FACTOR : value / ZOOM_FACTOR)
 }
 

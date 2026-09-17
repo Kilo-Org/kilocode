@@ -1,4 +1,4 @@
-import { createSignal, onMount, type JSX } from "solid-js"
+import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { Portal } from "solid-js/web"
 import type { MermaidLabels } from "./markdown-mermaid"
 import { clampZoom, zoomBy, zoomLabel } from "./markdown-mermaid-zoom-state"
@@ -80,6 +80,20 @@ export function MermaidZoom(props: Props) {
       props.onClose()
       return
     }
+    if (event.key === "Tab") {
+      const items = Array.from(panel?.querySelectorAll<HTMLElement>("button") ?? [])
+      const first = items.at(0)
+      const last = items.at(-1)
+      if (!first || !last) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+      return
+    }
     if (event.key === "+" || event.key === "=") {
       event.preventDefault()
       zoomTo(zoomBy(zoom(), -1))
@@ -109,6 +123,10 @@ export function MermaidZoom(props: Props) {
 
   const move = (event: PointerEvent) => {
     if (!dragging()) return
+    if (event.buttons === 0) {
+      setDragging(false)
+      return
+    }
     setPan({ x: drag.panX + event.clientX - drag.x, y: drag.panY + event.clientY - drag.y })
   }
 
@@ -121,11 +139,19 @@ export function MermaidZoom(props: Props) {
   let panel: HTMLDivElement | undefined
   let viewport: HTMLDivElement | undefined
   let canvas: HTMLDivElement | undefined
+  let restore: Element | null = null
   onMount(() => {
+    restore = document.activeElement
+    // Listen on the document so Escape keeps working even if focus leaves the panel.
+    document.addEventListener("keydown", keydown)
     // Insert the sanitized SVG once. Pan and zoom only update the transform, so
     // the diagram is never re-serialized or re-parsed on pointer or wheel frames.
     if (canvas) canvas.innerHTML = props.svg()
     panel?.focus()
+  })
+  onCleanup(() => {
+    document.removeEventListener("keydown", keydown)
+    if (restore instanceof HTMLElement) restore.focus()
   })
 
   return (
@@ -139,7 +165,7 @@ export function MermaidZoom(props: Props) {
           if (event.target === event.currentTarget) props.onClose()
         }}
       >
-        <div data-slot="markdown-mermaid-zoom-panel" tabIndex={-1} ref={panel} onKeyDown={keydown}>
+        <div data-slot="markdown-mermaid-zoom-panel" tabIndex={-1} ref={panel}>
           <div data-slot="markdown-mermaid-zoom-header">
             <span data-slot="markdown-mermaid-zoom-title">{props.labels.zoom}</span>
             <button
@@ -161,6 +187,7 @@ export function MermaidZoom(props: Props) {
             onPointerMove={move}
             onPointerUp={up}
             onPointerCancel={up}
+            onLostPointerCapture={() => setDragging(false)}
           >
             <div
               data-slot="markdown-mermaid-zoom-canvas"

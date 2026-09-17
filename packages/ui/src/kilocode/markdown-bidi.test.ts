@@ -36,6 +36,7 @@ describe("Markdown bidirectional rendering contract", () => {
         KiloTheme: { name: "Kilo" },
       }))
       mock.module("./src/kilocode/mermaid/markdown-mermaid", () => ({
+        cleanupMermaidActions: () => {},
         hasMermaid: () => false,
         preserveMermaid: () => false,
         renderMermaid: async () => {},

@@ -252,6 +252,14 @@ function cleanupActions(el: HTMLElement) {
   actions.delete(el)
 }
 
+// Dispose the mounted action roots for every Mermaid panel inside a block that
+// is about to be rebuilt, so an open zoom viewer does not outlive its diagram.
+export function cleanupMermaidActions(root: ParentNode) {
+  for (const el of root.querySelectorAll('[data-component="markdown-mermaid"]')) {
+    if (el instanceof HTMLElement) cleanupActions(el)
+  }
+}
+
 function serialize(svg: SVGSVGElement) {
   const clone = svg.cloneNode(true) as SVGSVGElement
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")

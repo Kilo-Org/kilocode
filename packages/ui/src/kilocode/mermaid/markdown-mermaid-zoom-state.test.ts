@@ -20,6 +20,12 @@ describe("mermaid zoom state", () => {
     expect(zoomBy(MIN_ZOOM, 1)).toBe(MIN_ZOOM)
   })
 
+  test("a zero wheel delta is a no-op", () => {
+    expect(zoomBy(1, 0)).toBe(1)
+    expect(zoomBy(2.5, 0)).toBe(2.5)
+    expect(zoomBy(MAX_ZOOM, 0)).toBe(MAX_ZOOM)
+  })
+
   test("formats the zoom percentage", () => {
     expect(zoomLabel(1)).toBe("100%")
     expect(zoomLabel(1.5)).toBe("150%")
