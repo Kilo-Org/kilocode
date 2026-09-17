@@ -9,5 +9,5 @@ class OpenMarketplaceSettingsAction : OpenSettingsPageAction(
     KiloBundle.message("action.Kilo.OpenMarketplaceSettings.description"),
     surface = "tool_window_marketplace",
 ) {
-    override fun page(e: AnActionEvent): String = MarketplaceConfigurable.ID
+    internal override fun page(e: AnActionEvent): String = MarketplaceConfigurable.ID
 }

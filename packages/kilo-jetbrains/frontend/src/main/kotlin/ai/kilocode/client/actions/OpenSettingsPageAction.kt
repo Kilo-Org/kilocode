@@ -23,7 +23,8 @@ abstract class OpenSettingsPageAction(
     private val surface: String,
 ) : DumbAwareAction(text, description, null) {
 
-    protected abstract fun page(e: AnActionEvent): String
+    /** Internal rather than protected so tests in this module can call it directly. */
+    internal abstract fun page(e: AnActionEvent): String
 
     final override fun actionPerformed(e: AnActionEvent) {
         Telemetry.send("Settings Opened", mapOf("surface" to surface))

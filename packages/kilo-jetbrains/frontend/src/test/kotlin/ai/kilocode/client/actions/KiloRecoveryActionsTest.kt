@@ -182,11 +182,8 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
     }
 
     /** Passes a workspace so the data context carries the project the action reads state from. */
-    private fun page(action: OpenSettingsPageAction): String {
-        val method = OpenSettingsPageAction::class.java.getDeclaredMethod("page", AnActionEvent::class.java)
-        method.isAccessible = true
-        return method.invoke(action, event(action, workspace("/tmp/kilo-settings-shortcuts"))) as String
-    }
+    private fun page(action: OpenSettingsPageAction): String =
+        action.page(event(action, workspace("/tmp/kilo-settings-shortcuts")))
 
     fun `test core info action shows version and architecture`() {
         appRpc.cliVersion = "1.2.3"

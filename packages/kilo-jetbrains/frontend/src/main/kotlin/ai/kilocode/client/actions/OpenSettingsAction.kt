@@ -11,6 +11,6 @@ class OpenSettingsAction : OpenSettingsPageAction(
     surface = "tool_window",
 ) {
     /** Reopens wherever the user last was, so this entry resumes rather than jumps somewhere fixed. */
-    override fun page(e: AnActionEvent): String =
+    internal override fun page(e: AnActionEvent): String =
         KiloSettingsSelection.target(e.project ?: ProjectManager.getInstance().defaultProject)
 }
