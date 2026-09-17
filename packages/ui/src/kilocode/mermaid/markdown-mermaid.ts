@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify"
-import { fnv1a } from "../context/marked"
+import { fnv1a } from "../../context/marked"
 import { mountMermaidActions } from "./markdown-mermaid-actions"
 import { dataUrlToBlob } from "./markdown-mermaid-data-url"
 
@@ -31,6 +31,11 @@ export type MermaidLabels = {
   copyPng: string
   downloadSvg: string
   downloadPng: string
+  zoom: string
+  zoomIn: string
+  zoomOut: string
+  zoomReset: string
+  close: string
 }
 
 const labels: MermaidLabels = {
@@ -46,6 +51,11 @@ const labels: MermaidLabels = {
   copyPng: "Copy PNG",
   downloadSvg: "Download SVG",
   downloadPng: "Download PNG",
+  zoom: "Zoom",
+  zoomIn: "Zoom in",
+  zoomOut: "Zoom out",
+  zoomReset: "Reset zoom",
+  close: "Close",
 }
 
 const cache: { promise?: Promise<Mermaid>; id: number; queue: Promise<void> } = {
@@ -358,6 +368,7 @@ function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, 
     el,
     mountMermaidActions(el, {
       labels,
+      svg: sourceSvg,
       onCopySource: () => copyText(sourceText),
       onCopySvg: () => copySvg(svg),
       onCopyPng: () => copyPng(svg),

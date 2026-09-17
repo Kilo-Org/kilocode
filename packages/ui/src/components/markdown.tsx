@@ -27,7 +27,7 @@ import {
 import { markdownBlockKey, type MarkdownToken } from "./markdown-worker-protocol"
 import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-state"
 // kilocode_change start: Mermaid rendering and morphdom guards for highlighted blocks
-import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid"
+import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/mermaid/markdown-mermaid"
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight"
 import { patchCodeTokens } from "../kilocode/markdown-code-tokens"
 // kilocode_change end
@@ -514,6 +514,11 @@ export function Markdown(
       copyPng: i18n.t("ui.mermaid.copyPng"),
       downloadSvg: i18n.t("ui.mermaid.downloadSvg"),
       downloadPng: i18n.t("ui.mermaid.downloadPng"),
+      zoom: i18n.t("ui.mermaid.zoom"),
+      zoomIn: i18n.t("ui.mermaid.zoomIn"),
+      zoomOut: i18n.t("ui.mermaid.zoomOut"),
+      zoomReset: i18n.t("ui.mermaid.zoomReset"),
+      close: i18n.t("ui.common.close"),
     }
     kickHighlight(container, labels)
     kickMermaid(container, local.streaming ?? false, mermaid)
