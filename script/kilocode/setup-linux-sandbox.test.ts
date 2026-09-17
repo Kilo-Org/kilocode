@@ -50,8 +50,10 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
       port: 0,
       idleTimeout: 0,
       fetch(request) {
-        const route = new URL(request.url).pathname.split("/").at(1)!
+        const pathname = new URL(request.url).pathname
+        const route = pathname.split("/").at(1)!
         requests.push(route)
+        if (pathname !== `/${route}/${name}.tar.xz`) return new Response("wrong archive path", { status: 404 })
         if (route === "good") return new Response(archive)
         if (route === "bad") return new Response(tampered)
         if (route === "large") return new Response(new Uint8Array(49091961))
