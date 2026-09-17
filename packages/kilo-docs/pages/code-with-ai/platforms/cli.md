@@ -418,7 +418,7 @@ Common configuration options include:
 - **`lsp`** - Language server configuration (`true`, `false`, or server-specific entries)
 - **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
 - **`privacy_mode`** - Blur PII in the TUI (balance, team name, Kilo Pass usage) and require confirmation before `/profile` reveals account details — see [Privacy Mode](#privacy-mode)
-- **`require_approval_for_config_edits`** - Require approval for edits to protected config files (default: `true`). Set it to `false` in global config only to disable the check — see [Config File Protection](/docs/getting-started/settings/auto-approving-actions#config-file-protection)
+- **`require_approval_for_config_edits`** - Require approval for edits to protected config files (default: `true`). Project config controls protection for the project's own files; global config controls global config directories and protected config targets outside the project — see [Config File Protection](/docs/getting-started/settings/auto-approving-actions#config-file-protection)
 
 {% callout type="tip" %}
 **Using a model that's not in the built-in list?** You can register any model by adding it under `provider.<provider_id>.models` in your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for full details and examples.

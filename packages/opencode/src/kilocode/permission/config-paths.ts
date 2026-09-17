@@ -29,15 +29,47 @@ export namespace ConfigProtection {
    * "Config file edits always require approval" explanation copy applies. */
   export const CONFIG_PROTECTED_KEY = "configProtected" as const
 
+  /** The `require_approval_for_config_edits` value from one config source. */
+  type Config = { require_approval_for_config_edits?: boolean }
+
   /**
-   * Whether the extra config-edit restrictions are active.
-   *
-   * Default-on and global-only: read the value from `Config.Service.getGlobal()` at the
-   * decision boundary. Only an explicit global `false` disables it. `undefined`, `true`,
-   * project config, `KILO_CONFIG_CONTENT`, and other non-global merged values never do.
+   * Whether the extra config-edit restrictions are active for one config source.
+   * Default-on: only an explicit `false` disables it. Callers pass the global config for
+   * global/out-of-project targets and the effective project config for in-boundary targets.
    */
-  export function enabled(global?: { require_approval_for_config_edits?: boolean }): boolean {
-    return global?.require_approval_for_config_edits !== false
+  export function enabled(config?: Config): boolean {
+    return config?.require_approval_for_config_edits !== false
+  }
+
+  /**
+   * Scope of one protected config target relative to the active project.
+   * - `global`: inside a Kilo global config directory (a global config dir inside the
+   *   project still counts as global).
+   * - `inside`: a protected config path proven to be inside the project boundary.
+   * - `outside`: a protected config path outside the boundary, or one that could not be
+   *   proven inside (symlink escape, failed resolution). Falls back to the global policy.
+   * - `none`: not a protected config path.
+   */
+  type Scope = "global" | "inside" | "outside" | "none"
+
+  /** Per-request outcome of applying the global and project protection policies. */
+  export type Verdict = {
+    /** The request targets at least one protected config path, ignoring policy. */
+    candidate: boolean
+    /** Protection applies to this request under the current policies. */
+    protect: boolean
+    /** Some protected target is global or outside the project boundary. */
+    external: boolean
+    /** Exact global skill subtree that may bypass protection, when the request is one skill. */
+    skill?: string
+  }
+
+  /**
+   * The real project boundary: the git worktree root, or the instance directory for non-git
+   * projects. Never `/` for non-git projects.
+   */
+  export function boundary(ctx: { directory: string; worktree?: string }): string {
+    return ctx.worktree && ctx.worktree !== "/" ? ctx.worktree : ctx.directory
   }
 
   function normalize(p: string): string {
@@ -176,63 +208,126 @@ export namespace ConfigProtection {
     return globalSkillPattern(request) !== undefined
   }
 
-  /** Check a single path (absolute or relative) against config protection. */
-  function protected_(p: string): boolean {
-    return path.isAbsolute(p) ? isAbsolute(p) : isRelative(p)
-  }
+  /** Structural shape shared by config-gated permission requests. */
+  type Target = { permission: string; patterns: readonly string[]; metadata?: Record<string, any> }
 
-  /**
-   * Determine if a permission request targets config files.
-   * Gates `edit` permissions and bash-originated `external_directory` requests.
-   * File-tool reads are not restricted.
-   */
-  export function isRequest(request: {
-    permission: string
-    patterns: readonly string[]
-    metadata?: Record<string, any>
-  }): boolean {
+  /** Collect every path string a permission request may write to. */
+  function targets(request: Target): string[] {
     if (request.permission === "external_directory") {
       // File tools include metadata.filepath. They may read global config
       // without prompting, but edits are still protected separately via `edit`.
-      if (request.metadata?.filepath) return false
+      if (request.metadata?.filepath) return []
       // Bash read-only file commands may read global config when explicitly allowed.
-      if (request.metadata?.access === "read") return false
-      for (const pattern of request.patterns) {
-        const dir = pattern.replace(/[\\/]\*$/, "")
-        const target = physical(dir)
-        if (isAbsolute(dir) || (target && isAbsolute(target))) return true
-      }
-      return false
+      if (request.metadata?.access === "read") return []
+      return request.patterns.map((pattern) => pattern.replace(/[\\/]\*$/, ""))
     }
 
-    if (request.permission !== "edit") return false
+    if (request.permission !== "edit") return []
 
-    // Check patterns — handle both relative and absolute
-    for (const pattern of request.patterns) {
-      if (protected_(pattern)) return true
-    }
-
-    // Check metadata.filepath (absolute for edit, comma-joined relative for apply_patch)
+    const out: string[] = [...request.patterns]
+    // metadata.filepath is absolute for edit/write and comma-joined relative for apply_patch.
     const fp = request.metadata?.filepath
-    if (typeof fp === "string") {
-      // apply_patch joins relative paths with ", "
-      const parts = fp.includes(", ") ? fp.split(", ") : [fp]
-      for (const part of parts) {
-        if (protected_(part)) return true
-      }
-    }
-
-    // Check metadata.files[] (apply_patch file objects with absolute filePath/movePath)
+    if (typeof fp === "string") out.push(...(fp.includes(", ") ? fp.split(", ") : [fp]))
+    // metadata.files[] carries apply_patch file objects with absolute filePath/movePath.
     const files = request.metadata?.files
     if (Array.isArray(files)) {
       for (const file of files) {
         for (const key of ["filePath", "movePath"] as const) {
           const val = file?.[key]
-          if (typeof val === "string" && protected_(val)) return true
+          if (typeof val === "string") out.push(val)
         }
       }
     }
+    return out
+  }
 
+  /** Absolute path contains a `.kilo`/`.kilocode` config directory segment. */
+  function configPath(abs: string): boolean {
+    const parts = normalize(abs).split("/")
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i] !== ".kilo" && parts[i] !== ".kilocode") continue
+      if (isRelative(parts.slice(i).join("/"))) return true
+    }
     return false
+  }
+
+  /**
+   * Classify one target path against the project boundary.
+   *
+   * A target is protected when EITHER the requested (lexical) path or the canonical
+   * (symlink-resolved) path is config-shaped: root config filenames relative to the matching root,
+   * or `.kilo`/`.kilocode` directory segments. The scope follows physical containment, so an alias
+   * into the project uses the project policy, an alias out of it uses the global policy, and global
+   * config dirs win at either location. Root config filenames are recognized only relative to a
+   * known root, so an arbitrary outside filename is never newly protected.
+   */
+  function level(target: string, root: string): Scope {
+    const abs = path.isAbsolute(target) ? path.resolve(target) : path.resolve(root, target)
+    // Global config dirs stay global even when physically inside the project boundary.
+    if (isAbsolute(abs)) return "global"
+
+    const canonRoot = physical(root)
+    const canon = physical(abs)
+    if (!protectedTarget(target, abs, root, canon, canonRoot)) return "none"
+    return canon && canonRoot && within(canon, canonRoot) ? "inside" : "outside"
+  }
+
+  /** Whether the requested (lexical) or canonical path is a protected config shape. */
+  function protectedTarget(
+    target: string,
+    abs: string,
+    root: string,
+    canon: string | undefined,
+    canonRoot: string | undefined,
+  ): boolean {
+    // Requested path. Root-relative names count only inside the requested root; outside it only
+    // config dir segments count, so the protected filename set does not grow.
+    if (within(abs, root)) {
+      if (isRelative(normalize(path.relative(root, abs))) || configPath(abs)) return true
+    } else if (path.isAbsolute(target) ? configPath(abs) : isRelative(target) || configPath(abs)) {
+      return true
+    }
+
+    if (!canon) return false
+    // Canonical path. Root-relative names count only inside the canonical root.
+    if (canonRoot && within(canon, canonRoot)) {
+      return isRelative(normalize(path.relative(canonRoot, canon))) || configPath(canon)
+    }
+    return configPath(canon)
+  }
+
+  /** Whether one target looks like a protected config path, ignoring policy and containment. */
+  function configLike(target: string): boolean {
+    return path.isAbsolute(target) ? isAbsolute(target) || configPath(target) : isRelative(target)
+  }
+
+  /**
+   * Determine if a permission request targets config files at all, ignoring policy.
+   * Gates `edit` permissions and bash-originated `external_directory` requests.
+   * File-tool reads are not restricted. When `root` is provided, relative targets are resolved
+   * against the project boundary so paths into global config dirs are still detected.
+   */
+  export function isRequest(request: Target, root?: string): boolean {
+    const paths = targets(request)
+    if (root) return paths.some((target) => level(target, root) !== "none")
+    return paths.some(configLike)
+  }
+
+  /**
+   * Apply the global and project protection policies to one permission request.
+   *
+   * Targets proven inside the project boundary use the effective project policy; global config
+   * dirs, out-of-boundary targets, and targets that cannot be proven inside use the global
+   * policy. A request is protected when any of its targets is protected under its own policy,
+   * so a project opt-out can never bypass protection for an out-of-project target.
+   */
+  export function evaluate(request: Target, input: { root: string; global?: Config; project?: Config }): Verdict {
+    const scopes = targets(request).map((target) => level(target, input.root))
+    const candidate = scopes.some((scope) => scope !== "none")
+    if (!candidate) return { candidate: false, protect: false, external: false }
+    const external = scopes.some((scope) => scope === "global" || scope === "outside")
+    const inside = scopes.some((scope) => scope === "inside")
+    const protect = (external && enabled(input.global)) || (inside && enabled(input.project))
+    return { candidate, protect, external, skill: external ? globalSkillPattern(request) : undefined }
   }
 }

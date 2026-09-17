@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import path from "path"
+import os from "os"
 import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
@@ -321,6 +322,323 @@ describe("ConfigProtection.isGlobalSkillRequest", () => {
     } finally {
       if (prev === undefined) delete process.env.XDG_CONFIG_HOME
       else process.env.XDG_CONFIG_HOME = prev
+    }
+  })
+})
+
+describe("ConfigProtection.boundary", () => {
+  test("uses the git worktree when present", () => {
+    expect(ConfigProtection.boundary({ directory: "/a/b", worktree: "/a" })).toBe("/a")
+  })
+
+  test("falls back to the directory for non-git projects", () => {
+    expect(ConfigProtection.boundary({ directory: "/a/b", worktree: "/" })).toBe("/a/b")
+    expect(ConfigProtection.boundary({ directory: "/a/b" })).toBe("/a/b")
+  })
+})
+
+describe("ConfigProtection.evaluate", () => {
+  const global = path.resolve(Global.Path.config)
+  const link = process.platform === "win32" ? "junction" : "dir"
+
+  const verdict = (file: string, root: string, g?: object, p?: object) =>
+    ConfigProtection.evaluate(
+      { permission: "edit", patterns: [file], metadata: { filepath: file } },
+      { root, global: g, project: p },
+    )
+
+  test("uses the project policy for config targets inside the boundary", async () => {
+    await using tmp = await tmpdir()
+    expect(verdict(".kilo/kilo.json", tmp.path, undefined, { require_approval_for_config_edits: false })).toMatchObject(
+      {
+        candidate: true,
+        external: false,
+        protect: false,
+      },
+    )
+    expect(
+      verdict("packages/sub/.kilo/config.json", tmp.path, undefined, { require_approval_for_config_edits: true }),
+    ).toMatchObject({ candidate: true, external: false, protect: true })
+  })
+
+  test("global false with project true re-enables protection for inside targets", async () => {
+    await using tmp = await tmpdir()
+    expect(
+      verdict(
+        ".kilo/kilo.json",
+        tmp.path,
+        { require_approval_for_config_edits: false },
+        {
+          require_approval_for_config_edits: true,
+        },
+      ),
+    ).toMatchObject({ candidate: true, external: false, protect: true })
+  })
+
+  test("uses the global policy for absolute global config targets", async () => {
+    await using tmp = await tmpdir()
+    expect(
+      verdict(path.join(global, "kilo.json"), tmp.path, undefined, {
+        require_approval_for_config_edits: false,
+      }),
+    ).toMatchObject({ candidate: true, external: true, protect: true })
+  })
+
+  test("uses the global policy for sibling absolute and traversal targets", async () => {
+    await using tmp = await tmpdir()
+    const sibling = path.join(os.tmpdir(), "opencode-eval-sibling", ".kilo", "kilo.json")
+    expect(verdict(sibling, tmp.path, undefined, { require_approval_for_config_edits: false })).toMatchObject({
+      candidate: true,
+      external: true,
+      protect: true,
+    })
+    expect(
+      verdict("../sibling/.kilo/kilo.json", tmp.path, undefined, { require_approval_for_config_edits: false }),
+    ).toMatchObject({ candidate: true, external: true, protect: true })
+  })
+
+  test("protects mixed requests when any target is external", async () => {
+    await using tmp = await tmpdir()
+    const result = ConfigProtection.evaluate(
+      {
+        permission: "edit",
+        patterns: [".kilo/a.json", "../sib/.kilo/b.json"],
+        metadata: { filepath: ".kilo/a.json, ../sib/.kilo/b.json" },
+      },
+      { root: tmp.path, global: undefined, project: { require_approval_for_config_edits: false } },
+    )
+    expect(result).toMatchObject({ candidate: true, external: true, protect: true })
+  })
+
+  test("does not protect nested AGENTS.md or ordinary files", async () => {
+    await using tmp = await tmpdir()
+    expect(verdict("src/AGENTS.md", tmp.path).candidate).toBe(false)
+    expect(verdict("src/index.ts", tmp.path).candidate).toBe(false)
+  })
+
+  test("protects root config files inside the boundary under the project policy", async () => {
+    await using tmp = await tmpdir()
+    expect(verdict("AGENTS.md", tmp.path, undefined, { require_approval_for_config_edits: false })).toMatchObject({
+      candidate: true,
+      external: false,
+      protect: false,
+    })
+  })
+
+  test("ignores file-tool external_directory requests", async () => {
+    await using tmp = await tmpdir()
+    const result = ConfigProtection.evaluate(
+      {
+        permission: "external_directory",
+        patterns: [global + "/*"],
+        metadata: { filepath: path.join(global, "kilo.json") },
+      },
+      { root: tmp.path },
+    )
+    expect(result.candidate).toBe(false)
+  })
+
+  test("treats a symlinked global directory inside the project as global", async () => {
+    await using tmp = await tmpdir()
+    const alias = path.join(tmp.path, "global-link")
+    await fs.symlink(global, alias, link)
+    try {
+      expect(
+        verdict(path.join(alias, "kilo.json"), tmp.path, undefined, {
+          require_approval_for_config_edits: false,
+        }),
+      ).toMatchObject({ candidate: true, external: true, protect: true })
+    } finally {
+      await fs.rm(alias, { recursive: true, force: true })
+    }
+  })
+
+  test("treats symlink escapes and nonexistent leaves under them as external", async () => {
+    await using tmp = await tmpdir()
+    await using outside = await tmpdir()
+    const escape = path.join(tmp.path, "escape")
+    await fs.symlink(outside.path, escape, link)
+    try {
+      expect(
+        verdict(path.join(escape, ".kilo", "kilo.json"), tmp.path, undefined, {
+          require_approval_for_config_edits: false,
+        }),
+      ).toMatchObject({ candidate: true, external: true, protect: true })
+      expect(
+        verdict(path.join(escape, "nested", ".kilo", "kilo.json"), tmp.path, undefined, {
+          require_approval_for_config_edits: false,
+        }),
+      ).toMatchObject({ candidate: true, external: true, protect: true })
+    } finally {
+      await fs.rm(escape, { recursive: true, force: true })
+    }
+  })
+
+  test("treats a relative path into a global config dir inside the boundary as global", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    const inner = path.join(tmp.path, ".config", "kilo")
+    await fs.mkdir(inner, { recursive: true })
+    ;(Global.Path as { config: string }).config = inner
+    try {
+      const result = ConfigProtection.evaluate(
+        { permission: "edit", patterns: [".config/kilo/kilo.json"], metadata: { filepath: ".config/kilo/kilo.json" } },
+        { root: tmp.path, global: undefined, project: { require_approval_for_config_edits: false } },
+      )
+      expect(result).toMatchObject({ candidate: true, external: true, protect: true })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+    }
+  })
+
+  test("does not treat a shared-prefix sibling as inside", async () => {
+    await using tmp = await tmpdir()
+    expect(
+      verdict(path.join(tmp.path + "-evil", ".kilo", "kilo.json"), tmp.path, undefined, {
+        require_approval_for_config_edits: false,
+      }),
+    ).toMatchObject({ candidate: true, external: true, protect: true })
+  })
+
+  test("uses the project policy for an outside alias that canonically lands inside the boundary", async () => {
+    await using tmp = await tmpdir()
+    const project = path.join(tmp.path, "project")
+    await fs.mkdir(project, { recursive: true })
+    const alias = path.join(tmp.path, "alias")
+    await fs.symlink(project, alias, link)
+    const off = { require_approval_for_config_edits: false }
+    const on = { require_approval_for_config_edits: true }
+    try {
+      // Global false, project true: the canonical target is protected inside the project.
+      expect(verdict(path.join(alias, ".kilo", "kilo.json"), project, off, on)).toMatchObject({
+        candidate: true,
+        external: false,
+        protect: true,
+      })
+      expect(verdict(path.join(alias, "AGENTS.md"), project, off, on)).toMatchObject({
+        candidate: true,
+        external: false,
+        protect: true,
+      })
+    } finally {
+      await fs.rm(alias, { recursive: true, force: true })
+    }
+  })
+
+  test("uses the global policy when an inside alias canonically escapes the boundary", async () => {
+    await using tmp = await tmpdir()
+    await using outside = await tmpdir()
+    const escape = path.join(tmp.path, "escape")
+    await fs.symlink(outside.path, escape, link)
+    try {
+      expect(
+        verdict(
+          path.join(escape, ".kilo", "kilo.json"),
+          tmp.path,
+          { require_approval_for_config_edits: true },
+          { require_approval_for_config_edits: false },
+        ),
+      ).toMatchObject({ candidate: true, external: true, protect: true })
+    } finally {
+      await fs.rm(escape, { recursive: true, force: true })
+    }
+  })
+
+  test("follows an alias to a physical protected config path inside the boundary", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const alias = path.join(tmp.path, "configs")
+    await fs.symlink(path.join(tmp.path, ".kilo"), alias, link)
+    try {
+      expect(
+        verdict(
+          path.join(alias, "kilo.json"),
+          tmp.path,
+          { require_approval_for_config_edits: false },
+          { require_approval_for_config_edits: true },
+        ),
+      ).toMatchObject({ candidate: true, external: false, protect: true })
+      expect(
+        verdict(
+          path.join(alias, "kilo.json"),
+          tmp.path,
+          { require_approval_for_config_edits: true },
+          { require_approval_for_config_edits: false },
+        ),
+      ).toMatchObject({ candidate: true, external: false, protect: false })
+    } finally {
+      await fs.rm(alias, { recursive: true, force: true })
+    }
+  })
+
+  test("does not protect arbitrary config-looking filenames outside the boundary", async () => {
+    await using tmp = await tmpdir()
+    const project = { require_approval_for_config_edits: false }
+    const sibling = path.join(os.tmpdir(), "opencode-eval-sibling-root", "AGENTS.md")
+    const siblingKilo = path.join(os.tmpdir(), "opencode-eval-sibling-root", "kilo.json")
+    const traversal = "../opencode-eval-sibling-root/AGENTS.md"
+    expect(verdict(sibling, tmp.path, undefined, project).candidate).toBe(false)
+    expect(verdict(siblingKilo, tmp.path, undefined, project).candidate).toBe(false)
+    expect(verdict(traversal, tmp.path, undefined, project).candidate).toBe(false)
+  })
+
+  test("keeps protection when a project config path symlinks to an ordinary same-project file", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    await fs.writeFile(path.join(tmp.path, "settings.json"), "{}")
+    await fs.writeFile(path.join(tmp.path, "instructions.md"), "x")
+    const dotKilo = path.join(tmp.path, ".kilo", "kilo.json")
+    const agents = path.join(tmp.path, "AGENTS.md")
+    await fs.symlink(path.join(tmp.path, "settings.json"), dotKilo, "file")
+    await fs.symlink(path.join(tmp.path, "instructions.md"), agents, "file")
+    const off = { require_approval_for_config_edits: false }
+    const on = { require_approval_for_config_edits: true }
+    try {
+      // Default and global-false/project-true still protect these inside the project.
+      for (const file of [dotKilo, agents]) {
+        expect(verdict(file, tmp.path)).toMatchObject({ candidate: true, external: false, protect: true })
+        expect(verdict(file, tmp.path, off, on)).toMatchObject({ candidate: true, external: false, protect: true })
+        expect(verdict(file, tmp.path, on, off)).toMatchObject({ candidate: true, external: false, protect: false })
+      }
+    } finally {
+      await fs.rm(dotKilo, { force: true })
+      await fs.rm(agents, { force: true })
+    }
+  })
+
+  test("protects a plain project file that symlinks to a config path", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    await fs.writeFile(path.join(tmp.path, ".kilo", "kilo.json"), "{}")
+    const alias = path.join(tmp.path, "settings.json")
+    await fs.symlink(path.join(tmp.path, ".kilo", "kilo.json"), alias, "file")
+    try {
+      expect(verdict(alias, tmp.path)).toMatchObject({ candidate: true, external: false, protect: true })
+      expect(verdict(alias, tmp.path, undefined, { require_approval_for_config_edits: false })).toMatchObject({
+        candidate: true,
+        external: false,
+        protect: false,
+      })
+    } finally {
+      await fs.rm(alias, { force: true })
+    }
+  })
+
+  test("keeps protecting a config parent symlink with a nonexistent leaf", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, "sub"), { recursive: true })
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const parentLink = path.join(tmp.path, ".kilo", "link")
+    await fs.symlink(path.join(tmp.path, "sub"), parentLink, "dir")
+    try {
+      // Lexical path is protected; canonical location is an ordinary project dir with no file yet.
+      expect(
+        verdict(path.join(parentLink, "nested", "kilo.json"), tmp.path, undefined, {
+          require_approval_for_config_edits: false,
+        }),
+      ).toMatchObject({ candidate: true, external: false, protect: false })
+    } finally {
+      await fs.rm(parentLink, { recursive: true, force: true })
     }
   })
 })

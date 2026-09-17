@@ -1750,7 +1750,7 @@ describe("require_approval_for_config_edits source scope", () => {
   const read = () =>
     Effect.runPromise(Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)))
 
-  test("KILO_CONFIG_CONTENT false reaches the merged config but not the global config", async () => {
+  test("KILO_CONFIG_CONTENT false disables the effective project policy but not the global policy", async () => {
     await using dir = await tmpdir()
     await using project = await tmpdir()
     const previous = process.env["KILO_CONFIG_CONTENT"]
@@ -1768,6 +1768,9 @@ describe("require_approval_for_config_edits source scope", () => {
           const global = await read()
           expect(merged.require_approval_for_config_edits).toBe(false)
           expect(global.require_approval_for_config_edits).toBeUndefined()
+          // The env-provided value is project-scoped: it disables the effective project policy, while
+          // the global policy that governs global config files stays enabled.
+          expect(ConfigProtection.enabled(merged)).toBe(false)
           expect(ConfigProtection.enabled(global)).toBe(true)
         },
       })
@@ -1775,6 +1778,37 @@ describe("require_approval_for_config_edits source scope", () => {
       ;(Global.Path as { config: string }).config = prev
       if (previous === undefined) delete process.env["KILO_CONFIG_CONTENT"]
       else process.env["KILO_CONFIG_CONTENT"] = previous
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("project updates change the effective project policy while the global policy stays", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalDir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          await saveGlobal({ require_approval_for_config_edits: true })
+          expect(ConfigProtection.enabled(await load())).toBe(true)
+
+          await saveProject({ require_approval_for_config_edits: false })
+          expect(ConfigProtection.enabled(await load())).toBe(false)
+          // A project value never changes the global policy that governs global config files.
+          expect(ConfigProtection.enabled(await read())).toBe(true)
+
+          await saveProject({ require_approval_for_config_edits: true })
+          expect(ConfigProtection.enabled(await load())).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
       await clear()
       await disposeAllInstances()
     }
