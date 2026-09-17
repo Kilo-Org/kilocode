@@ -1,6 +1,7 @@
 import * as fs from "fs/promises"
 import { imageMime } from "../diff/shared/image"
 import { resolveInside } from "../diff/shared/path"
+import { fileSize } from "../diff/sources/git-status"
 import type { GitOps } from "./GitOps"
 import type { WorktreeDiffEntry } from "./types"
 
@@ -47,12 +48,7 @@ export function summarize(meta: Meta): WorktreeDiffEntry {
   }
 }
 
-export async function fileSize(dir: string, file: string): Promise<number> {
-  const full = resolveInside(dir, file)
-  if (!full) return 0
-  const stat = await fs.lstat(full).catch(() => undefined)
-  return stat?.size ?? 0
-}
+export { fileSize }
 
 export async function readAfter(dir: string, file: string, status: Meta["status"]): Promise<string> {
   if (status === "deleted") return ""

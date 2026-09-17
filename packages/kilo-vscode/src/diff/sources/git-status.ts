@@ -56,6 +56,13 @@ export function createFileEntry(
   }
 }
 
+/** Stamp image entries on their blob refs so cache invalidation tracks the
+ *  encoded sides, not only the numstat counts. */
+export function stamp(entry: FileEntry, before: string, after: string): FileEntry {
+  if (!imageMime(entry.file)) return entry
+  return { ...entry, stamp: `${entry.status}:${before}:${after}` }
+}
+
 /** Parse `git diff --name-status` output into entries (status code + path). */
 export function parseNameStatus(stdout: string): { file: string; status: Status }[] {
   const out: { file: string; status: Status }[] = []
