@@ -43,7 +43,6 @@ const MUTATING = new Set([
   "reset",
   "restore",
   "rm",
-  "stash",
   "switch",
   "update-index",
 ])
@@ -83,14 +82,62 @@ const TAG_READ = new Set([
   "--verbose",
 ])
 
+const BRANCH_WRITE = new Set([
+  "-d",
+  "-D",
+  "-m",
+  "-M",
+  "-c",
+  "-C",
+  "-u",
+  "--delete",
+  "--move",
+  "--copy",
+  "--set-upstream-to",
+  "--unset-upstream",
+  "--edit-description",
+])
+
+const TAG_WRITE = new Set([
+  "-d",
+  "--delete",
+  "-a",
+  "--annotate",
+  "-s",
+  "--sign",
+  "-f",
+  "--force",
+  "-F",
+  "--file",
+  "-m",
+  "--message",
+])
+
 const REMOTE_READ = new Set(["get-url", "show"])
 const REMOTE_FLAGS = new Set(["-v", "--verbose"])
 const STASH_READ = new Set(["list", "show"])
 const REFLOG_READ = new Set(["exists", "show"])
-const NOTES_READ = new Set(["list", "show"])
+const NOTES_READ = new Set(["get-ref", "list", "show"])
+const VALUE_FLAGS = new Set(["-m", "--message", "--ref"])
 
-function verb(values: string[]) {
-  return values.slice(1).find((value) => !value.startsWith("-"))
+function flags(values: string[]) {
+  return values.slice(1).flatMap((value) => {
+    if (value.startsWith("--")) return [value.split("=").at(0) ?? value]
+    if (value.startsWith("-") && value.length > 2)
+      return value
+        .slice(1)
+        .split("")
+        .map((char) => `-${char}`)
+    return [value]
+  })
+}
+
+function verb(values: string[], index = 1): string | undefined {
+  const value = values[index]
+  if (!value) return
+  if (!value.startsWith("-")) return value
+  if (value.startsWith("--") && value.includes("=")) return verb(values, index + 1)
+  return verb(values, VALUE_FLAGS.has(value) ? index + 2 : index + 1)
 }
 
 function args(text: string) {
@@ -115,10 +162,16 @@ export function mutates(text: string) {
   const subcommand = values[0]?.toLowerCase()
   if (!subcommand) return false
   if (subcommand === "branch") {
-    return values.length > 1 && !values.slice(1).some((value) => BRANCH_READ.has(value))
+    const parts = flags(values)
+    if (parts.some((value) => BRANCH_WRITE.has(value))) return true
+    if (parts.some((value) => BRANCH_READ.has(value))) return false
+    return parts.some((value) => !value.startsWith("-"))
   }
   if (subcommand === "tag") {
-    return values.length > 1 && !values.slice(1).some((value) => TAG_READ.has(value))
+    const parts = flags(values)
+    if (parts.some((value) => TAG_WRITE.has(value))) return true
+    if (parts.some((value) => TAG_READ.has(value))) return false
+    return parts.some((value) => !value.startsWith("-"))
   }
   if (subcommand === "config") {
     if (values.length === 1) return false
