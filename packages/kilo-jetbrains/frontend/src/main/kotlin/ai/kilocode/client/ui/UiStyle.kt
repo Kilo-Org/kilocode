@@ -280,9 +280,12 @@ object UiStyle {
             JBColor(Color(0x55, 0xA7, 0x6A), Color(0x57, 0x96, 0x5C)),
         )
 
+        // An explicit pair like its siblings rather than the theme's link foreground: that colour is
+        // tuned to be read as text on the panel, and in dark themes it is light enough that white pill
+        // text on it has visibly less contrast than the agent and skill pills.
         private val MCP_ACCENT = JBColor.namedColor(
             "Kilo.Marketplace.mcpBadgeBackground",
-            JBUI.CurrentTheme.Link.Foreground.ENABLED,
+            JBColor(Color(0x35, 0x73, 0xD9), Color(0x3E, 0x6D, 0xA8)),
         )
 
         private val SKILL_ACCENT = JBColor.namedColor(

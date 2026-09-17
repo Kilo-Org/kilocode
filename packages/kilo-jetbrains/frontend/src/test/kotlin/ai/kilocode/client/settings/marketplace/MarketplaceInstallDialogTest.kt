@@ -18,6 +18,7 @@ import java.awt.event.ComponentEvent
 import javax.swing.JComponent
 import javax.swing.JEditorPane
 import javax.swing.JLabel
+import javax.swing.ScrollPaneConstants
 
 class MarketplaceInstallDialogTest : BasePlatformTestCase() {
 
@@ -80,15 +81,28 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test the dialog packs to its content so nothing is left needing a scroll`() {
+    /**
+     * `pack()` itself cannot be asserted here: a headless dialog has no window or root pane, so the
+     * packed size is unobservable (see the PR's manual verification steps). What is checkable is the
+     * setup that makes packing produce a scroll-free dialog — the content height is requested in full
+     * rather than capped, nothing horizontal ever scrolls, and no remembered size can override it.
+     */
+    fun `test the dialog asks for its full content height and persists no size`() {
         withDialog(item(type = "mcp", description = LONG, params = wideParams(), prerequisites = listOf("Docker"))) { dialog ->
             val scroll = dialog.centerComponent() as JBScrollPane
-            val needed = scroll.viewport.view.preferredSize
+            val content = scroll.viewport.view.preferredSize
 
-            assertTrue("the viewport must be tall enough for the whole form", scroll.preferredSize.height >= needed.height)
+            assertEquals(
+                "the scroll pane must not cap the form's height, or pack() would leave it scrolling",
+                content.height,
+                scroll.preferredSize.height,
+            )
+            assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, scroll.horizontalScrollBarPolicy)
+            assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, scroll.verticalScrollBarPolicy)
             assertNull("a remembered size must not override packing", dialog.dimensionKey())
         }
     }
+
 
     fun `test the mcp security note wraps instead of widening the dialog`() {
         withDialog(item(type = "mcp")) { dialog ->
@@ -211,7 +225,20 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
             ),
         )
         withDialog(item) { dialog ->
-            assertEquals(mapOf("__method" to "UVX"), dialog.result().parameters)
+            val method = dialog.methodBox()
+
+            // Default method: only its own parameter is asked for, and it is what gets sent.
+            assertEquals("UVX", method.selectedItem)
+            assertEquals(listOf("Token"), dialog.paramLabels())
+            fields(dialog.centerComponent()).single().text = "secret"
+            assertEquals(mapOf("token" to "secret", "__method" to "UVX"), dialog.result().parameters)
+
+            // Switching method must swap the form over to that method's parameters, not keep the first's.
+            method.selectedItem = "Docker"
+
+            assertEquals(listOf("Image"), dialog.paramLabels())
+            fields(dialog.centerComponent()).single().text = "ghcr.io/example"
+            assertEquals(mapOf("image" to "ghcr.io/example", "__method" to "Docker"), dialog.result().parameters)
         }
     }
 
@@ -238,6 +265,19 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
     )
 
     private fun MarketplaceInstallDialog.scopeBox() = combos(centerComponent()).first()
+
+    /** The installation-method combo; the scope combo is the first, so this is the one after it. */
+    private fun MarketplaceInstallDialog.methodBox() = combos(centerComponent())[1]
+
+    /** Labels of the parameter rows currently on the form, in order. */
+    private fun MarketplaceInstallDialog.paramLabels(): List<String> {
+        val texts = fields(centerComponent()).map { field ->
+            generateSequence(field.parent) { it.parent }
+                .filterIsInstance<Container>()
+                .firstNotNullOfOrNull { row -> labels(row).firstOrNull() }
+        }
+        return texts.filterNotNull()
+    }
 
     private fun MarketplaceInstallDialog.okText(): String =
         DialogWrapper::class.java.getDeclaredMethod("getOKAction")

@@ -46,11 +46,14 @@ internal class WrapBanner(private val copy: String, private val seed: Int) :
     InlineBanner("", Status.Info) {
     private var applied = 0
 
+    /** Measured once per banner: chrome cannot change mid-resize, and [chrome] builds a component. */
+    private val chrome = chrome()
+
     init {
         showCloseButton(false)
         wrap(seed)
         addComponentListener(object : ComponentAdapter() {
-            override fun componentResized(e: ComponentEvent) = wrap(width - chrome())
+            override fun componentResized(e: ComponentEvent) = wrap(width - chrome)
         })
     }
 
@@ -64,7 +67,8 @@ internal class WrapBanner(private val copy: String, private val seed: Int) :
         /**
          * Horizontal space a banner spends on itself — insets, icon, the gap after it, and the slot it
          * reserves for its buttons. Measured from an empty banner rather than rebuilt from the platform's
-         * constants, so it stays right if any of them change.
+         * constants, so it stays right if any of them change. Callers should hold the result rather than
+         * call this per layout pass; it constructs a banner to measure.
          */
         fun chrome(): Int = InlineBanner("", Status.Info).showCloseButton(false).preferredSize.width
     }

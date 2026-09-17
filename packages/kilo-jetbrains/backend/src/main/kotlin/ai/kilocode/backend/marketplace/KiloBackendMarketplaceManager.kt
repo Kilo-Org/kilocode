@@ -173,28 +173,53 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
         val patterns = decoded.flatMapTo(mutableSetOf()) { it.filenames }
         if (patterns.isEmpty()) return emptySet()
         val fs = FileSystems.getDefault()
-        val matchers = patterns.associateWith { fs.getPathMatcher("glob:**/$it") }
+        // Two globs per pattern: Java's `**/` requires a separator, so `**/Cargo.toml` alone would miss
+        // a root-level file, which is where these markers usually live. The bare form covers depth zero
+        // and the `**/` form any depth, together matching what VS Code's `findFiles("**/<p>")` finds.
+        //
+        // Patterns come from the remote catalog, so a malformed one (unbalanced `[` or `{`) must only
+        // make its own item not-relevant rather than throw out of the whole list RPC.
+        val matchers = patterns.mapNotNull { pattern ->
+            runCatching { pattern to listOf(fs.getPathMatcher("glob:$pattern"), fs.getPathMatcher("glob:**/$pattern")) }
+                .onFailure { LOG.warn("marketplace relevance pattern rejected: $pattern", it) }
+                .getOrNull()
+        }.toMap()
+        if (matchers.isEmpty()) return emptySet()
         val found = mutableSetOf<String>()
         var visited = 0
-        Files.walkFileTree(
-            root,
-            object : SimpleFileVisitor<Path>() {
-                override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    val name = dir.fileName?.toString()
-                    return if (name != null && name in EXCLUDED_DIRS) FileVisitResult.SKIP_SUBTREE else FileVisitResult.CONTINUE
-                }
-
-                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    if (++visited > MAX_RELEVANCE_FILES || found.size == matchers.size) return FileVisitResult.TERMINATE
-                    val rel = root.relativize(file)
-                    for ((pattern, matcher) in matchers) {
-                        if (pattern in found) continue
-                        if (matcher.matches(rel)) found += pattern
+        // Relevance is a hint, so a partial walk still yields a useful answer: an unreadable entry or a
+        // transient filesystem error skips that entry instead of failing the catalog.
+        runCatching {
+            Files.walkFileTree(
+                root,
+                object : SimpleFileVisitor<Path>() {
+                    override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        // Runs for the start directory too; excluding by name there would skip a
+                        // workspace that simply happens to be called `build`, `out`, `dist`, ...
+                        if (dir == root) return FileVisitResult.CONTINUE
+                        val name = dir.fileName?.toString()
+                        return if (name != null && name in EXCLUDED_DIRS) {
+                            FileVisitResult.SKIP_SUBTREE
+                        } else {
+                            FileVisitResult.CONTINUE
+                        }
                     }
-                    return FileVisitResult.CONTINUE
-                }
-            },
-        )
+
+                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        if (++visited > MAX_RELEVANCE_FILES || found.size == matchers.size) return FileVisitResult.TERMINATE
+                        val rel = root.relativize(file)
+                        for ((pattern, globs) in matchers) {
+                            if (pattern in found) continue
+                            if (globs.any { it.matches(rel) }) found += pattern
+                        }
+                        return FileVisitResult.CONTINUE
+                    }
+
+                    override fun visitFileFailed(file: Path, exc: java.io.IOException): FileVisitResult =
+                        FileVisitResult.CONTINUE
+                },
+            )
+        }.onFailure { LOG.warn("marketplace relevance walk failed dir=$directory", it) }
         return decoded.filter { it.filenames.any { pattern -> pattern in found } }.mapTo(mutableSetOf()) { it.key }
     }
 
@@ -240,8 +265,9 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
         http.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
-                LOG.warn("marketplace request failed: $path HTTP ${response.code}")
-                throw RuntimeException("HTTP ${response.code}")
+                // Keep the CLI's own error detail; it is the only description of what went wrong.
+                LOG.warn("marketplace request failed: $path HTTP ${response.code} $text")
+                throw RuntimeException("HTTP ${response.code}: ${text.ifBlank { "no response body" }}")
             }
             text.ifBlank { "{}" }
         }

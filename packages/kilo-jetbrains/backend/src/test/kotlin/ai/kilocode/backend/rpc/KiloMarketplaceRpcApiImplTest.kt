@@ -21,6 +21,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -122,6 +123,8 @@ class KiloMarketplaceRpcApiImplTest {
         try {
             Files.createDirectories(dir.resolve("src"))
             Files.writeString(dir.resolve("src/main.py"), "print('hi')")
+            // At the workspace root, where these marker files normally live.
+            Files.writeString(dir.resolve("pyproject.toml"), "[project]")
             Files.createDirectories(dir.resolve("node_modules/some-pkg"))
             Files.writeString(dir.resolve("node_modules/some-pkg/Cargo.toml"), "[package]")
             mock.marketplaceList = """
@@ -143,6 +146,11 @@ class KiloMarketplaceRpcApiImplTest {
                       "suggest_for": {"filename": ["go.mod"]}
                     },
                     {
+                      "id": "root-marker-agent", "type": "agent", "name": "Root Marker", "description": "d", "category": "c",
+                      "content": {"mode":"primary"},
+                      "suggest_for": {"filename": ["pyproject.toml"]}
+                    },
+                    {
                       "id": "generic-agent", "type": "agent", "name": "Generic Agent", "description": "d", "category": "c",
                       "content": {"mode":"primary"}
                     }
@@ -155,12 +163,95 @@ class KiloMarketplaceRpcApiImplTest {
             val result = rpc.list(dir.toString())
 
             assertTrue(result.items.single { it.id == "python-agent" }.relevant)
+            assertTrue(
+                result.items.single { it.id == "root-marker-agent" }.relevant,
+                "a marker file directly in the workspace root must match",
+            )
             assertFalse(result.items.single { it.id == "rust-agent" }.relevant, "Cargo.toml only exists under node_modules, which is excluded")
             assertFalse(result.items.single { it.id == "go-agent" }.relevant)
             assertFalse(result.items.single { it.id == "generic-agent" }.relevant, "items without suggest_for are never relevant")
         } finally {
             dir.toFile().deleteRecursively()
         }
+    }
+
+    @Test
+    fun `a malformed catalog glob only makes its own item not-relevant`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-marketplace-badglob")
+        try {
+            Files.writeString(dir.resolve("main.py"), "print('hi')")
+            mock.marketplaceList = """
+                {
+                  "items": [
+                    {
+                      "id": "broken", "type": "agent", "name": "Broken", "description": "d", "category": "c",
+                      "content": {"mode":"primary"},
+                      "suggest_for": {"filename": ["[unclosed"]}
+                    },
+                    {
+                      "id": "python-agent", "type": "agent", "name": "Python", "description": "d", "category": "c",
+                      "content": {"mode":"primary"},
+                      "suggest_for": {"filename": ["*.py"]}
+                    }
+                  ],
+                  "installed": {"project":{}, "global":{}}
+                }
+            """.trimIndent()
+            val rpc = rpc()
+
+            val result = rpc.list(dir.toString())
+
+            assertEquals(2, result.items.size, "a bad pattern must not fail the whole catalog")
+            assertFalse(result.items.single { it.id == "broken" }.relevant)
+            assertTrue(
+                result.items.single { it.id == "python-agent" }.relevant,
+                "a sibling item's pattern must still be evaluated",
+            )
+        } finally {
+            dir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a workspace whose own directory name is excluded is still scanned`() = runBlocking {
+        val parent = Files.createTempDirectory("kilo-marketplace-rootname")
+        try {
+            // `build` is in EXCLUDED_DIRS; excluding it at the walk root would skip the whole workspace.
+            val dir = Files.createDirectories(parent.resolve("build"))
+            Files.writeString(dir.resolve("main.py"), "print('hi')")
+            mock.marketplaceList = """
+                {
+                  "items": [{
+                    "id": "python-agent", "type": "agent", "name": "Python", "description": "d", "category": "c",
+                    "content": {"mode":"primary"},
+                    "suggest_for": {"filename": ["*.py"]}
+                  }],
+                  "installed": {"project":{}, "global":{}}
+                }
+            """.trimIndent()
+            val rpc = rpc()
+
+            val result = rpc.list(dir.toString())
+
+            assertTrue(result.items.single().relevant)
+        } finally {
+            parent.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a failing request surfaces the CLI's error body`() = runBlocking {
+        mock.marketplaceListStatus = 500
+        mock.marketplaceList = """{"error":"catalog exploded"}"""
+        val rpc = rpc()
+
+        val error = runCatching { rpc.list("/test") }.exceptionOrNull()
+
+        assertNotNull(error)
+        assertTrue(
+            error.message.orEmpty().contains("catalog exploded"),
+            "the CLI's error detail must survive into the message, was: ${error.message}",
+        )
     }
 
     @Test

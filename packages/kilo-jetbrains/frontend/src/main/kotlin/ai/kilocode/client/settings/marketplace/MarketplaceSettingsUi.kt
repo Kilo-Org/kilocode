@@ -64,23 +64,21 @@ internal class MarketplaceSettingsUi(
     /** Set while a row action is in flight, so the finished reload hands focus back to the list. */
     private var refocus = false
 
+    /** Bumped by every filter change; [fetched] records the revision the last fetch ran under. */
+    private var filters = 0
+    private var fetched = 0
+
     private val allButton = textAction(this, allLabel()) { selectAllTypes() }
     private val agentChip = FilterChip(agentLabel(), UiStyle.Badge::typeAgent) { toggleType("agent") }
     private val mcpChip = FilterChip(mcpLabel(), UiStyle.Badge::typeMcp) { toggleType("mcp") }
     private val skillChip = FilterChip(skillLabel(), UiStyle.Badge::typeSkill) { toggleType("skill") }
     private val installedCheck = JBCheckBox(KiloBundle.message("settings.marketplace.installedOnly")).apply {
         toolTipText = UiStyle.Text.tip(KiloBundle.message("settings.marketplace.installedOnly.description"))
-        addActionListener {
-            installedOnly = isSelected
-            view.update(rows())
-        }
+        addActionListener { refilter { installedOnly = isSelected } }
     }
     private val relevantCheck = JBCheckBox(KiloBundle.message("settings.marketplace.relevantOnly")).apply {
         toolTipText = UiStyle.Text.tip(KiloBundle.message("settings.marketplace.relevantOnly.description"))
-        addActionListener {
-            relevantOnly = isSelected
-            view.update(rows())
-        }
+        addActionListener { refilter { relevantOnly = isSelected } }
     }
 
     private val hasProjectDirectory: Boolean get() = dir.isNotBlank()
@@ -98,8 +96,13 @@ internal class MarketplaceSettingsUi(
     override suspend fun fetch(): List<ActiveListItem> {
         val result = service<KiloMarketplaceService>().list(dir)
         items = result.items
-        withContext(edt) { syncErrors(result.errors) }
-        return rows()
+        // Rows are built here but painted later by apply(), so record which filter revision they
+        // reflect; afterApply repaints if a toggle landed in between.
+        return withContext(edt) {
+            syncErrors(result.errors)
+            fetched = filters
+            rows()
+        }
     }
 
     override fun onCell(key: String, cellId: String) {
@@ -135,18 +138,28 @@ internal class MarketplaceSettingsUi(
     private fun divider(): JComponent = JSeparator(SwingConstants.VERTICAL)
         .align(HAlign.CENTER, VAlign.CENTER, maxH = { ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE.height })
 
-    private fun selectAllTypes() {
-        if (selectedTypes.size == ALL_TYPES.size) return
-        selectedTypes.clear()
-        selectedTypes += ALL_TYPES
-        syncChips()
+    /** Single entry point for a filter change, so every one of them records a new revision. */
+    private fun refilter(change: () -> Unit) {
+        change()
+        filters++
+        fetched = filters
         view.update(rows())
     }
 
+    private fun selectAllTypes() {
+        if (selectedTypes.size == ALL_TYPES.size) return
+        refilter {
+            selectedTypes.clear()
+            selectedTypes += ALL_TYPES
+            syncChips()
+        }
+    }
+
     private fun toggleType(type: String) {
-        if (!selectedTypes.remove(type)) selectedTypes += type
-        syncChips()
-        view.update(rows())
+        refilter {
+            if (!selectedTypes.remove(type)) selectedTypes += type
+            syncChips()
+        }
     }
 
     private fun syncChips() {
@@ -252,8 +265,17 @@ internal class MarketplaceSettingsUi(
             } finally {
                 withContext(edt) {
                     pending = null
-                    // A failure never reaches the reload, so the row needs its actions put back here.
-                    if (!ok) view.update(rows(), ActiveListSelection.Key(key))
+                    // Repaint unconditionally rather than only on failure. This block covers the
+                    // mutation, not the reload that mutateAndReload runs afterwards, so if that reload
+                    // throws the row would otherwise stay on the progress text painted before it with
+                    // no action cells. On success apply() simply repaints again with the fetched rows.
+                    view.update(rows(), ActiveListSelection.Key(key))
+                    if (!ok) {
+                        // afterApply never runs for a failed mutation, so hand focus back here instead
+                        // and clear the flag, or the next unrelated reload would steal it.
+                        refocus = false
+                        view.focusList()
+                    }
                 }
             }
         }
@@ -275,10 +297,23 @@ internal class MarketplaceSettingsUi(
     }
 
     override fun afterApply() {
+        syncFilters()
         if (!refocus) return
         refocus = false
         // Puts the row's action overlay back after a mutation, without stealing focus on a plain reload.
         view.focusList()
+    }
+
+    /**
+     * A filter toggled while a reload was in flight repaints from the new filter state, and then the
+     * reload paints rows it had already computed under the old one — leaving the controls and the
+     * visible rows disagreeing. Comparing the filter revision the fetch ran under against the current
+     * one repaints in exactly that case, and leaves the common path a single update.
+     */
+    private fun syncFilters() {
+        if (fetched == filters) return
+        fetched = filters
+        view.update(rows())
     }
 
     private fun syncErrors(errors: List<String>) {
