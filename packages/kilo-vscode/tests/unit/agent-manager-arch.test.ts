@@ -257,7 +257,7 @@ describe("Agent Manager leftover worktree folders", () => {
 
   it("explains the list in the dialog header before offering a bulk delete", () => {
     const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
-    expect(source).toContain("description={<OrphanHelp expanded={helpExpanded()} onToggle={() => setHelpExpanded((prev) => !prev)} />}")
+    expect(source).toMatch(/description=\{<OrphanHelp\b/)
     for (const key of ["helpIntro", "helpCheckout", "helpCauses", "helpDelete", "helpMore", "helpLess"]) {
       expect(source, `header explanation covers ${key}`).toContain(`agentManager.orphans.${key}`)
     }

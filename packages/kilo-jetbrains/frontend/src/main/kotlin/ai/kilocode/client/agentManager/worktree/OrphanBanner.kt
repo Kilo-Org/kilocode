@@ -28,6 +28,7 @@ internal class OrphanBanner(
 ) : EditorNotificationPanel(Status.Warning) {
     private var syncedCount = -1
     private var syncedSize: Long? = null
+    private var syncedPending = false
 
     /** Path set the cached [sizes] answer for. Empty until the first size pass lands. */
     private var sizedPaths: Set<String> = emptySet()
@@ -35,6 +36,12 @@ internal class OrphanBanner(
 
     /** Path set a size fetch is currently in flight for, or null when none is running. */
     private var requested: Set<String>? = null
+
+    /**
+     * Path set whose size pass came back with nothing at all. Kept so a failed walk is not retried on
+     * every [refresh] — the banner drops the size claim instead, and a changed orphan set asks again.
+     */
+    private var failed: Set<String>? = null
 
     init {
         refresh()
@@ -48,6 +55,7 @@ internal class OrphanBanner(
             sizedPaths = emptySet()
             sizes = emptyMap()
             requested = null
+            failed = null
             if (isVisible) {
                 isVisible = false
                 changed()
@@ -55,13 +63,20 @@ internal class OrphanBanner(
             return
         }
         val paths = orphans.mapTo(HashSet()) { it.path }
-        if (paths != sizedPaths && paths != requested) {
+        if (paths != sizedPaths && paths != requested && paths != failed) {
             requested = paths
+            failed = null
             requestSizes(paths)
         }
-        val total = if (paths == sizedPaths) sizes.values.sum() else null
-        val dirty = orphans.size != syncedCount || total != syncedSize
-        if (dirty) sync(orphans.size, total)
+        // Only a pass that measured *every* path is a total worth showing. orphanSizes omits paths it
+        // could not walk and answers empty for a failed batch, so summing a partial answer would
+        // report a confident "0 B" (or a silent undercount) for folders that are actually large.
+        val total = if (paths == sizedPaths && sizes.keys.containsAll(paths)) sizes.values.sum() else null
+        // No total yet, but a walk is still running: say it is being calculated. Once the walk has
+        // settled without a full answer, drop the size claim entirely rather than keep promising one.
+        val pending = total == null && requested != null
+        val dirty = orphans.size != syncedCount || total != syncedSize || pending != syncedPending
+        if (dirty) sync(orphans.size, total, pending)
         if (!isVisible) {
             isVisible = true
             changed()
@@ -70,20 +85,22 @@ internal class OrphanBanner(
         if (dirty) changed()
     }
 
-    private fun sync(count: Int, total: Long?) {
+    private fun sync(count: Int, total: Long?, pending: Boolean) {
         clear()
+        val summary = KiloBundle.message("worktree.orphans.summary", count)
         text(
-            if (total != null) {
-                KiloBundle.message("worktree.orphans.summarySize", count, StringUtil.formatFileSize(total))
-            } else {
+            when {
+                total != null -> KiloBundle.message("worktree.orphans.summarySize", count, StringUtil.formatFileSize(total))
                 // Sizing is a background fs walk (see requestSizes/refresh above) — while it is in
                 // flight, say so instead of showing the count as if it were the final answer.
-                "${KiloBundle.message("worktree.orphans.summary", count)} \u00b7 ${KiloBundle.message("worktree.orphans.calculating")}"
+                pending -> "$summary \u00b7 ${KiloBundle.message("worktree.orphans.calculating")}"
+                else -> summary
             },
         )
         createActionLabel(KiloBundle.message("worktree.orphans.resolve")) { openDialog() }
         syncedCount = count
         syncedSize = total
+        syncedPending = pending
     }
 
     private fun requestSizes(paths: Set<String>) {
@@ -91,8 +108,15 @@ internal class OrphanBanner(
             val result = service<KiloWorktreeService>().orphanSizes(controller.directory, paths.toList())
             edt {
                 if (requested != paths) return@edt
-                sizedPaths = paths
-                sizes = result
+                // A wholly empty answer means the walk failed, not that the folders are empty. Remember
+                // the failure instead of caching it as a 0-byte answer, so refresh stops claiming a size
+                // without re-running the failing walk on every reload.
+                if (result.isEmpty()) {
+                    failed = paths
+                } else {
+                    sizedPaths = paths
+                    sizes = result
+                }
                 requested = null
                 refresh()
             }

@@ -94,6 +94,51 @@ class OrphanBannerTest : BasePlatformTestCase() {
         assertFalse(edt { banner.isVisible })
     }
 
+    /**
+     * `orphanSizes` answers empty when the walk fails outright, which must not be read as "these
+     * folders are 0 bytes" — the banner drops the size claim instead of stating a wrong one, and does
+     * not keep re-running the failing walk on every refresh.
+     */
+    fun `test banner drops the size claim when the size pass fails instead of reporting zero bytes`() {
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        rpc.orphanSizesResult = { emptyMap() }
+        val controller = controller()
+        edt { controller.reload() }
+        flush()
+
+        val banner = edt { OrphanBanner(project, controller, testRootDisposable) }
+        flush()
+
+        assertEquals("1 leftover worktree folder(s)", edt { banner.text })
+        assertEquals(1, rpc.orphanSizeCalls.size)
+
+        edt { banner.refresh() }
+        flush()
+
+        assertEquals("1 leftover worktree folder(s)", edt { banner.text })
+        assertEquals("a failed walk must not be retried on every refresh", 1, rpc.orphanSizeCalls.size)
+    }
+
+    /**
+     * A walk that omits some paths (permission error on one folder) is not a total either: summing it
+     * would silently undercount, so the banner reports the count alone.
+     */
+    fun `test banner drops the size claim when the size pass covers only some folders`() {
+        rpc.orphans = listOf(
+            OrphanDto("/repo/.kilo/worktrees/first", OrphanKind.LEFTOVER),
+            OrphanDto("/repo/.kilo/worktrees/second", OrphanKind.LEFTOVER),
+        )
+        rpc.orphanSizesResult = { mapOf("/repo/.kilo/worktrees/first" to 4096L) }
+        val controller = controller()
+        edt { controller.reload() }
+        flush()
+
+        val banner = edt { OrphanBanner(project, controller, testRootDisposable) }
+        flush()
+
+        assertEquals("2 leftover worktree folder(s)", edt { banner.text })
+    }
+
     fun `test banner does not re-fetch sizes when the orphan set is unchanged`() {
         rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
         rpc.orphanSizesResult = { mapOf("/repo/.kilo/worktrees/leftover" to 10L) }
