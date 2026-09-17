@@ -6,6 +6,8 @@ import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.views.tool.BoardToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.components.JBHtmlPane
+import com.intellij.util.ui.UIUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
@@ -50,7 +52,9 @@ class BoardToolViewTest : BasePlatformTestCase() {
 
         assertTrue(view.isExpanded())
         assertTrue(view.bodyVisible())
-        assertTrue(view.markdown().contains("status update"))
+        // Read the rendered body, not view.markdown(): the latter re-derives from the tool part and
+        // would pass even if syncBody() never pushed anything into the MdView.
+        assertTrue(bodyText(view).contains("status update"))
     }
 
     fun `test board body is lazy and reused across collapse cycles`() {
@@ -59,13 +63,15 @@ class BoardToolViewTest : BasePlatformTestCase() {
         assertFalse(view.bodyCreated())
         view.toggle()
         assertTrue(view.bodyCreated())
-        val body = view.markdown()
+        val pane = bodyPane(view)
 
         view.toggle()
         assertFalse(view.bodyVisible())
         view.toggle()
 
-        assertEquals(body, view.markdown())
+        // Same pane instance, still populated: the body is reused rather than rebuilt.
+        assertSame(pane, bodyPane(view))
+        assertTrue(bodyText(view).contains("status update"))
         assertTrue(view.bodyVisible())
     }
 
@@ -75,7 +81,7 @@ class BoardToolViewTest : BasePlatformTestCase() {
 
         view.update(post(body = "revised body"))
 
-        assertTrue(view.markdown().contains("revised body"))
+        assertTrue(bodyText(view).contains("revised body"))
     }
 
     fun `test view factory routes completed board_post to board tool view`() {
@@ -99,6 +105,14 @@ class BoardToolViewTest : BasePlatformTestCase() {
         assertTrue(ViewFactory.shouldReplace(ToolView(running), completed))
         assertFalse(ViewFactory.shouldReplace(BoardToolView(completed), completed))
     }
+
+    /** The rendered prose pane inside the card's lazily created MdView body. */
+    private fun bodyPane(view: BoardToolView): JBHtmlPane =
+        UIUtil.findComponentOfType(view, JBHtmlPane::class.java) ?: error("board body pane not found")
+
+    /** Rendered body HTML, whitespace-normalized because the pane re-serializes and hard-wraps it. */
+    private fun bodyText(view: BoardToolView): String =
+        bodyPane(view).text.replace(Regex("\\s+"), " ")
 
     private fun post(body: String = "status update") = Tool("p1", "board_post", toolKind("board_post")).also {
         it.state = ToolExecState.COMPLETED
