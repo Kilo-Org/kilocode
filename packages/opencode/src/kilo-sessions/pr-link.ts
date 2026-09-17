@@ -387,7 +387,13 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
       const positive = lastPositive.get(worktree)
       if (positive && positive.link.prUrl === recorded.link.prUrl) lastPositive.delete(worktree)
     } else {
-      if (recorded.key == null && branch) recorded.key = branch
+      if (recorded.key == null && branch) {
+        // The link was recorded before detection knew the branch. Bind it now
+        // and persist the verified record so the next process reads a record
+        // keyed to this branch instead of one that matches any branch.
+        recorded.key = branch
+        await persistRecordedPrLink(worktree)
+      }
       if (recorded.key == null || branch == null || recorded.key === branch) return recorded.link
     }
   }
@@ -398,10 +404,12 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
   // process. Return it before the REST lookup so a GitLab/Bitbucket worktree —
   // which has no REST lookup — still shows the MR/PR the session linked; a
   // GitHub record likewise skips the lookup. Drop it when the worktree's repo
-  // or branch no longer matches.
+  // or branch no longer matches. A record with no branch key is untrusted: it
+  // was written before detection knew the branch, so returning it would show
+  // that link on whatever branch the next process happens to be on.
   const stored = await readRecordedPrLink(worktree)
   if (stored) {
-    const staleBranch = stored.key != null && stored.key !== branch
+    const staleBranch = stored.key == null || stored.key !== branch
     if (!sameRepo(stored.link, identity) || staleBranch) {
       await forgetRecordedPrLink(worktree)
     } else {
@@ -486,9 +494,12 @@ export async function readPrLinkOverride(worktree: string): Promise<PrLinkOverri
 // on disk is a no-op, and a failed write is logged and retried on the next part
 // instead of rejecting into the caller — the session watcher awaits this before
 // the immediate `session_pr_link` ingest, and `recordPrLinkText` reports an
-// unchanged URL only once, so a lost write would never be attempted again. The
-// dedup entry is dropped by `forgetRecordedPrLink`, so a record detection
-// removed is written again by the next persist.
+// unchanged URL only once, so a lost write would never be attempted again. A
+// record written before detection knew the branch carries no key; `detectPrLink`
+// then binds it and rewrites the record with the verified key (a reader treats a
+// keyless record as untrusted). The dedup entry is dropped by
+// `forgetRecordedPrLink`, so a record detection removed is written again by the
+// next persist.
 export async function persistRecordedPrLink(worktree: string) {
   const recorded = recordedLinks.get(worktree)
   if (!recorded) return

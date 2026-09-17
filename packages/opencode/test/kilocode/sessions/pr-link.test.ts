@@ -516,6 +516,25 @@ describe("detectPrLink", () => {
     expect(ghCalls().length).toBe(0)
   })
 
+  // The repro for the record that outlived its branch: a record persisted before
+  // a branch key was known has no branch to compare against, so the old read
+  // returned it on whatever branch the next process happened to be on. A keyless
+  // record is untrusted and must be forgotten.
+  test("persisted link: a record with no branch key is dropped and forgotten", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    await writeRecorded(dir, {
+      link: {
+        platform: "gitlab",
+        prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+        prNumber: 3,
+      },
+    })
+
+    expect(await restoreWorktree(dir, () => detectPrLink())).toBeUndefined()
+    expect(await readRecordedPrLink(dir)).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
+  })
+
   test("persisted link: GitHub record is returned without spawning gh", async () => {
     const dir = await makeRepo()
     await writeRecorded(dir, {
@@ -763,6 +782,29 @@ describe("persistRecordedPrLink", () => {
     const dir = await makeRepo()
     await persistRecordedPrLink(dir)
     expect(await readRecordedPrLink(dir)).toBeUndefined()
+  })
+
+  // A link recorded before the branch was known is rewritten with the verified
+  // key once detection binds it, so the record a later process reads is bound to
+  // that branch instead of matching any branch of the repository.
+  test("re-persists a link recorded before the branch was known once detection binds it", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    const expected = {
+      platform: "gitlab",
+      prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+      prNumber: 3,
+    }
+
+    const link = recordPrLinkText(dir, `Opened ${expected.prUrl}`)
+    expect(link).toEqual(expected)
+
+    // Before detection runs the record carries no branch key.
+    await persistRecordedPrLink(dir)
+    expect((await readRecordedPrLink(dir))?.key).toBeUndefined()
+
+    expect(await restoreWorktree(dir, () => detectPrLink())).toEqual(expected)
+    // Detection binds the record to the branch and rewrites it verified.
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/gl", link: expected })
   })
 
   // The repro for the record a stale detection drops: `forgetRecordedPrLink`
