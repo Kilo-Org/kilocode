@@ -40,6 +40,22 @@ const RETRYABLE_MESSAGE_PATTERNS = [
   /\btry again (?:later|in\b)|\b(?:currently|temporarily) at capacity\b/i,
 ]
 
+function messageDelay(message?: string): number | null {
+  if (!message) return null
+
+  const match = message.match(/please\s+retry\s+in\s+([\d.]+)\s*(ms|s)/i)
+  if (!match) return null
+
+  const value = Number.parseFloat(match[1])
+  if (!Number.isFinite(value) || value < 0) return null
+
+  const unit = match[2].toLowerCase()
+  
+  const milliseconds = unit === 's' ? value * 1000 : value
+
+  return Math.round(milliseconds)
+}
+
 function cap(ms: number) {
   return Math.min(ms, RETRY_MAX_DELAY)
 }
@@ -69,7 +85,17 @@ export function delay(attempt: number, error?: SessionV1.APIError, random = Math
           return cap(Math.ceil(parsed))
         }
       }
+    }
 
+    const fromMessage =
+      messageDelay(error.data.message) ??
+      messageDelay(error.data.responseBody)
+
+    if (fromMessage !== null) {
+      return cap(fromMessage)
+    }
+
+    if (headers) {
       return cap(exponential(attempt, random))
     }
   }
