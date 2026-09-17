@@ -192,6 +192,11 @@ class KiloWorktreeService internal constructor(
     /** Apparent size of every orphan in [paths]. A failed lookup answers empty, never a partial throw. */
     suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> = try {
         call { orphanSizes(directory, paths) }
+    } catch (e: CancellationException) {
+        // This pass is cancelled whenever the orphan set changes or a delete starts. Rethrow so the
+        // caller's job actually ends: swallowing it would hand back an empty map that reads exactly
+        // like a walk that failed, which the banner remembers and stops retrying.
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree orphan sizes failed for $directory", e)
         emptyMap()

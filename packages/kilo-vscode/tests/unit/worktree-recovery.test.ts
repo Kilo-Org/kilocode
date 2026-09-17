@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { trackOrphanSizes } from "../../src/agent-manager/orphan-sizing"
 import { ProjectContext } from "../../src/agent-manager/project/context"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import { cleanOrphans, restoreWorktree, type RecoveryHost } from "../../src/agent-manager/worktree-recovery"
+import type { OrphanDirectory } from "../../src/agent-manager/worktree-reconcile"
 
 // Real state manager and real git repository: recovery is only interesting if it agrees with both.
 function git(args: string[]) {
@@ -144,6 +146,9 @@ describe("worktree recovery", () => {
       "reconcile",
       `teardown:${target}`,
       "post:error",
+      // Reconciles even though nothing was removed: the size pass was paused for the delete, and this
+      // is what resumes measuring whatever is still on disk.
+      "reconcile",
       "notify:error",
     ])
   })
@@ -168,7 +173,57 @@ describe("worktree recovery", () => {
     await cleanOrphans(ctx, host, [orphan])
 
     expect(fs.existsSync(orphan)).toBe(true)
-    expect(calls).toEqual(["progress:Removing leftover worktree folders", "reconcile", "notify:error"])
+    expect(calls).toEqual(["progress:Removing leftover worktree folders", "reconcile", "reconcile", "notify:error"])
+  })
+
+  it("cancels the size pass when a delete starts, then measures only what survived", async () => {
+    const doomed = path.join(root, ".kilo", "worktrees", "doomed")
+    const survivor = path.join(root, ".kilo", "worktrees", "survivor")
+    fs.mkdirSync(doomed, { recursive: true })
+    fs.mkdirSync(survivor, { recursive: true })
+    fs.writeFileSync(path.join(doomed, "f.txt"), "x".repeat(100))
+    fs.writeFileSync(path.join(survivor, "f.txt"), "x".repeat(25))
+    const orphans: OrphanDirectory[] = [
+      { path: doomed, kind: "leftover" },
+      { path: survivor, kind: "leftover" },
+    ]
+    ctx.report = { entries: [], orphans, dropped: [], pruned: false, degraded: false }
+
+    // Mirrors production, where every reconcile re-runs sizing for the orphans it just listed.
+    const landed = Promise.withResolvers<void>()
+    host.reconcile = async () => {
+      calls.push("reconcile")
+      const live = (ctx.report?.orphans ?? []).filter((orphan) => fs.existsSync(orphan.path))
+      ctx.report = { entries: [], orphans: live, dropped: [], pruned: false, degraded: false }
+      trackOrphanSizes(
+        ctx,
+        live,
+        () => undefined,
+        () => landed.resolve(),
+      )
+      return ctx.report
+    }
+
+    // A walk is already in flight over both folders when the user confirms the delete.
+    let initialSized = 0
+    trackOrphanSizes(
+      ctx,
+      orphans,
+      () => undefined,
+      () => initialSized++,
+    )
+
+    await cleanOrphans(ctx, host, [doomed])
+    await landed.promise
+
+    expect(fs.existsSync(doomed)).toBe(false)
+    expect(fs.existsSync(survivor)).toBe(true)
+    // The pass that was walking the folder the user deleted never reports: it is cancelled on the way
+    // in, and the reconcile inside the delete does not start a replacement for the doomed set either.
+    expect(initialSized).toBe(0)
+    // The leftover that is still there gets measured once the delete is done.
+    expect(ctx.report?.orphans.map((orphan) => orphan.path)).toEqual([survivor])
+    expect(ctx.report?.orphans[0]?.bytes).toBe(25)
   })
 
   it("stages the directory (rename) instead of a blocking recursive delete", async () => {

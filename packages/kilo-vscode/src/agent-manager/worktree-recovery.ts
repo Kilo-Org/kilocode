@@ -9,6 +9,7 @@
  * - clean: delete directories under `.kilo/worktrees/` that no worktree claims
  */
 
+import { pauseOrphanSizes, resumeOrphanSizes } from "./orphan-sizing"
 import type { ProjectContext } from "./project/context"
 import type { WorktreeHealthReport } from "./worktree-reconcile"
 
@@ -90,6 +91,11 @@ export async function restoreWorktree(ctx: ProjectContext, host: RecoveryHost, w
  * dialog closes instantly, and the actual teardown + delete + snapshot cleanup happens in the
  * background. Cancelling stops the loop from starting new paths; a path already handed to
  * `detachOrphanDirectory` keeps reaping regardless, since the rename already happened.
+ *
+ * Size walking is paused for the whole delete and resumed after it. Sizing a folder that is about to
+ * be renamed away is wasted I/O — potentially gigabytes of it — and the pass would be discarded on
+ * arrival anyway. Resuming before the closing reconcile is what re-measures whatever is still there,
+ * once, instead of once per deleted folder.
  */
 export async function cleanOrphans(ctx: ProjectContext, host: RecoveryHost, paths: string[]): Promise<void> {
   const manager = ctx.worktreeManager()
@@ -98,41 +104,46 @@ export async function cleanOrphans(ctx: ProjectContext, host: RecoveryHost, path
   let failed = 0
   let removedBytes = 0
   let sizeKnown = true
-  await host.withProgress("Removing leftover worktree folders", async (cancelled) => {
-    const fresh = await host.reconcile(ctx)
-    const known = new Set(fresh?.orphans.map((orphan) => orphan.path) ?? [])
-    for (const target of paths) {
-      if (cancelled()) break
-      if (!known.has(target)) {
-        host.log(`Ignored cleanup for a path that is not a known orphan: ${target}`)
-        continue
+  pauseOrphanSizes(ctx)
+  try {
+    await host.withProgress("Removing leftover worktree folders", async (cancelled) => {
+      const fresh = await host.reconcile(ctx)
+      const known = new Set(fresh?.orphans.map((orphan) => orphan.path) ?? [])
+      for (const target of paths) {
+        if (cancelled()) break
+        if (!known.has(target)) {
+          host.log(`Ignored cleanup for a path that is not a known orphan: ${target}`)
+          continue
+        }
+        // Teardown/snapshot failures log and continue: the directory is still gone either way, and a
+        // backend that never had state for it (or already cleaned it up) is not a reason to refuse.
+        await host.teardown(ctx.root, target).catch((error: unknown) => {
+          host.log(`Failed to tear down backend state for ${target}: ${error}`)
+        })
+        const failure = await manager
+          .detachOrphanDirectory(target)
+          .then(() => undefined)
+          .catch((error: unknown) => (error instanceof Error ? error.message : String(error)))
+        if (failure) {
+          host.log(`Failed to remove orphaned directory ${target}: ${failure}`)
+          host.post({ type: "error", projectId: ctx.id, message: `Could not remove ${target}: ${failure}` })
+          failed++
+          continue
+        }
+        await host.removeSnapshot(ctx.root, target)
+        removed++
+        const bytes = sizeBefore.get(target)
+        if (bytes === undefined) sizeKnown = false
+        else removedBytes += bytes
       }
-      // Teardown/snapshot failures log and continue: the directory is still gone either way, and a
-      // backend that never had state for it (or already cleaned it up) is not a reason to refuse.
-      await host.teardown(ctx.root, target).catch((error: unknown) => {
-        host.log(`Failed to tear down backend state for ${target}: ${error}`)
-      })
-      const failure = await manager
-        .detachOrphanDirectory(target)
-        .then(() => undefined)
-        .catch((error: unknown) => (error instanceof Error ? error.message : String(error)))
-      if (failure) {
-        host.log(`Failed to remove orphaned directory ${target}: ${failure}`)
-        host.post({ type: "error", projectId: ctx.id, message: `Could not remove ${target}: ${failure}` })
-        failed++
-        continue
-      }
-      await host.removeSnapshot(ctx.root, target)
-      removed++
-      const bytes = sizeBefore.get(target)
-      if (bytes === undefined) sizeKnown = false
-      else removedBytes += bytes
-    }
-  })
-  if (removed > 0) {
-    await host.reconcile(ctx)
-    host.push()
+    })
+  } finally {
+    resumeOrphanSizes(ctx)
   }
+  // Unconditional: this refreshes the report after failures *and* is what restarts the size pass that
+  // was paused above, for the leftovers that are still on disk.
+  await host.reconcile(ctx)
+  if (removed > 0) host.push()
   notifyCleanupResult(host, removed, failed, paths.length, sizeKnown ? removedBytes : undefined)
   host.log(`Removed ${removed} orphaned worktree director${removed === 1 ? "y" : "ies"}`)
 }

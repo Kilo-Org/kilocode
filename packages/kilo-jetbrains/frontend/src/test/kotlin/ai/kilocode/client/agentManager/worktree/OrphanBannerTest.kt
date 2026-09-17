@@ -12,6 +12,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.HyperlinkLabel
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -137,6 +138,85 @@ class OrphanBannerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals("2 leftover worktree folder(s)", edt { banner.text })
+    }
+
+    /**
+     * The fs walk is the expensive half of a size pass, so a pass whose answer is already worthless
+     * has to be cancelled rather than left running to be discarded when it lands.
+     */
+    fun `test a size pass is cancelled when the orphan set changes under it`() {
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/first", OrphanKind.LEFTOVER))
+        val gate = CompletableDeferred<Unit>()
+        val walked = AtomicInteger()
+        rpc.beforeOrphanSizes = { gate.await() }
+        rpc.orphanSizesResult = { paths ->
+            walked.incrementAndGet()
+            paths.associateWith { 512L }
+        }
+        val controller = controller()
+        edt { controller.reload() }
+        flush()
+        val banner = edt { OrphanBanner(project, controller, testRootDisposable) }
+        flush()
+        assertEquals(1, rpc.orphanSizeCalls.size)
+
+        // The orphan set changes while the first walk is still parked on the gate.
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/second", OrphanKind.LEFTOVER))
+        edt { controller.reload() }
+        flush()
+        edt { banner.refresh() }
+        flush()
+        assertEquals(2, rpc.orphanSizeCalls.size)
+
+        gate.complete(Unit)
+        assertTrue(coroutines.pumpUntil { walked.get() > 0 })
+        flush()
+
+        // Only the current pass ever produced an answer; the superseded one was cancelled at the gate
+        // instead of walking to completion.
+        assertEquals("the superseded walk must not run", 1, walked.get())
+        assertEquals("1 leftover worktree folder(s) \u00b7 512 B", edt { banner.text })
+    }
+
+    /**
+     * Clicking delete makes the pass in flight pointless — it is holding the very paths about to be
+     * renamed away — so it is cancelled, and the reload afterwards measures only what is left.
+     */
+    fun `test removing folders cancels the size pass and re-measures the leftovers`() {
+        val doomed = "/repo/.kilo/worktrees/doomed"
+        val survivor = "/repo/.kilo/worktrees/survivor"
+        rpc.orphans = listOf(OrphanDto(doomed, OrphanKind.LEFTOVER), OrphanDto(survivor, OrphanKind.LEFTOVER))
+        val gate = CompletableDeferred<Unit>()
+        val walked = AtomicInteger()
+        rpc.beforeOrphanSizes = { gate.await() }
+        rpc.orphanSizesResult = { paths ->
+            walked.incrementAndGet()
+            paths.associateWith { 1024L }
+        }
+        val controller = controller()
+        edt { controller.reload() }
+        flush()
+        val banner = edt { OrphanBanner(project, controller, testRootDisposable) }
+        // Mirrors AgentManagerPanel, which is what refreshes the banner after every reload.
+        controller.onReload = { banner.refresh() }
+        flush()
+        assertEquals(1, rpc.orphanSizeCalls.size)
+        assertEquals("2 leftover worktree folder(s) \u00b7 calculating size\u2026", edt { banner.text })
+
+        // Delete one folder; the walk over both is still parked on the gate. Later passes are ungated
+        // so the re-measure can actually land.
+        rpc.beforeOrphanSizes = {}
+        rpc.orphans = listOf(OrphanDto(survivor, OrphanKind.LEFTOVER))
+        edt { banner.remove(listOf(doomed)) }
+        gate.complete(Unit)
+        assertTrue(coroutines.pumpUntil { rpc.orphanSizeCalls.size > 1 })
+        flush()
+
+        assertEquals(listOf(doomed), rpc.removeOrphansCalls.single().second)
+        // The cancelled pass never walked; the pass after the delete covers the survivor alone.
+        assertEquals("only the post-delete pass runs", 1, walked.get())
+        assertEquals(listOf(survivor), rpc.orphanSizeCalls.last().second)
+        assertEquals("1 leftover worktree folder(s) \u00b7 1.02 kB", edt { banner.text })
     }
 
     fun `test banner does not re-fetch sizes when the orphan set is unchanged`() {

@@ -48,12 +48,7 @@ export const OrphanHelp: Component<{ expanded: boolean; onToggle: () => void }> 
           <span>{t("agentManager.orphans.helpDelete")}</span>
         </span>
       </Show>
-      <button
-        type="button"
-        class="am-orphan-help-toggle"
-        aria-expanded={props.expanded}
-        onClick={props.onToggle}
-      >
+      <button type="button" class="am-orphan-help-toggle" aria-expanded={props.expanded} onClick={props.onToggle}>
         {props.expanded ? t("agentManager.orphans.helpLess") : t("agentManager.orphans.helpMore")}
       </button>
     </>

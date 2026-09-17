@@ -11,8 +11,11 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -43,8 +46,12 @@ internal class OrphanBanner(
      */
     private var failed: Set<String>? = null
 
+    /** The size pass in flight, kept so it can be cancelled rather than left to finish unwatched. */
+    private var job: Job? = null
+
     init {
         refresh()
+        Disposer.register(parent) { job?.cancel() }
     }
 
     /** Re-reads [WorktreeController.orphans] and updates the banner. Call after every [reload]. */
@@ -104,8 +111,15 @@ internal class OrphanBanner(
     }
 
     private fun requestSizes(paths: Set<String>) {
-        service<KiloAppService>().scope.launch {
+        // A pass for a superseded path set is worthless the moment the set changes, and the fs walk is
+        // the expensive part — cancel it instead of letting it run to completion just to be discarded
+        // on arrival. Cancellation is cooperative on the backend (see KiloWorktreeRpcApiImpl).
+        job?.cancel()
+        job = service<KiloAppService>().scope.launch {
             val result = service<KiloWorktreeService>().orphanSizes(controller.directory, paths.toList())
+            // Belt and braces for the cancelled case: in split mode the call can still answer normally
+            // after cancellation, and an empty answer must not be recorded as a failed walk.
+            if (!isActive) return@launch
             edt {
                 if (requested != paths) return@edt
                 // A wholly empty answer means the walk failed, not that the folders are empty. Remember
@@ -129,17 +143,49 @@ internal class OrphanBanner(
         if (!dialog.showAndGet()) return
         val selected = dialog.result()
         if (selected.isNullOrEmpty()) return
+        remove(selected)
+    }
+
+    /**
+     * Delete a confirmed selection.
+     *
+     * Split from [openDialog] so the delete path is the "do" half of an ask-then-do pair: it is driven
+     * by the dialog in production and directly by tests, which would otherwise have to show a modal.
+     */
+    @RequiresEdt
+    internal fun remove(selected: List<String>) {
         // The apparent size of what was asked to be removed, from the same cache the dialog showed —
         // not a promise of freed disk space (APFS clones/reflinks and block rounding can differ), just
-        // the number the user already saw and agreed to.
+        // the number the user already saw and agreed to. Read before cancelling, which drops the cache.
         val requestedSize = selected.sumOf { sizes[it] ?: 0L }
+        cancelSizes()
         service<KiloAppService>().scope.launch {
             val result = service<KiloWorktreeService>().removeOrphans(controller.directory, selected)
             edt {
                 notify(result.results, requestedSize)
+                // Brings the banner back through refresh, which starts a fresh pass for the leftovers
+                // that are still on disk — measured once, not once per deleted folder.
                 controller.reload()
             }
         }
+    }
+
+    /**
+     * Drop the in-flight size pass and the cached answer it was for.
+     *
+     * Called when a delete starts: the walk is holding the very paths that are about to be renamed
+     * away, so it is measuring folders the user already decided to destroy, and any total it produced
+     * would describe a disk state that no longer exists. Clearing [sizedPaths] and [failed] is what
+     * makes the next [refresh] treat the remaining set as unmeasured and ask again; [sizes] is left
+     * alone so a dialog reopened before the new pass lands can still show last-known numbers.
+     */
+    @RequiresEdt
+    private fun cancelSizes() {
+        job?.cancel()
+        job = null
+        requested = null
+        sizedPaths = emptySet()
+        failed = null
     }
 
     private fun notify(results: List<OrphanRemoveResultDto>, requestedSize: Long) {

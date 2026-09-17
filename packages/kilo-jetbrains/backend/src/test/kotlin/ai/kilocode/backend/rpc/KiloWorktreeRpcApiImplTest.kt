@@ -32,12 +32,14 @@ import com.intellij.openapi.util.SystemInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
@@ -192,6 +194,33 @@ class KiloWorktreeRpcApiImplTest {
 
         assertEquals(5L, sizes[ok.toString()])
         assertFalse(sizes.containsKey(missing.toString()), "a path that could not be measured must be omitted, not zero")
+    }
+
+    /**
+     * The frontend cancels a size pass whenever the orphan set changes or a delete starts, and
+     * `Files.walkFileTree` cannot be interrupted — so the walk has to check cancellation itself rather
+     * than leave a cancelled coroutine walking every remaining path on Dispatchers.IO.
+     */
+    @Test
+    fun `orphanSizes stops measuring once its caller is cancelled`() = runBlocking {
+        initRepo()
+        val first = repo.resolve(".kilo").resolve("worktrees").resolve("first")
+        val second = repo.resolve(".kilo").resolve("worktrees").resolve("second")
+        Files.createDirectories(first)
+        Files.createDirectories(second)
+        Files.write(first.resolve("a.bin"), ByteArray(10))
+        Files.write(second.resolve("b.bin"), ByteArray(20))
+
+        val job = Job()
+        job.cancel()
+        val outcome = runCatching<Map<String, Long>> {
+            withContext(job) { api.orphanSizes(repo.toString(), listOf(first.toString(), second.toString())) }
+        }
+
+        assertTrue(
+            outcome.exceptionOrNull() is CancellationException,
+            "a cancelled pass must not answer with sizes -> ${outcome.getOrNull()}",
+        )
     }
 
     @Test

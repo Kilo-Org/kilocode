@@ -3,7 +3,12 @@ import * as fs from "node:fs/promises"
 import * as os from "node:os"
 import * as path from "node:path"
 import { ProjectContext } from "../../src/agent-manager/project/context"
-import { disposeOrphanSizes, trackOrphanSizes } from "../../src/agent-manager/orphan-sizing"
+import {
+  disposeOrphanSizes,
+  pauseOrphanSizes,
+  resumeOrphanSizes,
+  trackOrphanSizes,
+} from "../../src/agent-manager/orphan-sizing"
 import type { OrphanDirectory, WorktreeHealthReport } from "../../src/agent-manager/worktree-reconcile"
 
 const tempDirs: string[] = []
@@ -118,6 +123,89 @@ describe("trackOrphanSizes", () => {
     await second.promise
 
     expect(project.report?.orphans[0]?.bytes).toBe(20)
+  })
+
+  it("aborts the pass in flight when the orphan path set changes under it", async () => {
+    const dirA = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-abort-a-"))
+    const dirB = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-abort-b-"))
+    tempDirs.push(dirA, dirB)
+    await fs.writeFile(path.join(dirA, "f.txt"), "x".repeat(30))
+    await fs.writeFile(path.join(dirB, "f.txt"), "x".repeat(40))
+    const project = ctx()
+    project.report = reportWith([{ path: dirA, kind: "leftover" }])
+
+    let firstSized = 0
+    trackOrphanSizes(
+      project,
+      [{ path: dirA, kind: "leftover" }],
+      () => undefined,
+      () => firstSized++,
+    )
+    // Synchronously superseded: the first walk has not resumed from its first `opendir` yet, so the
+    // abort lands before it can read anything.
+    project.report = reportWith([{ path: dirB, kind: "leftover" }])
+    const second = Promise.withResolvers<void>()
+    trackOrphanSizes(
+      project,
+      [{ path: dirB, kind: "leftover" }],
+      () => undefined,
+      () => second.resolve(),
+    )
+    await second.promise
+
+    expect(project.report?.orphans[0]?.bytes).toBe(40)
+    expect(firstSized, "the superseded pass must not report").toBe(0)
+  })
+
+  it("pauses in-flight sizing for a delete and only measures again once resumed", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-pause-"))
+    tempDirs.push(dir)
+    await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(70))
+    const project = ctx()
+    const orphans: OrphanDirectory[] = [{ path: dir, kind: "leftover" }]
+    project.report = reportWith(orphans)
+
+    let sized = 0
+    trackOrphanSizes(
+      project,
+      orphans,
+      () => undefined,
+      () => sized++,
+    )
+    pauseOrphanSizes(project)
+    await Bun.sleep(20)
+
+    expect(sized, "the paused pass must not land").toBe(0)
+    expect(project.report?.orphans[0]?.bytes).toBeUndefined()
+
+    // A reconcile during the delete must not start a new walk over folders being removed.
+    trackOrphanSizes(
+      project,
+      orphans,
+      () => undefined,
+      () => sized++,
+    )
+    await Bun.sleep(20)
+    expect(sized).toBe(0)
+    expect(project.report?.orphans[0]?.bytes).toBeUndefined()
+
+    // Resuming does not measure by itself; the reconcile that follows the delete does, and it has to
+    // actually run even though the surviving path set is the one the paused pass was already given.
+    resumeOrphanSizes(project)
+    const landed = Promise.withResolvers<void>()
+    trackOrphanSizes(
+      project,
+      orphans,
+      () => undefined,
+      () => landed.resolve(),
+    )
+    await landed.promise
+
+    expect(project.report?.orphans[0]?.bytes).toBe(70)
+  })
+
+  it("resumeOrphanSizes is safe for a project that never started sizing", () => {
+    expect(() => resumeOrphanSizes(ctx())).not.toThrow()
   })
 
   it("aborts in-flight sizing when the project is disposed, without throwing", async () => {
