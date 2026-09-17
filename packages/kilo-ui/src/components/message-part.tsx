@@ -159,10 +159,6 @@ export interface MessagePartProps {
    * forces a collapsed tool/reasoning block open so the user can see the
    * highlighted match without manually expanding it first. */
   forceOpen?: boolean
-  /** For a multi-file apply_patch part, the specific file path (matching
-   * that file's `filePath`) whose accordion contains the current match —
-   * lets that one nested item open instead of every file in the patch. */
-  forceOpenFile?: string
   /** How reasoning blocks render: expanded (open body), preview (capped
    * scrolling viewport), or headline (header only until opened). */
   reasoningDisplay?: ReasoningDisplay
@@ -1090,7 +1086,6 @@ export function Part(props: MessagePartProps) {
         hideDetails={props.hideDetails}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
-        forceOpenFile={props.forceOpenFile}
         reasoningDisplay={props.reasoningDisplay}
         settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
@@ -1121,9 +1116,6 @@ export interface ToolProps {
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
-  /** For a multi-file apply_patch part, the specific file path whose
-   * accordion contains the current transcript search match. */
-  forceOpenFile?: string
   locked?: boolean
   animate?: boolean
   reveal?: boolean
@@ -1503,7 +1495,6 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 hideDetails={props.hideDetails}
                 defaultOpen={props.defaultOpen}
                 forceOpen={props.forceOpen}
-                forceOpenFile={props.forceOpenFile}
                 animate
                 reveal={props.animate}
                 readonly={props.readonly}
@@ -3165,30 +3156,11 @@ ToolRegistry.register({
       seeded = true
       setExpanded(list.filter((f) => f.type !== "delete").map((f) => f.filePath))
     })
-    // Deleted files start collapsed above; a chat search match could be
-    // inside one. `forceOpenFile` (from MessageList's per-chunk file
-    // attribution) names exactly which file's accordion to open. This is
-    // tracked separately from the user's own manual toggles: replacing it
-    // on every navigation (rather than appending to `expanded`, which never
-    // shrinks) closes the previously force-opened file again, so its Pierre
-    // diff instance unmounts instead of accumulating one per visited match.
-    const [searchOpenFile, setSearchOpenFile] = createSignal<string | undefined>()
+    // Deleted files start collapsed above. A generic forceOpen (still part of
+    // this component's API) expands everything rather than nothing.
     createEffect(() => {
-      if (props.forceOpenFile) {
-        setSearchOpenFile(props.forceOpenFile)
-        return
-      }
-      // Defensive fallback for forceOpen without a known file (MessageList
-      // always attributes apply_patch matches to a specific file today):
-      // expand everything rather than nothing.
-      setSearchOpenFile(undefined)
       if (!props.forceOpen) return
       setExpanded(files().map((f) => f.filePath))
-    })
-    const allExpanded = createMemo(() => {
-      const search = searchOpenFile()
-      if (!search) return expanded()
-      return expanded().includes(search) ? expanded() : [...expanded(), search]
     })
     const subtitle = createMemo(() => {
       const count = files().length
@@ -3244,21 +3216,17 @@ ToolRegistry.register({
                   multiple
                   data-scope="apply-patch"
                   style={{ "--sticky-accordion-offset": "37px" }}
-                  value={allExpanded()}
+                  value={expanded()}
                   onChange={(value) => {
                     const next = Array.isArray(value) ? value : value ? [value] : []
-                    // The user explicitly closed the search-forced file —
-                    // stop treating it as force-open so it doesn't reopen
-                    // itself out of `allExpanded()` on the next render.
-                    if (searchOpenFile() && !next.includes(searchOpenFile()!)) setSearchOpenFile(undefined)
-                    setExpanded(next.filter((path) => path !== searchOpenFile()))
+                    setExpanded(next)
                   }}
                 >
                   <For each={files()}>
                     {(file) => {
                       // Diff defers its own expensive render; mounting the container
                       // here avoids dropping the last item during batch expansion.
-                      const active = createMemo(() => allExpanded().includes(file.filePath))
+                      const active = createMemo(() => expanded().includes(file.filePath))
 
                       return (
                         <Accordion.Item value={file.filePath} data-type={file.type}>

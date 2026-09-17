@@ -7,11 +7,11 @@ import { canUseSpeechToText } from "./availability"
 export const SpeechToTextPrewarm: Component = () => {
   const vscode = getVSCodeAPI()
   const provider = useProvider()
-  const { config } = useConfig()
+  const { config, features } = useConfig()
   let prepared = false
 
   createEffect(() => {
-    if (prepared || !canUseSpeechToText(config(), provider.authStates())) return
+    if (prepared || !canUseSpeechToText(config(), provider.authStates(), features().speechToText)) return
     prepared = true
     vscode.postMessage({ type: "speechToTextPrewarm" })
   })

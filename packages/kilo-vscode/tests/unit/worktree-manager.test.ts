@@ -1421,20 +1421,6 @@ describe("WorktreeManager.checkedOutBranches", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager helpers", () => {
-  it("hasOriginRemote returns false when no remote exists", async () => {
-    const root = await createTempRepo()
-    const mgr = createManager(root)
-    expect(await mgr.hasOriginRemote()).toBe(false)
-  })
-
-  it("hasOriginRemote returns true when origin exists", async () => {
-    const root = await createTempRepo()
-    const git = simpleGit(root)
-    await git.addRemote("origin", "https://example.com/repo.git")
-    const mgr = createManager(root)
-    expect(await mgr.hasOriginRemote()).toBe(true)
-  })
-
   it("refExistsLocally verifies refs", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)

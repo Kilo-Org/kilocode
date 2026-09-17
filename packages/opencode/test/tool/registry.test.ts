@@ -144,6 +144,31 @@ const withRestrictedCodeMode = testEffect(
 )
 // kilocode_change end
 
+// kilocode_change start - Code Mode can be enabled from the Kilo config instead of the environment flag
+const weatherMcp = Layer.mock(MCP.Service, {
+  tools: () =>
+    Effect.succeed({
+      weather_current: {
+        def: {
+          name: "current",
+          description: "current weather",
+          inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+        } as MCPToolDef,
+        client: {} as MCP.McpTool["client"],
+        clientName: "weather",
+      },
+    }),
+  clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
+})
+const withConfigCodeMode = testEffect(
+  registryLayer({
+    config: { get: () => Effect.succeed({ experimental: { code_mode: true } }) },
+    mcp: weatherMcp,
+  }),
+)
+const withoutCodeMode = testEffect(registryLayer({ mcp: weatherMcp }))
+// kilocode_change end
+
 afterEach(async () => {
   await disposeAllInstances()
 })
@@ -314,6 +339,36 @@ describe("tool.registry", () => {
         modelID: ModelV2.ID.make("test"),
         agent: yield* agents.defaultInfo(),
         networkRestricted: true,
+      })
+
+      expect(tools.map((tool) => tool.id)).not.toContain("execute")
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - the Kilo config toggle enables Code Mode without the environment flag
+  withConfigCodeMode.instance("exposes execute when experimental.code_mode is true in the Kilo config", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
+      })
+
+      expect(tools.map((tool) => tool.id)).toContain("execute")
+    }),
+  )
+
+  withoutCodeMode.instance("does not expose execute when the config toggle is absent", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
       })
 
       expect(tools.map((tool) => tool.id)).not.toContain("execute")

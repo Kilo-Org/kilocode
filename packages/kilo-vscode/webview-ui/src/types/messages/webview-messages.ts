@@ -323,10 +323,6 @@ export interface OpenAdvancedWorktreeRequest {
   type: "openAdvancedWorktree"
 }
 
-export interface OpenKiloClawRequest {
-  type: "openKiloClaw"
-}
-
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -1622,7 +1618,6 @@ export type WebviewMessage =
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
-  | OpenKiloClawRequest
   | OpenFileRequest
   | ValidateFilesRequest
   | CancelLoginRequest
