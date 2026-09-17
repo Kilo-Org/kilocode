@@ -286,6 +286,45 @@ describe("trackOrphanSizes", () => {
     expect(sized, "the superseded pass must not report").toBe(1)
   })
 
+  /**
+   * A grown orphan set has to abort the in-flight walk to start a wider one (`sizes` cannot add paths
+   * to a running call) — but the paths that walk was already trusted to cover must not simply vanish
+   * when it is discarded. Unlike "walks only the folders it has never measured when the set grows"
+   * above, this grows the set *while the first walk is still in flight*, so the still-valid `pending`
+   * path is excluded from what looks missing and would otherwise fall out of both `known` and
+   * `pending` once the aborted walk's result is thrown away.
+   */
+  it("folds a still-valid in-flight walk's paths into the replacement pass when the orphan set grows under it", async () => {
+    const dirA = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-grow-inflight-a-"))
+    const dirB = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-grow-inflight-b-"))
+    tempDirs.push(dirA, dirB)
+    await fs.writeFile(path.join(dirA, "f.txt"), "x".repeat(30))
+    await fs.writeFile(path.join(dirB, "f.txt"), "x".repeat(40))
+    const landed = Promise.withResolvers<void>()
+    const project = ctx(() => landed.resolve())
+    project.report = reportWith([{ path: dirA, kind: "leftover" }])
+
+    // A walk starts over dirA and has not resumed from its first `opendir` yet (see "aborts the pass
+    // in flight when the orphan path set changes under it" above for why this synchronous back-to-back
+    // sequencing works: `sizes` has not reached its first await when this line returns).
+    trackOrphanSizes(project, [{ path: dirA, kind: "leftover" }], () => undefined)
+    // The set grows to include dirB while dirA has not left the list — the walk covering it is still
+    // trustworthy, unlike the "leaves and rejoins" case tested elsewhere in this file.
+    const grown: OrphanDirectory[] = [
+      { path: dirA, kind: "leftover" },
+      { path: dirB, kind: "leftover" },
+    ]
+    project.report = reportWith(grown)
+    trackOrphanSizes(project, grown, () => undefined)
+
+    await landed.promise
+    // Give a second pass a turn to land, in case dirA needed one the fix did not actually provide.
+    await Bun.sleep(30)
+
+    expect(project.report?.orphans[0]?.bytes, "dirA must not be silently dropped by the replacement pass").toBe(30)
+    expect(project.report?.orphans[1]?.bytes).toBe(40)
+  })
+
   it("pauses in-flight sizing for a delete and only measures again once resumed", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-pause-"))
     tempDirs.push(dir)

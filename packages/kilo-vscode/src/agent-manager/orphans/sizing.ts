@@ -114,16 +114,21 @@ export function trackOrphanSizes(
   }
   const missing = next.filter((path) => !state.known.has(path) && !state.pending?.has(path))
   if (missing.length === 0) return
+  // Starting a new walk means abandoning whatever is still in flight — `sizes` has no way to add
+  // paths to a running call. The still-trustworthy `pending` paths excluded above were relying on
+  // that walk to land for them, so they are folded into this one rather than left to fall out of both
+  // `known` and `pending` once the old walk's result is discarded as aborted.
+  const walk = state.pending ? [...state.pending, ...missing] : missing
   state.abort?.abort()
   const controller = new AbortController()
   state.abort = controller
-  state.pending = new Set(missing)
-  sizes(missing, { signal: controller.signal })
+  state.pending = new Set(walk)
+  sizes(walk, { signal: controller.signal })
     .then((result) => {
       if (controller.signal.aborted) return
       // Recorded for every path walked, with or without an answer: `sizes` omits a directory it could
       // not read rather than failing the batch, and "we tried" is what the UI needs to stop waiting.
-      for (const path of missing) state.known.set(path, result.get(path))
+      for (const path of walk) state.known.set(path, result.get(path))
       state.pending = undefined
       if (apply(ctx, state.known)) ctx.notifySized()
     })
