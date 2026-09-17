@@ -136,6 +136,17 @@ describe("SystemPrompt.provider", () => {
   })
 })
 
+describe("comment policy", () => {
+  test.each([
+    ["default", PROMPT_DEFAULT],
+    ["trinity", PROMPT_TRINITY],
+    ["ling", PROMPT_LING],
+  ] as const)("%s prompt defers to project comment conventions", (_name, prompt) => {
+    expect(prompt).not.toContain("DO NOT ADD ***ANY*** COMMENTS")
+    expect(prompt).toContain("Instructions from the user or the project take precedence over this guidance.")
+  })
+})
+
 describe("Ask diagram guidance", () => {
   test.each([
     [undefined, false],
