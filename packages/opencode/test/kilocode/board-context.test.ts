@@ -278,7 +278,7 @@ describe("shared board notifications", () => {
     ),
   )
 
-  it.live("does not consume failed reads or reads cancelled during the activity check", () =>
+  it.live("recovers stale cursors and does not consume reads cancelled during the activity check", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -298,7 +298,6 @@ describe("shared board notifications", () => {
             throw new Error(`board_read must replay stale cursors: ${Cause.pretty(replayed.cause)}`)
           expect(cache.cursor).toBeGreaterThan(0)
           cache.cursor = 0
-          cache.failed = false
           const page = yield* read(root.id)
           const controller = new AbortController()
           controller.abort()
