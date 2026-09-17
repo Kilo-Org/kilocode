@@ -468,3 +468,78 @@ describe("workspace revert status", () => {
     30_000,
   )
 })
+
+describe("sub-agent revert", () => {
+  it.live(
+    "restores a file a child session recorded after the revert point",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "child.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate the edit",
+          })
+
+          const before = yield* snapshot.track()
+          if (!before) throw new Error("expected snapshot")
+          yield* Effect.promise(() => fs.writeFile(file, "after"))
+          const after = yield* snapshot.track()
+          if (!after) throw new Error("expected snapshot")
+          const patch = yield* snapshot.patch(before)
+
+          const child = yield* sessions.create({ parentID: session.id })
+          const assistant = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: child.id,
+            role: "assistant",
+            parentID: user.id,
+            mode: "default",
+            agent: "default",
+            path: { cwd: dir, root: dir },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ModelV2.ID.make("test"),
+            providerID,
+            time: { created: Date.now() },
+            finish: "end_turn",
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: child.id,
+            type: "patch",
+            hash: patch.hash,
+            files: patch.files,
+          })
+
+          const reverted = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect({
+            workspace: reverted.revert?.workspace,
+            file: yield* Effect.promise(() => fs.readFile(file, "utf8")),
+          }).toEqual({ workspace: "restored", file: "before" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
