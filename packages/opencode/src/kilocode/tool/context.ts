@@ -4,6 +4,7 @@ import { Session } from "@/session/session"
 import { Provider } from "@/provider/provider"
 import { SessionCompaction } from "@/session/compaction"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 
 const Parameters = Schema.Struct({})
 
@@ -25,12 +26,16 @@ export const ContextInfoTool = Tool.define(
       execute: (_args, ctx) =>
         Effect.gen(function* () {
           const session = yield* sessions.get(ctx.sessionID)
-          const final = [...ctx.messages].reverse().find((m) => m.info.role === "assistant" && m.info.finish)
-          const tokens = final && final.info.role === "assistant" ? final.info.tokens : undefined
+          // filterCompacted reorders messages for model consumption, so array
+          // position is not chronology; derive the last finished step the way
+          // the prompt loop does.
+          const { finished } = KiloSessionMessageOrder.latest(ctx.messages)
+          const tokens = finished?.tokens
           const contextTokens = tokens ? KiloSessionOverflow.count(tokens) : 0
+          // 0 is the "unknown context window" sentinel, not an exhausted window.
           const limit = session.model
             ? yield* provider.getModel(session.model.providerID, session.model.id).pipe(
-                Effect.map((model) => model.limit.context),
+                Effect.map((model) => (model.limit.context > 0 ? model.limit.context : undefined)),
                 Effect.catchCause(() => Effect.succeed(undefined)),
               )
             : undefined
@@ -63,18 +68,38 @@ export const CompactTool = Tool.define(
   Effect.gen(function* () {
     const sessions = yield* Session.Service
     const compaction = yield* SessionCompaction.Service
+    // Step that last scheduled a compaction per session. Sibling calls inside
+    // one assistant step share the same ctx.messageID and the same frozen
+    // message snapshot, so only this claim can collapse them.
+    const scheduled = new Map<string, string>()
 
     return {
       description: COMPACT_DESCRIPTION,
       parameters: Parameters,
       execute: (_args, ctx) =>
         Effect.gen(function* () {
+          const latest = KiloSessionMessageOrder.latest(ctx.messages)
+          // A compaction part newer than the last finished step is queued work
+          // the prompt loop will run; scheduling another would run a second
+          // summariser pass over the same history. The claim below is set
+          // synchronously, before the first yield, so concurrent siblings
+          // cannot both pass it.
+          const pending = latest.tasks.some((task) => task.type === "compaction")
+          if (pending || scheduled.get(ctx.sessionID) === ctx.messageID) {
+            return {
+              title: "context compaction already scheduled",
+              metadata: { sessionID: ctx.sessionID, agent: ctx.agent, time: new Date().toISOString(), pending: true },
+              output:
+                "A context compaction is already scheduled and will summarise the conversation history when this turn finishes; no additional compaction was scheduled.",
+            }
+          }
+          scheduled.set(ctx.sessionID, ctx.messageID)
+
           const session = yield* sessions.get(ctx.sessionID)
-          const last = [...ctx.messages].reverse().find((m) => m.info.role === "user")
           const model = session.model
             ? { providerID: session.model.providerID, modelID: session.model.id }
-            : last && last.info.role === "user"
-              ? { providerID: last.info.model.providerID, modelID: last.info.model.modelID }
+            : latest.user
+              ? { providerID: latest.user.model.providerID, modelID: latest.user.model.modelID }
               : undefined
           if (!model) {
             return yield* Effect.fail(new Error("Cannot compact: this session has no model"))
@@ -84,7 +109,7 @@ export const CompactTool = Tool.define(
 
           return {
             title: "context compaction scheduled",
-            metadata: { sessionID: ctx.sessionID, agent: ctx.agent, time: new Date().toISOString() },
+            metadata: { sessionID: ctx.sessionID, agent: ctx.agent, time: new Date().toISOString(), pending: false },
             output:
               "Context compaction scheduled. The conversation history will be summarised into a summary when this turn finishes; continue with your next step.",
           }

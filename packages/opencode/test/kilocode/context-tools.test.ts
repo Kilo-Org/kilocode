@@ -28,8 +28,16 @@ const tokens = (input: number, output = 0): Tokens => ({
 const user = (model: { providerID: string; modelID: string } = { providerID: "test", modelID: "test-model" }): Msg =>
   ({ info: { role: "user", model }, parts: [] }) as unknown as Msg
 
-const assistant = (usage: Tokens, finish?: string): Msg =>
-  ({ info: { role: "assistant", finish, tokens: usage }, parts: [{}] }) as unknown as Msg
+const assistant = (usage: Tokens, finish?: string, created = 0): Msg =>
+  ({ info: { role: "assistant", finish, tokens: usage, time: { created } }, parts: [{}] }) as unknown as Msg
+
+// A user message carrying a compaction part that no finished summary has
+// consumed yet — the loop's own definition of queued compaction work.
+const compaction = (created = 3_000): Msg =>
+  ({
+    info: { role: "user", model: { providerID: "test", modelID: "test-model" }, time: { created } },
+    parts: [{ type: "compaction" }],
+  }) as unknown as Msg
 
 let session: { model?: { id: string; providerID: string } } = {}
 let lookup: Effect.Effect<{ limit: { context: number } }, unknown> = Effect.succeed({ limit: { context: 100_000 } })
@@ -150,6 +158,34 @@ describe("kilocode.tool.context", () => {
         expect(payload.tokens).toEqual(tokens(1000, 20))
       }),
     )
+
+    it.instance("reads the last finished step by chronology, not array position", () =>
+      Effect.gen(function* () {
+        // filterCompacted moves the retained tail after a newer compaction turn,
+        // so the last array element is not the newest message.
+        const newer = assistant(tokens(100, 10), "stop", 2_000)
+        const stale = assistant(tokens(900, 90), "stop", 1_000)
+
+        const result = yield* info([newer, stale])
+        const payload = JSON.parse(result.output)
+
+        expect(payload.tokens).toEqual(tokens(100, 10))
+        expect(payload.contextTokens).toBe(110)
+      }),
+    )
+
+    it.instance("reports an unknown context window as null, not as exhausted", () =>
+      Effect.gen(function* () {
+        lookup = Effect.succeed({ limit: { context: 0 } })
+
+        const result = yield* info([user(), assistant(tokens(1000, 20), "stop")])
+        const payload = JSON.parse(result.output)
+
+        expect(payload.contextLimit).toBeNull()
+        expect(payload.contextRemaining).toBeNull()
+        expect(payload.contextTokens).toBe(1020)
+      }),
+    )
   })
 
   describe("compact", () => {
@@ -193,6 +229,38 @@ describe("kilocode.tool.context", () => {
 
         if (Exit.isSuccess(exit)) throw new Error("expected compact to fail")
         expect(Cause.pretty(exit.cause)).toContain("Cannot compact")
+      }),
+    )
+
+    it.instance("does not queue a second summariser pass while one is pending", () =>
+      Effect.gen(function* () {
+        const result = yield* compact([assistant(tokens(1000, 20), "stop"), compaction()])
+
+        expect(result.title).toBe("context compaction already scheduled")
+        expect(created).toEqual([])
+      }),
+    )
+
+    it.instance("collapses sibling compact calls in one step into one pass", () =>
+      Effect.gen(function* () {
+        const tool = yield* CompactTool
+        const def = yield* tool.init()
+        const context = ctx([])
+
+        yield* def.execute({}, context)
+        const second = yield* def.execute({}, context)
+
+        expect(second.title).toBe("context compaction already scheduled")
+        expect(created).toHaveLength(1)
+      }),
+    )
+
+    it.instance("still schedules a compaction after the previous one has finished", () =>
+      Effect.gen(function* () {
+        const result = yield* compact([assistant(tokens(1000, 20), "stop"), user()])
+
+        expect(result.title).toBe("context compaction scheduled")
+        expect(created).toHaveLength(1)
       }),
     )
   })
