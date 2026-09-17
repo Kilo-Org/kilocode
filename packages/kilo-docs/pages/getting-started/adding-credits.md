@@ -22,7 +22,7 @@ At Kilo Code, we believe in complete pricing transparency:
 - Model inference through Kilo Gateway matches the provider's API rates with no markup.
 - We debit your Kilo credits by the amount charged for inference or other metered Kilo services, such as cloud compute.
 - $1 of purchased credits funds $1 of usage.
-- A 5% payment-processing fee applies when you purchase credits. This fee is charged separately and does not increase your credit balance.
+- A 5% payment-processing fee applies when you purchase credits or a Kilo Pass. This fee is charged separately and does not increase your credit balance.
 
 For current platform, inference, credit purchase, and cloud compute pricing, see [Kilo Code pricing](https://kilo.ai/pricing).
 

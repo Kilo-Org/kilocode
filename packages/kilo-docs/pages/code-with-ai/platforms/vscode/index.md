@@ -68,6 +68,14 @@ Send a message while Kilo is working to queue it for processing in order. To rev
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
 
+## Pasting large text
+
+Pasting a large plain-text block collapses it into a `[Pasted ~N lines]` chip in the prompt input. A paste collapses when it contains 15 or more lines, or more than 4,000 characters.
+
+Click the chip to expand the paste in place. Keep it collapsed and Kilo still restores the exact text when you copy the message or send it. Backspace removes a whole chip at once, and undo brings it back. Short pastes, images, and file pastes keep their normal behavior.
+
+This applies to every prompt input: the sidebar, Agent Manager chat, and Kilo editor tabs. To turn it off, disable **Paste summary** in the **Experimental** settings, or set `experimental.disable_paste_summary` to `true` in `kilo.jsonc`.
+
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.

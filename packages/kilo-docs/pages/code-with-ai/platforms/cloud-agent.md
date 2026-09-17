@@ -84,6 +84,8 @@ Standard-input prompts must be valid UTF-8 and contain no more than 100,000 char
   - Commits them
   - Pushes to the session’s branch
 
+Each commit the agent creates also appears in the chat transcript as a compact entry. Hover or tap the entry to see its metadata, including the commit message and push status.
+
 - Containers are **ephemeral**:
   - Spindown occurs after inactivity
   - Expect slightly longer setup after idle periods
@@ -110,6 +112,12 @@ Select **Changes** in the chat header to review the worktree's saved change summ
 Select a file to open its saved diff and, when available, full contents in a read-only tab. Reloading reads the latest saved revision without starting the workspace.
 
 These are saved snapshots, not a live view of the checkout. Diffs or contents may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
+
+### Sending a review to the agent
+
+While a saved diff is open, select a line or a range and add a comment. Drafts are kept per file, so you can comment across several files and send them together.
+
+Sending a review delivers all of its comments to the agent as a single message in the chat that owns the worktree. If the saved diff changes before you send, Kilo treats the review as stale and asks you to confirm, so comments stay pinned to the revision you reviewed.
 
 ## Agent Environment Profiles
 
