@@ -325,7 +325,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nouvelle Tâche",
   "sidebar.topBar.history": "Historique",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Paramètres",
@@ -941,6 +940,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Activez et connectez-vous au fournisseur Kilo pour utiliser Speech to Text, ou définissez ci-dessous une URL de base de transcription personnalisée.",
+  "settings.models.speechToText.remoteDescription":
+    "La saisie vocale n'est pas disponible dans les fenêtres distantes. Ouvrez Kilo dans une fenêtre locale pour utiliser le microphone.",
   "settings.models.speechToTextModel.title": "Modèle de transcription vocale",
   "settings.models.speechToTextModel.description":
     "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",

@@ -321,7 +321,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Новая задача",
   "sidebar.topBar.history": "История",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Маркетплейс",
   "sidebar.topBar.profile": "Профиль",
   "sidebar.topBar.settings": "Настройки",
@@ -918,6 +917,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text, либо укажите ниже свой базовый URL транскрипции.",
+  "settings.models.speechToText.remoteDescription":
+    "Голосовой ввод недоступен в удалённых окнах. Откройте Kilo в локальном окне, чтобы использовать микрофон.",
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",

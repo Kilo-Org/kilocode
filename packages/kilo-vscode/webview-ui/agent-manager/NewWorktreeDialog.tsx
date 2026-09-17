@@ -172,7 +172,7 @@ export const NewWorktreeDialog: Component<{
   const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true
   const speech = useSpeechToText(vscode, server, { t })
   const speechModels = useSpeechToTextModels()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   let prior: string | null = null
   let request: string | undefined

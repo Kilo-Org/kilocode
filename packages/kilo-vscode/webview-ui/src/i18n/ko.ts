@@ -323,7 +323,6 @@ export const dict = {
   "sidebar.topBar.newTask": "새 작업",
   "sidebar.topBar.history": "기록",
   "sidebar.topBar.agentManager": "에이전트 관리자",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "마켓플레이스",
   "sidebar.topBar.profile": "프로필",
   "sidebar.topBar.settings": "설정",
@@ -912,6 +911,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하거나, 아래에서 사용자 지정 변환 기본 URL을 설정하세요.",
+  "settings.models.speechToText.remoteDescription":
+    "음성 입력은 원격 창에서 사용할 수 없습니다. 마이크를 사용하려면 로컬 창에서 Kilo를 여세요.",
   "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",

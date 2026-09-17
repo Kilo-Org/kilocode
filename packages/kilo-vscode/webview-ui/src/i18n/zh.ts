@@ -309,7 +309,6 @@ export const dict = {
   "sidebar.topBar.newTask": "新建任务",
   "sidebar.topBar.history": "历史记录",
   "sidebar.topBar.agentManager": "代理管理器",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "市场",
   "sidebar.topBar.profile": "个人资料",
   "sidebar.topBar.settings": "设置",
@@ -884,6 +883,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "启用并登录 Kilo 提供商以使用 Speech to Text，或在下方设置自定义转录基础 URL。",
+  "settings.models.speechToText.remoteDescription":
+    "远程窗口中无法使用语音输入。请在本地窗口中打开 Kilo 以使用麦克风。",
   "settings.models.speechToTextModel.title": "语音转文本模型",
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",

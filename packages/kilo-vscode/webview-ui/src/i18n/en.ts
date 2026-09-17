@@ -730,7 +730,6 @@ export const dict = {
   "sidebar.topBar.newTask": "New Task",
   "sidebar.topBar.history": "History",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profile",
   "sidebar.topBar.settings": "Settings",
@@ -888,6 +887,8 @@ export const dict = {
 
   "settings.models.speechToText.disabledDescription":
     "Kilo Gateway is selected. Enable and sign in to the Kilo provider to choose a supported model, or enter a custom transcription base URL above.",
+  "settings.models.speechToText.remoteDescription":
+    "Voice input is unavailable in remote windows. Open Kilo in a local window to use the microphone.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
   "settings.models.speechToTextModel.description":
     "Kilo Gateway is the active speech-to-text source. Choose its transcription model for voice input.",
