@@ -4,15 +4,57 @@ description: "Build the Linux bubblewrap helper"
 runs:
   using: "composite"
   steps:
+    - name: Restore Zig archive
+      id: zig
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+      env:
+        SEGMENT_DOWNLOAD_TIMEOUT_MINS: "1"
+      with:
+        path: ${{ runner.temp }}/zig-linux-x86_64-0.14.0.tar.xz
+        key: zig-linux-x86_64-0.14.0-473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982
+
     - name: Setup Zig
+      env:
+        ZIG_SHA256: "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982"
+        ZIG_MIRRORS: |
+          https://zig.linus.dev/zig
+          https://zigmirror.hryx.net/zig
+          https://ziglang.org/download/0.14.0
       run: |
-        curl --fail --location --retry 3 \
-          https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
-          --output "$RUNNER_TEMP/zig.tar.xz"
-        echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
-        tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+        set -euo pipefail
+        file="$RUNNER_TEMP/zig-linux-x86_64-0.14.0.tar.xz"
+        # Mirrors and caches are untrusted. Verify against the repository's pinned digest before extraction.
+        if [ ! -f "$file" ] || ! echo "$ZIG_SHA256  $file" | sha256sum -c - > /dev/null; then
+          rm -f "$file"
+          while IFS= read -r mirror; do
+            [ -n "$mirror" ] || continue
+            echo "Downloading Zig from $mirror"
+            if curl --fail --silent --show-error --location \
+              --connect-timeout 5 --max-time 60 --speed-limit 102400 --speed-time 15 \
+              --max-filesize 49091960 \
+              "$mirror/zig-linux-x86_64-0.14.0.tar.xz" --output "$file" \
+              && echo "$ZIG_SHA256  $file" | sha256sum -c - > /dev/null; then
+              break
+            fi
+            echo "::warning::Zig download failed or checksum mismatched at $mirror; trying the next source"
+            rm -f "$file"
+          done <<< "$ZIG_MIRRORS"
+        fi
+        if [ ! -f "$file" ] || ! echo "$ZIG_SHA256  $file" | sha256sum -c - > /dev/null; then
+          echo "::error::Could not obtain the verified Zig 0.14.0 archive"
+          exit 1
+        fi
+        tar -xJf "$file" -C "$RUNNER_TEMP"
         echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
       shell: bash
+
+    # Save before tests run so a later test failure does not discard the toolchain cache.
+    - name: Save Zig archive
+      if: steps.zig.outputs.cache-hit != 'true'
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+      with:
+        path: ${{ runner.temp }}/zig-linux-x86_64-0.14.0.tar.xz
+        key: ${{ steps.zig.outputs.cache-primary-key }}
 
     - name: Build bubblewrap helper
       run: |
