@@ -68,10 +68,12 @@ export const CompactTool = Tool.define(
   Effect.gen(function* () {
     const sessions = yield* Session.Service
     const compaction = yield* SessionCompaction.Service
-    // Step that last scheduled a compaction per session. Sibling calls inside
-    // one assistant step share the same ctx.messageID and the same frozen
-    // message snapshot, so only this claim can collapse them.
-    const scheduled = new Map<string, string>()
+    // Compaction claim, one per step. The step's frozen message snapshot is the
+    // WeakMap key, so the claim is released with the snapshot instead of
+    // retaining a sessionID entry for the life of the process; sibling calls
+    // inside one assistant step share the snapshot and the same ctx.messageID,
+    // and only this claim can collapse them.
+    const scheduled = new WeakMap<object, string>()
 
     return {
       description: COMPACT_DESCRIPTION,
@@ -85,7 +87,7 @@ export const CompactTool = Tool.define(
           // synchronously, before the first yield, so concurrent siblings
           // cannot both pass it.
           const pending = latest.tasks.some((task) => task.type === "compaction")
-          if (pending || scheduled.get(ctx.sessionID) === ctx.messageID) {
+          if (pending || scheduled.get(ctx.messages) === ctx.messageID) {
             return {
               title: "context compaction already scheduled",
               metadata: { sessionID: ctx.sessionID, agent: ctx.agent, time: new Date().toISOString(), pending: true },
@@ -93,7 +95,7 @@ export const CompactTool = Tool.define(
                 "A context compaction is already scheduled and will summarise the conversation history when this turn finishes; no additional compaction was scheduled.",
             }
           }
-          scheduled.set(ctx.sessionID, ctx.messageID)
+          scheduled.set(ctx.messages, ctx.messageID)
 
           const session = yield* sessions.get(ctx.sessionID)
           const model = session.model

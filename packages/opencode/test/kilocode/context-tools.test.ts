@@ -255,6 +255,22 @@ describe("kilocode.tool.context", () => {
       }),
     )
 
+    it.instance("releases the step claim so a later step schedules again", () =>
+      Effect.gen(function* () {
+        const tool = yield* CompactTool
+        const def = yield* tool.init()
+
+        yield* def.execute({}, ctx([]))
+        // A later step brings a fresh message snapshot. Reusing the message id
+        // keeps a session-keyed claim visible, so this pins the claim to the
+        // step instead of retaining one entry per session for the process.
+        const later = yield* def.execute({}, ctx([]))
+
+        expect(later.title).toBe("context compaction scheduled")
+        expect(created).toHaveLength(2)
+      }),
+    )
+
     it.instance("still schedules a compaction after the previous one has finished", () =>
       Effect.gen(function* () {
         const result = yield* compact([assistant(tokens(1000, 20), "stop"), user()])
