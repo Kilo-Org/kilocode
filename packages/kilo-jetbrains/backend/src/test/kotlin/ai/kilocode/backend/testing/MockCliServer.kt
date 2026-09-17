@@ -85,6 +85,15 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastAgentBuilderPath: String? = null
     @Volatile var lastAgentBuilderBody: String? = null
     @Volatile var lastAgentBuilderMethod: String? = null
+    @Volatile var marketplaceList = """{"items":[],"installed":{"project":{},"global":{}}}"""
+    @Volatile var marketplaceListStatus = 200
+    @Volatile var marketplaceInstallResult = """{"success":true,"slug":"test"}"""
+    @Volatile var marketplaceInstallStatus = 200
+    @Volatile var marketplaceRemoveResult = """{"success":true,"slug":"test"}"""
+    @Volatile var marketplaceRemoveStatus = 200
+    @Volatile var lastMarketplaceListPath: String? = null
+    @Volatile var lastMarketplaceInstallBody: String? = null
+    @Volatile var lastMarketplaceRemoveBody: String? = null
 
     // Project-scoped REST responses
     @Volatile var providers = """{"all":[],"default":{},"connected":[],"failed":[]}"""
@@ -412,6 +421,18 @@ class MockCliServer : AutoCloseable {
                 bare == "/kilocode/skill/remove" && method == "POST" -> {
                     lastSkillRemoveBody = body
                     respond(output, skillRemoveStatus, if (skillRemoveStatus == 200) "true" else """{"error":"Skill not found"}""")
+                }
+                bare == "/kilocode/marketplace" && method == "GET" -> {
+                    lastMarketplaceListPath = path
+                    respond(output, marketplaceListStatus, marketplaceList)
+                }
+                bare == "/kilocode/marketplace/install" && method == "POST" -> {
+                    lastMarketplaceInstallBody = body
+                    respond(output, marketplaceInstallStatus, marketplaceInstallResult)
+                }
+                bare == "/kilocode/marketplace/remove" && method == "POST" -> {
+                    lastMarketplaceRemoveBody = body
+                    respond(output, marketplaceRemoveStatus, marketplaceRemoveResult)
                 }
                 bare.matches(Regex("/kilocode/session/ses_[^/]+/board")) && method == "GET" -> {
                     lastSessionBoardPath = path

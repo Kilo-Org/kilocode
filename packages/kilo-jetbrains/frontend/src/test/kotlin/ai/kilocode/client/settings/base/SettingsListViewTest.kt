@@ -70,7 +70,14 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val bounds = view.list.getCellBounds(0, 0)
             val tip = view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4)))
 
-            assertEquals("<html>Use &lt;safe&gt; text<br>Across lines</html>", tip)
+            // Escaped, one line per source line, and capped so a long description wraps instead of
+            // stretching the tooltip off screen.
+            assertEquals(
+                "<html><body><div width=\"${UiStyle.Text.tipWidth()}\">" +
+                    "Use &lt;safe&gt; text<br/>Across lines" +
+                    "</div></body></html>",
+                tip,
+            )
         }
     }
 
