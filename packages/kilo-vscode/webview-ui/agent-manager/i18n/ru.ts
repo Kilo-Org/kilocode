@@ -502,6 +502,8 @@ export const dict = {
     "Остатки обычно появляются из-за прерванного удаления, worktree, удалённого вне Kilo, или инструмента, который записал данные в папку после её удаления. Удаления, которые ещё выполняются, здесь не показываются.",
   "agentManager.orphans.helpDelete":
     "Удаление безвозвратно убирает выбранные папки с диска, минуя Корзину. Ни одна ветка и ни один активный worktree не затрагиваются. Размеры показывают, сколько места каждая папка занимает на диске сейчас.",
+  "agentManager.orphans.helpMore": "Показать ещё",
+  "agentManager.orphans.helpLess": "Показать меньше",
   "agentManager.orphans.columnPath": "Путь",
   "agentManager.orphans.columnSize": "Размер",
   "agentManager.orphans.columnContents": "Содержимое",

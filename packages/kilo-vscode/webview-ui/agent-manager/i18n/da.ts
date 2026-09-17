@@ -501,6 +501,8 @@ export const dict = {
     "Efterladte mapper skyldes typisk en sletning, der blev afbrudt, et worktree, der blev fjernet uden om Kilo, eller et værktøj, der skrev i mappen, efter at den blev fjernet. Sletninger, der stadig kører, vises ikke her.",
   "agentManager.orphans.helpDelete":
     "Sletning fjerner de valgte mapper permanent fra disken uden om Papirkurven. Ingen branch og intet aktivt worktree bliver berørt. Størrelserne er den plads, hver mappe fylder på disken lige nu.",
+  "agentManager.orphans.helpMore": "Vis mere",
+  "agentManager.orphans.helpLess": "Vis mindre",
   "agentManager.orphans.columnPath": "Sti",
   "agentManager.orphans.columnSize": "Størrelse",
   "agentManager.orphans.columnContents": "Indhold",

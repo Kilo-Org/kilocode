@@ -509,6 +509,8 @@ export const dict = {
     "Les résidus proviennent généralement d'une suppression interrompue, d'un worktree supprimé en dehors de Kilo ou d'un outil qui a écrit dans le dossier après sa suppression. Les suppressions encore en cours ne sont pas listées ici.",
   "agentManager.orphans.helpDelete":
     "La suppression retire définitivement du disque les dossiers sélectionnés, sans passer par la Corbeille. Aucune branche ni aucun worktree actif n'est touché. Les tailles correspondent à l'espace disque occupé par chaque dossier en ce moment.",
+  "agentManager.orphans.helpMore": "Afficher plus",
+  "agentManager.orphans.helpLess": "Afficher moins",
   "agentManager.orphans.columnPath": "Chemin",
   "agentManager.orphans.columnSize": "Taille",
   "agentManager.orphans.columnContents": "Contenu",

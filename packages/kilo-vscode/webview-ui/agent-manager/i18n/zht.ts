@@ -482,6 +482,8 @@ export const dict = {
     "殘留通常來自中斷的刪除、在 Kilo 之外移除的 worktree，或在資料夾被移除後仍寫入其中的工具。仍在進行中的刪除不會列在這裡。",
   "agentManager.orphans.helpDelete":
     "刪除會將所選資料夾從磁碟永久移除，不會經過資源回收筒。不會變更任何分支或使用中的 worktree。顯示的大小是每個資料夾目前在磁碟上佔用的空間。",
+  "agentManager.orphans.helpMore": "顯示更多",
+  "agentManager.orphans.helpLess": "顯示更少",
   "agentManager.orphans.columnPath": "路徑",
   "agentManager.orphans.columnSize": "大小",
   "agentManager.orphans.columnContents": "內容",

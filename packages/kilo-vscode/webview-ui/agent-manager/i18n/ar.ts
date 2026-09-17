@@ -492,6 +492,8 @@ export const dict = {
     "تنتج المجلدات المتبقية عادةً عن عملية حذف توقفت في منتصفها، أو worktree أُزيل من خارج Kilo، أو أداة كتبت في المجلد بعد إزالته. أما عمليات الحذف التي لا تزال قيد التنفيذ فلا تظهر هنا.",
   "agentManager.orphans.helpDelete":
     "يؤدي الحذف إلى إزالة المجلدات المحددة من القرص نهائيًا دون المرور بسلة المحذوفات. ولا يتأثر أي فرع أو أي worktree نشط. تمثل الأحجام المساحة التي يشغلها كل مجلد على القرص في الوقت الحالي.",
+  "agentManager.orphans.helpMore": "إظهار المزيد",
+  "agentManager.orphans.helpLess": "إظهار أقل",
   "agentManager.orphans.columnPath": "المسار",
   "agentManager.orphans.columnSize": "الحجم",
   "agentManager.orphans.columnContents": "المحتوى",

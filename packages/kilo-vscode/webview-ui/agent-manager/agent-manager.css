@@ -995,6 +995,28 @@ html[data-theme="kilo-vscode"]
   list-style: disc outside;
 }
 
+.am-orphan-help-toggle {
+  display: block;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--kilo-font-size-13);
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+}
+
+.am-orphan-help-toggle:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
+.am-orphan-help-toggle:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
 .am-orphan-dialog-root [data-slot="dialog-body"] {
   padding: 0 20px 20px;
 }

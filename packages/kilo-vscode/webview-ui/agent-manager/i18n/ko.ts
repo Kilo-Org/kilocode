@@ -494,6 +494,8 @@ export const dict = {
     "남은 폴더는 보통 중단된 삭제, Kilo 외부에서 제거된 worktree 또는 폴더가 제거된 뒤에 그 안에 기록한 도구 때문에 생깁니다. 아직 진행 중인 삭제는 여기에 표시되지 않습니다.",
   "agentManager.orphans.helpDelete":
     "삭제하면 선택한 폴더가 휴지통을 거치지 않고 디스크에서 영구적으로 제거됩니다. 브랜치와 사용 중인 worktree는 변경되지 않습니다. 크기는 각 폴더가 현재 디스크에서 차지하는 용량입니다.",
+  "agentManager.orphans.helpMore": "더보기",
+  "agentManager.orphans.helpLess": "간략히 보기",
   "agentManager.orphans.columnPath": "경로",
   "agentManager.orphans.columnSize": "크기",
   "agentManager.orphans.columnContents": "내용",

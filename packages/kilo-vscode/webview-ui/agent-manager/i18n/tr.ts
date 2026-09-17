@@ -509,6 +509,8 @@ export const dict = {
     "Artakalan klasörler genellikle yarıda kesilen bir silme işleminden, Kilo dışında kaldırılan bir worktree'den veya klasör kaldırıldıktan sonra içine yazan bir araçtan kaynaklanır. Hâlâ sürmekte olan silme işlemleri burada listelenmez.",
   "agentManager.orphans.helpDelete":
     "Silme işlemi, seçili klasörleri Geri Dönüşüm Kutusu'na göndermeden diskten kalıcı olarak kaldırır. Hiçbir dal ve etkin worktree etkilenmez. Boyutlar, her klasörün şu anda diskte kapladığı alanı gösterir.",
+  "agentManager.orphans.helpMore": "Daha fazla göster",
+  "agentManager.orphans.helpLess": "Daha az göster",
   "agentManager.orphans.columnPath": "Yol",
   "agentManager.orphans.columnSize": "Boyut",
   "agentManager.orphans.columnContents": "İçerik",

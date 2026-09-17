@@ -509,6 +509,8 @@ export const dict = {
     "Restanten komen meestal van een verwijdering die is afgebroken, een worktree die buiten Kilo is verwijderd of een tool die na het verwijderen nog in de map heeft geschreven. Verwijderingen die nog bezig zijn, staan hier niet.",
   "agentManager.orphans.helpDelete":
     "Verwijderen haalt de geselecteerde mappen definitief van de schijf, zonder via de Prullenbak te gaan. Er wordt geen branch en geen actieve worktree aangeraakt. De groottes zijn de ruimte die elke map op dit moment op de schijf inneemt.",
+  "agentManager.orphans.helpMore": "Meer weergeven",
+  "agentManager.orphans.helpLess": "Minder weergeven",
   "agentManager.orphans.columnPath": "Pad",
   "agentManager.orphans.columnSize": "Grootte",
   "agentManager.orphans.columnContents": "Inhoud",

@@ -500,6 +500,8 @@ export const dict = {
     "Pozostałości zwykle wynikają z przerwanego usuwania, worktree usuniętego poza Kilo albo narzędzia, które zapisało coś w folderze po jego usunięciu. Usuwanie, które nadal trwa, nie jest tu wymieniane.",
   "agentManager.orphans.helpDelete":
     "Usunięcie trwale usuwa wybrane foldery z dysku, bez przenoszenia ich do Kosza. Żadna gałąź ani żaden aktywny worktree nie zostaje zmieniony. Rozmiary pokazują, ile miejsca każdy folder zajmuje na dysku w tej chwili.",
+  "agentManager.orphans.helpMore": "Pokaż więcej",
+  "agentManager.orphans.helpLess": "Pokaż mniej",
   "agentManager.orphans.columnPath": "Ścieżka",
   "agentManager.orphans.columnSize": "Rozmiar",
   "agentManager.orphans.columnContents": "Zawartość",

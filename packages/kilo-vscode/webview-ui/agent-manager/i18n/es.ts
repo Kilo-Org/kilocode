@@ -509,6 +509,8 @@ export const dict = {
     "Los restos suelen provenir de una eliminación que se interrumpió, de un worktree eliminado fuera de Kilo o de una herramienta que escribió en la carpeta después de que se eliminara. Las eliminaciones que aún están en curso no aparecen aquí.",
   "agentManager.orphans.helpDelete":
     "Al eliminar, las carpetas seleccionadas se borran del disco de forma definitiva, sin pasar por la Papelera. No se toca ninguna rama ni ningún worktree activo. Los tamaños son el espacio que cada carpeta ocupa en el disco ahora mismo.",
+  "agentManager.orphans.helpMore": "Mostrar más",
+  "agentManager.orphans.helpLess": "Mostrar menos",
   "agentManager.orphans.columnPath": "Ruta",
   "agentManager.orphans.columnSize": "Tamaño",
   "agentManager.orphans.columnContents": "Contenido",

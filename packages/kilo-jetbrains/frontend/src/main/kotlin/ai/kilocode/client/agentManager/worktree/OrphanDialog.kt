@@ -13,6 +13,7 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.InlineBanner
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.xml.util.XmlStringUtil
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -96,6 +97,15 @@ internal class OrphanDialog(
     private var center: JComponent? = null
     private var north: JComponent? = null
 
+    // The three bullets are the collapsible detail; the intro sentence always stays visible so
+    // collapsing never hides the point of the dialog, only the specifics. `helpWidth` is fixed at
+    // banner creation (see createNorthPanel) and reused on every toggle so the HTML body keeps
+    // wrapping at the same width instead of the dialog's current, possibly user-resized, one.
+    private var helpExpanded = false
+    private var helpWidth = 0
+    private lateinit var helpBanner: InlineBanner
+    private lateinit var helpToggle: LinkLabel<Runnable>
+
     init {
         title = KiloBundle.message("worktree.orphans.dialogTitle")
         setOKButtonText(deleteLabel())
@@ -122,25 +132,47 @@ internal class OrphanDialog(
         // Bounded in CSS pixels, which are this component's own scaled pixels, so the text wraps with the
         // table instead of stretching the dialog to one long line. Budget is the dialog content width less
         // the banner's own padding (read from it rather than restated) and the strip its status icon takes.
-        val width = JBUI.scale(WIDTH) - 2 * UiStyle.Gap.pad() - banner.insets.left - banner.insets.right -
+        helpWidth = JBUI.scale(WIDTH) - 2 * UiStyle.Gap.pad() - banner.insets.left - banner.insets.right -
             EditorNotificationPanel.Status.Info.icon.iconWidth - UiStyle.Gap.lg()
-        val body = buildString {
-            append("<body style='width: ${width}px'>")
-            append(escape("worktree.orphans.help.intro"))
-            append("<ul style='margin-top: ${UiStyle.Gap.md()}px; margin-bottom: 0'>")
-            append("<li>").append(escape("worktree.orphans.help.checkout")).append("</li>")
-            append("<li>").append(escape("worktree.orphans.help.causes")).append("</li>")
-            append("<li>").append(escape("worktree.orphans.help.delete")).append("</li>")
-            append("</ul>")
-            append("</body>")
-        }
-        banner.setMessage(XmlStringUtil.wrapInHtml(body))
+        helpBanner = banner
+        banner.setMessage(XmlStringUtil.wrapInHtml(helpBody()))
+        // Public overload only — createActionLabel/removeAllActions are @ApiStatus.Internal. The link
+        // lands in InlineBanner's action row, which InlineBannerBase's VerticalLayout places under the
+        // message, so it reads as "intro [+ bullets] / Show more|less" in both states.
+        helpToggle = banner.addAction(helpToggleLabel(), null) { toggleHelp() }
         val panel = BorderLayoutPanel()
         // The outer margin goes on a wrapper: the banner's own border is padding inside its rounded fill.
         panel.addToCenter(banner)
         panel.border = JBUI.Borders.empty(UiStyle.Gap.PAD, UiStyle.Gap.PAD, 0, UiStyle.Gap.PAD)
         north = banner
         return panel
+    }
+
+    private fun helpBody(): String = buildString {
+        append("<body style='width: ${helpWidth}px'>")
+        append(escape("worktree.orphans.help.intro"))
+        if (helpExpanded) {
+            append("<ul style='margin-top: ${UiStyle.Gap.md()}px; margin-bottom: 0'>")
+            append("<li>").append(escape("worktree.orphans.help.checkout")).append("</li>")
+            append("<li>").append(escape("worktree.orphans.help.causes")).append("</li>")
+            append("<li>").append(escape("worktree.orphans.help.delete")).append("</li>")
+            append("</ul>")
+        }
+        append("</body>")
+    }
+
+    private fun helpToggleLabel(): String =
+        KiloBundle.message(if (helpExpanded) "worktree.orphans.help.less" else "worktree.orphans.help.more")
+
+    private fun toggleHelp() {
+        helpExpanded = !helpExpanded
+        helpBanner.setMessage(XmlStringUtil.wrapInHtml(helpBody()))
+        helpToggle.text = helpToggleLabel()
+        helpBanner.revalidate()
+        helpBanner.repaint()
+        // The banner grew or shrank; repack so the table keeps its own WIDTH x HEIGHT instead of being
+        // squeezed by (or leaving slack under) the new banner height.
+        pack()
     }
 
     override fun createCenterPanel(): JComponent {

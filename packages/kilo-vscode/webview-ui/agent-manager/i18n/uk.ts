@@ -510,6 +510,8 @@ export const dict = {
     "Залишки зазвичай з'являються через перерване видалення, worktree, видалений поза Kilo, або інструмент, який записав дані до теки після її видалення. Видалення, які ще тривають, тут не показуються.",
   "agentManager.orphans.helpDelete":
     "Видалення остаточно вилучає вибрані теки з диска, не переміщуючи їх до Кошика. Жодна гілка й жоден активний worktree не змінюються. Розміри показують, скільки місця кожна тека займає на диску зараз.",
+  "agentManager.orphans.helpMore": "Показати більше",
+  "agentManager.orphans.helpLess": "Показати менше",
   "agentManager.orphans.columnPath": "Шлях",
   "agentManager.orphans.columnSize": "Розмір",
   "agentManager.orphans.columnContents": "Зміст",

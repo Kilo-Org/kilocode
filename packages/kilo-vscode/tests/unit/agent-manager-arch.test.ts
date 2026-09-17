@@ -257,10 +257,23 @@ describe("Agent Manager leftover worktree folders", () => {
 
   it("explains the list in the dialog header before offering a bulk delete", () => {
     const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
-    expect(source).toContain("description={<OrphanHelp />}")
-    for (const key of ["helpIntro", "helpCheckout", "helpCauses", "helpDelete"]) {
+    expect(source).toContain("description={<OrphanHelp expanded={helpExpanded()} onToggle={() => setHelpExpanded((prev) => !prev)} />}")
+    for (const key of ["helpIntro", "helpCheckout", "helpCauses", "helpDelete", "helpMore", "helpLess"]) {
       expect(source, `header explanation covers ${key}`).toContain(`agentManager.orphans.${key}`)
     }
+  })
+
+  it("collapses the bullet detail behind a toggle, keeping the intro sentence always visible", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
+    const helpIntro = source.indexOf("agentManager.orphans.helpIntro")
+    const showGate = source.indexOf("<Show when={props.expanded}>")
+    const toggle = source.indexOf('class="am-orphan-help-toggle"')
+    expect(helpIntro, "intro renders unconditionally").toBeGreaterThan(-1)
+    expect(showGate, "bullets are gated behind expanded state").toBeGreaterThan(helpIntro)
+    expect(toggle, "toggle button follows the bullets").toBeGreaterThan(showGate)
+
+    const css = readAllCss()
+    expect(css).toContain(".am-orphan-help-toggle {")
   })
 
   it("uses the shared check glyph for selection instead of a bespoke one", () => {

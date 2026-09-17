@@ -509,6 +509,8 @@ export const dict = {
     "Übrig gebliebene Ordner entstehen meist durch eine abgebrochene Löschung, einen außerhalb von Kilo entfernten Worktree oder ein Tool, das nach dem Entfernen noch in den Ordner geschrieben hat. Löschvorgänge, die noch laufen, werden hier nicht aufgeführt.",
   "agentManager.orphans.helpDelete":
     "Beim Löschen werden die ausgewählten Ordner endgültig von der Festplatte entfernt, ohne den Papierkorb zu durchlaufen. Kein Branch und kein aktiver Worktree wird angetastet. Die Größen zeigen, wie viel Speicherplatz jeder Ordner aktuell belegt.",
+  "agentManager.orphans.helpMore": "Mehr anzeigen",
+  "agentManager.orphans.helpLess": "Weniger anzeigen",
   "agentManager.orphans.columnPath": "Pfad",
   "agentManager.orphans.columnSize": "Größe",
   "agentManager.orphans.columnContents": "Inhalt",

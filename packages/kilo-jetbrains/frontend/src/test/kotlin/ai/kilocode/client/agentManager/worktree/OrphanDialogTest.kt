@@ -9,6 +9,7 @@ import com.intellij.ui.InlineBanner
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.ui.table.JBTable
 import java.awt.Component
 import java.awt.Container
@@ -133,8 +134,35 @@ class OrphanDialogTest : BasePlatformTestCase() {
         )
         assertTrue("expected the worktree directory to be named -> $text", text.contains(".kilo/worktrees"))
         assertTrue("expected git detection to be explained -> $text", text.contains("git"))
-        assertTrue("expected the checkout case to be explained -> $text", text.contains("uncommitted"))
         assertFalse("every help string must resolve -> $text", text.contains("!worktree.orphans"))
+    }
+
+    /**
+     * The bullet detail (uncommitted-work warning, likely causes, delete semantics) is collapsed
+     * behind a Show more / Show less link; only the intro sentence is visible up front.
+     */
+    fun `test the header explanation is collapsed to its intro until Show more is clicked`() {
+        open(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        val north = edt { requireNotNull(dialog).northComponent() }
+
+        val collapsedText = edt { messageText(north) }
+        assertTrue("expected the intro up front -> $collapsedText", collapsedText.contains(".kilo/worktrees"))
+        assertFalse("bullets must stay hidden until expanded -> $collapsedText", collapsedText.contains("uncommitted"))
+
+        val toggle = edt { linkLabel(north) }
+        assertEquals("Show more", edt { toggle.text })
+
+        edt { toggle.doClick() }
+
+        val expandedText = edt { messageText(north) }
+        assertTrue("expected the checkout case once expanded -> $expandedText", expandedText.contains("uncommitted"))
+        assertEquals("Show less", edt { toggle.text })
+
+        edt { toggle.doClick() }
+
+        val recollapsedText = edt { messageText(north) }
+        assertFalse("bullets must hide again on a second click -> $recollapsedText", recollapsedText.contains("uncommitted"))
+        assertEquals("Show more", edt { toggle.text })
     }
 
     /**
@@ -175,6 +203,17 @@ class OrphanDialogTest : BasePlatformTestCase() {
     private fun footer(): JBLabel = components(edt { requireNotNull(dialog).centerComponent() }).filterIsInstance<JBLabel>().first()
 
     private fun column(table: JBTable, index: Int): TableColumn = table.columnModel.getColumn(index)
+
+    private fun messageText(north: Component): String =
+        components(north).filterIsInstance<JEditorPane>().joinToString(" ") { it.text ?: "" }
+
+    /**
+     * [InlineBanner] always carries a second, initially-invisible `LinkLabel` — its overflow
+     * "More" dropdown, shown only once there are 4+ actions — so the one visible link is ours.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun linkLabel(north: Component): LinkLabel<Runnable> =
+        components(north).filterIsInstance<LinkLabel<*>>().single { it.isVisible } as LinkLabel<Runnable>
 
     private fun components(root: Component): List<Component> = buildList {
         add(root)

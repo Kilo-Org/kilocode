@@ -501,6 +501,8 @@ export const dict = {
     "باقی‌مانده‌ها معمولاً از حذفی که نیمه‌کاره مانده، worktree‌ای که بیرون از Kilo حذف شده، یا ابزاری که پس از حذف پوشه در آن نوشته است به وجود می‌آیند. حذف‌هایی که هنوز در حال اجرا هستند اینجا فهرست نمی‌شوند.",
   "agentManager.orphans.helpDelete":
     "حذف، پوشه‌های انتخاب‌شده را برای همیشه از دیسک پاک می‌کند و آن‌ها را به سبد بازیافت نمی‌فرستد. هیچ شاخه و هیچ worktree فعالی دست‌کاری نمی‌شود. حجم‌ها نشان می‌دهند هر پوشه در این لحظه چه مقدار فضای دیسک را اشغال کرده است.",
+  "agentManager.orphans.helpMore": "نمایش بیشتر",
+  "agentManager.orphans.helpLess": "نمایش کمتر",
   "agentManager.orphans.columnPath": "مسیر",
   "agentManager.orphans.columnSize": "حجم",
   "agentManager.orphans.columnContents": "محتوا",

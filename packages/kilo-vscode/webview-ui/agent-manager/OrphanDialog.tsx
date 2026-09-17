@@ -33,18 +33,29 @@ function revealLabelKey(userAgent: string | undefined): string {
  * directory Kilo owns, and "delete 48 folders" is not a decision anybody can make from paths alone.
  *
  * Rendered inside the shared dialog's description slot, which is a `<p>`, so every block here is a
- * span laid out by CSS rather than a `<ul>`.
+ * span laid out by CSS rather than a `<ul>`. The three bullets are the collapsible detail — the intro
+ * sentence always stays visible, so collapsing never hides the point of the dialog, only the specifics.
  */
-const OrphanHelp: Component = () => {
+export const OrphanHelp: Component<{ expanded: boolean; onToggle: () => void }> = (props) => {
   const { t } = useLanguage()
   return (
     <>
       {t("agentManager.orphans.helpIntro")}
-      <span class="am-orphan-help-list">
-        <span>{t("agentManager.orphans.helpCheckout")}</span>
-        <span>{t("agentManager.orphans.helpCauses")}</span>
-        <span>{t("agentManager.orphans.helpDelete")}</span>
-      </span>
+      <Show when={props.expanded}>
+        <span class="am-orphan-help-list">
+          <span>{t("agentManager.orphans.helpCheckout")}</span>
+          <span>{t("agentManager.orphans.helpCauses")}</span>
+          <span>{t("agentManager.orphans.helpDelete")}</span>
+        </span>
+      </Show>
+      <button
+        type="button"
+        class="am-orphan-help-toggle"
+        aria-expanded={props.expanded}
+        onClick={props.onToggle}
+      >
+        {props.expanded ? t("agentManager.orphans.helpLess") : t("agentManager.orphans.helpMore")}
+      </button>
     </>
   )
 }
@@ -58,6 +69,7 @@ interface OrphanDialogProps {
 
 export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
   const { t } = useLanguage()
+  const [helpExpanded, setHelpExpanded] = createSignal(false)
   const [selected, setSelected] = createSignal(defaultOrphanSelection(props.orphans))
   const stats = () => orphanSelectionStats(props.orphans, selected())
   const allChecked = () => props.orphans.length > 0 && props.orphans.every((orphan) => selected().has(orphan.path))
@@ -80,7 +92,7 @@ export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
     <Dialog
       class="am-orphan-dialog-root"
       title={t("agentManager.orphans.dialogTitle")}
-      description={<OrphanHelp />}
+      description={<OrphanHelp expanded={helpExpanded()} onToggle={() => setHelpExpanded((prev) => !prev)} />}
       size="large"
     >
       <div class="am-orphan-dialog">

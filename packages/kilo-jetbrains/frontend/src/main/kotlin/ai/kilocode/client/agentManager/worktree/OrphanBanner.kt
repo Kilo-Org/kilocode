@@ -76,7 +76,9 @@ internal class OrphanBanner(
             if (total != null) {
                 KiloBundle.message("worktree.orphans.summarySize", count, StringUtil.formatFileSize(total))
             } else {
-                KiloBundle.message("worktree.orphans.summary", count)
+                // Sizing is a background fs walk (see requestSizes/refresh above) — while it is in
+                // flight, say so instead of showing the count as if it were the final answer.
+                "${KiloBundle.message("worktree.orphans.summary", count)} \u00b7 ${KiloBundle.message("worktree.orphans.calculating")}"
             },
         )
         createActionLabel(KiloBundle.message("worktree.orphans.resolve")) { openDialog() }

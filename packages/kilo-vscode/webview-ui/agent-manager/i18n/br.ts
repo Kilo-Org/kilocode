@@ -504,6 +504,8 @@ export const dict = {
     "As pastas remanescentes geralmente vêm de uma exclusão interrompida, de um worktree removido fora do Kilo ou de uma ferramenta que gravou na pasta depois que ela foi removida. Exclusões que ainda estão em andamento não aparecem aqui.",
   "agentManager.orphans.helpDelete":
     "A exclusão remove as pastas selecionadas do disco definitivamente, sem passar pela Lixeira. Nenhuma branch e nenhum worktree ativo é afetado. Os tamanhos são o espaço que cada pasta ocupa no disco neste momento.",
+  "agentManager.orphans.helpMore": "Mostrar mais",
+  "agentManager.orphans.helpLess": "Mostrar menos",
   "agentManager.orphans.columnPath": "Caminho",
   "agentManager.orphans.columnSize": "Tamanho",
   "agentManager.orphans.columnContents": "Conteúdo",

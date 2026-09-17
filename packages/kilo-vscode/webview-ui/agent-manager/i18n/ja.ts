@@ -503,6 +503,8 @@ export const dict = {
     "残されたフォルダーは通常、中断された削除、Kilo の外で削除された worktree、または削除後にフォルダーへ書き込んだツールが原因で発生します。実行中の削除はここには表示されません。",
   "agentManager.orphans.helpDelete":
     "削除すると、選択したフォルダーはゴミ箱を経由せずにディスクから完全に削除されます。ブランチや使用中の worktree には影響しません。サイズは各フォルダーが現在ディスク上で占めている容量です。",
+  "agentManager.orphans.helpMore": "さらに表示",
+  "agentManager.orphans.helpLess": "表示を減らす",
   "agentManager.orphans.columnPath": "パス",
   "agentManager.orphans.columnSize": "サイズ",
   "agentManager.orphans.columnContents": "内容",

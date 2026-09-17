@@ -97,6 +97,8 @@ export const dict = {
     "Leftovers usually come from a deletion that was interrupted, a worktree removed outside Kilo, or a tool that wrote into the folder after it was removed. Deletions that are still running are not listed here.",
   "agentManager.orphans.helpDelete":
     "Deleting removes the selected folders from disk for good, without going through the Trash. No branch and no active worktree is touched. Sizes are what each folder takes up on disk right now.",
+  "agentManager.orphans.helpMore": "Show more",
+  "agentManager.orphans.helpLess": "Show less",
   "agentManager.orphans.columnPath": "Path",
   "agentManager.orphans.columnSize": "Size",
   "agentManager.orphans.columnContents": "Contents",

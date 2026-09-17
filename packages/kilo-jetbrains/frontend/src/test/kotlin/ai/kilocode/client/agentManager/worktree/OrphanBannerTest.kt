@@ -65,10 +65,10 @@ class OrphanBannerTest : BasePlatformTestCase() {
         flush()
 
         assertTrue(edt { banner.isVisible })
-        assertEquals("1 leftover worktree folder(s)", edt { banner.text })
+        assertEquals("1 leftover worktree folder(s) \u00b7 calculating size\u2026", edt { banner.text })
 
         gate.complete(Unit)
-        assertTrue(coroutines.pumpUntil { edt { banner.text } != "1 leftover worktree folder(s)" })
+        assertTrue(coroutines.pumpUntil { edt { banner.text } != "1 leftover worktree folder(s) \u00b7 calculating size\u2026" })
 
         // The exact size format is StringUtil.formatFileSize's own choice — only assert the size
         // pass landed, not the number's presentation.

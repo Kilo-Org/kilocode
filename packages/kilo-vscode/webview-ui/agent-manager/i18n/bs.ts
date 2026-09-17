@@ -500,6 +500,8 @@ export const dict = {
     "Zaostali folderi najčešće nastaju zbog prekinutog brisanja, worktreeja uklonjenog izvan aplikacije Kilo ili alata koji je pisao u folder nakon što je uklonjen. Brisanja koja su još u toku nisu navedena ovdje.",
   "agentManager.orphans.helpDelete":
     "Brisanje trajno uklanja odabrane foldere s diska, bez prebacivanja u Korpu za smeće. Nijedna grana niti aktivan worktree se ne dira. Veličine pokazuju koliko prostora svaki folder trenutno zauzima na disku.",
+  "agentManager.orphans.helpMore": "Prikaži još",
+  "agentManager.orphans.helpLess": "Prikaži manje",
   "agentManager.orphans.columnPath": "Putanja",
   "agentManager.orphans.columnSize": "Veličina",
   "agentManager.orphans.columnContents": "Sadržaj",

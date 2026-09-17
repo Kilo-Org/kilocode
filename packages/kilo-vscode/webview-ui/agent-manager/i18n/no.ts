@@ -499,6 +499,8 @@ export const dict = {
     "Gjenglemte mapper skyldes vanligvis en sletting som ble avbrutt, et worktree som ble fjernet utenom Kilo, eller et verktøy som skrev til mappen etter at den ble fjernet. Slettinger som fortsatt pågår, vises ikke her.",
   "agentManager.orphans.helpDelete":
     "Sletting fjerner de valgte mappene permanent fra disken, uten å gå via Papirkurven. Ingen branch og ingen aktive worktrees blir berørt. Størrelsene viser hvor mye plass hver mappe bruker på disken akkurat nå.",
+  "agentManager.orphans.helpMore": "Vis mer",
+  "agentManager.orphans.helpLess": "Vis færre",
   "agentManager.orphans.columnPath": "Bane",
   "agentManager.orphans.columnSize": "Størrelse",
   "agentManager.orphans.columnContents": "Innhold",

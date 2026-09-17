@@ -515,6 +515,8 @@ export const dict = {
     "Le cartelle rimaste derivano di solito da un'eliminazione interrotta, da un worktree rimosso fuori da Kilo o da uno strumento che ha scritto nella cartella dopo la rimozione. Le eliminazioni ancora in corso non sono elencate qui.",
   "agentManager.orphans.helpDelete":
     "L'eliminazione rimuove definitivamente dal disco le cartelle selezionate, senza passare dal Cestino. Nessun branch e nessun worktree attivo viene toccato. Le dimensioni indicano lo spazio che ogni cartella occupa sul disco in questo momento.",
+  "agentManager.orphans.helpMore": "Mostra altro",
+  "agentManager.orphans.helpLess": "Mostra meno",
   "agentManager.orphans.columnPath": "Percorso",
   "agentManager.orphans.columnSize": "Dimensione",
   "agentManager.orphans.columnContents": "Contenuto",

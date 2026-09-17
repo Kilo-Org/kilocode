@@ -491,6 +491,8 @@ export const dict = {
     "โฟลเดอร์ตกค้างมักเกิดจากการลบที่ถูกขัดจังหวะ worktree ที่ถูกลบจากภายนอก Kilo หรือเครื่องมือที่เขียนข้อมูลลงในโฟลเดอร์หลังจากที่ถูกลบไปแล้ว การลบที่ยังทำงานอยู่จะไม่แสดงที่นี่",
   "agentManager.orphans.helpDelete":
     "การลบจะนำโฟลเดอร์ที่เลือกออกจากดิสก์อย่างถาวรโดยไม่ผ่านถังขยะ ไม่มีแบรนช์และไม่มี worktree ที่ใช้งานอยู่ถูกแตะต้อง ขนาดที่แสดงคือพื้นที่ที่แต่ละโฟลเดอร์ใช้บนดิสก์ในขณะนี้",
+  "agentManager.orphans.helpMore": "แสดงเพิ่มเติม",
+  "agentManager.orphans.helpLess": "แสดงน้อยลง",
   "agentManager.orphans.columnPath": "พาธ",
   "agentManager.orphans.columnSize": "ขนาด",
   "agentManager.orphans.columnContents": "เนื้อหา",
