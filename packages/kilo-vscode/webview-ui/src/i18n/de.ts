@@ -214,6 +214,7 @@ export const dict = {
     "Automatische Genehmigung ist aktiviert. Berechtigungsanfragen werden automatisch genehmigt.",
   "prompt.action.autoApprove.disabled":
     "Automatische Genehmigung ist deaktiviert. Klicken, um Berechtigungsanfragen automatisch zu genehmigen.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox-Eskalationsanfragen sind immer ausgeschlossen.",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
   "prompt.action.sandbox.enable": "Sandbox aktivieren",
@@ -232,6 +233,8 @@ export const dict = {
   "prompt.action.sandbox.unrestricted": "Uneingeschränkt",
   "prompt.action.sandbox.description.enabled":
     "Schreibvorgänge sind auf die Projekt- und Kilo-Verzeichnisse beschränkt.",
+  "prompt.action.sandbox.description.escalation":
+    "Berechtigungsregeln und automatische Genehmigung gelten innerhalb der Sandbox. Befehle, die sie verlassen müssen, fragen immer.",
   "prompt.action.sandbox.description.disabled":
     "Klicken, um Schreibvorgänge im Dateisystem und den Netzwerkzugriff einzuschränken.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -277,9 +280,9 @@ export const dict = {
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
-  "notification.permission.titleSandboxEscalation": "Git-Vorgang außerhalb der Sandbox zulassen?",
+  "notification.permission.titleSandboxEscalation": "Außerhalb der Sandbox ausführen?",
   "notification.permission.descriptionSandboxEscalation":
-    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
+    "Dies führt den gesamten Befehl mit entfernten Dateisystem- und Netzwerkeinschränkungen aus, nur für diesen Befehl. Git muss in .git schreiben, das in der Sandbox schreibgeschützt ist und bei einem verknüpften Worktree außerhalb des Worktrees liegt. Bash-Erlaubnisregeln und die automatische Genehmigung genehmigen diese Anfrage nie automatisch.",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.reject": "Ablehnen",
   "ui.permission.feedbackPlaceholder": "Teile Kilo mit, was es anders machen soll",

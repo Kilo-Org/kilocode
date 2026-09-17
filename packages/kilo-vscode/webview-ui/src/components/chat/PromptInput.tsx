@@ -2160,11 +2160,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Tooltip>
           </Show>
           <Tooltip
-            value={
-              autoApprove()
-                ? language.t("prompt.action.autoApprove.enabled")
-                : language.t("prompt.action.autoApprove.disabled")
-            }
+            value={`${language.t(
+              autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+            )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
             placement="top"
             openDelay={0}
           >

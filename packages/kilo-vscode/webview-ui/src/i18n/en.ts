@@ -202,10 +202,9 @@ export const dict = {
   "prompt.action.indexing": "Indexing settings",
   "prompt.action.autoApprove.enable": "Enable auto-approve",
   "prompt.action.autoApprove.disable": "Disable auto-approve",
-  "prompt.action.autoApprove.enabled":
-    "Auto-approve is enabled. Permission prompts will be approved automatically. Sandbox escalation prompts are always excluded.",
-  "prompt.action.autoApprove.disabled":
-    "Auto-approve is disabled. Click to approve permission prompts automatically. Sandbox escalation prompts are always excluded.",
+  "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
+  "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox escalation prompts are always excluded.",
   "prompt.action.sandbox.enable": "Enable sandbox",
   "prompt.action.sandbox.disable": "Disable sandbox",
   "prompt.action.sandbox.enabled":
@@ -220,8 +219,9 @@ export const dict = {
   "prompt.action.sandbox.network.blocked": "Blocked",
   "prompt.action.sandbox.network.allowed": "Allowed",
   "prompt.action.sandbox.unrestricted": "Unrestricted",
-  "prompt.action.sandbox.description.enabled":
-    "Writes are limited to the project and Kilo directories. Permission rules and auto-approve apply inside the sandbox. Commands that must leave it always ask.",
+  "prompt.action.sandbox.description.enabled": "Writes are limited to the project and Kilo directories.",
+  "prompt.action.sandbox.description.escalation":
+    "Permission rules and auto-approve apply inside the sandbox. Commands that must leave it always ask.",
   "prompt.action.sandbox.description.disabled": "Click to restrict filesystem writes and network access.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",

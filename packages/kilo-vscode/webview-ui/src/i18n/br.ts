@@ -208,6 +208,7 @@ export const dict = {
     "A aprovação automática está ativada. Solicitações de permissão serão aprovadas automaticamente.",
   "prompt.action.autoApprove.disabled":
     "A aprovação automática está desativada. Clique para aprovar solicitações de permissão automaticamente.",
+  "prompt.action.autoApprove.sandboxExcluded": "Solicitações de escalonamento da sandbox são sempre excluídas.",
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.unrestricted": "Sem restrições",
   "prompt.action.sandbox.description.enabled":
     "As operações de escrita são limitadas aos diretórios do projeto e do Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Regras de permissão e aprovação automática se aplicam dentro da sandbox. Comandos que precisam sair dela sempre perguntam.",
   "prompt.action.sandbox.description.disabled":
     "Clique para restringir as operações de escrita no sistema de arquivos e o acesso à rede.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,9 +275,9 @@ export const dict = {
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.titleSkillShell": "Executar comandos de shell da skill “{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Permitir operação do Git fora da sandbox?",
+  "notification.permission.titleSandboxEscalation": "Executar fora da sandbox?",
   "notification.permission.descriptionSandboxEscalation":
-    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
+    "Isto executa todo o comando sem as restrições de sistema de arquivos e rede, apenas para este comando. O Git precisa gravar em .git, que é somente leitura na sandbox e fica fora da árvore de trabalho em um worktree vinculado. Regras de permissão do Bash e a aprovação automática nunca aprovam esta solicitação automaticamente.",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
   "ui.permission.reject": "Rejeitar",
   "ui.permission.feedbackPlaceholder": "Diga ao Kilo o que fazer de forma diferente",

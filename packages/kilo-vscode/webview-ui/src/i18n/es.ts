@@ -209,6 +209,7 @@ export const dict = {
     "La aprobación automática está activada. Las solicitudes de permisos se aprobarán automáticamente.",
   "prompt.action.autoApprove.disabled":
     "La aprobación automática está desactivada. Haz clic para aprobar solicitudes de permisos automáticamente.",
+  "prompt.action.autoApprove.sandboxExcluded": "Las solicitudes de escalado de la sandbox siempre se excluyen.",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Permitida",
   "prompt.action.sandbox.unrestricted": "Sin restricciones",
   "prompt.action.sandbox.description.enabled": "Las escrituras se limitan a los directorios del proyecto y de Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Las reglas de permisos y la aprobación automática se aplican dentro de la sandbox. Los comandos que deben salir de ella siempre preguntan.",
   "prompt.action.sandbox.description.disabled":
     "Haz clic para restringir las escrituras en el sistema de archivos y el acceso a la red.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,9 +275,9 @@ export const dict = {
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
   "notification.permission.titleSkillShell": "¿Ejecutar comandos de shell de la habilidad «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "¿Permitir la operación de Git fuera del entorno aislado?",
+  "notification.permission.titleSandboxEscalation": "¿Ejecutar fuera de la sandbox?",
   "notification.permission.descriptionSandboxEscalation":
-    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
+    "Esto ejecuta todo el comando con las restricciones de sistema de archivos y de red eliminadas, solo para este comando. Git debe escribir en .git, que es de solo lectura en la sandbox y está fuera del árbol de trabajo en un worktree vinculado. Las reglas de permiso de Bash y la aprobación automática nunca aprueban esta solicitud automáticamente.",
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
   "ui.permission.reject": "Rechazar",
   "ui.permission.feedbackPlaceholder": "Dile a Kilo qué debe hacer de otra forma",

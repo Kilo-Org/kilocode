@@ -209,6 +209,7 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "Автоматичне схвалення увімкнено. Запити дозволів схвалюватимуться автоматично.",
   "prompt.action.autoApprove.disabled":
     "Автоматичне схвалення вимкнено. Натисніть, щоб автоматично схвалювати запити дозволів.",
+  "prompt.action.autoApprove.sandboxExcluded": "Запити на вихід із пісочниці завжди виключено.",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
   "prompt.action.sandbox.enable": "Увімкнути пісочницю",
@@ -225,6 +226,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Дозволено",
   "prompt.action.sandbox.unrestricted": "Без обмежень",
   "prompt.action.sandbox.description.enabled": "Запис дозволено лише в каталогах проєкту та Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Правила дозволів і автоматичне схвалення діють усередині пісочниці. Команди, яким потрібно вийти з неї, завжди запитують.",
   "prompt.action.sandbox.description.disabled": "Натисніть, щоб обмежити запис у файлову систему та доступ до мережі.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
@@ -271,9 +274,9 @@ export const dict = {
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
+  "notification.permission.titleSandboxEscalation": "Виконати поза пісочницею?",
   "notification.permission.descriptionSandboxEscalation":
-    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
+    "Команда повністю виконується без обмежень файлової системи та мережі, лише для цієї команди. Git має записувати в .git, який доступний лише для читання в пісочниці та розташований поза робочим деревом у пов'язаному worktree. Правила дозволів Bash і автоматичне схвалення ніколи не схвалюють цей запит автоматично.",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.reject": "Відхилити",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",

@@ -187,6 +187,7 @@ export const dict = {
     "L'approvazione automatica è abilitata. Le richieste di autorizzazione saranno approvate automaticamente.",
   "prompt.action.autoApprove.disabled":
     "L'approvazione automatica è disabilitata. Fai clic per approvare automaticamente le richieste di autorizzazione.",
+  "prompt.action.autoApprove.sandboxExcluded": "Le richieste di escalation della sandbox sono sempre escluse.",
   "prompt.action.enhanceDescription":
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
@@ -207,9 +208,9 @@ export const dict = {
   "notification.permission.title": "Autorizzazione richiesta",
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
   "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Consentire l'operazione Git al di fuori della sandbox?",
+  "notification.permission.titleSandboxEscalation": "Eseguire fuori dalla sandbox?",
   "notification.permission.descriptionSandboxEscalation":
-    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
+    "Questo esegue l'intero comando senza le restrizioni di filesystem e rete, solo per questo comando. Git deve scrivere in .git, che è di sola lettura nella sandbox e si trova fuori dall'albero di lavoro in un worktree collegato. Le regole di autorizzazione Bash e l'approvazione automatica non approvano mai automaticamente questa richiesta.",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.reject": "Rifiuta",
   "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
@@ -852,6 +853,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Consentita",
   "prompt.action.sandbox.unrestricted": "Senza restrizioni",
   "prompt.action.sandbox.description.enabled": "Le scritture sono limitate alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Le regole di autorizzazione e l'approvazione automatica si applicano all'interno della sandbox. I comandi che devono uscirne chiedono sempre.",
   "prompt.action.sandbox.description.disabled":
     "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":

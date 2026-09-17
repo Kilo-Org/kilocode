@@ -208,6 +208,7 @@ export const dict = {
     "Automatisk godkendelse er aktiveret. Tilladelsesanmodninger godkendes automatisk.",
   "prompt.action.autoApprove.disabled":
     "Automatisk godkendelse er deaktiveret. Klik for at godkende tilladelsesanmodninger automatisk.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox-eskaleringsanmodninger er altid udelukket.",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
   "prompt.action.sandbox.enable": "Aktivér sandbox",
@@ -225,6 +226,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Tilladt",
   "prompt.action.sandbox.unrestricted": "Ubegrænset",
   "prompt.action.sandbox.description.enabled": "Skrivning er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.description.escalation":
+    "Tilladelsesregler og automatisk godkendelse gælder i sandkassen. Kommandoer, der skal forlade den, spørger altid.",
   "prompt.action.sandbox.description.disabled": "Klik for at begrænse skriveadgang til filsystemet og netværksadgang.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
@@ -269,9 +272,9 @@ export const dict = {
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
-  "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
+  "notification.permission.titleSandboxEscalation": "Kør uden for sandkassen?",
   "notification.permission.descriptionSandboxEscalation":
-    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
+    "Dette kører hele kommandoen uden begrænsninger for filsystem og netværk, kun for denne kommando. Git skal skrive til .git, som er skrivebeskyttet i sandkassen og ligger uden for worktreet i et linket worktree. Bash-tilladelsesregler og automatisk godkendelse godkender aldrig denne anmodning automatisk.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.reject": "Afvis",
   "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",

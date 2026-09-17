@@ -210,6 +210,7 @@ export const dict = {
     "Automatisch goedkeuren is ingeschakeld. Toestemmingsverzoeken worden automatisch goedgekeurd.",
   "prompt.action.autoApprove.disabled":
     "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
+  "prompt.action.autoApprove.sandboxExcluded": "Escalatieaanvragen van de sandbox worden altijd uitgesloten.",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
   "prompt.action.sandbox.enable": "Sandbox inschakelen",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Toegestaan",
   "prompt.action.sandbox.unrestricted": "Onbeperkt",
   "prompt.action.sandbox.description.enabled": "Schrijfbewerkingen zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.description.escalation":
+    "Toestemmingsregels en automatisch goedkeuren gelden binnen de sandbox. Commando's die deze moeten verlaten, vragen altijd.",
   "prompt.action.sandbox.description.disabled":
     "Klik om schrijfbewerkingen in het bestandssysteem en netwerktoegang te beperken.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,9 +275,9 @@ export const dict = {
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
-  "notification.permission.titleSandboxEscalation": "Git-bewerking buiten de sandbox toestaan?",
+  "notification.permission.titleSandboxEscalation": "Buiten de sandbox uitvoeren?",
   "notification.permission.descriptionSandboxEscalation":
-    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
+    "Dit voert het hele commando uit zonder beperkingen voor het bestandssysteem en netwerk, alleen voor dit commando. Git moet naar .git schrijven, dat alleen-lezen is in de sandbox en bij een gekoppelde worktree buiten de worktree ligt. Bash-toestemmingsregels en automatisch goedkeuren keuren deze aanvraag nooit automatisch goed.",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
   "ui.permission.reject": "Weigeren",
   "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
