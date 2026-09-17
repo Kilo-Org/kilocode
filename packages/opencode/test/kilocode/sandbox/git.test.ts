@@ -29,6 +29,7 @@ const read = [
   "git tag --list",
   "git tag -n5",
   "git tag -ln",
+  "git tag -ln5",
   "git tag --format %(refname)",
   "git tag --points-at HEAD",
   "git tag --verify v1.0.0",

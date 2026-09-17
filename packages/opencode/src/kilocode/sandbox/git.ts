@@ -153,9 +153,10 @@ function flag(value: string) {
 
 function expand(values: string[]) {
   return values.flatMap((value) => {
-    if (/^-[A-Za-z]{2,}$/.test(value))
+    if (/^-[A-Za-z]{2,}\d*$/.test(value))
       return value
         .slice(1)
+        .replace(/\d+$/, "")
         .split("")
         .map((char) => `-${char}`)
     if (/^-[A-Za-z]\d+$/.test(value)) return [value.slice(0, 2)]
