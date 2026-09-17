@@ -16,6 +16,12 @@ export interface WorktreeCommand {
   arguments: string
 }
 
+export interface WorktreePromptPayload {
+  text?: string
+  command?: string
+  arguments?: string
+}
+
 /**
  * Parse a submitted prompt into a server command when it starts with one.
  *
@@ -43,11 +49,41 @@ export function parseWorktreeCommand(
  * Prefer this over `parseWorktreeCommand` when building the create message so
  * the caller does not add branching to already-complex submit handlers.
  */
-export function worktreePromptPayload(
-  text: string,
-  commands: readonly WorktreeCommandEntry[],
-): { text?: string; command?: string; arguments?: string } {
+export function worktreePromptPayload(text: string, commands: readonly WorktreeCommandEntry[]): WorktreePromptPayload {
   const command = parseWorktreeCommand(text, commands)
   if (command) return { command: command.command, arguments: command.arguments }
   return { text: text || undefined }
+}
+
+/**
+ * True when the draft is exactly `/goal`. That enters goal composition so the
+ * objective can be typed as the next step instead of dispatching immediately.
+ */
+export function isGoalActivation(text: string): boolean {
+  return text.trim() === "/goal"
+}
+
+/**
+ * True when submitting should switch to goal composition instead of creating:
+ * a bare `/goal` while not already composing an objective.
+ */
+export function shouldComposeGoal(composing: boolean, text: string): boolean {
+  return !composing && isGoalActivation(text)
+}
+
+/**
+ * Build the goal command for a composed objective. The `-- ` delimiter matches
+ * the chat composer, so an objective that is itself a control word still sets
+ * the goal instead of pausing, resuming, or clearing.
+ */
+export function worktreeGoalPayload(objective: string): WorktreePromptPayload {
+  return { command: "goal", arguments: `-- ${objective.trim()}` }
+}
+
+export function submitPayload(
+  composing: boolean,
+  text: string,
+  commands: readonly WorktreeCommandEntry[],
+): WorktreePromptPayload {
+  return composing ? worktreeGoalPayload(text) : worktreePromptPayload(text, commands)
 }

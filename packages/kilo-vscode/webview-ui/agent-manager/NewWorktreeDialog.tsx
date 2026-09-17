@@ -53,7 +53,7 @@ import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
 import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
-import { worktreePromptPayload } from "./new-worktree-command"
+import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -161,6 +161,7 @@ export const NewWorktreeDialog: Component<{
   const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [starting, setStarting] = createSignal(false)
+  const [goalMode, setGoalMode] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
@@ -367,6 +368,9 @@ export const NewWorktreeDialog: Component<{
   const canSubmit = () => {
     if (starting()) return false
     if (speech.active()) return false
+    // In goal mode the objective replaces the prompt, so a session can only
+    // start once the objective has been typed.
+    if (goalMode() && !prompt().trim()) return false
     return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
@@ -384,9 +388,19 @@ export const NewWorktreeDialog: Component<{
       })
       return
     }
+    const draft = prompt().trim()
+    if (shouldComposeGoal(goalMode(), draft)) {
+      // First step of the two-step goal flow: switch to goal composition and
+      // start the session only after the objective is entered.
+      setGoalMode(true)
+      setPromptValue("")
+      slash.close()
+      requestAnimationFrame(() => textareaRef?.focus({ preventScroll: true }))
+      return
+    }
     setStarting(true)
 
-    const payload = worktreePromptPayload(prompt().trim(), slash.commands())
+    const payload = submitPayload(goalMode(), draft, slash.commands())
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
     const imgs = imageAttach.images()
@@ -706,6 +720,15 @@ export const NewWorktreeDialog: Component<{
               value={name()}
               onInput={(e) => setName(e.currentTarget.value)}
             />
+            <Show when={goalMode()}>
+              <div class="prompt-goal-header">
+                <Icon name="target" size="small" />
+                <span>{t("prompt.goal.set")}</span>
+                <Button variant="ghost" size="small" onClick={() => setGoalMode(false)}>
+                  {t("common.cancel")}
+                </Button>
+              </div>
+            </Show>
             {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
             <div
               ref={containerRef}
@@ -785,7 +808,8 @@ export const NewWorktreeDialog: Component<{
                       setPrompt(val)
                       persistPrompt(val)
                       adjustHeight()
-                      slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
+                      if (goalMode()) slash.close()
+                      else slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
                     }}
                     onKeyDown={onKey}
                     onKeyUp={speechUp}
@@ -1124,7 +1148,7 @@ export const NewWorktreeDialog: Component<{
                   </>
                 }
               >
-                {t("agentManager.dialog.createWorktree")}
+                {goalMode() ? t("prompt.goal.start") : t("agentManager.dialog.createWorktree")}
               </Show>
             </Button>
           </div>

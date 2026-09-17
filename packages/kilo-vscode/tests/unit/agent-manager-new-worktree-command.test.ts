@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test"
-import { parseWorktreeCommand, type WorktreeCommandEntry } from "../../webview-ui/agent-manager/new-worktree-command"
+import {
+  isGoalActivation,
+  parseWorktreeCommand,
+  shouldComposeGoal,
+  submitPayload,
+  worktreeGoalPayload,
+  worktreePromptPayload,
+  type WorktreeCommandEntry,
+} from "../../webview-ui/agent-manager/new-worktree-command"
 
 const commands: WorktreeCommandEntry[] = [
   { name: "models", hints: ["model"] },
@@ -45,5 +53,37 @@ describe("parseWorktreeCommand", () => {
 
   it("does not treat a mid-prompt slash as a command", () => {
     expect(parseWorktreeCommand("please run /goal later", commands)).toBeUndefined()
+  })
+})
+
+describe("two-step goal flow", () => {
+  it("activates composition only for a bare /goal", () => {
+    expect(isGoalActivation("/goal")).toBe(true)
+    expect(isGoalActivation("  /goal  ")).toBe(true)
+    expect(isGoalActivation("/goal ship it")).toBe(false)
+    expect(isGoalActivation("/goals")).toBe(false)
+    expect(isGoalActivation("")).toBe(false)
+  })
+
+  it("keeps a one-line /goal objective on the direct command path", () => {
+    expect(worktreePromptPayload("/goal ship it", commands)).toEqual({ command: "goal", arguments: "ship it" })
+  })
+
+  it("sends the composed objective with the composer delimiter", () => {
+    expect(worktreeGoalPayload("ship the release")).toEqual({ command: "goal", arguments: "-- ship the release" })
+    expect(worktreeGoalPayload("pause")).toEqual({ command: "goal", arguments: "-- pause" })
+    expect(worktreeGoalPayload("  spaced objective  ")).toEqual({ command: "goal", arguments: "-- spaced objective" })
+  })
+
+  it("only composes on the first bare /goal submit", () => {
+    expect(shouldComposeGoal(false, "/goal")).toBe(true)
+    expect(shouldComposeGoal(false, "/goal ship it")).toBe(false)
+    expect(shouldComposeGoal(true, "/goal")).toBe(false)
+  })
+
+  it("submits the objective when composing and parses otherwise", () => {
+    expect(submitPayload(true, "ship it", commands)).toEqual({ command: "goal", arguments: "-- ship it" })
+    expect(submitPayload(false, "/goal ship it", commands)).toEqual({ command: "goal", arguments: "ship it" })
+    expect(submitPayload(false, "plain prompt", commands)).toEqual({ text: "plain prompt" })
   })
 })
