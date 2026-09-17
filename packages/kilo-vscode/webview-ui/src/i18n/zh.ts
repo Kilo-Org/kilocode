@@ -260,7 +260,7 @@ export const dict = {
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
   "notification.permission.titleSandboxEscalation": "要在沙盒外运行吗？",
   "notification.permission.descriptionSandboxEscalation":
-    "这会移除文件系统和网络限制，运行整条命令，且仅限此命令。Git 必须写入 .git，该路径在沙盒中为只读，且在链接的 worktree 中位于 worktree 之外。Bash 允许规则和自动审批永远不会自动批准此提示。",
+    "这会移除文件系统和网络限制，运行整条命令，且仅限此命令。Git 必须写入 .git，该路径在沙盒中为只读，且在链接的 worktree 中位于该 worktree 之外。Bash 允许规则和自动审批永远不会自动批准此提示。",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.reject": "拒绝",
   "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",

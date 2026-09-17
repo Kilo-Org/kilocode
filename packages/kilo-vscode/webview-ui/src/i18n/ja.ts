@@ -274,7 +274,7 @@ export const dict = {
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
   "notification.permission.titleSandboxEscalation": "サンドボックス外で実行しますか？",
   "notification.permission.descriptionSandboxEscalation":
-    "このコマンド全体を、ファイルシステムとネットワークの制限を外して実行します。このコマンドに限ります。Git は .git に書き込む必要があります。これはサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
+    "このコマンドに限り、ファイルシステムとネットワークの制限を外してコマンド全体を実行します。Git は .git に書き込む必要があります。.git はサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.reject": "拒否",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",

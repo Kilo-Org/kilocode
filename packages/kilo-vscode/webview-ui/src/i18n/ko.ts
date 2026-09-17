@@ -275,7 +275,7 @@ export const dict = {
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
   "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 실행할까요?",
   "notification.permission.descriptionSandboxEscalation":
-    "이 명령 전체를 파일 시스템 및 네트워크 제한 없이 실행하며, 이 명령에만 적용됩니다. Git은 .git에 기록해야 하며, 이 경로는 샌드박스에서 읽기 전용이고 연결된 worktree에서는 worktree 밖에 있습니다. Bash 허용 규칙과 자동 승인은 이 프롬프트를 자동으로 승인하지 않습니다.",
+    "이 명령에만 적용되며, 파일 시스템 및 네트워크 제한을 해제하고 명령 전체를 실행합니다. Git은 .git에 기록해야 하며, 이 경로는 샌드박스에서 읽기 전용이고 연결된 worktree에서는 해당 worktree 밖에 있습니다. Bash 허용 규칙과 자동 승인은 이 프롬프트를 자동으로 승인하지 않습니다.",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.reject": "거부",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
