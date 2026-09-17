@@ -1986,27 +1986,8 @@ export const layer = Layer.effect(
       }
 
       yield* compaction.prune({ sessionID, reason: "normal" }).pipe(Effect.ignore, Effect.forkIn(scope))
-      // kilocode_change start - generate the title at normal turn end once intent is clear.
-      // The fork lives in the service scope, so it outlives the turn like compaction.prune.
-      // Read the session first: most turns already have a title, so skip the history load.
-      const titled = yield* sessions.get(sessionID).pipe(Effect.orDie)
-      if (!titled.parentID && Session.isDefaultTitle(titled.title)) {
-        const finalMsgs = KiloSessionPrompt.trimBeforeLastSummary(
-          KiloSessionPromptQueue.scope(
-            sessionID,
-            yield* MessageV2.filterCompactedEffect(sessionID).pipe(Effect.provideService(Database.Service, database)),
-          ),
-        )
-        const finalUser = KiloSessionMessageOrder.latest(finalMsgs).user
-        if (finalUser && KiloSessionTitle.shouldGenerate({ sessionID, history: finalMsgs }))
-          yield* title({
-            session: titled,
-            history: finalMsgs,
-            modelID: finalUser.model.modelID,
-            providerID: finalUser.model.providerID,
-          }).pipe(Effect.ignore, Effect.forkIn(scope))
-      }
-      // kilocode_change end
+      // kilocode_change - Kilo defers session titles; see kilocode/session/title.ts
+      yield* KiloSessionTitle.deferred({ sessionID, scope, sessions, database, generate: title }).pipe(Effect.ignore)
       return yield* lastAssistant(sessionID)
     })
 

@@ -1,5 +1,12 @@
 import type { ModelMessage } from "ai"
+import { Effect, Scope } from "effect"
+import { Database } from "@opencode-ai/core/database/database"
 import { MessageV2 } from "@/session/message-v2"
+import { Session } from "@/session/session"
+import type { SessionID } from "@/session/schema"
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
+import { KiloSessionPrompt } from "@/kilocode/session/prompt"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 
 /** Max title-generation attempts per session before the placeholder stays. */
 const MAX_ATTEMPTS = 4
@@ -58,6 +65,14 @@ function tools(turn: MessageV2.WithParts[]) {
   }
   return lines
 }
+
+/** Title generation callback owned by the shared prompt loop. */
+type Generate = (input: {
+  session: Session.Info
+  history: MessageV2.WithParts[]
+  providerID: MessageV2.User["model"]["providerID"]
+  modelID: MessageV2.User["model"]["modelID"]
+}) => Effect.Effect<unknown, unknown>
 
 export namespace KiloSessionTitle {
   /** Drop the attempt counter for one session. */
@@ -137,5 +152,45 @@ export namespace KiloSessionTitle {
         },
       ],
     }
+  }
+
+  /**
+   * Run the deferred title step at normal turn end. Skips the history load when
+   * the session already has a title or is a child session, gates on the context
+   * rule, then forks the shared title generator in the service scope so it
+   * outlives the turn. All Kilo-specific orchestration lives here so the shared
+   * prompt loop only makes a single call.
+   */
+  export function deferred(input: {
+    sessionID: SessionID
+    scope: Scope.Scope
+    sessions: Session.Interface
+    database: Database.Interface
+    generate: Generate
+  }) {
+    return Effect.gen(function* () {
+      const titled = yield* input.sessions.get(input.sessionID).pipe(Effect.orDie)
+      if (titled.parentID || !Session.isDefaultTitle(titled.title)) return
+
+      const history = KiloSessionPrompt.trimBeforeLastSummary(
+        KiloSessionPromptQueue.scope(
+          input.sessionID,
+          yield* MessageV2.filterCompactedEffect(input.sessionID).pipe(
+            Effect.provideService(Database.Service, input.database),
+          ),
+        ),
+      )
+      const finalUser = KiloSessionMessageOrder.latest(history).user
+      if (!finalUser || !shouldGenerate({ sessionID: input.sessionID, history })) return
+
+      yield* input
+        .generate({
+          session: titled,
+          history,
+          providerID: finalUser.model.providerID,
+          modelID: finalUser.model.modelID,
+        })
+        .pipe(Effect.ignore, Effect.forkIn(input.scope))
+    })
   }
 }
