@@ -52,6 +52,15 @@ test("passes a GET probe answered with an event stream through", async () => {
   expect(response.headers.get("content-type")).toBe("text/event-stream")
 })
 
+test("matches the event stream content type case-insensitively", async () => {
+  const response = await probe(async () => get({ "content-type": "TEXT/EVENT-STREAM; charset=utf-8" }))(
+    new URL("http://mcp.invalid"),
+    { method: "GET" },
+  )
+
+  expect(response.status).toBe(200)
+})
+
 test("passes other requests through", async () => {
   const request = probe(async (_input, init) => {
     if (init?.method === "GET") return get({ "content-type": "text/html" }, 500)

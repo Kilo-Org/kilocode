@@ -17,7 +17,7 @@ export const probe = (base: Request = fetch) => {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const response = await base(input, init)
     if (init?.method !== "GET" || !response.ok) return response
-    const type = response.headers.get("content-type")
+    const type = response.headers.get("content-type")?.toLowerCase()
     if (!type || type.includes("text/event-stream")) return response
     await response.body?.cancel()
     return new Response(null, { status: 405 })
