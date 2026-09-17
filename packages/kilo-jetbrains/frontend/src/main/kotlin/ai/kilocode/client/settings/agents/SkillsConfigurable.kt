@@ -15,7 +15,7 @@ import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.settings.base.settingsChoosePath
 import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
-import ai.kilocode.client.settings.marketplace.marketplaceLink
+import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -35,6 +35,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.EDT
@@ -142,7 +143,7 @@ internal class SkillsSettingsUi(
 
     override fun emptyText() = KiloBundle.message("settings.agentBehavior.skills.empty")
 
-    override fun toolbarRight(): JComponent = marketplaceLink()
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction())
 
     internal fun updateSources(paths: List<String>, urls: List<String>) {
         state.update { copy(sources = SkillsConfigDto(paths = paths, urls = urls)) }

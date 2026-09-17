@@ -13,7 +13,7 @@ import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
-import ai.kilocode.client.settings.marketplace.marketplaceLink
+import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -104,10 +104,11 @@ internal class AgentsSettingsUi(
 
     override fun extraActions(): List<AnAction> = listOf(addAction())
 
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction())
+
     override fun toolbarRight(): JComponent = Stack.horizontal(UiStyle.Gap.sm())
         .next(JBLabel(KiloBundle.message("settings.agentBehavior.agents.default")))
         .next(makePicker())
-        .next(marketplaceLink())
 
     override fun afterApply() {
         syncPicker()

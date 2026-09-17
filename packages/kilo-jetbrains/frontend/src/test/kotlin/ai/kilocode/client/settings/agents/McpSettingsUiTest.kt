@@ -18,12 +18,16 @@ import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.Separator
+import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
@@ -297,12 +301,16 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test toolbar offers a marketplace link`() {
+    fun `test toolbar offers marketplace as final button after separator`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
 
         edt {
-            assertTrue(text(panel).contains(KiloBundle.message("settings.marketplace.displayName")))
+            assertTrue(components(panel).filterIsInstance<ActionLink>().none {
+                it.text == KiloBundle.message("settings.marketplace.displayName")
+            })
+            assertNull(marketplaceButton(panel).presentation.icon)
+            assertMarketplaceAtEnd(panel)
             true
         }
     }
@@ -413,6 +421,18 @@ class McpSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+
+    private fun marketplaceButton(panel: McpSettingsUi) = components(panel)
+        .filterIsInstance<ActionButtonWithText>()
+        .single { it.presentation.text == KiloBundle.message("settings.marketplace.displayName") }
+
+    private fun assertMarketplaceAtEnd(panel: McpSettingsUi) {
+        val group = components(panel)
+            .filterIsInstance<ActionToolbar>()
+            .map { it.actionGroup.getChildren(null).toList() }
+            .single { it.lastOrNull()?.templatePresentation?.text == KiloBundle.message("settings.marketplace.displayName") }
+        assertTrue(group[group.size - 2] is Separator)
+    }
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()

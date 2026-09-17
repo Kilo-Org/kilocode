@@ -132,6 +132,8 @@ internal abstract class SettingsListPanel(
 
     protected open fun extraActions(): List<AnAction> = emptyList()
 
+    protected open fun tailActions(): List<AnAction> = emptyList()
+
     /** Controls placed immediately after the action toolbar, sharing its row and left edge. */
     protected open fun toolbarLeft(): JComponent? = null
 
@@ -192,18 +194,25 @@ internal abstract class SettingsListPanel(
     private fun toolbar(): JComponent {
         val actions = mutableListOf<AnAction>()
         actions += extraActions()
+        var refresh: SettingsToolbarAction? = null
         if (showRefresh()) {
             if (actions.isNotEmpty()) actions += Separator.getInstance()
-            actions += SettingsToolbarAction(
+            refresh = SettingsToolbarAction(
                 KiloBundle.message("settings.agentBehavior.refresh"),
                 KiloBundle.message("settings.agentBehavior.refresh.description"),
                 AllIcons.Actions.Refresh,
                 { !busy },
             ) { reload() }
+            actions += refresh
+        }
+        val tail = tailActions()
+        if (tail.isNotEmpty()) {
+            if (actions.isNotEmpty()) actions += Separator.getInstance()
+            actions += tail
         }
         actions.firstOrNull()?.registerCustomShortcutSet(CommonShortcuts.getNewForDialogs(), this)
         ActionManager.getInstance().getAction("Refresh")?.shortcutSet?.let { set ->
-            actions.filterIsInstance<SettingsToolbarAction>().lastOrNull()?.registerCustomShortcutSet(set, this)
+            refresh?.registerCustomShortcutSet(set, this)
         }
         val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(actions), true)
         toolbar.targetComponent = this
