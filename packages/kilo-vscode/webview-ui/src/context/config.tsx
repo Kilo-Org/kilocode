@@ -96,6 +96,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     indexing: false,
     sandboxControls: false,
     backgroundSubagents: false,
+    speechToText: false,
   })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})

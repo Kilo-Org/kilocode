@@ -1,3 +1,8 @@
+import type {
+  ResponseLensSettings,
+  ExplainBrieflyResult,
+  ExplainBrieflyError,
+} from "../../../../src/shared/response-lens"
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PRComment, PRReactionContent } from "../../../agent-manager/pr/pr-types"
@@ -19,7 +24,8 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
-import type { PRMergeResult } from "../../../../src/shared/pr-comment-actions"
+import type { CodeContext } from "../../../../src/shared/code-context"
+import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
@@ -378,6 +384,11 @@ export interface AppendChatBoxMessage {
   browser?: BrowserReference
 }
 
+export interface AppendChatContextMessage {
+  type: "appendChatContext"
+  context: CodeContext
+}
+
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewCommentEntry[]
@@ -517,6 +528,10 @@ export interface ImageModelsLoadedMessage {
 export interface SpeechToTextModelsLoadedMessage {
   type: "speechToTextModelsLoaded"
   models: SpeechToTextModelDef[]
+  source: "gateway" | "custom"
+  // Producer instance id. A new epoch means a restarted host, not a stale reply.
+  epoch: string
+  seq: number
 }
 
 export interface ProvidersLoadedMessage {
@@ -887,6 +902,15 @@ export interface AgentManagerStateMessage {
   sessions: ManagedSessionState[]
   sections?: SectionState[]
   staleWorktreeIds?: string[]
+  /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
+  worktreeHealth?: Record<string, "absent-restorable" | "absent-gone" | "unregistered" | "unavailable">
+  /**
+   * Directories under `.kilo/worktrees/` that no worktree claims.
+   *
+   * `broken` still holds a git checkout, so it can contain work that exists nowhere else; `leftover`
+   * is a bare directory. The notice says which, because the two do not deserve the same warning.
+   */
+  orphanDirectories?: { path: string; kind: "broken" | "leftover" }[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
@@ -1104,10 +1128,11 @@ export interface FavoritesLoadedMessage {
   favorites: ModelSelection[]
 }
 
-// Per-mode model selections loaded from model.json (extension → webview)
+// Preferred and per-mode model selections loaded from persisted state (extension → webview)
 export interface ModelSelectionsLoadedMessage {
   type: "modelSelectionsLoaded"
   selections: Record<string, ModelSelection>
+  preferred?: ModelSelection & { variant?: string }
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1697,6 +1722,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
+  | AppendChatContextMessage
   | AppendReviewCommentsMessage
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
@@ -1724,6 +1750,7 @@ export type ExtensionMessage =
   | AgentManagerPRErrorMessage
   | AgentManagerCommentReactionResultMessage
   | PRMergeResult
+  | PRReviewResult
   | AgentManagerTerminalCreatedMessage
   | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage

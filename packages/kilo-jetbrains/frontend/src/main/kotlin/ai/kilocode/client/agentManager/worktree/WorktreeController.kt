@@ -65,6 +65,14 @@ class WorktreeController(
     private var kinds: Map<String, SessionActivityKind> = emptyMap()
 
     init {
+        // The New Worktree dialog rejects a pull request from another repository using [origin], and
+        // it can open before any reload has run — the chat dock and worktree editor actions call
+        // configure() directly, and only selecting the Agent Manager tab triggers a reload. Resolve
+        // it here so the check is armed on every entry path, not just the tab one.
+        cs.launch {
+            val info = service.listBranches(directory)
+            edt { origin = info.origin }
+        }
         cs.launch {
             activity.collect { snap ->
                 edt {
@@ -94,6 +102,11 @@ class WorktreeController(
     @Volatile
     private var known: Set<String> = emptySet()
 
+    /** `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. */
+    @Volatile
+    var origin: String? = null
+        private set
+
     fun isPending(id: String): Boolean = id in pending
 
     fun progress(id: String): String? = tasks[id]
@@ -116,6 +129,7 @@ class WorktreeController(
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
+                origin = branchInfo.origin
                 onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }

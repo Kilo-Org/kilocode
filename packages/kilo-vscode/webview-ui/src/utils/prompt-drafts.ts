@@ -5,9 +5,13 @@ export function composePromptMessage(parts: {
   review: string
   browser: string
   annotations: string
+  push?: string
+  context?: string
   draft: string
 }): string {
-  return [parts.review, parts.browser, parts.annotations, parts.draft].filter(Boolean).join("\n\n")
+  return [parts.review, parts.browser, parts.annotations, parts.push, parts.context, parts.draft]
+    .filter(Boolean)
+    .join("\n\n")
 }
 
 export function failedPrompt(failed: Pick<SendMessageFailedMessage, "text" | "review" | "browserFeedback">) {
@@ -84,6 +88,8 @@ interface PromptDraftLookupStores {
   images: ReadonlyMap<string, unknown>
   scrolls: ReadonlyMap<string, unknown>
   browsers?: ReadonlyMap<string, unknown>
+  pastes?: ReadonlyMap<string, unknown>
+  contexts?: ReadonlyMap<string, unknown>
   annotations?: ReadonlyMap<string, unknown>
   editors?: ReadonlyMap<string, unknown>
 }
@@ -92,6 +98,8 @@ export function promptDraftStorageKey(raw: string, fallback: string, stores: Pro
   const suffix = `:${raw}`
   const maps: ReadonlyMap<string, unknown>[] = [stores.text, stores.comments, stores.images, stores.scrolls]
   if (stores.browsers) maps.push(stores.browsers)
+  if (stores.pastes) maps.push(stores.pastes)
+  if (stores.contexts) maps.push(stores.contexts)
   if (stores.annotations) maps.push(stores.annotations)
   if (stores.editors) maps.push(stores.editors)
   for (const map of maps) {
@@ -114,38 +122,62 @@ export function promptDraftPromotion(
   return { source, target: scopeDraftKey(box, sessionDraftKey(sessionID)) }
 }
 
-export function movePromptDraft<T, C, I, S, B, A, E>(
+/**
+ * Move one draft value from `source` to `target`. Required stores never
+ * overwrite an existing target value; optional stores do.
+ */
+function move<V>(map: Map<string, V>, source: string, target: string, overwrite: boolean): V | undefined {
+  const value = map.get(source)
+  if (value === undefined) return undefined
+  if (overwrite || !map.has(target)) map.set(target, value)
+  map.delete(source)
+  return value
+}
+
+export function movePromptDraft<T, C, I, S, B, P, X, A, E>(
   stores: {
     text: Map<string, T>
     comments: Map<string, C>
     images: Map<string, I>
     scrolls: Map<string, S>
     browsers?: Map<string, B>
+    pastes?: Map<string, P>
+    contexts?: Map<string, X>
     annotations?: Map<string, A>
     editors?: Map<string, E>
   },
   source: string,
   target: string,
-): { text?: T; comments?: C; images?: I; scroll?: S; browsers?: B; annotations?: A; editor?: E } {
-  const draft = {
-    text: stores.text.get(source),
-    comments: stores.comments.get(source),
-    images: stores.images.get(source),
-    scroll: stores.scrolls.get(source),
-    ...(stores.browsers?.has(source) ? { browsers: stores.browsers.get(source) } : {}),
-    ...(stores.annotations?.has(source) ? { annotations: stores.annotations.get(source) } : {}),
-    ...(stores.editors?.has(source) ? { editor: stores.editors.get(source) } : {}),
+): {
+  text?: T
+  comments?: C
+  images?: I
+  scroll?: S
+  browsers?: B
+  pastes?: P
+  contexts?: X
+  annotations?: A
+  editor?: E
+} {
+  const hasAnnotations = Boolean(stores.annotations?.has(source))
+  const hasEditors = Boolean(stores.editors?.has(source))
+  const annotations = stores.annotations ? move(stores.annotations, source, target, false) : undefined
+  const editor = stores.editors ? move(stores.editors, source, target, false) : undefined
+  const hasBrowsers = Boolean(stores.browsers?.has(source))
+  const hasPastes = Boolean(stores.pastes?.has(source))
+  const hasContexts = Boolean(stores.contexts?.has(source))
+  const browsers = stores.browsers ? move(stores.browsers, source, target, true) : undefined
+  const pastes = stores.pastes ? move(stores.pastes, source, target, true) : undefined
+  const contexts = stores.contexts ? move(stores.contexts, source, target, true) : undefined
+  return {
+    text: move(stores.text, source, target, false),
+    comments: move(stores.comments, source, target, false),
+    images: move(stores.images, source, target, false),
+    scroll: move(stores.scrolls, source, target, false),
+    ...(hasBrowsers ? { browsers } : {}),
+    ...(hasPastes ? { pastes } : {}),
+    ...(hasContexts ? { contexts } : {}),
+    ...(hasAnnotations ? { annotations } : {}),
+    ...(hasEditors ? { editor } : {}),
   }
-  const move = <V>(map: Map<string, V> | undefined, value: V | undefined) => {
-    if (value !== undefined && !map?.has(target)) map?.set(target, value)
-    map?.delete(source)
-  }
-  move(stores.text, draft.text)
-  move(stores.comments, draft.comments)
-  move(stores.images, draft.images)
-  move(stores.scrolls, draft.scroll)
-  move(stores.browsers, draft.browsers)
-  move(stores.annotations, draft.annotations)
-  move(stores.editors, draft.editor)
-  return draft
 }

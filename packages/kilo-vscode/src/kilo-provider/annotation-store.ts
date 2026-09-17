@@ -126,7 +126,11 @@ export class AnnotationStore {
     }
   }
 
-  private async change(id: string, mutate?: (record: Conversation) => boolean, mutateState?: (state: State) => boolean) {
+  private async change(
+    id: string,
+    mutate?: (record: Conversation) => boolean,
+    mutateState?: (state: State) => boolean,
+  ) {
     if (!id || id.length > 512 || ["__proto__", "constructor", "prototype"].includes(id))
       throw new Error("Invalid source conversation.")
     await mkdir(this.directory, { recursive: true, mode: 0o700 })
@@ -214,9 +218,7 @@ export class AnnotationStore {
         const tombstones = Object.entries(state.sessions).filter(([key, record]) => record.deleted && key !== id)
         const excess = tombstones.length + 1 - TOMBSTONES
         if (excess <= 0) return false
-        const oldest = tombstones
-          .sort((left, right) => left[1].revision - right[1].revision)
-          .slice(0, excess)
+        const oldest = tombstones.sort((left, right) => left[1].revision - right[1].revision).slice(0, excess)
         for (const [key] of oldest) delete state.sessions[key]
         return true
       },

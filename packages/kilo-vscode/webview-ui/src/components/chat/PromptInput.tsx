@@ -3,14 +3,14 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
+import { createSignal, createEffect, on, onMount, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { hasPopup, isTextControl } from "../../utils/focus"
+import { createHold, hasPopup, hasTextSelection, isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
@@ -28,13 +28,14 @@ import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+import { usePasteCollapse } from "../../hooks/usePasteCollapse"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
 import { isMentionEntry } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
-import { useSlashCommand } from "../../hooks/useSlashCommand"
+import { useSlashCommand, skill as isSkill } from "../../hooks/useSlashCommand"
 import { useGoalComposer } from "./goal/useGoalComposer"
 import { GoalHeader } from "./goal/GoalHeader"
 import { useGhostText } from "../../hooks/useGhostText"
@@ -43,6 +44,7 @@ import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
+import { promptMentionOver, registerPromptMentionDrop } from "../../utils/prompt-mention-drop"
 import { SessionMentionPicker } from "./SessionMentionPicker"
 import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
@@ -51,7 +53,6 @@ import { cycleVariant } from "../../context/session-variant-store"
 import {
   fileName,
   dirName,
-  buildHighlightSegments,
   atEnd,
   insertSpacedText,
   isPromptBusy,
@@ -59,6 +60,7 @@ import {
   memoryRest,
   type SandboxDefaultState,
   type SandboxState,
+  undoKey,
 } from "./prompt-input-utils"
 import { sandboxMessages } from "./prompt-sandbox-messages"
 import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
@@ -83,12 +85,14 @@ import {
   annotationEditorDrafts,
   clearPendingDraftDiscarded,
   clearSessionDraftDiscarded,
+  contextDrafts,
   drafts,
   finishPendingSend,
   imageDrafts,
   mentionDrafts,
   isPendingDraftDiscarded,
   isSessionDraftDiscarded,
+  pasteDrafts,
   reviewDrafts,
   savePromptDraft,
   scrollDrafts,
@@ -123,6 +127,7 @@ import {
   replaceAnnotationDraft,
   updateAnnotationEditor,
 } from "../../utils/annotation-state"
+import { CodeContextChips } from "./CodeContextChips"
 import {
   browserFeedbackData,
   formatBrowserFeedback,
@@ -130,6 +135,7 @@ import {
   partFeedback,
   type BrowserReference,
 } from "../../../../src/shared/browser-feedback"
+import { formatCodeContexts, mergeCodeContexts, type CodeContext } from "../../../../src/shared/code-context"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
@@ -311,6 +317,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+  let containerRef: HTMLDivElement | undefined
 
   /**
    * True after the last menu entry of a bare `@`, which lists the entries above
@@ -340,12 +347,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const fingerprint = (key: string) =>
     JSON.stringify(
       key === draftKey()
-        ? [text().trim(), reviewComments(), imageAttach.images(), browsers()]
+        ? [
+            text().trim(),
+            reviewComments(),
+            imageAttach.images(),
+            browsers(),
+            contexts(),
+            paste.pastes().map((item) => item.text),
+            annotations().map((item) => [item.id, item.comment, item.selectedText]),
+            annotationEditorState.snapshot(),
+          ]
         : [
             (drafts.get(key) ?? "").trim(),
             reviewDrafts.get(key) ?? [],
             imageDrafts.get(key) ?? [],
             references.get(key) ?? [],
+            contextDrafts.get(key) ?? [],
+            pasteDrafts.get(key) ?? [],
+            (annotationDrafts.get(key) ?? []).map((item) => [item.id, item.comment, item.selectedText]),
+            annotationEditorDrafts.get(key),
           ],
     )
   const locked = () => !!props.edit && props.edit.sessionID === session.currentSessionID()
@@ -375,7 +395,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imgs: ImageAttachment[],
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
     browser: BrowserReference[] = browsers(),
-  ) => savePromptDraft(key, next, comments, imgs, scroll, browser)
+    codeContexts: CodeContext[] = contexts(),
+    pastes = key === draftKey() ? paste.pastes().map((item) => item.text) : undefined,
+  ) => savePromptDraft(key, next, comments, imgs, scroll, browser, codeContexts, pastes)
   const readDraft = () => ({
     text: text().trim(),
     comments: reviewComments(),
@@ -383,6 +405,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     editor: annotationEditorState.snapshot(),
     images: imageAttach.images(),
     browsers: browsers(),
+    pastes: paste.pastes().map((item) => item.text),
+    contexts: contexts(),
     scroll: textareaRef?.scrollTop ?? scrollDrafts.get(draftKey()) ?? 0,
   })
 
@@ -450,6 +474,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     images: imageDrafts,
     scrolls: scrollDrafts,
     browsers: references,
+    pastes: pasteDrafts,
+    contexts: contextDrafts,
     annotations: annotationDrafts,
     editors: annotationEditorDrafts,
   }
@@ -619,6 +645,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     showToast({ title: language.t("annotations.commandBlocked") })
     return true
   }
+  // Large pastes collapse into a `[Pasted ~N lines]` chip, matching the CLI and
+  // JetBrains plugin. Honor the same experimental opt-out.
+  const paste = usePasteCollapse({
+    enabled: () => globalConfig()?.experimental?.disable_paste_summary !== true,
+    text,
+  })
+  const [contexts, setContexts] = createSignal<CodeContext[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -715,7 +748,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         action: () => vscode.postMessage({ type: "toggleCaffeination" }),
       },
     ],
-    (command) => !blockAnnotatedCommand(command),
+    (command) => command.name === "goal" || !blockAnnotatedCommand(command),
   )
   const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
     setSandboxRequests((current) => {
@@ -737,6 +770,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
+  // Backing text of collapsed pastes, restored alongside preEnhanceText on undo.
+  let preEnhancePastes: string[] | null = null
 
   createEffect(() => {
     const sessionID = sandboxID()
@@ -787,6 +822,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const clear = () => replace([])
 
+  const replaceContexts = (next: CodeContext[]) => {
+    setContexts(next)
+    if (next.length === 0) {
+      contextDrafts.delete(draftKey())
+      return
+    }
+    contextDrafts.set(draftKey(), next)
+  }
+
+  const removeContext = (id: string) => {
+    if (!readonly()) replaceContexts(contexts().filter((item) => item.id !== id))
+  }
+  const clearContexts = () => replaceContexts([])
+
   const removeReviewComment = (id: string) => {
     if (readonly()) return
     replaceReviewComments(reviewComments().filter((item) => item.id !== id))
@@ -802,8 +851,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const imgs = untrack(imageAttach.images)
         const browser = untrack(browsers)
         const notes = untrack(annotations)
-        if (val || comments.length > 0 || imgs.length > 0 || browser.length > 0 || drafts.has(prev)) {
-          saveDraft(prev, val, comments, imgs, undefined, browser)
+        const codeContexts = untrack(contexts)
+        if (
+          val ||
+          comments.length > 0 ||
+          imgs.length > 0 ||
+          browser.length > 0 ||
+          codeContexts.length > 0 ||
+          drafts.has(prev)
+        ) {
+          saveDraft(
+            prev,
+            val,
+            comments,
+            imgs,
+            undefined,
+            browser,
+            codeContexts,
+            untrack(paste.pastes).map((item) => item.text),
+          )
         }
         if (notes.length > 0) annotationDrafts.set(prev, notes)
         else annotationDrafts.delete(prev)
@@ -815,6 +881,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const pendingAnnotations = parseAnnotations(storedAnnotations) ?? []
       if (storedAnnotations && pendingAnnotations.length === 0) annotationDrafts.delete(key)
       setText(draft)
+      paste.load(draft, pasteDrafts.get(key) ?? [])
       mention.seedFromText(draft)
       const refs = mentionDrafts.get(key)
       if (refs) {
@@ -824,9 +891,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setReviewComments(pending)
       setAnnotations(pendingAnnotations)
       setBrowsers(references.get(key) ?? [])
+      setContexts(contextDrafts.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
       preEnhanceText = null
+      preEnhancePastes = null
       history.reset()
       if (textareaRef) {
         textareaRef.value = draft
@@ -869,7 +938,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
     const ownsFocus = () => {
       const active = document.activeElement
-      return hasPopup() || (active !== textareaRef && isTextControl(active))
+      return hasPopup() || (active !== textareaRef && isTextControl(active)) || hasTextSelection()
     }
     const focus = () => {
       if (defer() || ownsFocus()) return
@@ -895,6 +964,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  const hold = createHold({
+    target: () => textareaRef,
+    busy: () => hasPopup(),
+  })
+  window.addEventListener("focus", hold.reclaim)
+  onCleanup(() => window.removeEventListener("focus", hold.reclaim))
+
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
     const draft = text().trim()
@@ -904,10 +980,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const browser = browsers()
     const scroll = textareaRef?.scrollTop ?? 0
+    // Capture paste backing before tabs.add() switches the draft and clears it.
+    const pastes = paste.pastes().map((item) => item.text)
     const id = tabs?.add()
     if (!id) session.clearCurrentSession()
     const key = id ? scopeDraftKey(boxKey(), pendingDraftKey(id) ?? "new") : draftKey()
-    saveDraft(key, draft, comments, imgs, scroll, browser)
+    saveDraft(key, draft, comments, imgs, scroll, browser, undefined, pastes)
     if (notes.length > 0) annotationDrafts.set(key, notes)
     else annotationDrafts.delete(key)
     if (editor) annotationEditorDrafts.set(key, editor)
@@ -938,7 +1016,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     captured.delete(id)
     if (!draft) return
     const key = scopeDraftKey(box, sessionDraftKey(sid))
-    saveDraft(key, draft.text, draft.comments, draft.images, draft.scroll, draft.browsers)
+    saveDraft(key, draft.text, draft.comments, draft.images, draft.scroll, draft.browsers, draft.contexts, draft.pastes)
     if (draft.annotations.length > 0) annotationDrafts.set(key, draft.annotations)
     else annotationDrafts.delete(key)
     if (draft.editor) annotationEditorDrafts.set(key, draft.editor)
@@ -981,10 +1059,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       globalConfig(),
     )
   const isDisabled = () => !server.isConnected() || locked() || goal.pending()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () =>
-    text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0 || browsers().length > 0
+    text().trim().length > 0 ||
+    imageAttach.images().length > 0 ||
+    reviewComments().length > 0 ||
+    browsers().length > 0 ||
+    hasAnnotationDraft() ||
+    contexts().length > 0
+  // Review, browser, and code context all need the composed message instead of
+  // the server slash-command branch, which sends the raw args only.
+  const hasStructuredInput = (data: unknown, browser: unknown) =>
+    data != null || browser != null || contexts().length > 0
   const sendReady = () => !isDisabled() && goalReady() && !terminal.pending() && !git.pending() && !props.blocked?.()
   const canContinue = () => !goal.active() && speech.state() === "idle" && !hasInput() && session.canResume()
   const goalReady = () => !goal.pending() && (!goal.active() || (!enhancing() && !imageAttach.pending()))
@@ -1067,16 +1154,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         ...(active ? imageAttach.images() : (imageDrafts.get(key) ?? [])),
       ]
       const comments = active ? reviewComments() : (reviewDrafts.get(key) ?? [])
-      savePromptDraft(key, value, comments, images)
+      const pastes = active ? paste.pastes().map((item) => item.text) : undefined
+      const codeContexts = active ? contexts() : (contextDrafts.get(key) ?? [])
+      savePromptDraft(key, value, comments, images, undefined, undefined, codeContexts, pastes)
       mentionDrafts.set(key, { paths: state.paths, sessions: state.sessions })
       if (!active) return
       enhanceCounter++
       preEnhanceText = null
+      preEnhancePastes = null
       history.reset()
       setText(value)
       mention.seedFromParts(state.paths, value)
       mention.seedSessions(state.sessions, value)
       replaceReviewComments(comments)
+      setContexts(codeContexts)
       imageAttach.replace(images)
       adjustHeight()
       textareaRef?.focus()
@@ -1132,7 +1223,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         dataUrl: file.url,
       }))
     if (target !== draftKey()) {
-      saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser)
+      saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser, [])
       return
     }
     // Do not overwrite a new draft the user started while the send was in flight.
@@ -1141,11 +1232,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       reviewComments().length > 0 ||
       imageAttach.images().length > 0 ||
       browsers().length > 0 ||
-      hasAnnotationDraft()
+      hasAnnotationDraft() ||
+      contexts().length > 0
     )
       return
     replaceReviewComments(comments)
     replace(browser)
+    clearContexts()
     if (draft) {
       setText(draft)
       mention.seedFromText(draft)
@@ -1184,24 +1277,62 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }),
   })
 
-  const restoreBox = (message: Extract<ExtensionMessage, { type: "setChatBoxMessage" }>, key = draftKey()) => {
-    if (defer(key, (key) => restoreBox(message, key))) return
-    if (key !== draftKey()) {
-      savePromptDraft(
-        key,
-        message.text,
-        message.review ?? reviewDrafts.get(key) ?? [],
-        message.images?.map((image) => ({ ...image, id: crypto.randomUUID(), filename: image.filename ?? "image" })) ??
-          imageDrafts.get(key) ??
-          [],
-        scrollDrafts.get(key),
-        message.browser ?? references.get(key) ?? [],
-      )
-      if (message.paths || message.sessions)
-        mentionDrafts.set(key, { paths: message.paths ?? [], sessions: message.sessions ?? [] })
-      return
+  const restoreBox = (message: Extract<ExtensionMessage, { type: "setChatBoxMessage" }>, key?: string) => {
+    const raw = sessionDraftKey(message.sessionID)
+    const target = key ?? (raw ? promptDraftStorageKey(raw, boxKey(), promptDraftStores) : draftKey())
+    if (defer(target, (key) => restoreBox(message, key))) return
+    const current = draftKey()
+    const active = target === current
+    annotationSend.cancel(target)
+    replaceAnnotationDraft({
+      target,
+      current,
+      drafts: annotationDrafts,
+      editors: annotationEditorDrafts,
+      clearCurrent: () => {
+        setAnnotations([])
+        annotationEditorState.replace(undefined)
+        annotationFocus = undefined
+        annotationFallback = undefined
+      },
+    })
+
+    const replaceFeedback = message.review !== undefined || message.browser !== undefined
+    const comments = replaceFeedback
+      ? (message.review ?? [])
+      : active
+        ? reviewComments()
+        : (reviewDrafts.get(target) ?? [])
+    const browser = replaceFeedback ? (message.browser ?? []) : active ? browsers() : (references.get(target) ?? [])
+    const images = message.images
+      ? message.images.map((img) => ({
+          id: crypto.randomUUID(),
+          filename: img.filename ?? "image",
+          mime: img.mime,
+          dataUrl: img.dataUrl,
+        }))
+      : active
+        ? imageAttach.images()
+        : (imageDrafts.get(target) ?? [])
+
+    saveDraft(
+      target,
+      message.text,
+      comments,
+      images,
+      scrollDrafts.get(target) ?? 0,
+      browser,
+      active ? contexts() : (contextDrafts.get(target) ?? []),
+      active ? paste.pastes().map((item) => item.text) : (pasteDrafts.get(target) ?? []),
+    )
+    mentionDrafts.delete(target)
+    if (message.paths?.length || message.sessions?.length) {
+      mentionDrafts.set(target, { paths: message.paths ?? [], sessions: message.sessions ?? [] })
     }
+    if (!active) return
+
     setText(message.text)
+    paste.load(message.text, pasteDrafts.get(target) ?? [])
     if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
     else mention.seedFromText(message.text)
     if (message.sessions?.length) mention.seedSessions(message.sessions, message.text)
@@ -1245,6 +1376,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
+  const appendContext = (message: Extract<ExtensionMessage, { type: "appendChatContext" }>, key = draftKey()) => {
+    if (defer(key, (key) => appendContext(message, key))) return
+    if (key !== draftKey()) {
+      contextDrafts.set(key, mergeCodeContexts(contextDrafts.get(key) ?? [], [message.context]))
+      return
+    }
+    replaceContexts(mergeCodeContexts(contexts(), [message.context]))
+    textareaRef?.focus()
+  }
+
   const appendReviews = (message: Extract<ExtensionMessage, { type: "appendReviewComments" }>, key?: string) => {
     const target =
       key ??
@@ -1272,17 +1413,35 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const created = (message: Extract<ExtensionMessage, { type: "sessionCreated" }>) => {
     const raw = createdDraftKey(message.draftID, sandboxRequest(undefined) !== undefined)
     if (!raw) return
-    const source = scopeDraftKey(boxKey(), raw)
-    const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
-    goal.move(source, target)
-    const queued = deferred.get(source)
-    if (queued) {
-      deferred.set(target, [...queued, ...(deferred.get(target) ?? [])])
-      deferred.delete(source)
+    const box = boxKey()
+    const live = scopeDraftKey(box, raw)
+    if (live === draftKey()) {
+      saveDraft(
+        live,
+        text(),
+        reviewComments(),
+        imageAttach.images(),
+        undefined,
+        browsers(),
+        contexts(),
+        paste.pastes().map((item) => item.text),
+      )
+      if (annotations().length > 0) annotationDrafts.set(live, annotations())
+      annotationEditorState.persist(live)
     }
-    if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())
-    const from = reviewDrafts.get(source)
-    const to = reviewDrafts.get(target)
+    // The stored pending key retains its worktree even if Agent Manager switched boxes before this event.
+    const route = message.draftID
+      ? promptDraftPromotion(raw, message.session.id, box, promptDraftStores)
+      : { source: live, target: scopeDraftKey(box, sessionDraftKey(message.session.id)) }
+    const sourceActive = route.source === draftKey()
+    goal.move(route.source, route.target)
+    const queued = deferred.get(route.source)
+    if (queued) {
+      deferred.set(route.target, [...queued, ...(deferred.get(route.target) ?? [])])
+      deferred.delete(route.source)
+    }
+    const from = reviewDrafts.get(route.source)
+    const to = reviewDrafts.get(route.target)
     if (from && to) {
       reviewDrafts.set(route.target, mergeReviewComments(from, to))
       reviewDrafts.delete(route.source)
@@ -1300,6 +1459,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setReviewComments(reviewDrafts.get(route.target) ?? [])
       setAnnotations(parseAnnotations(annotationDrafts.get(route.target)) ?? [])
       setBrowsers(references.get(route.target) ?? [])
+      setContexts(contextDrafts.get(route.target) ?? [])
+      paste.load(draft, pasteDrafts.get(route.target) ?? [])
       imageAttach.replace(imageDrafts.get(route.target) ?? [])
       if (textareaRef) textareaRef.value = draft
     }
@@ -1321,6 +1482,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "appendChatBoxMessage") appendBox(message)
+
+    if (message.type === "appendChatContext") appendContext(message)
 
     if (message.type === "appendReviewComments") appendReviews(message)
 
@@ -1345,6 +1508,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "action" && message.action === "focusInput") {
       textareaRef?.focus()
+    }
+
+    if (message.type === "action" && message.action === "restoreInput") {
+      if (hasPopup()) return
+      const active = document.activeElement
+      if (active && active !== textareaRef && isTextControl(active)) return
+      textareaRef?.focus({ preventScroll: true })
     }
 
     if (message.type === "enhancePromptResult") {
@@ -1440,6 +1610,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return
     }
     imageAttach.handlePaste(e)
+    // Collapse a large plain-text paste into a chip before the browser inserts
+    // it; images and files keep the default path.
+    if (
+      textareaRef &&
+      paste.paste(e, textareaRef, setText, () => {
+        adjustHeight()
+        syncHighlightScroll()
+      })
+    ) {
+      return
+    }
     // After pasting text, the textarea content changes but the layout may not
     // have reflowed yet, causing the caret position to be visually out of sync.
     // Defer height recalculation to after the browser completes the reflow.
@@ -1458,6 +1639,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const val = target.value
     setText(val)
     preEnhanceText = null
+    preEnhancePastes = null
     adjustHeight()
     syncHighlightScroll()
     history.reset()
@@ -1480,6 +1662,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return true
   }
 
+  // Native undo/redo. Plain undo falls through to handleKeyDown when an
+  // Enhance result can be reverted first.
+  const undo = (e: KeyboardEvent): boolean => {
+    const action = undoKey(e)
+    if (!action) return false
+    e.stopPropagation()
+    if (action === "undo" && preEnhanceText !== null) return false
+    e.preventDefault()
+    if (readonly()) return true
+    document.execCommand(action)
+    return true
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (goal.pending()) {
       escape(e)
@@ -1487,13 +1682,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
     if (locked()) return
     // Undo enhanced prompt with Ctrl+Z / ⌘Z
-    if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
+    if (undoKey(e) === "undo" && preEnhanceText !== null) {
       e.preventDefault()
       const restored = preEnhanceText
+      const pastes = preEnhancePastes
       preEnhanceText = null
+      preEnhancePastes = null
       setText(restored)
       if (textareaRef) {
         textareaRef.value = restored
+        paste.load(restored, pastes ?? [])
         adjustHeight()
       }
       return
@@ -1508,7 +1706,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     )
       return
 
-    // Skip cursor over mentions on arrow keys
+    // Atomic collapsed-paste removal on backspace
+    if (paste.backspace(e, textareaRef, setText)) {
+      adjustHeight()
+      syncHighlightScroll()
+      return
+    }
+
+    // Skip cursor over mentions and collapsed pastes on arrow keys
+    paste.arrow(e, textareaRef)
     if (mention.handleArrowKey(e, textareaRef)) return
 
     if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
@@ -1583,7 +1789,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
-    const draft = text().trim()
+    const draft = paste.plainText(text()).trim()
     if (!draft) {
       const description = language.t("prompt.action.enhanceDescription")
       setText(description)
@@ -1595,6 +1801,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return
     }
     preEnhanceText = text()
+    preEnhancePastes = paste.pastes().map((item) => item.text)
     enhanceCounter++
     setEnhancing(true)
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
@@ -1749,9 +1956,40 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return { match, entry }
   }
 
+  const sendBlocked = (message: string, imageCount: number) =>
+    (!message && imageCount === 0) || !sendReady() || speech.active()
+
+  const waitAnnotation = async () => {
+    const waiting = annotationSaving
+    if (!waiting) return true
+    const key = draftKey()
+    const id = session.currentSessionID()
+    const value = text()
+    return (
+      waiting.key === key &&
+      (await waiting.promise) &&
+      draftKey() === key &&
+      session.currentSessionID() === id &&
+      text() === value
+    )
+  }
+  const annotationMessage = async (
+    key: string,
+    items: Annotation[],
+    parts: { review: string; browser: string; draft: string; push?: string; context?: string },
+  ) => {
+    const saved = items.length ? await persistAnnotations(key, items) : []
+    return composePromptMessage({ ...parts, annotations: formatAnnotationsMarkdown(saved) })
+  }
+  const pendingSession = (origin: string | undefined) =>
+    props.pendingSessionID ?? (!origin ? session.draftSessionID() : undefined)
+
   const handleSend = async () => {
     if (annotationSaving && !(await waitAnnotation())) return
-    const draft = text().trim()
+    // Collapsed pastes are expanded to their full content before anything reads
+    // the draft: sending, attachments, slash detection, and history all see the
+    // real text, never the placeholder.
+    const draft = paste.plainText(text()).trim()
     if (
       !goal.prepare(draft, () => {
         setText("")
@@ -1764,6 +2002,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const objective = goal.active()
 
     const memory = objective ? undefined : parseMemoryCommand(draft)
+    const parsed = command(objective ? "" : draft)
+    const cmdMatch = parsed.match
+    const matched = parsed.entry
+    if (blockAnnotatedCommand(memory ?? matched)) return
+    if (!commitOpenAnnotation()) return
     if (memory) {
       if (!runMemory(memory)) return
       history.append(draft)
@@ -1771,6 +2014,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       clearReviewComments()
       clearAnnotations()
       clear()
+      clearContexts()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
@@ -1778,19 +2022,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       reviewDrafts.delete(draftKey())
       annotationDrafts.delete(draftKey())
       annotationEditorDrafts.delete(draftKey())
+      contextDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
+      pasteDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       return
     }
-
-    // Detect slash command (hoisted for both client and server command checks).
-    // Prioritize exact name matches over hint/alias matches so that a server
-    // command named e.g. "continue" is not hijacked by a client alias.
-    const parsed = command(objective ? "" : draft)
-    const cmdMatch = parsed.match
-    const matched = parsed.entry
 
     // Client-side slash command — runs locally without a backend round-trip
     if (matched?.action) {
@@ -1799,6 +2038,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       clearReviewComments()
       clearAnnotations()
       clear()
+      clearContexts()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
@@ -1806,9 +2046,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       reviewDrafts.delete(draftKey())
       annotationDrafts.delete(draftKey())
       annotationEditorDrafts.delete(draftKey())
+      contextDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
+      pasteDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       matched.action()
       return
@@ -1821,12 +2063,23 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const push = pushInstruction(pending, settings()["agentManager.pushFixes"] !== false)
     const browserData = browserFeedbackData(browsers())
     const browserText = browserData ? formatBrowserFeedback(browserData.references) : ""
-    const message = [review, push, browserText, draft].filter(Boolean).join("\n\n")
+    const contextText = formatCodeContexts(contexts())
+    const pendingAnnotations = annotations()
+    const annotationsText = formatAnnotationsMarkdown(pendingAnnotations)
+    let message = composePromptMessage({
+      review,
+      browser: browserText,
+      push,
+      context: contextText,
+      annotations: annotationsText,
+      draft,
+    })
     if (canSendContinue()) {
       session.resume()
       return
     }
     const data = review ? { version: 1 as const, comments: pending } : undefined
+    const structured = hasStructuredInput(data, browserData) || pendingAnnotations.length > 0
     if (sendBlocked(message, imgs.length)) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
@@ -1834,118 +2087,103 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const origin = session.currentSessionID()
     const pendingId = pendingSession(origin)
     const id = origin ?? pendingId
-    const sel = session.selected(id)
+    const sel = session.selected(id) ?? { providerID: undefined, modelID: undefined }
     const context = ctx()
     const key = draftKey()
     const stamp = fingerprint(key)
+    const gitAvailable = hasGit()
+    const terminalContext = readTerminalContext(props.terminalContext)
+    const token = annotationSend.begin({ key, sessionID: id })
+    if (!token) return
+    beginPending(pendingId)
 
     try {
       if (pendingAnnotations.length)
-        message = await annotationMessage(key, pendingAnnotations, { review, browser: browserText, draft })
+        message = await annotationMessage(key, pendingAnnotations, {
+          review,
+          browser: browserText,
+          push,
+          context: contextText,
+          draft,
+        })
       const terminalFile = await terminal.resolveAttachment(draft, id, terminalContext).catch((err: Error) => {
         showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
         return undefined
       })
-    if (hasTerminalMention(message) && !terminalFile) {
-      finishPending(pendingId)
-      return
-    }
+      if (!annotationSend.held(token)) return
+      if (hasTerminalMention(draft) && !terminalFile) return
 
-    const gitFile = await git.resolveAttachment(message, id, context).catch((err: Error) => {
-      showToast({ variant: "error", title: "Git changes unavailable", description: err.message })
-      return undefined
-    })
-    if (hasGit() && hasGitChangesMention(message) && !gitFile) {
-      finishPending(pendingId)
-      return
-    }
-    if (isDisabled()) {
-      finishPending(pendingId)
-      return
-    }
-    if (finishPending(pendingId)) return
+      const gitFile = await git
+        .resolveAttachment(draft, id, {
+          captured: true,
+          ...(context === undefined ? {} : { agentManagerContext: context }),
+          available: gitAvailable,
+        })
+        .catch((err: Error) => {
+          showToast({ variant: "error", title: "Git changes unavailable", description: err.message })
+          return undefined
+        })
+      if (!annotationSend.held(token)) return
+      if (gitAvailable && hasGitChangesMention(draft) && !gitFile) return
+      if (!server.isConnected() || finishPending(pendingId)) return
 
-    const allFiles = [
-      ...mentionFiles,
-      ...imgFiles,
-      ...(terminalFile ? [terminalFile] : []),
-      ...(gitFile ? [gitFile] : []),
-    ]
-    const attachments = allFiles.length > 0 ? allFiles : undefined
+      const allFiles = [
+        ...mentionFiles,
+        ...imgFiles,
+        ...(terminalFile ? [terminalFile] : []),
+        ...(gitFile ? [gitFile] : []),
+      ]
+      const attachments = allFiles.length > 0 ? allFiles : undefined
+      const owns = annotationSendOwns(token, draftKey(), sid())
+      if (objective) {
+        mention.closeMention()
+        slash.close()
+        ghost.dismiss()
+        goal.send(key, stamp, [
+          "goal",
+          `-- ${message}`,
+          sel.providerID,
+          sel.modelID,
+          attachments,
+          pendingId,
+          context,
+          origin ?? null,
+        ])
+        return
+      }
 
-    if (objective) {
-      mention.closeMention()
-      slash.close()
-      ghost.dismiss()
-      goal.send(key, stamp, [
-        "goal",
-        `-- ${message}`,
-        sel?.providerID,
-        sel?.modelID,
-        attachments,
-        pendingId,
-        context,
-        origin ?? null,
-      ])
-      return
-    }
-
-    // Server-side slash command (cmdMatch/matched already computed above)
-    if (matched && !data && !browserData) {
-      const args = draft.slice(cmdMatch![0].length).trim()
-      const accepted = session.sendCommand(
-        matched.name,
-        args,
-        sel?.providerID,
-        sel?.modelID,
-        attachments,
-        pendingId,
-        context,
-        origin ?? null,
-        {
-          agent: matched.agent,
-          model: matched.model,
-          variant: matched.variant,
-        },
-      )
-      if (!accepted) return
-    } else {
-      const accepted = session.sendMessage(
-        message,
-        sel?.providerID,
-        sel?.modelID,
-        attachments,
-        pendingId,
-        context,
-        data,
-        origin ?? null,
-        browserData,
-      )
+      // Server-side slash command (cmdMatch/matched already computed above)
+      const accepted =
+        matched && !structured
+          ? session.sendCommand(
+              matched.name,
+              draft.slice(cmdMatch![0].length).trim(),
+              sel.providerID,
+              sel.modelID,
+              attachments,
+              pendingId,
+              context,
+              origin ?? null,
+              {
+                agent: matched.agent,
+                model: matched.model,
+                variant: matched.variant,
+              },
+            )
+          : session.sendMessage(
+              message,
+              sel.providerID,
+              sel.modelID,
+              attachments,
+              pendingId,
+              context,
+              data,
+              origin ?? null,
+              browserData,
+            )
       if (!accepted) return
 
-    clearDraft(key, draft)
-  }
-
-  const clearDraft = (key: string, value = key === draftKey() ? text().trim() : (drafts.get(key) ?? "").trim()) => {
-    history.append(value)
-    drafts.delete(key)
-    reviewDrafts.delete(key)
-    references.delete(key)
-    imageDrafts.delete(key)
-    mentionDrafts.delete(key)
-    scrollDrafts.delete(key)
-    if (draftKey() !== key) return
-
-      history.reset()
-      setText("")
-      clearReviewComments()
-      setAnnotations([])
-      setBrowsers([])
-      imageAttach.clear()
-      mention.closeMention()
-      slash.close()
-
-      if (textareaRef) textareaRef.style.height = "auto"
+      clearDraft(token.key, draft, owns)
     } catch (error) {
       annotationFailure(error)
     } finally {
@@ -1954,10 +2192,55 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
+  const clearDraft = (key: string, value?: string, owns = draftKey() === key) => {
+    if (value === undefined) {
+      const active = key === draftKey()
+      const source = active ? text() : (drafts.get(key) ?? "")
+      const backing = active ? paste.pastes().map((item) => item.text) : (pasteDrafts.get(key) ?? [])
+      value = paste.plainTextFor(source, backing).trim()
+    }
+    clearAcceptedAnnotationDraft(key, annotationDrafts, annotationEditorDrafts)
+    history.append(value)
+    drafts.delete(key)
+    reviewDrafts.delete(key)
+    references.delete(key)
+    contextDrafts.delete(key)
+    imageDrafts.delete(key)
+    mentionDrafts.delete(key)
+    scrollDrafts.delete(key)
+    pasteDrafts.delete(key)
+    if (!owns) return
+
+    history.reset()
+    setText("")
+    clearReviewComments()
+    setAnnotations([])
+    setBrowsers([])
+    clearContexts()
+    imageAttach.clear()
+    mention.closeMention()
+    slash.close()
+
+    if (textareaRef) textareaRef.style.height = "auto"
+  }
+
+  onMount(() => {
+    registerPromptMentionDrop(containerRef, (drop) => {
+      const ref = textareaRef
+      if (!ref || !ref.isConnected || readonly()) return false
+      return mention.insertDrop(drop, ref, setText, server.workspaceDirectory(), adjustHeight)
+    })
+    onCleanup(() => registerPromptMentionDrop(undefined, undefined))
+  })
+
   return (
     <div
+      ref={containerRef}
       class="prompt-input-container"
-      classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
+      classList={{
+        "prompt-input-container--dragging": imageAttach.dragging(),
+        "prompt-input-container--mention-drop": promptMentionOver(),
+      }}
       onDragOver={imageAttach.handleDragOver}
       onDragLeave={imageAttach.handleDragLeave}
       onDrop={(event) => {
@@ -1973,6 +2256,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           onCancel={() => {
             goal.cancel()
             textareaRef?.focus()
+          }}
+        />
+      </Show>
+      <Show when={contexts().length > 0}>
+        <CodeContextChips
+          contexts={contexts()}
+          sessionID={sid()}
+          onRemove={removeContext}
+          onClear={() => {
+            if (!readonly()) clearContexts()
           }}
         />
       </Show>
@@ -2104,56 +2397,43 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             {(() => {
               const all = slash.results()
               const actions = all.filter((c) => c.action)
-              const server = all.filter((c) => !c.action)
-              const offset = actions.length
+              const commands = all.filter((c) => !c.action && !isSkill(c))
+              const skills = all.filter(isSkill)
+              // results() is ordered actions, commands, skills; keyboard indexes follow that order.
+              const groups = [
+                { label: "Actions", items: actions, offset: 0 },
+                { label: "Commands", items: commands, offset: actions.length },
+                { label: "Skills", items: skills, offset: actions.length + commands.length },
+              ].filter((group) => group.items.length > 0)
               return (
-                <>
-                  <Show when={actions.length > 0}>
-                    <div class="slash-command-group-label">Actions</div>
-                    <For each={actions}>
-                      {(cmd, idx) => (
-                        <div
-                          class="slash-command-item"
-                          classList={{ "slash-command-item--active": idx() === slash.index() }}
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
-                          }}
-                          onMouseEnter={() => slash.setIndex(idx())}
-                        >
-                          <span class="slash-command-name">/{cmd.name}</span>
-                          <Show when={cmd.description}>
-                            <span class="slash-command-desc">{cmd.description}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                  <Show when={server.length > 0}>
-                    <Show when={actions.length > 0}>
-                      <div class="slash-command-separator" />
-                    </Show>
-                    <div class="slash-command-group-label">Commands</div>
-                    <For each={server}>
-                      {(cmd, idx) => (
-                        <div
-                          class="slash-command-item"
-                          classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
-                          }}
-                          onMouseEnter={() => slash.setIndex(idx() + offset)}
-                        >
-                          <span class="slash-command-name">/{cmd.name}</span>
-                          <Show when={cmd.description}>
-                            <span class="slash-command-desc">{cmd.description}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </>
+                <For each={groups}>
+                  {(group, g) => (
+                    <>
+                      <Show when={g() > 0}>
+                        <div class="slash-command-separator" />
+                      </Show>
+                      <div class="slash-command-group-label">{group.label}</div>
+                      <For each={group.items}>
+                        {(cmd, idx) => (
+                          <div
+                            class="slash-command-item"
+                            classList={{ "slash-command-item--active": idx() + group.offset === slash.index() }}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                            }}
+                            onMouseEnter={() => slash.setIndex(idx() + group.offset)}
+                          >
+                            <span class="slash-command-name">/{cmd.name}</span>
+                            <Show when={cmd.description}>
+                              <span class="slash-command-desc">{cmd.description}</span>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </>
+                  )}
+                </For>
               )
             })()}
           </Show>
@@ -2191,25 +2471,56 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
-            <Index each={buildHighlightSegments(text(), highlightMentions())}>
+            <Index each={paste.segments(text(), highlightMentions())}>
               {(seg) => (
-                <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
-                  <span
-                    class="prompt-input-file-mention"
-                    classList={{
-                      "prompt-input-file-mention--file": isPathMention(seg().text) && !isModelMention(seg().text),
-                    }}
-                    onClick={(e) => {
-                      if (!isPathMention(seg().text)) return
-                      if (isModelMention(seg().text)) return
-                      if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
-                      e.preventDefault()
-                      e.stopPropagation()
-                      vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })
-                    }}
-                  >
-                    {seg().text}
-                  </span>
+                <Show
+                  when={seg().kind !== "paste"}
+                  fallback={
+                    <span
+                      class="prompt-input-paste"
+                      title={language.t("prompt.paste.expand")}
+                      onClick={(e) => {
+                        if (readonly()) return
+                        if (!textareaRef) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        paste.expand(seg().paste!, textareaRef, setText, () => {
+                          // A large expansion writes the textarea value directly
+                          // and skips the input handler. Reset the enhance and
+                          // history state a manual edit would reset, but leave
+                          // mention, slash, and ghost alone: restored paste
+                          // content is not new input, so it should not rerun
+                          // autocomplete or request a suggestion.
+                          preEnhanceText = null
+                          preEnhancePastes = null
+                          history.reset()
+                          adjustHeight()
+                          syncHighlightScroll()
+                        })
+                      }}
+                    >
+                      {seg().text}
+                    </span>
+                  }
+                >
+                  <Show when={seg().kind === "mention"} fallback={<span>{seg().text}</span>}>
+                    <span
+                      class="prompt-input-file-mention"
+                      classList={{
+                        "prompt-input-file-mention--file": isPathMention(seg().text) && !isModelMention(seg().text),
+                      }}
+                      onClick={(e) => {
+                        if (!isPathMention(seg().text)) return
+                        if (isModelMention(seg().text)) return
+                        if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })
+                      }}
+                    >
+                      {seg().text}
+                    </span>
+                  </Show>
                 </Show>
               )}
             </Index>
@@ -2232,10 +2543,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onInput={handleInput}
             onKeyDown={(e) => {
               if (speechDown(e)) return
-              const key = e.key.toLowerCase()
-              if ((e.ctrlKey || e.metaKey) && !e.altKey && (key === "z" || (key === "y" && !e.shiftKey))) {
-                e.stopPropagation()
-              }
+              if (undo(e)) return
               handleKeyDown(e)
             }}
             onKeyUp={(e) => {
@@ -2243,12 +2551,23 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               syncGhost()
             }}
             onPaste={handlePaste}
+            onCopy={(e) => {
+              if (paste.clipboard(e, textareaRef, setText)) syncGhost()
+            }}
+            onCut={(e) => {
+              if (!paste.clipboard(e, textareaRef, setText, true)) return
+              adjustHeight()
+              syncHighlightScroll()
+              syncGhost()
+            }}
             onClick={syncGhost}
             onFocus={() => {
+              hold.claim()
               syncGhost()
               props.onFocusChange?.(true)
             }}
             onBlur={() => {
+              hold.release()
               syncGhost()
               props.onFocusChange?.(false)
             }}

@@ -1041,6 +1041,8 @@ Options:
   --stream        connect to the WebSocket stream and print events as JSONL  [boolean]
 ```
 
+Provide exactly one of `--prompt` or `--prompt-stdin`. For example, read a multiline prompt from a file with `kilo cloud start --repo owner/repo --prompt-stdin < prompt.txt`.
+
 ### kilo cloud send
 
 ```
@@ -1053,6 +1055,8 @@ Options:
   --prompt-stdin  read the prompt from standard input  [boolean] [default: false]
   --session-id    Cloud Agent session ID  [string] [required]
 ```
+
+Provide exactly one of `--prompt` or `--prompt-stdin`, as with `kilo cloud start`.
 
 ### kilo cloud status
 

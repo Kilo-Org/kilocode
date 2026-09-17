@@ -365,7 +365,7 @@ describe("movePromptDraft", () => {
     expect(scrolls.has(source)).toBe(false)
   })
 
-  it("keeps existing target artifacts during promotion", () => {
+  it("keeps required and annotation targets while refreshing optional upstream artifacts", () => {
     const source = scopeDraftKey("prompt:default", pendingDraftKey("pending-1"))
     const target = scopeDraftKey("prompt:default", sessionDraftKey("session-1"))
     const text = new Map([
@@ -404,7 +404,7 @@ describe("movePromptDraft", () => {
     expect(comments.get(target)).toEqual([{ id: "existing-comment" }])
     expect(images.get(target)).toEqual(["existing-image"])
     expect(scrolls.get(target)).toBe(128)
-    expect(browsers.get(target)).toEqual(["existing-browser"])
+    expect(browsers.get(target)).toEqual(["pending-browser"])
     expect(annotations.get(target)).toEqual([{ id: "existing-note", number: 2 }])
     expect(editors.get(target)).toEqual({ comment: "existing editor" })
     expect(text.has(source)).toBe(false)

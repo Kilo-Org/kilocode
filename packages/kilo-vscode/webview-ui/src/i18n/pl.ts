@@ -201,6 +201,7 @@ export const dict = {
   "prompt.action.send.recording": "Transkrybuj i wyślij",
   "prompt.action.stop": "Zatrzymaj",
   "prompt.action.enhance": "Ulepsz prompt",
+  "prompt.paste.expand": "Kliknij, aby rozwinąć wklejony tekst",
   "prompt.action.autoApprove.enable": "Włącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.disable": "Wyłącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.enabled":
@@ -229,7 +230,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Kliknij, aby ograniczyć zapisy w systemie plików. Ustawienia sandboxa nadal zezwalają na dostęp do sieci.",
 
-  "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe z Kilo Gateway",
+  "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe",
   "speechToText.tooltip.shortcut":
     "Stuknij lub naciśnij Cmd/Ctrl+K, aby rozpocząć albo zatrzymać nagrywanie; przytrzymaj podczas mówienia, a następnie zwolnij, aby dokonać transkrypcji i wysłać.",
   "speechToText.tooltip.starting": "Uruchamianie mikrofonu... Poczekaj, zanim zaczniesz mówić.",
@@ -271,6 +272,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
   "notification.permission.titleSandboxEscalation": "Zezwolić na operację Git poza piaskownicą?",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
+  "ui.permission.reject": "Odrzuć",
+  "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",
+  "ui.permission.feedbackHint": "Enter, aby odrzucić, Esc, aby anulować",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
   "ui.permission.doomLoop.rule": "Kontynuuj wywołania {{tool}}",
   "ui.permission.rule.addToAllowed": "Dodaj do listy dozwolonych",
@@ -319,7 +323,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nowe Zadanie",
   "sidebar.topBar.history": "Historia",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Ustawienia",
@@ -419,6 +422,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Niestandardowy dostawca",
   "settings.providers.connected.environmentDescription": "Połączony z twoich zmiennych środowiskowych",
   "settings.providers.action.signInChatGPT": "Zaloguj przez ChatGPT",
+  "settings.providers.action.changeApiKey": "Zmień klucz API",
   "settings.providers.custom.description": "Dodaj niestandardowego dostawcę przez bazowy URL.",
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
@@ -635,6 +639,7 @@ export const dict = {
   "profile.usage.source.direct": "Bezpośrednio",
   "profile.usage.state.stale": "Wyświetlane są ostatnio zaktualizowane dane o wykorzystaniu.",
   "profile.usage.state.unavailable": "Dane o wykorzystaniu są niedostępne.",
+  "profile.usage.state.empty": "Nie zgłoszono limitów wykorzystania.",
   "profile.usage.plan.pastDue": "Plan: Zaległa płatność",
   "profile.usage.plan.canceling": "Plan: Zostanie anulowany z końcem okresu",
   "profile.usage.plan.unknown": "Plan: Status nieznany",
@@ -798,7 +803,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Umiejętności",
 
   "settings.browser.description":
-    "Po włączeniu agent AI może wchodzić w interakcję ze stronami internetowymi — nawigować, klikać, pisać i robić zrzuty ekranu. Otworzy się okno Chrome, abyś mógł obserwować pracę agenta.",
+    "Skonfiguruj wbudowaną automatyzację przeglądarki opartą na Playwright. Kilo może nawigować po stronach internetowych, wchodzić z nimi w interakcję i robić zrzuty ekranu w Twoich sesjach.",
   "settings.browser.enable.title": "Włącz automatyzację przeglądarki",
   "settings.browser.enable.description": "Zarejestruj serwer Playwright MCP w backendzie CLI.",
   "settings.browser.systemChrome.title": "Użyj systemowego Chrome",
@@ -852,15 +857,28 @@ export const dict = {
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.imageGeneration.title": "Generowanie obrazów",
   "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Współdziel tablicę między główną sesją a jej podagentami wykonującymi zadania, w tym zagnieżdżonymi podagentami. Używaj jej do równoległych prób rozwiązania problemu lub wzajemnie uzupełniających się prac, a nie do każdego zadania.",
   "settings.experimental.imageGenerationModel.title": "Model obrazu",
   "settings.experimental.imageGenerationModel.description": "Model generowania obrazów",
   "settings.experimental.imageGenerationModel.placeholder": "Domyślny (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Identyfikator modelu wysyłany do własnego punktu końcowego transkrypcji, na przykład whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Bazowy adres URL mowy na tekst",
+  "settings.models.speechToTextBaseUrl.description":
+    "Użyj API transkrypcji zgodnego z OpenAI zamiast Kilo Gateway. Modele są odczytywane z /models, a dźwięk jest wysyłany do /audio/transcriptions. Pozostaw puste, aby używać Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Klucz API mowy na tekst",
+  "settings.models.speechToTextApiKey.description":
+    "Token bearer wysyłany na własny bazowy adres URL transkrypcji. Przechowywany w pliku konfiguracyjnym Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Włącz i zaloguj się do dostawcy Kilo, aby korzystać ze Speech to Text. Speech to Text jest obecnie obsługiwane tylko z Kilo Gateway.",
+    "Włącz i zaloguj się do dostawcy Kilo, aby korzystać ze Speech to Text, albo ustaw poniżej własny bazowy adres URL transkrypcji.",
+  "settings.models.speechToText.remoteDescription":
+    "Wprowadzanie głosowe nie jest dostępne w zdalnych oknach. Otwórz Kilo w lokalnym oknie, aby użyć mikrofonu.",
   "settings.models.speechToTextModel.title": "Model mowy na tekst",
   "settings.models.speechToTextModel.description":
     "Wybierz model transkrypcji Kilo Gateway dla wprowadzania głosowego.",
@@ -1064,6 +1082,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "model",
   "settings.agentBehaviour.workflows.variant": "wariant",
   "settings.agentBehaviour.workflows.modelDescription": "Globalne nadpisanie modelu",
+  "settings.experimental.codeMode.title": "Programmatyczne wywołania narzędzi",
+  "settings.experimental.codeMode.description":
+    "Kieruje wywołania narzędzi MCP przez odizolowane środowisko uruchomieniowe JavaScript z wykrywaniem narzędzi na żądanie, zamiast udostępniać każde narzędzie MCP bezpośrednio. Oszczędza kontekst, gdy podłączonych jest wiele narzędzi MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
@@ -1119,6 +1140,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model używany do automatycznej i ręcznej kompakcji. Pozostaw puste, aby używać modelu czatu. Koszt, szybkość i jakość podsumowania zależą od modelu.",
   "settings.context.compactionModel.useChatModel": "Użyj modelu czatu",
+  "settings.context.compactionModel.hint": "Aby wybrać model używany do kompakcji, zobacz Ustawienia modeli.",
   "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
   "settings.context.compactionLimit.description":
     "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
@@ -1163,9 +1185,12 @@ export const dict = {
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.fontSize.title": "Rozmiar czcionki",
   "settings.display.fontSize.description": "Dostosuj rozmiar czcionki webview UI Kilo niezależnie od VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
-  "settings.display.reasoningAutoCollapse.description":
-    "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
+  "settings.display.reasoningDisplay.title": "Bloki rozumowania",
+  "settings.display.reasoningDisplay.description":
+    "Wybierz, jak zaczynają się bloki rozumowania. Rozwinięte pokazuje pełny tekst, Podgląd ogranicza go do krótkiego przewijanego podglądu, a Nagłówek pokazuje tylko tytuł i wskaźnik strumieniowania, dopóki go nie otworzysz.",
+  "settings.display.reasoningDisplay.expanded": "Rozwinięte",
+  "settings.display.reasoningDisplay.preview": "Podgląd",
+  "settings.display.reasoningDisplay.headline": "Nagłówek",
   "settings.display.shiftTabCycle.title": "Przełączaj wysiłek rozumowania za pomocą Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Naciśnij Shift+Tab w polu wprowadzania promptu, aby przełączyć się na następny poziom wysiłku rozumowania. Wyłącz tę opcję, aby zachować Shift+Tab do nawigacji fokusem za pomocą klawiatury.",
@@ -1306,6 +1331,18 @@ export const dict = {
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Zapisz lokalnie",
+  "diffViewer.comment.sendToAgent": "Wyślij do agenta",
+  "diffViewer.comment.postToGithub": "Opublikuj na GitHubie",
+  "diffViewer.comment.loadFailed": "Nie udało się wczytać zmian pull requesta.",
+  "diffViewer.comment.unavailable": "Ten wiersz nie jest dostępny w bieżącej migawce pull requesta.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Otwórz pull request",
+  "diffViewer.comment.localChanges": "Zmiany lokalne",
+  "diffViewer.comment.prChanges": "Zmiany PR",
+  "diffViewer.comment.sendToKilo": "Wyślij do Kilo",
+  "diffViewer.comment.sendToGithub": "Wyślij do GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Wybierz miejsce docelowe",
   "diffViewer.notice.snapshotsDisabled":
     "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 
@@ -1327,5 +1364,11 @@ export const dict = {
   "chat.search.close": "Zamknij wyszukiwanie",
   "chat.search.invalidRegex": "Nieprawidłowe wyrażenie regularne",
   "chat.search.noResults": "Brak wyników",
+  "settings.experimental.browserAutomation.title": "Zintegrowana przeglądarka",
+  "settings.experimental.browserAutomation.description":
+    "Wyświetlaj podglądy lokalnych aplikacji w Agent Manager i udostępniaj narzędzie browser_open sesjom Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Użyj systemowego Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Użyj zainstalowanej przeglądarki Google Chrome dla zintegrowanej przeglądarki. Wyłącz tylko wtedy, gdy zgodna przeglądarka Playwright Chromium jest już zainstalowana.",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
 }

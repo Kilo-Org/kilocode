@@ -195,6 +195,7 @@ export const dict = {
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
+  "prompt.paste.expand": "點擊展開貼上的文字",
   "prompt.action.autoApprove.enable": "啟用自動核准",
   "prompt.action.autoApprove.disable": "停用自動核准",
   "prompt.action.autoApprove.enabled": "自動核准已啟用。權限請求將自動獲准。",
@@ -217,7 +218,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabled": "點擊以限制檔案系統寫入和網路存取。",
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
-  "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
+  "speechToText.tooltip.start": "開始語音輸入",
   "speechToText.tooltip.shortcut": "點擊或按下 Cmd/Ctrl+K 開始或停止錄音；說話時按住，放開後即可轉錄並提交。",
   "speechToText.tooltip.starting": "正在啟動麥克風... 請稍後再說。",
   "speechToText.tooltip.stop": "停止擷取音訊",
@@ -255,6 +256,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
   "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
+  "ui.permission.reject": "拒絕",
+  "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
+  "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
   "ui.permission.rule.addToAllowed": "加入允許清單",
@@ -303,7 +307,6 @@ export const dict = {
   "sidebar.topBar.newTask": "新建任務",
   "sidebar.topBar.history": "歷史記錄",
   "sidebar.topBar.agentManager": "代理管理器",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "市集",
   "sidebar.topBar.profile": "個人資料",
   "sidebar.topBar.settings": "設定",
@@ -403,6 +406,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "自訂提供商",
   "settings.providers.connected.environmentDescription": "從您的環境變數連線",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登入",
+  "settings.providers.action.changeApiKey": "更改 API 金鑰",
   "settings.providers.custom.description": "透過基礎 URL 新增自訂提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的預設模型和推理工作量。留空以繼承呼叫代理的模型。",
@@ -612,6 +616,7 @@ export const dict = {
   "profile.usage.source.direct": "直接",
   "profile.usage.state.stale": "正在顯示上次更新的用量。",
   "profile.usage.state.unavailable": "無法取得用量資料。",
+  "profile.usage.state.empty": "未回報任何用量限制。",
   "profile.usage.plan.pastDue": "方案：付款逾期",
   "profile.usage.plan.canceling": "方案：將於週期結束時取消",
   "profile.usage.plan.unknown": "方案：狀態未知",
@@ -768,7 +773,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "啟用後，AI Agent 可以與網頁互動，可導覽、點選、輸入並擷取螢幕截圖。Chrome 視窗將開啟，方便觀察 Agent 的工作。",
+    "設定由 Playwright 提供支援的內建瀏覽器自動化。Kilo 可以在你的工作階段中瀏覽網頁、與網頁互動，並擷取螢幕截圖。",
   "settings.browser.enable.title": "啟用瀏覽器自動化",
   "settings.browser.enable.description": "將 Playwright MCP 伺服器註冊到 CLI 後端。",
   "settings.browser.systemChrome.title": "使用系統 Chrome",
@@ -819,15 +824,26 @@ export const dict = {
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
   "settings.experimental.imageGeneration.title": "圖像生成",
   "settings.experimental.imageGeneration.description": "啟用 AI 圖像生成",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "讓主要工作階段與負責其任務的子代理共用看板，包括巢狀子代理。用於並行嘗試解決方案或進行相互補充的工作，而不是用於每一項任務。",
   "settings.experimental.imageGenerationModel.title": "圖像模型",
   "settings.experimental.imageGenerationModel.description": "圖像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "預設 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription": "傳送到自訂轉錄端點的模型 ID，例如 whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "語音轉文字基礎 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "使用相容 OpenAI 的轉錄 API 取代 Kilo Gateway。模型從 /models 讀取，音訊傳送到 /audio/transcriptions。留空則使用 Kilo Gateway。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "語音轉文字 API 金鑰",
+  "settings.models.speechToTextApiKey.description": "傳送到自訂轉錄基礎 URL 的 Bearer 權杖。儲存在你的 Kilo 設定檔中。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "啟用並登入 Kilo 供應商以使用 Speech to Text。Speech to Text 目前僅支援透過 Kilo Gateway 使用。",
+    "啟用並登入 Kilo 供應商以使用 Speech to Text，或在下方設定自訂轉錄基礎 URL。",
+  "settings.models.speechToText.remoteDescription":
+    "遠端視窗中無法使用語音輸入。請在本機視窗中開啟 Kilo 以使用麥克風。",
   "settings.models.speechToTextModel.title": "語音轉文字模型",
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.nativeNotebookTools.title": "原生筆記本工具",
@@ -976,6 +992,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "模型",
   "settings.agentBehaviour.workflows.variant": "變體",
   "settings.agentBehaviour.workflows.modelDescription": "全域模型覆寫",
+  "settings.experimental.codeMode.title": "程式化工具呼叫",
+  "settings.experimental.codeMode.description":
+    "透過受限的 JavaScript 執行階段按需探索工具來路由 MCP 工具呼叫，而不是直接公開每個 MCP 工具。連接大量 MCP 工具時可節省上下文。",
   "settings.sandboxing.enabled.title": "沙盒",
   "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
@@ -1018,6 +1037,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "用於自動和手動壓縮的模型。留空以使用聊天模型。成本、速度和摘要品質取決於模型。",
   "settings.context.compactionModel.useChatModel": "使用聊天模型",
+  "settings.context.compactionModel.hint": "若要選擇用於壓縮的模型，請參閱模型設定。",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
   "settings.context.prune.title": "修剪舊輸出",
@@ -1059,9 +1079,12 @@ export const dict = {
   "settings.display.username.description": "對話中顯示的自訂使用者名稱",
   "settings.display.fontSize.title": "字體大小",
   "settings.display.fontSize.description": "獨立於 VS Code 調整 Kilo webview UI 的字體大小。",
-  "settings.display.reasoningAutoCollapse.title": "自動收合推理",
-  "settings.display.reasoningAutoCollapse.description":
-    "在代理寫完推理後收合推理區塊。保持關閉可讓推理保持展開，除非你手動收合它。",
+  "settings.display.reasoningDisplay.title": "推理區塊",
+  "settings.display.reasoningDisplay.description":
+    "選擇推理區塊的起始顯示方式。展開會顯示完整文字，預覽會將其限制為簡短的可捲動預覽，標題僅顯示標題和串流指示器，直到你開啟它。",
+  "settings.display.reasoningDisplay.expanded": "展開",
+  "settings.display.reasoningDisplay.preview": "預覽",
+  "settings.display.reasoningDisplay.headline": "標題",
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切換推理強度",
   "settings.display.shiftTabCycle.description":
     "在提示輸入框中按 Shift+Tab 可切換至下一個推理強度等級。停用此選項可保留 Shift+Tab 用於鍵盤焦點導覽。",
@@ -1235,6 +1258,18 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "儲存至本機",
+  "diffViewer.comment.sendToAgent": "傳送給代理程式",
+  "diffViewer.comment.postToGithub": "發佈到 GitHub",
+  "diffViewer.comment.loadFailed": "無法載入提取請求的變更。",
+  "diffViewer.comment.unavailable": "此行在目前的提取請求快照中無法使用。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "開啟提取請求",
+  "diffViewer.comment.localChanges": "本機變更",
+  "diffViewer.comment.prChanges": "PR 變更",
+  "diffViewer.comment.sendToKilo": "傳送到 Kilo",
+  "diffViewer.comment.sendToGithub": "傳送到 GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "選擇目標",
   "diffViewer.notice.snapshotsDisabled": "此存放庫的快照已停用。請編輯設定檔以顯示工作階段的變更。",
 
   "diffViewer.baseBranch.auto": "預設",
@@ -1255,5 +1290,11 @@ export const dict = {
   "chat.search.close": "關閉搜尋",
   "chat.search.invalidRegex": "規則運算式無效",
   "chat.search.noResults": "無結果",
+  "settings.experimental.browserAutomation.title": "整合瀏覽器",
+  "settings.experimental.browserAutomation.description":
+    "在 Agent Manager 中顯示本機應用程式預覽，並向 Agent Manager 工作階段公開 browser_open 工具。",
+  "settings.experimental.browserAutomation.systemChrome.title": "使用系統 Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "為整合瀏覽器使用已安裝的 Google Chrome。僅在已安裝相容的 Playwright Chromium 瀏覽器時才停用。",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
 } satisfies Partial<Record<Keys, string>>

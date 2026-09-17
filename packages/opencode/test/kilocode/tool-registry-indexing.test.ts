@@ -6,6 +6,7 @@ import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
+import { Wakeup } from "../../src/kilocode/wakeup"
 import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
@@ -474,7 +475,11 @@ describe("kilocode tool registry indexing", () => {
       for (const client of ["cli", "vscode", "jetbrains", "desktop", "run", "acp"]) {
         process.env["KILO_CLIENT"] = client
         for (const enabled of [false, true]) {
-          const ids = KiloToolRegistry.extra(tools, { experimental: { shared_agent_board: enabled } }, flags)
+          const ids = KiloToolRegistry.extra(
+            tools,
+            { shared_agent_board: enabled },
+            { experimentalSharedAgentBoard: enabled },
+          )
             .map((tool) => tool.id)
             .filter((id) => id.startsWith("board_"))
           expect(ids).toEqual(enabled ? ["board_read", "board_post"] : [])
@@ -519,6 +524,17 @@ describe("kilocode tool registry indexing", () => {
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
     const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
+    const wakeup = Layer.succeed(
+      Wakeup.Service,
+      Wakeup.Service.of({
+        schedule: () => Effect.die(new Error("wakeup schedule is not used by this test")),
+        list: () => Effect.succeed([]),
+        pending: () => Effect.succeed([]),
+        cancel: () => Effect.succeed(undefined),
+        cancelSession: () => Effect.succeed(0),
+        adopt: () => Effect.void,
+      }),
+    )
     const indexing = spyOn(KiloIndexing, "init").mockRejectedValue(err)
     const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
@@ -526,7 +542,9 @@ describe("kilocode tool registry indexing", () => {
       await Effect.runPromise(
         KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
           Effect.provide(
-            KilocodeBootstrap.layer.pipe(Layer.provide([sessions, bus, memory, session, summary, provider, watcher])),
+            KilocodeBootstrap.layer.pipe(
+              Layer.provide([sessions, bus, memory, session, summary, provider, watcher, wakeup]),
+            ),
           ),
           Effect.scoped,
         ),

@@ -24,7 +24,6 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
-import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -96,6 +95,7 @@ import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kil
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
+import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -145,6 +145,7 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID, scope?: KiloSessionControl.AbortScope) => Effect.Effect<void> // kilocode_change
+  readonly paused: (sessionID: SessionID) => Effect.Effect<boolean> // kilocode_change - wakeup resume refuses a paused session instead of dropping its turn
   readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
@@ -1450,15 +1451,10 @@ export const layer = Layer.effect(
     ) => Effect.Effect<SessionV1.WithParts, Image.Error> = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput, prior?: KiloSessionControl.Ticket) {
         const background = KiloSessionControl.background(input.parts)
-        if (!prior && input.parts.some((part) => part.type !== "text" || !part.synthetic)) {
-          yield* goals.pause(input.sessionID)
-        }
-        const ticket =
-          prior ??
-          (yield* control.begin(
-            input.sessionID,
-            input.noReply !== true && input.parts.some((part) => part.type !== "text" || !part.synthetic),
-          ))
+        // kilocode_change - a real user message takes priority over an active goal
+        // for its turn but must not pause the goal; the goal loop resumes after it.
+        const human = input.parts.some((part) => part.type !== "text" || !part.synthetic)
+        const ticket = prior ?? (yield* control.begin(input.sessionID, input.noReply !== true && human))
         // kilocode_change end
         const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
         yield* revert.cleanup(session)
@@ -1976,6 +1972,12 @@ export const layer = Layer.effect(
           // not a premature stop, so clients must not flash an interruption warning.
           if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
             closeReasons.set(sessionID, "superseded")
+            // kilocode_change - record which turn handed off so a goal loop that
+            // owns it can continue after the queued prompt instead of pausing.
+            // Only record while a goal is active, so plain sessions never
+            // accumulate markers.
+            const handoff = KiloSessionPromptQueue.active(sessionID)
+            if (handoff && GoalState.active(sessionID)) KiloSessionPromptQueue.markSuperseded(sessionID, handoff)
             return "break" as const
           }
           // kilocode_change end
@@ -2362,74 +2364,6 @@ export const layer = Layer.effect(
         return yield* handleResume({ cmdInput: input, format: fmt })
       }
       // kilocode_change end
-      // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
-      const legacy = legacyReviewMessage(input.command)
-      if (legacy) {
-        const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
-        if (!agent) {
-          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-          yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-          throw error
-        }
-        const model = yield* Effect.gen(function* () {
-          if (cmd.model) return Provider.parseModel(cmd.model)
-          if (cmd.agent && agent.model) return agent.model
-          if (input.model) return Provider.parseModel(input.model)
-          return yield* currentModel(input.sessionID)
-        })
-        yield* getModel(model.providerID, model.modelID, input.sessionID)
-        const text = `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`
-        if (!ticket.current()) return yield* Effect.interrupt
-        const user = yield* KiloSessionPrompt.intake(
-          input.sessionID,
-          createUserMessage({
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-            model,
-            agent: agent.name,
-            variant: input.variant,
-            parts: [{ type: "text", text }, ...(input.parts ?? [])],
-          }),
-        )
-        yield* sessions.touch(input.sessionID)
-        const ctx = yield* InstanceState.context
-        const completed = Date.now()
-        const info: MessageV2.Assistant = yield* sessions.updateMessage({
-          id: MessageID.ascending(),
-          role: "assistant",
-          parentID: user.info.id,
-          sessionID: input.sessionID,
-          mode: agent.name,
-          agent: agent.name,
-          variant: user.info.model.variant,
-          path: { cwd: ctx.directory, root: ctx.worktree },
-          cost: 0,
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: user.info.model.modelID,
-          providerID: user.info.model.providerID,
-          time: { created: completed, completed },
-          finish: "stop",
-        })
-        const part: MessageV2.TextPart = yield* sessions.updatePart({
-          id: PartID.ascending(),
-          messageID: info.id,
-          sessionID: input.sessionID,
-          type: "text",
-          text: legacy,
-        })
-        const result = { info, parts: [part] }
-        yield* events.publish(Command.Event.Executed, {
-          name: input.command,
-          sessionID: input.sessionID,
-          arguments: input.arguments,
-          messageID: result.info.id,
-        })
-        return result
-      }
-      // kilocode_change end
-
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
       const templateCommand = yield* Effect.promise(async () => cmd.template)
@@ -2567,6 +2501,7 @@ export const layer = Layer.effect(
 
     return Service.of({
       cancel,
+      paused: (id) => control.paused(id), // kilocode_change - wakeup resume reads it before forking a turn
       prompt,
       loop: (input) => loop(input).pipe(Effect.orDie),
       shell,

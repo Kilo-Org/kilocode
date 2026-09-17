@@ -177,10 +177,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    feedback?: string,
   ) => {
     const perm = permissionRequest()
     if (!perm || perm.id !== permissionID || session.respondingPermissions().has(permissionID)) return
-    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways)
+    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways, feedback)
   }
 
   const startSession = () => window.dispatchEvent(new CustomEvent("newTaskRequest"))
@@ -243,10 +244,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const canStartSession = (hasChat: boolean) => hasChat
 
-  // Deliberately status-independent: the dock reserves this row's height even
-  // while the working indicator covers it, so a button that came and went with
-  // the turn would resize the row and shift the transcript. The row is hidden
-  // and non-interactive while a turn runs.
+  // Deliberately status-independent so the row keeps one stable layout across
+  // turns. The dock hides it and makes it non-interactive while a turn runs.
   const canFork = (hasChat: boolean) => hasChat && !isSidebar() && !!props.onForkSession
 
   const canStartWorktree = () => isSidebar() && server.gitInstalled()

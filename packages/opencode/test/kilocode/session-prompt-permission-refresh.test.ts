@@ -438,7 +438,7 @@ it.live(
 )
 
 it.live(
-  "stops a legacy command while an attachment read permission is pending",
+  "stops a command while an attachment read permission is pending",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ dir }) {
@@ -453,7 +453,7 @@ it.live(
         const fiber = yield* prompt
           .command({
             sessionID: session.id,
-            command: "local-review",
+            command: "review",
             arguments: "",
             parts: [
               {
@@ -470,7 +470,7 @@ it.live(
             const requests = yield* permission.list()
             return requests.find((request) => request.sessionID === session.id && request.permission === "read")
           }),
-          "legacy command attachment permission was never requested",
+          "command attachment permission was never requested",
           "15 seconds",
         )
 

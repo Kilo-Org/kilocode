@@ -24,7 +24,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { DEFAULT_VARIANT, cycleVariant, preserveVariant } from "../src/context/session-variant-store"
+import { DEFAULT_VARIANT, cycleVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -44,14 +44,14 @@ import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToTex
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
-import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
-import { createDialogModels } from "./new-worktree-models"
+import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -137,17 +137,22 @@ export const NewWorktreeDialog: Component<{
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
+  const [compareMode, setCompareMode] = createSignal(false)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
-  const [agent, setAgent] = createSignal(initialAgent)
-  const selection = createDialogModels({
-    saved: saved.model,
-    fallback: () => session.modelForAgent(agent()),
+  const preferences = createDialogPreferences({
+    saved,
+    agent: initialAgent,
+    fallback: session.modelForAgent,
+    effort: session.variantPreference,
+    preferred: session.preferredSelection,
+    hydrated: session.preferencesReady,
     ready: provider.ready,
     valid: provider.isModelValid,
     variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
+    compare: compareMode,
+    remember: session.rememberSelection,
   })
-  const model = selection.model
-  const [compareMode, setCompareMode] = createSignal(false)
+  const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [starting, setStarting] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
@@ -157,7 +162,6 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(saved.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -168,7 +172,7 @@ export const NewWorktreeDialog: Component<{
   const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true
   const speech = useSpeechToText(vscode, server, { t })
   const speechModels = useSpeechToTextModels()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   let prior: string | null = null
   let request: string | undefined
@@ -176,12 +180,6 @@ export const NewWorktreeDialog: Component<{
     prior = null
     request = undefined
     setEnhancing(false)
-  }
-
-  const selectAgent = (name: string) => {
-    setAgent(name)
-    selection.select(undefined)
-    setVariant(undefined)
   }
 
   const cycle = (direction: 1 | -1) => {
@@ -197,33 +195,6 @@ export const NewWorktreeDialog: Component<{
     if (tab() !== "new") return
     const dispose = props.mode.register(cycle)
     onCleanup(dispose)
-  })
-
-  // Variant list for the currently selected model
-  const variants = createMemo(() => {
-    const sel = model()
-    if (!sel) return []
-    const found = provider.findModel(sel)
-    if (!found?.variants) return []
-    return Object.keys(found.variants)
-  })
-
-  const effectiveVariant = createMemo(() => {
-    const list = variants()
-    if (list.length === 0) return undefined
-    const stored = variant() ?? session.variantForAgent(agent(), model())
-    return stored && list.includes(stored) ? stored : undefined
-  })
-
-  // Reset variant when model changes and stored variant is not in new list
-  createEffect(() => {
-    const list = variants()
-    if (list.length === 0) {
-      setVariant(undefined)
-      return
-    }
-    const stored = variant()
-    if (stored && !list.includes(stored)) setVariant(preserveVariant(stored, list))
   })
 
   createEffect(() => {
@@ -300,9 +271,7 @@ export const NewWorktreeDialog: Component<{
     vscode.setState({
       ...state,
       advancedDialogSelections: {
-        agent: agent(),
-        model: selection.choice(),
-        variant: variant(),
+        ...preferences.saved(),
         sandbox: sandbox(),
       },
     })
@@ -451,8 +420,14 @@ export const NewWorktreeDialog: Component<{
   }
 
   const undo = (e: KeyboardEvent) => {
-    if (e.key !== "z" || (!e.metaKey && !e.ctrlKey) || e.shiftKey || prior === null) return
+    const action = undoKey(e)
+    if (!action) return
+    e.stopPropagation()
     e.preventDefault()
+    if (action === "redo" || prior === null) {
+      document.execCommand(action)
+      return
+    }
     const restored = prior
     cancel()
     setPrompt(restored)
@@ -483,7 +458,7 @@ export const NewWorktreeDialog: Component<{
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
       e.preventDefault()
-      setVariant(next ?? DEFAULT_VARIANT)
+      selectVariant(next)
       return
     }
     undo(e)
@@ -824,14 +799,7 @@ export const NewWorktreeDialog: Component<{
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
                       value={model()}
-                      onSelect={(pid, mid) => {
-                        if (!pid || !mid) return
-                        const current = effectiveVariant()
-                        const next = { providerID: pid, modelID: mid }
-                        const list = Object.keys(provider.findModel(next)?.variants ?? {})
-                        selection.select(next)
-                        setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
-                      }}
+                      onSelect={selectModel}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
                       trigger={WORKTREE_PROMPT_SCOPE}
@@ -842,8 +810,8 @@ export const NewWorktreeDialog: Component<{
                     <ThinkingSelectorBase
                       variants={variants()}
                       value={effectiveVariant()}
-                      onSelect={setVariant}
-                      onClear={() => setVariant(DEFAULT_VARIANT)}
+                      onSelect={selectVariant}
+                      onClear={() => selectVariant(DEFAULT_VARIANT)}
                       allowClear
                       clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}

@@ -90,7 +90,7 @@ describe("sendCommand dismisses pending tool requests", () => {
     expect(body).toContain("selectAgent(overrides.agent, scope)")
     expect(body).toContain("if (overrides?.model)")
     expect(body).toContain("selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)")
-    expect(body).toContain("if (overrides?.variant)")
+    expect(body).toContain("if (overrides?.variant !== undefined)")
     expect(body).toContain("selectVariant(overrides.variant, scope)")
   })
 })
@@ -322,7 +322,7 @@ describe("sendMessage / sendCommand draft id contract", () => {
   it("sendCommand seeds the pending agent before resolving draft-scoped settings", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*submission\(scope, effectiveSelection\)/,
+      /if \(!sid && !draftID && effectiveDraftID\) \{\s*agentDrafts\.seed\(effectiveDraftID\)[\s\S]*submission\(scope, effectiveSelection\)/,
     )
   })
 
@@ -427,9 +427,9 @@ describe("PromptInput send origin contract", () => {
     const end = source.indexOf("\n  return (", start)
     const body = source.slice(start, end)
     const send = Math.max(body.indexOf("session.sendMessage("), body.indexOf("session.sendCommand("))
-    const clear = body.indexOf("clearDraft(key, draft)")
+    const clear = body.indexOf("clearDraft(token.key, draft, owns)")
     const append = body.lastIndexOf("history.append(value)")
-    const guard = body.indexOf("if (draftKey() !== key) return")
+    const guard = body.indexOf("if (!owns) return")
 
     expect(send).toBeGreaterThan(-1)
     expect(clear).toBeGreaterThan(send)
@@ -700,7 +700,10 @@ describe("browser element reference contract", () => {
   it("includes browser reference content only when the user sends the prompt", () => {
     expect(source).toContain("browserFeedbackData(browsers())")
     expect(source).toContain("formatBrowserFeedback(browserData.references)")
-    expect(source).toContain('const message = [review, push, browserText, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain("let message = composePromptMessage({")
+    expect(source).toContain("browser: browserText,")
+    expect(source).toContain("context: contextText,")
+    expect(source).toContain("annotations: annotationsText,")
     expect(source).toContain("references.delete(key)")
   })
 
@@ -725,7 +728,7 @@ describe("webview-local annotation send contract", () => {
   it("commits the open editor before formatting and clears only after an accepted send", () => {
     const send = source.indexOf("// Server-side slash command")
     const accepted = source.indexOf("if (!accepted) return", send)
-    const cleared = source.indexOf("clearAcceptedAnnotationDraft(token.key", send)
+    const cleared = source.indexOf("clearDraft(token.key, draft, owns)", send)
     expect(source.indexOf("if (!commitOpenAnnotation()) return")).toBeLessThan(
       source.indexOf("formatAnnotationsMarkdown(pendingAnnotations)"),
     )
@@ -763,7 +766,7 @@ describe("webview-local annotation send contract", () => {
     const committed = handleSend.indexOf("if (!commitOpenAnnotation()) return")
     expect(blocked).toBeGreaterThan(0)
     expect(blocked).toBeLessThan(committed)
-    expect(source).toContain("(command) => !blockAnnotatedCommand(command)")
+    expect(source).toContain('(command) => command.name === "goal" || !blockAnnotatedCommand(command)')
   })
 
   it("keeps failed annotation sends as raw Markdown and protects newer annotation drafts", () => {
@@ -790,8 +793,8 @@ describe("webview-local annotation send contract", () => {
     expect(restore).toContain("promptDraftStorageKey(raw, boxKey(), promptDraftStores)")
     expect(restore).toContain("annotationSend.cancel(target)")
     expect(restore).toContain("replaceAnnotationDraft({")
-    expect(restore).toContain("saveDraft(target, message.text, comments, images")
-    expect(restore.indexOf("if (!active) return")).toBeGreaterThan(restore.indexOf("saveDraft(target"))
+    expect(restore).toMatch(/saveDraft\(\s*target,\s*message.text,\s*comments,\s*images/)
+    expect(restore.indexOf("if (!active) return")).toBeGreaterThan(restore.indexOf("saveDraft("))
     const session = readFile(SESSION_FILE)
     expect(session).toMatch(/type: "setChatBoxMessage",\s*sessionID: id,\s*text,\s*paths/)
     expect(session).toMatch(/type: "setChatBoxMessage",\s*sessionID: id,\s*text: "",\s*images: \[\]/)
@@ -822,5 +825,52 @@ describe("KiloConnectionService pruneSession contract", () => {
     expect(match![1]).toMatch(/this\.attached\.(?:set|delete)/)
     expect(match![1]).toMatch(/this\.visible\.(?:set|delete)/)
     expect(match![1]).toMatch(/this\.flushViewed\(\)/)
+  })
+})
+
+describe("code context pill contract", () => {
+  const source = readFile(PROMPT_FILE)
+  const chips = readFile(path.join(ROOT, "webview-ui/src/components/chat/CodeContextChips.tsx"))
+
+  it("renders editor selections as pills instead of inserting them into the draft", () => {
+    expect(source).toContain("const appendContext =")
+    expect(source).toContain("replaceContexts(mergeCodeContexts(contexts(), [message.context]))")
+    expect(source).toContain("CodeContextChips")
+    expect(chips).toContain('data-component="code-context"')
+    expect(chips).toContain("codeContextLabel(context)")
+  })
+
+  it("reuses the review attachment shell for collapse and large lists", () => {
+    const more = readFile(path.join(ROOT, "webview-ui/src/components/chat/PromptShowMore.tsx"))
+    expect(chips).toContain("prompt-review-comments-toggle")
+    expect(chips).toContain("prompt-review-row-main")
+    expect(chips).toContain("prompt-review-row-snippet")
+    expect(chips).toContain("prompt-review-list--scroll")
+    expect(chips).toContain("PromptShowMore")
+    expect(more).toContain("agentManager.review.showMore")
+    expect(chips).toContain("agentManager.review.clearAll")
+    expect(chips).toContain("ui.promptInput.context")
+    // Clear all must respect the locked prompt, like the review and browser clear handlers.
+    expect(source).toContain("if (!readonly()) clearContexts()")
+  })
+
+  it("includes code context content only when the user sends the prompt", () => {
+    expect(source).toContain("formatCodeContexts(contexts())")
+    expect(source).not.toContain("setText(formatCodeContexts")
+    // A context-only prompt must not take the server slash-command branch, which
+    // sends the raw args and drops the composed message.
+    expect(source).toContain("matched && !structured")
+    expect(source).toContain(
+      "const structured = hasStructuredInput(data, browserData) || pendingAnnotations.length > 0",
+    )
+    expect(source).toContain("data != null || browser != null || contexts().length > 0")
+  })
+
+  it("persists and clears code context with the rest of the draft", () => {
+    expect(source).toContain("setContexts(contextDrafts.get(key) ?? [])")
+    expect(source).toContain("references.delete(key)\n    contextDrafts.delete(key)")
+    expect(source).toContain("setContexts(codeContexts)")
+    // The memory command and client-side slash resets also drop the contexts.
+    expect((source.match(/contextDrafts\.delete\(draftKey\(\)\)/g) ?? []).length).toBeGreaterThanOrEqual(2)
   })
 })

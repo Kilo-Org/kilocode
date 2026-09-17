@@ -84,8 +84,8 @@ const { SpeechToTextModelsProvider } = await import("../../webview-ui/src/contex
 const { PromptInput } = await import("../../webview-ui/src/components/chat/PromptInput")
 const { AnnotationSourceMarkers } = await import("../../webview-ui/src/components/chat/AnnotationMarkers")
 const { ResponseLensBoundary } = await import("../../webview-ui/src/components/chat/ResponseLens")
-const { Toast } = await import("@kilocode/kilo-ui/toast")
-const { drafts, reviewDrafts, annotationDrafts, annotationEditorDrafts, savePromptDraft } = await import(
+const { Toast, toaster } = await import("@kilocode/kilo-ui/toast")
+const { drafts, reviewDrafts, contextDrafts, annotationDrafts, annotationEditorDrafts, savePromptDraft } = await import(
   "../../webview-ui/src/utils/draft-store"
 )
 const { newAnnotation } = await import("../../webview-ui/src/utils/annotations")
@@ -197,6 +197,10 @@ const save = () => {
   button.click()
 }
 const send = () => host.querySelector<HTMLButtonElement>('[aria-label="prompt.action.send"]')!.click()
+const typePrompt = (value: string) => {
+  prompt().value = value
+  prompt().dispatchEvent(new window.Event("input", { bubbles: true }))
+}
 const seed = async (id: string, comment: string) => {
   setMounted(false)
   await settle()
@@ -362,6 +366,146 @@ try {
   assert.equal(annotationDrafts.has(key("ses_a")), false)
   assert.equal((await store.load("ses_a")).items[0]?.id, first.id)
 
+  // An annotation is input even when the ordinary prompt is empty.
+  await seed("ses_annotation_only", "annotation-only request")
+  typePrompt("")
+  const annotationOnly = sends().length
+  assert.equal(host.querySelector<HTMLButtonElement>('[aria-label="prompt.action.send"]')!.disabled, false)
+  send()
+  await until(() => sends().length > annotationOnly, "annotation-only send")
+  assert(sends().at(-1)!.text.includes("annotation-only request"))
+  assert.equal(annotationDrafts.has(key("ses_annotation_only")), false)
+
+  // Local, server, and memory commands must not discard a pending annotation.
+  const guarded = await seed("ses_commands", "retain while commands are blocked")
+  post({ type: "commandsLoaded", commands: [{ name: "review-test", description: "Test", hints: [] }] })
+  await settle()
+  for (const command of ["/caffeinate", "/review-test", "/memory status"]) {
+    typePrompt(command)
+    const before = sent.length
+    send()
+    await settle()
+    assert.equal(
+      sent
+        .slice(before)
+        .some((message) =>
+          ["sendMessage", "sendCommand", "toggleCaffeination", "memoryShow", "memoryOperation"].includes(message.type),
+        ),
+      false,
+    )
+    assert.equal(prompt().value, command)
+    assert.equal(annotationEditorDrafts.get(key("ses_commands"))?.annotation.id, guarded.id)
+    await until(() => !!document.body.textContent?.includes("annotations.commandBlocked"), "blocked-command toast")
+    // Happy DOM has no CSS exit-animation completion; reset the public toast store between scenarios.
+    toaster.clear()
+    await until(() => !document.querySelector('[data-component="toast"]'), "cleared command toast")
+  }
+
+  // Expanded paste text and code context survive asynchronous annotation persistence.
+  await seed("ses_composed", "comment with paste and code")
+  setMounted(false)
+  await settle()
+  const pasted = Array.from({ length: 30 }, (_, index) => `retained pasted line ${index}`).join("\n")
+  savePromptDraft(
+    key("ses_composed"),
+    "[Pasted ~30 lines]",
+    [],
+    [],
+    0,
+    [],
+    [{ id: "selected-code", filePath: "example.ts", startLine: 2, endLine: 3, text: "retained selected code" }],
+    [pasted],
+  )
+  setMounted(true)
+  await until(() => !!editor(), "composed annotation editor")
+  const composed = sends().length
+  send()
+  await until(() => sends().length > composed, "composed annotation send")
+  assert(sends().at(-1)!.text.includes(pasted))
+  assert(sends().at(-1)!.text.includes("retained selected code"))
+  assert(sends().at(-1)!.text.includes("comment with paste and code"))
+  assert.equal(sends().at(-1)!.text.includes("[Pasted ~30 lines]"), false)
+
+  // A Goal acknowledgement must not clear an annotation edited after submission.
+  await seed("ses_goal", "submitted goal annotation")
+  save()
+  await until(() => !editor(), "saved goal annotation")
+  typePrompt("/goal")
+  send()
+  typePrompt("goal objective")
+  const goals = () => sent.filter((message) => message.type === "sendCommand" && message.command === "goal")
+  const goalCount = goals().length
+  host.querySelector<HTMLButtonElement>('[aria-label="prompt.goal.start"]')!.click()
+  await until(() => goals().length > goalCount, "goal with annotation")
+  const submittedGoal = goals().at(-1)!
+  assert(submittedGoal.arguments.includes("submitted goal annotation"))
+  assert(submittedGoal.arguments.includes("goal objective"))
+  assert(submittedGoal.messageID)
+  host.querySelector<HTMLButtonElement>(".prompt-annotations-toggle")!.click()
+  host.querySelector<HTMLButtonElement>('.prompt-annotation-actions [aria-label="common.edit"]')!.click()
+  await until(() => !!editor(), "annotation edit during goal admission")
+  editor().value = "newer annotation must survive acknowledgement"
+  editor().dispatchEvent(new window.Event("input", { bubbles: true }))
+  post({ type: "sessionCommandCompleted", messageID: submittedGoal.messageID })
+  await settle()
+  assert.equal(editor().value, "newer annotation must survive acknowledgement")
+  assert.equal(prompt().value, "goal objective")
+
+  // Host numbering during first persistence is not a user edit: an unchanged Goal clears normally.
+  await seed("ses_goal_fresh", "fresh goal annotation")
+  typePrompt("/goal")
+  send()
+  typePrompt("fresh goal objective")
+  const freshGoalCount = goals().length
+  host.querySelector<HTMLButtonElement>('[aria-label="prompt.goal.start"]')!.click()
+  await until(() => goals().length > freshGoalCount, "fresh goal with annotation")
+  const freshGoal = goals().at(-1)!
+  assert(freshGoal.arguments.includes("fresh goal annotation"))
+  assert(freshGoal.messageID)
+  post({ type: "sessionCommandCompleted", messageID: freshGoal.messageID })
+  await settle()
+  assert.equal(prompt().value, "")
+  assert.equal(annotationDrafts.has(key("ses_goal_fresh")), false)
+
+  // Revert/redo replaces annotations only in its addressed composer, including offscreen drafts.
+  await seed("ses_restore", "stale annotation before revert")
+  post({
+    type: "setChatBoxMessage",
+    sessionID: "ses_restore",
+    text: "restored user message",
+    review: [],
+    images: [],
+    browser: [],
+  })
+  await settle()
+  assert.equal(prompt().value, "restored user message")
+  assert.equal(editor(), null)
+  assert.equal(annotationDrafts.has(key("ses_restore")), false)
+  assert.equal(annotationEditorDrafts.has(key("ses_restore")), false)
+  const activeNote = await seed("ses_restore_other", "keep active pane annotation")
+  const offscreenContext = {
+    id: "offscreen-code",
+    filePath: "other.ts",
+    startLine: 1,
+    endLine: 1,
+    text: "offscreen code",
+  }
+  contextDrafts.set(key("ses_restore"), [offscreenContext])
+  post({ type: "appendChatContext", context: { ...offscreenContext, id: "active-code", text: "active pane code" } })
+  post({
+    type: "setChatBoxMessage",
+    sessionID: "ses_restore",
+    text: "offscreen replacement",
+    review: [],
+    images: [],
+    browser: [],
+  })
+  await settle()
+  assert.equal(drafts.get(key("ses_restore")), "offscreen replacement")
+  assert.equal(prompt().value, "keep prompt text")
+  assert.equal(annotationEditorDrafts.get(key("ses_restore_other"))?.annotation.id, activeNote.id)
+  assert.deepEqual(contextDrafts.get(key("ses_restore")), [offscreenContext])
+
   // Scope changes while a save is pending preserve the captured draft, never send the newer pane.
   const second = await seed("ses_switch", "captured comment")
   gate = Promise.withResolvers<void>()
@@ -506,7 +650,7 @@ try {
   assert.equal(sends().length, failures)
   assert.equal(editor().value, "must survive storage failure")
   assert.equal(annotationDrafts.get(key("ses_failure"))?.[0]?.id, failure.id)
-  assert(document.body.textContent?.includes("annotations.storageFailed"))
+  await until(() => !!document.body.textContent?.includes("annotations.storageFailed"), "storage error toast")
   await writeFile(store.file, original)
   save()
   await until(() => !editor(), "retry closes editor")

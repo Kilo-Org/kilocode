@@ -31,6 +31,7 @@ import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { McpApps } from "@/kilocode/mcp/apps"
 import { BoardEnabled } from "@/kilocode/board/enabled"
+import { KiloCodeMode } from "@/kilocode/tool/code-mode" // kilocode_change
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -79,7 +80,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
   const notify = BoardEnabled.resolve({
-    config: cfg.experimental?.shared_agent_board,
+    config: cfg.shared_agent_board,
     flag: flags.experimentalSharedAgentBoard,
   })
     ? input.notify
@@ -466,7 +467,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  if (flags.experimentalCodeMode) return tools
+  if (KiloCodeMode.wanted(flags, cfg)) return tools // kilocode_change
 
   const mcpTools = restricted ? {} : yield* mcp.tools() // kilocode_change
   for (const [key, entry] of Object.entries(mcpTools)) {

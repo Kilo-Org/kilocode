@@ -87,6 +87,19 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "server/experimental-session-list.test.ts": { count: 2, reason: "Kilo session list integration test" },
   "kilocode/server/cloud-session-import.test.ts": { count: 5, reason: "full app cloud import transaction integration" },
   "kilocode/server/listener-runtime.test.ts": { count: 4, reason: "listener and AppRuntime integration test" },
+  "kilocode/wakeup/wakeup-resume.test.ts": {
+    count: 11,
+    reason:
+      "the wakeup resume integration test schedules through the production Wakeup service and asserts the mock " +
+      "model receives the scheduled prompt, so it must run the production Fire/resume path " +
+      "(src/kilocode/wakeup/resume.ts). That path resolves Session and SessionPrompt from the global AppRuntime " +
+      "because a static layer dependency is impossible: Wakeup.node <- kilocode/tool/registry.ts (via " +
+      "schedule_wakeup/cancel_wakeup) <- SessionPrompt.node <- ToolRegistry.node, which already depends on Wakeup.node. " +
+      "The test therefore creates the instance, session, and wakeup through that same global runtime and asserts the " +
+      "pending list on it; scoped layers cannot express the boundary under test. The paused-session case pauses the " +
+      "session and reads SessionPrompt.paused through the same runtime to prove resume refuses and logs instead of " +
+      "dropping the wake.",
+  },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
 }
 

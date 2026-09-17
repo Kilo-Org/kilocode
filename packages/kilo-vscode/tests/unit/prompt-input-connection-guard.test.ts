@@ -19,7 +19,7 @@ describe("PromptInput connection guard", () => {
     const attachments = src.indexOf("const terminalFile = await terminal.resolveAttachment")
     const guard = src.indexOf("if (!server.isConnected() || finishPending(pendingId)) return", attachments)
     const send = src.indexOf("session.sendMessage(", guard)
-    const clear = src.indexOf("drafts.delete(token.key)", send)
+    const clear = src.indexOf("clearDraft(token.key, draft, owns)", send)
     const release = src.indexOf("annotationSend.end(token)", clear)
 
     expect(lock).toBeGreaterThan(-1)
@@ -63,7 +63,7 @@ describe("PromptInput sandbox toggle", () => {
     const start = src.indexOf("const created = (message:")
     const end = src.indexOf("const unsubscribe", start)
     const created = src.slice(start, end)
-    const save = created.indexOf("saveDraft(live, text(), reviewComments(), imageAttach.images()")
+    const save = created.search(/saveDraft\(\s*live,\s*text\(\),\s*reviewComments\(\),\s*imageAttach.images\(\)/)
     const promote = created.indexOf("promptDraftPromotion(raw, message.session.id, box, promptDraftStores)")
     const move = created.indexOf("movePromptDraft(promptDraftStores, route.source, route.target)")
 
@@ -75,6 +75,10 @@ describe("PromptInput sandbox toggle", () => {
     expect(move).toBeGreaterThan(promote)
     expect(created).toContain("annotationEditorState.persist(live)")
     expect(created).toContain("if (sourceActive || targetActive) annotationEditorState.load(route.target)")
+    expect(src).toContain("text: drafts,")
+    expect(src).toContain("browsers: references,")
+    expect(src).toContain("pastes: pasteDrafts,")
+    expect(src).toContain("contexts: contextDrafts,")
   })
 
   it("restores each prompt draft's textarea and highlight scroll positions", () => {
@@ -84,7 +88,7 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain("if (highlightRef) highlightRef.scrollTop = scroll")
     expect(src).toContain("scrollDrafts.set(draftKey(), textareaRef.scrollTop)")
     expect(src).toContain(
-      "images: imageAttach.images(),\n    browsers: browsers(),\n    scroll: textareaRef?.scrollTop",
+      "images: imageAttach.images(),\n    browsers: browsers(),\n    pastes: paste.pastes().map((item) => item.text),\n    contexts: contexts(),\n    scroll: textareaRef?.scrollTop",
     )
     expect(src).toContain("draft.text,")
     expect(src).toContain("draft.comments,")
