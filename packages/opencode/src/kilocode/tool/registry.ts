@@ -296,10 +296,7 @@ export namespace KiloToolRegistry {
     },
     flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">,
   ): Tool.Def[] {
-    const enabled = BoardEnabled.resolve({
-      config: cfg.shared_agent_board,
-      flag: flags.experimentalSharedAgentBoard,
-    })
+    const enabled = BoardEnabled.on(cfg, flags)
     return [
       ...(tools.goalReport ? [tools.goalReport] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
