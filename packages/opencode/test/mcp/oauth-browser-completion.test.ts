@@ -13,7 +13,7 @@ import { McpAuth } from "../../src/mcp/auth"
 import { McpBrowser } from "../../src/mcp/browser"
 import { MCP } from "../../src/mcp/index"
 import { McpOAuthCallback } from "../../src/mcp/oauth-callback"
-import { McpOAuthProvider } from "../../src/mcp/oauth-provider"
+import { McpOAuthPendingProvider, McpOAuthProvider } from "../../src/mcp/oauth-provider"
 import { awaitWithTimeout, testEffect } from "../lib/effect"
 
 async function freePort() {
@@ -370,6 +370,42 @@ mcpTest.instance("a callback listener taken over by another Kilo process is repo
     expect(status).toEqual({
       status: "failed",
       error: "Browser authorization was rejected: this request was replaced by another authorization attempt",
+    })
+  }),
+)
+
+mcpTest.instance("the pending flow owns its state and verifier instead of the shared mcp-auth.json", () =>
+  Effect.gen(function* () {
+    yield* withCallbackStop
+    const auth = yield* McpAuth.Service
+    const name = "test-oauth-own-state"
+
+    // Another Kilo process already wrote its own state and verifier for this server name, the
+    // way `kilo mcp list` or the VS Code backend does while a browser tab is open.
+    yield* auth.set(name, {
+      codeVerifier: "verifier-from-another-process",
+      oauthState: "state-from-another-process",
+    })
+
+    const flow = new McpOAuthPendingProvider(
+      name,
+      "https://mcp.example.com/mcp",
+      {},
+      { onRedirect: async () => {} },
+      auth,
+    )
+    yield* Effect.promise(() => flow.saveState("state-saved-in-memory"))
+    expect(yield* Effect.promise(() => flow.state())).toBe("state-saved-in-memory")
+    flow.pinState("state-of-this-flow")
+    expect(yield* Effect.promise(() => flow.state())).toBe("state-of-this-flow")
+    yield* Effect.promise(() => flow.saveCodeVerifier("verifier-of-this-flow"))
+    expect(yield* Effect.promise(() => flow.codeVerifier())).toBe("verifier-of-this-flow")
+
+    // The flow never rewrites the process-shared entry, so no other process can make it redeem
+    // a verifier the authorization server never saw.
+    expect(yield* auth.get(name)).toEqual({
+      codeVerifier: "verifier-from-another-process",
+      oauthState: "state-from-another-process",
     })
   }),
 )
