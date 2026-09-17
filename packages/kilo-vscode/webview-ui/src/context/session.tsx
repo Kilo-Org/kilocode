@@ -104,7 +104,7 @@ import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { createPreferenceLoader } from "./session-preference-loader"
 import { activities, type Activity } from "../utils/session-activity"
-import { active as activeTiming, hold, type Timing } from "./session-timing"
+import { hold, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
