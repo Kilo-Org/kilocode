@@ -29,6 +29,17 @@ export namespace ConfigProtection {
    * "Config file edits always require approval" explanation copy applies. */
   export const CONFIG_PROTECTED_KEY = "configProtected" as const
 
+  /**
+   * Whether the extra config-edit restrictions are active.
+   *
+   * Default-on and global-only: read the value from `Config.Service.getGlobal()` at the
+   * decision boundary. Only an explicit global `false` disables it. `undefined`, `true`,
+   * project config, `KILO_CONFIG_CONTENT`, and other non-global merged values never do.
+   */
+  export function enabled(global?: { require_approval_for_config_edits?: boolean }): boolean {
+    return global?.require_approval_for_config_edits !== false
+  }
+
   function normalize(p: string): string {
     return path.posix.normalize(p.replaceAll("\\", "/"))
   }

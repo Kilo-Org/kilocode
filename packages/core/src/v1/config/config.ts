@@ -147,6 +147,10 @@ export const Info = Schema.Struct({
     description:
       "Blur personally identifiable information (account email, balance, team name, etc.) in the TUI and require confirmation before showing profile details",
   }),
+  require_approval_for_config_edits: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Require approval before the agent edits Kilo config files. Global config only; an explicit false in the global config disables the extra config-edit restrictions. Project and other non-global values are ignored.",
+  }),
   sandbox: Schema.optional(
     Schema.Struct({
       enabled: Schema.optional(

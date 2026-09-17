@@ -280,6 +280,33 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
 
+## Config File Protection
+
+Config file edits always require approval by default, even when `edit` or `external_directory` is set to `"allow"`. Kilo protects these paths:
+
+- The root-level `AGENTS.md`
+- Root-level `kilo.json`, `kilo.jsonc`, `opencode.json`, and `opencode.jsonc`
+- Project `.kilo/` and `.kilocode/` directories at any depth, except `plans/`
+- Global config directories `~/.config/kilo/`, `~/.kilo/`, and `~/.kilocode/`
+
+Protection by filename applies to the root-level `AGENTS.md` and the root-level config files above. A nested `AGENTS.md` or `AGENT.md` is not protected by name alone, but any file inside a project `.kilo/` or `.kilocode/` directory, or inside a global config directory, is still protected by directory, except files in an exempt `plans/` subtree.
+
+Set `require_approval_for_config_edits` to `false` in your **global** config (`~/.config/kilo/kilo.json` or `kilo.jsonc`) to disable the check:
+
+```jsonc
+{
+  "require_approval_for_config_edits": false,
+}
+```
+
+Only global config can turn protection off. Setting the key in project config or other non-global configuration sources has no effect. The option defaults to enabled, so leaving it out keeps the current behavior.
+
+With protection off, config file edits follow your regular `edit` and `external_directory` rules, and any `deny` or agent-level restrictions still apply.
+
+{% callout type="note" %}
+This setting controls a permission check, not a security boundary. Other tools, including shell commands and scripts, can still change files and bypass the check.
+{% /callout %}
+
 ## MCP Tool Permissions
 
 MCP tools use the same `allow` / `ask` / `deny` permission system as built-in tools. Each MCP tool's permission key is its namespaced name: `{server}_{tool}` (e.g. `github_create_pull_request`). You can use glob patterns like `github_*` for broad rules.

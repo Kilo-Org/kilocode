@@ -35075,6 +35075,9 @@
           "privacy_mode": {
             "type": "boolean"
           },
+          "require_approval_for_config_edits": {
+            "type": "boolean"
+          },
           "sandbox": {
             "type": "object",
             "properties": {

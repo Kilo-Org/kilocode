@@ -194,6 +194,18 @@ describe("ConfigProtection.isRequest", () => {
   })
 })
 
+describe("ConfigProtection.enabled", () => {
+  test("defaults on when the global value is absent or true", () => {
+    expect(ConfigProtection.enabled(undefined)).toBe(true)
+    expect(ConfigProtection.enabled({})).toBe(true)
+    expect(ConfigProtection.enabled({ require_approval_for_config_edits: true })).toBe(true)
+  })
+
+  test("only an explicit global false disables protection", () => {
+    expect(ConfigProtection.enabled({ require_approval_for_config_edits: false })).toBe(false)
+  })
+})
+
 describe("ConfigProtection.isGlobalSkillRequest", () => {
   const roots = [Global.Path.config, ...KilocodePaths.globalDirs()]
 

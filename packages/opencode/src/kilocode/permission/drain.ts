@@ -26,13 +26,16 @@ export function drainCovered(
   approved: Permission.Ruleset,
   publishReply: PublishReply,
   exclude?: string,
+  protect = true,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
     for (const [id, entry] of pending) {
       if (id === exclude) continue
-      // Never auto-resolve config file edit permissions
-      const skill = ConfigProtection.globalSkillPattern(entry.info)
-      if (ConfigProtection.isRequest(entry.info) && !skill) continue
+      // Never auto-resolve config file edit permissions while config protection is active.
+      // `protect` is resolved once from the global config by the caller. When protection is
+      // disabled we use ordinary resolve/base rules instead of the exact global-skill guard.
+      const skill = protect ? ConfigProtection.globalSkillPattern(entry.info) : undefined
+      if (protect && ConfigProtection.isRequest(entry.info) && !skill) continue
       // Never auto-resolve a skill shell batch; it must get an explicit reply.
       if (entry.info.metadata?.["skillShell"] === true) continue
       if (entry.info.metadata?.["sandboxEscalation"] === true) continue

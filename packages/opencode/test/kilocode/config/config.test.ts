@@ -14,6 +14,7 @@ import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { GlobalBus } from "../../../src/bus/global"
 import { Config } from "../../../src/config/config"
+import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { ConfigMarkdown } from "../../../src/config/markdown"
 import { ConfigParse } from "../../../src/config/parse"
 import { Env } from "../../../src/env"
@@ -1672,6 +1673,41 @@ describe("bash permission migration", () => {
       expect(text).toContain(`"read": "allow"`)
     } finally {
       ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
+describe("require_approval_for_config_edits source scope", () => {
+  const read = () =>
+    Effect.runPromise(Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)))
+
+  test("KILO_CONFIG_CONTENT false reaches the merged config but not the global config", async () => {
+    await using dir = await tmpdir()
+    await using project = await tmpdir()
+    const previous = process.env["KILO_CONFIG_CONTENT"]
+    const prev = Global.Path.config
+    process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ require_approval_for_config_edits: false })
+    ;(Global.Path as { config: string }).config = dir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          const merged = await load()
+          const global = await read()
+          expect(merged.require_approval_for_config_edits).toBe(false)
+          expect(global.require_approval_for_config_edits).toBeUndefined()
+          expect(ConfigProtection.enabled(global)).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (previous === undefined) delete process.env["KILO_CONFIG_CONTENT"]
+      else process.env["KILO_CONFIG_CONTENT"] = previous
       await clear()
       await disposeAllInstances()
     }

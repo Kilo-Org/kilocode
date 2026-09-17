@@ -79,11 +79,15 @@ This is useful for providing context-specific guidance for different parts of a 
 
 ## File Protection
 
-Both `AGENTS.md` and `AGENT.md` are **write-protected files** in Kilo Code. This means:
+The root-level `AGENTS.md` is a **write-protected file** in Kilo Code. This means:
 
-- The AI agent cannot modify these files without explicit user approval
-- You'll be prompted to confirm any changes to these files
+- The AI agent cannot modify it without explicit user approval
+- You'll be prompted to confirm any changes
 - This prevents accidental modifications to your project's AI configuration
+
+Protection by filename applies to the root-level `AGENTS.md` only: nested `AGENTS.md` files and the `AGENT.md` (singular) fallback are not protected by name alone. Any file inside a protected config directory (project `.kilo/` or `.kilocode/`, or a global Kilo config directory) is still protected by directory, except files in an exempt `plans/` subtree.
+
+Config edit protection is enabled by default. To turn it off, set `require_approval_for_config_edits` to `false` in your global config (`~/.config/kilo/kilo.json` or `kilo.jsonc`). Only global config can disable it, and your regular permission rules still apply. See [Config File Protection](/docs/getting-started/settings/auto-approving-actions#config-file-protection).
 
 ## Basic Syntax and Structure
 
