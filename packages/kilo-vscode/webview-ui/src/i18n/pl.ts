@@ -877,6 +877,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Włącz i zaloguj się do dostawcy Kilo, aby korzystać ze Speech to Text, albo ustaw poniżej własny bazowy adres URL transkrypcji.",
+  "settings.models.speechToText.remoteDescription":
+    "Wprowadzanie głosowe nie jest dostępne w zdalnych oknach. Otwórz Kilo w lokalnym oknie, aby użyć mikrofonu.",
   "settings.models.speechToTextModel.title": "Model mowy na tekst",
   "settings.models.speechToTextModel.description":
     "Wybierz model transkrypcji Kilo Gateway dla wprowadzania głosowego.",

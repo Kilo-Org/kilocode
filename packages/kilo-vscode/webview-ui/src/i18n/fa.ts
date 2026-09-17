@@ -904,6 +904,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "برای استفاده از تبدیل گفتار به متن، ارائه‌دهنده Kilo را فعال کرده و وارد شوید، یا در پایین یک نشانی پایه رونویسی دلخواه تعیین کنید.",
+  "settings.models.speechToText.remoteDescription":
+    "ورودی صوتی در پنجره‌های راه دور در دسترس نیست. برای استفاده از میکروفون، Kilo را در یک پنجره محلی باز کنید.",
   "settings.models.speechToTextModel.title": "مدل تبدیل گفتار به متن",
   "settings.models.speechToTextModel.description": "مدل رونویسی Kilo Gateway را برای ورودی صوتی انتخاب کنید.",
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
