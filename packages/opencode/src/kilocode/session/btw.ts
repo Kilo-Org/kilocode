@@ -14,6 +14,7 @@ import { MessageID, PartID, SessionID } from "@/session/schema"
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 import type { ModelV2 } from "@opencode-ai/core/model"
 import { setPromptCacheKey, clearPromptCacheKey } from "./cache-key"
+import { markBtwFork } from "./fork-marker"
 import { isInterrupted } from "@/kilocode/effect/cause"
 import { AbortedError } from "@opencode-ai/core/v1/session"
 import { errorMessage } from "@/util/error"
@@ -123,7 +124,7 @@ export namespace KiloBtw {
   export interface Ops {
     sessions: Pick<
       Session.Interface,
-      "fork" | "remove" | "get" | "touch" | "updateMessage" | "updatePart" | "setPermission"
+      "fork" | "remove" | "get" | "touch" | "updateMessage" | "updatePart" | "setPermission" | "setMetadata"
     >
     agents: Pick<Agent.Interface, "defaultInfo" | "get">
     events: Pick<EventV2.Interface, "publish">
@@ -307,15 +308,13 @@ export namespace KiloBtw {
         text: `/btw ${question}`,
       })
 
-      // Run the fork on the agent whose ruleset we can actually enforce. For
-      // ask/plan/architect, guardPermissions re-appends session deny rules
-      // after agent rules, replaying the allowlist's "*" deny last and
-      // disabling every tool, so those switch to the default agent. We then
-      // resolve that agent's ruleset (base defaults + config + user overrides)
-      // and feed it to forkPermission, so an agent- or config-level deny like
-      // `read: { "*.env": "deny" }` still beats the read-only blanket allow.
-      const guarded = ["ask", "plan", "architect"]
-      const forkAgent = guarded.includes(agent.toLowerCase()) ? (fallback?.name ?? "build") : agent
+      // Keep the parent's agent so the system prompt, and with it the parent's
+      // warm prompt cache, stays identical. The fork's ruleset already carries
+      // the resolved agent rules: forkPermission copies them with "ask"
+      // downgraded to "deny". The fork session is marked so guardPermissions
+      // treats its ruleset as complete instead of re-merging agent rules (which
+      // would replay the allowlist's "*" deny last and disable every tool).
+      const forkAgent = agent
       const rules = (yield* ops.agents.get(forkAgent)).permission
       const variant = model.variant ?? cmdInput.variant
 
@@ -332,6 +331,9 @@ export namespace KiloBtw {
           setPromptCacheKey(fork.id, parent)
           yield* ops.sessions
             .setPermission({ sessionID: fork.id, permission: forkPermission(rules, session.permission) })
+            .pipe(Effect.orDie)
+          yield* ops.sessions
+            .setMetadata({ sessionID: fork.id, metadata: markBtwFork(session.metadata) })
             .pipe(Effect.orDie)
           return fork
         }),

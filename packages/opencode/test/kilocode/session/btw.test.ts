@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { KiloBtw } from "../../../src/kilocode/session/btw"
 import { clearPromptCacheKey, resolvePromptCacheKey, setPromptCacheKey } from "../../../src/kilocode/session/cache-key"
+import { BTW_FORK } from "../../../src/kilocode/session/fork-marker"
+import { KiloSessionPrompt } from "../../../src/kilocode/session/prompt"
 import { Permission } from "../../../src/permission"
 import * as ProviderTransform from "../../../src/provider/transform"
 import type { Provider } from "../../../src/provider/provider"
@@ -99,6 +101,28 @@ describe("KiloBtw fork permissions", () => {
     expect(Permission.evaluate("read", "src/index.ts", rules).action).toBe("allow")
     expect(Permission.evaluate("bash", "ls", rules).action).toBe("deny")
     expect(rules.some((rule) => rule.action === "ask")).toBe(false)
+  })
+})
+
+describe("btw fork permission assembly", () => {
+  test("treats the fork ruleset as complete for guarded agents", () => {
+    const rules = Permission.fromConfig({ "*": "deny", read: "allow" })
+    const agent = {
+      name: "plan",
+      permission: Permission.fromConfig({ edit: "deny", read: { "*": "allow", "*.env": "ask" } }),
+    }
+
+    // A guarded agent normally has session rules merged with agent rules, which
+    // would replay the allowlist's "*" deny last and disable every tool.
+    const gated = KiloSessionPrompt.guardPermissions({ agent, session: { permission: rules } })
+    expect(gated).not.toEqual(rules)
+
+    // Marked forks pass their ruleset through untouched.
+    const forked = KiloSessionPrompt.guardPermissions({
+      agent,
+      session: { permission: rules, metadata: { [BTW_FORK]: true } },
+    })
+    expect(forked).toEqual(rules)
   })
 })
 

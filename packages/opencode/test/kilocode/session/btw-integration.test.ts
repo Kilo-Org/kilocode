@@ -78,9 +78,13 @@ const askAgent: AgentSvc.Info = {
   options: {},
 }
 
+// A guarded agent (ask/plan/architect mode). /btw must be able to keep this
+// agent, not swap it for the default one.
+const planAgent: AgentSvc.Info = { ...buildAgent, name: "plan" }
+
 const fastAgents = Layer.mock(AgentSvc.Service)({
-  get: () => Effect.succeed(buildAgent),
-  list: () => Effect.succeed([buildAgent, askAgent]),
+  get: (name: string) => Effect.succeed(name === "plan" ? planAgent : buildAgent),
+  list: () => Effect.succeed([buildAgent, planAgent, askAgent]),
   defaultInfo: () => Effect.succeed(buildAgent),
   defaultAgent: () => Effect.succeed(buildAgent.name),
 })
@@ -250,11 +254,11 @@ const useServerConfig = Effect.fn("test.useServerConfig")(function* (config: (ur
   return { dir, llm }
 })
 
-const boot = Effect.fn("test.boot")(function* () {
+const boot = Effect.fn("test.boot")(function* (agent = "build") {
   const prompt = yield* SessionPrompt.Service
   const sessions = yield* Session.Service
   const chat = yield* sessions.create({
-    agent: "build",
+    agent,
     model: { id: ref.modelID, providerID: ref.providerID },
   })
   return { prompt, sessions, chat }
@@ -412,6 +416,43 @@ it.instance(
 
       const inputs = yield* llm.inputs
       expect(JSON.stringify(inputs)).not.toContain("SENTINEL_SECRET_12345")
+
+      const children = yield* sessions.children(chat.id)
+      expect(children.length).toBe(0)
+    }),
+  60_000,
+)
+
+it.instance(
+  "btw keeps a guarded (plan) agent and still applies the read-only allowlist",
+  () =>
+    Effect.gen(function* () {
+      const { dir, llm } = yield* useServerConfig(providerCfg)
+      const { prompt, sessions, chat } = yield* boot("plan")
+      yield* writeText(path.join(dir, "notes.md"), "ALLOWED_CONTENT_OK")
+      yield* writeText(path.join(dir, "data.secret"), "SENTINEL_SECRET_12345")
+
+      // The fork runs as the guarded plan agent. Its allowlist must still let
+      // allowlisted reads run, while the agent's own deny still blocks the
+      // secret. An earlier implementation avoided the guarded-agent permission
+      // merge by swapping to the default agent; keeping the same agent must not
+      // disable every tool.
+      yield* llm.tool("read", { filePath: "notes.md" })
+      yield* llm.tool("read", { filePath: "data.secret" })
+      yield* llm.text("done")
+
+      const result = yield* prompt.command({
+        sessionID: chat.id,
+        command: "btw",
+        arguments: "read the notes and the secret",
+        agent: "plan",
+      })
+
+      expect((result.parts[0] as MessageV2.TextPart).text).toContain("done")
+
+      const inputs = JSON.stringify(yield* llm.inputs)
+      expect(inputs).toContain("ALLOWED_CONTENT_OK")
+      expect(inputs).not.toContain("SENTINEL_SECRET_12345")
 
       const children = yield* sessions.children(chat.id)
       expect(children.length).toBe(0)

@@ -30,6 +30,7 @@ import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import ASK_CODE_SWITCH from "./ask-code-switch.txt"
 import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
+import { isBtwFork } from "./fork-marker"
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
@@ -282,9 +283,14 @@ export namespace KiloSessionPrompt {
 
   export function guardPermissions(input: {
     agent: { name: string; permission: Permission.Ruleset }
-    session: Pick<Session.Info, "permission">
+    session: Pick<Session.Info, "permission"> & { metadata?: Session.Info["metadata"] }
   }) {
     const rules = input.session.permission ?? []
+    // A /btw fork's ruleset is already the complete policy: forkPermission merged
+    // the running agent's rules into it with "ask" downgraded to "deny". Merging
+    // agent rules again would append the allowlist's "*" deny last and disable
+    // every tool, so the fork keeps the parent agent and its cacheable prompt.
+    if (isBtwFork(input.session.metadata)) return rules
     if (!modes.includes(mode(input.agent.name))) return rules
     return Permission.merge(
       rules,
@@ -328,7 +334,7 @@ export namespace KiloSessionPrompt {
   /** Assemble the ruleset and hard ruleset for a permission ask, deduped. */
   export function buildAskRuleset(input: {
     agent: Pick<Agent.Info, "name" | "permission">
-    session: Pick<Session.Info, "permission">
+    session: Pick<Session.Info, "permission"> & { metadata?: Session.Info["metadata"] }
     origins?: PermissionProvenance.Origins
   }): { ruleset: Permission.Ruleset; hardRuleset?: Permission.Ruleset } {
     // Tag every rule with its true origin before merging, so the winning rule (chosen by
@@ -340,9 +346,10 @@ export namespace KiloSessionPrompt {
     const ruleset = dedupeRuleset(
       Permission.merge(
         taggedAgent,
+        // Carry the fork marker so a /btw fork keeps its complete ruleset here too.
         guardPermissions({
           agent: { name: input.agent.name, permission: taggedAgent },
-          session: { permission: taggedSession },
+          session: { permission: taggedSession, metadata: input.session.metadata },
         }),
       ),
     )
