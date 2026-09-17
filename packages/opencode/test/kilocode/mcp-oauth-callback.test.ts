@@ -1,5 +1,5 @@
 import { describe, expect, test, afterEach } from "bun:test"
-import { createServer, type Server } from "http"
+import { createServer, request, type Server } from "http"
 import * as KiloOAuthCallback from "../../src/kilocode/mcp-oauth-callback"
 import { McpOAuthCallback } from "../../src/mcp/oauth-callback"
 import { parseRedirectUri } from "../../src/mcp/oauth-provider"
@@ -11,6 +11,30 @@ async function freePort(): Promise<number> {
   if (!address || typeof address === "string") throw new Error("missing probe address")
   await new Promise<void>((resolve) => probe.close(() => resolve()))
   return address.port
+}
+
+// A takeover request with the header but a spoofed `Host`, as a DNS-rebinding page sends it:
+// its own origin resolves to 127.0.0.1, so the browser treats the request as same-origin.
+function takeoverFrom(port: number, hostHeader: string): Promise<{ released: boolean; status: number | undefined }> {
+  const url = new URL(KiloOAuthCallback.takeoverUrl("127.0.0.1", port, "/mcp/oauth/callback"))
+  return new Promise((resolve) => {
+    const req = request(
+      {
+        host: "127.0.0.1",
+        port,
+        path: `${url.pathname}${url.search}`,
+        method: "GET",
+        headers: { host: hostHeader, [KiloOAuthCallback.TAKEOVER_HEADER]: KiloOAuthCallback.TAKEOVER_VALUE },
+      },
+      (res) => {
+        const released = res.headers[KiloOAuthCallback.TAKEOVER_HEADER] === KiloOAuthCallback.TAKEOVER_VALUE
+        res.resume()
+        res.once("end", () => resolve({ released, status: res.statusCode }))
+      },
+    )
+    req.once("error", () => resolve({ released: false, status: undefined }))
+    req.end()
+  })
 }
 
 type Later = { server: Server | undefined; port: number; path: string }
@@ -104,6 +128,31 @@ describe("Kilo MCP OAuth callback", () => {
 
     // The genuine browser callback still completes the flow the page tried to abort.
     const callback = await fetch(`${uri}?code=the-code&state=state-of-the-earlier-attempt`)
+    await callback.body?.cancel()
+    expect(callback.status).toBe(200)
+    expect(await settled).toBe("the-code")
+  })
+
+  test("a takeover request from a rebound host cannot release the listener", async () => {
+    const port = await freePort()
+    const uri = `http://127.0.0.1:${port}/mcp/oauth/callback`
+
+    // The earlier attempt owns the listener and waits for its browser tab.
+    await McpOAuthCallback.ensureRunning(uri)
+    const settled = McpOAuthCallback.waitForCallback("state-of-a-rebound-attempt", "kilo").then(
+      (code) => code,
+      (error: unknown) => error,
+    )
+
+    // A DNS-rebinding page is same-origin with the listener and can send the takeover header
+    // without a preflight, but it addresses its own name; the listener must not be released.
+    const attack = await takeoverFrom(port, `attacker.example:${port}`)
+    expect(attack.released).toBe(false)
+    expect(attack.status).toBe(400)
+    expect(McpOAuthCallback.isRunning()).toBe(true)
+
+    // The genuine browser callback still completes the flow the page tried to abort.
+    const callback = await fetch(`${uri}?code=the-code&state=state-of-a-rebound-attempt`)
     await callback.body?.cancel()
     expect(callback.status).toBe(200)
     expect(await settled).toBe("the-code")

@@ -31,8 +31,15 @@ type Deps = {
   error: (msg: string, data?: Record<string, unknown>) => void
 }
 
+const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1"])
+
 let active = host
 let start: Promise<void> | null = null
+
+function hostOf(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  return value.startsWith("[") ? value.slice(1, value.indexOf("]")) : value.split(":")[0]
+}
 
 export function parseHost(uri?: string): string {
   if (!uri) return host
@@ -58,10 +65,14 @@ export function isReplaced(error: unknown): boolean {
  * True when a request proves it asks this process to hand its callback listener over. The
  * takeover header makes it a non-simple request: a browser must clear a CORS preflight first,
  * and this listener never answers one, so a cross-origin GET from a web page cannot release an
- * authorization that is in flight.
+ * authorization that is in flight. A DNS-rebinding page is same-origin with the listener as the
+ * browser sees it, so the header alone does not prove the caller is a Kilo process: the request
+ * must also address this listener's own host (or a loopback name), never the rebound name.
  */
 export function isTakeoverRequest(req: IncomingMessage, url: URL): boolean {
   if (url.searchParams.get(TAKEOVER_QUERY) !== "1") return false
+  const name = hostOf(req.headers.host)
+  if (!name || (name !== hostOf(active) && !LOOPBACK.has(name))) return false
   const header = req.headers[TAKEOVER_HEADER]
   return (Array.isArray(header) ? header[0] : header) === TAKEOVER_VALUE
 }

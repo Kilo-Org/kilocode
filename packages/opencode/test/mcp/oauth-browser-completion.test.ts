@@ -5,7 +5,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { Deferred, Effect, Layer } from "effect"
+import { Cause, Deferred, Effect, Exit, Layer } from "effect"
 import { Config } from "../../src/config/config"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import * as KiloOAuthCallback from "../../src/kilocode/mcp-oauth-callback"
@@ -236,6 +236,30 @@ mcpTest.instance("completion redeems the flow's own PKCE verifier when another p
   }),
 )
 
+mcpTest.instance("an automatic reconnect during the browser wait is not reported as replaced", () =>
+  Effect.gen(function* () {
+    yield* withCallbackStop
+    const server = yield* serveOAuthMcp()
+    const name = "test-oauth-reconnect"
+    const mcp = yield* addServer(name, server.url)
+
+    // While the browser tab is open, another connect for the same server runs in this process
+    // (a status refresh or a config reload) and registers a provider-less pending transport.
+    // That is not a newer authorization attempt, so it must not reject this flow as replaced.
+    yield* withBrowserHook(() => mcp.connect(name).pipe(Effect.ignore))
+
+    const status = yield* awaitWithTimeout(
+      mcp.authenticate(name),
+      "Timed out completing OAuth after an automatic reconnect",
+      "10 seconds",
+    )
+
+    expect(status).toEqual({ status: "connected" })
+    expect(server.attempts()).toHaveLength(1)
+    expect(server.attempts()[0]).toMatchObject({ matched: true })
+  }),
+)
+
 mcpTest.instance("token exchange failure names the step and the OAuth error code", () =>
   Effect.gen(function* () {
     yield* withCallbackStop
@@ -247,6 +271,11 @@ mcpTest.instance("token exchange failure names the step and the OAuth error code
     const status = yield* mcp.finishAuth(name, "unknown-authorization-code")
 
     expect(status).toEqual({ status: "failed", error: "Token exchange failed: invalid_grant" })
+
+    const exit = yield* Effect.exit(mcp.finishAuth(name, "unknown-authorization-code"))
+    expect(Exit.isFailure(exit) ? Cause.pretty(exit.cause) : "the failed flow was still pending").toContain(
+      "No pending OAuth flow",
+    )
   }),
 )
 
@@ -265,6 +294,13 @@ mcpTest.instance("an error callback fails the browser step by name", () =>
     )
 
     expect(status).toEqual({ status: "failed", error: "Browser authorization failed: User denied the request" })
+
+    // The browser step failed, so the flow released its pending transport: a later completion
+    // cannot drive the abandoned attempt.
+    const exit = yield* Effect.exit(mcp.finishAuth(name, "any-authorization-code"))
+    expect(Exit.isFailure(exit) ? Cause.pretty(exit.cause) : "the failed flow was still pending").toContain(
+      "No pending OAuth flow",
+    )
   }),
 )
 
