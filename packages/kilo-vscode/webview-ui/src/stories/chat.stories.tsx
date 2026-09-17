@@ -909,6 +909,8 @@ export const MessageListLayoutCorrection: Story = {
   render: () => {
     const [output, setOutput] = createSignal("Initial streamed response.")
     const [status, setStatus] = createSignal<"idle" | "busy">("busy")
+    // Simulates the composer or a dock growing below the transcript.
+    const [spacer, setSpacer] = createSignal(0)
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       status,
@@ -954,8 +956,12 @@ export const MessageListLayoutCorrection: Story = {
               >
                 Toggle status
               </button>
+              <button type="button" data-testid="grow-viewport-spacer" onClick={() => setSpacer((v) => v + 160)}>
+                Grow spacer
+              </button>
             </div>
             <ChatView />
+            <div data-testid="viewport-spacer" style={{ height: `${spacer()}px`, "flex-shrink": "0" }} />
           </div>
         </SessionContext.Provider>
       </StoryProviders>

@@ -671,6 +671,70 @@ describe("WorktreeManager.removeWorktree", () => {
     expect(after.all).not.toContain(result.branch)
   })
 
+  it("detaches the directory immediately and finishes git bookkeeping afterwards", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+    const result = await mgr.createWorktree({ prompt: "detach-me" })
+
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    expect(existsSync(result.path)).toBe(false)
+
+    await detached.done
+    const raw = await git.raw(["worktree", "list", "--porcelain"])
+    expect(raw.split("\n").filter((l) => l.startsWith("worktree "))).toHaveLength(1)
+    expect((await git.branch()).all).not.toContain(result.branch)
+  }, 15_000)
+
+  it("detaches without waiting for the repository git lock", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "detach-locked" })
+
+    // A pool refill or another creation can hold the git lock for seconds in large repositories.
+    const hold = Promise.withResolvers<void>()
+    const busy = mgr["withGitLock"](() => hold.promise)
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    expect(existsSync(result.path)).toBe(false)
+    expect((await simpleGit(root).branch()).all).toContain(result.branch)
+
+    hold.resolve()
+    await busy
+    // settle() flushes the deferred bookkeeping on dispose so branches are not orphaned.
+    await mgr.settle()
+    await detached.done
+    expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+  }, 20_000)
+
+  it("falls back to locked removal when the directory cannot be renamed", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ branchName: "detach-rename-blocked" })
+    const rename = spyOn(fs, "rename").mockRejectedValueOnce(
+      Object.assign(new Error("directory busy"), { code: "EBUSY" }),
+    )
+
+    try {
+      const detached = await mgr.detachWorktree(result.path, result.branch)
+      await detached.done
+      expect(existsSync(result.path)).toBe(false)
+      expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+    } finally {
+      rename.mockRestore()
+    }
+  })
+
+  it("detach never rejects for an already missing directory and still drops the branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "detach-missing" })
+    await fs.rm(result.path, { recursive: true, force: true })
+
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    await detached.done
+    expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+  })
+
   it("keeps the branch when branch param is omitted", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)

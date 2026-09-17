@@ -1043,8 +1043,7 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private async acquirePtyCleanup(directory: string): Promise<() => void> {
-    return acquirePtyCleanup({
-      directory,
+    return acquirePtyCleanup(directory, this.getRoot(), {
       terminals: this.terminalRouter,
       integrated: this.terminalManager,
       scripts: this.scripts.manager,

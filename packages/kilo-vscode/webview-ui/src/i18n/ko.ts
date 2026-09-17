@@ -204,6 +204,7 @@ export const dict = {
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
+  "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
   "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
@@ -322,7 +323,6 @@ export const dict = {
   "sidebar.topBar.newTask": "새 작업",
   "sidebar.topBar.history": "기록",
   "sidebar.topBar.agentManager": "에이전트 관리자",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "마켓플레이스",
   "sidebar.topBar.profile": "프로필",
   "sidebar.topBar.settings": "설정",
@@ -838,7 +838,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "스킬",
 
   "settings.browser.description":
-    "활성화하면 AI 에이전트가 웹 페이지와 상호작용할 수 있습니다 — 탐색, 클릭, 입력, 스크린샷 촬영. Chrome 창이 열려 에이전트의 작업을 확인할 수 있습니다.",
+    "Playwright 기반의 내장 브라우저 자동화를 구성합니다. Kilo는 세션에서 웹 페이지를 탐색하고 상호 작용하며 스크린샷을 찍을 수 있습니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
   "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
@@ -1333,5 +1333,11 @@ export const dict = {
   "chat.search.close": "검색 닫기",
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
+  "settings.experimental.browserAutomation.title": "통합 브라우저",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager에서 로컬 애플리케이션 미리보기를 표시하고 browser_open 도구를 Agent Manager 세션에 노출합니다.",
+  "settings.experimental.browserAutomation.systemChrome.title": "시스템 Chrome 사용",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "통합 브라우저에 설치된 Google Chrome을 사용합니다. 호환되는 Playwright Chromium 브라우저가 이미 설치된 경우에만 비활성화하세요.",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
 }

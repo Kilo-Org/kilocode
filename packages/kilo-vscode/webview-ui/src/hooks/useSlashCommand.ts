@@ -19,6 +19,24 @@ export function sortByScore(matches: SlashCommandEntry[], query: string): SlashC
   return [...matches].sort((a, b) => getMatchScore(b, lower) - getMatchScore(a, lower))
 }
 
+export const skill = (cmd: SlashCommandEntry) => !cmd.action && cmd.source === "skill"
+
+/**
+ * The CLI lists a skill next to a command of the same name so the TUI can offer both as
+ * `/name` and `/name:skill`. Apply the same suffix here so the two rows are distinguishable
+ * and selecting the skill row inserts the text the CLI resolves to that skill.
+ */
+export function disambiguate(list: SlashCommandEntry[], taken: Set<string>): SlashCommandEntry[] {
+  const seen = new Set<string>()
+  return list.flatMap((cmd) => {
+    const name = skill(cmd) && taken.has(cmd.name) ? `${cmd.name}:skill` : cmd.name
+    const key = `${cmd.source ?? "command"}:${name}`
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [name === cmd.name ? cmd : { ...cmd, name }]
+  })
+}
+
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -191,14 +209,6 @@ export function useSlashCommand(
       },
     },
     {
-      name: "kiloclaw",
-      description: "Open KiloClaw chat",
-      hints: ["claw"],
-      action: () => {
-        vscode.postMessage({ type: "openKiloClaw" })
-      },
-    },
-    {
       name: "sandbox",
       description: "Toggle sandbox",
       hints: [],
@@ -238,7 +248,8 @@ export function useSlashCommand(
     const set = excluded()
     const only = included()
     const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name)))
-    return [...list, ...filtered]
+    const taken = new Set(filtered.filter((c) => !skill(c)).map((c) => c.name))
+    return [...list, ...disambiguate(filtered, taken)]
   }
 
   const show = () => query() !== null
@@ -285,8 +296,12 @@ export function useSlashCommand(
 
   const results = () => {
     const list = matched()
-    // PromptInput renders contiguous Actions and Commands groups, so keyboard indexes must use the same order.
-    return [...list.filter((cmd) => cmd.action), ...list.filter((cmd) => !cmd.action)]
+    // PromptInput renders contiguous Actions, Commands, and Skills groups, so keyboard indexes must use the same order.
+    return [
+      ...list.filter((cmd) => cmd.action),
+      ...list.filter((cmd) => !cmd.action && !skill(cmd)),
+      ...list.filter(skill),
+    ]
   }
 
   const unsubscribe = vscode.onMessage((message) => {

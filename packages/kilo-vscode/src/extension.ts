@@ -3,7 +3,6 @@ import { basename } from "node:path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
-import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
 import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
@@ -21,7 +20,11 @@ import { AttentionService, showOSNotification } from "./services/attention"
 import { CaffeinationService } from "./services/caffeination"
 import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
-import { BrowserBroker } from "./services/browser-automation"
+import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
+import {
+  integratedBrowserUseSystemChrome,
+  migrateIntegratedBrowserUseSystemChrome,
+} from "./services/browser-automation/chrome-setting"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -62,16 +65,28 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const telemetry = TelemetryProxy.getInstance()
 
+  await migrateIntegratedBrowserUseSystemChrome().catch((error: unknown) =>
+    console.warn("[Kilo New] Integrated Browser Chrome preference migration failed:", error),
+  )
+
   const browserBroker = new BrowserBroker({
     log: (...args) => console.warn("[Kilo New] BrowserBroker:", ...args),
     enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
     trusted: () => vscode.workspace.isTrusted,
-    useSystemChrome: () =>
-      vscode.workspace.getConfiguration("kilo-code.new.browserAutomation").get("useSystemChrome", true),
+    useSystemChrome: () => integratedBrowserUseSystemChrome(),
   })
 
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(context, () => browserBroker.env())
+  const connectionService = new KiloConnectionService(
+    context,
+    () => browserBroker.env(),
+    (dir): Promise<void> => browserAutomationService.ready(dir),
+  )
+
+  // Manages the built-in Playwright MCP server for ordinary sessions. This is
+  // independent from the Agent Manager browser broker above.
+  const browserAutomationService = new BrowserAutomationService(connectionService)
+  void browserAutomationService.syncWithSettings()
   const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
@@ -88,6 +103,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
+      void browserAutomationService
+        .reregisterIfEnabled()
+        .catch((error) => console.warn("[Kilo New] Playwright MCP re-registration failed:", error))
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
@@ -176,10 +194,6 @@ export async function activate(context: vscode.ExtensionContext) {
   ]
   if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
   ensureCommandsSkipShell(skip)
-
-  // Create KiloClaw chat provider for editor panel
-  const kiloClawProvider = new KiloClawProvider(context.extensionUri, connectionService)
-  context.subscriptions.push(kiloClawProvider)
 
   // Create Agent Manager provider for editor panel
   const reason = vscode.env.remoteName ? "Keep Awake is only available in a local VS Code window." : undefined
@@ -324,16 +338,6 @@ export async function activate(context: vscode.ExtensionContext) {
           projectId: () => agentManagerProvider.projectId(),
         })
         agentManagerProvider.deserializePanel(ctx)
-        return Promise.resolve()
-      },
-    }),
-  )
-
-  // Register serializer so KiloClaw panel restores when VS Code restarts
-  context.subscriptions.push(
-    vscode.window.registerWebviewPanelSerializer(KiloClawProvider.viewType, {
-      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        kiloClawProvider.restorePanel(panel)
         return Promise.resolve()
       },
     }),
@@ -494,9 +498,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.agentManagerOpen", () => {
       track("agent_manager", "kilo-code.new.agentManagerOpen")
     }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.kiloClawOpen", () => {
-      track("kiloclaw", "kilo-code.new.kiloClawOpen")
-    }),
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.marketplaceButtonClicked", () => {
       track("marketplace", "kilo-code.new.marketplaceButtonClicked")
     }),
@@ -516,9 +517,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {
       marketplacePanelProvider.openPanel(directory)
-    }),
-    vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
-      kiloClawProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       const tab = activeTabProvider()
@@ -747,6 +745,7 @@ export async function activate(context: vscode.ExtensionContext) {
       unsubscribeStateChange()
       attention.dispose()
       browserBroker.dispose()
+      browserAutomationService.dispose()
       provider.dispose()
       notebookBridge.dispose()
       connectionService.dispose()

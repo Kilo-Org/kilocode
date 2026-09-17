@@ -129,18 +129,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": [
-        "packages/opencode/src/kilocode/components/dialog-claw-setup.tsx",
-        "packages/opencode/src/kilocode/components/dialog-claw-upgrade.tsx"
-      ],
-      "fingerprint": "89ef84cc3499824c",
-      "maxMatches": 1,
-      "maxTokens": 100,
-      "kind": "legacy",
-      "owner": "opencode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": ["packages/opencode/src/kilocode/session/prompt.ts", "packages/opencode/src/kilocode/session/prompt.ts"],
       "fingerprint": "b985f7708c9b4632",
       "maxMatches": 1,

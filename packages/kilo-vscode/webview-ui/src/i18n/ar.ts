@@ -197,6 +197,7 @@ export const dict = {
   "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.paste.expand": "انقر لتوسيع النص الملصق",
   "prompt.action.autoApprove.enable": "تفعيل الموافقة التلقائية",
   "prompt.action.autoApprove.disable": "تعطيل الموافقة التلقائية",
   "prompt.action.autoApprove.enabled": "الموافقة التلقائية مفعلة. ستتم الموافقة على طلبات الأذونات تلقائياً.",
@@ -314,7 +315,6 @@ export const dict = {
   "sidebar.topBar.newTask": "مهمة جديدة",
   "sidebar.topBar.history": "السجل",
   "sidebar.topBar.agentManager": "مدير الوكلاء",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "المتجر",
   "sidebar.topBar.profile": "الملف الشخصي",
   "sidebar.topBar.settings": "الإعدادات",
@@ -826,7 +826,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "المهارات",
 
   "settings.browser.description":
-    "عند التفعيل، يمكن لوكيل الذكاء الاصطناعي التفاعل مع صفحات الويب — التنقل والنقر والكتابة والتقاط لقطات الشاشة. سيتم فتح نافذة Chrome حتى تتمكن من مشاهدة الوكيل أثناء العمل.",
+    "تكوين أتمتة المتصفح المدمجة المدعومة من Playwright. يمكن لـ Kilo التنقل والتفاعل مع صفحات الويب والتقاط لقطات شاشة لها في جلساتك.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
   "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
@@ -1324,5 +1324,11 @@ export const dict = {
   "chat.search.close": "إغلاق البحث",
   "chat.search.invalidRegex": "تعبير عادي غير صالح",
   "chat.search.noResults": "لا توجد نتائج",
+  "settings.experimental.browserAutomation.title": "المتصفح المدمج",
+  "settings.experimental.browserAutomation.description":
+    "عرض معاينات التطبيقات المحلية في Agent Manager وإتاحة أداة browser_open لجلسات Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "استخدام Chrome النظام",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "استخدام Google Chrome المثبّت للمتصفح المدمج. عطّله فقط عند تثبيت متصفح Playwright Chromium متوافق.",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
 }
