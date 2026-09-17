@@ -764,7 +764,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       globalConfig(),
     )
   const isDisabled = () => !server.isConnected() || locked() || goal.pending()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () =>
     text().trim().length > 0 ||

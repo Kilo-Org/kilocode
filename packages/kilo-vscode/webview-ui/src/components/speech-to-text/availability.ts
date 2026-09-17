@@ -31,7 +31,8 @@ export function hasSpeechToTextAccess(cfg: Cfg, auth: Readonly<Record<string, Au
   return enabled && !cfg.disabled_providers?.includes(KILO_PROVIDER_ID) && (type === "api" || type === "oauth")
 }
 
-export function canUseSpeechToText(cfg: Cfg, auth: Readonly<Record<string, AuthState>>): boolean {
+export function canUseSpeechToText(cfg: Cfg, auth: Readonly<Record<string, AuthState>>, capture = true): boolean {
+  if (!capture) return false
   if (!hasSpeechToTextAccess(cfg, auth)) return false
   // A custom endpoint needs an explicit model. Never fall back to a Gateway model ID,
   // which the endpoint would reject or misinterpret.
