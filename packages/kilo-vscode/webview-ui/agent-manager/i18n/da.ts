@@ -493,6 +493,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} efterladt(e) worktree-mappe(r) · {{size}}",
   "agentManager.orphans.calculating": "beregner størrelse…",
   "agentManager.orphans.dialogTitle": "Efterladte worktree-mapper",
+  "agentManager.orphans.helpIntro":
+    "Kilo gemmer alle worktrees, den opretter, i mappen .kilo/worktrees i dette repository. Mapperne nedenfor ligger i den mappe, men git viser ingen af dem som et worktree, så der er ikke længere noget, der bruger dem.",
+  "agentManager.orphans.helpCheckout":
+    "En mappe, der er markeret som indeholdende et git-checkout, har stadig en .git-post indeni og kan indeholde arbejde, der ikke er committet. Sådanne mapper er ikke valgt, så åbn en af dem og tjek den, før du sletter den.",
+  "agentManager.orphans.helpCauses":
+    "Efterladte mapper skyldes typisk en sletning, der blev afbrudt, et worktree, der blev fjernet uden om Kilo, eller et værktøj, der skrev i mappen, efter at den blev fjernet. Sletninger, der stadig kører, vises ikke her.",
+  "agentManager.orphans.helpDelete":
+    "Sletning fjerner de valgte mapper permanent fra disken uden om Papirkurven. Ingen branch og intet aktivt worktree bliver berørt. Størrelserne er den plads, hver mappe fylder på disken lige nu.",
   "agentManager.orphans.columnPath": "Sti",
   "agentManager.orphans.columnSize": "Størrelse",
   "agentManager.orphans.columnContents": "Indhold",

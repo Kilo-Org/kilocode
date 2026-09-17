@@ -496,6 +496,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} pasta(s) de worktree remanescente(s) · {{size}}",
   "agentManager.orphans.calculating": "calculando o tamanho…",
   "agentManager.orphans.dialogTitle": "Pastas de worktree remanescentes",
+  "agentManager.orphans.helpIntro":
+    "O Kilo mantém cada worktree que cria dentro da pasta .kilo/worktrees deste repositório. As pastas abaixo estão nessa pasta, mas o git não lista nenhuma delas como worktree, portanto nada mais as usa.",
+  "agentManager.orphans.helpCheckout":
+    "Uma pasta sinalizada como contendo um checkout do git ainda tem uma entrada .git dentro dela e pode guardar trabalho sem commit. Essas pastas ficam desmarcadas, então abra uma e verifique-a antes de excluí-la.",
+  "agentManager.orphans.helpCauses":
+    "As pastas remanescentes geralmente vêm de uma exclusão interrompida, de um worktree removido fora do Kilo ou de uma ferramenta que gravou na pasta depois que ela foi removida. Exclusões que ainda estão em andamento não aparecem aqui.",
+  "agentManager.orphans.helpDelete":
+    "A exclusão remove as pastas selecionadas do disco definitivamente, sem passar pela Lixeira. Nenhuma branch e nenhum worktree ativo é afetado. Os tamanhos são o espaço que cada pasta ocupa no disco neste momento.",
   "agentManager.orphans.columnPath": "Caminho",
   "agentManager.orphans.columnSize": "Tamanho",
   "agentManager.orphans.columnContents": "Conteúdo",

@@ -237,6 +237,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
           }
         />
         <div class="am-worktree-list">
+          <OrphanNotice orphans={props.orphanDirectories?.() ?? []} onResolve={openOrphanDialog} />
           <Show when={props.worktreesLoaded() && props.sessionsLoaded()} fallback={<WorktreeSkeleton />}>
             <Show when={!props.isGitRepo()}>
               <div class="am-not-git-notice">
@@ -512,7 +513,6 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               </Show>
             </Show>
           </Show>
-          <OrphanNotice orphans={props.orphanDirectories?.() ?? []} onResolve={openOrphanDialog} />
         </div>
       </div>
     </>

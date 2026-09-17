@@ -89,6 +89,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} leftover worktree folder(s) · {{size}}",
   "agentManager.orphans.calculating": "calculating size…",
   "agentManager.orphans.dialogTitle": "Leftover worktree folders",
+  "agentManager.orphans.helpIntro":
+    "Kilo keeps every worktree it creates inside the .kilo/worktrees folder of this repository. The folders below are in that folder, but git does not list any of them as a worktree, so nothing is using them anymore.",
+  "agentManager.orphans.helpCheckout":
+    "A folder flagged as containing a git checkout still has a .git entry inside and may hold uncommitted work. Those are left unselected, so open one and check it before you delete it.",
+  "agentManager.orphans.helpCauses":
+    "Leftovers usually come from a deletion that was interrupted, a worktree removed outside Kilo, or a tool that wrote into the folder after it was removed. Deletions that are still running are not listed here.",
+  "agentManager.orphans.helpDelete":
+    "Deleting removes the selected folders from disk for good, without going through the Trash. No branch and no active worktree is touched. Sizes are what each folder takes up on disk right now.",
   "agentManager.orphans.columnPath": "Path",
   "agentManager.orphans.columnSize": "Size",
   "agentManager.orphans.columnContents": "Contents",

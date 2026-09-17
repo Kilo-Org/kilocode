@@ -501,6 +501,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} übrig gebliebene(r) Worktree-Ordner · {{size}}",
   "agentManager.orphans.calculating": "Größe wird berechnet…",
   "agentManager.orphans.dialogTitle": "Übrig gebliebene Worktree-Ordner",
+  "agentManager.orphans.helpIntro":
+    "Kilo legt jeden Worktree, den es erstellt, im Ordner .kilo/worktrees dieses Repositorys ab. Die folgenden Ordner liegen in diesem Ordner, aber git führt keinen davon als Worktree, sodass sie von nichts mehr verwendet werden.",
+  "agentManager.orphans.helpCheckout":
+    "Ein Ordner, der als git-Checkout markiert ist, enthält noch einen .git-Eintrag und möglicherweise nicht committete Arbeit. Diese Ordner bleiben nicht ausgewählt; öffnen Sie einen davon und prüfen Sie ihn, bevor Sie ihn löschen.",
+  "agentManager.orphans.helpCauses":
+    "Übrig gebliebene Ordner entstehen meist durch eine abgebrochene Löschung, einen außerhalb von Kilo entfernten Worktree oder ein Tool, das nach dem Entfernen noch in den Ordner geschrieben hat. Löschvorgänge, die noch laufen, werden hier nicht aufgeführt.",
+  "agentManager.orphans.helpDelete":
+    "Beim Löschen werden die ausgewählten Ordner endgültig von der Festplatte entfernt, ohne den Papierkorb zu durchlaufen. Kein Branch und kein aktiver Worktree wird angetastet. Die Größen zeigen, wie viel Speicherplatz jeder Ordner aktuell belegt.",
   "agentManager.orphans.columnPath": "Pfad",
   "agentManager.orphans.columnSize": "Größe",
   "agentManager.orphans.columnContents": "Inhalt",

@@ -501,6 +501,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} carpeta(s) de worktree sobrante(s) · {{size}}",
   "agentManager.orphans.calculating": "calculando el tamaño…",
   "agentManager.orphans.dialogTitle": "Carpetas de worktree sobrantes",
+  "agentManager.orphans.helpIntro":
+    "Kilo guarda cada worktree que crea dentro de la carpeta .kilo/worktrees de este repositorio. Las carpetas siguientes están en esa carpeta, pero git no incluye ninguna de ellas como worktree, así que ya no se usan.",
+  "agentManager.orphans.helpCheckout":
+    "Una carpeta marcada como que contiene un checkout de git todavía tiene una entrada .git en su interior y puede guardar trabajo sin confirmar. Esas carpetas quedan sin seleccionar, así que abre una y revísala antes de eliminarla.",
+  "agentManager.orphans.helpCauses":
+    "Los restos suelen provenir de una eliminación que se interrumpió, de un worktree eliminado fuera de Kilo o de una herramienta que escribió en la carpeta después de que se eliminara. Las eliminaciones que aún están en curso no aparecen aquí.",
+  "agentManager.orphans.helpDelete":
+    "Al eliminar, las carpetas seleccionadas se borran del disco de forma definitiva, sin pasar por la Papelera. No se toca ninguna rama ni ningún worktree activo. Los tamaños son el espacio que cada carpeta ocupa en el disco ahora mismo.",
   "agentManager.orphans.columnPath": "Ruta",
   "agentManager.orphans.columnSize": "Tamaño",
   "agentManager.orphans.columnContents": "Contenido",

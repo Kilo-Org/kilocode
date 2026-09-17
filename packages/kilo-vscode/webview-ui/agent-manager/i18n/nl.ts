@@ -501,6 +501,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} achtergebleven worktree-map(pen) · {{size}}",
   "agentManager.orphans.calculating": "grootte berekenen…",
   "agentManager.orphans.dialogTitle": "Achtergebleven worktree-mappen",
+  "agentManager.orphans.helpIntro":
+    "Kilo bewaart elke worktree die het aanmaakt in de map .kilo/worktrees van deze repository. De mappen hieronder staan in die map, maar git vermeldt er geen enkele als worktree, dus niets gebruikt ze nog.",
+  "agentManager.orphans.helpCheckout":
+    "Een map die is gemarkeerd als map met een git-checkout heeft nog een .git-item erin en kan werk bevatten dat niet is gecommit. Die mappen blijven niet geselecteerd, dus open er een en controleer die voordat je hem verwijdert.",
+  "agentManager.orphans.helpCauses":
+    "Restanten komen meestal van een verwijdering die is afgebroken, een worktree die buiten Kilo is verwijderd of een tool die na het verwijderen nog in de map heeft geschreven. Verwijderingen die nog bezig zijn, staan hier niet.",
+  "agentManager.orphans.helpDelete":
+    "Verwijderen haalt de geselecteerde mappen definitief van de schijf, zonder via de Prullenbak te gaan. Er wordt geen branch en geen actieve worktree aangeraakt. De groottes zijn de ruimte die elke map op dit moment op de schijf inneemt.",
   "agentManager.orphans.columnPath": "Pad",
   "agentManager.orphans.columnSize": "Grootte",
   "agentManager.orphans.columnContents": "Inhoud",

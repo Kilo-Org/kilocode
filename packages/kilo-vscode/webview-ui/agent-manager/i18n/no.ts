@@ -491,6 +491,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} gjenglemt(e) worktree-mappe(r) · {{size}}",
   "agentManager.orphans.calculating": "beregner størrelse…",
   "agentManager.orphans.dialogTitle": "Gjenglemte worktree-mapper",
+  "agentManager.orphans.helpIntro":
+    "Kilo lagrer alle worktrees den oppretter, i mappen .kilo/worktrees i dette repositoriet. Mappene nedenfor ligger i den mappen, men git viser ingen av dem som et worktree, så det er ikke lenger noe som bruker dem.",
+  "agentManager.orphans.helpCheckout":
+    "En mappe som er merket med at den inneholder en git-utsjekking, har fortsatt en .git-oppføring inni og kan inneholde arbeid som ikke er committet. Slike mapper er ikke valgt, så åpne en av dem og sjekk den før du sletter den.",
+  "agentManager.orphans.helpCauses":
+    "Gjenglemte mapper skyldes vanligvis en sletting som ble avbrutt, et worktree som ble fjernet utenom Kilo, eller et verktøy som skrev til mappen etter at den ble fjernet. Slettinger som fortsatt pågår, vises ikke her.",
+  "agentManager.orphans.helpDelete":
+    "Sletting fjerner de valgte mappene permanent fra disken, uten å gå via Papirkurven. Ingen branch og ingen aktive worktrees blir berørt. Størrelsene viser hvor mye plass hver mappe bruker på disken akkurat nå.",
   "agentManager.orphans.columnPath": "Bane",
   "agentManager.orphans.columnSize": "Størrelse",
   "agentManager.orphans.columnContents": "Innhold",

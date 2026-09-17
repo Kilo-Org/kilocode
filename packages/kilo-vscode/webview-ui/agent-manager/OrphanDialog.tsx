@@ -28,6 +28,27 @@ function revealLabelKey(userAgent: string | undefined): string {
   return REVEAL_KEYS[revealPlatform(userAgent)]
 }
 
+/**
+ * Header explanation, mirroring the JetBrains dialog's banner: the list comes from a heuristic over a
+ * directory Kilo owns, and "delete 48 folders" is not a decision anybody can make from paths alone.
+ *
+ * Rendered inside the shared dialog's description slot, which is a `<p>`, so every block here is a
+ * span laid out by CSS rather than a `<ul>`.
+ */
+const OrphanHelp: Component = () => {
+  const { t } = useLanguage()
+  return (
+    <>
+      {t("agentManager.orphans.helpIntro")}
+      <span class="am-orphan-help-list">
+        <span>{t("agentManager.orphans.helpCheckout")}</span>
+        <span>{t("agentManager.orphans.helpCauses")}</span>
+        <span>{t("agentManager.orphans.helpDelete")}</span>
+      </span>
+    </>
+  )
+}
+
 interface OrphanDialogProps {
   orphans: OrphanDirectory[]
   onReveal: (path: string) => void
@@ -56,64 +77,82 @@ export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
   }
 
   return (
-    <Dialog title={t("agentManager.orphans.dialogTitle")} size="large">
+    <Dialog
+      class="am-orphan-dialog-root"
+      title={t("agentManager.orphans.dialogTitle")}
+      description={<OrphanHelp />}
+      size="large"
+    >
       <div class="am-orphan-dialog">
-        <table class="am-orphan-table">
-          <thead>
-            <tr>
-              <th class="am-orphan-col-check">
-                <Checkbox hideLabel checked={allChecked()} indeterminate={someChecked()} onChange={toggleAll}>
-                  {t("agentManager.orphans.dialogTitle")}
-                </Checkbox>
-              </th>
-              <th>{t("agentManager.orphans.columnPath")}</th>
-              <th>{t("agentManager.orphans.columnSize")}</th>
-              <th>{t("agentManager.orphans.columnContents")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            <For each={props.orphans}>
-              {(orphan) => (
-                <tr data-orphan-kind={orphan.kind}>
-                  <td class="am-orphan-col-check">
-                    <Checkbox
-                      hideLabel
-                      checked={selected().has(orphan.path)}
-                      onChange={(checked) => toggleRow(orphan.path, checked)}
-                    >
-                      {orphan.path}
-                    </Checkbox>
-                  </td>
-                  <td class="am-orphan-path" title={orphan.path}>
-                    {orphan.path}
-                  </td>
-                  <td class="am-orphan-size">
-                    <Show when={orphan.bytes !== undefined} fallback={t("agentManager.orphans.calculating")}>
-                      {formatOrphanBytes(orphan.bytes ?? 0)}
-                    </Show>
-                  </td>
-                  <td class="am-orphan-contents">
-                    <Show when={orphan.kind === "broken"}>
-                      <Icon name="warning" size="small" />
-                      <span>{t("agentManager.orphans.checkoutWarning")}</span>
-                    </Show>
-                  </td>
-                  <td class="am-orphan-col-reveal">
-                    <IconButton
-                      icon="folder"
-                      variant="ghost"
-                      size="small"
-                      aria-label={t(revealKey)}
-                      title={t(revealKey)}
-                      onClick={() => props.onReveal(orphan.path)}
-                    />
-                  </td>
-                </tr>
-              )}
-            </For>
-          </tbody>
-        </table>
+        <div class="am-orphan-scroll">
+          <table class="am-orphan-table">
+            <thead>
+              <tr>
+                <th class="am-orphan-col-check">
+                  <Checkbox
+                    hideLabel
+                    checked={allChecked()}
+                    indeterminate={someChecked()}
+                    onChange={toggleAll}
+                    icon={<Icon name={someChecked() ? "dash" : "check-small"} size="small" />}
+                  >
+                    {t("agentManager.orphans.dialogTitle")}
+                  </Checkbox>
+                </th>
+                <th class="am-orphan-col-path">{t("agentManager.orphans.columnPath")}</th>
+                <th class="am-orphan-col-size">{t("agentManager.orphans.columnSize")}</th>
+                <th class="am-orphan-col-contents">{t("agentManager.orphans.columnContents")}</th>
+                <th class="am-orphan-col-reveal" />
+              </tr>
+            </thead>
+            <tbody>
+              <For each={props.orphans}>
+                {(orphan) => (
+                  <tr data-orphan-kind={orphan.kind}>
+                    <td class="am-orphan-col-check">
+                      <Checkbox
+                        hideLabel
+                        checked={selected().has(orphan.path)}
+                        onChange={(checked) => toggleRow(orphan.path, checked)}
+                        icon={<Icon name="check-small" size="small" />}
+                      >
+                        {orphan.path}
+                      </Checkbox>
+                    </td>
+                    <td class="am-orphan-col-path">
+                      <span class="am-orphan-path" title={orphan.path}>
+                        {orphan.path}
+                      </span>
+                    </td>
+                    <td class="am-orphan-col-size">
+                      <Show when={orphan.bytes !== undefined} fallback={t("agentManager.orphans.calculating")}>
+                        {formatOrphanBytes(orphan.bytes ?? 0)}
+                      </Show>
+                    </td>
+                    <td class="am-orphan-col-contents">
+                      <Show when={orphan.kind === "broken"}>
+                        <span class="am-orphan-contents">
+                          <Icon name="warning" size="small" />
+                          <span>{t("agentManager.orphans.checkoutWarning")}</span>
+                        </span>
+                      </Show>
+                    </td>
+                    <td class="am-orphan-col-reveal">
+                      <IconButton
+                        icon="folder"
+                        variant="ghost"
+                        size="small"
+                        aria-label={t(revealKey)}
+                        title={t(revealKey)}
+                        onClick={() => props.onReveal(orphan.path)}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </For>
+            </tbody>
+          </table>
+        </div>
 
         <div class="am-orphan-dialog-footer">
           <div class="am-orphan-dialog-summary">
@@ -133,12 +172,12 @@ export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
             </Show>
           </div>
           <div class="am-orphan-dialog-actions">
-            <Button variant="ghost" size="large" onClick={props.onClose}>
+            <Button variant="secondary" size="normal" onClick={props.onClose}>
               {t("agentManager.orphans.cancel")}
             </Button>
             <Button
               variant="primary"
-              size="large"
+              size="normal"
               class="am-confirm-delete"
               disabled={stats().count === 0}
               onClick={() => props.onDelete([...selected()])}

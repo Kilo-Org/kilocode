@@ -227,6 +227,60 @@ describe("Agent Manager edit preview", () => {
   })
 })
 
+describe("Agent Manager leftover worktree folders", () => {
+  const bodies = [
+    path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+    path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
+  ]
+
+  it("puts the notice above the worktrees instead of below them", () => {
+    for (const file of bodies) {
+      const source = fs.readFileSync(file, "utf-8")
+      const list = source.indexOf('<div class="am-worktree-list">')
+      const notice = source.indexOf("<OrphanNotice", list)
+      const first = source.indexOf("fallback={<WorktreeSkeleton />}", list)
+      expect(list, `${path.basename(file)} renders the worktree list`).toBeGreaterThan(-1)
+      expect(notice, `${path.basename(file)} renders the orphan notice inside the list`).toBeGreaterThan(list)
+      expect(notice, `${path.basename(file)} renders the orphan notice before the first worktree`).toBeLessThan(first)
+    }
+  })
+
+  it("offers the cleanup as an ordinary action button, not a ghost affordance", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanNotice.tsx"), "utf-8")
+    expect(source).toContain('<Button variant="primary" size="small" onClick={props.onResolve}>')
+  })
+
+  it("keeps the banner headline in the normal foreground", () => {
+    const css = readAllCss()
+    expect(css).toContain(".am-orphan-notice-title {\n  color: var(--text-base);\n}")
+  })
+
+  it("explains the list in the dialog header before offering a bulk delete", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
+    expect(source).toContain("description={<OrphanHelp />}")
+    for (const key of ["helpIntro", "helpCheckout", "helpCauses", "helpDelete"]) {
+      expect(source, `header explanation covers ${key}`).toContain(`agentManager.orphans.${key}`)
+    }
+  })
+
+  it("uses the shared check glyph for selection instead of a bespoke one", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
+    expect(source).toContain('icon={<Icon name="check-small" size="small" />}')
+    expect(source).toContain('icon={<Icon name={someChecked() ? "dash" : "check-small"} size="small" />}')
+  })
+
+  it("gives the dialog body the same gutter as its header", () => {
+    const css = readAllCss()
+    expect(css).toContain('.am-orphan-dialog-root [data-slot="dialog-body"] {\n  padding: 0 20px 20px;\n}')
+  })
+
+  it("left-aligns every cell, including the git checkout flag", () => {
+    const css = readAllCss()
+    const table = css.slice(css.indexOf(".am-orphan-table th {"), css.indexOf(".am-orphan-table tbody tr:last-child"))
+    expect(table.match(/text-align: left;/g)?.length).toBe(2)
+  })
+})
+
 describe("Agent Manager Provider Messages", () => {
   function getMethodBody(name: string): string {
     const project = new Project({ compilerOptions: { allowJs: true } })

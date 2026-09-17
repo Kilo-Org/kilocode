@@ -494,6 +494,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} оставшихся папок worktree · {{size}}",
   "agentManager.orphans.calculating": "вычисление размера…",
   "agentManager.orphans.dialogTitle": "Оставшиеся папки worktree",
+  "agentManager.orphans.helpIntro":
+    "Kilo хранит все создаваемые worktree в папке .kilo/worktrees этого репозитория. Папки ниже находятся в этой папке, но git не считает ни одну из них worktree, поэтому они больше не используются.",
+  "agentManager.orphans.helpCheckout":
+    "Папка, помеченная как содержащая рабочую копию git, всё ещё содержит запись .git и может хранить незакоммиченную работу. Такие папки остаются невыбранными, поэтому откройте одну из них и проверьте её перед удалением.",
+  "agentManager.orphans.helpCauses":
+    "Остатки обычно появляются из-за прерванного удаления, worktree, удалённого вне Kilo, или инструмента, который записал данные в папку после её удаления. Удаления, которые ещё выполняются, здесь не показываются.",
+  "agentManager.orphans.helpDelete":
+    "Удаление безвозвратно убирает выбранные папки с диска, минуя Корзину. Ни одна ветка и ни один активный worktree не затрагиваются. Размеры показывают, сколько места каждая папка занимает на диске сейчас.",
   "agentManager.orphans.columnPath": "Путь",
   "agentManager.orphans.columnSize": "Размер",
   "agentManager.orphans.columnContents": "Содержимое",

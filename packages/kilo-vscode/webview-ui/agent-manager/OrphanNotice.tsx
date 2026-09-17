@@ -41,7 +41,7 @@ export const OrphanNotice: Component<{
           </Show>
         </div>
         <div class="am-orphan-notice-actions">
-          <Button variant="ghost" size="small" onClick={props.onResolve}>
+          <Button variant="primary" size="small" onClick={props.onResolve}>
             {t("agentManager.orphans.resolve")}
           </Button>
         </div>

@@ -507,6 +507,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} cartella(e) di worktree rimasta(e) · {{size}}",
   "agentManager.orphans.calculating": "calcolo delle dimensioni…",
   "agentManager.orphans.dialogTitle": "Cartelle di worktree rimaste",
+  "agentManager.orphans.helpIntro":
+    "Kilo tiene ogni worktree che crea nella cartella .kilo/worktrees di questa repository. Le cartelle elencate qui sotto si trovano in quella cartella, ma git non ne elenca nessuna come worktree, quindi non sono più usate da niente.",
+  "agentManager.orphans.helpCheckout":
+    "Una cartella segnalata come contenente un checkout git ha ancora una voce .git al suo interno e può contenere lavoro non committato. Quelle cartelle restano deselezionate, quindi aprine una e controllala prima di eliminarla.",
+  "agentManager.orphans.helpCauses":
+    "Le cartelle rimaste derivano di solito da un'eliminazione interrotta, da un worktree rimosso fuori da Kilo o da uno strumento che ha scritto nella cartella dopo la rimozione. Le eliminazioni ancora in corso non sono elencate qui.",
+  "agentManager.orphans.helpDelete":
+    "L'eliminazione rimuove definitivamente dal disco le cartelle selezionate, senza passare dal Cestino. Nessun branch e nessun worktree attivo viene toccato. Le dimensioni indicano lo spazio che ogni cartella occupa sul disco in questo momento.",
   "agentManager.orphans.columnPath": "Percorso",
   "agentManager.orphans.columnSize": "Dimensione",
   "agentManager.orphans.columnContents": "Contenuto",

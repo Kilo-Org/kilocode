@@ -492,6 +492,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} zaostalih worktree foldera · {{size}}",
   "agentManager.orphans.calculating": "računanje veličine…",
   "agentManager.orphans.dialogTitle": "Zaostali worktree folderi",
+  "agentManager.orphans.helpIntro":
+    "Kilo čuva svaki worktree koji napravi u folderu .kilo/worktrees ovog repozitorija. Folderi ispod nalaze se u tom folderu, ali git ni jedan od njih ne navodi kao worktree, pa ih više ništa ne koristi.",
+  "agentManager.orphans.helpCheckout":
+    "Folder označen kao folder koji sadrži git checkout još ima .git zapis unutra i može sadržavati nekomitovan rad. Takvi folderi ostaju neodabrani, pa otvorite jedan i provjerite ga prije nego što ga izbrišete.",
+  "agentManager.orphans.helpCauses":
+    "Zaostali folderi najčešće nastaju zbog prekinutog brisanja, worktreeja uklonjenog izvan aplikacije Kilo ili alata koji je pisao u folder nakon što je uklonjen. Brisanja koja su još u toku nisu navedena ovdje.",
+  "agentManager.orphans.helpDelete":
+    "Brisanje trajno uklanja odabrane foldere s diska, bez prebacivanja u Korpu za smeće. Nijedna grana niti aktivan worktree se ne dira. Veličine pokazuju koliko prostora svaki folder trenutno zauzima na disku.",
   "agentManager.orphans.columnPath": "Putanja",
   "agentManager.orphans.columnSize": "Veličina",
   "agentManager.orphans.columnContents": "Sadržaj",

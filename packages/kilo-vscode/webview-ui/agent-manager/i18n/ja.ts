@@ -495,6 +495,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} 件の残された worktree フォルダー · {{size}}",
   "agentManager.orphans.calculating": "サイズを計算中…",
   "agentManager.orphans.dialogTitle": "残された worktree フォルダー",
+  "agentManager.orphans.helpIntro":
+    "Kilo は作成した worktree をすべて、このリポジトリの .kilo/worktrees フォルダー内に保存します。以下のフォルダーはそのフォルダー内にありますが、git はいずれも worktree として認識していないため、どこからも使用されていません。",
+  "agentManager.orphans.helpCheckout":
+    "git チェックアウトが残っていると表示されているフォルダーには、まだ .git エントリがあり、コミットされていない作業が含まれている可能性があります。これらは選択されていないため、削除する前に開いて内容を確認してください。",
+  "agentManager.orphans.helpCauses":
+    "残されたフォルダーは通常、中断された削除、Kilo の外で削除された worktree、または削除後にフォルダーへ書き込んだツールが原因で発生します。実行中の削除はここには表示されません。",
+  "agentManager.orphans.helpDelete":
+    "削除すると、選択したフォルダーはゴミ箱を経由せずにディスクから完全に削除されます。ブランチや使用中の worktree には影響しません。サイズは各フォルダーが現在ディスク上で占めている容量です。",
   "agentManager.orphans.columnPath": "パス",
   "agentManager.orphans.columnSize": "サイズ",
   "agentManager.orphans.columnContents": "内容",

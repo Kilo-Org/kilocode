@@ -501,6 +501,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} dossier(s) de worktree résiduel(s) · {{size}}",
   "agentManager.orphans.calculating": "calcul de la taille…",
   "agentManager.orphans.dialogTitle": "Dossiers de worktree résiduels",
+  "agentManager.orphans.helpIntro":
+    "Kilo place chaque worktree qu'il crée dans le dossier .kilo/worktrees de ce dépôt. Les dossiers ci-dessous se trouvent dans ce dossier, mais git n'en répertorie aucun comme worktree : plus rien ne les utilise.",
+  "agentManager.orphans.helpCheckout":
+    "Un dossier signalé comme contenant un checkout git possède encore une entrée .git et peut renfermer du travail non commité. Ces dossiers restent désélectionnés : ouvrez-en un et vérifiez-le avant de le supprimer.",
+  "agentManager.orphans.helpCauses":
+    "Les résidus proviennent généralement d'une suppression interrompue, d'un worktree supprimé en dehors de Kilo ou d'un outil qui a écrit dans le dossier après sa suppression. Les suppressions encore en cours ne sont pas listées ici.",
+  "agentManager.orphans.helpDelete":
+    "La suppression retire définitivement du disque les dossiers sélectionnés, sans passer par la Corbeille. Aucune branche ni aucun worktree actif n'est touché. Les tailles correspondent à l'espace disque occupé par chaque dossier en ce moment.",
   "agentManager.orphans.columnPath": "Chemin",
   "agentManager.orphans.columnSize": "Taille",
   "agentManager.orphans.columnContents": "Contenu",

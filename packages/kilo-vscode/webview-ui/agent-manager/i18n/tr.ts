@@ -501,6 +501,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} artakalan worktree klasörü · {{size}}",
   "agentManager.orphans.calculating": "boyut hesaplanıyor…",
   "agentManager.orphans.dialogTitle": "Artakalan worktree klasörleri",
+  "agentManager.orphans.helpIntro":
+    "Kilo, oluşturduğu her worktree'yi bu deponun .kilo/worktrees klasöründe tutar. Aşağıdaki klasörler bu klasörün içindedir, ancak git bunların hiçbirini worktree olarak listelemez; dolayısıyla artık hiçbir şey onları kullanmıyor.",
+  "agentManager.orphans.helpCheckout":
+    "İçinde git checkout bulunduğu belirtilen bir klasörde hâlâ bir .git girdisi vardır ve commit edilmemiş çalışma barındırabilir. Bu klasörler seçili bırakılmaz; silmeden önce birini açıp inceleyin.",
+  "agentManager.orphans.helpCauses":
+    "Artakalan klasörler genellikle yarıda kesilen bir silme işleminden, Kilo dışında kaldırılan bir worktree'den veya klasör kaldırıldıktan sonra içine yazan bir araçtan kaynaklanır. Hâlâ sürmekte olan silme işlemleri burada listelenmez.",
+  "agentManager.orphans.helpDelete":
+    "Silme işlemi, seçili klasörleri Geri Dönüşüm Kutusu'na göndermeden diskten kalıcı olarak kaldırır. Hiçbir dal ve etkin worktree etkilenmez. Boyutlar, her klasörün şu anda diskte kapladığı alanı gösterir.",
   "agentManager.orphans.columnPath": "Yol",
   "agentManager.orphans.columnSize": "Boyut",
   "agentManager.orphans.columnContents": "İçerik",

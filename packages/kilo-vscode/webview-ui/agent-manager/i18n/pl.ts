@@ -492,6 +492,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} pozostały(ch) folder(ów) worktree · {{size}}",
   "agentManager.orphans.calculating": "obliczanie rozmiaru…",
   "agentManager.orphans.dialogTitle": "Pozostałe foldery worktree",
+  "agentManager.orphans.helpIntro":
+    "Kilo przechowuje każdy tworzony worktree w folderze .kilo/worktrees tego repozytorium. Poniższe foldery znajdują się w tym folderze, ale git nie wymienia żadnego z nich jako worktree, więc nic już ich nie używa.",
+  "agentManager.orphans.helpCheckout":
+    "Folder oznaczony jako zawierający checkout git nadal ma w środku wpis .git i może zawierać zmiany bez commita. Takie foldery pozostają niezaznaczone, więc otwórz jeden z nich i sprawdź go, zanim go usuniesz.",
+  "agentManager.orphans.helpCauses":
+    "Pozostałości zwykle wynikają z przerwanego usuwania, worktree usuniętego poza Kilo albo narzędzia, które zapisało coś w folderze po jego usunięciu. Usuwanie, które nadal trwa, nie jest tu wymieniane.",
+  "agentManager.orphans.helpDelete":
+    "Usunięcie trwale usuwa wybrane foldery z dysku, bez przenoszenia ich do Kosza. Żadna gałąź ani żaden aktywny worktree nie zostaje zmieniony. Rozmiary pokazują, ile miejsca każdy folder zajmuje na dysku w tej chwili.",
   "agentManager.orphans.columnPath": "Ścieżka",
   "agentManager.orphans.columnSize": "Rozmiar",
   "agentManager.orphans.columnContents": "Zawartość",

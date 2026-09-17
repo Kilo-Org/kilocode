@@ -486,6 +486,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "남은 worktree 폴더 {{count}}개 · {{size}}",
   "agentManager.orphans.calculating": "크기 계산 중…",
   "agentManager.orphans.dialogTitle": "남은 worktree 폴더",
+  "agentManager.orphans.helpIntro":
+    "Kilo는 생성한 모든 worktree를 이 저장소의 .kilo/worktrees 폴더 안에 보관합니다. 아래 폴더들은 그 폴더 안에 있지만 git이 어느 것도 worktree로 표시하지 않으므로 더 이상 사용되지 않습니다.",
+  "agentManager.orphans.helpCheckout":
+    "git 체크아웃이 남아 있다고 표시된 폴더에는 아직 .git 항목이 있으며 커밋하지 않은 작업이 남아 있을 수 있습니다. 이러한 폴더는 선택되지 않은 상태로 두므로 삭제하기 전에 열어서 확인하세요.",
+  "agentManager.orphans.helpCauses":
+    "남은 폴더는 보통 중단된 삭제, Kilo 외부에서 제거된 worktree 또는 폴더가 제거된 뒤에 그 안에 기록한 도구 때문에 생깁니다. 아직 진행 중인 삭제는 여기에 표시되지 않습니다.",
+  "agentManager.orphans.helpDelete":
+    "삭제하면 선택한 폴더가 휴지통을 거치지 않고 디스크에서 영구적으로 제거됩니다. 브랜치와 사용 중인 worktree는 변경되지 않습니다. 크기는 각 폴더가 현재 디스크에서 차지하는 용량입니다.",
   "agentManager.orphans.columnPath": "경로",
   "agentManager.orphans.columnSize": "크기",
   "agentManager.orphans.columnContents": "내용",

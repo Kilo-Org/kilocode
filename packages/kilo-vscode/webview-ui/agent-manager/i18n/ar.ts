@@ -484,6 +484,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} مجلد worktree متبقٍ · {{size}}",
   "agentManager.orphans.calculating": "جارٍ حساب الحجم…",
   "agentManager.orphans.dialogTitle": "مجلدات worktree متبقية",
+  "agentManager.orphans.helpIntro":
+    "يحفظ Kilo كل worktree يُنشئه داخل مجلد .kilo/worktrees في هذا المستودع. المجلدات أدناه موجودة في ذلك المجلد، لكن git لا يسرد أيًا منها باعتباره worktree، لذا لم يعد أي شيء يستخدمها.",
+  "agentManager.orphans.helpCheckout":
+    "المجلد المُعلَّم بأنه يحتوي على نسخة عمل git لا يزال يضم مدخل .git بداخله وقد يحتوي على عمل غير مُودَع في commit. لذلك تُترك هذه المجلدات غير محددة؛ افتح أحدها وتحقق منه قبل حذفه.",
+  "agentManager.orphans.helpCauses":
+    "تنتج المجلدات المتبقية عادةً عن عملية حذف توقفت في منتصفها، أو worktree أُزيل من خارج Kilo، أو أداة كتبت في المجلد بعد إزالته. أما عمليات الحذف التي لا تزال قيد التنفيذ فلا تظهر هنا.",
+  "agentManager.orphans.helpDelete":
+    "يؤدي الحذف إلى إزالة المجلدات المحددة من القرص نهائيًا دون المرور بسلة المحذوفات. ولا يتأثر أي فرع أو أي worktree نشط. تمثل الأحجام المساحة التي يشغلها كل مجلد على القرص في الوقت الحالي.",
   "agentManager.orphans.columnPath": "المسار",
   "agentManager.orphans.columnSize": "الحجم",
   "agentManager.orphans.columnContents": "المحتوى",

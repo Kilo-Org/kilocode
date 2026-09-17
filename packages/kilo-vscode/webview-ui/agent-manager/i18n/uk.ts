@@ -502,6 +502,14 @@ export const dict = {
   "agentManager.orphans.summarySize": "{{count}} залишених тек worktree · {{size}}",
   "agentManager.orphans.calculating": "обчислення розміру…",
   "agentManager.orphans.dialogTitle": "Залишені теки worktree",
+  "agentManager.orphans.helpIntro":
+    "Kilo зберігає всі створені worktree у теці .kilo/worktrees цього репозиторію. Теки нижче містяться в цій теці, але git не вважає жодну з них worktree, тому ними більше ніщо не користується.",
+  "agentManager.orphans.helpCheckout":
+    "Тека, позначена як така, що містить робочу копію git, усе ще має всередині запис .git і може зберігати незакомічену роботу. Такі теки лишаються невибраними, тому відкрийте одну з них і перевірте перед видаленням.",
+  "agentManager.orphans.helpCauses":
+    "Залишки зазвичай з'являються через перерване видалення, worktree, видалений поза Kilo, або інструмент, який записав дані до теки після її видалення. Видалення, які ще тривають, тут не показуються.",
+  "agentManager.orphans.helpDelete":
+    "Видалення остаточно вилучає вибрані теки з диска, не переміщуючи їх до Кошика. Жодна гілка й жоден активний worktree не змінюються. Розміри показують, скільки місця кожна тека займає на диску зараз.",
   "agentManager.orphans.columnPath": "Шлях",
   "agentManager.orphans.columnSize": "Розмір",
   "agentManager.orphans.columnContents": "Зміст",

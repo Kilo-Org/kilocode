@@ -416,6 +416,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
 
       <div class="am-section">
         <div class="am-worktree-list">
+          <OrphanNotice orphans={store.orphanDirectories()} onResolve={openOrphanDialog} />
           <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider
               onDragStart={onDragStart}
@@ -480,7 +481,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               </DragOverlay>
             </DragDropProvider>
           </Show>
-          <OrphanNotice orphans={store.orphanDirectories()} onResolve={openOrphanDialog} />
         </div>
       </div>
     </div>
