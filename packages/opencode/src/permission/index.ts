@@ -16,7 +16,7 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionID } from "@/session/schema" // kilocode_change - used by AllowEverythingInput
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
-import { KilocodeProjectConfigStamp } from "@/kilocode/config/project-stamp"
+import { KiloConfigPolicy } from "@/kilocode/permission/policy"
 import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
@@ -196,47 +196,10 @@ const layer = Layer.effect(
       }),
     )
 
-    // kilocode_change start - config-protection policies. Read the effective project config first:
-    // it observes a global config change and invalidates this instance's cached config, so the
-    // global read below returns the same fresh value instead of consuming the change stamp early.
-    // Before that, compare the project config digest against this instance's last value so a direct
-    // edit to a config file is seen at the next protected request. The digest lives on the
-    // directory-scoped Permission state and participates in normal instance disposal.
-    const loadPolicies = Effect.fnUntraced(function* () {
-      const ctx = yield* InstanceState.context
-      const s = yield* InstanceState.get(state)
-      const digest = yield* KilocodeProjectConfigStamp.digest({
-        fs,
-        git,
-        directory: ctx.directory,
-        worktree: ctx.worktree,
-      })
-      // An unknown digest always reloads so a failed scan cannot pin a stale config; record the
-      // digest only after a successful invalidate so a failure cannot consume the change.
-      if (KilocodeProjectConfigStamp.stale(s.projectStamp, digest)) {
-        yield* config.invalidate()
-        s.projectStamp = digest
-      }
-      const project = yield* config.get()
-      const global = yield* config.getGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
-      return { global, project }
-    })
-
-    // Build the per-request protection decision. When no relevant request is config-shaped the
-    // policy was not loaded, and evaluate() still returns protect:false for non-config requests.
-    const decideWith = (root: string, policy?: { global?: Config.Info; project?: Config.Info }) => {
-      return (entry: { info: Request; root?: string }) =>
-        ConfigProtection.evaluate(entry.info, {
-          root: entry.root ?? root,
-          global: policy?.global,
-          project: policy?.project,
-        })
-    }
-
-    // True when any pending entry is a protected config target, so policy resolution (and its
-    // project config scan) can be skipped for ordinary permission traffic.
-    const anyPendingConfigShaped = (root: string, pending: Map<PermissionV1.ID, PendingEntry>) =>
-      [...pending.values()].some((entry) => ConfigProtection.isRequest(entry.info, entry.root ?? root))
+    // kilocode_change start - Kilo-owned config-protection policy orchestration. The helper owns
+    // effective-policy loading, per-instance config freshness, and per-request target classification;
+    // this shared module only wires it into the Permission request lifecycle.
+    const guard = KiloConfigPolicy.make({ config, fs, git })
     // kilocode_change end
 
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
@@ -255,13 +218,13 @@ const layer = Layer.effect(
       // feed the effective project config, so they only affect this project's own files.
       const ctx = yield* InstanceState.context
       const root = ConfigProtection.boundary(ctx)
-      const candidate = ConfigProtection.isRequest(request, root)
-      const skillCandidate = ConfigProtection.globalSkillPattern(request)
-      const needsPolicy = candidate || skillCandidate !== undefined
-      const policy = needsPolicy ? yield* loadPolicies() : undefined
+      // Classify the request once: the same immutable classification gates the config load and
+      // produces the verdict, so its filesystem work is not repeated. The global-skill candidate is
+      // independent of the protected-target candidate and must still trigger the policy load.
+      const classified = guard.classify(request, root)
+      const policy = classified.candidate || classified.skill !== undefined ? yield* guard.load(s) : undefined
+      const verdict = guard.verdict(classified, policy)
       const global = policy?.global
-      const project = policy?.project
-      const verdict = ConfigProtection.evaluate(request, { root, global, project })
       const isProtected = verdict.protect
       const skill = verdict.protect ? verdict.skill : undefined
       const trusted = skill
@@ -404,13 +367,15 @@ const layer = Layer.effect(
 
       // kilocode_change start - downgrade "always" to "once" for protected config paths. Re-resolve the
       // per-entry policy at this boundary so project config changes are observed and global skill trust
-      // is preserved. Skip the config scan when neither this reply nor a pending sibling is a config
-      // target: drain must still resolve ordinary entries, which evaluate() handles without policy.
+      // is preserved. Classify this reply's entry and every pending sibling once; the plan reuses those
+      // results for drain so each target path is resolved a single time per operation. Ordinary traffic
+      // still skips the config scan and resolves via evaluate() without a policy.
       const ctx = yield* InstanceState.context
       const root = ConfigProtection.boundary(ctx)
-      const relevant = ConfigProtection.isRequest(existing.info, root) || anyPendingConfigShaped(root, pending)
-      const policy = relevant ? yield* loadPolicies() : undefined
-      const decide = decideWith(root, policy)
+      const s = yield* InstanceState.get(state)
+      const plan = guard.plan(root, [existing, ...pending.values()])
+      const policy = plan.needs ? yield* guard.load(s) : undefined
+      const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
       const existingVerdict = decide(existing)
       if (existingVerdict.protect && existingVerdict.skill === undefined) return
       // kilocode_change end
@@ -460,13 +425,14 @@ const layer = Layer.effect(
       if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
 
       // kilocode_change start - protected config paths only persist selected always-rules when their
-      // per-entry policy allows it and the request is not a trusted global skill. Ordinary requests
-      // skip the config scan and use evaluate() without a policy.
+      // per-entry policy allows it and the request is not a trusted global skill. Classify the entry
+      // and every pending sibling once so drain reuses the same resolution; ordinary requests skip
+      // the config scan and use evaluate() without a policy.
       const ctx = yield* InstanceState.context
       const root = ConfigProtection.boundary(ctx)
-      const relevant = ConfigProtection.isRequest(existing.info, root) || anyPendingConfigShaped(root, s.pending)
-      const policy = relevant ? yield* loadPolicies() : undefined
-      const decide = decideWith(root, policy)
+      const plan = guard.plan(root, s.pending.values())
+      const policy = plan.needs ? yield* guard.load(s) : undefined
+      const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
       const verdict = decide(existing)
       if (verdict.protect && verdict.skill === undefined) return
       const skill = verdict.protect ? verdict.skill : undefined
@@ -520,12 +486,13 @@ const layer = Layer.effect(
       else s.approved.push(rule)
 
       // kilocode_change start - YOLO/auto-approve must not silently clear protected config edits
-      // unless the per-entry policy allows it. Skip the config scan when no pending entry is a
-      // config target, so ordinary YOLO traffic stays cheap.
+      // unless the per-entry policy allows it. Classify every pending entry once and reuse the
+      // results for each covered() check, so ordinary YOLO traffic stays cheap.
       const ctx = yield* InstanceState.context
       const root = ConfigProtection.boundary(ctx)
-      const policy = anyPendingConfigShaped(root, s.pending) ? yield* loadPolicies() : undefined
-      const decide = decideWith(root, policy)
+      const plan = guard.plan(root, s.pending.values())
+      const policy = plan.needs ? yield* guard.load(s) : undefined
+      const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
       // kilocode_change end
 
       if (input.requestID) {

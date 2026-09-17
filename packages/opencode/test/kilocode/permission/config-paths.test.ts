@@ -642,3 +642,57 @@ describe("ConfigProtection.evaluate", () => {
     }
   })
 })
+
+describe("ConfigProtection.classify", () => {
+  const request = (file: string) => ({
+    permission: "edit",
+    patterns: [file],
+    metadata: { filepath: file },
+  })
+
+  test("applies one classification through verdict exactly like evaluate", async () => {
+    await using tmp = await tmpdir()
+    const target = ".kilo/kilo.json"
+    const classification = ConfigProtection.classify(request(target), tmp.path)
+    expect(classification).toMatchObject({ candidate: true, external: false, inside: true })
+    const project = { require_approval_for_config_edits: false }
+    expect(ConfigProtection.verdict(classification, { project })).toEqual(
+      ConfigProtection.evaluate(request(target), { root: tmp.path, project }),
+    )
+  })
+
+  test("keeps an independent global-skill candidate when there are no protected targets", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    const skill = path.join(tmp.path, "skills", "classify-skill")
+    await fs.mkdir(skill, { recursive: true })
+    try {
+      const pattern = (skill + "/*").replaceAll("\\", "/")
+      const classification = ConfigProtection.classify(
+        {
+          permission: "external_directory",
+          patterns: [pattern],
+          // File-tool requests have no protected write targets, but the skill candidate stays independent.
+          metadata: { filepath: path.join(skill, "SKILL.md") },
+        },
+        os.tmpdir(),
+      )
+      expect(classification.candidate).toBe(false)
+      expect(classification.skill).toBe(pattern)
+      expect(classification.candidate || classification.skill !== undefined).toBe(true)
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+    }
+  })
+
+  test("resolves the skill candidate lazily and consistently", () => {
+    const classification = ConfigProtection.classify(
+      { permission: "edit", patterns: ["src/index.ts"], metadata: { filepath: "src/index.ts" } },
+      os.tmpdir(),
+    )
+    expect(classification.candidate).toBe(false)
+    expect(classification.skill).toBeUndefined()
+    expect(classification.skill).toBeUndefined()
+  })
+})

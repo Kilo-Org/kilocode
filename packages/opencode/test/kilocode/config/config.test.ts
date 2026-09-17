@@ -1746,4 +1746,54 @@ describe("require_approval_for_config_edits source scope", () => {
       await disposeAllInstances()
     }
   })
+
+  test("invalidateInstance reloads the project config without dropping the cached global config", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalDir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+      await writeConfig(project.path, { username: "before" })
+
+      await provideTestInstance({
+        directory: project.path,
+        fn: () =>
+          Effect.runPromise(
+            Effect.gen(function* () {
+              const svc = yield* Config.Service
+              const globalBefore = yield* svc.getGlobal()
+              expect((yield* svc.get()).username).toBe("before")
+
+              // A direct project edit changes only project-owned sources.
+              yield* Effect.promise(() => writeConfig(project.path, { username: "after" }))
+              yield* svc.invalidateInstance()
+              expect((yield* svc.get()).username).toBe("after")
+              // Instance-only invalidation preserves the cached global object.
+              expect(yield* svc.getGlobal()).toBe(globalBefore)
+
+              // Repeated instance invalidations (an unknown project digest reloads every time) also
+              // keep the global object warm and still reload the project config each time.
+              yield* svc.invalidateInstance()
+              yield* svc.invalidateInstance()
+              expect(yield* svc.get()).toMatchObject({ username: "after" })
+              expect(yield* svc.getGlobal()).toBe(globalBefore)
+
+              // A real global edit still propagates through the global stamp.
+              yield* Effect.promise(() => writeConfig(globalDir.path, { require_approval_for_config_edits: false }))
+              const globalFresh = yield* svc.getGlobal()
+              expect(globalFresh).not.toBe(globalBefore)
+              expect(globalFresh.require_approval_for_config_edits).toBe(false)
+            }).pipe(Effect.scoped, Effect.provide(layer)),
+          ),
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 })

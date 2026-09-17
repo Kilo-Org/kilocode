@@ -1,5 +1,6 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
-import { afterEach, describe, expect } from "bun:test"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { afterEach, describe, expect, spyOn } from "bun:test"
 import { $ } from "bun"
 import { Cause, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import fs from "fs/promises"
@@ -9,6 +10,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Bus } from "../../../src/bus"
+import { Config } from "../../../src/config/config"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { Permission } from "../../../src/permission"
 import { SessionID } from "../../../src/session/schema"
@@ -16,7 +18,7 @@ import { disposeAllInstances, provideInstance, provideTmpdirInstance, tmpdirScop
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 
 const env = Layer.mergeAll(
-  AppNodeBuilder.build(Permission.node),
+  AppNodeBuilder.build(LayerNode.group([Permission.node, Config.node])),
   Bus.layer,
   AppNodeBuilder.build(CrossSpawnSpawner.node),
 )
@@ -393,6 +395,169 @@ describe("require_approval_for_config_edits", () => {
           expect(yield* wait(1)).toHaveLength(1)
           yield* reject("per_fresh_on")
           yield* Fiber.await(reenabled)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("classifies each entry once per permission operation", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          // Spying on the exported classifier proves the orchestration reuses one classification per
+          // entry instead of resolving targets again for the gate and each verdict. The classifier
+          // itself still runs the real filesystem logic.
+          const spy = spyOn(ConfigProtection, "classify")
+          try {
+            const first = yield* ask(request("per_class_1", { ruleset: [] })).pipe(Effect.forkScoped)
+            const second = yield* ask(request("per_class_2", { ruleset: [] })).pipe(Effect.forkScoped)
+            const third = yield* ask(request("per_class_3", { ruleset: [] })).pipe(Effect.forkScoped)
+            expect(yield* wait(3)).toHaveLength(3)
+            expect(spy.mock.calls.length).toBe(3)
+
+            // "always" builds a plan over its entry and every pending sibling, then drain reuses it.
+            yield* reply({ requestID: PermissionV1.ID.make("per_class_1"), reply: "always" })
+            yield* Fiber.await(first)
+            expect(spy.mock.calls.length).toBe(6)
+
+            yield* reject("per_class_2")
+            yield* reject("per_class_3")
+            yield* Fiber.await(second)
+            yield* Fiber.await(third)
+          } finally {
+            spy.mockRestore()
+          }
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("classifies each entry once when saving selected always rules", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const spy = spyOn(ConfigProtection, "classify")
+          try {
+            const first = yield* ask(
+              request("per_save_class_1", { ruleset: [], metadata: { filepath: target, rules: [target] } }),
+            ).pipe(Effect.forkScoped)
+            const second = yield* ask(request("per_save_class_2", { ruleset: [] })).pipe(Effect.forkScoped)
+            const third = yield* ask(request("per_save_class_3", { ruleset: [] })).pipe(Effect.forkScoped)
+            expect(yield* wait(3)).toHaveLength(3)
+            expect(spy.mock.calls.length).toBe(3)
+
+            // The saved request is still in the pending map; the plan must not classify it twice.
+            yield* saveAlwaysRules({ requestID: PermissionV1.ID.make("per_save_class_1"), approvedAlways: [target] })
+            expect(spy.mock.calls.length).toBe(6)
+
+            yield* reject("per_save_class_1")
+            yield* reject("per_save_class_2")
+            yield* reject("per_save_class_3")
+            yield* Fiber.await(first)
+            yield* Fiber.await(second)
+            yield* Fiber.await(third)
+          } finally {
+            spy.mockRestore()
+          }
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("reuses the reply plan for drain and reclassifies on the next operation", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal({ require_approval_for_config_edits: false })
+          const spy = spyOn(ConfigProtection, "classify")
+          try {
+            const first = yield* ask(request("per_plan_drain_1", { ruleset: [] })).pipe(Effect.forkScoped)
+            const second = yield* ask(request("per_plan_drain_2", { ruleset: [] })).pipe(Effect.forkScoped)
+            const third = yield* ask(request("per_plan_drain_3", { ruleset: [] })).pipe(Effect.forkScoped)
+            expect(yield* wait(3)).toHaveLength(3)
+            expect(spy.mock.calls.length).toBe(3)
+
+            // Protection is disabled for these entries, so the reply actually drains its siblings.
+            yield* reply({ requestID: PermissionV1.ID.make("per_plan_drain_1"), reply: "always" })
+            yield* Fiber.await(first)
+            yield* Fiber.await(second)
+            yield* Fiber.await(third)
+            expect(yield* list()).toEqual([])
+            // The reply plan covered its entry and both siblings; drain made no more classifications.
+            expect(spy.mock.calls.length).toBe(6)
+
+            // A later operation classifies again instead of reusing a retained plan.
+            expect((yield* ask(request("per_plan_drain_4"))).manual).toBe(false)
+            expect(spy.mock.calls.length).toBe(7)
+          } finally {
+            spy.mockRestore()
+          }
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("reuses the YOLO plan for every covered pending entry", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal({ require_approval_for_config_edits: false })
+          const spy = spyOn(ConfigProtection, "classify")
+          try {
+            const first = yield* ask(request("per_yolo_plan_1", { ruleset: [] })).pipe(Effect.forkScoped)
+            const second = yield* ask(request("per_yolo_plan_2", { ruleset: [] })).pipe(Effect.forkScoped)
+            const third = yield* ask(request("per_yolo_plan_3", { ruleset: [] })).pipe(Effect.forkScoped)
+            expect(yield* wait(3)).toHaveLength(3)
+            expect(spy.mock.calls.length).toBe(3)
+
+            yield* allowEverything({ enable: true, requestID: PermissionV1.ID.make("per_yolo_plan_1") })
+            yield* Fiber.await(first)
+            yield* Fiber.await(second)
+            yield* Fiber.await(third)
+            expect(yield* list()).toEqual([])
+            // One classification per pending entry; the covered() checks reuse the plan.
+            expect(spy.mock.calls.length).toBe(6)
+          } finally {
+            spy.mockRestore()
+          }
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("observes a project edit without dropping the cached global config", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const config = yield* Config.Service
+          yield* withGlobal({ require_approval_for_config_edits: true })
+          const project = path.join(dir, "kilo.json")
+          yield* Effect.promise(() =>
+            fs.writeFile(project, JSON.stringify({ require_approval_for_config_edits: true })),
+          )
+
+          // Warm the global cache, then confirm the project config is protected under the default.
+          const globalBefore = yield* config.getGlobal()
+          const blocked = yield* ask(request("per_cache_blocked")).pipe(Effect.forkScoped)
+          expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+          yield* reject("per_cache_blocked")
+          yield* Fiber.await(blocked)
+
+          // A direct project edit changes only project-owned sources. The next protected request must
+          // reload the project config without invalidating the cached global object.
+          yield* Effect.promise(() =>
+            fs.writeFile(project, JSON.stringify({ require_approval_for_config_edits: false })),
+          )
+          expect((yield* ask(request("per_cache_off"))).manual).toBe(false)
+          expect(yield* config.getGlobal()).toBe(globalBefore)
+
+          // Global freshness still propagates after the project-only invalidation.
+          yield* withGlobal({ require_approval_for_config_edits: false, username: "fresh" })
+          const globalFresh = yield* config.getGlobal()
+          expect(globalFresh).not.toBe(globalBefore)
+          expect(globalFresh.username).toBe("fresh")
         }),
       { git: true },
     ),
