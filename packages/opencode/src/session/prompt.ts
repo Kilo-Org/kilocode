@@ -11,6 +11,7 @@ import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/d
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KiloSessionTitle } from "@/kilocode/session/title" // kilocode_change
 import { SessionTranscript } from "@/kilocode/session/transcript" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
@@ -317,19 +318,10 @@ export const layer = Layer.effect(
       if (input.session.parentID) return
       if (!Session.isDefaultTitle(input.session.title)) return
 
-      const real = (m: SessionV1.WithParts) =>
-        m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic)
-      const idx = input.history.findIndex(real)
-      if (idx === -1) return
-      if (input.history.filter(real).length !== 1) return
-
-      const context = input.history.slice(0, idx + 1)
-      const firstUser = context[idx]
-      if (!firstUser || firstUser.info.role !== "user") return
-      const firstInfo = firstUser.info
-
-      const subtasks = firstUser.parts.filter((p): p is SessionV1.SubtaskPart => p.type === "subtask")
-      const onlySubtasks = subtasks.length > 0 && firstUser.parts.every((p) => p.type === "subtask")
+      // kilocode_change start - Kilo defers titles and owns the context policy
+      const built = KiloSessionTitle.build(input.history)
+      if (!built) return
+      // kilocode_change end
 
       const ag = yield* agents.get("title")
       if (!ag) return
@@ -337,22 +329,17 @@ export const layer = Layer.effect(
         ? yield* provider.getModel(ag.model.providerID, ag.model.modelID)
         : ((yield* provider.getSmallModel(input.providerID)) ??
           (yield* provider.getModel(input.providerID, input.modelID)))
-      const msgs = onlySubtasks
-        ? [{ role: "user" as const, content: subtasks.map((p) => p.prompt).join("\n") }]
-        : yield* MessageV2.toModelMessagesEffect(context, mdl).pipe(
-            Effect.provideService(Database.Service, database), // kilocode_change - provide the migrated message store
-          )
       const text = yield* llm
         .stream({
           agent: ag,
-          user: firstInfo,
+          user: built.user,
           system: [],
           small: true,
           tools: {},
           model: mdl,
           sessionID: KiloSessionPrompt.titleID(input.session.id), // kilocode_change - isolate title requests from the agent task
           retries: 2,
-          messages: [{ role: "user", content: "Generate a title for this conversation:\n" }, ...msgs],
+          messages: built.messages,
         })
         .pipe(
           Stream.filter(LLMEvent.is.textDelta),
@@ -1638,13 +1625,6 @@ export const layer = Layer.effect(
         }
 
         step++
-        if (step === 1)
-          yield* title({
-            session,
-            modelID: lastUser.model.modelID,
-            providerID: lastUser.model.providerID,
-            history: msgs,
-          }).pipe(Effect.ignore, Effect.forkIn(scope))
 
         const model = yield* getModel(lastUser.model.providerID, lastUser.model.modelID, sessionID)
         const task = tasks.pop()
@@ -2006,6 +1986,29 @@ export const layer = Layer.effect(
       }
 
       yield* compaction.prune({ sessionID, reason: "normal" }).pipe(Effect.ignore, Effect.forkIn(scope))
+      // kilocode_change start - generate the title at normal turn end once intent is clear.
+      // The fork lives in the service scope, so it outlives the turn like compaction.prune.
+      const finalMsgs = KiloSessionPrompt.trimBeforeLastSummary(
+        KiloSessionPromptQueue.scope(
+          sessionID,
+          yield* MessageV2.filterCompactedEffect(sessionID).pipe(Effect.provideService(Database.Service, database)),
+        ),
+      )
+      const finalUser = KiloSessionMessageOrder.latest(finalMsgs).user
+      const titled = yield* sessions.get(sessionID).pipe(Effect.orDie)
+      if (
+        finalUser &&
+        !titled.parentID &&
+        Session.isDefaultTitle(titled.title) &&
+        KiloSessionTitle.shouldGenerate({ sessionID, history: finalMsgs })
+      )
+        yield* title({
+          session: titled,
+          history: finalMsgs,
+          modelID: finalUser.model.modelID,
+          providerID: finalUser.model.providerID,
+        }).pipe(Effect.ignore, Effect.forkIn(scope))
+      // kilocode_change end
       return yield* lastAssistant(sessionID)
     })
 
