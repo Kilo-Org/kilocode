@@ -151,6 +151,9 @@ function flag(value: string) {
   return value.split("=")[0]
 }
 
+// Git clusters short flags (`-avv` is `-a -v -v`) and attaches numeric values to them
+// (`-n5` is `-n 5`). Classification matches single flag names, so split each cluster into
+// separate tokens and drop any attached numeric value.
 function expand(values: string[]) {
   return values.flatMap((value) => {
     if (/^-[A-Za-z]{2,}\d*$/.test(value)) return Array.from(value.slice(1).replace(/\d+$/, ""), (char) => `-${char}`)
