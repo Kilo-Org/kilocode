@@ -206,6 +206,7 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
   "prompt.action.autoApprove.disabled":
     "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
+  "prompt.action.autoApprove.sandboxExcluded": "Запросы на выход из песочницы всегда исключены.",
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
@@ -223,6 +224,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Разрешена",
   "prompt.action.sandbox.unrestricted": "Без ограничений",
   "prompt.action.sandbox.description.enabled": "Запись разрешена только в каталогах проекта и Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Правила разрешений и автоодобрение действуют внутри песочницы. Команды, которым нужно выйти из неё, всегда спрашивают.",
   "prompt.action.sandbox.description.disabled": "Нажмите, чтобы ограничить запись в файловую систему и доступ к сети.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
@@ -267,7 +270,9 @@ export const dict = {
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
+  "notification.permission.titleSandboxEscalation": "Выполнить вне песочницы?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Команда целиком выполняется без ограничений файловой системы и сети, только для этой команды. Git должен записывать в .git, который доступен только для чтения в песочнице и находится вне рабочего дерева в связанном worktree. Правила разрешений Bash и автоодобрение никогда не одобряют этот запрос автоматически.",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.reject": "Отклонить",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",

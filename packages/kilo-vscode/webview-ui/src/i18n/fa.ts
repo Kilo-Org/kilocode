@@ -208,6 +208,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "غیرفعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.enabled": "تأیید خودکار فعال است. درخواست‌های مجوز به‌صورت خودکار تأیید می‌شوند.",
   "prompt.action.autoApprove.disabled": "تأیید خودکار غیرفعال است. برای تأیید خودکار درخواست‌های مجوز کلیک کنید.",
+  "prompt.action.autoApprove.sandboxExcluded": "درخواست‌های خروج از sandbox همیشه مستثنا هستند.",
   "prompt.action.sandbox.enable": "فعال‌سازی سندباکس",
   "prompt.action.sandbox.disable": "غیرفعال‌سازی سندباکس",
   "prompt.action.sandbox.enabled": "سندباکس فعال است. دستورات شل عامل به پوشه‌های پروژه و Kilo محدود شده‌اند.",
@@ -222,6 +223,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "مجاز",
   "prompt.action.sandbox.unrestricted": "بدون محدودیت",
   "prompt.action.sandbox.description.enabled": "نوشتن‌ها به پوشه‌های پروژه و Kilo محدود شده‌اند.",
+  "prompt.action.sandbox.description.escalation":
+    "قواعد مجوز و تأیید خودکار در داخل sandbox اعمال می‌شوند. فرمان‌هایی که باید از آن خارج شوند همیشه می‌پرسند.",
   "prompt.action.sandbox.description.disabled": "برای محدود کردن نوشتن در سیستم فایل و دسترسی به شبکه کلیک کنید.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "برای محدود کردن نوشتن در سیستم فایل کلیک کنید. دسترسی به شبکه طبق تنظیمات sandbox شما مجاز است.",
@@ -267,7 +270,9 @@ export const dict = {
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
-  "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
+  "notification.permission.titleSandboxEscalation": "اجرا خارج از sandbox؟",
+  "notification.permission.descriptionSandboxEscalation":
+    "این کل فرمان را با حذف محدودیت‌های فایل‌سیستم و شبکه، فقط برای همین فرمان اجرا می‌کند. Git باید در .git بنویسد؛ این مسیر در sandbox فقط‌خواندنی است و در یک worktree مرتبط خارج از worktree قرار دارد. قواعد اجازه Bash و تأیید خودکار هرگز این درخواست را به‌صورت خودکار تأیید نمی‌کنند.",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
   "ui.permission.reject": "رد",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",

@@ -423,11 +423,6 @@ export class WorktreeStateManager {
     void this.save()
   }
 
-  removeTabOrder(key: string): void {
-    delete this.tabOrder[key]
-    void this.save()
-  }
-
   /** Last selected sidebar target (Local/worktree/session) for seamless restore. */
   getActiveTarget(): SidebarTarget | undefined {
     return this.activeTarget

@@ -209,6 +209,7 @@ export const dict = {
     "L'approbation automatique est activée. Les demandes d'autorisation seront approuvées automatiquement.",
   "prompt.action.autoApprove.disabled":
     "L'approbation automatique est désactivée. Cliquez pour approuver automatiquement les demandes d'autorisation.",
+  "prompt.action.autoApprove.sandboxExcluded": "Les demandes d’escalade du bac à sable sont toujours exclues.",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Autorisé",
   "prompt.action.sandbox.unrestricted": "Sans restriction",
   "prompt.action.sandbox.description.enabled": "Les écritures sont limitées aux répertoires du projet et de Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Les règles d’autorisation et l’approbation automatique s’appliquent à l’intérieur du bac à sable. Les commandes qui doivent en sortir demandent toujours.",
   "prompt.action.sandbox.description.disabled":
     "Cliquez pour restreindre les écritures dans le système de fichiers et l'accès au réseau.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,7 +275,9 @@ export const dict = {
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
-  "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
+  "notification.permission.titleSandboxEscalation": "Exécuter en dehors du bac à sable ?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Cette action exécute toute la commande sans les restrictions de système de fichiers et de réseau, pour cette commande uniquement. Git doit écrire dans .git, qui est en lecture seule dans le bac à sable et se trouve hors de l’arborescence de travail pour un worktree lié. Les règles d’autorisation Bash et l’approbation automatique n’approuvent jamais cette demande automatiquement.",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.reject": "Rejeter",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
