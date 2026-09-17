@@ -21,6 +21,7 @@ jobs:
     name: Analyze (java-kotlin)
     if: github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       security-events: write
       packages: read
