@@ -455,7 +455,7 @@ internal fun icon(tool: Tool) = when (tool.name) {
     "glob", "grep" -> SessionViewIcons.search
     "webfetch", "websearch" -> SessionViewIcons.windowCursor
     "codesearch" -> SessionViewIcons.code
-    "task" -> SessionViewIcons.task
+    "task", "board_post", "board_read" -> SessionViewIcons.task
     "bash" -> SessionViewIcons.console
     "edit", "write", "apply_patch" -> SessionViewIcons.edit
     "todowrite", "todoread" -> SessionViewIcons.checklist
