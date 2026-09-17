@@ -50,9 +50,7 @@ class BoardToolViewTest : BasePlatformTestCase() {
 
         assertTrue(view.isExpanded())
         assertTrue(view.bodyVisible())
-        val body = view.bodyMarkdownText()
-        assertNotNull(body)
-        assertTrue(body!!.contains("status update"))
+        assertTrue(view.markdown().contains("status update"))
     }
 
     fun `test board body is lazy and reused across collapse cycles`() {
@@ -61,13 +59,13 @@ class BoardToolViewTest : BasePlatformTestCase() {
         assertFalse(view.bodyCreated())
         view.toggle()
         assertTrue(view.bodyCreated())
-        val body = view.bodyMarkdownText()
+        val body = view.markdown()
 
         view.toggle()
         assertFalse(view.bodyVisible())
         view.toggle()
 
-        assertEquals(body, view.bodyMarkdownText())
+        assertEquals(body, view.markdown())
         assertTrue(view.bodyVisible())
     }
 
@@ -77,7 +75,7 @@ class BoardToolViewTest : BasePlatformTestCase() {
 
         view.update(post(body = "revised body"))
 
-        assertTrue(view.bodyMarkdownText()!!.contains("revised body"))
+        assertTrue(view.markdown().contains("revised body"))
     }
 
     fun `test view factory routes completed board_post to board tool view`() {

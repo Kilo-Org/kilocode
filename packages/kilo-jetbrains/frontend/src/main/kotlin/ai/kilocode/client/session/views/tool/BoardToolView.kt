@@ -120,9 +120,6 @@ class BoardToolView(
     internal fun bodyCreated() = bodyHolder.scroll != null
 
     @RequiresEdt
-    internal fun bodyMarkdownText(): String? = bodyHolder.md?.markdown()
-
-    @RequiresEdt
     internal fun hasToggle(): Boolean = arrow.isVisible
 
     private fun sync(): Boolean {

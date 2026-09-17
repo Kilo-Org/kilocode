@@ -321,9 +321,6 @@ object UiStyle {
             { JBColor.namedColor("Kilo.Swarm.avatarBackground6", JBColor(0x2E8FB8, 0x4CB4DE)) },
         )
 
-        /** Number of distinct swarm avatar fills before colours repeat. */
-        fun swarmAvatarCount(): Int = swarmAvatars.size
-
         /** Initial drawn on top of a swarm avatar fill; the fills are saturated in both themes. */
         fun swarmAvatarForeground(): Color = JBColor.namedColor(
             "Kilo.Swarm.avatarForeground",
