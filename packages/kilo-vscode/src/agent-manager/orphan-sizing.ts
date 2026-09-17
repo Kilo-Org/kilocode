@@ -16,33 +16,65 @@ import { sizes } from "./orphan-size"
 import type { ProjectContext } from "./project/context"
 import type { OrphanDirectory } from "./worktree-reconcile"
 
-type Tracker = { paths: string[]; abort: AbortController | undefined; paused: boolean }
+type Tracker = {
+  abort: AbortController | undefined
+  paused: boolean
+  /**
+   * Settled measurements by path. A present key means the walk is done with that directory; the value
+   * is its size, or undefined when it could not be measured at all.
+   *
+   * This is the only durable home for a size. Every reconcile rebuilds the report's orphan objects
+   * from scratch (see worktree-reconcile.ts), so a size written onto them is gone by the next
+   * worktree-health poll — and because the path set is unchanged at that point, no new pass would run
+   * to recover it. Keeping the numbers here, on a tracker that outlives the report, is what lets a
+   * rebuilt report inherit what is already known.
+   */
+  known: Map<string, number | undefined>
+}
 
 const trackers = new WeakMap<ProjectContext, Tracker>()
-
-function samePaths(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) return false
-  return a.every((value, index) => value === b[index])
-}
 
 function tracker(ctx: ProjectContext): Tracker {
   const existing = trackers.get(ctx)
   if (existing) return existing
-  const created: Tracker = { paths: [], abort: undefined, paused: false }
+  const created: Tracker = { abort: undefined, paused: false, known: new Map() }
   trackers.set(ctx, created)
   return created
 }
 
 /**
- * Kick off (or skip) a size pass for the current orphan set.
+ * Copy what is already known onto the report's current orphan objects.
  *
- * A no-op when the path set is unchanged since the last pass — an unrelated reconcile (e.g. a
- * routine worktree-health poll) must never re-walk directories nothing has touched. A set that *has*
- * changed aborts the pass in flight before starting the new one: its answer is already worthless, and
- * the walk is the expensive part, so leaving it running would burn I/O on directories nobody is
- * waiting for. Results land on `ctx.report?.orphans` in place, read fresh at completion time rather
- * than closed over, so a report replaced by a newer reconcile while the walk was in flight is never
- * overwritten with stale data.
+ * Read fresh from `ctx.report` rather than closed over, so a report replaced by a newer reconcile
+ * while a walk was in flight is never overwritten with sizes for directories it does not list.
+ */
+function apply(ctx: ProjectContext, known: Map<string, number | undefined>): boolean {
+  let applied = false
+  for (const orphan of ctx.report?.orphans ?? []) {
+    if (!known.has(orphan.path)) continue
+    const bytes = known.get(orphan.path)
+    if (bytes !== undefined && orphan.bytes !== bytes) {
+      orphan.bytes = bytes
+      applied = true
+    }
+    // Marked even without a size, so the UI stops waiting for a number that is never coming.
+    if (!orphan.sized) {
+      orphan.sized = true
+      applied = true
+    }
+  }
+  return applied
+}
+
+/**
+ * Annotate the current orphan set with sizes, walking only what is not already known.
+ *
+ * Called by every reconcile. Known sizes are re-applied to the objects that reconcile just built —
+ * that part is not an optimization, it is what stops the banner from losing its total on every
+ * worktree-health poll. Only genuinely new directories are walked, so a routine poll costs nothing and
+ * one new leftover folder does not re-read the other forty. A pass in flight is abandoned when new
+ * directories appear, since the walk is the expensive part and its results are cached per path
+ * anyway: whatever it had not finished is simply picked up by the next pass.
  */
 export function trackOrphanSizes(
   ctx: ProjectContext,
@@ -52,29 +84,25 @@ export function trackOrphanSizes(
   const state = tracker(ctx)
   if (state.paused) return
   const next = orphans.map((orphan) => orphan.path).toSorted()
-  if (samePaths(next, state.paths)) return
-  state.paths = next
+  apply(ctx, state.known)
+  // Directories that have left the list stop being interesting; without this the cache would grow for
+  // the life of the window.
+  const covered = new Set(next)
+  for (const path of state.known.keys()) {
+    if (!covered.has(path)) state.known.delete(path)
+  }
+  const missing = next.filter((path) => !state.known.has(path))
+  if (missing.length === 0) return
   state.abort?.abort()
-  if (next.length === 0) return
   const controller = new AbortController()
   state.abort = controller
-  const covered = new Set(next)
-  sizes(next, { signal: controller.signal })
+  sizes(missing, { signal: controller.signal })
     .then((result) => {
       if (controller.signal.aborted) return
-      const current = ctx.report?.orphans ?? []
-      let touched = false
-      for (const orphan of current) {
-        // Only paths this pass actually covered: the report can already describe a different set.
-        if (!covered.has(orphan.path)) continue
-        const bytes = result.get(orphan.path)
-        if (bytes !== undefined) orphan.bytes = bytes
-        // Marked even when the walk could not measure it, so the UI stops waiting for a number that
-        // is never coming — `sizes` omits a directory it could not read rather than failing the batch.
-        orphan.sized = true
-        touched = true
-      }
-      if (touched) ctx.notifySized()
+      // Recorded for every path walked, with or without an answer: `sizes` omits a directory it could
+      // not read rather than failing the batch, and "we tried" is what the UI needs to stop waiting.
+      for (const path of missing) state.known.set(path, result.get(path))
+      if (apply(ctx, state.known)) ctx.notifySized()
     })
     .catch((err: unknown) => log(`Failed to compute orphan directory sizes: ${err}`))
 }
@@ -87,15 +115,16 @@ export function trackOrphanSizes(
  * matters because a delete re-reconciles before it touches anything, and that reconcile would
  * otherwise start a fresh pass over the doomed set immediately.
  *
- * The measured path set is forgotten too: whatever survives the delete has to be walked again, and
- * leaving the old set here would make the next pass look redundant and skip itself.
+ * Already-measured sizes are kept: deleting one folder does not change the size of the others, so the
+ * reconcile after the delete can show a correct total straight away instead of re-reading everything
+ * that survived. The deleted directories drop out of the cache on that same reconcile, since they are
+ * no longer in the list.
  */
 export function pauseOrphanSizes(ctx: ProjectContext): void {
   const state = tracker(ctx)
   state.paused = true
   state.abort?.abort()
   state.abort = undefined
-  state.paths = []
 }
 
 /**

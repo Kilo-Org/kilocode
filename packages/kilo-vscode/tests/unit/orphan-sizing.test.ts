@@ -84,6 +84,39 @@ describe("trackOrphanSizes", () => {
     ).toBe(true)
   })
 
+  /**
+   * Every reconcile builds the report's orphan objects from scratch, and the health scheduler
+   * reconciles on a timer — so sizes held only as a mutation on those objects vanish on the next poll.
+   * The path set is unchanged at that point, so no new pass would run either: the banner showed a size
+   * for one poll interval and then said "calculating size…" forever.
+   */
+  it("re-applies known sizes to the fresh objects a later reconcile builds", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-keep-"))
+    tempDirs.push(dir)
+    await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(50))
+    const landed = Promise.withResolvers<void>()
+    let sized = 0
+    const project = ctx(() => {
+      sized++
+      landed.resolve()
+    })
+    project.report = reportWith([{ path: dir, kind: "leftover" }])
+
+    trackOrphanSizes(project, project.report.orphans, () => undefined)
+    await landed.promise
+    expect(project.report?.orphans[0]?.bytes).toBe(50)
+
+    // What a routine health poll does: same folders, brand new objects, no sizes on them.
+    const fresh: OrphanDirectory[] = [{ path: dir, kind: "leftover" }]
+    project.report = reportWith(fresh)
+    trackOrphanSizes(project, fresh, () => undefined)
+
+    expect(fresh[0]?.bytes, "a known size must survive the rebuild").toBe(50)
+    expect(fresh[0]?.sized).toBe(true)
+    await Bun.sleep(20)
+    expect(sized, "and it must not need a second walk to get there").toBe(1)
+  })
+
   it("does not re-run when called again with the same orphan path set", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-track-"))
     tempDirs.push(dir)
@@ -109,6 +142,63 @@ describe("trackOrphanSizes", () => {
 
     expect(sized).toBe(1)
     expect(project.report?.orphans[0]?.bytes).toBe(10)
+  })
+
+  /**
+   * A new leftover folder appearing must not re-read the ones already measured — on a real repo that
+   * is tens of gigabytes of walking for one added directory.
+   */
+  it("walks only the folders it has never measured when the set grows", async () => {
+    const first = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-grow-a-"))
+    const second = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-grow-b-"))
+    tempDirs.push(first, second)
+    await fs.writeFile(path.join(first, "f.txt"), "x".repeat(11))
+    await fs.writeFile(path.join(second, "f.txt"), "x".repeat(22))
+    let landed = Promise.withResolvers<void>()
+    const project = ctx(() => landed.resolve())
+    project.report = reportWith([{ path: first, kind: "leftover" }])
+
+    trackOrphanSizes(project, project.report.orphans, () => undefined)
+    await landed.promise
+
+    // The measured folder grows on disk. If the second pass re-walks it, its size changes; if it only
+    // walks the newcomer, the cached 11 stands.
+    await fs.appendFile(path.join(first, "f.txt"), "x".repeat(500))
+    landed = Promise.withResolvers<void>()
+    project.report = reportWith([
+      { path: first, kind: "leftover" },
+      { path: second, kind: "leftover" },
+    ])
+    trackOrphanSizes(project, project.report.orphans, () => undefined)
+    await landed.promise
+
+    expect(project.report?.orphans[0]?.bytes, "an already-measured folder is not re-walked").toBe(11)
+    expect(project.report?.orphans[1]?.bytes).toBe(22)
+  })
+
+  it("forgets folders that leave the list so the cache cannot grow unbounded", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-forget-"))
+    tempDirs.push(dir)
+    await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(12))
+    let landed = Promise.withResolvers<void>()
+    const project = ctx(() => landed.resolve())
+    project.report = reportWith([{ path: dir, kind: "leftover" }])
+
+    trackOrphanSizes(project, project.report.orphans, () => undefined)
+    await landed.promise
+    expect(project.report?.orphans[0]?.bytes).toBe(12)
+
+    // Gone from the list (deleted), then back again with different contents: the stale size must not
+    // be resurrected from the cache.
+    project.report = reportWith([])
+    trackOrphanSizes(project, [], () => undefined)
+    await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(90))
+    landed = Promise.withResolvers<void>()
+    project.report = reportWith([{ path: dir, kind: "leftover" }])
+    trackOrphanSizes(project, project.report.orphans, () => undefined)
+    await landed.promise
+
+    expect(project.report?.orphans[0]?.bytes).toBe(90)
   })
 
   it("re-runs once the orphan path set actually changes", async () => {
