@@ -79,12 +79,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const flags = yield* RuntimeFlags.Service
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
-  const notify = BoardEnabled.resolve({
-    config: cfg.shared_agent_board,
-    flag: flags.experimentalSharedAgentBoard,
-  })
-    ? input.notify
-    : undefined
+  const notify = BoardEnabled.on(cfg, flags) ? input.notify : undefined
   type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
   const finish = <T extends Output>(name: string, output: T, opts: ToolExecutionOptions) =>
     Effect.gen(function* () {

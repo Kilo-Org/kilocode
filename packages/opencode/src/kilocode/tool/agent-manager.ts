@@ -2,7 +2,7 @@ import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { AgentManagerEvent, type AgentManagerTask } from "@/kilocode/agent-manager/event"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
-import { RequestID, type Result } from "@/kilocode/agent-manager/protocol"
+import { RequestID } from "@/kilocode/agent-manager/protocol"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Provider } from "@/provider/provider"
@@ -11,6 +11,7 @@ import * as ToolJsonSchema from "@/tool/json-schema"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import { selectModel } from "./model-selection"
+import { runner } from "./host"
 import DESCRIPTION from "./agent-manager.txt"
 
 const Task = Schema.Struct({
@@ -210,19 +211,7 @@ type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
 type Source = { model: NonNullable<AgentManagerTask["model"]>; variant?: string }
 
-function abort(signal: AbortSignal) {
-  return Effect.callback<never, HostError>((resume) => {
-    const err = () => new HostError({ code: "cancelled", detail: "The Agent Manager tool call was cancelled" })
-    if (signal.aborted) return resume(Effect.fail(err()))
-    const handler = () => resume(Effect.fail(err()))
-    signal.addEventListener("abort", handler, { once: true })
-    return Effect.sync(() => signal.removeEventListener("abort", handler))
-  })
-}
-
-function run(effect: Effect.Effect<Result, HostError>, signal: AbortSignal) {
-  return effect.pipe(Effect.raceFirst(abort(signal)), Effect.orDie)
-}
+const run = runner(() => new HostError({ code: "cancelled", detail: "The Agent Manager tool call was cancelled" }))
 
 function select(
   task: Input,
