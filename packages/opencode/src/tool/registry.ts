@@ -254,7 +254,7 @@ const layer = Layer.effect(
         }
 
         // kilocode_change start
-        const cfg = yield* config.get()
+        const cfg = kiloCfg
         const global = yield* config.getGlobal()
         const indexing = KiloToolRegistry.indexing(cfg, global)
         // kilocode_change end
@@ -350,15 +350,18 @@ const layer = Layer.effect(
       return ["Available agent types and the tools they have access to:", description].join("\n")
     })
 
-    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (input: {
-      agent: Agent.Info
-      permission?: PermissionV1.Ruleset
-      networkRestricted?: boolean // kilocode_change
-    }) {
+    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (
+      input: {
+        agent: Agent.Info
+        permission?: PermissionV1.Ruleset
+        networkRestricted?: boolean // kilocode_change
+      },
+      cfg: Config.Info,
+    ) {
+      // kilocode_change - reuse the config already fetched by the caller
       if (input.networkRestricted) return // kilocode_change
       // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
-      const kiloCfg = yield* config.get()
-      const mode = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, kiloCfg)))
+      const mode = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, cfg)))
       if (!mode) return
       // kilocode_change end
       const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
@@ -387,7 +390,7 @@ const layer = Layer.effect(
       const kiloFiltered = yield* KiloToolRegistry.applyVisibility(filtered) // kilocode_change
 
       const codeModeDescription = filtered.some((tool) => tool.id === "execute")
-        ? yield* describeCodeMode(input)
+        ? yield* describeCodeMode(input, cfg) // kilocode_change - pass the config fetched above
         : undefined
       const visible = kiloFiltered.filter((tool) => tool.id !== "execute" || codeModeDescription) // kilocode_change
 
