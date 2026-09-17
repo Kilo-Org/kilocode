@@ -1,7 +1,6 @@
 import * as fs from "fs/promises"
 import { imageMime } from "../diff/shared/image"
 import { resolveInside } from "../diff/shared/path"
-import { fileSize } from "../diff/sources/git-status"
 import type { GitOps } from "./GitOps"
 import type { WorktreeDiffEntry } from "./types"
 
@@ -48,7 +47,18 @@ export function summarize(meta: Meta): WorktreeDiffEntry {
   }
 }
 
-export { fileSize }
+/**
+ * Size of the working-tree entry at `file`. Uses `lstat` so symlinks report
+ * the link's own size (length of the target string) instead of resolving to
+ * whatever the link points at. `git-status.ts` re-exports this for the diff
+ * sources, so keep the definition here to avoid an import cycle.
+ */
+export async function fileSize(dir: string, file: string): Promise<number> {
+  const full = resolveInside(dir, file)
+  if (!full) return 0
+  const stat = await fs.lstat(full).catch(() => undefined)
+  return stat?.size ?? 0
+}
 
 export async function readAfter(dir: string, file: string, status: Meta["status"]): Promise<string> {
   if (status === "deleted") return ""

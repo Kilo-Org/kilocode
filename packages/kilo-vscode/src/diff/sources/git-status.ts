@@ -8,7 +8,10 @@ import { imageMime, readImageFile } from "../shared/image"
 import { resolveInside } from "../shared/path"
 import type { DiffFile } from "../types"
 
-export { MAX_DETAIL_BYTES } from "../../agent-manager/local-diff"
+// Re-exported from the definition module so the diff sources can size entries
+// without routing through local-diff. The definition stays in the batch module
+// so this file has no back-edge from agent-manager.
+export { fileSize, MAX_DETAIL_BYTES } from "../../agent-manager/local-diff-batch"
 
 export type Status = "added" | "deleted" | "modified"
 
@@ -206,16 +209,4 @@ export async function diskStamp(dir: string, file: string): Promise<string> {
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) return "missing"
   return `${stat.size}:${stat.mtimeMs}`
-}
-
-/**
- * Size of the working-tree entry at `file`. Uses `lstat` so symlinks report
- * the link's own size (length of the target string) instead of resolving to
- * whatever the link points at — see `readDisk` for why.
- */
-export async function fileSize(dir: string, file: string): Promise<number> {
-  const full = resolveInside(dir, file)
-  if (!full) return 0
-  const stat = await fs.lstat(full).catch(() => undefined)
-  return stat?.size ?? 0
 }
