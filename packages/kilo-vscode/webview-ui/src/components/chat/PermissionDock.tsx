@@ -352,6 +352,11 @@ export const PermissionDock: Component<{
                       </div>
                     )}
                   </Show>
+                  <Show when={sandboxEscalation()}>
+                    <div data-slot="permission-hint">
+                      {language.t("notification.permission.descriptionSandboxEscalation")}
+                    </div>
+                  </Show>
                   <Show when={command()}>
                     {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
                   </Show>

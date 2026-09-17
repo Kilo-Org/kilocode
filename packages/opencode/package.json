@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.6.2",
+  "version": "7.7.3",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -187,6 +187,7 @@
     "ws": "8.21.0",
     "xdg-basedir": "5.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "yaml": "2.8.3",
     "yargs": "18.0.0",
     "zod": "catalog:"
   },

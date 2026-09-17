@@ -475,7 +475,11 @@ describe("kilocode tool registry indexing", () => {
       for (const client of ["cli", "vscode", "jetbrains", "desktop", "run", "acp"]) {
         process.env["KILO_CLIENT"] = client
         for (const enabled of [false, true]) {
-          const ids = KiloToolRegistry.extra(tools, { experimental: { shared_agent_board: enabled } }, flags)
+          const ids = KiloToolRegistry.extra(
+            tools,
+            { shared_agent_board: enabled },
+            { experimentalSharedAgentBoard: enabled },
+          )
             .map((tool) => tool.id)
             .filter((id) => id.startsWith("board_"))
           expect(ids).toEqual(enabled ? ["board_read", "board_post"] : [])
@@ -525,7 +529,9 @@ describe("kilocode tool registry indexing", () => {
       Wakeup.Service.of({
         schedule: () => Effect.die(new Error("wakeup schedule is not used by this test")),
         list: () => Effect.succeed([]),
+        pending: () => Effect.succeed([]),
         cancel: () => Effect.succeed(undefined),
+        cancelSession: () => Effect.succeed(0),
         adopt: () => Effect.void,
       }),
     )

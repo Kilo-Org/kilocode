@@ -8,6 +8,7 @@
 import * as vscode from "vscode"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import type { PRMergeMethod } from "./types"
 import { ProjectRouteService } from "./project/route"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
@@ -22,7 +23,6 @@ import type { CaffeinationService } from "../services/caffeination"
 
 const INTRO_KEY = "kilo.agentManager.introDismissed"
 const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
-type PRMergeMethod = "merge" | "squash" | "rebase"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -366,6 +366,7 @@ export class VscodeHost implements Host {
     const channel = vscode.window.createOutputChannel(name)
     return {
       appendLine: (msg) => channel.appendLine(msg),
+      show: () => channel.show(true),
       dispose: () => channel.dispose(),
     }
   }

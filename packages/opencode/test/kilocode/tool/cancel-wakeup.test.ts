@@ -5,8 +5,10 @@ import os from "os"
 import path from "path"
 import { Effect, Layer } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { EventV2 } from "@opencode-ai/core/event"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Agent } from "@/agent/agent"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Git } from "@/git"
 import { Wakeup } from "@/kilocode/wakeup"
 import { CancelWakeupTool, type Meta, Params } from "@/kilocode/tool/cancel-wakeup"
@@ -49,13 +51,16 @@ const ctx: Tool.Context = {
 }
 
 const fire = Layer.succeed(Wakeup.Fire, Wakeup.Fire.of({ run: () => Effect.void }))
+const events = Layer.mock(EventV2Bridge.Service, {
+  publish: (definition, data) => Effect.succeed({ id: EventV2.ID.create(), type: definition.type, data }),
+})
 
 function makeLayer(dir: string) {
   const storage = Storage.layerFromDir(path.join(dir, "storage")).pipe(
     Layer.provide(LayerNode.compile(LayerNode.group([FSUtil.node, Git.node]))),
   )
   return Layer.mergeAll(
-    Wakeup.layer.pipe(Layer.provide(Layer.merge(storage, fire))),
+    Wakeup.layer.pipe(Layer.provide(Layer.mergeAll(storage, fire, events))),
     Layer.succeed(Agent.Service, agents),
     Layer.succeed(Truncate.Service, truncate),
   )

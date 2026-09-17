@@ -39,6 +39,7 @@ import {
   markAutoTitle,
   markRenameAdopted,
 } from "@/kilo-sessions/rename-adoptions"
+import { KiloSessionTitle } from "@/kilocode/session/title"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -598,6 +599,7 @@ export namespace KiloSessions {
             knownTitles.delete(sessionID)
             lastPrLinkTriple.delete(sessionID)
             clearRenameMarks(sessionID)
+            KiloSessionTitle.clear(sessionID)
             // kilocode_change - detach a locally announced session on dispose.
             void detachLocalSession(sessionID)
           })

@@ -1,4 +1,8 @@
 import { describe, expect, it } from "bun:test"
+import { execFileSync } from "node:child_process"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import {
   parsePRResult,
   checkStatus,
@@ -8,6 +12,7 @@ import {
   parseComments,
   parseReactions,
   parseReviewers,
+  related,
   signature,
   summarize,
 } from "../../src/agent-manager/pr/am-pr-utils"
@@ -50,6 +55,12 @@ describe("comment permissions", () => {
 describe("parsePRResult", () => {
   it("retains the pull request node ID", () => {
     expect(parsePRResult(JSON.stringify({ number: 1, id: "PR_1" }))?.id).toBe("PR_1")
+  })
+  it("parses the merge commit of a merged PR", () => {
+    expect(parsePRResult(JSON.stringify({ number: 1, mergeCommit: { oid: "c".repeat(40) } }))?.mergeCommit).toBe(
+      "c".repeat(40),
+    )
+    expect(parsePRResult(JSON.stringify({ number: 1, mergeCommit: null }))?.mergeCommit).toBeUndefined()
   })
   it("returns null when number is missing", () => {
     expect(parsePRResult(JSON.stringify({ title: "foo" }))).toBeNull()
@@ -328,6 +339,91 @@ describe("parsePRResult", () => {
 
     expect(result?.checks).toEqual({ status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] })
     expect(result?.reviewers).toEqual([])
+  })
+})
+
+// --- related ---
+
+describe("related", () => {
+  const head = "b".repeat(40)
+  const merge = "c".repeat(40)
+  const base = { number: 1, title: "", body: "", url: "", review: null, additions: 0, deletions: 0, files: 0 } as const
+
+  /** A git stub whose HEAD history contains exactly `ancestors`. */
+  function repo(ancestors: string[]) {
+    const calls: string[][] = []
+    const git = async (args: string[]) => {
+      calls.push(args)
+      if (ancestors.includes(args[2]!)) return ""
+      throw new Error("not an ancestor")
+    }
+    return { git, calls }
+  }
+
+  it("keeps open and draft PRs without touching git", async () => {
+    const { git, calls } = repo([])
+    expect(await related({ ...base, state: "open", headRefOid: head }, git)).toBe(true)
+    expect(await related({ ...base, state: "draft", headRefOid: head }, git)).toBe(true)
+    expect(calls).toEqual([])
+  })
+
+  it("keeps a merged PR whose head is in the local history", async () => {
+    // `merge-base --is-ancestor` is reflexive, so one case covers a worktree on the
+    // PR head and local commits on top of it. The reverse check decides the merge case.
+    const { git, calls } = repo([head])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(true)
+    expect(calls).toEqual([
+      ["merge-base", "--is-ancestor", head, "HEAD"],
+      ["merge-base", "--is-ancestor", merge, "HEAD"],
+    ])
+  })
+
+  it("drops a squash-merged PR that a recreated branch name inherited", async () => {
+    // The old PR head is not in the new branch's history, only the base merge is.
+    const { git } = repo([merge])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
+  })
+
+  it("drops a merge-commit PR that a branch created from the base after the merge inherited", async () => {
+    const { git } = repo([head, merge])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
+  })
+
+  it("keeps a closed PR only when its head is in the local history", async () => {
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo([head]).git)).toBe(true)
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo([]).git)).toBe(false)
+  })
+
+  it("keeps a merged PR without a head SHA", async () => {
+    expect(await related({ ...base, state: "merged" }, repo([]).git)).toBe(true)
+  })
+
+  it("matches a real repository for the reflexive, ancestor, and merge cases", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kilo-related-"))
+    const run = (args: string[]) =>
+      execFileSync("git", args, { cwd: dir, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"] })
+    try {
+      run(["init", "-q"])
+      run(["config", "user.email", "test@example.com"])
+      run(["config", "user.name", "Test"])
+      run(["config", "commit.gpgsign", "false"])
+      run(["commit", "-q", "--allow-empty", "-m", "base"])
+      const pr = run(["rev-parse", "HEAD"]).trim()
+      run(["commit", "-q", "--allow-empty", "-m", "tip"])
+      const tip = run(["rev-parse", "HEAD"]).trim()
+      const git = async (args: string[]) => run(args)
+
+      // HEAD is the PR head, which holds only if the ancestor check matches itself.
+      expect(await related({ ...base, state: "merged", headRefOid: tip }, git)).toBe(true)
+      // The PR head is below HEAD with no merge commit, so it is this checkout's PR.
+      expect(await related({ ...base, state: "merged", headRefOid: pr }, git)).toBe(true)
+      // The PR head and its merge are both in the history: this branch came after the merge.
+      expect(await related({ ...base, state: "merged", headRefOid: pr, mergeCommit: tip }, git)).toBe(false)
+      // An object absent from the repository cannot be in HEAD's history either.
+      expect(await related({ ...base, state: "merged", headRefOid: "f".repeat(40) }, git)).toBe(false)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

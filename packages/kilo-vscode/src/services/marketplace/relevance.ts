@@ -8,6 +8,19 @@ function strings(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string")
 }
 
+// vscode_extension entries are either bare ids or { name, id } objects.
+function extensionIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item
+      if (item && typeof item === "object" && typeof (item as { id?: unknown }).id === "string")
+        return (item as { id: string }).id
+      return undefined
+    })
+    .filter((id): id is string => typeof id === "string")
+}
+
 interface RelevanceHost {
   extensions: readonly string[]
   find: (root: vscode.Uri, pattern: string) => Promise<boolean>
@@ -54,7 +67,7 @@ export async function detectMarketplaceRelevance(
   return Object.fromEntries(
     items.flatMap((item) => {
       const filename = strings(item.suggest_for?.filename).filter((pattern) => files.get(pattern))
-      const vscodeExtension = strings(item.suggest_for?.vscode_extension).filter((id) =>
+      const vscodeExtension = extensionIds(item.suggest_for?.vscode_extension).filter((id) =>
         extensions.has(id.toLowerCase()),
       )
       if (!filename?.length && !vscodeExtension?.length) return []

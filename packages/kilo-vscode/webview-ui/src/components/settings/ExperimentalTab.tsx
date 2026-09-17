@@ -179,19 +179,6 @@ const ExperimentalTab: Component = () => {
         </Show>
 
         <SettingsRow
-          title={language.t("settings.experimental.sharedAgentBoard.title")}
-          description={language.t("settings.experimental.sharedAgentBoard.description")}
-        >
-          <Switch
-            checked={experimental().shared_agent_board ?? false}
-            onChange={(checked) => updateExperimental("shared_agent_board", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.sharedAgentBoard.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}
           description={language.t("settings.experimental.nativeNotebookTools.description")}
         >
@@ -214,6 +201,19 @@ const ExperimentalTab: Component = () => {
             hideLabel
           >
             {language.t("settings.experimental.continueOnDeny.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.codeMode.title")}
+          description={language.t("settings.experimental.codeMode.description")}
+        >
+          <Switch
+            checked={experimental().code_mode ?? false}
+            onChange={(checked) => updateExperimental("code_mode", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.codeMode.title")}
           </Switch>
         </SettingsRow>
 
@@ -244,15 +244,30 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.browser.enable.title")}
-          description={language.t("settings.browser.enable.description")}
+          title={language.t("settings.experimental.browserAutomation.title")}
+          description={language.t("settings.experimental.browserAutomation.description")}
         >
           <Switch
             checked={settings().browserAutomation === true}
             onChange={(checked) => applySetting("browserAutomation", checked, "experimental.browserAutomation")}
             hideLabel
           >
-            {language.t("settings.browser.enable.title")}
+            {language.t("settings.experimental.browserAutomation.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.systemChrome.title")}
+          description={language.t("settings.experimental.browserAutomation.systemChrome.description")}
+        >
+          <Switch
+            checked={settings().agentManagerBrowserUseSystemChrome !== false}
+            onChange={(checked) =>
+              applySetting("agentManagerBrowserUseSystemChrome", checked, "agentManager.browser.useSystemChrome")
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.browserAutomation.systemChrome.title")}
           </Switch>
         </SettingsRow>
 

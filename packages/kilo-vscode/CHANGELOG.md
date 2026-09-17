@@ -1,5 +1,156 @@
 # kilo-code
 
+## 7.7.3
+
+### Major Changes
+
+- [#14209](https://github.com/Kilo-Org/kilocode/pull/14209) [`3eaf47b`](https://github.com/Kilo-Org/kilocode/commit/3eaf47ba52179d385a1945c0be323c5d8fa2b4ee) - Remove KiloClaw: the VS Code chat panel and sidebar button, the `/kiloclaw` TUI command and chat view, the Kilo Chat client and token handling, and the `kilo.claw.status` and `kilo.claw.chatCredentials` gateway endpoints.
+
+### Minor Changes
+
+- [#14204](https://github.com/Kilo-Org/kilocode/pull/14204) [`d202c80`](https://github.com/Kilo-Org/kilocode/commit/d202c80ea9d7c23df90305e20c4182e3d7059b6b) - Animate the Kilo logo on the welcome screen: hover the mark to see it turn and play the yellow slot-machine animation.
+
+- [#13519](https://github.com/Kilo-Org/kilocode/pull/13519) [`9e61d68`](https://github.com/Kilo-Org/kilocode/commit/9e61d686699002a0a940084b62974a73932d76c3) - Show ChatGPT Codex quota alongside other provider usage in the CLI and VS Code.
+
+- [#14170](https://github.com/Kilo-Org/kilocode/pull/14170) [`36771e6`](https://github.com/Kilo-Org/kilocode/commit/36771e61926911280d135f606fd35411ebc46759) - Show large pasted text in the prompt input as an expandable `[Pasted ~N lines]` block that restores the full text when expanded, copied, or sent.
+
+- [#14137](https://github.com/Kilo-Org/kilocode/pull/14137) [`91040bc`](https://github.com/Kilo-Org/kilocode/commit/91040bcff4995784ad36ad9dcaa6f8d1bbb2b652) - Report worktree problems accurately and repair them: stale entries are cleaned up on their own, a deleted worktree can be restored from its branch or removed while keeping its sessions, leftover folders are listed with a cleanup action, and a failed status check now says so instead of showing a worktree as unchanged. Pull request lookups no longer stall on an unresponsive GitHub CLI, a single broken worktree no longer slows down the others, and deleting a worktree while its status is being checked no longer hides review and CI badges on every other worktree until the IDE restarts. The cleanup notice now marks leftover folders that still contain a git checkout and warns that they may hold uncommitted work, and removing a stale worktree entry no longer fails when its terminals cannot be stopped. New "Show Worktree Diagnostics" command in VS Code and "Copy report" action in JetBrains settings.
+
+### Patch Changes
+
+- [#14200](https://github.com/Kilo-Org/kilocode/pull/14200) [`78a4d93`](https://github.com/Kilo-Org/kilocode/commit/78a4d932a664d998e54c154d2a1405ba244eeb6c) - Fix Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y undo and redo in the chat input, including on non-Latin keyboard layouts
+
+- [#14210](https://github.com/Kilo-Org/kilocode/pull/14210) [`8437096`](https://github.com/Kilo-Org/kilocode/commit/8437096975098889d0955b3a4c07b8cc9ce1b02c) - Restrict chat search to user and assistant messages, so reasoning blocks, tool calls, and tool output no longer produce matches
+
+- [#14185](https://github.com/Kilo-Org/kilocode/pull/14185) [`b51f2e3`](https://github.com/Kilo-Org/kilocode/commit/b51f2e388364d9994bdf9ed50e48e061dcc4ec61) - Fix document previews reporting "Document is outside the worktree" for files inside the project when the path casing differs
+
+- [#14206](https://github.com/Kilo-Org/kilocode/pull/14206) [`634d1a7`](https://github.com/Kilo-Org/kilocode/commit/634d1a777803b71ba28d51da18fcc345d479cfec) - Make Agent Manager worktree deletion near-instant in large repositories: the directory is detached without waiting for other git operations, backend cleanup no longer boots an instance for the worktree, and checkpoint cleanup finishes in the background. A worktree whose conversations cannot be re-homed is still deleted instead of leaving an undeletable card.
+
+- [#14199](https://github.com/Kilo-Org/kilocode/pull/14199) [`98918cd`](https://github.com/Kilo-Org/kilocode/commit/98918cd691df15261666b98f4499b2991f30613e) - Render inline edit and write diffs in the chat with the same gutter bars, word highlighting, and colors as the diff viewer, and keep them mounted while the tool streams.
+
+- [#14183](https://github.com/Kilo-Org/kilocode/pull/14183) [`3a98691`](https://github.com/Kilo-Org/kilocode/commit/3a98691ca1d4deb4910f185cc39672494caa93f2) - Reload the pull request diff after a review comment is rejected because its snapshot expired, so the comment can be posted again without reopening the review.
+
+- [#14180](https://github.com/Kilo-Org/kilocode/pull/14180) [`dd2f2f9`](https://github.com/Kilo-Org/kilocode/commit/dd2f2f9a977891920896d5bc371468fde8f0f76e) Thanks [@WebReflection](https://github.com/WebReflection)! - Keep model and reasoning choices when switching modes, and remember explicit new-session choices as the default without changing open sessions.
+  - Keep an untouched draft on Default reasoning when selecting a different effort in another draft.
+  - Keep the model and reasoning effort together when a mode-only command starts a new session.
+
+- [#14208](https://github.com/Kilo-Org/kilocode/pull/14208) [`1d187e8`](https://github.com/Kilo-Org/kilocode/commit/1d187e857d5e6a7af10438da11eec89d325633fe) - Remove the deprecated `/local-review` and `/local-review-uncommitted` command aliases. Use `/review` with its scopes instead.
+
+- [#14049](https://github.com/Kilo-Org/kilocode/pull/14049) [`c6936a7`](https://github.com/Kilo-Org/kilocode/commit/c6936a7453ab61e244fb9727090af1038c68a075) - Restore built-in Playwright browser automation and its settings under Web Tools. Keep the experimental Integrated Browser independent and allow its panel to open before selecting a session.
+
+- [#14142](https://github.com/Kilo-Org/kilocode/pull/14142) [`68879be`](https://github.com/Kilo-Org/kilocode/commit/68879beb36220fbbe9895eff8112689714c95853) Thanks [@mondalaci](https://github.com/mondalaci)! - Restore chat prompt focus when returning to VS Code if the prompt was focused before the window was deactivated.
+
+- [#14170](https://github.com/Kilo-Org/kilocode/pull/14170) [`9be66de`](https://github.com/Kilo-Org/kilocode/commit/9be66de3514c482face9361e4fccf97db96ab394) - Keep large review diffs from jumping when file rows are re-created at a different panel width.
+
+- [#14201](https://github.com/Kilo-Org/kilocode/pull/14201) [`5bf040e`](https://github.com/Kilo-Org/kilocode/commit/5bf040ea69cda7d53641acca8977037fef779792) - Load skills from `skills.paths` entries written with a leading slash, such as `/.github/skills`, by falling back to the project root when no such directory exists at the filesystem root. Show skills in the VS Code slash menu under their own Skills group and list a skill that shares a name with a command as `/name:skill`.
+
+- [#14203](https://github.com/Kilo-Org/kilocode/pull/14203) [`96b2b16`](https://github.com/Kilo-Org/kilocode/commit/96b2b16aeb2af98f5a65c3553f3fc5a191f2207c) - Keep the chat transcript steady while the agent works. A question prompt no longer disappears for a moment when it is answered, updates that arrive in the same frame now paint once, the view stays pinned to the bottom while a permission is pending or the composer grows, and expanded edit diffs no longer collapse and re-expand when they scroll back into view.
+
+- Updated dependencies [[`3eaf47b`](https://github.com/Kilo-Org/kilocode/commit/3eaf47ba52179d385a1945c0be323c5d8fa2b4ee)]:
+  - @kilocode/kilo-gateway@8.0.0
+  - @kilocode/sdk@8.0.0
+  - @opencode-ai/core@7.7.3
+  - @kilocode/kilo-indexing@7.7.3
+  - @kilocode/kilo-ui@7.7.3
+  - @kilocode/plugin@7.7.3
+  - @opencode-ai/ui@7.7.3
+
+## 7.7.2
+
+### Minor Changes
+
+- [#14155](https://github.com/Kilo-Org/kilocode/pull/14155) [`f894108`](https://github.com/Kilo-Org/kilocode/commit/f894108d4522550f2ac13e14ebb4f7dc3d5c531c) - Show message timestamps on hover in the chat transcript, including the turn's finish time and duration.
+
+- [#14168](https://github.com/Kilo-Org/kilocode/pull/14168) [`a16e5e9`](https://github.com/Kilo-Org/kilocode/commit/a16e5e994e903f0b80154d7c683c95804df2e608) - Show code added with "Add to Context" as a collapsible context card in the prompt input instead of pasting the path and code block as text
+
+- [#12714](https://github.com/Kilo-Org/kilocode/pull/12714) [`23ecd42`](https://github.com/Kilo-Org/kilocode/commit/23ecd42c80f916789ebf673d636b7e164e204df5) - Move marketplace catalog, installation, removal, and installed-item detection into the CLI backend so editor clients use the shared marketplace API.
+
+- [#14159](https://github.com/Kilo-Org/kilocode/pull/14159) [`0480c79`](https://github.com/Kilo-Org/kilocode/commit/0480c79e6bb0470f479572303ea976dcc7ddb567) - Support a custom speech-to-text source. Point voice input at any OpenAI-compatible transcription API with a base URL and optional API key, instead of always using Kilo Gateway. Switching back to Kilo Gateway restores a valid Gateway transcription model instead of showing the custom one, and a custom endpoint requires its own model ID. Custom transcription settings are read from the global config only, so a workspace config cannot redirect voice input.
+
+### Patch Changes
+
+- [#14149](https://github.com/Kilo-Org/kilocode/pull/14149) [`60628ee`](https://github.com/Kilo-Org/kilocode/commit/60628eed9ffca0234f691d09f436731b55167ef5) - Move Add project to a fixed footer in the Agent Manager project list
+
+- [#14158](https://github.com/Kilo-Org/kilocode/pull/14158) [`5517390`](https://github.com/Kilo-Org/kilocode/commit/5517390afb9a7f9a75346c81f05eb409cc6f12f3) - Stream subagent transcripts smoothly in the Agent Manager inspector instead of in coarse background batches
+
+- [#14165](https://github.com/Kilo-Org/kilocode/pull/14165) [`ae0afbf`](https://github.com/Kilo-Org/kilocode/commit/ae0afbfd5474efdf70d41bdf59c67d06af68ebd3) - Keep the computer awake while a session has a scheduled wakeup, instead of releasing Keep Awake as soon as the session goes idle.
+
+- [#14164](https://github.com/Kilo-Org/kilocode/pull/14164) [`136f411`](https://github.com/Kilo-Org/kilocode/commit/136f411853b90c5ff266a36e7460cca3c40e996c) - Keep text selections in the chat transcript intact while the agent streams and when it finishes, including selections inside code blocks, and pause auto-scroll after you select text so it does not jump away
+
+- [#14154](https://github.com/Kilo-Org/kilocode/pull/14154) [`f77ae0b`](https://github.com/Kilo-Org/kilocode/commit/f77ae0b092149624d2b85f8589fe70e7b62351e6) - Keep the session header height stable while a turn streams. The activity timeline, context bar, and token counts now fill in place with skeleton rows instead of appearing one at a time and shifting the transcript.
+
+- [#14166](https://github.com/Kilo-Org/kilocode/pull/14166) [`b4df88d`](https://github.com/Kilo-Org/kilocode/commit/b4df88d0f8044ade4544788fbc26d4730f4ff0b3) - Stop the transcript from jumping up and down while subagents run. Task cards keep their expanded state when the next assistant step starts, and finished turns no longer remount every row in the virtualized list.
+
+- [#14160](https://github.com/Kilo-Org/kilocode/pull/14160) [`1c33649`](https://github.com/Kilo-Org/kilocode/commit/1c33649f94720708ed9c5beff2af3a1bf35dac1c) - Move the Kilo Swarm setting out of Experimental to Agent Behaviour. The setting stays enabled by default and is now controlled by the top-level `shared_agent_board` key. The `experimental.shared_agent_board` key is no longer read, and a warning is logged when it is still present.
+
+- [#14156](https://github.com/Kilo-Org/kilocode/pull/14156) [`1b62b5e`](https://github.com/Kilo-Org/kilocode/commit/1b62b5e5254617fc592ebadbf0f58461e6a3bf14) - Stop the working indicator from cutting off the status label with a fading edge when it returns to a shorter status such as "Thinking".
+
+## 7.7.1
+
+### Minor Changes
+
+- [#14126](https://github.com/Kilo-Org/kilocode/pull/14126) [`4fb9f38`](https://github.com/Kilo-Org/kilocode/commit/4fb9f3831054c3b254fe491c167ce4296a3a15fb) - Copy a link to any PR review comment from the Agent Manager PR panel.
+
+- [#14144](https://github.com/Kilo-Org/kilocode/pull/14144) [`53a553f`](https://github.com/Kilo-Org/kilocode/commit/53a553f03b751756a29439400feb5e73b74eb774) - Add a Reasoning Blocks display setting with Expanded, Preview, and Headline modes. Headline shows only the reasoning header and streaming indicator until you open the block, and your open or closed choice is kept while the response streams. Preview keeps a short capped scrolling preview while the agent writes and stays compact after it finishes, and blocks from earlier sessions start collapsed. Expanded keeps the full text open. The setting replaces Auto-Collapse Reasoning; existing `auto_collapse_reasoning: true` configurations map to Preview.
+
+  Keep the Preview viewport anchored to the newest reasoning text after the block finishes, so later tool calls no longer make it jump back to the top.
+
+  Background subagent transcripts use the same Reasoning Blocks setting instead of always showing the capped preview.
+
+### Patch Changes
+
+- [#14127](https://github.com/Kilo-Org/kilocode/pull/14127) [`7bbba88`](https://github.com/Kilo-Org/kilocode/commit/7bbba885b97f4d29f3d7164e779cdcf64e402f49) - Fix "Close Others" in the Agent Manager leaving closed session tabs open in the local tab bar.
+
+- [#14150](https://github.com/Kilo-Org/kilocode/pull/14150) [`94c3e3c`](https://github.com/Kilo-Org/kilocode/commit/94c3e3c328fe2e8b1497e55be7682195e968bfca) - Fix the Agent Manager sidebar going blank when a PR badge changes status
+
+- [#14145](https://github.com/Kilo-Org/kilocode/pull/14145) [`c1195f0`](https://github.com/Kilo-Org/kilocode/commit/c1195f081544f8b0c452006feffcd3b5d29186c5) - Stop showing a merged or closed pull request of an old branch on an Agent Manager worktree that only reuses its branch name.
+
+- [#14146](https://github.com/Kilo-Org/kilocode/pull/14146) [`9701f12`](https://github.com/Kilo-Org/kilocode/commit/9701f1242e15f526d6c9a748f3259f5d625a8fb5) - Keep the project row with its New worktree button pinned while scrolling the Agent Manager project list.
+
+## 7.7.0
+
+### Minor Changes
+
+- [#14102](https://github.com/Kilo-Org/kilocode/pull/14102) [`81ecad2`](https://github.com/Kilo-Org/kilocode/commit/81ecad2b13a413c8404c74940d99cddd81ae369c) - Mention sessions, worktrees, terminals, and open documents by dragging their tab or card into the prompt.
+
+- [#14051](https://github.com/Kilo-Org/kilocode/pull/14051) [`b30b2cf`](https://github.com/Kilo-Org/kilocode/commit/b30b2cf0d37b3eaec335254b44f28080e81b8cd8) - Let permission denials include feedback so the agent can adjust before retrying.
+
+  Keep saved approval rules unchanged unless explicitly selected, and show a clear message when an edit has no changes to review.
+
+- [#14025](https://github.com/Kilo-Org/kilocode/pull/14025) [`1ef46bd`](https://github.com/Kilo-Org/kilocode/commit/1ef46bd36050f9ea75a63cae97f9ba17837122c5) - Post inline comments to a checked-out GitHub pull request from Changes and Agent Manager diff views. The compact composer saves locally, sends to Kilo, or posts to GitHub with an explicit destination choice. Cmd/Ctrl+Enter saves a comment, and pressing it again in the review view sends all comments to Kilo without publishing to GitHub. The toolbar shows separate send-all-to-Kilo and send-all-to-GitHub actions, and only the Kilo action carries the keyboard shortcut. GitHub posting stops on the first error so unpublished comments are kept.
+
+- [#14105](https://github.com/Kilo-Org/kilocode/pull/14105) [`b06c745`](https://github.com/Kilo-Org/kilocode/commit/b06c745de20a57f60ee647ff386d38dadf6c253b) - Disconnect built-in providers without disabling them, and let users change stored API keys directly for providers with standard API-key authentication.
+
+  Keep settings saves available after disabling or enabling a provider.
+
+- [#14134](https://github.com/Kilo-Org/kilocode/pull/14134) [`50fc57d`](https://github.com/Kilo-Org/kilocode/commit/50fc57db0cacf4210e8ee47d7bde8e767ecf162c) - Enable the Kilo Swarm shared board by default. Turn it off in Agent Behaviour settings or with `experimental.shared_agent_board: false`.
+
+- [#14050](https://github.com/Kilo-Org/kilocode/pull/14050) [`7a6ab9a`](https://github.com/Kilo-Org/kilocode/commit/7a6ab9abf4104bd76a80d018e0a0af948e13ef01) - Speed up Agent Manager worktree creation by pre-warming reusable worktrees and claiming a ready one instead of running a full checkout. Control the pre-warming in Agent Manager settings under "Pre-warm worktrees"; it is enabled by default and uses one extra checkout of disk space per open project.
+
+  Prepare snapshots during session creation to reduce first-prompt initialization work. Start no-script sessions after environment files are copied, while preserving setup-script completion before agent startup. Discarded worktrees now remove their checkpoint data instead of leaving it behind.
+
+  Resolve the primary checkout with one git call instead of four and discover agents and skills for a new worktree before the first prompt arrives, so the first response starts sooner.
+
+### Patch Changes
+
+- [#14104](https://github.com/Kilo-Org/kilocode/pull/14104) [`3c040da`](https://github.com/Kilo-Org/kilocode/commit/3c040da646ac288197590205e1a663c500acfffb) - Keep background subagent task cards collapsed and show their reasoning as a compact preview instead of expanding while the agent runs.
+
+- [#14116](https://github.com/Kilo-Org/kilocode/pull/14116) [`81b9c21`](https://github.com/Kilo-Org/kilocode/commit/81b9c21c24ac50a849a8b095be33b008439d782b) - Reduce GitHub API usage of Agent Manager PR status polling by resolving all worktrees in one request per sync.
+
+- [#14045](https://github.com/Kilo-Org/kilocode/pull/14045) [`f64c664`](https://github.com/Kilo-Org/kilocode/commit/f64c6646d672a8e896215621aa39e2fbc6d7d14d) - Move the compaction model setting to the Models settings tab and link to it from the Compaction section.
+
+- [#14106](https://github.com/Kilo-Org/kilocode/pull/14106) [`20c5742`](https://github.com/Kilo-Org/kilocode/commit/20c5742952cd5874c9b6d119f32363f10b51f80c) - Close the @ mention menu when prose follows a typed or picked mention, keep it closed after Escape, and let Enter send the message instead of replacing the draft with a loose fuzzy match.
+
+- [#14103](https://github.com/Kilo-Org/kilocode/pull/14103) [`3a2c5d5`](https://github.com/Kilo-Org/kilocode/commit/3a2c5d5c2e28980f36b8ac020206c11a626183ff) - Reload the entire project for `/reload` and the reload actions. A reload from an Agent Manager worktree now reboots every loaded instance of the same project, so a project config change applies to the main checkout and all worktrees. The reload is refused while any session in the project is running.
+
+- [#14046](https://github.com/Kilo-Org/kilocode/pull/14046) [`e49e786`](https://github.com/Kilo-Org/kilocode/commit/e49e7862f95ba646801a4d8b3f5ee1ce0d4bce74) - Keep the working indicator snug above the prompt at every sidebar width instead of floating in the empty space reserved for the wrapped session actions row.
+
+- [#14115](https://github.com/Kilo-Org/kilocode/pull/14115) [`f40394f`](https://github.com/Kilo-Org/kilocode/commit/f40394f07a92e7fc3441b03485096d08777212ed) - Start the first snapshot of a new worktree several times faster. Seeding now reuses the checkout's index state instead of re-hashing every file, snapshot preparation reconciles the working tree before the first prompt arrives, and repacking snapshot objects waits until the snapshot repository is idle instead of blocking the tool steps of the running turn.
+
+  Delay the replacement of a claimed pre-warmed worktree so its checkout does not compete with the new session's first prompt.
+
+- [#14044](https://github.com/Kilo-Org/kilocode/pull/14044) [`ea6d9b3`](https://github.com/Kilo-Org/kilocode/commit/ea6d9b3f1d3bbf00b2db68ce0deb5e0423461bdc) - Stop the transcript from twitching down and back up for one frame when the agent starts its next step after running tools
+
 ## 7.6.2
 
 ## 7.6.1

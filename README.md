@@ -93,15 +93,6 @@ Set up automated AI code reviews on your pull requests at [app.kilo.ai/code-revi
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Spin up your always-on AI agent at [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Install the CLI from GitHub Releases (binaries)</summary>
 
 Download the latest binary from the [Releases page](https://github.com/Kilo-Org/kilocode/releases).

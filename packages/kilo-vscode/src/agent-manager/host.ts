@@ -10,6 +10,7 @@
 
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
+import type { PRMergeMethod } from "./types"
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -25,6 +26,8 @@ export interface Disposable {
 
 export interface OutputHandle {
   appendLine(msg: string): void
+  /** Reveal the channel, e.g. after writing a report the user asked for. */
+  show?(): void
   dispose(): void
 }
 
@@ -149,8 +152,8 @@ export interface Host {
   writeProjects(value: unknown): Promise<void>
 
   /** Read and persist the user's last PR merge method per repository. */
-  getPRMergeMethod?(repo: string): "merge" | "squash" | "rebase" | undefined
-  savePRMergeMethod?(repo: string, method: "merge" | "squash" | "rebase"): Promise<void>
+  getPRMergeMethod?(repo: string): PRMergeMethod | undefined
+  savePRMergeMethod?(repo: string, method: PRMergeMethod): Promise<void>
 
   unregisterProjectRoutes(projectId: string): void
 

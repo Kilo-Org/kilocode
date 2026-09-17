@@ -411,6 +411,9 @@
     opacity: 0;
     filter: blur(1.5px);
     transform: translateY(-0.45em);
+    /* Held by the `both` fill: the copy stays mounted until the width lock is
+       released, and this keeps it from being painted for that remainder. */
+    visibility: hidden;
   }
 }
 
@@ -466,11 +469,14 @@
   width: 100%;
 }
 
-[data-component="assistant-throughput"] {
+[data-component="assistant-throughput"],
+[data-slot="assistant-turn-meta"],
+[data-component="user-message"] [data-slot="user-message-meta-tail"] {
   /* Plain-text generation-speed value shown beside the copy/feedback buttons
    * on an assistant message. Renders as muted metadata — no icon, no
    * background, no border — so it reads as tertiary info that never
-   * competes with the action row for visual weight. */
+   * competes with the action row for visual weight. The hover timestamps on
+   * both message types share this exact style so the action rows match. */
   color: var(--vscode-descriptionForeground);
   font-family: var(--font-family-sans);
   font-size: var(--kilo-font-size-11);

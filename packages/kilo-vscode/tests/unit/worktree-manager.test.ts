@@ -13,6 +13,7 @@ import {
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import type { PRInfo } from "../../src/agent-manager/git-import"
+import { BUDGET } from "../../src/agent-manager/command-budget"
 import simpleGit from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -670,6 +671,70 @@ describe("WorktreeManager.removeWorktree", () => {
     expect(after.all).not.toContain(result.branch)
   })
 
+  it("detaches the directory immediately and finishes git bookkeeping afterwards", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+    const result = await mgr.createWorktree({ prompt: "detach-me" })
+
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    expect(existsSync(result.path)).toBe(false)
+
+    await detached.done
+    const raw = await git.raw(["worktree", "list", "--porcelain"])
+    expect(raw.split("\n").filter((l) => l.startsWith("worktree "))).toHaveLength(1)
+    expect((await git.branch()).all).not.toContain(result.branch)
+  }, 15_000)
+
+  it("detaches without waiting for the repository git lock", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "detach-locked" })
+
+    // A pool refill or another creation can hold the git lock for seconds in large repositories.
+    const hold = Promise.withResolvers<void>()
+    const busy = mgr["withGitLock"](() => hold.promise)
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    expect(existsSync(result.path)).toBe(false)
+    expect((await simpleGit(root).branch()).all).toContain(result.branch)
+
+    hold.resolve()
+    await busy
+    // settle() flushes the deferred bookkeeping on dispose so branches are not orphaned.
+    await mgr.settle()
+    await detached.done
+    expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+  }, 20_000)
+
+  it("falls back to locked removal when the directory cannot be renamed", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ branchName: "detach-rename-blocked" })
+    const rename = spyOn(fs, "rename").mockRejectedValueOnce(
+      Object.assign(new Error("directory busy"), { code: "EBUSY" }),
+    )
+
+    try {
+      const detached = await mgr.detachWorktree(result.path, result.branch)
+      await detached.done
+      expect(existsSync(result.path)).toBe(false)
+      expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+    } finally {
+      rename.mockRestore()
+    }
+  })
+
+  it("detach never rejects for an already missing directory and still drops the branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "detach-missing" })
+    await fs.rm(result.path, { recursive: true, force: true })
+
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    await detached.done
+    expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+  })
+
   it("keeps the branch when branch param is omitted", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
@@ -950,6 +1015,147 @@ describe("WorktreeManager.discoverWorktrees", () => {
 })
 
 // ---------------------------------------------------------------------------
+// WorktreeManager -- scanWorktrees / restore / orphan removal
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.scanWorktrees", () => {
+  it("keeps the reason a directory is not usable", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const live = await mgr.createWorktree({ prompt: "live" })
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(path.join(leftover, ".kilo-dev"), { recursive: true })
+    const broken = await mgr.createWorktree({ prompt: "broken" })
+    // Hand-deleted registration: directory intact, git metadata gone.
+    await fs.rm(path.join(root, ".git", "worktrees", path.basename(broken.path)), {
+      recursive: true,
+      force: true,
+    })
+
+    const probes = await mgr.scanWorktrees()
+    const byPath = new Map(probes.map((probe) => [probe.ok ? probe.info.path : probe.path, probe]))
+
+    expect(byPath.get(live.path)?.ok).toBe(true)
+    expect(byPath.get(leftover)).toEqual({ ok: false, path: leftover, reason: "leftover" })
+    expect(byPath.get(broken.path)).toEqual({ ok: false, path: broken.path, reason: "unregistered" })
+    // discoverWorktrees keeps its old contract: healthy worktrees only.
+    expect((await mgr.discoverWorktrees()).map((info) => info.path)).toEqual([live.path])
+  })
+
+  it("reports registered paths through a single git listing", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "registered" })
+
+    const registered = await mgr.registeredPaths()
+
+    expect(registered?.size).toBe(2) // main checkout + the new worktree
+    expect(await mgr.worktreeDirs()).toEqual([path.basename(wt.path)])
+  })
+})
+
+describe("WorktreeManager.restoreWorktree", () => {
+  it("recreates a deleted worktree from its branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "restore-me" })
+    await fs.writeFile(path.join(wt.path, "work.txt"), "committed work")
+    gitExec(["git", "-C", wt.path, "add", "."])
+    gitExec(["git", "-C", wt.path, "commit", "-m", "work"])
+    await fs.rm(wt.path, { recursive: true, force: true })
+
+    await mgr.restoreWorktree(wt.path, wt.branch)
+
+    expect(existsSync(path.join(wt.path, "work.txt"))).toBe(true)
+    expect((await mgr.discoverWorktrees()).map((info) => info.branch)).toEqual([wt.branch])
+  })
+
+  it("refuses paths outside the managed directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    await expect(mgr.restoreWorktree(path.join(root, "elsewhere"), "main")).rejects.toThrow(/outside/)
+  })
+
+  it("refuses to overwrite an existing directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "occupied" })
+
+    await expect(mgr.restoreWorktree(wt.path, wt.branch)).rejects.toThrow(/already exists/)
+  })
+})
+
+describe("WorktreeManager.createFromPR", () => {
+  it("reports a timed-out gh lookup as a timeout, not as an unexplained failure", async () => {
+    // The import path a user reaches by pasting a PR url ran gh on a 30s budget and classified the
+    // failure from text a killed process never produces, so a hang read as "Failed to fetch PR info".
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const internal = manager as unknown as { gh: (args: string[], timeout?: number) => Promise<string> }
+    const budgets: (number | undefined)[] = []
+    internal.gh = async (_args, timeout) => {
+      budgets.push(timeout)
+      throw Object.assign(new Error("Command failed: gh pr view 1"), { killed: true, signal: "SIGTERM" })
+    }
+
+    const failure = await manager.createFromPR("https://github.com/org/repo/pull/1").then(
+      () => undefined,
+      (err: unknown) => (err instanceof Error ? err.message : String(err)),
+    )
+
+    expect(failure).toBe("GitHub CLI (gh) did not respond in time. Try again.")
+    expect(budgets).toEqual([BUDGET.gh])
+  })
+})
+
+describe("WorktreeManager.removeOrphanDirectory", () => {
+  it("removes an untracked leftover directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(path.join(leftover, ".kilo-dev"), { recursive: true })
+
+    await mgr.removeOrphanDirectory(leftover)
+
+    expect(existsSync(leftover)).toBe(false)
+  })
+
+  it("refuses to remove a live worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "live" })
+
+    await expect(mgr.removeOrphanDirectory(wt.path)).rejects.toThrow(/live worktree/)
+    expect(existsSync(wt.path)).toBe(true)
+  })
+
+  it("refuses paths outside the managed directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    await fs.mkdir(path.join(root, "outside"), { recursive: true })
+
+    await expect(mgr.removeOrphanDirectory(path.join(root, "outside"))).rejects.toThrow(/outside/)
+    expect(existsSync(path.join(root, "outside"))).toBe(true)
+  })
+
+  // The manager re-check is the only thing between a stale webview orphan list and a recursive
+  // delete, so an unanswerable `git worktree list` has to fail closed. Not a repository at all is the
+  // simplest way to make the listing fail for real.
+  it("refuses to remove anything while git cannot list worktrees", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-nogit-"))
+    tempDirs.push(root)
+    const mgr = createManager(root)
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(leftover, { recursive: true })
+
+    await expect(mgr.removeOrphanDirectory(leftover)).rejects.toThrow(/cannot list worktrees/)
+    expect(existsSync(leftover)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // WorktreeManager -- ensureGitExclude
 // ---------------------------------------------------------------------------
 
@@ -1215,20 +1421,6 @@ describe("WorktreeManager.checkedOutBranches", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager helpers", () => {
-  it("hasOriginRemote returns false when no remote exists", async () => {
-    const root = await createTempRepo()
-    const mgr = createManager(root)
-    expect(await mgr.hasOriginRemote()).toBe(false)
-  })
-
-  it("hasOriginRemote returns true when origin exists", async () => {
-    const root = await createTempRepo()
-    const git = simpleGit(root)
-    await git.addRemote("origin", "https://example.com/repo.git")
-    const mgr = createManager(root)
-    expect(await mgr.hasOriginRemote()).toBe(true)
-  })
-
   it("refExistsLocally verifies refs", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)
