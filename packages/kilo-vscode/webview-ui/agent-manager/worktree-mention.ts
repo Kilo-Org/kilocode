@@ -240,6 +240,35 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     setIndex(0)
   }
 
+  /**
+   * Replace a text range with mention text. The dialog's undo uses the native
+   * undo stack, so insert through execCommand when a live textarea is present
+   * (same as the chat composer) and fall back to a direct assignment where no
+   * DOM is available.
+   */
+  const replaceRange = (
+    textarea: HTMLTextAreaElement,
+    start: number,
+    end: number,
+    inserted: string,
+    setText: (text: string) => void,
+  ) => {
+    const pos = start + inserted.length
+    const canExec =
+      typeof document !== "undefined" && typeof document.execCommand === "function" && textarea.isConnected
+    if (canExec) {
+      textarea.focus()
+      textarea.setSelectionRange(start, end)
+      document.execCommand("insertText", false, inserted)
+      textarea.setSelectionRange(pos, pos)
+      return
+    }
+    textarea.value = `${textarea.value.substring(0, start)}${inserted}${textarea.value.substring(end)}`
+    textarea.setSelectionRange(pos, pos)
+    textarea.focus()
+    setText(textarea.value)
+  }
+
   /** Replace the open `@query` with `@token`, keeping a trailing space. */
   const insertToken = (
     token: string,
@@ -252,14 +281,8 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     const match = before.match(AT_PATTERN)
     if (!match) return
     const start = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
-    const after = textarea.value.substring(cursor)
-    const suffix = /^\s/.test(after) ? "" : " "
-    const next = `${textarea.value.substring(0, start)}@${token}${suffix}${after}`
-    const pos = start + token.length + 1 + suffix.length
-    textarea.value = next
-    textarea.setSelectionRange(pos, pos)
-    textarea.focus()
-    setText(next)
+    const suffix = /^\s/.test(textarea.value.substring(cursor)) ? "" : " "
+    replaceRange(textarea, start, cursor, `@${token}${suffix}`, setText)
     close()
     onSelect?.()
   }
@@ -319,15 +342,9 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     const textarea = state.textarea
     if (!textarea.isConnected) return
     const token = `${providerID}/${modelID}`
-    const after = textarea.value.substring(state.end)
-    const suffix = /^\s/.test(after) ? "" : " "
-    const next = `${textarea.value.substring(0, state.start)}@${token}${suffix}${after}`
-    const pos = state.start + token.length + 1 + suffix.length
+    const suffix = /^\s/.test(textarea.value.substring(state.end)) ? "" : " "
     models.add(token)
-    textarea.value = next
-    textarea.setSelectionRange(pos, pos)
-    textarea.focus()
-    state.setText(next)
+    replaceRange(textarea, state.start, state.end, `@${token}${suffix}`, state.setText)
     state.onSelect?.()
   }
 
