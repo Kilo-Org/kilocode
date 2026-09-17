@@ -1107,8 +1107,20 @@ class SessionUi(
 
     @RequiresEdt
     override fun showBoard() {
-        val session = controller.id ?: return
-        if (!board) return
+        openBoard()?.show()
+    }
+
+    /**
+     * Builds the board dialog and binds its lifetime, without showing it. Split from [showBoard] so
+     * the lifetime wiring is one statement both the caller and its test go through; showing a real
+     * window is the only part a test cannot exercise.
+     *
+     * Returns null when the board does not apply to this session.
+     */
+    @RequiresEdt
+    internal fun openBoard(): SessionBoardDialog? {
+        val session = controller.id ?: return null
+        if (!board) return null
         val order = listOf("main") + controller.model.childSessions()
         Telemetry.send("Swarm Board Opened", mapOf("sessionId" to session))
         val dialog = SessionBoardDialog(this, project, session, title(), workspace.directory, order, sessions) { id, label ->
@@ -1122,7 +1134,7 @@ class SessionUi(
         // so re-probe when it closes. Skipped when the session itself is going away, since that path
         // disposes the dialog too.
         Disposer.register(dialog.disposable) { if (!disposed) refreshBoard() }
-        dialog.show()
+        return dialog
     }
 
     @RequiresEdt

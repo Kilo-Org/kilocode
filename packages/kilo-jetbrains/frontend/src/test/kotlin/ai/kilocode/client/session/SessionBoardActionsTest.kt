@@ -1,6 +1,5 @@
 package ai.kilocode.client.session
 
-import ai.kilocode.client.session.board.SessionBoardDialog
 import com.intellij.openapi.util.Disposer
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -167,24 +166,32 @@ class SessionBoardActionsTest : SessionUiTestBase() {
     }
 
     /**
-     * The board is non-modal, so it outlives showBoard(). It must be registered on the session:
-     * otherwise closing the session tab leaves the window alive holding a disposed SessionUi, its
-     * service, and the dialog's own coroutine scope. Disposing a DialogWrapper's disposable calls
-     * DialogWrapper.dispose(), so registering it under the session closes the board with the tab.
+     * The board is non-modal, so it outlives the call that opens it. It must be registered on the
+     * session: otherwise closing the session tab leaves the window alive holding a disposed
+     * SessionUi, its service, and the dialog's own coroutine scope. Disposing a DialogWrapper's
+     * disposable calls DialogWrapper.dispose(), so registering it under the session closes the board
+     * with the tab.
+     *
+     * Goes through openBoard(), the same call showBoard() makes, so the production wiring is what is
+     * under test rather than a copy of it.
      */
     fun `test open board is disposed with the session`() {
         board(messages = 1)
         open()
-        assertTrue(actions().board)
 
-        val dialog = SessionBoardDialog(
-            ui, project, "ses_test", "Test", "/repo", listOf("main"), sessions,
-        ) { _, _ -> }
-        Disposer.register(ui, dialog.disposable)
+        val dialog = requireNotNull(ui.openBoard()) { "board should be available" }
+        assertFalse(dialog.isDisposed)
 
         Disposer.dispose(ui)
 
         assertTrue("closing the session must dispose the board dialog", dialog.isDisposed)
+    }
+
+    fun `test openBoard returns null when the board does not apply`() {
+        board(messages = 0)
+        open()
+
+        assertNull(ui.openBoard())
     }
 
     private fun actions(): SessionActions = ui
