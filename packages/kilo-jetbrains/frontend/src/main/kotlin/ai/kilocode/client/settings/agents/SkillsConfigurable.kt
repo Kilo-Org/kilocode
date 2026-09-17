@@ -143,7 +143,7 @@ internal class SkillsSettingsUi(
 
     override fun emptyText() = KiloBundle.message("settings.agentBehavior.skills.empty")
 
-    override fun tailActions(): List<AnAction> = listOf(marketplaceAction())
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_skills"))
 
     internal fun updateSources(paths: List<String>, urls: List<String>) {
         state.update { copy(sources = SkillsConfigDto(paths = paths, urls = urls)) }

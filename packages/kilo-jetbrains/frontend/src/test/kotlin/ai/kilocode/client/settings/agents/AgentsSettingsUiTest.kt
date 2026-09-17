@@ -23,16 +23,12 @@ import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
-import com.intellij.openapi.actionSystem.ActionToolbar
-import com.intellij.openapi.actionSystem.Separator
-import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
@@ -112,11 +108,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rows(panel).size == 6 }
 
         edt {
-            assertTrue(components(panel).filterIsInstance<ActionLink>().none {
-                it.text == KiloBundle.message("settings.marketplace.displayName")
-            })
-            assertNull(marketplaceButton(panel).presentation.icon)
-            assertMarketplaceAtEnd(panel)
+            assertMarketplaceToolbarButton(panel)
             true
         }
     }
@@ -459,18 +451,6 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
-
-    private fun marketplaceButton(panel: AgentsSettingsUi) = components(panel)
-        .filterIsInstance<ActionButtonWithText>()
-        .single { it.presentation.text == KiloBundle.message("settings.marketplace.displayName") }
-
-    private fun assertMarketplaceAtEnd(panel: AgentsSettingsUi) {
-        val group = components(panel)
-            .filterIsInstance<ActionToolbar>()
-            .map { it.actionGroup.getChildren(null).toList() }
-            .single { it.lastOrNull()?.templatePresentation?.text == KiloBundle.message("settings.marketplace.displayName") }
-        assertTrue(group[group.size - 2] is Separator)
-    }
 
     private fun picker(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JComboBox<String>>().single()
 

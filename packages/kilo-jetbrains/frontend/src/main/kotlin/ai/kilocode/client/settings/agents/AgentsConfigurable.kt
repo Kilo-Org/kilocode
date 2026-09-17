@@ -104,7 +104,7 @@ internal class AgentsSettingsUi(
 
     override fun extraActions(): List<AnAction> = listOf(addAction())
 
-    override fun tailActions(): List<AnAction> = listOf(marketplaceAction())
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_agents"))
 
     override fun toolbarRight(): JComponent = Stack.horizontal(UiStyle.Gap.sm())
         .next(JBLabel(KiloBundle.message("settings.agentBehavior.agents.default")))

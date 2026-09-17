@@ -93,7 +93,7 @@ internal class McpSettingsUi(
 
     override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.mcp.search")
 
-    override fun tailActions(): List<AnAction> = listOf(marketplaceAction())
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_mcp"))
 
     override fun toolbarRight(): JComponent = JBLabel(KiloBundle.message("settings.agentBehavior.mcp.addHint")).apply {
         foreground = UIUtil.getContextHelpForeground()

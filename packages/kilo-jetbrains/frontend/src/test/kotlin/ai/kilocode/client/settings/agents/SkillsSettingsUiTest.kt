@@ -18,9 +18,6 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.SkillDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
-import com.intellij.openapi.actionSystem.ActionToolbar
-import com.intellij.openapi.actionSystem.Separator
-import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -32,7 +29,6 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.TitledSeparator
-import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
@@ -129,11 +125,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rows(panel).size == 3 }
 
         edt {
-            assertTrue(components(panel).filterIsInstance<ActionLink>().none {
-                it.text == KiloBundle.message("settings.marketplace.displayName")
-            })
-            assertNull(marketplaceButton(panel).presentation.icon)
-            assertMarketplaceAtEnd(panel)
+            assertMarketplaceToolbarButton(panel)
             true
         }
     }
@@ -563,18 +555,6 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun skillsList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().first()
-
-    private fun marketplaceButton(panel: SkillsSettingsUi) = components(panel)
-        .filterIsInstance<ActionButtonWithText>()
-        .single { it.presentation.text == KiloBundle.message("settings.marketplace.displayName") }
-
-    private fun assertMarketplaceAtEnd(panel: SkillsSettingsUi) {
-        val group = components(panel)
-            .filterIsInstance<ActionToolbar>()
-            .map { it.actionGroup.getChildren(null).toList() }
-            .single { it.lastOrNull()?.templatePresentation?.text == KiloBundle.message("settings.marketplace.displayName") }
-        assertTrue(group[group.size - 2] is Separator)
-    }
 
     private fun sourceList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().last()
 

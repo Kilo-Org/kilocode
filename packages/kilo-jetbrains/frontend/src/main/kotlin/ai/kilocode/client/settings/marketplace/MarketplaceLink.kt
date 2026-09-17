@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings.marketplace
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -14,7 +15,7 @@ import javax.swing.JComponent
  * Toolbar action that jumps to the Marketplace settings page. Used from the Agents, MCP Servers, and
  * Skills pages, each of which lets a user configure by hand what Marketplace can install directly.
  */
-internal fun marketplaceAction(): AnAction = object : DumbAwareAction(
+internal fun marketplaceAction(surface: String): AnAction = object : DumbAwareAction(
     KiloBundle.message("settings.marketplace.displayName"),
     KiloBundle.message("action.Kilo.OpenMarketplaceSettings.description"),
     null,
@@ -26,6 +27,7 @@ internal fun marketplaceAction(): AnAction = object : DumbAwareAction(
     override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
     override fun actionPerformed(e: AnActionEvent) {
+        Telemetry.send("Settings Opened", mapOf("surface" to surface))
         val src = e.inputEvent?.source as? JComponent
         val ctx = src?.let { DataManager.getInstance().getDataContext(it) } ?: e.dataContext
         val settings = Settings.KEY.getData(ctx) ?: return
