@@ -1,5 +1,6 @@
 import { Cause, Effect } from "effect"
 import type { MessageV2 } from "@/session/message-v2"
+import type { SessionID } from "@/session/schema"
 import type { Session } from "@/session/session"
 import type { Snapshot } from "@/snapshot"
 
@@ -25,6 +26,42 @@ export namespace KiloSessionRevert {
     }
     return [...new Set(result)]
   }
+
+  /**
+   * Patch parts recorded by descendant sessions at or after the revert point.
+   *
+   * A delegated task runs in its own session with its own processor, so its edits land in patch
+   * parts there. A child that keeps working after the parent's step window closed — a background
+   * or goal-driven task, or one running in another worktree — is invisible to the parent's own
+   * messages, and reverting the parent would leave its files behind.
+   */
+  export const descendants = Effect.fn("KiloSessionRevert.descendants")(function* (
+    sessions: Pick<Session.Interface, "children" | "messages">,
+    sessionID: SessionID,
+    from: string,
+  ) {
+    const walk = (parent: SessionID): Effect.Effect<{ patches: Snapshot.Patch[]; files: string[] }> =>
+      Effect.gen(function* () {
+        const patches: Snapshot.Patch[] = []
+        const files: string[] = []
+        for (const kid of yield* sessions.children(parent).pipe(Effect.orDie)) {
+          const nested = yield* walk(kid.id)
+          patches.push(...nested.patches)
+          files.push(...nested.files)
+          for (const msg of yield* sessions.messages({ sessionID: kid.id }).pipe(Effect.orDie)) {
+            if (msg.info.id < from) continue
+            for (const part of msg.parts) {
+              if (part.type !== "patch") continue
+              patches.push(part)
+              files.push(...part.files)
+            }
+          }
+        }
+        return { patches, files }
+      })
+    const found = yield* walk(sessionID)
+    return { patches: found.patches, files: [...new Set(found.files)] }
+  })
 
   export const apply = Effect.fn("KiloSessionRevert.apply")(function* <A, E, R>(
     snap: Snapshot.Interface,
