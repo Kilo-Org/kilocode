@@ -225,6 +225,29 @@ export async function removeWorktreeSnapshot(host: LifecycleHost, root: string, 
   }
 }
 
+/** Re-home sessions to the project root so they stay reachable under Local. Never rejects. */
+async function moveSessionsToRoot(
+  client: KiloClient,
+  host: LifecycleHost,
+  root: string,
+  ids: Iterable<string>,
+): Promise<void> {
+  const results = await Promise.allSettled(
+    [...ids].map((sessionID) =>
+      client.experimental.controlPlane.moveSession(
+        { sessionID, destination: { directory: root }, moveChanges: false },
+        { throwOnError: true },
+      ),
+    ),
+  )
+  const failed = results.filter((result) => result.status === "rejected")
+  for (const result of failed) host.log(`Failed to move a worktree session to Local: ${result.reason}`)
+  if (failed.length === 0) return
+  host.notify(
+    "The worktree was deleted, but some conversations could not be moved to Local. Conversation history is preserved.",
+  )
+}
+
 /** Delete a worktree and dissociate its sessions. */
 export async function deleteLifecycleWorktree(
   ctx: ProjectContext,
@@ -302,21 +325,15 @@ export async function deleteLifecycleWorktree(
     return fail(`Failed to stop worktree processes: ${getErrorMessage(error)}`)
   }
   try {
-    await client.instance.dispose({ directory: worktree.path }, { throwOnError: true })
-    await ctx.worktreeManager().removeWorktree(worktree.path, branch)
-    await Promise.all(
-      [...retained].map((sessionID) =>
-        client.experimental.controlPlane.moveSession(
-          { sessionID, destination: { directory: ctx.root }, moveChanges: false },
-          { throwOnError: true },
-        ),
-      ),
-    )
-    if (!(await removeWorktreeSnapshot(host, ctx.root, worktree.path))) {
-      host.notify(
-        "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
-      )
-    }
+    // The rename is the point of no return. Git bookkeeping (prune, branch delete) finishes under
+    // the git lock afterwards so a pool refill in progress cannot block the deletion; the manager
+    // flushes it on project dispose.
+    await ctx.worktreeManager().detachWorktree(worktree.path, branch)
+    // Conversations live in the backend database whatever their location; the move only re-homes
+    // them to the project root so they stay reachable under Local. A failed move keeps the
+    // history and must not leave a row for a directory that is already gone, which would make
+    // the worktree undeletable.
+    await moveSessionsToRoot(client, host, ctx.root, retained)
     state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
@@ -324,6 +341,14 @@ export async function deleteLifecycleWorktree(
     host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
+    // Checkpoint cleanup verifies under its own lock that the worktree directory is absent, so it
+    // can run after the row is gone. Failure only leaves checkpoint data behind.
+    void removeWorktreeSnapshot(host, ctx.root, worktree.path).then((removed) => {
+      if (removed) return
+      host.notify(
+        "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
+      )
+    })
   } catch (error) {
     host.unskipStats(worktreeId)
     host.log(`Failed to delete worktree ${worktreeId}: ${error}`)

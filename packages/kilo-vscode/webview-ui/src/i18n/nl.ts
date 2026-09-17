@@ -210,6 +210,7 @@ export const dict = {
     "Automatisch goedkeuren is ingeschakeld. Toestemmingsverzoeken worden automatisch goedgekeurd.",
   "prompt.action.autoApprove.disabled":
     "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
+  "prompt.action.autoApprove.sandboxExcluded": "Escalatieaanvragen van de sandbox worden altijd uitgesloten.",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
   "prompt.action.sandbox.enable": "Sandbox inschakelen",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Toegestaan",
   "prompt.action.sandbox.unrestricted": "Onbeperkt",
   "prompt.action.sandbox.description.enabled": "Schrijfbewerkingen zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.description.escalation":
+    "Toestemmingsregels en automatisch goedkeuren gelden binnen de sandbox. Commando's die deze moeten verlaten, vragen altijd.",
   "prompt.action.sandbox.description.disabled":
     "Klik om schrijfbewerkingen in het bestandssysteem en netwerktoegang te beperken.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,7 +275,9 @@ export const dict = {
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
-  "notification.permission.titleSandboxEscalation": "Git-bewerking buiten de sandbox toestaan?",
+  "notification.permission.titleSandboxEscalation": "Buiten de sandbox uitvoeren?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Dit voert het hele commando uit zonder beperkingen voor het bestandssysteem en netwerk, alleen voor dit commando. Git moet naar .git schrijven, dat alleen-lezen is in de sandbox en bij een gekoppelde worktree buiten de worktree ligt. Bash-toestemmingsregels en automatisch goedkeuren keuren deze aanvraag nooit automatisch goed.",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
   "ui.permission.reject": "Weigeren",
   "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
@@ -326,7 +331,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nieuwe Taak",
   "sidebar.topBar.history": "Geschiedenis",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profiel",
   "sidebar.topBar.settings": "Instellingen",
@@ -919,6 +923,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken, of stel hieronder een eigen transcriptie-basis-URL in.",
+  "settings.models.speechToText.remoteDescription":
+    "Spraakinvoer is niet beschikbaar in externe vensters. Open Kilo in een lokaal venster om de microfoon te gebruiken.",
   "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
@@ -958,6 +964,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
+  "settings.experimental.codeMode.title": "Programmatische toolaanroepen",
+  "settings.experimental.codeMode.description":
+    "Leidt MCP-toolaanroepen via een afgeschermde JavaScript-runtime met on-demand tooldetectie, in plaats van elke MCP-tool direct beschikbaar te stellen. Bespaart context wanneer veel MCP-tools zijn verbonden.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { ExtensionMessage, Part } from "../../webview-ui/src/types/messages"
-import { createPlanOpener, planOpens } from "../../webview-ui/src/utils/open-plan"
+import { createPlanOpener } from "../../webview-ui/src/utils/open-plan"
 
 const done = (id = "part-1") =>
   ({
@@ -24,45 +24,30 @@ const update = (part: Part, sessionID = "session-1") =>
     part,
   }) satisfies Extract<ExtensionMessage, { type: "partUpdated" }>
 
-describe("planOpens", () => {
-  it("returns completed open_plan requests", () => {
-    expect(planOpens(update(done()), "session-1")).toEqual([
-      { id: "part-1", path: ".kilo/plans/plan.md", sessionID: "session-1" },
-    ])
-  })
-
-  it("handles batched updates and ignores unrelated parts", () => {
+describe("createPlanOpener", () => {
+  it("opens only completed open_plan parts from batched updates", async () => {
+    const opened: string[] = []
+    const opener = createPlanOpener(
+      () => "session-1",
+      (plan) => opened.push(`${plan.sessionID}:${plan.id}`),
+    )
     const message = {
       type: "partsUpdated",
       updates: [
-        update(done("part-1")),
-        update({ ...done("part-2"), tool: "read" }),
-        update({ ...done("part-3"), state: { ...done("part-3").state, metadata: { open: false } } }),
+        update(done("part-valid")),
+        update({ ...done("part-tool"), tool: "read" }),
+        update({ ...done("part-running"), state: { status: "running", input: {} } }),
+        update({
+          ...done("part-unmarked"),
+          state: { ...done("part-unmarked").state, metadata: { plan: ".kilo/plans/plan.md" } },
+        }),
+        update({ ...done("part-nopath"), state: { ...done("part-nopath").state, metadata: { open: true } } }),
       ],
     } satisfies Extract<ExtensionMessage, { type: "partsUpdated" }>
 
-    expect(planOpens(message, "session-1")).toEqual([
-      { id: "part-1", path: ".kilo/plans/plan.md", sessionID: "session-1" },
-    ])
-  })
-
-  it("ignores plans from sessions that are not active", () => {
-    expect(planOpens(update(done()), "session-2")).toEqual([])
-    expect(planOpens(update(done()), undefined)).toEqual([])
-  })
-
-  it("does not open incomplete or unmarked plan parts", () => {
-    const running = {
-      ...done("part-running"),
-      state: { status: "running", input: {} },
-    } satisfies Part
-    const unmarked = {
-      ...done("part-unmarked"),
-      state: { ...done("part-unmarked").state, metadata: { plan: ".kilo/plans/plan.md" } },
-    } satisfies Part
-
-    expect(planOpens(update(running), "session-1")).toEqual([])
-    expect(planOpens(update(unmarked), "session-1")).toEqual([])
+    opener.accept(message)
+    await Promise.resolve()
+    expect(opened).toEqual(["session-1:part-valid"])
   })
 
   it("defers inactive plans and replays them when the session becomes active", async () => {

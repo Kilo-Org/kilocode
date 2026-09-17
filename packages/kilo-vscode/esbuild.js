@@ -435,7 +435,6 @@ function getWebviewsConfig() {
   return {
     entryPoints: {
       "agent-manager": "webview-ui/agent-manager/index.tsx",
-      kiloclaw: "webview-ui/kiloclaw/index.tsx",
       marketplace: "webview-ui/marketplace/index.tsx",
       "diff-viewer": "webview-ui/diff-viewer/index.tsx",
       documents: "webview-ui/documents/index.tsx",
@@ -510,8 +509,23 @@ function notices() {
   }
 }
 
+/**
+ * The DotLottie player defaults to a CDN for its WASM renderer. Ship the copy from
+ * `@lottiefiles/dotlottie-web` next to the webview bundles so the animated Kilo logo never
+ * reaches the network (the webview CSP blocks it anyway).
+ */
+function wasm() {
+  const root = path.dirname(require.resolve("@lottiefiles/dotlottie-web/package.json"))
+  fs.mkdirSync(path.join(__dirname, "dist"), { recursive: true })
+  fs.copyFileSync(
+    path.join(root, "dist", "dotlottie-player.wasm"),
+    path.join(__dirname, "dist", "dotlottie-player.wasm"),
+  )
+}
+
 async function main() {
   notices()
+  wasm()
   const extensionConfig = getExtensionConfig()
   const webviewsConfig = getWebviewsConfig()
   const shikiWorkerConfig = getShikiWorkerConfig()

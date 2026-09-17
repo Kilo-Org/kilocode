@@ -3,7 +3,19 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, onMount, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
+import {
+  createSignal,
+  createEffect,
+  createMemo,
+  on,
+  onMount,
+  For,
+  Index,
+  onCleanup,
+  Show,
+  untrack,
+  type Component,
+} from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -250,7 +262,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return rest === "unassigned" ? undefined : rest
   }
   const hasGit = () => server.gitInstalled()
-  const modelKeys = () => new Set(provider.models().map((model) => `${model.providerID}/${model.id}`))
+  const modelKeys = createMemo(() => new Set(provider.models().map((model) => `${model.providerID}/${model.id}`)))
   const mention = useFileMention(vscode, sid, hasGit, props.worktrees, modelKeys)
   // Picking the `@` model entry reuses the shared model selector: it is
   // mounted hidden and opened through its programmatic-open event. The mention
@@ -609,10 +621,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       preEnhancePastes = null
       history.reset()
       if (textareaRef) {
-        textareaRef.value = draft
-        // Reset height then adjust
-        textareaRef.style.height = "auto"
-        textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+        if (textareaRef.value !== draft) textareaRef.value = draft
+        adjustHeight()
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
@@ -764,7 +774,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       globalConfig(),
     )
   const isDisabled = () => !server.isConnected() || locked() || goal.pending()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () =>
     text().trim().length > 0 ||
@@ -1247,6 +1257,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const adjustHeight = () => {
     if (!textareaRef) return
     textareaRef.style.height = "auto"
+    // Empty drafts use rows=1 and the CSS minimum without forcing layout.
+    if (!textareaRef.value) return
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
   }
 
@@ -2160,11 +2172,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Tooltip>
           </Show>
           <Tooltip
-            value={
-              autoApprove()
-                ? language.t("prompt.action.autoApprove.enabled")
-                : language.t("prompt.action.autoApprove.disabled")
-            }
+            value={`${language.t(
+              autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+            )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
             placement="top"
             openDelay={0}
           >

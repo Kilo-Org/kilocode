@@ -12,23 +12,24 @@ class PromptPasteCollapseTest : TestCase() {
         assertEquals(1, lines(""))
     }
 
-    fun `test collapsible is false at four lines`() {
-        assertFalse(collapsible("1\n2\n3\n4"))
+    fun `test collapsible is false at fourteen lines`() {
+        assertFalse(collapsible((1..14).joinToString("\n") { "$it" }))
     }
 
-    fun `test collapsible is true at five lines`() {
-        assertTrue(collapsible("1\n2\n3\n4\n5"))
+    fun `test collapsible is true at fifteen lines`() {
+        assertTrue(collapsible((1..15).joinToString("\n") { "$it" }))
     }
 
-    fun `test collapsible is false at exactly eight hundred chars`() {
-        assertFalse(collapsible("a".repeat(800)))
+    fun `test collapsible is false at exactly four thousand chars`() {
+        assertFalse(collapsible("a".repeat(4000)))
     }
 
-    fun `test collapsible is true at eight hundred one chars`() {
-        assertTrue(collapsible("a".repeat(801)))
+    fun `test collapsible is true at four thousand one chars`() {
+        assertTrue(collapsible("a".repeat(4001)))
     }
 
     fun `test placeholder reports line count from bundle`() {
-        assertEquals(KiloBundle.message("prompt.paste.collapsed", 5), placeholder("1\n2\n3\n4\n5"))
+        val text = (1..15).joinToString("\n") { "$it" }
+        assertEquals(KiloBundle.message("prompt.paste.collapsed", 15), placeholder(text))
     }
 }

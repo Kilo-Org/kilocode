@@ -1043,8 +1043,7 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private async acquirePtyCleanup(directory: string): Promise<() => void> {
-    return acquirePtyCleanup({
-      directory,
+    return acquirePtyCleanup(directory, this.getRoot(), {
       terminals: this.terminalRouter,
       integrated: this.terminalManager,
       scripts: this.scripts.manager,
@@ -1514,13 +1513,6 @@ export class AgentManagerProvider implements Disposable {
 
   private get state(): WorktreeStateManager | undefined {
     return this.context?.peekState()
-  }
-  private get worktrees(): WorktreeManager | undefined {
-    return this.context?.peekWorktrees()
-  }
-
-  private get setupScript(): SetupScriptService | undefined {
-    return this.context?.peekSetup()
   }
 
   private get staleWorktreeIds(): Set<string> {

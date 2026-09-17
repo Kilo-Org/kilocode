@@ -3,6 +3,7 @@ import { Effect, Schema } from "effect"
 import { randomUUID } from "node:crypto"
 import { Database } from "@opencode-ai/core/database/database"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import * as Log from "@opencode-ai/core/util/log"
 import { SessionID } from "@/session/schema"
 
 type DB = Database.Interface["db"]
@@ -52,6 +53,7 @@ const ALL = "ALL"
 const TRUNCATED = "[truncated]"
 const WHITESPACE =
   "\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+const log = Log.create({ service: "board.store" })
 
 export namespace BoardStore {
   export const Kind = Schema.Literals(["INFO", "ASK", "RESULT", "HOLD", "VETO"])
@@ -184,7 +186,14 @@ export namespace BoardStore {
         Effect.gen(function* () {
           const board = yield* get(tx, current.root)
           if (!board) return yield* fail("Board was not initialized")
-          const since = yield* cursor(tx, current.root, input.since)
+          const since = yield* cursor(tx, current.root, input.since, true)
+          const stale = input.since !== undefined && since === undefined
+          if (stale)
+            log.warn("recovering shared board read from invalid cursor", {
+              cursor: input.since,
+              root: current.root,
+              sessionID: input.sessionID,
+            })
           const rows = yield* tx.all<MessageRow>(sql`
             SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
               source_message_id, source_call_id
@@ -209,7 +218,8 @@ export namespace BoardStore {
             participantsTruncated: members.truncated,
             messages,
             limit,
-            since: input.since,
+            since: stale ? undefined : input.since,
+            recovered: stale,
           })
         }),
       )
@@ -455,12 +465,13 @@ export namespace BoardStore {
     })
   }
 
-  function cursor(tx: DB | TX, root: string, id: string | undefined) {
+  function cursor(tx: DB | TX, root: string, id: string | undefined, recover = false) {
     return Effect.gen(function* () {
       if (id === undefined) return undefined
       const row = yield* tx.get<{ seq: number }>(sql`
         SELECT seq FROM kilo_board_message WHERE board_root_session_id = ${root} AND id = ${id}
       `)
+      if (!row && recover) return undefined
       if (!row) return yield* fail(`Board cursor is not valid for session ${root}`)
       return row.seq
     })
@@ -761,6 +772,7 @@ export namespace BoardStore {
     messages: Message[]
     limit: number
     since?: string
+    recovered?: boolean
   }): Effect.Effect<
     {
       observedAt: number
@@ -770,6 +782,7 @@ export namespace BoardStore {
       cursor?: string
       hasMore: boolean
       participantsTruncated?: boolean
+      recovered?: boolean
     },
     Error
   > {
@@ -785,6 +798,7 @@ export namespace BoardStore {
         hasMore: more,
         ...(cursor ? { cursor } : {}),
         ...(truncated ? { participantsTruncated: true } : {}),
+        ...(input.recovered ? { recovered: true } : {}),
       }
     }
     const size = (value: ReturnType<typeof base>) => Buffer.byteLength(JSON.stringify(value))

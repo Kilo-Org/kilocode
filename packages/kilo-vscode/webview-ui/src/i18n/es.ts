@@ -209,6 +209,7 @@ export const dict = {
     "La aprobación automática está activada. Las solicitudes de permisos se aprobarán automáticamente.",
   "prompt.action.autoApprove.disabled":
     "La aprobación automática está desactivada. Haz clic para aprobar solicitudes de permisos automáticamente.",
+  "prompt.action.autoApprove.sandboxExcluded": "Las solicitudes de escalado de la sandbox siempre se excluyen.",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Permitida",
   "prompt.action.sandbox.unrestricted": "Sin restricciones",
   "prompt.action.sandbox.description.enabled": "Las escrituras se limitan a los directorios del proyecto y de Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Las reglas de permisos y la aprobación automática se aplican dentro de la sandbox. Los comandos que deben salir de ella siempre preguntan.",
   "prompt.action.sandbox.description.disabled":
     "Haz clic para restringir las escrituras en el sistema de archivos y el acceso a la red.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,7 +275,9 @@ export const dict = {
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
   "notification.permission.titleSkillShell": "¿Ejecutar comandos de shell de la habilidad «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "¿Permitir la operación de Git fuera del entorno aislado?",
+  "notification.permission.titleSandboxEscalation": "¿Ejecutar fuera de la sandbox?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Esto ejecuta todo el comando con las restricciones de sistema de archivos y de red eliminadas, solo para este comando. Git debe escribir en .git, que es de solo lectura en la sandbox y está fuera del árbol de trabajo en un worktree vinculado. Las reglas de permiso de Bash y la aprobación automática nunca aprueban esta solicitud automáticamente.",
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
   "ui.permission.reject": "Rechazar",
   "ui.permission.feedbackPlaceholder": "Dile a Kilo qué debe hacer de otra forma",
@@ -325,7 +330,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nueva Tarea",
   "sidebar.topBar.history": "Historial",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Perfil",
   "sidebar.topBar.settings": "Configuración",
@@ -929,6 +933,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Habilita e inicia sesión en el proveedor Kilo para usar Speech to Text, o define abajo una URL base de transcripción propia.",
+  "settings.models.speechToText.remoteDescription":
+    "La entrada de voz no está disponible en ventanas remotas. Abre Kilo en una ventana local para usar el micrófono.",
   "settings.models.speechToTextModel.title": "Modelo de voz a texto",
   "settings.models.speechToTextModel.description":
     "Elige el modelo de transcripción de Kilo Gateway para la entrada de voz.",
@@ -1093,6 +1099,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "modelo",
   "settings.agentBehaviour.workflows.variant": "variante",
   "settings.agentBehaviour.workflows.modelDescription": "Anulación global del modelo",
+  "settings.experimental.codeMode.title": "Llamadas a herramientas programáticas",
+  "settings.experimental.codeMode.description":
+    "Enruta las llamadas a herramientas MCP a través de un entorno de ejecución JavaScript confinado con descubrimiento de herramientas bajo demanda, en lugar de exponer cada herramienta MCP directamente. Ahorra contexto cuando hay muchas herramientas MCP conectadas.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Ejecutar los comandos de shell del agente dentro de un sandbox a nivel de sistema operativo que restringe las escrituras a los directorios de estado del proyecto y de Kilo",

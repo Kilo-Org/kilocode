@@ -200,6 +200,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "停用自動核准",
   "prompt.action.autoApprove.enabled": "自動核准已啟用。權限請求將自動獲准。",
   "prompt.action.autoApprove.disabled": "自動核准已停用。點擊以自動核准權限請求。",
+  "prompt.action.autoApprove.sandboxExcluded": "離開沙盒的提示一律被排除。",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
   "prompt.action.sandbox.enable": "啟用沙盒",
@@ -215,6 +216,7 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "允許",
   "prompt.action.sandbox.unrestricted": "不受限制",
   "prompt.action.sandbox.description.enabled": "寫入僅限於專案和 Kilo 目錄。",
+  "prompt.action.sandbox.description.escalation": "權限規則和自動核准在沙盒內生效。必須離開沙盒的命令一律會詢問。",
   "prompt.action.sandbox.description.disabled": "點擊以限制檔案系統寫入和網路存取。",
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
@@ -254,7 +256,9 @@ export const dict = {
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
-  "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
+  "notification.permission.titleSandboxEscalation": "要在沙盒外執行嗎？",
+  "notification.permission.descriptionSandboxEscalation":
+    "這會移除檔案系統和網路限制，執行整條命令，且僅限此命令。Git 必須寫入 .git，該路徑在沙盒中為唯讀，且在連結的 worktree 中位於該 worktree 之外。Bash 允許規則和自動核准永遠不會自動核准此提示。",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.reject": "拒絕",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
@@ -307,7 +311,6 @@ export const dict = {
   "sidebar.topBar.newTask": "新建任務",
   "sidebar.topBar.history": "歷史記錄",
   "sidebar.topBar.agentManager": "代理管理器",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "市集",
   "sidebar.topBar.profile": "個人資料",
   "sidebar.topBar.settings": "設定",
@@ -843,6 +846,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "啟用並登入 Kilo 供應商以使用 Speech to Text，或在下方設定自訂轉錄基礎 URL。",
+  "settings.models.speechToText.remoteDescription":
+    "遠端視窗中無法使用語音輸入。請在本機視窗中開啟 Kilo 以使用麥克風。",
   "settings.models.speechToTextModel.title": "語音轉文字模型",
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.nativeNotebookTools.title": "原生筆記本工具",
@@ -991,6 +996,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "模型",
   "settings.agentBehaviour.workflows.variant": "變體",
   "settings.agentBehaviour.workflows.modelDescription": "全域模型覆寫",
+  "settings.experimental.codeMode.title": "程式化工具呼叫",
+  "settings.experimental.codeMode.description":
+    "透過受限的 JavaScript 執行階段按需探索工具來路由 MCP 工具呼叫，而不是直接公開每個 MCP 工具。連接大量 MCP 工具時可節省上下文。",
   "settings.sandboxing.enabled.title": "沙盒",
   "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
