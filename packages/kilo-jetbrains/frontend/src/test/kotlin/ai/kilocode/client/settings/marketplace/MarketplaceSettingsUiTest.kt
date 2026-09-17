@@ -663,7 +663,16 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         MouseEvent.BUTTON1,
     )
 
+    /**
+     * Dispatches the event already consumed.
+     *
+     * `ActiveListView`'s own handlers only test `UIUtil.isActionClick`, so they still run, but
+     * `BasicListUI`'s handler skips consumed events — and its selection path calls
+     * `Toolkit.getMenuShortcutKeyMaskEx()`, which throws `HeadlessException` on a headless CI runner
+     * with no X display. Consuming keeps the cell activation under test while staying off that path.
+     */
     private fun fire(component: java.awt.Component, event: MouseEvent) {
+        event.consume()
         component.dispatchEvent(event)
     }
 
