@@ -88,7 +88,11 @@ export namespace KiloSessionTitle {
 
     const index = input.history.findIndex((msg) => msg.info.id === lastUser.info.id)
     const turn = input.history.slice(index + 1)
-    const ranTool = turn.some((msg) => msg.info.role === "assistant" && msg.parts.some((part) => part.type === "tool"))
+    const ranTool = turn.some(
+      (msg) =>
+        msg.info.role === "assistant" &&
+        msg.parts.some((part) => part.type === "tool" && part.state.status === "completed"),
+    )
     if (users.length < 2 && !ranTool && text(lastUser).length < MIN_CHARS) return false
 
     attempts.set(input.sessionID, used + 1)
