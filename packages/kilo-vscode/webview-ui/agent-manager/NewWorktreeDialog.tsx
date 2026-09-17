@@ -53,10 +53,16 @@ import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
 import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
+import { worktreePromptPayload } from "./new-worktree-command"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
+// Local dialog actions offered by the prompt slash menu. Server commands
+// (custom commands, skills, MCP prompts, /goal) are always offered; the
+// exclude set hides the session/global/navigation commands that do not apply
+// to creating a worktree.
 const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox", "project"])
+const WORKTREE_PROMPT_HIDDEN = ["init", "review", "resume-claude", "resume-codex"]
 const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 
 type DialogTab = "new" | "import"
@@ -295,7 +301,7 @@ export const NewWorktreeDialog: Component<{
     vscode,
     { action: toggleSandbox, enabled: () => sandboxVisible() && sandbox() !== undefined && sandboxAvailable() },
     () => {
-      const hidden = new Set<string>()
+      const hidden = new Set<string>(WORKTREE_PROMPT_HIDDEN)
       if (session.agents().length < 2) hidden.add("agents")
       if (variants().length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
@@ -318,6 +324,9 @@ export const NewWorktreeDialog: Component<{
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
   onMount(() => {
+    // Server commands must be known before submit so a pasted `/command`
+    // prompt can be routed through the command path, not only via the menu.
+    vscode.postMessage({ type: "requestCommands" })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
     const focus = () => {
@@ -377,7 +386,7 @@ export const NewWorktreeDialog: Component<{
     }
     setStarting(true)
 
-    const text = prompt().trim() || undefined
+    const payload = worktreePromptPayload(prompt().trim(), slash.commands())
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
     const imgs = imageAttach.images()
@@ -393,7 +402,9 @@ export const NewWorktreeDialog: Component<{
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
       projectId: target,
-      text,
+      text: payload.text,
+      command: payload.command,
+      arguments: payload.arguments,
       name: name().trim() || undefined,
       versions: count,
       providerID: sel?.providerID,
