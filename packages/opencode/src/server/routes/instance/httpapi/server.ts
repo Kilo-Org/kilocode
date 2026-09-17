@@ -42,6 +42,8 @@ import { SessionProcessor } from "@/session/processor"
 import { SessionPrompt } from "@/session/prompt"
 import { SessionRevert } from "@/session/revert"
 import { SessionRunState } from "@/session/run-state"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
+import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { Session } from "@/session/session"
 import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
@@ -264,6 +266,8 @@ const app = LayerNode.group([
   RuntimeFlags.node,
   EventV2Bridge.node,
   SessionRunState.node,
+  SessionDrain.node, // kilocode_change
+  Wakeup.node, // kilocode_change - export the shared Wakeup service so Keep Awake can read pending wakeups
   SessionProcessor.node,
   SessionCompaction.node,
   SessionRevert.node,

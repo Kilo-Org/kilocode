@@ -20,3 +20,9 @@ export const ActivityIcon: Component<{
     </Match>
   </Switch>
 )
+
+export const LocalActivity: Component<{ state: Activity; label: string }> = (props) => (
+  <span class="am-local-status" data-activity={props.state} aria-label={props.label}>
+    <ActivityIcon state={props.state} idle={<Icon name="local" size="small" />} />
+  </span>
+)

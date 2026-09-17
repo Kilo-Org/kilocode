@@ -4,7 +4,7 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  */
 
-import { For, Show, createMemo, createEffect, onCleanup } from "solid-js"
+import { For, Show, createMemo, createEffect } from "solid-js"
 import type { Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -13,11 +13,9 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
 import {
-  clearActiveQuestionTab,
   pickOutcome,
   resolveOptimisticQuestionAgent,
   resolveSelectedQuestionMode,
-  setActiveQuestionTab,
   toggleAnswer,
   tr,
 } from "./question-dock-utils"
@@ -27,14 +25,16 @@ import { isTextControl } from "../../utils/focus"
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const id = props.request.id
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
 
   const [store, setStore] = createStore({
     tab: 0,
-    answers: [] as string[][],
+    answers: questions().map((q) => {
+      const option = !q.multiple && q.options.find((opt) => opt.label === q.default)
+      return option ? [option.label] : []
+    }),
     custom: [] as string[],
     kinds: [] as Record<string, "option" | "custom">[],
     editing: false,
@@ -55,12 +55,6 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       }
     }
   })
-
-  // Chat search indexes only the mounted page's options, and there's no
-  // other signal exposing which page that is — publish it here so search
-  // stays in sync as the user navigates instead of always assuming page 0.
-  createEffect(() => setActiveQuestionTab(id, store.tab))
-  onCleanup(() => clearActiveQuestionTab(id))
 
   const question = createMemo(() => questions()[store.tab])
   const confirm = createMemo(() => !single() && store.tab === questions().length)
@@ -125,6 +119,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const submit = () => {
+    if (store.sending) return
+    syncAgent(store.answers)
     reply(questions().map((_, i) => [...(store.answers[i] ?? [])]))
   }
 
@@ -232,6 +228,19 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const onKey = (e: KeyboardEvent) => {
+    if (
+      single() &&
+      question()?.options.some((opt) => opt.label === question()?.default) &&
+      isEnterKeyCommitNotIme(e) &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      (e.target as HTMLElement).matches("button[data-picked='true']:not([data-custom])")
+    ) {
+      e.preventDefault()
+      e.stopPropagation()
+      submit()
+      return
+    }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return
     if ((e.target as HTMLElement).tagName === "INPUT") return
     e.preventDefault()
@@ -329,8 +338,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     void store.tab
     if (store.collapsed || store.editing || confirm()) return
     requestAnimationFrame(() => {
-      if (!document.hasFocus() || isTextControl(document.activeElement)) return
-      const btn = root?.querySelector<HTMLButtonElement>("button[data-slot='question-option']:not(:disabled)")
+      if (!document.hasFocus() || isTextControl(document.activeElement) || !root?.isConnected) return
+      const selector = "button[data-slot='question-option']:not(:disabled)"
+      const picked = root?.querySelector<HTMLButtonElement>(`${selector}[data-picked='true']`)
+      const btn = picked ?? root?.querySelector<HTMLButtonElement>(selector)
       btn?.focus({ preventScroll: true })
     })
   })

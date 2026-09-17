@@ -29,6 +29,7 @@ import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
+import java.awt.Rectangle
 import javax.swing.SwingUtilities
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
@@ -606,6 +607,27 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
 
     fun `test reverse sync returns active path for diff-driven navigation`() {
         assertEquals("test/AppTest.kt", reverseSyncTarget("test/AppTest.kt", null, "src/App.kt"))
+    }
+
+    fun `test empty state centers its label on both axes`() {
+        val root = emptyChangesComponent()
+        root.setSize(400, 300)
+
+        root.doLayout()
+
+        val label = components(root).filterIsInstance<JBLabel>().single()
+        assertEquals(KiloBundle.message("diff.editor.empty"), label.text)
+        // The label keeps its preferred size and sits in the middle of both axes rather than being
+        // stretched across the viewport, which is what left-aligned it before. Centerizer computes
+        // each axis as containerSize / 2 - compSize / 2 (Couple.of in Centerizer.getFit), which is not
+        // the same as (containerSize - compSize) / 2 once compSize is odd: integer division of an odd
+        // preferred width/height rounds differently depending on grouping, and a real font on CI does
+        // produce odd label dimensions where a local build with different font metrics may not.
+        val size = label.preferredSize
+        assertEquals(
+            Rectangle(400 / 2 - size.width / 2, 300 / 2 - size.height / 2, size.width, size.height),
+            label.bounds,
+        )
     }
 
     private fun renderer(tree: Tree, node: DefaultMutableTreeNode): Component =

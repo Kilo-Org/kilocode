@@ -13,6 +13,7 @@ import {
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import type { PRInfo } from "../../src/agent-manager/git-import"
+import { BUDGET } from "../../src/agent-manager/command-budget"
 import simpleGit from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -263,6 +264,40 @@ describe("WorktreeStateManager.updateWorktreeLabel", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree", () => {
+  it.each([
+    "Feature/My_fix.v2",
+    "Release_" + "a".repeat(60),
+    ...(process.platform === "win32" ? [] : ["CON", 'fix/a"b<c>d|e']),
+  ])("preserves explicit branch %s with a safe directory", async (branch) => {
+    const root = await createTempRepo()
+    const result = await createManager(root).createWorktree({ branchName: branch })
+    expect(result.branch).toBe(branch)
+    expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe(branch)
+    expect(path.dirname(result.path)).toBe(path.join(root, ".kilo", "worktrees"))
+    expect(path.basename(result.path)).toMatch(/^[a-zA-Z0-9_-][a-zA-Z0-9._-]*$/)
+    expect(path.basename(result.path)).not.toBe("CON")
+  })
+
+  it.each(["../escape", "bad name", "bad..name", "bad.lock", "-option", "@{-1}", "HEAD", ""])(
+    "rejects invalid explicit branch %s before creating directories",
+    async (branchName) => {
+      const root = await createTempRepo()
+      await expect(createManager(root).createWorktree({ branchName })).rejects.toThrow()
+      expect(existsSync(path.join(root, ".kilo", "worktrees"))).toBe(false)
+    },
+  )
+
+  it("keeps slash refs independent from flat refs and preserves collision suffixes", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const first = await manager.createWorktree({ branchName: "Feature/My_fix.v2" })
+    const flat = await manager.createWorktree({ branchName: "Feature-My_fix.v2" })
+    const second = await manager.createWorktree({ branchName: "Feature/My_fix.v2" })
+    expect(flat.branch).toBe("Feature-My_fix.v2")
+    expect(second.branch).toBe("Feature/My_fix.v2-2")
+    expect(new Set([first.path, flat.path, second.path]).size).toBe(3)
+  })
+
   it("uses a configured Git executable for worktree creation", async () => {
     const root = await createTempRepo()
     gitExec(["git", "-C", root, "config", "core.autocrlf", "false"])
@@ -395,6 +430,26 @@ describe("WorktreeManager.createWorktree", () => {
     )
   })
 
+  it("reports when an explicit base branch is selected in a repository with no commits", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-empty-"))
+    tempDirs.push(root)
+    gitExec(["git", "init", "-b", "main", root])
+
+    await expect(createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" })).rejects.toThrow(
+      "This repository has no commits yet. Create an initial commit before using worktrees.",
+    )
+  })
+
+  it("allows an explicit base branch from an orphan current branch", async () => {
+    const root = await createTempRepo()
+    gitExec(["git", "-C", root, "checkout", "--orphan", "orphan"])
+    gitExec(["git", "-C", root, "rm", "-rf", "."])
+
+    const result = await createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" })
+
+    expect(result.parentBranch).toBe("main")
+  })
+
   it("throws when workspace is not a git repo", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-nogit-"))
     tempDirs.push(dir)
@@ -423,7 +478,7 @@ describe("WorktreeManager.createWorktree", () => {
     expect(result.parentBranch).toBe(branch)
   })
 
-  it("uses two checkout workers without changing Git configuration", async () => {
+  it("uses four checkout workers without changing Git configuration", async () => {
     const root = await createTempRepo()
     const hook = path.join(root, ".git", "hooks", "post-checkout")
     const file = path.join(root, "workers")
@@ -432,7 +487,7 @@ describe("WorktreeManager.createWorktree", () => {
 
     await createManager(root).createWorktree({ branchName: "parallel-checkout" })
 
-    expect((await fs.readFile(file, "utf8")).trim()).toBe("2")
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("4")
     expect((await simpleGit(root).getConfig("checkout.workers")).value).toBeNull()
   })
 
@@ -616,6 +671,70 @@ describe("WorktreeManager.removeWorktree", () => {
     expect(after.all).not.toContain(result.branch)
   })
 
+  it("detaches the directory immediately and finishes git bookkeeping afterwards", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+    const result = await mgr.createWorktree({ prompt: "detach-me" })
+
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    expect(existsSync(result.path)).toBe(false)
+
+    await detached.done
+    const raw = await git.raw(["worktree", "list", "--porcelain"])
+    expect(raw.split("\n").filter((l) => l.startsWith("worktree "))).toHaveLength(1)
+    expect((await git.branch()).all).not.toContain(result.branch)
+  }, 15_000)
+
+  it("detaches without waiting for the repository git lock", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "detach-locked" })
+
+    // A pool refill or another creation can hold the git lock for seconds in large repositories.
+    const hold = Promise.withResolvers<void>()
+    const busy = mgr["withGitLock"](() => hold.promise)
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    expect(existsSync(result.path)).toBe(false)
+    expect((await simpleGit(root).branch()).all).toContain(result.branch)
+
+    hold.resolve()
+    await busy
+    // settle() flushes the deferred bookkeeping on dispose so branches are not orphaned.
+    await mgr.settle()
+    await detached.done
+    expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+  }, 20_000)
+
+  it("falls back to locked removal when the directory cannot be renamed", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ branchName: "detach-rename-blocked" })
+    const rename = spyOn(fs, "rename").mockRejectedValueOnce(
+      Object.assign(new Error("directory busy"), { code: "EBUSY" }),
+    )
+
+    try {
+      const detached = await mgr.detachWorktree(result.path, result.branch)
+      await detached.done
+      expect(existsSync(result.path)).toBe(false)
+      expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+    } finally {
+      rename.mockRestore()
+    }
+  })
+
+  it("detach never rejects for an already missing directory and still drops the branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "detach-missing" })
+    await fs.rm(result.path, { recursive: true, force: true })
+
+    const detached = await mgr.detachWorktree(result.path, result.branch)
+    await detached.done
+    expect((await simpleGit(root).branch()).all).not.toContain(result.branch)
+  })
+
   it("keeps the branch when branch param is omitted", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
@@ -747,6 +866,7 @@ describe("WorktreeManager.createWorktree cleanup", () => {
     const second = await mgr.createWorktree({ existingBranch: branch })
 
     expect(second.branch).toBe(branch)
+    expect(second.path).toBe(first.path)
     const gitFile = await fs.stat(path.join(second.path, ".git"))
     expect(gitFile.isFile()).toBe(true)
 
@@ -895,6 +1015,147 @@ describe("WorktreeManager.discoverWorktrees", () => {
 })
 
 // ---------------------------------------------------------------------------
+// WorktreeManager -- scanWorktrees / restore / orphan removal
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.scanWorktrees", () => {
+  it("keeps the reason a directory is not usable", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const live = await mgr.createWorktree({ prompt: "live" })
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(path.join(leftover, ".kilo-dev"), { recursive: true })
+    const broken = await mgr.createWorktree({ prompt: "broken" })
+    // Hand-deleted registration: directory intact, git metadata gone.
+    await fs.rm(path.join(root, ".git", "worktrees", path.basename(broken.path)), {
+      recursive: true,
+      force: true,
+    })
+
+    const probes = await mgr.scanWorktrees()
+    const byPath = new Map(probes.map((probe) => [probe.ok ? probe.info.path : probe.path, probe]))
+
+    expect(byPath.get(live.path)?.ok).toBe(true)
+    expect(byPath.get(leftover)).toEqual({ ok: false, path: leftover, reason: "leftover" })
+    expect(byPath.get(broken.path)).toEqual({ ok: false, path: broken.path, reason: "unregistered" })
+    // discoverWorktrees keeps its old contract: healthy worktrees only.
+    expect((await mgr.discoverWorktrees()).map((info) => info.path)).toEqual([live.path])
+  })
+
+  it("reports registered paths through a single git listing", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "registered" })
+
+    const registered = await mgr.registeredPaths()
+
+    expect(registered?.size).toBe(2) // main checkout + the new worktree
+    expect(await mgr.worktreeDirs()).toEqual([path.basename(wt.path)])
+  })
+})
+
+describe("WorktreeManager.restoreWorktree", () => {
+  it("recreates a deleted worktree from its branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "restore-me" })
+    await fs.writeFile(path.join(wt.path, "work.txt"), "committed work")
+    gitExec(["git", "-C", wt.path, "add", "."])
+    gitExec(["git", "-C", wt.path, "commit", "-m", "work"])
+    await fs.rm(wt.path, { recursive: true, force: true })
+
+    await mgr.restoreWorktree(wt.path, wt.branch)
+
+    expect(existsSync(path.join(wt.path, "work.txt"))).toBe(true)
+    expect((await mgr.discoverWorktrees()).map((info) => info.branch)).toEqual([wt.branch])
+  })
+
+  it("refuses paths outside the managed directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    await expect(mgr.restoreWorktree(path.join(root, "elsewhere"), "main")).rejects.toThrow(/outside/)
+  })
+
+  it("refuses to overwrite an existing directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "occupied" })
+
+    await expect(mgr.restoreWorktree(wt.path, wt.branch)).rejects.toThrow(/already exists/)
+  })
+})
+
+describe("WorktreeManager.createFromPR", () => {
+  it("reports a timed-out gh lookup as a timeout, not as an unexplained failure", async () => {
+    // The import path a user reaches by pasting a PR url ran gh on a 30s budget and classified the
+    // failure from text a killed process never produces, so a hang read as "Failed to fetch PR info".
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const internal = manager as unknown as { gh: (args: string[], timeout?: number) => Promise<string> }
+    const budgets: (number | undefined)[] = []
+    internal.gh = async (_args, timeout) => {
+      budgets.push(timeout)
+      throw Object.assign(new Error("Command failed: gh pr view 1"), { killed: true, signal: "SIGTERM" })
+    }
+
+    const failure = await manager.createFromPR("https://github.com/org/repo/pull/1").then(
+      () => undefined,
+      (err: unknown) => (err instanceof Error ? err.message : String(err)),
+    )
+
+    expect(failure).toBe("GitHub CLI (gh) did not respond in time. Try again.")
+    expect(budgets).toEqual([BUDGET.gh])
+  })
+})
+
+describe("WorktreeManager.removeOrphanDirectory", () => {
+  it("removes an untracked leftover directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(path.join(leftover, ".kilo-dev"), { recursive: true })
+
+    await mgr.removeOrphanDirectory(leftover)
+
+    expect(existsSync(leftover)).toBe(false)
+  })
+
+  it("refuses to remove a live worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const wt = await mgr.createWorktree({ prompt: "live" })
+
+    await expect(mgr.removeOrphanDirectory(wt.path)).rejects.toThrow(/live worktree/)
+    expect(existsSync(wt.path)).toBe(true)
+  })
+
+  it("refuses paths outside the managed directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    await fs.mkdir(path.join(root, "outside"), { recursive: true })
+
+    await expect(mgr.removeOrphanDirectory(path.join(root, "outside"))).rejects.toThrow(/outside/)
+    expect(existsSync(path.join(root, "outside"))).toBe(true)
+  })
+
+  // The manager re-check is the only thing between a stale webview orphan list and a recursive
+  // delete, so an unanswerable `git worktree list` has to fail closed. Not a repository at all is the
+  // simplest way to make the listing fail for real.
+  it("refuses to remove anything while git cannot list worktrees", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-nogit-"))
+    tempDirs.push(root)
+    const mgr = createManager(root)
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(leftover, { recursive: true })
+
+    await expect(mgr.removeOrphanDirectory(leftover)).rejects.toThrow(/cannot list worktrees/)
+    expect(existsSync(leftover)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // WorktreeManager -- ensureGitExclude
 // ---------------------------------------------------------------------------
 
@@ -983,6 +1244,32 @@ describe("WorktreeManager.renameBranch", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree branch collision", () => {
+  it("preserves an unrelated dirty worktree when an existing slash branch hashes to its literal name", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const branch = "Feature/My_fix.v2"
+    const original = await mgr.createWorktree({ branchName: branch })
+    const literal = path.basename(original.path)
+    await mgr.removeWorktree(original.path)
+    const other = await mgr.createWorktree({ branchName: literal })
+    const file = path.join(other.path, "draft.txt")
+    await fs.writeFile(file, "uncommitted work")
+    const occupied = `${other.path}-2`
+    await fs.mkdir(occupied)
+    await fs.writeFile(path.join(occupied, "keep.txt"), "keep")
+
+    const result = await mgr.createWorktree({ existingBranch: branch })
+
+    expect(result.branch).toBe(branch)
+    expect(result.path).toBe(`${other.path}-3`)
+    expect((await simpleGit(result.path).raw(["symbolic-ref", "HEAD"])).trim()).toBe(`refs/heads/${branch}`)
+    expect((await simpleGit(other.path).raw(["symbolic-ref", "HEAD"])).trim()).toBe(`refs/heads/${literal}`)
+    expect(await fs.readFile(file, "utf8")).toBe("uncommitted work")
+    expect(await changedFiles(other.path)).toEqual(["?? draft.txt"])
+    expect(await fs.readFile(path.join(occupied, "keep.txt"), "utf8")).toBe("keep")
+    expect(await mgr.checkedOutBranches()).toEqual(new Set(["main", literal, branch]))
+  })
+
   it("creates a suffixed worktree without replacing an active explicitly named worktree", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)

@@ -4,11 +4,46 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.GhState
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import java.awt.Color
 
 @Suppress("UnstableApiUsage")
 class UiStyleTest : BasePlatformTestCase() {
+
+    /**
+     * [UiStyle.Gap]'s unscaled constants exist for APIs that scale what they are handed (notably
+     * [JBUI.Borders]) — feeding them the scaled function result instead double-scales the value. This
+     * pins each constant to the pixel count its matching function reports at 1x, so the two can never
+     * silently drift apart.
+     */
+    fun `test gap constants match their scaled functions at 1x`() {
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(1f)
+
+            assertEquals(UiStyle.Gap.XS, UiStyle.Gap.xs())
+            assertEquals(UiStyle.Gap.SM, UiStyle.Gap.sm())
+            assertEquals(UiStyle.Gap.MD, UiStyle.Gap.md())
+            assertEquals(UiStyle.Gap.LG, UiStyle.Gap.lg())
+            assertEquals(UiStyle.Gap.PAD, UiStyle.Gap.pad())
+            assertEquals(UiStyle.Gap.XL, UiStyle.Gap.xl())
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
+    }
+
+    fun `test gap constants scale exactly once through JBUI scale`() {
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(2f)
+
+            assertEquals(UiStyle.Gap.md(), JBUI.scale(UiStyle.Gap.MD))
+            assertEquals(UiStyle.Gap.pad(), JBUI.scale(UiStyle.Gap.PAD))
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
+    }
 
     fun `test border is lighter than dark panel`() {
         val panel = Color(0, 0, 0)

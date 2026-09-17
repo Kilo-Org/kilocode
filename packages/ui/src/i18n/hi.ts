@@ -89,6 +89,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "विचार एकत्रित करना",
   "ui.sessionTurn.status.consideringNextSteps": "अगले कदमों पर विचार",
   "ui.messagePart.diagnostic.error": "त्रुटि",
+  // kilocode_change start
+  "ui.messagePart.board.read": "एजेंटों के संदेश पढ़ें",
+  "ui.messagePart.board.all": "सभी एजेंट",
+  "ui.messagePart.board.primary": "मुख्य एजेंट",
+  "ui.messagePart.board.agent": "एजेंट",
+  "ui.messagePart.board.route": "{{from}} से {{to}} को",
+  "ui.messagePart.board.empty": "एजेंटों का कोई संदेश नहीं",
+  "ui.messagePart.board.stored": "केवल सहेजा गया है। पहुँचने और पढ़े जाने की पुष्टि नहीं हुई है।",
+  // kilocode_change end
   "ui.messagePart.title.edit": "संपादित करें",
   "ui.messagePart.title.write": "लिखें",
   "ui.messagePart.option.typeOwnAnswer": "अपना उत्तर स्वयं लिखें",

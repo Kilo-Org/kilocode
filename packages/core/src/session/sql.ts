@@ -14,6 +14,8 @@ import { Timestamps } from "../database/schema.sql"
 import type { SystemContext } from "../system-context/index"
 import type { Revert } from "@opencode-ai/schema/revert"
 import { RecallPartIndex } from "../kilocode/session/recall-part-index" // kilocode_change
+import { RecallMessageIndex } from "../kilocode/session/recall-message-index" // kilocode_change
+import { sql } from "drizzle-orm" // kilocode_change
 
 type SessionMessageData = Omit<(typeof SessionMessage.Message)["Encoded"], "type" | "id">
 type V1MessageData = Omit<SessionV1.Info, "id" | "sessionID">
@@ -79,7 +81,12 @@ export const MessageTable = sqliteTable(
     ...Timestamps,
     data: text({ mode: "json" }).notNull().$type<V1MessageData>(),
   },
-  (table) => [index("message_session_time_created_id_idx").on(table.session_id, table.time_created, table.id)],
+  // kilocode_change start
+  (table) => [
+    index("message_session_time_created_id_idx").on(table.session_id, table.time_created, table.id),
+    RecallMessageIndex.make(table),
+  ],
+  // kilocode_change end
 )
 
 export const PartTable = sqliteTable(
@@ -97,6 +104,11 @@ export const PartTable = sqliteTable(
   (table) => [
     index("part_message_id_id_idx").on(table.message_id, table.id),
     index("part_session_idx").on(table.session_id),
+    // kilocode_change start
+    index("part_session_step_finish_idx")
+      .on(table.session_id)
+      .where(sql`json_valid(${table.data}) AND json_extract(${table.data}, '$.type') = 'step-finish'`),
+    // kilocode_change end
     RecallPartIndex.make(table), // kilocode_change
   ],
 )

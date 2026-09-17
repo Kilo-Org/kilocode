@@ -7,7 +7,7 @@ import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.activateIde
-import ai.kilocode.client.testing.fakeRoot
+import ai.kilocode.client.testing.deactivateIde
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
@@ -87,6 +87,152 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test an unavailable poll keeps the previous counts instead of publishing zeros`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4, files = 2)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        // A failed measurement carries zeros. Publishing them would render as a clean worktree and
+        // silently drop the badges the row was showing.
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, unavailable = true, reason = "timed out")))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, unavailable = true, reason = "timed out")))
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.stats.value[key]?.files)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test a worktree the backend stops reporting is dropped`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        // Gone from the list entirely is different from unmeasured: the worktree no longer exists.
+        rpc.statsResult = WorktreeStatsListDto(emptyList())
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertNull(service.stats.value[key])
+        handle.close()
+    }
+
+    fun `test an RPC exception keeps every badge instead of clearing them`() {
+        // KiloWorktreeService.stats/dirty wrap the RPC in try/catch; a thrown exception must still
+        // report unavailable=true, not fall through to the DTO's default false, or a failed RPC would
+        // clear every badge exactly like a failed poll answering an empty list.
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        rpc.statsThrows = RuntimeException("backend unreachable")
+        rpc.dirtyThrows = RuntimeException("backend unreachable")
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test a failed listing keeps every badge instead of clearing them`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        // What the backend answers when `git worktree list` itself fails: an empty list that must not
+        // be read as "the worktrees are gone".
+        rpc.statsResult = WorktreeStatsListDto(emptyList(), unavailable = true)
+        rpc.dirtyResult = WorktreeDirtyListDto(emptyList(), unavailable = true)
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test a stats poll in flight is cancelled when the last handle closes`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeStats = { gate.await() }
+        val first = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(1, rpc.statsCalls.size)
+
+        // Detaching with a slow poll unanswered used to leave the in-flight guard set, so every
+        // refresh after the next attach was skipped — permanently if the RPC never returned.
+        first.close()
+        rpc.beforeStats = {}
+        gate.complete(Unit)
+        drain()
+
+        val second = service.attach()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(2, rpc.statsCalls.size)
+        assertEquals(1, service.stats.value[key]?.additions)
+        second.close()
+    }
+
+    fun `test a stats poll does not stack while one is in flight`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeStats = { gate.await() }
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(1, rpc.statsCalls.size)
+
+        // Every extra request while the first is unanswered would fan out another set of git
+        // processes — the queue that made even `git --version` time out.
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+        assertEquals("a poll in flight must not be joined by another", 1, rpc.statsCalls.size)
+
+        gate.complete(Unit)
+        drain()
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(2, rpc.statsCalls.size)
+        handle.close()
+    }
+
     fun `test refresh is ignored after the last handle closes`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
@@ -145,6 +291,130 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test a forced refresh does not stack a second lookup on a running one`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+
+        // Every return from a long absence forces past PR_THROTTLE, so without an in-flight guard a
+        // user leaving and coming back faster than a lookup completes would multiply the per-worktree
+        // `gh` fan-out instead of getting an answer sooner.
+        repeat(5) { service.refreshPr(force = true, maxAge = 0) }
+        drain()
+        assertEquals("a lookup already running covers the request", 1, rpc.prCalls.size)
+
+        // Once it lands the path is open again, so the guard throttles nothing on its own.
+        gate.complete(Unit)
+        drain()
+        rpc.beforePrStatus = {}
+        service.refreshPr(force = true)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test activation while a lookup runs does not stack a second one`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+
+        assertEquals(1, rpc.prCalls.size)
+        gate.complete(Unit)
+        drain()
+
+        // The return is held, not spent: the running lookup covered the request, and the attach lookup
+        // is still inside the spend floor, so the trailing lookup waits out the rest of the window.
+        assertEquals(1, rpc.prCalls.size)
+        timers.advanceBy(PR_FLOOR - Away.FRESH)
+        drain()
+        assertEquals(2, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test a return held behind a running lookup is spent when that lookup ends`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+        // Clear of the spend floor, so the in-flight guard is the only thing left holding the return.
+        timers.advanceBy(PR_FLOOR)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        assertEquals("the running lookup must not be joined by a second fan-out", 1, rpc.prCalls.size)
+
+        // The lookup that was running started before the departure, so its answer can predate the very
+        // change this return came back to observe. Dropping the request would leave that stale answer
+        // standing until the 120s poll, which is the staleness this whole path exists to avoid.
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals("the held return keeps the ceiling it was submitted with", Away.FRESH, rpc.prAges.last())
+        handle.close()
+    }
+
+    fun `test a return held behind a lookup that reports a rate limit is dropped`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+        timers.advanceBy(PR_FLOOR)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // The budget was still OK when the return was recorded, so it could not have been refused up
+        // front. Spending it now would pay for the one fan-out GitHub is currently refusing.
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(1, rpc.prCalls.size)
+        assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        handle.close()
+    }
+
+    fun `test a return held behind a running lookup does not outlive a detach`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+        timers.advanceBy(PR_FLOOR)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // Nothing is watching worktrees any more, so the held return has no surface left to update.
+        handle.close()
+        gate.complete(Unit)
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        drain()
+
+        assertEquals(1, rpc.prCalls.size)
+    }
+
     fun `test gh availability propagates from pr status`() {
         rpc.prResult = WorktreePrListDto(GhAvailability.MISSING)
         val handle = service.attach()
@@ -201,7 +471,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
-    fun `test activation reloads pr state within the throttle budget`() {
+    fun `test returning after a long absence observes a pr merged elsewhere`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
@@ -209,8 +479,9 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         drain()
         assertEquals(1, service.pr.value[key]?.number)
 
-        // A PR merged while the IDE sat in the background.
+        // A PR merged in a browser while the IDE sat in the background.
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.MERGED, "https://pr/1")))
+        deactivateIde(project)
         timers.advanceBy(30_000)
         activateIde(project)
         drain()
@@ -219,31 +490,255 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
-    fun `test activation collapses a burst of focus events into one lookup`() {
+    fun `test an absence past the bar outranks the throttle and the backend pr cache`() {
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
-        val before = rpc.prCalls.size
+        assertEquals(1, rpc.prCalls.size)
+        // Clear of the spend floor, so only the absence rule decides what this activation costs.
+        timers.advanceBy(PR_FLOOR)
 
-        repeat(5) { activateIde(project) }
+        // The absence is the whole reason to spend the lookup, and the ceiling is the only way past the
+        // backend's own PR cache — without it the answer could predate the departure by up to its TTL.
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
         drain()
 
-        assertEquals("PR_THROTTLE must absorb repeated activation", before, rpc.prCalls.size)
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(listOf(null, Away.FRESH), rpc.prAges.toList())
         handle.close()
     }
 
-    fun `test activation of another project does not reload pr state`() {
+    fun `test a spent github budget leaves the badges it cannot refresh alone`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        val handle = service.attach()
+        drain()
+        assertEquals(1, service.pr.value[key]?.number)
+
+        // GitHub refuses the lookup, so it carries no PRs. That is not evidence the PR went away, and
+        // the limit can stand for an hour — blanking every badge over it would be a worse lie than
+        // holding the last known state behind the banner.
+        rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
+        service.refreshPr(force = true)
+        drain()
+
+        assertEquals(1, service.pr.value[key]?.number)
+        assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        handle.close()
+    }
+
+    fun `test an absence one tick under the bar does not bypass the backend cache`() {
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
-        val before = rpc.prCalls.size
+        assertEquals(1, rpc.prCalls.size)
+        timers.advanceBy(PR_FLOOR)
+
+        // Under the bar the absence is window churn, which does not justify a fresh per-worktree gh
+        // fan-out. It still reloads — the RPC round trip is cheap — but a cached answer is acceptable.
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH - 1)
+        activateIde(project)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertNull("window churn has no claim on the backend cache", rpc.prAges.last())
+        handle.close()
+    }
+
+    fun `test returning from a quick switch reloads without bypassing the backend cache`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        // Past PR_THROTTLE, so only the absence rule decides what this activation costs.
         timers.advanceBy(30_000)
 
-        // A different project's window gaining focus says nothing about this project's worktrees.
-        activateIde(ProjectManager.getInstance().defaultProject)
+        deactivateIde(project)
+        timers.advanceBy(Away.REAL)
+        activateIde(project)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertNull("a quick switch does not justify a fresh gh fan-out", rpc.prAges.last())
+        handle.close()
+    }
+
+    fun `test returning from a transient window does not reload pr state`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        timers.advanceBy(30_000)
+        val before = rpc.prCalls.size
+
+        // A dialog or popup closing never took focus out of the IDE for long enough to have changed a
+        // PR, and this lookup costs one `gh` call per worktree.
+        deactivateIde(project)
+        timers.advanceBy(Away.REAL - 1)
+        activateIde(project)
         drain()
 
         assertEquals(before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test a burst of activations reloads once per absence`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        timers.advanceBy(PR_FLOOR)
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        repeat(5) { activateIde(project) }
+        drain()
+
+        assertEquals("one departure owes one lookup, however often the frame reports focus", 2, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test activation without a preceding absence does not reload pr state`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        timers.advanceBy(30_000)
+        val before = rpc.prCalls.size
+
+        activateIde(project)
+        drain()
+
+        assertEquals("the first focus of a session is not a return", before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test activation of any frame reloads every attached project`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+        timers.advanceBy(PR_FLOOR)
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+
+        // The absence belongs to the application, so returning to it is news for every project that is
+        // watching worktrees — not only the one whose frame happened to report the focus. The frame the
+        // platform hands us can also answer with a null or default project, so routing on it would drop
+        // the return entirely.
+        activateIde(ProjectManager.getInstance().defaultProject)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(listOf(null, Away.FRESH), rpc.prAges.toList())
+        handle.close()
+    }
+
+    fun `test a return blocked by the spend floor runs once the floor clears`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // Past the bar, so this return deserves fresh data — but the attach lookup was 5s ago, so we
+        // may not pay for it yet. Dropping it would leave the badge stale until the 120s poll.
+        timers.advanceBy(5_000)
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        assertEquals("the floor holds the return rather than spending on it", 1, rpc.prCalls.size)
+
+        // 5s + FRESH of the 30s floor is already spent, so the trailing lookup is due at the remainder.
+        timers.advanceBy(PR_FLOOR - 5_000 - Away.FRESH)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals("the held return keeps the ceiling it was submitted with", Away.FRESH, rpc.prAges.last())
+        handle.close()
+    }
+
+    fun `test a burst of blocked returns costs one trailing lookup`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // Two departures and returns inside one floor window. Each is real news, but they are news about
+        // the same thing, and one fan-out answers both.
+        repeat(2) {
+            deactivateIde(project)
+            timers.advanceBy(Away.FRESH)
+            activateIde(project)
+            drain()
+        }
+        assertEquals("no return may spend while the floor stands", 1, rpc.prCalls.size)
+
+        // The deadline is fixed from the first deferral, so the second return cannot push it out. Under a
+        // sliding debounce the window would now end at 2 x FRESH past here and this would still be 1.
+        timers.advanceBy(PR_FLOOR - 2 * Away.FRESH)
+        drain()
+
+        assertEquals("one window owes one lookup, however many returns it held", 2, rpc.prCalls.size)
+        assertEquals("the strictest ceiling the window held survives", Away.FRESH, rpc.prAges.last())
+        handle.close()
+    }
+
+    fun `test a spent github budget suppresses focus refreshes`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
+        val handle = service.attach()
+        drain()
+        assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        val before = rpc.prCalls.size
+        timers.advanceBy(PR_FLOOR)
+
+        // The fan-out this return would pay for is the one GitHub is currently refusing, so it can only
+        // confirm what the last answer already said. Returning to the IDE is not a reason to spend it.
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+
+        assertEquals(before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test the poll still recovers after a rate limit suppressed focus refreshes`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
+        val handle = service.attach()
+        drain()
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        val before = rpc.prCalls.size
+
+        // Suppressing the focus path must not be a dead end: the budget resets on GitHub's schedule,
+        // and the poll is what notices.
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 5, GhState.OPEN, "https://pr/5")))
+        timers.advanceBy(120_000)
+        drain()
+
+        assertEquals(before + 1, rpc.prCalls.size)
+        assertEquals(GhAvailability.OK, service.gh.value)
+        assertEquals(5, service.pr.value[key]?.number)
+        handle.close()
+    }
+
+    fun `test a forced refresh can demand a fresh backend lookup`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+
+        // What creating a worktree needs: the cached PR list was built before this worktree existed,
+        // so serving it would leave the new row without a badge until the entry aged out.
+        service.refreshPr(force = true, maxAge = 0)
+        drain()
+
+        assertEquals(listOf(null, 0L), rpc.prAges.toList())
         handle.close()
     }
 
@@ -326,5 +821,12 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     private companion object {
         /** Stands in for a real repo path that differs from the project's synthetic client basePath. */
         private const val BACKEND_ROOT = "/real/repo"
+
+        /**
+         * Minimum gap between lookups the focus path may pay for, measured from the last one. A return
+         * past `Away.FRESH` deserves fresh data; this is whether it may be afforded yet. Mirrors the
+         * service's private `PR_THROTTLE`, which serves as both the unforced throttle and this floor.
+         */
+        private const val PR_FLOOR = 30_000L
     }
 }

@@ -1,5 +1,55 @@
 import type { ProjectStore } from "./store"
-import type { ExtensionMessage } from "../../src/types/messages"
+import type { AgentManagerWorktreeSetupMessage, ExtensionMessage } from "../../src/types/messages"
+
+export interface SetupState {
+  active: boolean
+  message: string
+  branch?: string
+  error?: boolean
+  worktreeId?: string
+  errorCode?: string
+  projectId?: string
+  selection?: string | null
+}
+
+export function setupVisible(state: SetupState, project: string | undefined, selection: string | null): boolean {
+  return state.active && state.projectId === project && (state.worktreeId ?? state.selection) === selection
+}
+
+export function updateSetup(
+  store: ProjectStore,
+  state: SetupState,
+  msg: AgentManagerWorktreeSetupMessage,
+  project: string | undefined,
+  selection: string | null,
+): SetupState {
+  const owner = msg.projectId ?? project
+  const current = owner === project
+  const same = state.active && state.projectId === owner
+  const done = msg.status === "ready" || msg.status === "error"
+  const id = msg.worktreeId ?? (done && same ? state.worktreeId : undefined)
+  const matches = same && state.worktreeId === id
+  if (id) {
+    store.setBusy((prev) => {
+      const next = new Map(prev)
+      if (done) next.delete(id)
+      else next.set(id, { reason: "setting-up", message: msg.message, branch: msg.branch })
+      return next
+    })
+  }
+  if (!current && !same) return state
+  if (!matches && (done ? state.active : !current && !!state.worktreeId)) return state
+  return {
+    active: !done || (current && msg.status === "error"),
+    message: msg.message,
+    branch: msg.branch,
+    error: msg.status === "error",
+    errorCode: msg.errorCode,
+    worktreeId: id,
+    projectId: owner,
+    selection: id ? undefined : matches ? state.selection : selection,
+  }
+}
 
 export function clearFailedDelete(
   msg: ExtensionMessage,

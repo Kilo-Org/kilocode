@@ -52,12 +52,16 @@ internal class GhBanner(
             GhAvailability.GIT_MISSING -> KiloBundle.message("worktree.git.missing.content")
             GhAvailability.MISSING -> KiloBundle.message("worktree.gh.missing.content")
             GhAvailability.UNAUTH -> KiloBundle.message("worktree.gh.unauth.content")
+            GhAvailability.RATE_LIMITED -> KiloBundle.message("worktree.gh.limited.content")
+            GhAvailability.TIMEOUT -> KiloBundle.message("worktree.gh.timeout.content")
             GhAvailability.OK -> ""
         })
         createActionLabel(when (next) {
             GhAvailability.GIT_MISSING -> KiloBundle.message("worktree.gh.learnMore")
             GhAvailability.MISSING -> KiloBundle.message("worktree.gh.learnMore")
             GhAvailability.UNAUTH -> KiloBundle.message("worktree.gh.authorize")
+            GhAvailability.RATE_LIMITED -> KiloBundle.message("worktree.gh.learnMore")
+            GhAvailability.TIMEOUT -> KiloBundle.message("worktree.gh.learnMore")
             GhAvailability.OK -> ""
         }) { runAction() }
         if (next == GhAvailability.UNAUTH) {
@@ -68,7 +72,7 @@ internal class GhBanner(
         // Offered only for gh problems: a missing git is not the GitHub integration, and turning the
         // integration off would not make worktree stats work. The coordinator publishes OK in
         // response, which routes back through render() and hides this banner.
-        if (next == GhAvailability.MISSING || next == GhAvailability.UNAUTH) {
+        if (next != GhAvailability.GIT_MISSING) {
             createActionLabel(KiloBundle.message("worktree.gh.disable")) {
                 setGithubIntegration(false, "worktree_gh_banner")
             }.toolTipText = KiloBundle.message("worktree.gh.disable.tooltip")
@@ -82,6 +86,14 @@ internal class GhBanner(
             return
         }
         if (state == GhAvailability.MISSING) {
+            BrowserUtil.browse("https://cli.github.com/")
+            return
+        }
+        if (state == GhAvailability.RATE_LIMITED) {
+            BrowserUtil.browse(GH_LIMIT_DOCS)
+            return
+        }
+        if (state == GhAvailability.TIMEOUT) {
             BrowserUtil.browse("https://cli.github.com/")
             return
         }

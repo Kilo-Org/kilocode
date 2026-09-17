@@ -80,18 +80,28 @@ class KiloWorktreeService internal constructor(
         }
     }
 
+    /**
+     * `unavailable = true` on failure, not the default `false`: callers merge this against their
+     * previous values and only drop a row when the poll actually answered (see
+     * `WorktreeStatusService.merge`), so a swallowed RPC failure must not read as "no worktrees".
+     */
     suspend fun stats(directory: String): WorktreeStatsListDto = try {
         call { stats(directory) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree stats failed for $directory", e)
-        WorktreeStatsListDto()
+        WorktreeStatsListDto(unavailable = true)
     }
 
+    /** See [stats] for why a failure reports `unavailable = true` instead of an empty, "clean" list. */
     suspend fun dirty(directory: String): WorktreeDirtyListDto = try {
         call { dirty(directory) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree dirty failed for $directory", e)
-        WorktreeDirtyListDto()
+        WorktreeDirtyListDto(unavailable = true)
     }
 
     /**
@@ -99,10 +109,11 @@ class KiloWorktreeService internal constructor(
      * distinguish a healthy gh from an unhealthy backend via their own `runCatching` + backoff;
      * swallowing errors here would publish a false "gh is fine" and reset that backoff.
      */
-    suspend fun ghStatus(directory: String, github: Boolean = true): GhAvailability = call { ghStatus(directory, github) }
+    suspend fun ghStatus(directory: String, github: Boolean = true, maxAge: Long? = null): GhAvailability =
+        call { ghStatus(directory, github, maxAge) }
 
-    suspend fun prStatus(directory: String): WorktreePrListDto = try {
-        call { prStatus(directory) }
+    suspend fun prStatus(directory: String, maxAge: Long? = null): WorktreePrListDto = try {
+        call { prStatus(directory, maxAge) }
     } catch (e: Exception) {
         LOG.warn("worktree PR status failed for $directory", e)
         WorktreePrListDto()
@@ -114,7 +125,8 @@ class KiloWorktreeService internal constructor(
      * would offer worktree actions against a directory whose real state is unknown. Callers decide
      * what an unknown status means.
      */
-    suspend fun branchStatus(directory: String, github: Boolean = true): BranchStatusDto = call { branchStatus(directory, github) }
+    suspend fun branchStatus(directory: String, github: Boolean = true, maxAge: Long? = null): BranchStatusDto =
+        call { branchStatus(directory, github, maxAge) }
 
     /**
      * Long-lived move flow. Routed through [durable] (via [call]) so it survives reconnects and

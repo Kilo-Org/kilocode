@@ -14,6 +14,7 @@ import type {
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { DeferredPopover } from "../src/components/shared/DeferredPopover"
@@ -23,7 +24,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { DEFAULT_VARIANT, cycleVariant, preserveVariant } from "../src/context/session-variant-store"
+import { DEFAULT_VARIANT, cycleVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -42,15 +43,16 @@ import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImage
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
-import { convertToMentionPath } from "../src/utils/path-mentions"
-import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
+import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
+import { createDialogPreferences } from "./new-worktree-models"
+import { validBranch } from "./new-worktree-branch"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -90,39 +92,7 @@ function restoreAgent(value: string | undefined, list: Array<{ name: string }>, 
   return list.some((item) => item.name === value) ? value : base
 }
 
-function restoreModel(value: Model | undefined, providers: Record<string, unknown>, valid: (value: Model) => boolean) {
-  if (!value) return undefined
-  if (Object.keys(providers).length === 0) return value
-  return valid(value) ? value : undefined
-}
-
-function fallback<T>(value: T | undefined, get: () => T): T {
-  return value === undefined ? get() : value
-}
-
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-
-function sanitizeSegment(text: string, maxLength = 50): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9._+@-]/g, "")
-    .replace(/\.{2,}/g, ".")
-    .replace(/@\{/g, "@")
-    .replace(/-+/g, "-")
-    .replace(/^[-.]|[-.]+$/g, "")
-    .replace(/\.lock$/g, "")
-    .slice(0, maxLength)
-}
-
-function sanitizeBranchName(name: string): string {
-  return name
-    .split("/")
-    .map((s) => sanitizeSegment(s))
-    .filter(Boolean)
-    .join("/")
-}
 
 export const NewWorktreeDialog: Component<{
   onClose: () => void
@@ -167,15 +137,23 @@ export const NewWorktreeDialog: Component<{
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
-  const initialModel = fallback(
-    restoreModel(saved.model, provider.providers(), (value) => provider.isModelValid(value)),
-    () => session.modelForAgent(initialAgent),
-  )
-  const [model, setModel] = createSignal<Model | null>(initialModel)
   const [compareMode, setCompareMode] = createSignal(false)
+  const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
+  const preferences = createDialogPreferences({
+    saved,
+    agent: initialAgent,
+    fallback: session.modelForAgent,
+    effort: session.variantPreference,
+    preferred: session.preferredSelection,
+    hydrated: session.preferencesReady,
+    ready: provider.ready,
+    valid: provider.isModelValid,
+    variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
+    compare: compareMode,
+    remember: session.rememberSelection,
+  })
+  const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
-  const [agent, setAgent] = createSignal(initialAgent)
   const [starting, setStarting] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -184,7 +162,6 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(saved.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -195,7 +172,7 @@ export const NewWorktreeDialog: Component<{
   const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true
   const speech = useSpeechToText(vscode, server, { t })
   const speechModels = useSpeechToTextModels()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   let prior: string | null = null
   let request: string | undefined
@@ -203,13 +180,6 @@ export const NewWorktreeDialog: Component<{
     prior = null
     request = undefined
     setEnhancing(false)
-  }
-
-  const selectAgent = (name: string) => {
-    setAgent(name)
-    const sel = session.modelForAgent(name)
-    setModel(sel)
-    setVariant(undefined)
   }
 
   const cycle = (direction: 1 | -1) => {
@@ -225,33 +195,6 @@ export const NewWorktreeDialog: Component<{
     if (tab() !== "new") return
     const dispose = props.mode.register(cycle)
     onCleanup(dispose)
-  })
-
-  // Variant list for the currently selected model
-  const variants = createMemo(() => {
-    const sel = model()
-    if (!sel) return []
-    const found = provider.findModel(sel)
-    if (!found?.variants) return []
-    return Object.keys(found.variants)
-  })
-
-  const effectiveVariant = createMemo(() => {
-    const list = variants()
-    if (list.length === 0) return undefined
-    const stored = variant() ?? session.variantForAgent(agent(), model())
-    return stored && list.includes(stored) ? stored : undefined
-  })
-
-  // Reset variant when model changes and stored variant is not in new list
-  createEffect(() => {
-    const list = variants()
-    if (list.length === 0) {
-      setVariant(undefined)
-      return
-    }
-    const stored = variant()
-    if (stored && !list.includes(stored)) setVariant(preserveVariant(stored, list))
   })
 
   createEffect(() => {
@@ -299,18 +242,12 @@ export const NewWorktreeDialog: Component<{
     const resolved = paths.map((p) => convertToMentionPath(p, cwd))
     const ref = textareaRef
     if (!ref) return
-    const val = ref.value
-    const cursor = ref.selectionStart ?? val.length
-    const before = val.substring(0, cursor)
-    const after = val.substring(cursor)
-    const inserted = resolved.map((p) => `@${p}`).join(" ")
-    const result = before + inserted + " " + after
-    ref.value = result
+    const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
+    ref.value = result.text
     cancel()
-    setPrompt(result)
-    persistPrompt(result)
-    const pos = cursor + inserted.length + 1
-    ref.setSelectionRange(pos, pos)
+    setPrompt(result.text)
+    persistPrompt(result.text)
+    ref.setSelectionRange(result.pos, result.pos)
     ref.focus()
     adjustHeight()
   })
@@ -334,9 +271,7 @@ export const NewWorktreeDialog: Component<{
     vscode.setState({
       ...state,
       advancedDialogSelections: {
-        agent: agent(),
-        model: model(),
-        variant: variant(),
+        ...preferences.saved(),
         sandbox: sandbox(),
       },
     })
@@ -423,21 +358,28 @@ export const NewWorktreeDialog: Component<{
   const canSubmit = () => {
     if (starting()) return false
     if (speech.active()) return false
-    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
-    return true
+    return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
   const mode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
 
   const handleSubmit = () => {
     if (!canSubmit()) return
+    const advanced = showAdvanced()
+    const customBranch = advanced ? branchName() || undefined : undefined
+    if (!validBranch(customBranch)) {
+      showToast({
+        variant: "error",
+        title: t("agentManager.dialog.branchName"),
+        description: t("agentManager.dialog.invalidBranch"),
+      })
+      return
+    }
     setStarting(true)
 
     const text = prompt().trim() || undefined
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
-    const advanced = showAdvanced()
-    const customBranch = advanced ? branchName().trim() || undefined : undefined
     const imgs = imageAttach.images()
     const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
 
@@ -478,8 +420,14 @@ export const NewWorktreeDialog: Component<{
   }
 
   const undo = (e: KeyboardEvent) => {
-    if (e.key !== "z" || (!e.metaKey && !e.ctrlKey) || e.shiftKey || prior === null) return
+    const action = undoKey(e)
+    if (!action) return
+    e.stopPropagation()
     e.preventDefault()
+    if (action === "redo" || prior === null) {
+      document.execCommand(action)
+      return
+    }
     const restored = prior
     cancel()
     setPrompt(restored)
@@ -510,7 +458,7 @@ export const NewWorktreeDialog: Component<{
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
       e.preventDefault()
-      setVariant(next ?? DEFAULT_VARIANT)
+      selectVariant(next)
       return
     }
     undo(e)
@@ -851,14 +799,7 @@ export const NewWorktreeDialog: Component<{
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
                       value={model()}
-                      onSelect={(pid, mid) => {
-                        if (!pid || !mid) return
-                        const current = effectiveVariant()
-                        const next = { providerID: pid, modelID: mid }
-                        const list = Object.keys(provider.findModel(next)?.variants ?? {})
-                        setModel(next)
-                        setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
-                      }}
+                      onSelect={selectModel}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
                       trigger={WORKTREE_PROMPT_SCOPE}
@@ -869,8 +810,8 @@ export const NewWorktreeDialog: Component<{
                     <ThinkingSelectorBase
                       variants={variants()}
                       value={effectiveVariant()}
-                      onSelect={setVariant}
-                      onClear={() => setVariant(DEFAULT_VARIANT)}
+                      onSelect={selectVariant}
+                      onClear={() => selectVariant(DEFAULT_VARIANT)}
                       allowClear
                       clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}
@@ -882,15 +823,15 @@ export const NewWorktreeDialog: Component<{
                 </div>
                 <div class="prompt-input-hint-actions">
                   <Tooltip value={t("prompt.action.enhance")} placement="top">
-                    <Button
+                    <IconButton
+                      icon="wand-sparkles"
                       variant="ghost"
                       size="small"
                       onClick={handleEnhance}
                       disabled={!canEnhance()}
+                      loading={enhancing()}
                       aria-label={t("prompt.action.enhance")}
-                    >
-                      <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
-                    </Button>
+                    />
                   </Tooltip>
                   <Show when={sandboxVisible()}>
                     <SandboxButtonBase
@@ -941,7 +882,7 @@ export const NewWorktreeDialog: Component<{
                     type="text"
                     placeholder={t("agentManager.dialog.branchNamePlaceholder")}
                     value={branchName()}
-                    onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
+                    onInput={(e) => setBranchName(e.currentTarget.value)}
                   />
                 </div>
                 <div class="am-advanced-field">

@@ -1,4 +1,11 @@
-import { partReview, type ReviewMessageData } from "./review-comments"
+import {
+  fenced,
+  partReview,
+  record,
+  text as string,
+  optionalLine as positive,
+  type ReviewMessageData,
+} from "./review-comments"
 
 export interface BrowserReference {
   id: string
@@ -39,16 +46,6 @@ const HTML_LIMIT = 20_000
 const STYLE_LIMIT = 256
 const SOURCE_LIMIT = 4_096
 
-function record(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
-  return value as Record<string, unknown>
-}
-
-function string(value: unknown, limit: number): string | undefined {
-  if (typeof value !== "string" || value.length > limit) return undefined
-  return value
-}
-
 function optionalString(value: unknown, limit: number): string | false | undefined {
   if (value === undefined) return undefined
   const result = string(value, limit)
@@ -79,12 +76,6 @@ function optionalUrl(value: unknown): string | false | undefined {
   if (typeof value !== "string" || value.length > URL_LIMIT) return false
   const result = url(value)
   return result === undefined ? false : result
-}
-
-function positive(value: unknown): number | false | undefined {
-  if (value === undefined) return undefined
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) return false
-  return value
 }
 
 function styles(value: unknown): BrowserReference["styles"] | false | undefined {
@@ -188,13 +179,6 @@ function normalize(references: readonly BrowserReference[]): BrowserReference[] 
 
 function escapeInline(value: string): string {
   return value.replace(/[\r\n]+/g, " ").replace(/([\\`*_[\]{}()#+\-!|<>])/g, "\\$1")
-}
-
-function fenced(value: string): string[] {
-  const matches = value.match(/`+/g) ?? []
-  const longest = matches.reduce((max, item) => Math.max(max, item.length), 0)
-  const fence = "`".repeat(Math.max(3, longest + 1))
-  return [fence, value, fence]
 }
 
 function page(item: BrowserReference): string | undefined {

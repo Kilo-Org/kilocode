@@ -428,7 +428,6 @@ describe("opencode run (non-interactive subprocess)", () => {
         const toolNames = tools?.map((t) => t.function?.name).filter(Boolean) ?? []
         expect(toolNames).not.toContain("suggest")
         expect(toolNames).not.toContain("question")
-        expect(toolNames).not.toContain("interactive_terminal")
       }),
     60_000,
   )

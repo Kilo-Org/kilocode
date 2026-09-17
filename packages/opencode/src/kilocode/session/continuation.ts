@@ -1,10 +1,21 @@
 import type { ModelMessage } from "ai"
 import { MessageV2 } from "@/session/message-v2"
 import { KiloSessionMessageOrder } from "./message-order"
+import { KiloSessionControl } from "./control"
 
 export namespace KiloSessionContinuation {
   export function target(messages: MessageV2.WithParts[]) {
-    const latest = KiloSessionMessageOrder.latest(messages)
+    const answered = new Set(
+      messages.flatMap((message) => (message.info.role === "assistant" ? [message.info.parentID] : [])),
+    )
+    const latest = KiloSessionMessageOrder.latest(
+      messages.filter(
+        (message) =>
+          message.info.role !== "user" ||
+          answered.has(message.info.id) ||
+          !KiloSessionControl.background(message.parts),
+      ),
+    )
     const user = latest.userMessage
     const assistant = latest.assistantMessage
     if (!user || !assistant || assistant.info.role !== "assistant") return undefined

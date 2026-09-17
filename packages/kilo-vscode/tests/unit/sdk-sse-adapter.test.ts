@@ -4,6 +4,7 @@ import { KiloConnectionService } from "../../src/services/cli-backend/connection
 import { SdkSSEAdapter, type SSEPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 type Opts = {
+  headers?: Record<string, string>
   onSseError?: (error: unknown) => void
   signal?: AbortSignal
 }
@@ -59,6 +60,7 @@ describe("SdkSSEAdapter", () => {
   it("normalizes nested sync envelopes at the SSE boundary", async () => {
     const adapter = new SdkSSEAdapter(
       client(async function* (opts) {
+        expect(opts.headers).toEqual({ "x-kilo-sse-skip-fork-sync": "1" })
         yield sync()
         await aborted(opts.signal)
       }),

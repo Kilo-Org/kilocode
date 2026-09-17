@@ -57,8 +57,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fullført (rapportert av modellen)",
+  "session.goal.blocked": "Blokkert",
+  "session.goal.restart": "Start mål på nytt",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Oppdater",
+  "task.swarm.reset": "Nullstill tavle",
+  "task.swarm.resetTitle": "Nullstille denne tavlen?",
+  "task.swarm.resetDescription":
+    "Tømme synlige meldinger? Samtaler og kjørende oppgaver endres ikke. Agenter kan sende nye meldinger.",
+  "task.swarm.loading": "Laster tavle...",
+  "task.swarm.failed": "Kunne ikke laste eller nullstille tavlen. Prøv å oppdatere den.",
 
   "command.provider.connect": "Koble til leverandør",
 
@@ -193,6 +204,7 @@ export const dict = {
   "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
+  "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
   "prompt.action.autoApprove.disable": "Deaktiver automatisk godkjenning",
   "prompt.action.autoApprove.enabled":
@@ -222,7 +234,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klikk for å begrense skrivetilgang til filsystemet. Nettverkstilgang er fortsatt tillatt av sandbox-innstillingene dine.",
 
-  "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
+  "speechToText.tooltip.start": "Start taleinndata",
   "speechToText.tooltip.shortcut":
     "Trykk på knappen eller bruk Cmd/Ctrl+K for å starte eller stoppe opptaket; hold knappen inne mens du snakker, og slipp den for å transkribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med å snakke.",
@@ -266,6 +278,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Tillate Git-operasjon utenfor sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
+  "ui.permission.reject": "Avvis",
+  "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
+  "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
   "ui.permission.rule.addToAllowed": "Legg til i tillatt-listen",
@@ -314,7 +329,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Ny Oppgave",
   "sidebar.topBar.history": "Historikk",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Markedsplass",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Innstillinger",
@@ -414,6 +428,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Egendefinert leverandør",
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
+  "settings.providers.action.changeApiKey": "Endre API-nøkkel",
   "settings.providers.custom.description": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
@@ -628,6 +643,7 @@ export const dict = {
   "profile.usage.source.direct": "Direkte",
   "profile.usage.state.stale": "Viser sist oppdaterte forbruksdata.",
   "profile.usage.state.unavailable": "Forbruksdata er utilgjengelige.",
+  "profile.usage.state.empty": "Ingen forbruksgrenser rapportert.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling forfalt",
   "profile.usage.plan.canceling": "Abonnement: Avsluttes ved periodens slutt",
   "profile.usage.plan.unknown": "Abonnement: Status ukjent",
@@ -712,6 +728,14 @@ export const dict = {
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angi mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Satt på pause",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Fortsett",
+  "session.goal.clear": "Fjern mål",
   "session.costAlert.header": "Varsel om øktkostnad",
   "session.costAlert.continue": "Fortsett",
   "session.costAlert.question":
@@ -782,7 +806,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Ferdigheter",
 
   "settings.browser.description":
-    "Når aktivert kan AI-agenten samhandle med nettsider — navigere, klikke, skrive og ta skjermbilder. Et Chrome-vindu åpnes slik at du kan se agenten jobbe.",
+    "Konfigurer innebygd nettleserautomatisering drevet av Playwright. Kilo kan navigere, samhandle med og ta skjermbilder av nettsider i øktene dine.",
   "settings.browser.enable.title": "Aktiver nettleserautomatisering",
   "settings.browser.enable.description": "Registrer Playwright MCP-serveren med CLI-backend.",
   "settings.browser.systemChrome.title": "Bruk system-Chrome",
@@ -809,7 +833,17 @@ export const dict = {
   "settings.notifications.enable.title": "Aktiver lydvarsler",
   "settings.notifications.enable.description":
     "Spill av lyder når økter fullføres, det oppstår en feil eller det trengs innspill fra deg",
+  "settings.notifications.workbench.title": "Aktiver VS Code-varsler",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-varsler når Kilo fullfører en oppgave eller trenger innspill fra deg",
+  "settings.notifications.os.title": "Aktiver OS-varsler",
+  "settings.notifications.os.description":
+    "Vis opprinnelige operativsystemvarsler når Kilo fullfører en oppgave eller trenger innspill fra deg mens VS Code ikke er aktiv.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sender testvarsel…",
+  "settings.notifications.testOS.success": "Testvarsel sendt.",
+  "settings.notifications.testOS.error": "Testvarsel mislyktes",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -827,12 +861,28 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "Del en tavle mellom en hovedøkt og underagentene som utfører oppgavene dens, inkludert nestede underagenter. Bruk den til parallelle løsningsforsøk eller arbeidsoppgaver som utfyller hverandre, ikke til alle oppgaver.",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",
   "settings.experimental.imageGenerationModel.description": "Bildegenereringsmodell",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Modell-ID som sendes til ditt eget transkripsjonsendepunkt, for eksempel whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Tale-til-tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Bruk et OpenAI-kompatibelt transkripsjons-API i stedet for Kilo Gateway. Modeller leses fra /models, og lyd sendes til /audio/transcriptions. La feltet stå tomt for å bruke Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Tale-til-tekst-API-nøkkel",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token som sendes til den egne transkripsjons-basis-URL-en. Lagres i Kilo-konfigurasjonsfilen din.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med Kilo Gateway.",
+    "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text, eller angi en egen transkripsjons-basis-URL nedenfor.",
+  "settings.models.speechToText.remoteDescription":
+    "Taleinndata er ikke tilgjengelig i eksterne vinduer. Åpne Kilo i et lokalt vindu for å bruke mikrofonen.",
   "settings.models.speechToTextModel.title": "Tale-til-tekst-modell",
   "settings.models.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
@@ -852,6 +902,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
+  "settings.experimental.claudeMigration.description":
+    "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
   "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
@@ -1006,6 +1059,9 @@ export const dict = {
     "Regler er instruksjonsfiler som styrer agentens atferd. De inkluderes i systemprompten for hver samtale. Legg til filstier nedenfor for å inkludere ekstra regler.",
   "settings.agentBehaviour.instructionFiles": "Ekstra instruksjonsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til ekstra instruksjonsfiler i systemprompten",
+  "settings.agentBehaviour.pushFixes.title": "Push pull request-rettelser",
+  "settings.agentBehaviour.pushFixes.description":
+    "Når du sender CI-feil eller review-kommentarer fra en pull request til agenten, eller oppdaterer et worktree fra basen, bes agenten committe og pushe slik at pull requesten oppdateres. Tillatelsesforespørsler gjelder fortsatt. Slå av for å committe manuelt.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Last inn Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1025,6 +1081,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "modell",
   "settings.agentBehaviour.workflows.variant": "variant",
   "settings.agentBehaviour.workflows.modelDescription": "Global modelloverstyring",
+  "settings.experimental.codeMode.title": "Programmatiske verktøykall",
+  "settings.experimental.codeMode.description":
+    "Ruter MCP-verktøykall gjennom en avgrenset JavaScript-runtime med behovsstyrt verktøyoppdagelse i stedet for å eksponere hvert MCP-verktøy direkte. Sparer kontekst når mange MCP-verktøy er tilkoblet.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
@@ -1075,6 +1134,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modell som brukes for automatisk og manuell komprimering. La feltet stå tomt for å bruke chatmodellen. Kostnad, hastighet og kvaliteten på sammendraget avhenger av modellen.",
   "settings.context.compactionModel.useChatModel": "Bruk chatmodell",
+  "settings.context.compactionModel.hint":
+    "For å velge hvilken modell som brukes til komprimering, se Modellinnstillinger.",
   "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
@@ -1118,9 +1179,12 @@ export const dict = {
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
-  "settings.display.reasoningAutoCollapse.description":
-    "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
+  "settings.display.reasoningDisplay.title": "Resonnementblokker",
+  "settings.display.reasoningDisplay.description":
+    "Velg hvordan resonnementblokker starter. Utvidet viser hele teksten, Forhåndsvisning begrenser den til en kort rullbar forhåndsvisning, og Overskrift viser bare tittelen og strømmingsindikatoren til du åpner den.",
+  "settings.display.reasoningDisplay.expanded": "Utvidet",
+  "settings.display.reasoningDisplay.preview": "Forhåndsvisning",
+  "settings.display.reasoningDisplay.headline": "Overskrift",
   "settings.display.shiftTabCycle.title": "Bytt resonnementsinnsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Trykk Shift+Tab i et promptinndatafelt for å bytte til neste nivå for resonnementsinnsats. Deaktiver for å beholde Shift+Tab for tastaturnavigering av fokus.",
@@ -1218,6 +1282,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} bakgrunnsagenter",
   "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
+  "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
@@ -1230,6 +1295,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Avbrutt",
   "task.backgroundAgents.status.error": "Feil",
   "task.backgroundAgents.untitled": "Bakgrunnsagent",
+  "task.backgroundAgents.stopAll": "Stopp alle ({{count}})",
   "settings.saveBar.unsavedChanges": "Ulagrede endringer",
   "settings.saveBar.discard": "Forkast",
   "settings.saveBar.save": "Lagre",
@@ -1256,6 +1322,19 @@ export const dict = {
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Lagre lokalt",
+  "diffViewer.comment.sendToAgent": "Send til agent",
+  "diffViewer.comment.postToGithub": "Publiser på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke laste inn endringene i pull requesten.",
+  "diffViewer.comment.unavailable":
+    "Denne linjen er ikke tilgjengelig i det gjeldende øyeblikksbildet av pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åpne pull request",
+  "diffViewer.comment.localChanges": "Lokale endringer",
+  "diffViewer.comment.prChanges": "PR-endringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Velg mål",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 
@@ -1277,5 +1356,11 @@ export const dict = {
   "chat.search.close": "Lukk søk",
   "chat.search.invalidRegex": "Ugyldig regulært uttrykk",
   "chat.search.noResults": "Ingen resultater",
+  "settings.experimental.browserAutomation.title": "Integrert nettleser",
+  "settings.experimental.browserAutomation.description":
+    "Vis forhåndsvisninger av lokale applikasjoner i Agent Manager, og gjør verktøyet browser_open tilgjengelig for Agent Manager-økter.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Bruk system-Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
 } satisfies Partial<Record<Keys, string>>

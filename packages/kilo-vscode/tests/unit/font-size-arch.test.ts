@@ -3,7 +3,7 @@
  *
  * Kilo's VS Code webviews use the `kilo-code.new.fontSize` setting, not
  * VS Code editor font-size or raw pixel declarations. This keeps the Kilo UI
- * independently scalable across sidebar, settings, Agent Manager, KiloClaw,
+ * independently scalable across sidebar, settings, Agent Manager,
  * diff viewers, code blocks, and shared kilo-ui controls.
  */
 
@@ -17,7 +17,6 @@ const REPO = path.resolve(ROOT, "../..")
 const TARGETS = [
   path.join(ROOT, "webview-ui/src"),
   path.join(ROOT, "webview-ui/agent-manager"),
-  path.join(ROOT, "webview-ui/kiloclaw"),
   path.join(ROOT, "webview-ui/marketplace"),
   path.join(ROOT, "webview-ui/diff-viewer"),
   path.join(ROOT, "webview-ui/diff-virtual"),
@@ -28,7 +27,6 @@ const WATCHED_PROVIDERS = [
   path.join(ROOT, "src/KiloProvider.ts"),
   path.join(ROOT, "src/diff/DiffViewerProvider.ts"),
   path.join(ROOT, "src/DiffVirtualProvider.ts"),
-  path.join(ROOT, "src/kiloclaw/KiloClawProvider.ts"),
   path.join(ROOT, "src/MarketplacePanelProvider.ts"),
 ]
 
@@ -100,6 +98,15 @@ describe("webview font-size architecture", () => {
         `Preferred tokens: var(--font-size-base), var(--font-size-small), or var(--kilo-font-size-N).\n\n` +
         violations.map((v) => `  - ${v}`).join("\n"),
     ).toEqual([])
+  })
+
+  it("scales answered questions with the tool output font", () => {
+    const css = fs.readFileSync(path.join(REPO, "packages/kilo-ui/src/components/message-part.css"), "utf-8")
+    const block = css.slice(css.indexOf('[data-component="question-answers"]'))
+    expect(block.slice(0, block.indexOf('[data-slot="question-answer-item"]'))).toContain(
+      "font-size: var(--kilo-font-size-12)",
+    )
+    expect(block.match(/\[data-slot="question-answer-item"\]\s*\{([^}]+)\}/)?.[1]).toContain("font-size: inherit")
   })
 
   it("uses scalable line heights in polished tool previews", () => {

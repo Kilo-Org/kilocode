@@ -43,6 +43,7 @@ export function createSessionActivity(opts: {
 
 export function createWorktreeActivity(
   opts: Parameters<typeof createSessionActivity>[0] & {
+    terminal?: (id: string | null, project?: string) => Activity
     inUseFor: (id: string) => boolean
     worktrees: (project?: string) => { id: string; path: string }[]
     subscribe: (callback: (message: ExtensionMessage) => void) => () => void
@@ -59,9 +60,14 @@ export function createWorktreeActivity(
     active().has(opts.worktrees(project).find((worktree) => worktree.id === id)?.path ?? "") ? "busy" : "idle"
   return {
     ...activity,
-    agent: (id: string) => strongest([activity.agent(id), working(id)]),
+    local: () => strongest([activity.local(), opts.terminal?.(null) ?? "idle"]),
+    agent: (id: string) => strongest([activity.agent(id), working(id), opts.terminal?.(id) ?? "idle"]),
     project: (project: string, id: string | null) =>
-      strongest([activity.project(project, id), id === null ? "idle" : working(id, project)]),
+      strongest([
+        activity.project(project, id),
+        id === null ? "idle" : working(id, project),
+        opts.terminal?.(id, project) ?? "idle",
+      ]),
     blocked: (id: string, project?: string) => {
       if (working(id, project) === "busy") return true
       const items = project && project !== opts.active() ? (opts.projects()[project] ?? []) : opts.managed()

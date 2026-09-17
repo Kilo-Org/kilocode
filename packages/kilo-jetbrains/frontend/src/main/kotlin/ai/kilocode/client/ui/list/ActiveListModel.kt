@@ -16,8 +16,17 @@ import javax.swing.SwingUtilities
 private const val CELL_GAP = 8
 
 /**
- * A pill rendered before or after an [ActiveListItem] title. A non-null [id] opts the badge into
- * hit-testing; [action] requires an id to have any effect.
+ * A pill or status glyph rendered before or after an [ActiveListItem] title. A non-null [id] opts the
+ * badge into hit-testing; [action] requires an id to have any effect.
+ *
+ * An [icon] replaces the pill rather than joining it, so a badge is either a worded pill or a glyph. The
+ * glyph form is how a row shows a status that already has a settled visual language — a CI or review
+ * verdict — where a worded pill would only repeat what the icon already says.
+ *
+ * A glyph may still be labelled: an [icon] with a non-blank [text] renders the two side by side, in the
+ * muted row color rather than a pill's own. That is the form for a status whose icon says what is being
+ * counted and whose text says how many — where the icon alone would report that something is outstanding
+ * without saying how much of it.
  */
 internal data class ActiveListBadge(
     val text: String,
@@ -25,15 +34,33 @@ internal data class ActiveListBadge(
     val id: String? = null,
     val tooltip: String? = null,
     val action: (() -> Unit)? = null,
+    val icon: Icon? = null,
 )
 
+/**
+ * A row's changes summary: what the row has committed against [base], and what it has left uncommitted.
+ * A row with nothing committed shows the uncommitted counts instead of hiding, so [onLocal] is the click
+ * target in that case and [onChanges] the rest of the time.
+ */
 internal data class ActiveListMetrics(
     val files: Int = 0,
     val additions: Int = 0,
     val deletions: Int = 0,
     val base: String = "",
+    /** The committed counts no longer merge into [base]. Marks the summary rather than changing it. */
+    val conflict: Boolean = false,
     val onChanges: (() -> Unit)? = null,
-)
+    val localFiles: Int = 0,
+    val localAdditions: Int = 0,
+    val localDeletions: Int = 0,
+    val onLocal: (() -> Unit)? = null,
+) {
+    /** Whether the uncommitted counts are standing in for a committed set that is empty. */
+    val local: Boolean get() = files == 0 && localFiles > 0
+
+    /** The one action the summary answers to, matched to whichever counts it is showing. */
+    val action: (() -> Unit)? get() = if (local) onLocal else onChanges
+}
 
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
@@ -52,6 +79,13 @@ internal data class ActiveListConfig(
     val header: ActiveListWeight = ActiveListWeight.BOLD,
     /** Show a separator line above section headers, except above the first row. */
     val divider: Boolean = true,
+    /**
+     * Pin title-line [ActiveListItem.badges] to the row's trailing edge instead of letting them trail
+     * the title text. Turn it on for status glyphs, which are scanned down the list as a column and
+     * then line up with the metrics on the description line; leave it off for pills that label the
+     * title ("builtin", "env"), which read as part of it and would be covered by the hover actions.
+     */
+    val badgesRight: Boolean = false,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)

@@ -1,12 +1,8 @@
 // kilocode_change - new file
 // K1 W1: verify `buildInstanceAdvertisement`'s payload shape as real behavior.
 //
-// The `RemoteCommand` handler itself is a CLI entry point that calls
-// `bootstrap(process.cwd(), async () => { ... })` and then awaits an abort
-// signal that never resolves in a test — it cannot be driven end-to-end.
-// `buildInstanceAdvertisement` is extracted from the handler specifically so
-// the advertised payload is independently testable as real behavior, not via
-// a source-text/regex assertion on the handler's structure.
+// The command handler's enablement path is covered in kilo-sessions.test.ts.
+// These tests exercise the shared builder without the CLI lifecycle.
 
 import { describe, expect, test } from "bun:test"
 // Shared helper lives in kilo-sessions; remote.ts re-exports for the CLI path.
@@ -19,6 +15,23 @@ describe("RemoteCommand instance advertisement (K1 W1)", () => {
     expect(typeof advertisement.name).toBe("string")
     expect(advertisement.name.length).toBeGreaterThan(0)
     expect(typeof advertisement.version).toBe("string")
+  })
+
+  test("keeps process identity across builder calls, directories, and kinds", async () => {
+    const first = buildInstanceAdvertisement("/projects/first")
+    // Advance past the timestamp resolution, not an asynchronous readiness boundary.
+    await Bun.sleep(2)
+    const second = buildInstanceAdvertisement("/projects/second", "remote")
+    expect(first.kind).toBe("cli")
+    expect(first.projectName).toBe("first")
+    expect(second.kind).toBe("remote")
+    expect(second.projectName).toBe("second")
+    expect(second.startedAt).toBe(first.startedAt)
+    expect(second.name).toBe(first.name)
+    expect(first.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+    const start = Date.now() - process.uptime() * 1000
+    expect(Date.parse(first.startedAt!)).toBeGreaterThanOrEqual(start - 100)
+    expect(Date.parse(first.startedAt!)).toBeLessThanOrEqual(start + 100)
   })
 
   test("buildInstanceAdvertisement truncates an overlong project directory name to 64 chars", () => {

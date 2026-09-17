@@ -19,10 +19,15 @@ const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPr
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/intro.css"),
   path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ShortcutsDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
+  path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
@@ -56,10 +61,13 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectsFooter.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/OrphanNotice.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
@@ -78,7 +86,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/SendAllButton.tsx"),
 ]
+const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
 const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -145,7 +155,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -162,7 +172,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -226,7 +236,7 @@ describe("Agent Manager Provider Messages", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted lifecycle module so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+)\(/)
     if (!delegated) return text
     const lifecycle = project.addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
     const fn = lifecycle.getFunction(delegated[1]!)
@@ -461,6 +471,19 @@ describe("Agent Manager Worktree Actions", () => {
     expect(action).not.toContain('msg.action === "newMainTerminal"')
   })
 
+  it("keeps Cmd+W terminal handling before the empty-worktree fallback", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf("const closeActiveTab = () =>")
+    const end = source.indexOf("// Close the currently selected worktree", start)
+    const action = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(action).toContain("termHandlers.closeFocused()")
+    expect(action).toContain("termHandlers.closeActive()")
+    expect(action).toContain("if (tabs.length === 0)")
+  })
+
   it("forwards the quick-worktree command to immediate creation", () => {
     const source = fs.readFileSync(path.join(ROOT, "src/extension.ts"), "utf-8")
     const start = source.indexOf('vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree"')
@@ -513,7 +536,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted handler modules so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+|createMultiVersion)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+|createMultiVersion)\(/)
     if (!delegated) return text
     const module = delegated[1] === "createMultiVersion" ? "provider-multi-version.ts" : "provider-lifecycle.ts"
     const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))
@@ -678,13 +701,20 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 
-  it("limits snapshot cleanup to explicit worktree deletion without deleting sessions", () => {
-    const text = body("onDeleteWorktree")
-    expect(text).toContain(".kilocode.removeSnapshot")
-    expect(text).not.toContain("session.delete")
-    for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
-      expect(body(name)).not.toContain("removeSnapshot")
+  it("cleans worktree snapshots only after worktree removal without deleting sessions", () => {
+    const del = body("onDeleteWorktree")
+    expect(del).toContain("removeWorktreeSnapshot")
+    expect(del).not.toContain("session.delete")
+    for (const name of ["onCreateWorktree", "onCreateMultiVersion"]) {
+      const text = body(name)
+      expect(text, `${name} must not delete sessions`).not.toContain("session.delete")
+      const disk = text.indexOf(".removeWorktree(")
+      const snapshot = text.indexOf("removeWorktreeSnapshot(")
+      if (snapshot < 0) continue
+      expect(disk, `${name} must remove the worktree before its snapshots`).toBeGreaterThanOrEqual(0)
+      expect(snapshot, `${name} must remove the worktree before its snapshots`).toBeGreaterThan(disk)
     }
+    expect(body("onRemoveStaleWorktree")).not.toContain("removeWorktreeSnapshot")
   })
 
   // -- onCreateWorktree invariants -------------------------------------------
@@ -924,7 +954,9 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
     // Find the onStateChange callback that handles "connected"
     const connectedIdx = provider.indexOf('state === "connected"')
     expect(connectedIdx, '"connected" state handler must exist').toBeGreaterThan(-1)
-    const snippet = provider.slice(connectedIdx, connectedIdx + 800)
+    const end = provider.indexOf("this.unsubscribeNotificationDismiss", connectedIdx)
+    expect(end, "notification subscription must follow connection handler").toBeGreaterThan(connectedIdx)
+    const snippet = provider.slice(connectedIdx, end)
     expect(snippet, "must call flushPendingSessionRefresh from connected handler").toContain(
       'this.flushPendingSessionRefresh("sse-connected")',
     )
@@ -1198,12 +1230,10 @@ describe("Shared webview provider shell", () => {
 })
 
 describe("Agent Manager worktree setup", () => {
-  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+  it("retains the guarded setup error delay", () => {
     const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
-    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
-    expect(source).not.toContain(
-      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
-    )
-    expect(source).toContain("globalThis.setTimeout")
+    const timer = source.match(/if \(next.active && next.error\)[\s\S]*?,\s*3000,\s*\)/)?.at(0)
+    expect(timer).toContain("globalThis.setTimeout")
+    expect(timer).toContain('current === next ? { active: false, message: "" } : current')
   })
 })

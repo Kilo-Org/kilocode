@@ -1,7 +1,8 @@
 import { Config } from "@/config/config"
 // kilocode_change start - preserve Kilo API default model overlay
-import { fetchDefaultModel } from "@kilocode/kilo-gateway"
+import { recommend } from "@/kilocode/provider/catalog"
 import { Auth } from "@/auth"
+import { Option } from "effect"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { filterPromptTrainingModels, nonEmptyProviders } from "@/kilocode/provider/model-filter"
@@ -9,7 +10,7 @@ import { filterPromptTrainingModels, nonEmptyProviders } from "@/kilocode/provid
 import { Provider } from "@/provider/provider"
 import * as InstanceState from "@/effect/instance-state"
 import { Effect } from "effect"
-import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi" // kilocode_change
+import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { markInstanceForDisposal } from "../lifecycle"
 
@@ -17,6 +18,7 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
   Effect.gen(function* () {
     const providerSvc = yield* Provider.Service
     const configSvc = yield* Config.Service
+    const auth = yield* Auth.Service // kilocode_change
 
     const get = Effect.fn("ConfigHttpApi.get")(function* () {
       return yield* configSvc.get()
@@ -45,12 +47,16 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       // kilocode_change end
 
       // kilocode_change start - Fetch default model from Kilo API when the kilo provider is available.
-      if (providers[ProviderV2.ID.kilo]) {
-        const auth = yield* Auth.Service
-        const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({}))) // kilocode_change
-        const token = info?.type === "oauth" ? info.access : info?.key
-        const organizationId = info?.type === "oauth" ? info.accountId : undefined
-        const model = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))
+      if (defaults[ProviderV2.ID.kilo]) {
+        const info = yield* auth.get("kilo").pipe(Effect.option)
+        const model = yield* Effect.promise(() =>
+          recommend(
+            providers[ProviderV2.ID.kilo].models,
+            config.provider?.kilo?.options,
+            Option.getOrUndefined(info),
+            Option.isSome(info),
+          ),
+        )
         if (model && providers[ProviderV2.ID.kilo]?.models[model]) defaults[ProviderV2.ID.kilo] = ModelV2.ID.make(model)
       }
       // kilocode_change end

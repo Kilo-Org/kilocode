@@ -34,6 +34,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     /** When set, [branchStatus] throws it instead of answering. */
     var branchThrows: Exception? = null
     var currentBranch: String? = null
+    var originSlug: String? = null
     val moves = CopyOnWriteArrayList<Triple<String, String?, String>>()
     /** Progress events emitted by [moveToWorktree], in order. */
     var moveScript: List<MoveProgressDto> = emptyList()
@@ -54,15 +55,25 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val ghCalls = CopyOnWriteArrayList<String>()
     /** The `github` flag of each [ghStatus] call, positionally matching [ghCalls]. */
     val ghFlags = CopyOnWriteArrayList<Boolean>()
+    /** The `maxAge` ceiling of each [ghStatus] call, positionally matching [ghCalls]. */
+    val ghAges = CopyOnWriteArrayList<Long?>()
     /** Each [branchStatus] call as directory to `github` flag. */
     val branchCalls = CopyOnWriteArrayList<Pair<String, Boolean>>()
     val prCalls = CopyOnWriteArrayList<String>()
+    /** The `maxAge` ceiling of each [prStatus] call, positionally matching [prCalls]. */
+    val prAges = CopyOnWriteArrayList<Long?>()
     val statsCalls = CopyOnWriteArrayList<String>()
     val dirtyCalls = CopyOnWriteArrayList<String>()
+    /** When set, [stats] throws it instead of answering. */
+    var statsThrows: Exception? = null
+    /** When set, [dirty] throws it instead of answering. */
+    var dirtyThrows: Exception? = null
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
     var beforeGhStatus: suspend () -> Unit = {}
+    /** Gate for holding a [stats] answer open, so a test can prove polls do not stack. */
+    var beforeStats: suspend () -> Unit = {}
     /** Gate for holding a [prStatus] answer open while the test changes state around it. */
     var beforePrStatus: suspend () -> Unit = {}
     var adoptResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
@@ -93,33 +104,38 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto {
         assertNotEdt("listBranches")
-        return WorktreeBranchesDto(branchesList.toList(), currentBranch)
+        return WorktreeBranchesDto(branchesList.toList(), currentBranch, originSlug)
     }
 
     override suspend fun stats(directory: String): WorktreeStatsListDto {
         assertNotEdt("stats")
         statsCalls.add(directory)
+        beforeStats()
+        statsThrows?.let { throw it }
         return statsResult
     }
 
     override suspend fun dirty(directory: String): WorktreeDirtyListDto {
         assertNotEdt("dirty")
         dirtyCalls.add(directory)
+        dirtyThrows?.let { throw it }
         return dirtyResult
     }
 
-    override suspend fun ghStatus(directory: String, github: Boolean): GhAvailability {
+    override suspend fun ghStatus(directory: String, github: Boolean, maxAge: Long?): GhAvailability {
         assertNotEdt("ghStatus")
         ghCalls.add(directory)
         ghFlags.add(github)
+        ghAges.add(maxAge)
         beforeGhStatus()
         if (!github) return if (ghResult == GhAvailability.GIT_MISSING) ghResult else GhAvailability.OK
         return ghResult
     }
 
-    override suspend fun prStatus(directory: String): WorktreePrListDto {
+    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto {
         assertNotEdt("prStatus")
         prCalls.add(directory)
+        prAges.add(maxAge)
         // Snapshot before the gate so a call held open answers with what was configured when it
         // started, letting a test stage a newer result for the calls that follow.
         val answer = prResult
@@ -127,7 +143,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         return answer
     }
 
-    override suspend fun branchStatus(directory: String, github: Boolean): BranchStatusDto {
+    override suspend fun branchStatus(directory: String, github: Boolean, maxAge: Long?): BranchStatusDto {
         assertNotEdt("branchStatus")
         branchCalls.add(directory to github)
         branchThrows?.let { throw it }

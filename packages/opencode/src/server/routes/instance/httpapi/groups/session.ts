@@ -52,6 +52,17 @@ export const DeleteMessageQuery = Schema.Struct({
   queued: Schema.optional(QueryBoolean),
 })
 // kilocode_change end
+// kilocode_change start
+export const AbortQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  scope: Schema.optional(
+    Schema.Literals(["session", "tree"]).annotate({
+      description:
+        "Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues.",
+    }),
+  ),
+})
+// kilocode_change end
 export const StatusMap = Schema.Record(Schema.String, SessionStatus.Info)
 export const UpdatePayload = Schema.Struct({
   title: Schema.optional(Schema.String),
@@ -273,7 +284,7 @@ export const SessionApi = HttpApi.make("session")
         ),
         HttpApiEndpoint.post("abort", SessionPaths.abort, {
           params: { sessionID: SessionID },
-          query: WorkspaceRoutingQuery,
+          query: AbortQuery, // kilocode_change
           success: described(Schema.Boolean, "Aborted session"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(

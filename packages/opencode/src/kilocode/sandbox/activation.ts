@@ -1,7 +1,6 @@
 import { Effect } from "effect"
 import { BackgroundJob } from "@/background/job"
 import { BackgroundProcess } from "@/kilocode/background-process"
-import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { Service as Notebook } from "@/kilocode/notebook/service"
 import type { Target } from "@/kilocode/sandbox/policy"
 import { InstanceState } from "@/effect/instance-state"
@@ -43,7 +42,6 @@ export const idle = Effect.fn("SandboxActivation.idle")(function* (
         status.list(),
         background.list(),
         Effect.promise(() => BackgroundProcess.list()),
-        Effect.promise(() => InteractiveTerminal.list()),
         notebook.list(),
       ] as const,
     ).pipe(Effect.map((resources) => ({ directory, targets, resources })))
@@ -52,7 +50,7 @@ export const idle = Effect.fn("SandboxActivation.idle")(function* (
   })
 
   for (const scan of scans) {
-    const [states, jobs, processes, terminals, requests] = scan.resources
+    const [states, jobs, processes, requests] = scan.resources
     if (scan.targets.some((target) => states.has(target.id))) return false
     if (
       jobs.some((job) => {
@@ -76,14 +74,6 @@ export const idle = Effect.fn("SandboxActivation.idle")(function* (
           scan.directory !== root?.directory
         )
       })
-    )
-      return false
-    if (
-      terminals.some(
-        (terminal) =>
-          ids.has(terminal.sessionID) &&
-          (terminal.sessionID !== sessionID || scan.directory !== root?.directory),
-      )
     )
       return false
     if (

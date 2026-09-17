@@ -11,10 +11,10 @@ import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.diff.KiloInlineDiffStore
 import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
-import ai.kilocode.client.migration.KiloMigrationService
-import ai.kilocode.client.migration.MigrationUiController
-import ai.kilocode.client.migration.MigrationUiState
-import ai.kilocode.client.migration.ui.MigrationWizardPanel
+import ai.kilocode.client.onboarding.KiloOnboardingService
+import ai.kilocode.client.onboarding.OnboardingController
+import ai.kilocode.client.onboarding.OnboardingStep
+import ai.kilocode.client.onboarding.ui.OnboardingListCard
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.FileAttachment
@@ -57,6 +57,7 @@ import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.held
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
@@ -142,7 +143,7 @@ class SessionUi(
     displayMs: Long = SessionController.DISPLAY_DELAY_MS,
     private val manager: SessionManager? = null,
     private val workspaces: KiloWorkspaceService = service(),
-    private val migration: MigrationUiController = service<KiloMigrationService>(),
+    private val onboarding: OnboardingController = service<KiloOnboardingService>(),
     private val timers: UiTimerSource = UiTimers,
 ) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
 
@@ -222,7 +223,7 @@ class SessionUi(
     private lateinit var prompt: PromptPanel
     private lateinit var completion: KiloPromptCompletionProvider
     private lateinit var load: LoadingPanel
-    private lateinit var migrationWizard: MigrationWizardPanel
+    private lateinit var onboardingCard: OnboardingListCard
     private var empty: EmptySessionPanel? = null
 
     /**
@@ -256,7 +257,7 @@ class SessionUi(
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
-        bindMigration()
+        bindOnboarding()
         onStateChanged(controller.model.state)
         dock?.let {
             syncDock()
@@ -294,10 +295,32 @@ class SessionUi(
 
     override val auto: Boolean get() = controller.autoApprove
 
+    /**
+     * Whether this surface offers forking at all. Decided per surface rather than per session, so the
+     * prompt bubbles can carry their fork button from the moment they render; [forkable] adds the
+     * "has a session yet" part that the action menus need.
+     */
+    private val forkSurface: Boolean get() = manager?.supportsFork == true && !readonly
+
+    override val forkable: Boolean get() = forkSurface && controller.id != null
+
     @RequiresEdt
     override fun setAuto(value: Boolean) {
         controller.setAutoApprove(value)
         prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun fork() {
+        forkMessage(null, "session_menu")
+    }
+
+    /** Single fork entry point for this session: the action menus pass no message, a prompt bubble does. */
+    @RequiresEdt
+    private fun forkMessage(messageId: String?, surface: String) {
+        if (!forkable) return
+        val session = controller.id ?: return
+        manager?.forkSession(session, messageId, surface)
     }
 
     @RequiresEdt
@@ -347,7 +370,10 @@ class SessionUi(
         // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
         // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
         // PromptPanel authoritative inside its own subtree, and both publish the same instance anyway.
-        if (this::prompt.isInitialized) sink[PromptDataKeys.SEND] = prompt
+        if (this::prompt.isInitialized) {
+            sink[PromptDataKeys.SEND] = prompt
+            sink[PromptDataKeys.SELECTORS] = prompt
+        }
     }
 
     @RequiresEdt
@@ -419,12 +445,10 @@ class SessionUi(
         fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
-        migrationWizard = MigrationWizardPanel().apply {
-            onSkip = { migration.skip() }
-            onLater = { migration.later() }
-            onDone = { migration.finish() }
-            onContinueFromError = { migration.finish() }
-            onStart = { sel -> migration.start(sel) }
+        onboardingCard = OnboardingListCard().apply {
+            onLater = { onboarding.later() }
+            onSkipAll = { onboarding.skipAll() }
+            onStart = { onboarding.start() }
         }
 
         account = SessionAccountOverlay(
@@ -490,6 +514,7 @@ class SessionUi(
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = if (readonly) null else ::revert,
+            fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
             cancelRevert = if (readonly) null else ::cancelRevert,
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
             banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
@@ -504,7 +529,15 @@ class SessionUi(
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
             val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
-            dock = BranchDock(openDiff = ::openBranchChanges, onMove = move, onNewWorktree = newWorktree)
+            // Editor-tab hosts that show the dock (the worktree editor) report the branch, its PR, and
+            // its changes in their own header at the top of the tab, so their dock is the action row
+            // alone rather than a second place those counts appear.
+            dock = BranchDock(
+                openDiff = ::openBranchChanges,
+                onMove = move,
+                onNewWorktree = newWorktree,
+                header = owner?.hostedInEditorTab != true,
+            )
         }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -585,8 +618,10 @@ class SessionUi(
         root.content.add(sessionContent, BorderLayout.CENTER)
         if (!readonly) {
             // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
-            // readable-width centering used across the transcript.
-            val aligned = if (manager?.hostedInEditorTab == true) {
+            // readable-width centering used across the transcript — for the dock as much as the
+            // prompt, so the strip above the prompt does not run wider than the session it belongs to.
+            val tab = manager?.hostedInEditorTab == true
+            val aligned = if (tab) {
                 prompt.align(
                     HAlign.CENTER,
                     VAlign.FIT,
@@ -596,7 +631,18 @@ class SessionUi(
                 prompt.align(HAlign.FIT, VAlign.FIT)
             }
             val container = Stack.vertical()
-            dock?.let { container.next(it) }
+            dock?.let {
+                val row = if (tab) {
+                    it.align(
+                        HAlign.CENTER,
+                        VAlign.FIT,
+                        maxW = { SessionUiStyle.SessionLayout.readableWidth(it, style.transcriptFont) },
+                    )
+                } else {
+                    it
+                }
+                container.next(row)
+            }
             container.next(aligned)
             bottom = container
             root.content.add(container, BorderLayout.SOUTH)
@@ -758,34 +804,34 @@ class SessionUi(
         hide.restart()
     }
 
-    private fun bindMigration() {
+    private fun bindOnboarding() {
         cs.launch {
-            migration.state.collect { state ->
+            onboarding.steps.collect { steps ->
                 withContext(Dispatchers.Main) {
-                    applyMigrationState(state)
+                    applyOnboardingSteps(steps)
                 }
             }
         }
     }
 
     @RequiresEdt
-    private fun applyMigrationState(state: MigrationUiState) {
-        when (state) {
-            is MigrationUiState.Hidden -> {
-                if (root.blocker.isVisible) LOG.info("Migration wizard: overlay hidden session=${id ?: cacheKey ?: "new"}")
-                setModalContent(null)
-            }
-            is MigrationUiState.Needed -> {
-                if (!root.blocker.isVisible) LOG.info("Migration wizard: overlay shown session=${id ?: cacheKey ?: "new"} phase=${state.phase}")
-                migrationWizard.update(state)
-                setModalContent(
-                    migrationWizard,
-                    maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
-                ) { migrationWizard.preferredFocusComponent() }
-                migrationWizard.revalidate()
-                migrationWizard.repaint()
-            }
+    private fun applyOnboardingSteps(steps: List<OnboardingStep>) {
+        // Only a blocking step keeps the session dead behind a modal card today — the session
+        // stays interactive while only non-blocking steps are pending. There is currently only one
+        // provider (v5 migration) and it is always blocking, so this always shows when non-empty.
+        if (steps.isEmpty() || steps.none { it.blocking }) {
+            if (root.blocker.isVisible) LOG.info("Onboarding: overlay hidden session=${id ?: cacheKey ?: "new"}")
+            setModalContent(null)
+            return
         }
+        if (!root.blocker.isVisible) LOG.info("Onboarding: overlay shown session=${id ?: cacheKey ?: "new"} steps=${steps.size}")
+        onboardingCard.update(steps)
+        setModalContent(
+            onboardingCard,
+            maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
+        ) { onboardingCard.preferredFocusComponent() }
+        onboardingCard.revalidate()
+        onboardingCard.repaint()
     }
 
     private fun bindStyle() {
@@ -1120,9 +1166,10 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                branch = status
-                dock?.setBranch(status)
-                empty?.setBranch(status)
+                val next = held(status, branch)
+                branch = next
+                dock?.setBranch(next)
+                empty?.setBranch(next)
             }
         }
     }

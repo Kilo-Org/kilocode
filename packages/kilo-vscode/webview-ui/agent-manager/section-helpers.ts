@@ -118,13 +118,15 @@ export function buildSidebarOrder(
   sorted: WorktreeState[],
   sections: SectionState[],
   members: (id: string) => WorktreeState[],
+  anchor?: string,
 ): SidebarItem[] {
   const result: SidebarItem[] = [{ type: "local", id: "local" }]
   if (sections.length > 0) {
     for (const item of items) {
       if (item.kind === "section") {
-        if (!item.section.collapsed) {
+        if (!item.section.collapsed || anchor) {
           for (const wt of members(item.section.id)) {
+            if (item.section.collapsed && wt.id !== anchor) continue
             result.push({ type: "wt", id: wt.id })
           }
         }

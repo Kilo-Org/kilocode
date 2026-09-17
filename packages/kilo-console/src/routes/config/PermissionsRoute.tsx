@@ -5,6 +5,7 @@ import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
 import { toolName } from "../../shared/utils"
 import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { actions, usePermissionSettings, type PermissionAction, type PermissionRule } from "./state/permissions"
+import "../../styles/permissions.css"
 
 export function tone(action: PermissionAction) {
   if (action === "allow") return "success"

@@ -245,6 +245,10 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
       "description": "Questions to ask",
       "items": {
         "properties": {
+          "default": {
+            "description": "Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown.",
+            "type": "string",
+          },
           "header": {
             "description": "Very short label (max 30 chars)",
             "type": "string",

@@ -72,7 +72,7 @@ const GeneratedAgent = Schema.Struct({
 })
 
 export interface Interface {
-  readonly get: (agent: string) => Effect.Effect<Info>
+  readonly get: (agent: string, cfg?: Config.Info) => Effect.Effect<Info> // kilocode_change
   readonly list: () => Effect.Effect<Info[]>
   readonly defaultInfo: () => Effect.Effect<Info>
   readonly defaultAgent: () => Effect.Effect<string>
@@ -142,7 +142,6 @@ const layer = Layer.effect(
           },
           suggest: "deny", // kilocode_change
           question: "deny",
-          interactive_terminal: "deny", // kilocode_change - human-driven tools are primary-agent only
           plan_enter: "deny",
           plan_exit: "deny",
           // kilocode_change start
@@ -159,7 +158,7 @@ const layer = Layer.effect(
         })
 
         // kilocode_change start - patch defaults with bash allowlist and recall permission
-        const kilo = KiloAgent.prepare(cfg)
+        const kilo = KiloAgent.prepare(cfg, flags)
         const defaults = Permission.merge(baseDefaults, kilo.defaultsPatch)
         // kilocode_change end
 
@@ -174,10 +173,7 @@ const layer = Layer.effect(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                // kilocode_change start
-                interactive_terminal: "allow",
-                suggest: "allow",
-                // kilocode_change end
+                suggest: "allow", // kilocode_change
                 plan_enter: "allow",
               }),
               user,
@@ -329,7 +325,7 @@ const layer = Layer.effect(
         }
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
-        KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx.worktree, whitelistedDirs)
+        KiloAgent.patchAgents(agents, defaults, user, kilo, ctx.worktree, whitelistedDirs)
 
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {
@@ -512,18 +508,20 @@ const layer = Layer.effect(
     )
 
     // kilocode_change start - rebuild cached agents when permission-relevant config changes
-    const current = Effect.fnUntraced(function* <A>(select: (s: State) => Effect.Effect<A>) {
-      const cfg = yield* config.get()
+    const current = Effect.fnUntraced(function* <A>(select: (s: State) => Effect.Effect<A>, cfg?: Config.Info) {
+      const value = cfg ?? (yield* config.get())
       const s = yield* InstanceState.get(state)
-      if (s.version === KiloAgent.cacheKey(cfg)) return yield* select(s)
+      if (s.version === KiloAgent.cacheKey(value)) return yield* select(s)
       yield* InstanceState.invalidate(state)
       return yield* select(yield* InstanceState.get(state))
     })
 
     return Service.of({
-      get: Effect.fn("Agent.get")(function* (agent: string) {
-        return yield* current((s) => s.get(agent)) // kilocode_change
+      // kilocode_change start
+      get: Effect.fn("Agent.get")(function* (agent: string, cfg?: Config.Info) {
+        return yield* current((s) => s.get(agent), cfg)
       }),
+      // kilocode_change end
       list: Effect.fn("Agent.list")(function* () {
         return yield* current((s) => s.list()) // kilocode_change
       }),

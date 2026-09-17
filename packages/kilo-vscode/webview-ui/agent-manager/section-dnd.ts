@@ -33,3 +33,16 @@ export function sectionAwareDetector(
     return closestCenter(draggable, droppables, ctx)
   }
 }
+
+/**
+ * True once a dragged worktree card has moved right past its own bounds, which
+ * means it left the sidebar. The sidebar sorts by vertical position, so drag
+ * over must stop reordering once the card is out. Otherwise the siblings keep
+ * animating while the user drags toward the prompt.
+ */
+export function outsideSidebar(draggable: {
+  layout: { right: number }
+  transformed: { center: { x: number } }
+}): boolean {
+  return draggable.transformed.center.x > draggable.layout.right
+}

@@ -31,20 +31,18 @@ export function createReviewSpeech(t: T): {
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
-  const { config } = useConfig()
+  const { config, features } = useConfig()
   const speech = useSpeechToText(vscode, server, { t })
   const models = useSpeechToTextModels()
   return {
     speech,
-    enabled: () => canUseSpeechToText(config(), provider.authStates()),
+    enabled: () => canUseSpeechToText(config(), provider.authStates(), features().speechToText),
     model: () => selectedSpeechToTextModel(config(), models.models()),
   }
 }
 
 export function reviewFocus(root: () => HTMLElement | undefined): void {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => root()?.focus())
-  })
+  root()?.focus({ preventScroll: true })
 }
 
 export function keepsNativeFocus(target: EventTarget | null): boolean {

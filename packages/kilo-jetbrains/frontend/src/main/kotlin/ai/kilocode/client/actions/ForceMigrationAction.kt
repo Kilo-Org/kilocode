@@ -1,7 +1,9 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.migration.KiloMigrationService
+import ai.kilocode.client.onboarding.KiloOnboardingService
+import ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationOnboardingProvider
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -29,6 +31,9 @@ class ForceMigrationAction : AnAction(
 
     override fun actionPerformed(e: AnActionEvent) {
         if (!confirm(e.project)) return
+        // A previous `Later` defers the step for the rest of the IDE run, which would leave the app
+        // stuck in MIGRATION_REQUIRED with no wizard after the restart below.
+        service<KiloOnboardingService>().reoffer(MigrationOnboardingProvider.ID)
         service<KiloMigrationService>().resetStatusAndRestart { ok ->
             if (ok) return@resetStatusAndRestart
             KiloNotifications.error(KiloBundle.message("action.Kilo.ForceMigration.failed"))

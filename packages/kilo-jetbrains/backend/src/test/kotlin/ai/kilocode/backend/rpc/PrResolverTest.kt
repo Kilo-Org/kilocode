@@ -1,6 +1,8 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,9 +13,14 @@ import kotlin.test.assertTrue
 class PrResolverTest {
     private val path = "/repo/.kilo/worktrees/feature-x"
     private val calls = mutableListOf<List<String>>()
+    /** Timeout budget each `gh` call was given, so the short probe budget stays verifiable. */
+    private val budgets = mutableListOf<Int>()
+
+    /** The checkout the command in flight runs in, so a test can answer differently per repository. */
+    private var dir = ""
 
     @Test
-    fun `resolves through branch config without falling back`() {
+    fun `resolves through the branch selector without falling back`() {
         val resolver = resolver(view = { pr(7, "OPEN") })
 
         val lookup = resolver.resolve(path, "feature/x", base = "main")
@@ -22,26 +29,214 @@ class PrResolverTest {
         assertEquals(7, pull.number)
         assertEquals(path, pull.path)
         assertEquals(GhState.OPEN, pull.state)
-        // The config-driven form answered, so the branch selector and the search never run.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_FIELDS)), calls)
+        // Naming the branch is the first strategy — the selector-less form is the one that has been
+        // seen hanging — so nothing else runs but the review conversations, which no `--json` field
+        // can answer.
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()), calls)
+        assertEquals(listOf(GH_READ_TIMEOUT_MS, GH_READ_TIMEOUT_MS), budgets)
     }
 
     @Test
-    fun `falls back to the branch selector when config resolves nothing`() {
-        val resolver = resolver(view = { args -> if (args.contains("feature/x")) pr(8, "DRAFT") else missing() })
+    fun `retries without review and ci fields when gh cannot answer them`() {
+        // An older gh rejects the field name outright rather than reporting a missing PR.
+        val resolver = resolver(
+            view = { args ->
+                if (args.contains(PR_RICH_FIELDS)) CmdOut(1, "", """Unknown JSON field: "statusCheckRollup"""")
+                else pr(7, "OPEN")
+            },
+        )
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        // Without the retry this reads as "no PR here", and the row loses a PR it has always shown.
+        assertEquals(7, assertNotNull(lookup.pr, "the scalar retry must still resolve the PR").number)
+        assertEquals(GhAvailability.OK, lookup.availability)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
+    }
+
+    @Test
+    fun `retries without review and ci fields when the token is refused them`() {
+        val resolver = resolver(
+            view = { args ->
+                if (args.contains(PR_RICH_FIELDS)) {
+                    CmdOut(1, "", "GraphQL: Resource not accessible by integration (repository.pullRequest)")
+                } else {
+                    pr(11, "OPEN")
+                }
+            },
+        )
+
+        assertEquals(11, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).number)
+    }
+
+    @Test
+    fun `retries without review and ci fields for every wording gh uses to refuse them`() {
+        // A PR the row already shows must survive each of these, so none of them may read as "no PR".
+        val refusals = listOf(
+            """Unknown JSON field: "statusCheckRollup"""",
+            "GraphQL: Resource not accessible by personal access token (repository.pullRequest)",
+            "GraphQL: Field 'statusCheckRollup' doesn't exist on type 'PullRequest'",
+            "GraphQL: Field 'reviewDecision' does not exist on type 'PullRequest'",
+            "HTTP 403: Forbidden (https://api.github.com/graphql)",
+            "your token has insufficient scopes",
+        )
+
+        for (stderr in refusals) {
+            calls.clear()
+            val resolver = resolver(
+                view = { args -> if (args.contains(PR_RICH_FIELDS)) CmdOut(1, "", stderr) else pr(11, "OPEN") },
+            )
+
+            val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+            assertEquals(11, assertNotNull(lookup.pr, "the scalar retry must resolve the PR for: $stderr").number)
+            assertEquals(GhAvailability.OK, lookup.availability)
+        }
+    }
+
+    @Test
+    fun `keeps asking for review and ci fields after one repository refused the token`() {
+        // One resolver serves every checkout, and a permission refusal is per repository and token, so
+        // the restricted worktree must not cost the others their review/CI state.
+        val restricted = "$path-restricted"
+        val resolver = resolver(
+            view = { args ->
+                if (!args.contains(PR_RICH_FIELDS)) pr(11, "OPEN")
+                else CmdOut(1, "", "GraphQL: Resource not accessible by integration (repository.pullRequest)")
+            },
+        )
+        resolver.resolve(restricted, "feature/x", base = "main")
+        calls.clear()
+
+        resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
+    }
+
+    @Test
+    fun `stops asking for review and ci fields once gh has refused them`() {
+        val resolver = resolver(
+            view = { args ->
+                if (args.contains(PR_RICH_FIELDS)) CmdOut(1, "", """Unknown JSON field: "reviewDecision"""")
+                else pr(7, "OPEN")
+            },
+        )
+        resolver.resolve(path, "feature/x", base = "main")
+        calls.clear()
+
+        resolver.resolve(path, "feature/x", base = "main")
+
+        // The downgrade latches, so the fallback costs one extra call in total rather than one per
+        // checkout on every poll.
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_FIELDS), graphql()), calls)
+    }
+
+    @Test
+    fun `keeps asking for review and ci fields after a checkout vanished mid-poll`() {
+        // A worktree deleted while a poll is in flight fails the spawn, not the query. The message
+        // carries "does not exist", so it used to read as a rejected field name and latch the downgrade
+        // for the whole backend: every row kept its PR number and silently lost its approved and checks
+        // badges until the IDE restarted.
+        val vanished = "$path-deleted"
+        val resolver = resolver(
+            view = { if (dir == vanished) gone(vanished) else pr(7, "OPEN") },
+            list = { if (dir == vanished) gone(vanished) else ok("[]") },
+            api = { if (dir == vanished) gone(vanished) else threads() },
+        )
+
+        val lost = resolver.resolve(vanished, "feature/x", base = "main")
+        calls.clear()
+        val live = resolver.resolve(path, "feature/x", base = "main")
+
+        assertNull(lost.pr, "a checkout that no longer exists has no pull request to report")
+        assertEquals(GhAvailability.OK, lost.availability, "a deleted worktree is not a gh problem")
+        assertEquals(7, assertNotNull(live.pr).number)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()), calls)
+    }
+
+    @Test
+    fun `keeps asking about review conversations after a checkout vanished mid-poll`() {
+        // The same race one call later: the view answered, then the delete landed, so only the thread
+        // query fails to spawn. Latching there costs every other worktree its conversation badge.
+        val vanished = "$path-deleted"
+        val resolver = resolver(
+            view = { pr(7, "OPEN") },
+            api = { if (dir == vanished) gone(vanished) else threads(unresolved = 2) },
+        )
+
+        val lost = resolver.resolve(vanished, "feature/x", base = "main")
+        val live = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.OK, lost.availability)
+        assertEquals(0, lost.pr?.comments?.unresolved)
+        assertEquals(2, live.pr?.comments?.unresolved, "the query must still run for a live checkout")
+    }
+
+    @Test
+    fun `does not read a vanished working directory as a refused field`() {
+        // Both shapes of the same race: the platform refusing to spawn into a gone directory, and git
+        // losing the directory after it started.
+        assertNull(richRefusal("Cannot start a process, the working directory '$path' does not exist"))
+        assertNull(richRefusal("fatal: Unable to read current working directory: No such file or directory"))
+        // The wordings that really are a refused field must still latch.
+        assertEquals(RichRefusal.FIELD, richRefusal("""Unknown JSON field: "reviewDecision""""))
+    }
+
+    @Test
+    fun `keeps reporting an authorization failure rather than retrying scalars`() {
+        val resolver = resolver(view = { CmdOut(1, "", "gh: authentication required") })
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.UNAUTH, lookup.availability)
+        assertEquals(1, calls.size, "an auth failure is not a field-support problem")
+    }
+
+    @Test
+    fun `falls back to branch config when the branch selector resolves nothing`() {
+        // A fork PR checked out with `gh pr checkout`: the branch name matches nothing, and only the
+        // selector-less form resolves it through `branch.<name>.merge`.
+        val resolver = resolver(view = { args -> if (args.contains("feature/x")) missing() else pr(8, "DRAFT") })
 
         val lookup = resolver.resolve(path, "feature/x", base = "main")
 
         assertEquals(8, assertNotNull(lookup.pr).number)
         assertEquals(GhState.DRAFT, lookup.pr?.state)
-        assertEquals(2, calls.size, "the head search should not run once the branch selector answered")
+        assertEquals(
+            listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_RICH_FIELDS), graphql()),
+            calls,
+            "the head search should not run once branch config answered",
+        )
+        // The hanging form runs on the short probe budget, not the ordinary read budget.
+        assertEquals(listOf(GH_READ_TIMEOUT_MS, GH_PROBE_TIMEOUT_MS, GH_READ_TIMEOUT_MS), budgets)
+    }
+
+    @Test
+    fun `carries review and ci state through to the resolved pull request`() {
+        val resolver = resolver(
+            view = {
+                ok(
+                    """
+                    {"id":"$NODE","number":12,"state":"OPEN","isDraft":false,"url":"https://pr/12","title":"Work",
+                     "reviewDecision":"APPROVED",
+                     "statusCheckRollup":[{"conclusion":"SUCCESS"},{"conclusion":"FAILURE"},{"conclusion":"SKIPPED"}]}
+                    """.trimIndent(),
+                )
+            },
+        )
+
+        val pull = assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr)
+
+        assertEquals(GhReview.APPROVED, pull.review)
+        assertEquals(GhChecks.FAILED, pull.checks.state)
+        assertEquals(2, pull.checks.total, "a skipped check is not counted")
     }
 
     @Test
     fun `falls back to searching the head commit`() {
         val resolver = resolver(
             view = { missing() },
-            list = { ok("""[{"number":9,"state":"MERGED","isDraft":false,"url":"https://pr/9","title":"Fork work","headRefOid":"$SHA"}]""") },
+            list = { ok("""[{"id":"$NODE","number":9,"state":"MERGED","isDraft":false,"url":"https://pr/9","title":"Fork work","headRefOid":"$SHA"}]""") },
         )
 
         val lookup = resolver.resolve(path, "renamed-locally", base = "main")
@@ -83,6 +278,170 @@ class PrResolverTest {
     }
 
     @Test
+    fun `reports a spent budget instead of walking the ladder against it`() {
+        // Both wordings GitHub answers with, primary and secondary.
+        val limits = listOf(
+            "HTTP 403: API rate limit exceeded for user ID 1. (https://api.github.com/graphql)",
+            "GraphQL: You have exceeded a secondary rate limit. Please wait a few minutes before you try again.",
+        )
+
+        for (stderr in limits) {
+            calls.clear()
+            val resolver = resolver(view = { CmdOut(1, "", stderr) }, list = { throw IllegalStateException("must not search") })
+
+            val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+            assertEquals(GhAvailability.RATE_LIMITED, lookup.availability, "for: $stderr")
+            assertNull(lookup.pr)
+            // The remaining strategies would be refused by the same limit, so a lookup that reads as
+            // "no PR here" would cost three calls per checkout at the worst possible moment.
+            assertEquals(1, calls.size, "a spent budget must stop the ladder immediately, got $calls")
+        }
+    }
+
+    @Test
+    fun `does not retry the scalar fields when the budget is spent`() {
+        val resolver = resolver(view = { CmdOut(1, "", "API rate limit exceeded") })
+
+        resolver.resolve(path, "feature/x", base = "main")
+
+        // The scalar form is refused just as readily, so the field-support fallback must not fire.
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
+    }
+
+    @Test
+    fun `carries the unresolved review conversation count through to the resolved pull request`() {
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { threads(unresolved = 3, resolved = 5) })
+
+        val pull = assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr)
+
+        assertEquals(3, pull.comments.unresolved)
+        assertEquals(8, pull.comments.total, "the total counts every conversation, settled or not")
+    }
+
+    @Test
+    fun `skips the review conversation lookup for a merged or closed pull request`() {
+        // Unresolved feedback on something already merged is not work anyone is waiting on, and the
+        // lookup is a process spawn per row on every poll.
+        for (state in listOf("MERGED", "CLOSED")) {
+            calls.clear()
+            val resolver = resolver(
+                view = { pr(7, state) },
+                api = { throw IllegalStateException("must not ask about review threads for $state") },
+            )
+
+            val pull = assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr)
+
+            assertEquals(0, pull.comments.unresolved, "for: $state")
+            assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls, "for: $state")
+        }
+    }
+
+    @Test
+    fun `asks about review conversations for a draft pull request`() {
+        // A draft is still being worked on, which is exactly when review feedback is outstanding.
+        val resolver = resolver(view = { pr(7, "DRAFT") }, api = { threads(unresolved = 1) })
+
+        assertEquals(1, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).comments.unresolved)
+    }
+
+    @Test
+    fun `reports a spent budget from the review conversation lookup without a pull request`() {
+        // The count is unknown and the DTO's default reads as "every conversation settled", so answering
+        // with the PR would publish a resolution nobody made and hold it for the rate-limit window. Told
+        // the way a refused `gh pr view` is instead, which is what lets the frontend keep its last answer.
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { CmdOut(1, "", "API rate limit exceeded") })
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.RATE_LIMITED, lookup.availability)
+        assertNull(lookup.pr, "a PR carrying a zeroed count would blank a conversation badge already shown")
+    }
+
+    @Test
+    fun `reports a timed-out review conversation lookup without a pull request`() {
+        // A killed process flushes no stderr, so the rate-limit and refusal tests both miss it. Left to
+        // fall through, the PR would carry the default count — "every conversation settled" — and blank a
+        // badge over a query that never ran.
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { CmdOut(-1, "", "", timeout = true) })
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.TIMEOUT, lookup.availability)
+        assertNull(lookup.pr, "a PR carrying a zeroed count would blank a conversation badge already shown")
+    }
+
+    @Test
+    fun `keeps the pull request and latches when gh rejects the review conversation field`() {
+        // The one failure that is true of every repository this process sees, so it may latch.
+        val resolver = resolver(
+            view = { pr(7, "OPEN") },
+            api = { CmdOut(1, "", "GraphQL: Field 'reviewThreads' doesn't exist on type 'PullRequest'") },
+        )
+
+        val first = resolver.resolve(path, "feature/x", base = "main")
+        calls.clear()
+        val second = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(first.pr, "a rejected field must not cost the row its PR").number)
+        assertEquals(GhAvailability.OK, first.availability, "a refusal is not a reason to hold every badge")
+        assertEquals(7, assertNotNull(second.pr).number)
+        // Latched, so a gh that cannot read threads costs one call in total rather than one per poll.
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
+    }
+
+    @Test
+    fun `keeps asking about review conversations after one repository refused the token`() {
+        // One resolver serves every checkout and an access refusal is per repository and token, so the
+        // restricted worktree must not cost the others their conversation count until the IDE restarts.
+        val restricted = "$path-restricted"
+        val resolver = resolver(
+            view = { pr(7, "OPEN") },
+            api = {
+                if (dir == restricted) CmdOut(1, "", "GraphQL: Resource not accessible by integration (repository)")
+                else threads(unresolved = 2)
+            },
+        )
+
+        val refused = resolver.resolve(restricted, "feature/x", base = "main")
+        val other = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(refused.pr, "a refused count must not cost the row its PR").number)
+        assertEquals(GhAvailability.OK, refused.availability, "one restricted repository holds no badges")
+        assertEquals(0, refused.pr?.comments?.unresolved)
+        assertEquals(2, other.pr?.comments?.unresolved, "the second checkout still gets its count")
+    }
+
+    @Test
+    fun `keeps asking about review conversations after a transient failure`() {
+        // A gateway error or a dropped connection says nothing about whether gh can answer threads at
+        // all, so it costs this poll's count and not the badge for every worktree until a restart.
+        val answers = mutableListOf(CmdOut(1, "", "HTTP 502: Bad Gateway"), threads(unresolved = 4))
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { answers.removeFirst() })
+
+        val blip = resolver.resolve(path, "feature/x", base = "main")
+        val after = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.OK, blip.availability)
+        assertEquals(0, blip.pr?.comments?.unresolved)
+        assertEquals(4, after.pr?.comments?.unresolved, "the query must still run on the next poll")
+        assertTrue(answers.isEmpty(), "both answers should have been asked for")
+    }
+
+    @Test
+    fun `skips the review conversation lookup when gh answered no node id`() {
+        // Nothing addresses the query without one, and the alternative — parsing owner and repo out of the
+        // PR url — silently skips GitHub Enterprise, whose urls are not github.com.
+        val resolver = resolver(
+            view = { ok("""{"number":7,"state":"OPEN","isDraft":false,"url":"https://pr/7","title":"Work"}""") },
+            api = { throw IllegalStateException("must not ask about review threads without a node id") },
+        )
+
+        assertEquals(7, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).number)
+        assertEquals(listOf(listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS)), calls)
+    }
+
+    @Test
     fun `treats a missing pull request as a clean result`() {
         val resolver = resolver(view = { missing() }, list = { ok("[]") })
 
@@ -95,26 +454,51 @@ class PrResolverTest {
     private fun resolver(
         view: (List<String>) -> CmdOut,
         list: (List<String>) -> CmdOut = { ok("[]") },
+        api: (List<String>) -> CmdOut = { threads() },
     ): PrResolver = PrResolver(
-        gh = { _, args ->
+        gh = { at, args, ms ->
+            dir = at.toString()
             calls.add(args)
-            if (args.getOrNull(1) == "list") list(args) else view(args)
+            budgets.add(ms)
+            when {
+                args.firstOrNull() == "api" -> api(args)
+                args.getOrNull(1) == "list" -> list(args)
+                else -> view(args)
+            }
         },
-        git = { _, args ->
+        git = { at, args ->
+            dir = at.toString()
             calls.add(args)
             assertEquals(listOf("rev-parse", "HEAD"), args)
             ok("$SHA\n")
         },
     )
 
-    private fun pr(number: Int, state: String): CmdOut =
-        ok("""{"number":$number,"state":"$state","isDraft":${state == "DRAFT"},"url":"https://pr/$number","title":"Work"}""")
+    private fun pr(number: Int, state: String): CmdOut = ok(
+        """{"id":"$NODE","number":$number,"state":"$state","isDraft":${state == "DRAFT"},""" +
+            """"url":"https://pr/$number","title":"Work"}""",
+    )
+
+    /** A `reviewThreads` response with [unresolved] open conversations and [resolved] settled ones. */
+    private fun threads(unresolved: Int = 0, resolved: Int = 0): CmdOut {
+        val nodes = List(unresolved) { """{"isResolved":false}""" } + List(resolved) { """{"isResolved":true}""" }
+        return ok(
+            """{"data":{"node":{"reviewThreads":{"totalCount":${nodes.size},"nodes":[${nodes.joinToString(",")}]}}}}""",
+        )
+    }
+
+    /** The review-thread lookup, as it lands in [calls]. */
+    private fun graphql() = listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=$NODE")
 
     private fun ok(stdout: String) = CmdOut(0, stdout, "")
 
     private fun missing() = CmdOut(1, "", "no pull requests found for branch \"feature/x\"")
 
+    /** The spawn failure a checkout deleted mid-poll produces: no process, so no `gh` stderr at all. */
+    private fun gone(at: String) = CmdOut(-1, "", "Cannot start a process, the working directory '$at' does not exist")
+
     private companion object {
         const val SHA = "1111111111111111111111111111111111111111"
+        const val NODE = "PR_kwDOAbCdEf"
     }
 }

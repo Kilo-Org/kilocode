@@ -258,16 +258,6 @@ function normalized(input: Dict): Config {
     if (typeof input.timeout === "number") cfg.timeout = input.timeout
     return cfg
   }
-  if (input.type === "remote" && typeof input.url === "string") {
-    const cfg: McpRemoteConfig = { type: "remote", url: input.url }
-    const headers = strings(input.headers)
-    const auth = input.oauth === false || record(input.oauth) === input.oauth ? input.oauth : undefined
-    if (headers) cfg.headers = headers
-    if (auth === false || (auth && typeof auth === "object")) cfg.oauth = auth as McpRemoteConfig["oauth"]
-    if (input.enabled === false) cfg.enabled = false
-    if (typeof input.timeout === "number") cfg.timeout = input.timeout
-    return cfg
-  }
   if (typeof input.url === "string") {
     const cfg: McpRemoteConfig = { type: "remote", url: input.url }
     const headers = strings(input.headers)

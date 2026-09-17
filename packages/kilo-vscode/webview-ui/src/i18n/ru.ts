@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Завершено (по сообщению модели)",
+  "session.goal.blocked": "Заблокировано",
+  "session.goal.restart": "Перезапустить цель",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Доска",
+  "task.swarm.refresh": "Обновить",
+  "task.swarm.reset": "Сбросить доску",
+  "task.swarm.resetTitle": "Сбросить эту доску?",
+  "task.swarm.resetDescription":
+    "Очистить видимые сообщения? Разговоры и выполняемые задачи останутся без изменений. Агенты могут публиковать новые сообщения.",
+  "task.swarm.loading": "Загрузка доски...",
+  "task.swarm.failed": "Не удалось загрузить или сбросить доску. Попробуйте обновить её.",
 
   "command.provider.connect": "Подключить провайдера",
 
@@ -189,6 +200,7 @@ export const dict = {
   "prompt.action.send.recording": "Расшифровать и отправить",
   "prompt.action.stop": "Остановить",
   "prompt.action.enhance": "Улучшить промпт",
+  "prompt.paste.expand": "Нажмите, чтобы развернуть вставленный текст",
   "prompt.action.autoApprove.enable": "Включить автоодобрение",
   "prompt.action.autoApprove.disable": "Отключить автоодобрение",
   "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
@@ -215,7 +227,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
-  "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.start": "Начать голосовой ввод",
   "speechToText.tooltip.shortcut":
     "Коснитесь или нажмите Cmd/Ctrl+K, чтобы начать или остановить запись; удерживайте кнопку во время речи, затем отпустите её, чтобы транскрибировать и отправить.",
   "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
@@ -257,6 +269,9 @@ export const dict = {
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.reject": "Отклонить",
+  "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
+  "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
   "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",
@@ -306,7 +321,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Новая задача",
   "sidebar.topBar.history": "История",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Маркетплейс",
   "sidebar.topBar.profile": "Профиль",
   "sidebar.topBar.settings": "Настройки",
@@ -447,6 +461,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Пользовательский провайдер",
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Изменить API-ключ",
   "settings.providers.custom.description": "Добавьте пользовательский провайдер по базовому URL.",
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
@@ -665,6 +680,7 @@ export const dict = {
   "profile.usage.source.direct": "Напрямую",
   "profile.usage.state.stale": "Показаны последние обновлённые данные об использовании.",
   "profile.usage.state.unavailable": "Данные об использовании недоступны.",
+  "profile.usage.state.empty": "Лимиты использования не указаны.",
   "profile.usage.plan.pastDue": "Тариф: Платёж просрочен",
   "profile.usage.plan.canceling": "Тариф: Отмена в конце периода",
   "profile.usage.plan.unknown": "Тариф: Статус неизвестен",
@@ -749,6 +765,14 @@ export const dict = {
   "session.outcome.interrupted": "Раунд прерван",
   "session.outcome.error": "Раунд завершился с ошибкой",
   "session.outcome.finish": "Причина завершения: {{reason}}",
+  "session.goal.label": "Цель",
+  "prompt.goal.set": "Задать цель",
+  "prompt.goal.start": "Начать работу над целью",
+  "session.goal.active": "Активна",
+  "session.goal.paused": "Приостановлена",
+  "session.goal.pause": "Пауза",
+  "session.goal.resume": "Возобновить",
+  "session.goal.clear": "Очистить цель",
   "session.costAlert.header": "Оповещение о стоимости сессии",
   "session.costAlert.continue": "Продолжить",
   "session.costAlert.question":
@@ -819,7 +843,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навыки",
 
   "settings.browser.description":
-    "При включении ИИ-агент может взаимодействовать с веб-страницами — переходить по ссылкам, нажимать, вводить текст и делать скриншоты. Откроется окно Chrome, чтобы вы могли наблюдать за работой агента.",
+    "Настройте встроенную автоматизацию браузера на основе Playwright. Kilo может переходить по веб-страницам, взаимодействовать с ними и делать скриншоты в ваших сессиях.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
   "settings.browser.enable.description": "Зарегистрировать сервер Playwright MCP в CLI-бэкенде.",
   "settings.browser.systemChrome.title": "Использовать системный Chrome",
@@ -845,7 +869,17 @@ export const dict = {
   "settings.notifications.enable.title": "Включить звуковые уведомления",
   "settings.notifications.enable.description":
     "Воспроизводить звуки при завершении сеансов, возникновении ошибки или необходимости вашего участия",
+  "settings.notifications.workbench.title": "Включить уведомления VS Code",
+  "settings.notifications.workbench.description":
+    "Показывать уведомления VS Code, когда Kilo завершает задачу или требуется ваше участие",
+  "settings.notifications.os.title": "Включить уведомления операционной системы",
+  "settings.notifications.os.description":
+    "Показывать нативные уведомления операционной системы, когда Kilo завершает задачу или требуется ваше участие, а VS Code неактивен.",
   "settings.notifications.testSound": "Тест",
+  "settings.notifications.testOS": "Тест",
+  "settings.notifications.testOS.testing": "Отправка тестового уведомления…",
+  "settings.notifications.testOS.success": "Тестовое уведомление отправлено.",
+  "settings.notifications.testOS.error": "Не удалось отправить тестовое уведомление",
   "settings.notifications.sound.default": "По умолчанию",
   "settings.notifications.sound.system": "Системный",
   "settings.notifications.sound.description":
@@ -863,12 +897,28 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "Предоставьте общую доску основному сеансу и его подагентам, выполняющим задачи, включая вложенных подагентов. Используйте её для параллельных попыток найти решение или взаимодополняющей работы, а не для каждой задачи.",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",
   "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
   "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Идентификатор модели, отправляемый в ваш собственный эндпоинт транскрипции, например whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Базовый URL речи в текст",
+  "settings.models.speechToTextBaseUrl.description":
+    "Использовать совместимый с OpenAI API транскрипции вместо Kilo Gateway. Модели читаются из /models, аудио отправляется в /audio/transcriptions. Оставьте пустым, чтобы использовать Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Ключ API речи в текст",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-токен, отправляемый на собственный базовый URL транскрипции. Хранится в файле конфигурации Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text. В настоящее время Speech to Text поддерживается только с Kilo Gateway.",
+    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text, либо укажите ниже свой базовый URL транскрипции.",
+  "settings.models.speechToText.remoteDescription":
+    "Голосовой ввод недоступен в удалённых окнах. Откройте Kilo в локальном окне, чтобы использовать микрофон.",
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
@@ -888,6 +938,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.claudeMigration.title": "Миграция Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
   "settings.experimental.taskModelSelection.title": "Выбор модели субагента Task",
@@ -1004,6 +1057,9 @@ export const dict = {
     "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
   "settings.agentBehaviour.instructionFiles.description": "Пути к дополнительным файлам инструкций в системном промпте",
+  "settings.agentBehaviour.pushFixes.title": "Отправлять исправления пул-реквеста",
+  "settings.agentBehaviour.pushFixes.description":
+    "Когда вы отправляете агенту ошибки CI или комментарии ревью из пул-реквеста либо обновляете worktree из базовой ветки, попросить его сделать коммит и push, чтобы пул-реквест обновился. Запросы разрешений по-прежнему действуют. Отключите, чтобы делать коммиты вручную.",
   "settings.agentBehaviour.claudeCompat.heading": "Совместимость с Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Загружать файлы Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1023,6 +1079,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "модель",
   "settings.agentBehaviour.workflows.variant": "вариант",
   "settings.agentBehaviour.workflows.modelDescription": "Глобальное переопределение модели",
+  "settings.experimental.codeMode.title": "Программные вызовы инструментов",
+  "settings.experimental.codeMode.description":
+    "Направляет вызовы инструментов MCP через изолированную среду выполнения JavaScript с обнаружением инструментов по запросу вместо прямого предоставления каждого инструмента MCP. Экономит контекст при подключении множества инструментов MCP.",
   "settings.sandboxing.enabled.title": "Песочница",
   "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
@@ -1076,6 +1135,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, используемая для автоматического и ручного сжатия. Оставьте поле пустым, чтобы использовать модель чата. Стоимость, скорость и качество сводки зависят от модели.",
   "settings.context.compactionModel.useChatModel": "Использовать модель чата",
+  "settings.context.compactionModel.hint": "Чтобы выбрать модель для сжатия, см. настройки Моделей.",
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
@@ -1119,9 +1179,12 @@ export const dict = {
   "settings.display.username.description": "Пользовательское имя в разговорах",
   "settings.display.fontSize.title": "Размер шрифта",
   "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
-  "settings.display.reasoningAutoCollapse.description":
-    "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.reasoningDisplay.title": "Блоки рассуждений",
+  "settings.display.reasoningDisplay.description":
+    "Выберите, как отображаются блоки рассуждений при запуске. Развёрнуты показывает полный текст, Предпросмотр ограничивает его коротким прокручиваемым предпросмотром, а Заголовок показывает только заголовок и индикатор потоковой передачи, пока вы не откроете блок.",
+  "settings.display.reasoningDisplay.expanded": "Развёрнуты",
+  "settings.display.reasoningDisplay.preview": "Предпросмотр",
+  "settings.display.reasoningDisplay.headline": "Заголовок",
   "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",
@@ -1221,6 +1284,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
   "task.backgroundAgents.more": "+{{count}} ещё",
   "task.backgroundAgents.open": "Открыть фонового агента",
+  "task.backgroundAgents.openAll": "Открыть всех фоновых агентов",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
@@ -1233,6 +1297,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Отменено",
   "task.backgroundAgents.status.error": "Ошибка",
   "task.backgroundAgents.untitled": "Фоновый агент",
+  "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",
@@ -1260,6 +1325,18 @@ export const dict = {
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Сохранить локально",
+  "diffViewer.comment.sendToAgent": "Отправить агенту",
+  "diffViewer.comment.postToGithub": "Опубликовать на GitHub",
+  "diffViewer.comment.loadFailed": "Не удалось загрузить изменения запроса на слияние.",
+  "diffViewer.comment.unavailable": "Эта строка недоступна в текущем снимке запроса на слияние.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Открыть PR",
+  "diffViewer.comment.localChanges": "Локальные изменения",
+  "diffViewer.comment.prChanges": "Изменения PR",
+  "diffViewer.comment.sendToKilo": "Отправить в Kilo",
+  "diffViewer.comment.sendToGithub": "Отправить в GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Выбрать назначение",
   "diffViewer.notice.snapshotsDisabled":
     "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
 
@@ -1281,5 +1358,11 @@ export const dict = {
   "chat.search.close": "Закрыть поиск",
   "chat.search.invalidRegex": "Недопустимое регулярное выражение",
   "chat.search.noResults": "Нет результатов",
+  "settings.experimental.browserAutomation.title": "Встроенный браузер",
+  "settings.experimental.browserAutomation.description":
+    "Показывайте предпросмотр локальных приложений в Agent Manager и предоставляйте инструмент browser_open сеансам Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Использовать системный Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
 }

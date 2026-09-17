@@ -209,7 +209,6 @@ data class KiloAppStateDto(
     val downloadPercent: Int? = null,
     val downloadVersion: String? = null,
     val downloadPlatform: String? = null,
-    val warnings: List<ConfigWarningDto> = emptyList(),
     val config: ConfigDto? = null,
     val profile: ProfileDto? = null,
     val migration: LegacyMigrationDetectionDto? = null,

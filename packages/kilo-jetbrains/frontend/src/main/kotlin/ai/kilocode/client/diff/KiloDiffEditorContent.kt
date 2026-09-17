@@ -48,6 +48,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import kotlinx.coroutines.CoroutineScope
@@ -113,7 +114,7 @@ internal class DiffEditorView(
     private val outdated = AtomicBoolean(false)
     private val refreshing = AtomicBoolean(false)
     private val tree = buildFileTree(start)
-    private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.pad())
+    private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.PAD)
     private val splitter = OnePixelSplitter(false, 0.25f)
     private val select = Debouncer<Int>(scope, parent) { show(it) }
     private val banner = EditorNotificationPanel(EditorNotificationPanel.Status.Warning).apply {
@@ -428,10 +429,10 @@ private class Debouncer<T>(
     }
 }
 
+/** Centered on both axes, matching the connecting and failed states rendered into the same slot. */
 @RequiresEdt
-internal fun emptyChangesComponent(): JComponent = JPanel(BorderLayout()).apply {
-    add(com.intellij.ui.components.JBLabel(KiloBundle.message("diff.editor.empty")), BorderLayout.CENTER)
-}
+internal fun emptyChangesComponent(): JComponent =
+    Centerizer(JBLabel(KiloBundle.message("diff.editor.empty")), Centerizer.TYPE.BOTH)
 
 private fun buildFileTree(files: List<DiffFileDto>): Tree {
     val tree = DiffTree(buildFileModel(files)).apply {

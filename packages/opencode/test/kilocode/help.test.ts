@@ -170,6 +170,12 @@ describe("kilo cloud help", () => {
     const names = [...help.matchAll(/^\s*kilo cloud ([a-z][a-z-]*)\b/gm)].map((match) => match[1])
     expect([...new Set(names)].sort()).toEqual(["result", "send", "start", "status"])
   })
+
+  test("documents start prompt stdin", async () => {
+    const output = await generateHelp({ command: "cloud", format: "md", commands })
+    expect(output).toContain("kilo cloud start")
+    expect(output).toContain("--prompt-stdin")
+  })
 })
 
 describe("edge cases", () => {

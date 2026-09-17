@@ -290,6 +290,7 @@ const layer = Layer.effect(
         }
         // kilocode_change end
         yield* settleToolCall(toolCallID)
+        KiloSessionProcessor.malformedToolGuard.reset(ctx.assistantMessage.parentID) // kilocode_change - a completed tool call is progress, so the failure streak ends
       })
 
       const failToolCall = Effect.fn("SessionProcessor.failToolCall")(function* (toolCallID: string, error: unknown) {
@@ -308,13 +309,22 @@ const layer = Layer.effect(
         })
         // kilocode_change start
         if (
-          error instanceof PermissionV1.RejectedError ||
+          (error instanceof PermissionV1.RejectedError && !(yield* session.get(ctx.sessionID)).parentID) ||
           error instanceof Question.RejectedError ||
           error instanceof Suggestion.DismissedError
         ) {
           // kilocode_change end
           ctx.blocked = ctx.shouldBreak
         }
+        // kilocode_change start - abort after repeated malformed tool calls instead of retrying forever (#14143)
+        // The streak lives per user turn because each model step creates a new processor.
+        const stopped = KiloSessionProcessor.malformedToolGuard.inspect(ctx.assistantMessage.parentID, error)
+        if (stopped && !ctx.assistantMessage.error) {
+          ctx.blocked = true
+          ctx.assistantMessage.error = stopped
+          yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error: stopped })
+        }
+        // kilocode_change end
         yield* settleToolCall(toolCallID)
         return true
       })

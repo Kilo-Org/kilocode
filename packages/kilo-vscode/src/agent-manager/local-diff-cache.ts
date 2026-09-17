@@ -69,6 +69,7 @@ export function createDiffCache(load: Loader) {
       meta.additions,
       meta.deletions,
       meta.binary,
+      meta.generatedLike,
       meta.stamp,
     )
 

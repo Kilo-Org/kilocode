@@ -158,6 +158,18 @@ describe("ConfigState", () => {
       expect(s.config.agent?.code?.hidden).toBe(false)
     })
 
+    it("preserves a shared agent board draft across configLoaded pushes", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ shared_agent_board: false })
+      s.updateConfig({ shared_agent_board: true })
+
+      s.handleConfigLoaded({ shared_agent_board: false })
+
+      expect(s.config.shared_agent_board).toBe(true)
+      expect(s.draft.shared_agent_board).toBe(true)
+      expect(s.dirty).toBe(true)
+    })
+
     it("preserves clearing default_agent when the current default is hidden", () => {
       const s = new ConfigState()
       s.handleConfigLoaded({ default_agent: "code", agent: { code: { hidden: false } } })

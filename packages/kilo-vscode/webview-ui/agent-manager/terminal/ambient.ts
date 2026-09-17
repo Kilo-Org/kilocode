@@ -13,13 +13,13 @@
 import { createEffect, createSignal, type Accessor } from "solid-js"
 import type { ScriptTerminalStatus, TerminalStateControls } from "./state"
 import type { TerminalTabStateWithContext } from "./state"
-import type { SidePanelState } from "../AgentManagerApp"
+import { SidePanel } from "../side-panel-layout"
 
 interface AmbientSetupDeps {
   terms: TerminalStateControls
   selection: Accessor<string | null>
-  sidePanel: Accessor<SidePanelState>
-  setSidePanel(panel: null): void
+  sidePanel: Accessor<SidePanel | null>
+  close(): void
 }
 
 export type AmbientDecision = "wait" | "hide" | "keep"
@@ -78,7 +78,7 @@ export function createAmbientSetup(deps: AmbientSetupDeps) {
     const decision = ambientDecision(deps.terms.scriptStatus(ambient.terminalId), deps.selection(), ambient.contextKey)
     if (decision === "wait") return
     setPending(undefined)
-    if (decision === "hide") deps.setSidePanel(null)
+    if (decision === "hide" && deps.sidePanel() === SidePanel.Terminal) deps.close()
   })
 
   return {

@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Tamamlandı (model bildirdi)",
+  "session.goal.blocked": "Engellendi",
+  "session.goal.restart": "Hedefi yeniden başlat",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Pano",
+  "task.swarm.refresh": "Yenile",
+  "task.swarm.reset": "Panoyu sıfırla",
+  "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
+  "task.swarm.resetDescription":
+    "Görünür mesajlar temizlensin mi? Konuşmalar ve çalışan görevler değişmez. Ajanlar yeni mesajlar gönderebilir.",
+  "task.swarm.loading": "Pano yükleniyor...",
+  "task.swarm.failed": "Pano yüklenemedi veya sıfırlanamadı. Yenilemeyi deneyin.",
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -190,6 +201,7 @@ export const dict = {
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
   "prompt.action.enhance": "Komutu geliştir",
+  "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.action.indexing": "İndeksleme ayarları",
   "prompt.action.autoApprove.enable": "Otomatik onayı etkinleştir",
   "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
@@ -216,7 +228,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Dosya sistemi yazma işlemlerini kısıtlamak için tıklayın. Sandbox ayarlarınız ağ erişimine izin vermeye devam ediyor.",
 
-  "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
+  "speechToText.tooltip.start": "Sesli girişi başlatın",
   "speechToText.tooltip.shortcut":
     "Kaydı başlatmak veya durdurmak için dokunun ya da Cmd/Ctrl+K tuşlarına basın; konuşurken basılı tutun, ardından metne dönüştürüp göndermek için bırakın.",
   "speechToText.tooltip.starting": "Mikrofon başlatılıyor... Henüz konuşmayın.",
@@ -259,6 +271,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation":
     "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.reject": "Reddet",
+  "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
+  "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
   "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
   "ui.permission.rule.addToAllowed": "İzin listesine ekle",
@@ -308,7 +323,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Yeni Görev",
   "sidebar.topBar.history": "Geçmiş",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Ayarlar",
@@ -407,6 +421,7 @@ export const dict = {
   "settings.providers.tag.other": "Diğer",
   "settings.providers.connected.environmentDescription": "Ortam değişkenlerinizden bağlandı",
   "settings.providers.action.signInChatGPT": "ChatGPT ile oturum aç",
+  "settings.providers.action.changeApiKey": "API anahtarını değiştir",
   "settings.providers.custom.description": "Temel URL üzerinden özel bir sağlayıcı ekleyin.",
 
   "provider.custom.title": "Özel sağlayıcı",
@@ -617,6 +632,7 @@ export const dict = {
   "profile.usage.source.direct": "Doğrudan",
   "profile.usage.state.stale": "Son güncellenen kullanım verileri gösteriliyor.",
   "profile.usage.state.unavailable": "Kullanım verileri kullanılamıyor.",
+  "profile.usage.state.empty": "Herhangi bir kullanım sınırı bildirilmedi.",
   "profile.usage.plan.pastDue": "Plan: Ödeme gecikmiş",
   "profile.usage.plan.canceling": "Plan: Dönem sonunda iptal edilecek",
   "profile.usage.plan.unknown": "Plan: Durum bilinmiyor",
@@ -738,6 +754,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",
+  "session.goal.label": "Hedef",
+  "prompt.goal.set": "Hedef belirle",
+  "prompt.goal.start": "Hedefi başlat",
+  "session.goal.active": "Etkin",
+  "session.goal.paused": "Duraklatıldı",
+  "session.goal.pause": "Duraklat",
+  "session.goal.resume": "Sürdür",
+  "session.goal.clear": "Hedefi temizle",
   "session.costAlert.header": "Oturum Maliyeti Uyarısı",
   "session.costAlert.continue": "Devam et",
   "session.costAlert.question":
@@ -809,7 +833,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Beceriler",
 
   "settings.browser.description":
-    "Etkinleştirildiğinde, yapay zeka ajanı web sayfalarıyla etkileşime girebilir — gezinme, tıklama, yazma ve ekran görüntüsü alma. Ajanın çalışmasını izleyebilmeniz için bir Chrome penceresi açılacak.",
+    "Playwright ile çalışan yerleşik tarayıcı otomasyonunu yapılandırın. Kilo, oturumlarınızda web sayfalarında gezinebilir, bunlarla etkileşime girebilir ve ekran görüntüsü alabilir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
   "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
@@ -837,7 +861,17 @@ export const dict = {
   "settings.notifications.enable.title": "Sesli bildirimleri etkinleştir",
   "settings.notifications.enable.description":
     "Oturumlar tamamlandığında, bir hatayla karşılaşıldığında veya sizden giriş beklendiğinde ses çal",
+  "settings.notifications.workbench.title": "VS Code bildirimlerini etkinleştir",
+  "settings.notifications.workbench.description":
+    "Kilo bir görevi tamamladığında veya sizden giriş beklendiğinde VS Code bildirimlerini göster",
+  "settings.notifications.os.title": "İşletim sistemi bildirimlerini etkinleştir",
+  "settings.notifications.os.description":
+    "VS Code etkin değilken Kilo bir görevi tamamladığında veya sizden giriş beklendiğinde yerel işletim sistemi bildirim uyarılarını göster.",
   "settings.notifications.testSound": "Test et",
+  "settings.notifications.testOS": "Test et",
+  "settings.notifications.testOS.testing": "Test bildirimi gönderiliyor…",
+  "settings.notifications.testOS.success": "Test bildirimi gönderildi.",
+  "settings.notifications.testOS.error": "Test bildirimi gönderilemedi",
   "settings.notifications.sound.default": "Varsayılan",
   "settings.notifications.sound.system": "Sistem",
   "settings.notifications.sound.description":
@@ -856,12 +890,28 @@ export const dict = {
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
   "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
   "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "Bir ana oturum ile görevlerini yürüten alt ajanları arasında, iç içe geçmiş alt ajanlar da dahil olmak üzere bir pano paylaşın. Her görev için değil, paralel çözüm denemeleri veya birbirini tamamlayan çalışmalar için kullanın.",
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",
   "settings.experimental.imageGenerationModel.description": "Görüntü oluşturma modeli",
   "settings.experimental.imageGenerationModel.placeholder": "Varsayılan (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Kendi transkripsiyon uç noktanıza gönderilen model kimliği, örneğin whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Sesten metne temel URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Kilo Gateway yerine OpenAI uyumlu bir transkripsiyon API'si kullanın. Modeller /models adresinden okunur, ses /audio/transcriptions adresine gönderilir. Kilo Gateway kullanmak için boş bırakın.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Sesten metne API anahtarı",
+  "settings.models.speechToTextApiKey.description":
+    "Kendi transkripsiyon temel URL'nize gönderilen bearer belirteci. Kilo yapılandırma dosyanızda saklanır.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
+    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın ya da aşağıda kendi transkripsiyon temel URL'nizi ayarlayın.",
+  "settings.models.speechToText.remoteDescription":
+    "Sesli giriş uzak pencerelerde kullanılamaz. Mikrofonu kullanmak için Kilo'yu yerel bir pencerede açın.",
   "settings.models.speechToTextModel.title": "Sesten metne modeli",
   "settings.models.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.nativeNotebookTools.title": "Yerel Not Defteri Araçları",
@@ -881,6 +931,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
+  "settings.experimental.claudeMigration.description":
+    "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
   "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
@@ -897,6 +950,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Pasif",
   "settings.experimental.remote.hint": "Geçiş yapmak için sohbette /remote kullanın",
   "settings.experimental.toolToggles": "Araç Açma/Kapatma",
+  "settings.experimental.codeMode.title": "Programatik Araç Çağrıları",
+  "settings.experimental.codeMode.description":
+    "MCP araç çağrılarını, her MCP aracını doğrudan sunmak yerine isteğe bağlı araç keşfiyle sınırlandırılmış bir JavaScript çalışma zamanı üzerinden yönlendirir. Çok sayıda MCP aracı bağlıyken bağlam tasarrufu sağlar.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Agent shell komutlarını, proje ve Kilo durum dizinlerine yazmaları kısıtlanan işletim sistemi düzeyinde bir sandbox içinde çalıştırın",
@@ -951,6 +1007,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",
+  "settings.agentBehaviour.pushFixes.title": "Çekme isteği düzeltmelerini push'la",
+  "settings.agentBehaviour.pushFixes.description":
+    "Bir çekme isteğinin CI hatalarını veya inceleme yorumlarını ajana gönderdiğinizde ya da bir worktree'yi tabanından güncellediğinizde, çekme isteğinin güncellenmesi için ajandan commit ve push yapmasını isteyin. İzin istemleri geçerli kalır. Commit'leri elle yapmak için kapatın.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1036,6 +1095,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Otomatik ve manuel sıkıştırma için kullanılan model. Sohbet modelini kullanmak için boş bırakın. Maliyet, hız ve özet kalitesi modele bağlıdır.",
   "settings.context.compactionModel.useChatModel": "Sohbet modelini kullan",
+  "settings.context.compactionModel.hint": "Sıkıştırma için kullanılacak modeli seçmek için Modeller ayarlarına bakın.",
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
@@ -1080,9 +1140,12 @@ export const dict = {
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
   "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
-  "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
-  "settings.display.reasoningAutoCollapse.description":
-    "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
+  "settings.display.reasoningDisplay.title": "Akıl Yürütme Blokları",
+  "settings.display.reasoningDisplay.description":
+    "Akıl yürütme bloklarının nasıl başlayacağını seçin. Genişletilmiş tam metni gösterir, Önizleme kısa ve kaydırılabilir bir önizlemeyle sınırlar, Başlık ise siz açana kadar yalnızca başlığı ve akış göstergesini gösterir.",
+  "settings.display.reasoningDisplay.expanded": "Genişletilmiş",
+  "settings.display.reasoningDisplay.preview": "Önizleme",
+  "settings.display.reasoningDisplay.headline": "Başlık",
   "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
   "settings.display.shiftTabCycle.description":
     "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
@@ -1194,6 +1257,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
   "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
+  "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
@@ -1206,6 +1270,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "İptal edildi",
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
+  "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
@@ -1276,6 +1341,18 @@ export const dict = {
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Yerel olarak kaydet",
+  "diffViewer.comment.sendToAgent": "Ajana gönder",
+  "diffViewer.comment.postToGithub": "GitHub'da paylaş",
+  "diffViewer.comment.loadFailed": "Çekme isteğindeki değişiklikler yüklenemedi.",
+  "diffViewer.comment.unavailable": "Bu satır, çekme isteğinin mevcut anlık görüntüsünde bulunmuyor.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull request'i aç",
+  "diffViewer.comment.localChanges": "Yerel değişiklikler",
+  "diffViewer.comment.prChanges": "PR değişiklikleri",
+  "diffViewer.comment.sendToKilo": "Kilo'ya gönder",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}} hedefine gönder",
+  "diffViewer.comment.chooseDestination": "Hedef seç",
   "diffViewer.notice.snapshotsDisabled":
     "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
 
@@ -1297,5 +1374,11 @@ export const dict = {
   "chat.search.close": "Aramayı kapat",
   "chat.search.invalidRegex": "Geçersiz normal ifade",
   "chat.search.noResults": "Sonuç yok",
+  "settings.experimental.browserAutomation.title": "Entegre Tarayıcı",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager'da yerel uygulama önizlemelerini gösterin ve browser_open aracını Agent Manager oturumlarına sunun.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu Kullan",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
 }

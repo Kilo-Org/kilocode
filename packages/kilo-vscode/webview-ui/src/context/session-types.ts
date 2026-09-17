@@ -18,11 +18,13 @@ import type {
   SessionStatus,
   SessionStatusInfo,
   SkillInfo,
+  SendMessageRequest,
   SuggestionRequest,
   TodoItem,
   ToolPart,
 } from "../types/messages"
 import type { Activity } from "../utils/session-activity"
+import type { Timing } from "./session-timing"
 import type { MessageMutation } from "./session-utils"
 
 export interface SessionContextValue {
@@ -39,7 +41,7 @@ export interface SessionContextValue {
   statusInfo: Accessor<SessionStatusInfo>
   closeReason: Accessor<SessionCloseReason | undefined>
   statusText: Accessor<string | undefined>
-  busySince: Accessor<number | undefined>
+  busyTiming: Accessor<Timing | undefined>
   submitting: Accessor<boolean>
   canResume: Accessor<boolean>
   resume: () => void
@@ -68,6 +70,7 @@ export interface SessionContextValue {
   allStatusMap: () => Record<string, SessionStatusInfo>
 
   activityFor: (sessionID: string | undefined) => Activity
+  acknowledge: (sessionID: string) => void
   inUseFor: (sessionID: string) => boolean
 
   // Parts for a specific message
@@ -109,6 +112,10 @@ export interface SessionContextValue {
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
+  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
+  preferencesReady: Accessor<boolean>
+  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
+  trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
@@ -133,6 +140,7 @@ export interface SessionContextValue {
   disconnectMcp: (name: string) => void
   authenticateMcp: (name: string) => void
   selectedAgent: (sessionID?: string) => string
+  submission: (sessionID?: string) => { model?: ModelSelection; variant?: string; agent?: string }
   selectAgent: (name: string, sessionID?: string) => void
   getSessionAgent: (sessionID: string) => string
   setSessionModel: (sessionID: string, providerID: string, modelID: string) => void
@@ -143,6 +151,7 @@ export interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
+  variantPreference: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
@@ -163,6 +172,7 @@ export interface SessionContextValue {
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
   deleteQueuedMessage: (sessionID: string, messageID: string) => Promise<boolean>
+  submit: (input: SendMessageRequest) => void
   sendMessage: (
     text: string,
     providerID?: string,
@@ -173,7 +183,7 @@ export interface SessionContextValue {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
-  ) => void
+  ) => boolean
   sendCommand: (
     command: string,
     args: string,
@@ -183,8 +193,8 @@ export interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
-    overrides?: { agent?: string; model?: string; variant?: string },
-  ) => void
+    overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+  ) => boolean
   abort: () => void
   compact: () => void
   respondToPermission: (
@@ -192,7 +202,8 @@ export interface SessionContextValue {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
-  ) => void
+    feedback?: string,
+  ) => boolean
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
   closeQuestion: (requestID: string) => void
@@ -202,7 +213,9 @@ export interface SessionContextValue {
   clearCurrentSession: () => void
   loadSessions: () => void
   loadOlderMessages: () => boolean
-  selectSession: (id: string, options?: { focus?: boolean }) => void
+  selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
+  scrollBottomID: Accessor<string | undefined>
+  consumeScrollBottom: (id: string) => boolean
   releaseSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
