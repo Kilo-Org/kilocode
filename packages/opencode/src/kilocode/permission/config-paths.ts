@@ -209,7 +209,7 @@ export namespace ConfigProtection {
   }
 
   /** Structural shape shared by config-gated permission requests. */
-  type Target = { permission: string; patterns: readonly string[]; metadata?: Record<string, any> }
+  export type Target = { permission: string; patterns: readonly string[]; metadata?: Record<string, any> }
 
   /** Collect every path string a permission request may write to. */
   function targets(request: Target): string[] {
@@ -302,15 +302,72 @@ export namespace ConfigProtection {
   }
 
   /**
+   * Immutable per-request target classification, computed once and reused for both the config-load
+   * gate and the policy verdict within one permission operation. `skill` is resolved lazily and
+   * memoized so a request only walks the global skill roots when the gate or an external verdict
+   * actually reads it. The result must not outlive the operation: files and symlinks can change
+   * between ask and reply, so each later operation classifies again.
+   */
+  export type Classification = {
+    /** The request targets at least one config-shaped path, ignoring policy. */
+    readonly candidate: boolean
+    /** Some protected target is global or outside the project boundary. */
+    readonly external: boolean
+    /** Some protected target is proven inside the project boundary. */
+    readonly inside: boolean
+    /** Exact global skill subtree that may bypass protection, resolved on first read. */
+    readonly skill?: string
+  }
+
+  /**
+   * Classify every target path of one request against the project boundary. This is the single
+   * filesystem-resolution pass: the returned scopes drive `candidate`, `external`, and `inside`,
+   * and the lazy skill probe is memoized. Prefer this plus `verdict` over `evaluate` when the same
+   * request is both gated (does policy loading apply?) and evaluated.
+   */
+  export function classify(request: Target, root: string): Classification {
+    const scopes = targets(request).map((target) => level(target, root))
+    const candidate = scopes.some((scope) => scope !== "none")
+    const external = scopes.some((scope) => scope === "global" || scope === "outside")
+    const inside = scopes.some((scope) => scope === "inside")
+    let skill: string | undefined
+    let resolved = false
+    return {
+      candidate,
+      external,
+      inside,
+      get skill() {
+        if (!resolved) {
+          skill = globalSkillPattern(request)
+          resolved = true
+        }
+        return skill
+      },
+    }
+  }
+
+  /** Apply the global and project protection policies to one already-classified request. */
+  export function verdict(classification: Classification, input: { global?: Config; project?: Config } = {}): Verdict {
+    if (!classification.candidate) return { candidate: false, protect: false, external: false }
+    const protect =
+      (classification.external && enabled(input.global)) || (classification.inside && enabled(input.project))
+    return {
+      candidate: true,
+      protect,
+      external: classification.external,
+      skill: classification.external ? classification.skill : undefined,
+    }
+  }
+
+  /**
    * Determine if a permission request targets config files at all, ignoring policy.
    * Gates `edit` permissions and bash-originated `external_directory` requests.
    * File-tool reads are not restricted. When `root` is provided, relative targets are resolved
    * against the project boundary so paths into global config dirs are still detected.
    */
   export function isRequest(request: Target, root?: string): boolean {
-    const paths = targets(request)
-    if (root) return paths.some((target) => level(target, root) !== "none")
-    return paths.some(configLike)
+    if (root) return classify(request, root).candidate
+    return targets(request).some(configLike)
   }
 
   /**
@@ -322,12 +379,6 @@ export namespace ConfigProtection {
    * so a project opt-out can never bypass protection for an out-of-project target.
    */
   export function evaluate(request: Target, input: { root: string; global?: Config; project?: Config }): Verdict {
-    const scopes = targets(request).map((target) => level(target, input.root))
-    const candidate = scopes.some((scope) => scope !== "none")
-    if (!candidate) return { candidate: false, protect: false, external: false }
-    const external = scopes.some((scope) => scope === "global" || scope === "outside")
-    const inside = scopes.some((scope) => scope === "inside")
-    const protect = (external && enabled(input.global)) || (inside && enabled(input.project))
-    return { candidate, protect, external, skill: external ? globalSkillPattern(request) : undefined }
+    return verdict(classify(request, input.root), input)
   }
 }

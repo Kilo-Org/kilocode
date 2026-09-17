@@ -191,6 +191,7 @@ export interface Interface {
   ) => Effect.Effect<{ info: Info; changed: boolean }>
   // kilocode_change end
   readonly invalidate: () => Effect.Effect<void>
+  readonly invalidateInstance: () => Effect.Effect<void> // kilocode_change - instance-only invalidation for project config freshness
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
   readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
@@ -1111,6 +1112,14 @@ const layer = Layer.effect(
       yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void)) // kilocode_change
     })
 
+    // kilocode_change start - invalidate only this instance's cached config, preserving the cached
+    // global config. Used when only project-owned config sources changed (project digest) so the
+    // warm global object is not dropped; real global edits still propagate via refreshGlobal.
+    const invalidateInstance = Effect.fn("Config.invalidateInstance")(function* () {
+      yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
+    })
+    // kilocode_change end
+
     // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes
     const updateGlobal = Effect.fn("Config.updateGlobal")(function* (config: Info, options?: { dispose?: boolean }) {
       const dispose = options?.dispose ?? true
@@ -1208,6 +1217,7 @@ const layer = Layer.effect(
       update,
       updateGlobal,
       invalidate,
+      invalidateInstance, // kilocode_change
       directories,
       waitForDependencies,
       warnings, // kilocode_change
