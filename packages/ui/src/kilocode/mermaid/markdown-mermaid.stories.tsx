@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Markdown } from "../components/markdown"
+import { Markdown } from "../../components/markdown"
 
 const text = `Diagram:
 
