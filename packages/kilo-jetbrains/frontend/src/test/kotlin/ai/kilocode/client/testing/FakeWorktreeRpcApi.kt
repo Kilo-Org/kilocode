@@ -6,8 +6,6 @@ import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.MoveProgressDto
-import ai.kilocode.rpc.dto.OrphanRemoveResultDto
-import ai.kilocode.rpc.dto.RemoveOrphansResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -16,6 +14,8 @@ import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import java.util.concurrent.ConcurrentHashMap
@@ -27,8 +27,8 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val listed = CopyOnWriteArrayList<WorktreeDto>()
-    /** Orphan directories [list] reports, alongside [listed]. See [ai.kilocode.rpc.dto.OrphanDto]. */
-    var orphans: List<ai.kilocode.rpc.dto.OrphanDto> = emptyList()
+    /** Orphan directories [list] reports, alongside [listed]. See [ai.kilocode.rpc.dto.orphans.OrphanDto]. */
+    var orphans: List<ai.kilocode.rpc.dto.orphans.OrphanDto> = emptyList()
     val branchesList = CopyOnWriteArrayList<String>()
     var statsResult = WorktreeStatsListDto()
     var dirtyResult = WorktreeDirtyListDto()

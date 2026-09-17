@@ -70,8 +70,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/OrphanNotice.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
@@ -249,7 +249,7 @@ describe("Agent Manager leftover worktree folders", () => {
   })
 
   it("offers the cleanup as an ordinary action button, not a ghost affordance", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanNotice.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"), "utf-8")
     expect(source).toContain('<Button variant="primary" size="small" onClick={props.onResolve}>')
   })
 
@@ -259,7 +259,7 @@ describe("Agent Manager leftover worktree folders", () => {
   })
 
   it("explains the list in the dialog header before offering a bulk delete", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
     expect(source).toMatch(/description=\{<OrphanHelp\b/)
     for (const key of ["helpIntro", "helpCheckout", "helpCauses", "helpDelete", "helpMore", "helpLess"]) {
       expect(source, `header explanation covers ${key}`).toContain(`agentManager.orphans.${key}`)
@@ -267,7 +267,7 @@ describe("Agent Manager leftover worktree folders", () => {
   })
 
   it("collapses the bullet detail behind a toggle, keeping the intro sentence always visible", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
     const helpIntro = source.indexOf("agentManager.orphans.helpIntro")
     const showGate = source.indexOf("<Show when={props.expanded}>")
     const toggle = source.indexOf('class="am-orphan-help-toggle"')
@@ -321,7 +321,7 @@ describe("Agent Manager leftover worktree folders", () => {
   })
 
   it("uses the shared check glyph for selection instead of a bespoke one", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
     expect(source).toContain('icon={<Icon name="check-small" size="small" />}')
     expect(source).toContain('icon={<Icon name={someChecked() ? "dash" : "check-small"} size="small" />}')
   })

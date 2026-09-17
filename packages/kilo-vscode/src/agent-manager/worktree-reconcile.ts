@@ -42,7 +42,7 @@ export type OrphanDirectory = {
   path: string
   /** `broken` still has a `.git` file; `leftover` is a bare directory, e.g. only `.kilo-dev/`. */
   kind: "broken" | "leftover"
-  /** Apparent size in bytes, filled in asynchronously by orphan-sizing.ts. Absent until it lands. */
+  /** Apparent size in bytes, filled in asynchronously by orphans/sizing.ts. Absent until it lands. */
   bytes?: number
   /**
    * True once a size pass has finished with this directory, whether or not it produced a number.

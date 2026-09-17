@@ -8,7 +8,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.MoveStage
-import ai.kilocode.rpc.dto.OrphanDto
+import ai.kilocode.rpc.dto.orphans.OrphanDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDto
@@ -105,8 +105,9 @@ class WorktreeController(
 
     /**
      * Directories under `.kilo/worktrees/` that git does not track, from the most recent [reload].
-     * [OrphanBanner] reads this on the EDT after [onReload] fires — never polled independently, so
-     * the banner and the worktree list always agree on which paths are orphans.
+     * [ai.kilocode.client.agentManager.orphans.OrphanBanner] reads this on the EDT after [onReload]
+     * fires — never polled independently, so the banner and the worktree list always agree on which
+     * paths are orphans.
      */
     @Volatile
     var orphans: List<OrphanDto> = emptyList()

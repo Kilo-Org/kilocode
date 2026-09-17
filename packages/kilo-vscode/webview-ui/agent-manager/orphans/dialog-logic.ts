@@ -2,7 +2,7 @@
  * Pure selection/footer math for the leftover-worktree-folders dialog, kept out of `OrphanDialog.tsx`
  * so it is testable without a Solid render pass.
  */
-import type { OrphanDirectory } from "./project/store"
+import type { OrphanDirectory } from "../project/store"
 
 /** Selection defaults to every `leftover` row checked; `broken` rows start unchecked and flagged. */
 export function defaultOrphanSelection(orphans: OrphanDirectory[]): Set<string> {

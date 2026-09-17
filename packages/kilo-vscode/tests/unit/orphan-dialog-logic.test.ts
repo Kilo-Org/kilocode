@@ -14,7 +14,7 @@ import {
   orphanSizesSettled,
   orphanTotalBytes,
   revealPlatform,
-} from "../../webview-ui/agent-manager/orphan-dialog-logic"
+} from "../../webview-ui/agent-manager/orphans/dialog-logic"
 import type { OrphanDirectory } from "../../webview-ui/agent-manager/project/store"
 
 describe("defaultOrphanSelection", () => {

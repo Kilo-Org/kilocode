@@ -13,9 +13,9 @@
 import { Component, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { useLanguage } from "../src/context/language"
-import { formatOrphanBytes, orphanSizesSettled, orphanTotalBytes } from "./orphan-dialog-logic"
-import type { OrphanDirectory } from "./project/store"
+import { useLanguage } from "../../src/context/language"
+import { formatOrphanBytes, orphanSizesSettled, orphanTotalBytes } from "./dialog-logic"
+import type { OrphanDirectory } from "../project/store"
 
 export const OrphanNotice: Component<{
   orphans: OrphanDirectory[]

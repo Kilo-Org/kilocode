@@ -19,10 +19,10 @@ import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
-import ai.kilocode.rpc.dto.OrphanKind
-import ai.kilocode.rpc.dto.OrphanRemoveResultDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine

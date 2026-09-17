@@ -24,7 +24,7 @@ import { WorktreeManager } from "../WorktreeManager"
 import { SetupScriptService } from "../SetupScriptService"
 import type { GitOps } from "../GitOps"
 import type { WorktreeHealthReport } from "../worktree-reconcile"
-import { disposeOrphanSizes } from "../orphan-sizing"
+import { disposeOrphanSizes } from "../orphans/sizing"
 import type { ProjectSessionView } from "./session-view"
 
 export interface ProjectContextDeps {

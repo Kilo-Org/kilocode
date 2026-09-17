@@ -1,13 +1,15 @@
-package ai.kilocode.client.agentManager.worktree
+package ai.kilocode.client.agentManager.orphans
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
-import ai.kilocode.rpc.dto.OrphanDto
-import ai.kilocode.rpc.dto.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService

@@ -8,7 +8,7 @@ import {
   pauseOrphanSizes,
   resumeOrphanSizes,
   trackOrphanSizes,
-} from "../../src/agent-manager/orphan-sizing"
+} from "../../src/agent-manager/orphans/sizing"
 import type { OrphanDirectory, WorktreeHealthReport } from "../../src/agent-manager/worktree-reconcile"
 
 const tempDirs: string[] = []

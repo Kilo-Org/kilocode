@@ -1,8 +1,8 @@
-package ai.kilocode.client.agentManager.worktree
+package ai.kilocode.client.agentManager.orphans
 
 import ai.kilocode.client.util.edtWait
-import ai.kilocode.rpc.dto.OrphanDto
-import ai.kilocode.rpc.dto.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.InlineBanner

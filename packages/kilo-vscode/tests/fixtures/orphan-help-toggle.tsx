@@ -3,7 +3,7 @@ import { createSignal } from "solid-js"
 import { harness } from "./comment-harness"
 
 const { node, mount, wait } = await harness<{ type: string }>()
-const { OrphanHelp } = await import("../../webview-ui/agent-manager/OrphanDialog")
+const { OrphanHelp } = await import("../../webview-ui/agent-manager/orphans/OrphanDialog")
 const [expanded, setExpanded] = createSignal(false)
 const release = mount(() => <OrphanHelp expanded={expanded()} onToggle={() => setExpanded((prev) => !prev)} />)
 try {

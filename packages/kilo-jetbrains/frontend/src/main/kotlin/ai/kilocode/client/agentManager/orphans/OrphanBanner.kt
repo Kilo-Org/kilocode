@@ -1,9 +1,11 @@
-package ai.kilocode.client.agentManager.worktree
+package ai.kilocode.client.agentManager.orphans
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.util.edt
-import ai.kilocode.rpc.dto.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
@@ -19,10 +21,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Warning banner for leftover worktree folders (see [ai.kilocode.rpc.dto.OrphanDto]), modelled on
- * [GhBanner]'s warning treatment. Count comes from [WorktreeController.orphans] — the same [reload]
- * that fills the worktree list — so the banner and the list can never disagree about which paths are
- * orphans. Sizes are requested lazily off the EDT and cached until the orphan path set changes.
+ * Warning banner for leftover worktree folders (see [ai.kilocode.rpc.dto.orphans.OrphanDto]), modelled
+ * on [ai.kilocode.client.agentManager.worktree.GhBanner]'s warning treatment. Count comes from
+ * [WorktreeController.orphans] — the same `reload` that fills the worktree list — so the banner and
+ * the list can never disagree about which paths are orphans. Sizes are requested lazily off the EDT
+ * and cached until the orphan path set changes.
  */
 internal class OrphanBanner(
     private val project: Project,

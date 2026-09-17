@@ -1,9 +1,10 @@
-package ai.kilocode.client.agentManager.worktree
+package ai.kilocode.client.agentManager.orphans
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.rpc.dto.OrphanDto
-import ai.kilocode.rpc.dto.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
 import com.intellij.icons.AllIcons
 import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.components.service
@@ -51,8 +52,9 @@ private const val HEIGHT = 360
  * apparent size, open one in the host OS's file manager, and confirm a background delete.
  *
  * The dialog performs no deletion itself — it records [result] and closes; the caller ([OrphanBanner])
- * runs the removal in the background so the modal never blocks on it, matching [NewWorktreeDialog]'s
- * split between "what the user confirmed" and "what happens next".
+ * runs the removal in the background so the modal never blocks on it, matching
+ * [ai.kilocode.client.agentManager.worktree.NewWorktreeDialog]'s split between "what the user
+ * confirmed" and "what happens next".
  */
 internal class OrphanDialog(
     parent: Component,

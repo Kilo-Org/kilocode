@@ -12,9 +12,9 @@
  * No vscode imports.
  */
 
-import { sizes } from "./orphan-size"
-import type { ProjectContext } from "./project/context"
-import type { OrphanDirectory } from "./worktree-reconcile"
+import { sizes } from "./size"
+import type { ProjectContext } from "../project/context"
+import type { OrphanDirectory } from "../worktree-reconcile"
 
 type Tracker = {
   abort: AbortController | undefined

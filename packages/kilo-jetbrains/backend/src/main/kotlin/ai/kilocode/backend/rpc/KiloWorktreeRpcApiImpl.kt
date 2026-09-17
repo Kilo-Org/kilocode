@@ -25,10 +25,6 @@ import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.MoveStage
-import ai.kilocode.rpc.dto.OrphanDto
-import ai.kilocode.rpc.dto.OrphanKind
-import ai.kilocode.rpc.dto.OrphanRemoveResultDto
-import ai.kilocode.rpc.dto.RemoveOrphansResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -40,6 +36,10 @@ import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.OrphanDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import ai.kilocode.jetbrains.api.model.KilocodeRemoveSnapshotRequest
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
@@ -64,10 +64,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -931,65 +929,12 @@ class KiloWorktreeRpcApiImpl(
     }
 
     /**
-     * Cancellation here has to be cooperative. The caller cancels this pass whenever the orphan set
-     * changes or a delete starts, but [Files.walkFileTree] is blocking and cannot be interrupted, so a
-     * cancelled coroutine on [Dispatchers.IO] would otherwise keep walking every remaining path. The
-     * loop re-checks between paths and the walk itself is handed an `isActive` probe.
+     * Delegates to [ai.kilocode.backend.worktree.orphans.orphanSizes] — a pure filesystem walk with no
+     * dependency on this class's worktree machinery, extracted so it can be read and tested on its own.
+     * [directory] is unused: sizing has never needed the repository root, only the paths themselves.
      */
     override suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> =
-        withContext(Dispatchers.IO) {
-            val result = mutableMapOf<String, Long>()
-            for (raw in paths) {
-                ensureActive()
-                val path = Path.of(raw).normalize()
-                // A directory that is gone (already removed, mid-delete elsewhere) is a failure to
-                // measure, not a size of zero — omitted the same as a walk that throws below.
-                if (!Files.isDirectory(path)) {
-                    LOG.info("worktree orphan size skipped: path=$raw reason=missing")
-                    continue
-                }
-                val size = runCatching { walkSize(path) { isActive } }.getOrElse { err ->
-                    LOG.info("worktree orphan size skipped: path=$raw message=${err.message}")
-                    null
-                } ?: continue
-                result[raw] = size
-            }
-            result
-        }
-
-    /**
-     * Apparent size of [root]: sum of regular-file sizes, never following symlinks.
-     *
-     * Answers null once [active] goes false, so a walk that stopped early contributes nothing rather
-     * than a partial sum that would be indistinguishable from a real measurement.
-     */
-    private fun walkSize(root: Path, active: () -> Boolean): Long? {
-        if (!Files.isDirectory(root)) return 0
-        var total = 0L
-        var stopped = false
-        Files.walkFileTree(
-            root,
-            object : SimpleFileVisitor<Path>() {
-                override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult = step()
-
-                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    val next = step()
-                    if (next == FileVisitResult.TERMINATE) return next
-                    if (!attrs.isSymbolicLink) total += attrs.size()
-                    return next
-                }
-
-                override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult = FileVisitResult.CONTINUE
-
-                private fun step(): FileVisitResult {
-                    if (active()) return FileVisitResult.CONTINUE
-                    stopped = true
-                    return FileVisitResult.TERMINATE
-                }
-            },
-        )
-        return if (stopped) null else total
-    }
+        ai.kilocode.backend.worktree.orphans.orphanSizes(paths)
 
     /** One orphan path submitted to [removeOrphans], resolved and guard-checked. */
     private data class OrphanTarget(val raw: String, val path: Path, val error: String?)

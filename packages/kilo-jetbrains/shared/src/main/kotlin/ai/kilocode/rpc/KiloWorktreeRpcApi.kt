@@ -5,7 +5,6 @@ import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.MoveProgressDto
-import ai.kilocode.rpc.dto.RemoveOrphansResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -13,6 +12,7 @@ import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
@@ -135,7 +135,7 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
 
     /**
      * Removes every one of [paths] — directories under `.kilo/worktrees/` that git does not track
-     * (see [ai.kilocode.rpc.dto.OrphanDto]) — from [directory]'s repository. Each path is
+     * (see [ai.kilocode.rpc.dto.orphans.OrphanDto]) — from [directory]'s repository. Each path is
      * re-validated against a fresh scan immediately before it is touched and reported independently,
      * so a stale selection or a path that is no longer an orphan is skipped rather than deleted.
      * Deletion is a stage-rename followed by a background recursive delete, the same primitive

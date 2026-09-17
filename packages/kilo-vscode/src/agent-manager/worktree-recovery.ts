@@ -9,7 +9,7 @@
  * - clean: delete directories under `.kilo/worktrees/` that no worktree claims
  */
 
-import { pauseOrphanSizes, resumeOrphanSizes } from "./orphan-sizing"
+import { pauseOrphanSizes, resumeOrphanSizes } from "./orphans/sizing"
 import type { ProjectContext } from "./project/context"
 import type { WorktreeHealthReport } from "./worktree-reconcile"
 

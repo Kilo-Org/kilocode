@@ -9,8 +9,6 @@ import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.MoveProgressDto
-import ai.kilocode.rpc.dto.OrphanRemoveResultDto
-import ai.kilocode.rpc.dto.RemoveOrphansResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -18,6 +16,8 @@ import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException

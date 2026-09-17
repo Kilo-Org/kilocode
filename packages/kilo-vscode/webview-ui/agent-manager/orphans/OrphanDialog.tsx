@@ -12,15 +12,15 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
-import { useLanguage } from "../src/context/language"
+import { useLanguage } from "../../src/context/language"
 import {
   defaultOrphanSelection,
   formatOrphanBytes,
   orphanSelectionStats,
   revealPlatform,
   type OrphanSelectionStats,
-} from "./orphan-dialog-logic"
-import type { OrphanDirectory } from "./project/store"
+} from "./dialog-logic"
+import type { OrphanDirectory } from "../project/store"
 
 const REVEAL_KEYS = {
   mac: "agentManager.orphans.revealMac",
