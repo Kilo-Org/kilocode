@@ -3,6 +3,7 @@ import { Effect, Schema } from "effect"
 import { randomUUID } from "node:crypto"
 import { Database } from "@opencode-ai/core/database/database"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import * as Log from "@opencode-ai/core/util/log"
 import { SessionID } from "@/session/schema"
 
 type DB = Database.Interface["db"]
@@ -52,6 +53,7 @@ const ALL = "ALL"
 const TRUNCATED = "[truncated]"
 const WHITESPACE =
   "\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+const log = Log.create({ service: "board.store" })
 
 export namespace BoardStore {
   export const Kind = Schema.Literals(["INFO", "ASK", "RESULT", "HOLD", "VETO"])
@@ -186,6 +188,12 @@ export namespace BoardStore {
           if (!board) return yield* fail("Board was not initialized")
           const since = yield* cursor(tx, current.root, input.since, true)
           const stale = input.since !== undefined && since === undefined
+          if (stale)
+            log.warn("recovering shared board read from invalid cursor", {
+              cursor: input.since,
+              root: current.root,
+              sessionID: input.sessionID,
+            })
           const rows = yield* tx.all<MessageRow>(sql`
             SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
               source_message_id, source_call_id

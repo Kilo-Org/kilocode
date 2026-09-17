@@ -297,12 +297,13 @@ describe("shared board notifications", () => {
           if (Exit.isFailure(replayed))
             throw new Error(`board_read must replay stale cursors: ${Cause.pretty(replayed.cause)}`)
           expect(cache.cursor).toBeGreaterThan(0)
-          cache.cursor = 0
+          const cursor = cache.cursor
+          yield* post(child.id, "after-recovery")
           const page = yield* read(root.id)
           const controller = new AbortController()
           controller.abort()
           expect(yield* notify("board_read", page, controller.signal)).toBe(page)
-          expect(cache.cursor).toBe(0)
+          expect(cache.cursor).toBe(cursor)
           const entered = Promise.withResolvers<void>()
           const release = Promise.withResolvers<void>()
           const activity = BoardStore.activity
@@ -323,9 +324,9 @@ describe("shared board notifications", () => {
           const run = yield* notify("board_read", page).pipe(Effect.forkChild)
           yield* Effect.promise(() => entered.promise)
           yield* Fiber.interrupt(run)
-          expect(cache.cursor).toBe(0)
+          expect(cache.cursor).toBe(cursor)
           probe.mockRestore()
-          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 1)
+          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 2)
         }),
       options,
     ),
