@@ -47,12 +47,33 @@ const MUTATING = new Set([
   "update-index",
 ])
 
+const BRANCH_WRITE = new Set([
+  "-c",
+  "-C",
+  "-d",
+  "-D",
+  "-f",
+  "-m",
+  "-M",
+  "-t",
+  "-u",
+  "--copy",
+  "--create-reflog",
+  "--delete",
+  "--edit-description",
+  "--force",
+  "--move",
+  "--set-upstream",
+  "--set-upstream-to",
+  "--track",
+  "--unset-upstream",
+])
+
 const BRANCH_READ = new Set([
   "-a",
   "-l",
   "-r",
   "-v",
-  "-vv",
   "--all",
   "--column",
   "--contains",
@@ -65,6 +86,30 @@ const BRANCH_READ = new Set([
   "--show-current",
   "--sort",
   "--verbose",
+])
+
+const BRANCH_CONSUME = new Set(["--contains", "--format", "--merged", "--no-merged", "--points-at", "--sort"])
+const BRANCH_PATTERN = new Set(["-l", "--list"])
+
+const TAG_WRITE = new Set([
+  "-F",
+  "-a",
+  "-d",
+  "-e",
+  "-f",
+  "-m",
+  "-s",
+  "-u",
+  "--annotate",
+  "--cleanup",
+  "--create-reflog",
+  "--delete",
+  "--edit",
+  "--file",
+  "--force",
+  "--local-user",
+  "--message",
+  "--sign",
 ])
 
 const TAG_READ = new Set([
@@ -80,64 +125,82 @@ const TAG_READ = new Set([
   "--points-at",
   "--sort",
   "--verbose",
+  "--verify",
 ])
 
-const BRANCH_WRITE = new Set([
-  "-d",
-  "-D",
-  "-m",
-  "-M",
-  "-c",
-  "-C",
-  "-u",
-  "--delete",
-  "--move",
-  "--copy",
-  "--set-upstream-to",
-  "--unset-upstream",
-  "--edit-description",
+const TAG_CONSUME = new Set([
+  "-v",
+  "--contains",
+  "--format",
+  "--merged",
+  "--no-merged",
+  "--points-at",
+  "--sort",
+  "--verify",
 ])
-
-const TAG_WRITE = new Set([
-  "-d",
-  "--delete",
-  "-a",
-  "--annotate",
-  "-s",
-  "--sign",
-  "-f",
-  "--force",
-  "-F",
-  "--file",
-  "-m",
-  "--message",
-])
+const TAG_PATTERN = new Set(["-l", "-n", "--list"])
 
 const REMOTE_READ = new Set(["get-url", "show"])
 const REMOTE_FLAGS = new Set(["-v", "--verbose"])
 const STASH_READ = new Set(["list", "show"])
 const REFLOG_READ = new Set(["exists", "show"])
 const NOTES_READ = new Set(["get-ref", "list", "show"])
-const VALUE_FLAGS = new Set(["-m", "--message", "--ref"])
+const NOTES_FLAGS = new Set(["--ref"])
 
-function flags(values: string[]) {
-  return values.slice(1).flatMap((value) => {
-    if (value.startsWith("--")) return [value.split("=").at(0) ?? value]
-    if (value.startsWith("-") && value.length > 2)
+function flag(value: string) {
+  return value.split("=")[0]
+}
+
+function expand(values: string[]) {
+  return values.flatMap((value) => {
+    if (/^-[A-Za-z]{2,}$/.test(value))
       return value
         .slice(1)
         .split("")
         .map((char) => `-${char}`)
+    if (/^-[A-Za-z]\d+$/.test(value)) return [value.slice(0, 2)]
     return [value]
   })
 }
 
-function verb(values: string[], index = 1): string | undefined {
-  const value = values[index]
-  if (!value) return
-  if (!value.startsWith("-")) return value
-  if (value.startsWith("--") && value.includes("=")) return verb(values, index + 1)
-  return verb(values, VALUE_FLAGS.has(value) ? index + 2 : index + 1)
+function strip(values: string[], consume: Set<string>) {
+  const out: string[] = []
+  let skip = false
+  for (const value of values) {
+    if (skip) {
+      skip = false
+      continue
+    }
+    out.push(value)
+    skip = consume.has(flag(value)) && !value.includes("=")
+  }
+  return out
+}
+
+function scan(values: string[], write: Set<string>, read: Set<string>, consume: Set<string>, pattern: Set<string>) {
+  if (values.length === 1) return false
+  const tokens = expand(values.slice(1))
+  if (tokens.some((token) => write.has(flag(token)))) return true
+  const rest = strip(tokens, consume)
+  if (!rest.some((token) => read.has(flag(token)))) return true
+  if (rest.some((token) => pattern.has(flag(token)))) return false
+  return rest.some((token) => !token.startsWith("-"))
+}
+
+function verb(values: string[], takes: Set<string> = new Set()) {
+  let skip = false
+  for (const value of values.slice(1)) {
+    if (skip) {
+      skip = false
+      continue
+    }
+    if (value.startsWith("-")) {
+      skip = takes.has(flag(value)) && !value.includes("=")
+      continue
+    }
+    return value
+  }
+  return
 }
 
 function args(text: string) {
@@ -161,18 +224,8 @@ export function mutates(text: string) {
   }
   const subcommand = values[0]?.toLowerCase()
   if (!subcommand) return false
-  if (subcommand === "branch") {
-    const parts = flags(values)
-    if (parts.some((value) => BRANCH_WRITE.has(value))) return true
-    if (parts.some((value) => BRANCH_READ.has(value))) return false
-    return parts.some((value) => !value.startsWith("-"))
-  }
-  if (subcommand === "tag") {
-    const parts = flags(values)
-    if (parts.some((value) => TAG_WRITE.has(value))) return true
-    if (parts.some((value) => TAG_READ.has(value))) return false
-    return parts.some((value) => !value.startsWith("-"))
-  }
+  if (subcommand === "branch") return scan(values, BRANCH_WRITE, BRANCH_READ, BRANCH_CONSUME, BRANCH_PATTERN)
+  if (subcommand === "tag") return scan(values, TAG_WRITE, TAG_READ, TAG_CONSUME, TAG_PATTERN)
   if (subcommand === "config") {
     if (values.length === 1) return false
     return !values
@@ -198,7 +251,9 @@ export function mutates(text: string) {
     return values.slice(1).some((value) => !REMOTE_FLAGS.has(value))
   }
   if (subcommand === "stash") {
-    const name = verb(values)
+    const rest = values.slice(1)
+    if (rest.some((value) => value === "-m" || value.startsWith("--message"))) return true
+    const name = rest.find((value) => !value.startsWith("-"))
     if (!name) return true
     return !STASH_READ.has(name)
   }
@@ -211,7 +266,7 @@ export function mutates(text: string) {
     return !REFLOG_READ.has(name)
   }
   if (subcommand === "notes") {
-    const name = verb(values)
+    const name = verb(values, NOTES_FLAGS)
     if (!name) return false
     return !NOTES_READ.has(name)
   }
