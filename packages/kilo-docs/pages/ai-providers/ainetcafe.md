@@ -37,7 +37,7 @@ ainetcafe is configured as a custom OpenAI-compatible provider.
 {% /tab %}
 {% tab label="CLI" %}
 
-Set your API key and add ainetcafe to your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`):
+Set your API key as an environment variable and add ainetcafe to your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`). The `env` field tells Kilo which variable holds the key, so the key itself never goes into the file:
 
 ```bash
 export AINETCAFE_API_KEY="your-api-key"
@@ -49,9 +49,9 @@ export AINETCAFE_API_KEY="your-api-key"
     "ainetcafe": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "ainetcafe",
+      "env": ["AINETCAFE_API_KEY"],
       "options": {
         "baseURL": "https://microquickjs.com/v1",
-        "apiKey": "{env:AINETCAFE_API_KEY}",
       },
       "models": {
         "Kimi-K3": {
