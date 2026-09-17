@@ -202,6 +202,18 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
     // The list has no public "all items" accessor (only selection-based reads), so tests read the
     // live JList model directly off the real component tree, matching the convention used by other
     // dialog tests in this plugin (e.g. AgentManagerPanelTest).
+    /**
+     * The board stays usable while the session and its subagents keep working, so it must not block
+     * the IDE. This also pins the contract that callers use `show()`, since `showAndGet()` throws on
+     * a non-modal dialog.
+     */
+    fun `test dialog is non-modal`() {
+        rpc.board = board(messages = emptyList(), hasMore = false)
+        val d = open()
+
+        edt { assertFalse(d.isModal) }
+    }
+
     fun `test window title carries the session name`() {
         rpc.board = board(messages = emptyList(), hasMore = false)
         val d = open(sessionTitle = "Locate session status logic")
@@ -234,7 +246,7 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
             assertFalse("long explanation must stay hidden", text.contains("routing hint"))
             // The div width is what makes the HTML pane wrap instead of reporting one long line.
             assertTrue("banner must carry a wrap width", text.contains("<div width="))
-            assertEquals("Expand", toggleLink(d).text)
+            assertEquals("Show more", toggleLink(d).text)
         }
     }
 
@@ -261,7 +273,7 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
             assertTrue("short intro stays", text.contains("board agents share to talk to each other."))
             assertTrue("moved sentence appears", text.contains("post here to exchange"))
             assertTrue("long explanation appears", text.contains("routing hint"))
-            assertEquals("Collapse", toggleLink(d).text)
+            assertEquals("Show less", toggleLink(d).text)
         }
     }
 
@@ -274,7 +286,7 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
 
         edt {
             assertFalse("long explanation hidden again", bannerText(d).contains("routing hint"))
-            assertEquals("Expand", toggleLink(d).text)
+            assertEquals("Show more", toggleLink(d).text)
         }
     }
 
@@ -306,7 +318,7 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
     private fun toggleLink(d: SessionBoardDialog): LinkLabel<*> {
         val banner = UIUtil.findComponentOfType(center(d), InlineBanner::class.java) ?: error("no banner")
         return UIUtil.findComponentsOfType(banner, LinkLabel::class.java)
-            .first { it.text == "Expand" || it.text == "Collapse" }
+            .first { it.text == "Show more" || it.text == "Show less" }
     }
 
     private fun itemCount(d: SessionBoardDialog): Int = items(d).size

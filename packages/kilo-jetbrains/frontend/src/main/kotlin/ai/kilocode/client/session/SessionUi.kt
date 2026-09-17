@@ -1111,11 +1111,13 @@ class SessionUi(
         if (!board) return
         val order = listOf("main") + controller.model.childSessions()
         Telemetry.send("Swarm Board Opened", mapOf("sessionId" to session))
-        SessionBoardDialog(this, project, session, title(), workspace.directory, order, sessions) { id, label ->
+        val dialog = SessionBoardDialog(this, project, session, title(), workspace.directory, order, sessions) { id, label ->
             openSubagent(id, label ?: id)
-        }.showAndGet()
-        // The dialog can reset the board, which must hide the entry points again.
-        refreshBoard()
+        }
+        // The dialog is non-modal, so show() returns immediately. The board can be reset while it is
+        // open, which must hide the entry points again, so re-probe when it closes rather than here.
+        Disposer.register(dialog.disposable) { refreshBoard() }
+        dialog.show()
     }
 
     @RequiresEdt

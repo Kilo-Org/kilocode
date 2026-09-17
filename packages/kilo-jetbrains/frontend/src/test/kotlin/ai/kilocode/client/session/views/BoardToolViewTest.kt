@@ -5,6 +5,10 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.views.tool.BoardToolView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.session.views.tool.toolBodyBorder
+import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
+import javax.swing.JPanel
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.util.ui.UIUtil
@@ -113,6 +117,24 @@ class BoardToolViewTest : BasePlatformTestCase() {
     /** Rendered body HTML, whitespace-normalized because the pane re-serializes and hard-wraps it. */
     private fun bodyText(view: BoardToolView): String =
         bodyPane(view).text.replace(Regex("\\s+"), " ")
+
+    /**
+     * The body must indent under the header title, clearing the glyph column, exactly like the task
+     * card's rows. Regression: it previously used a flat left gap, so board messages started at the
+     * card edge while every neighbouring card was indented.
+     */
+    fun `test expanded body indents under the title like the task card`() {
+        val view = track(BoardToolView(post()))
+        view.toggle()
+
+        val glyph = UIUtil.findComponentsOfType(view, JBLabel::class.java).first { it.icon != null }
+        val expected = toolBodyBorder(glyph).getBorderInsets(view).left
+        val indent = UIUtil.findComponentsOfType(view, JPanel::class.java)
+            .firstOrNull { it.border?.getBorderInsets(it)?.left == expected && !it.isOpaque }
+
+        assertNotNull("no body panel carrying the shared tool indent ($expected px)", indent)
+        assertTrue("indent must clear the glyph column, not sit at the card edge", expected > JBUI.scale(12))
+    }
 
     private fun post(body: String = "status update") = Tool("p1", "board_post", toolKind("board_post")).also {
         it.state = ToolExecState.COMPLETED

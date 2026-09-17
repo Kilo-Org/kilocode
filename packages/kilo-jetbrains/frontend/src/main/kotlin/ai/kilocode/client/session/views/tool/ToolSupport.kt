@@ -944,3 +944,22 @@ private class Preview {
         return text.toString()
     }
 }
+
+/**
+ * Left-indents an expandable tool card's body so its content lines up under the header title rather
+ * than the card edge, clearing the glyph column. Shared so every card that renders a body inside the
+ * raised surface indents identically.
+ */
+internal fun toolBodyBorder(glyph: JBLabel) = run {
+    val width = maxOf(
+        glyph.preferredSize.width,
+        glyph.icon?.iconWidth ?: 0,
+        JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+    )
+    JBUI.Borders.empty(
+        UiStyle.Gap.sm(),
+        width + JBUI.scale(SessionUiStyle.View.Layout.GAP) + UiStyle.Gap.md(),
+        UiStyle.Gap.sm(),
+        UiStyle.Gap.md(),
+    )
+}

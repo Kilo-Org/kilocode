@@ -15,11 +15,13 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
+import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
 /**
@@ -33,7 +35,7 @@ class BoardToolView(
     private val parts: ToolParts = toolParts(tool),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
     private val bodyHolder: BoardBody = BoardBody(),
-) : AbstractSessionPartView(parts.header, { bodyHolder.pane(selection) }, { footer }), ApprovalReasonTarget {
+) : AbstractSessionPartView(parts.header, { bodyHolder.pane(selection, parts.glyph) }, { footer }), ApprovalReasonTarget {
 
     companion object {
         fun canRender(content: Tool): Boolean =
@@ -183,15 +185,27 @@ class BoardBody {
         private set
 
     @RequiresEdt
-    fun pane(selection: SessionSelection?): JBScrollPane {
+    fun pane(selection: SessionSelection?, glyph: JBLabel): JBScrollPane {
         val existing = scroll
         if (existing != null) return existing
         val view = MdViewFactory.create(SessionEditorStyle.current(), selection)
         md = view
+        // The indent lives on an inner panel because TrackPanel must stay the viewport view for its
+        // width tracking, which is what makes the markdown wrap to the pane instead of scrolling.
+        // Non-opaque so TrackPanel's raised fill still spans the full card width behind the text.
+        val indent = object : JPanel(BorderLayout()) {
+            override fun updateUI() {
+                super.updateUI()
+                isOpaque = false
+                // Shared indent so the message lines up under the title, like the task card's rows.
+                border = toolBodyBorder(glyph)
+            }
+        }.apply {
+            add(view.component, BorderLayout.CENTER)
+        }
         val panel = TrackPanel().apply {
             background = SessionUiStyle.Colors.codeBlockBackground()
-            border = JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.md())
-            add(view.component, BorderLayout.CENTER)
+            add(indent, BorderLayout.CENTER)
         }
         val pane = JBScrollPane(panel).apply {
             border = JBUI.Borders.empty()

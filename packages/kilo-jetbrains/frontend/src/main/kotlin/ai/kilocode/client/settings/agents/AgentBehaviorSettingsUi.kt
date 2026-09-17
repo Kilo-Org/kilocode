@@ -54,7 +54,7 @@ internal class AgentBehaviorSettingsUi(
 
     override fun saved(base: AgentBehaviorDraft, draft: AgentBehaviorDraft): Boolean = savedMatches(base, draft)
 
-    override fun pendingText(): String = KiloBundle.message("settings.agentBehavior.save.pending")
+    override fun pendingText(): String = KiloBundle.message("settings.agentBehavior.saving")
 
     override fun failedText(): String = KiloBundle.message("settings.agentBehavior.save.failed")
 
@@ -80,7 +80,7 @@ internal class AgentBehaviorSettingsUi(
         form.sync(draft, ready && !saving)
         top.hideBanner()
         if (saving) {
-            showProgress(KiloBundle.message("settings.agentBehavior.save.pending"))
+            showProgress(KiloBundle.message("settings.agentBehavior.saving"))
             return
         }
         val err = saveError

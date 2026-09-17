@@ -38,9 +38,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-/** Lets tests drive the dialog without a real modal event loop. */
+/** Lets tests drive the dialog without actually showing a window. */
 internal interface SessionBoardDialogHandle {
-    fun showAndGet(): Boolean
+    fun show()
 }
 
 /**
@@ -96,7 +96,7 @@ internal class SessionBoardDialog(
         onClick = { item -> (item as? Row)?.let(::openParticipant) },
     )
 
-    internal val loadMoreButton = button(KiloBundle.message("session.board.load_more")) { load(before = board?.cursor) }
+    internal val loadMoreButton = button(KiloBundle.message("session.board.loadMore")) { load(before = board?.cursor) }
     internal val resetButton = button(KiloBundle.message("session.board.reset.action")) { onReset() }
     private val closeButton = button(KiloBundle.message("session.board.close"), primary = true) { close(OK_EXIT_CODE) }
     private val status = JBLabel().apply {
@@ -117,7 +117,7 @@ internal class SessionBoardDialog(
      * sentence because the banner installs its own [com.intellij.ui.BrowserHyperlinkListener] on a
      * message pane this class cannot reach, so an in-text `<a href>` would be treated as a URL.
      */
-    private val toggle = banner.addAction(KiloBundle.message("session.board.expand"), null) { flip() }
+    private val toggle = banner.addAction(KiloBundle.message("session.board.showMore"), null) { flip() }
 
     private var expanded = false
 
@@ -127,6 +127,10 @@ internal class SessionBoardDialog(
         title = sessionTitle?.takeIf { it.isNotBlank() }
             ?.let { KiloBundle.message("session.board.title.session", it) }
             ?: KiloBundle.message("session.board.title")
+        // Non-modal so the board can stay open while the session and its subagents keep working,
+        // which is the point of watching it. Callers must use show(); showAndGet() throws on a
+        // non-modal dialog.
+        isModal = false
         init()
         load(before = null)
     }
@@ -177,7 +181,7 @@ internal class SessionBoardDialog(
             if (expanded) append("<br><br>").append(KiloBundle.message("session.board.intro.more"))
         }
         banner.setMessage(XmlStringUtil.wrapInHtml("<div width='${boardWrap(frameWidth())}'>$body</div>"))
-        toggle.text = KiloBundle.message(if (expanded) "session.board.collapse" else "session.board.expand")
+        toggle.text = KiloBundle.message(if (expanded) "session.board.showLess" else "session.board.showMore")
     }
 
     override fun createActions(): Array<Action> = emptyArray()
@@ -296,8 +300,8 @@ internal class SessionBoardDialog(
         status.isVisible = false
     }
 
-    // The dialog is modal, so its EDT runs a nested event loop; a plain invokeLater would be
-    // deferred until it closes. ModalityState.any() lets these UI-only updates run while it shows.
+    // ModalityState.any() so these UI-only updates still run if a modal dialog is opened on top of
+    // this non-modal one, instead of being deferred until that dialog closes.
     private fun ui(block: () -> Unit) {
         ApplicationManager.getApplication().invokeLater({ if (!disposed) block() }, ModalityState.any())
     }
