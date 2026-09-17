@@ -121,6 +121,9 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
   // that a dismissal or a completed mention closed on.
   let at = 0
   let dead: { at: number; query: string } | undefined
+  // Set by onInput so replaceRange can tell whether execCommand produced the
+  // input event that syncs the prompt signal.
+  let sawInput = false
   let requested = false
   let ready = false
   let counter = 0
@@ -196,6 +199,7 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
   onCleanup(unsubscribe)
 
   const onInput = (text: string, cursor: number) => {
+    sawInput = true
     setSessionPicker(false)
     setWorktreePicker(false)
     setModelPicker(false)
@@ -259,7 +263,11 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     if (canExec) {
       textarea.focus()
       textarea.setSelectionRange(start, end)
+      // execCommand fires input synchronously, which syncs the prompt signal.
+      // If that ever does not happen, sync it here so the mention is not lost.
+      sawInput = false
       document.execCommand("insertText", false, inserted)
+      if (!sawInput) setText(textarea.value)
       textarea.setSelectionRange(pos, pos)
       return
     }
