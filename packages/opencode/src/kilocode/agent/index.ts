@@ -147,8 +147,6 @@ const exploreBash: Record<string, "allow" | "ask" | "deny"> = {
   ...readOnlyBash,
   // Explore runs as a delegated agent, so it cannot answer permission prompts.
   "gh *": "deny",
-  // Existing keys keep their positions before the blocklist when spread again.
-  ...gh,
   // `find` can mutate through `-delete` and `-exec`; use glob/list instead.
   "find *": "deny",
 }

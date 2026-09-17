@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Allow read-only `gh` commands such as `gh pr view` and `gh issue list` in Plan mode without a prompt.
+Allow read-only `gh` commands such as `gh pr view` and `gh issue list` in Plan and Ask modes and the Explore agent without a prompt.
