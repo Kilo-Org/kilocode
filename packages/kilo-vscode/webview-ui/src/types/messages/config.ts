@@ -181,4 +181,5 @@ export interface FeatureFlags {
   indexing: boolean
   sandboxControls: boolean
   backgroundSubagents: boolean
+  speechToText: boolean
 }
