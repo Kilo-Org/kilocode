@@ -321,6 +321,7 @@ async function renderSurface(script: string) {
               export const reviewRequest = (request) => { state.requests.push(request) }
               export const createPRDiffs = () => []
               export const createDiffCommentForms = () => ({ mount: () => () => {} })
+              export const notice = () => ""
               ${[
                 "DialogProvider",
                 "CodeComponentProvider",
