@@ -354,6 +354,7 @@ const ConfigWrapper: ParentComponent<{
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
         sandboxControls: props.features?.sandboxControls ?? false,
         backgroundSubagents: props.features?.backgroundSubagents ?? false,
+        speechToText: props.features?.speechToText ?? true,
       }
     })
 

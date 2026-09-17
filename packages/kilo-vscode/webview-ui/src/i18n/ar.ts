@@ -897,6 +897,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text، أو حدد أدناه عنوان URL أساسيًا مخصصًا للنسخ.",
+  "settings.models.speechToText.remoteDescription":
+    "الإدخال الصوتي غير متاح في النوافذ البعيدة. افتح Kilo في نافذة محلية لاستخدام الميكروفون.",
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
