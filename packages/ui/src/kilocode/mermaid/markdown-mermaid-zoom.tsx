@@ -85,10 +85,21 @@ export function MermaidZoom(props: Props) {
       const first = items.at(0)
       const last = items.at(-1)
       if (!first || !last) return
-      if (event.shiftKey && document.activeElement === first) {
+      const active = document.activeElement
+      const index = items.findIndex((item) => item === active)
+      // Focus is outside the list (for example on the panel itself): pull it back in.
+      if (index === -1) {
+        event.preventDefault()
+        const target = event.shiftKey ? last : first
+        target.focus()
+        return
+      }
+      if (event.shiftKey && index === 0) {
         event.preventDefault()
         last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
+        return
+      }
+      if (!event.shiftKey && index === items.length - 1) {
         event.preventDefault()
         first.focus()
       }
