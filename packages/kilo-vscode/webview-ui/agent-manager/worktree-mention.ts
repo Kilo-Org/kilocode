@@ -132,6 +132,10 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     onSelect?: () => void
   } | null = null
 
+  // Unlike chat, the dialog does not hide `disabled` worktrees. In chat the
+  // flag marks the worktree the user is currently in, but the dialog has no
+  // current worktree and the selected one is the most useful reference. The
+  // mention is metadata only, so a stale path has no read-time side effect.
   const worktreeCandidates = () => worktrees()
   const showMention = () => query() !== null
 
@@ -192,6 +196,7 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
   onCleanup(unsubscribe)
 
   const onInput = (text: string, cursor: number) => {
+    setSessionPicker(false)
     setWorktreePicker(false)
     setModelPicker(false)
     const before = text.substring(0, cursor)

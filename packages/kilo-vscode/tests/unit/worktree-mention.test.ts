@@ -183,6 +183,18 @@ describe("useWorktreeMention", () => {
     dispose.fn?.()
   })
 
+  it("closes the past-chat picker when the prompt text changes", () => {
+    const { mention, dispose } = harness()
+    const input = area("@", 1)
+    mention.onInput("@", 1)
+    mention.selectMention(pick(mention, "past-chats")!, input, () => {})
+    expect(mention.sessionPicker()).toBe(true)
+
+    mention.onInput("@q", 2)
+    expect(mention.sessionPicker()).toBe(false)
+    dispose.fn?.()
+  })
+
   it("keeps the menu closed after Escape until the query is edited", () => {
     const { mention, dispose } = harness()
     const event = {
