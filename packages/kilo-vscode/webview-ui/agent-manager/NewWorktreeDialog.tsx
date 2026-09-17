@@ -46,6 +46,11 @@ import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
+import type { MentionResult, WorktreeReference } from "../src/hooks/file-mention-utils"
+import { SessionMentionPicker } from "../src/components/chat/SessionMentionPicker"
+import { WorktreeMentionPicker } from "../src/components/chat/WorktreeMentionPicker"
+import { formatRelativeDate } from "../src/utils/date"
+import { useWorktreeMention } from "./worktree-mention"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
@@ -58,6 +63,10 @@ type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox", "project"])
 const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
+// The `@model` entry opens the shared model selector through its programmatic
+// open event, keyed to this prompt scope so the footer model selector and slash
+// commands are unaffected.
+const WORKTREE_MENTION_MODEL_TRIGGER = "agent-manager-worktree-mention-model"
 
 type DialogTab = "new" | "import"
 type Model = { providerID: string; modelID: string }
@@ -94,6 +103,50 @@ function restoreAgent(value: string | undefined, list: Array<{ name: string }>, 
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
+/**
+ * One row of the dialog's `@` menu. Only the three worktree-independent
+ * references plus past-chat matches can appear here.
+ */
+function MentionRow(props: { item: MentionResult }) {
+  const { t } = useLanguage()
+  const item = props.item
+  if (item.type === "model")
+    return (
+      <>
+        <Icon name="models" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "past-chats")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "worktrees")
+    return (
+      <>
+        <Icon name="branch" class="file-mention-icon" />
+        <span class="file-mention-name">{t("prompt.worktrees.title")}</span>
+        <span class="file-mention-dir">{t("prompt.worktrees.search")}</span>
+      </>
+    )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
+      </>
+    )
+  return null
+}
+
 export const NewWorktreeDialog: Component<{
   onClose: () => void
   defaultBase?: (projectId: string) => string | undefined
@@ -101,6 +154,7 @@ export const NewWorktreeDialog: Component<{
   projects?: () => AgentProjectSnapshot[]
   activeProjectId?: string
   onCreate?: (projectId: string) => void
+  worktrees?: () => WorktreeReference[]
   mode: ModeRouter
 }> = (props) => {
   const { t } = useLanguage()
@@ -317,6 +371,16 @@ export const NewWorktreeDialog: Component<{
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  const mention = useWorktreeMention(vscode, () => props.worktrees?.() ?? [])
+  // Picking the `@` model entry opens the shared model selector, mounted hidden
+  // and keyed to its own trigger. The mention latch resets first because the
+  // selector owns its open state afterwards.
+  createEffect(() => {
+    if (!mention.modelPicker()) return
+    mention.closeMention()
+    window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: WORKTREE_MENTION_MODEL_TRIGGER } }))
+  })
+
   onMount(() => {
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
@@ -363,6 +427,18 @@ export const NewWorktreeDialog: Component<{
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
   const mode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
 
+  /**
+   * Attachments for the new sessions. Mentions are resolved here, at creation
+   * time: the new worktree does not exist yet, so nothing is read from it. Past
+   * chats and worktrees travel as attachments; model references stay inline.
+   */
+  const resolveFiles = (text: string | undefined) => {
+    const mentionFiles = text ? mention.parseAttachments(text) : []
+    const imgFiles = imageAttach.images().map((img) => ({ mime: img.mime, url: img.dataUrl }))
+    const files = [...mentionFiles, ...imgFiles]
+    return files.length > 0 ? files : undefined
+  }
+
   const handleSubmit = () => {
     if (!canSubmit()) return
     const advanced = showAdvanced()
@@ -380,8 +456,6 @@ export const NewWorktreeDialog: Component<{
     const text = prompt().trim() || undefined
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
-    const imgs = imageAttach.images()
-    const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
 
     const isCompare = compareMode()
     const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
@@ -404,7 +478,7 @@ export const NewWorktreeDialog: Component<{
       branchName: customBranch,
       modelAllocations: allocations,
       sandbox: sandboxVisible() ? sandboxOverride() : undefined,
-      files: imgFiles,
+      files: resolveFiles(text),
     })
 
     persistPrompt("")
@@ -446,6 +520,11 @@ export const NewWorktreeDialog: Component<{
     }
 
     if (slash.onKeyDown(e, textareaRef, setPromptValue, restorePrompt)) {
+      e.stopPropagation()
+      return
+    }
+
+    if (mention.onKeyDown(e, textareaRef, setPromptValue, restorePrompt)) {
       e.stopPropagation()
       return
     }
@@ -704,6 +783,80 @@ export const NewWorktreeDialog: Component<{
               onDragLeave={imageAttach.handleDragLeave}
               onDrop={imageAttach.handleDrop}
             >
+              <div class="mention-model-anchor" aria-hidden="true">
+                <ModelSelectorBase
+                  value={null}
+                  trigger={WORKTREE_MENTION_MODEL_TRIGGER}
+                  collapsed
+                  placement="top-start"
+                  portal={false}
+                  deferDismiss
+                  onSelect={(providerID, modelID) => {
+                    if (providerID && modelID) mention.selectModelReference(providerID, modelID)
+                  }}
+                  onCancel={() => {
+                    mention.closeMention()
+                    restorePrompt()
+                  }}
+                />
+              </div>
+              <Show when={mention.showMention()}>
+                <div class="file-mention-dropdown am-mention-dropdown" data-component="popover-content">
+                  <Show
+                    when={!mention.sessionPicker()}
+                    fallback={
+                      <SessionMentionPicker
+                        sessions={mention.sessionCandidates()}
+                        onSelect={(picked) => {
+                          if (textareaRef) mention.selectSession(picked, textareaRef, setPromptValue, restorePrompt)
+                        }}
+                        onClose={() => {
+                          mention.closeMention()
+                          restorePrompt()
+                        }}
+                      />
+                    }
+                  >
+                    <Show
+                      when={!mention.worktreePicker()}
+                      fallback={
+                        <WorktreeMentionPicker
+                          worktrees={mention.worktreeCandidates()}
+                          onSelect={(picked) => {
+                            if (textareaRef) mention.selectWorktree(picked, textareaRef, setPromptValue, restorePrompt)
+                          }}
+                          onClose={() => {
+                            mention.closeMention()
+                            restorePrompt()
+                          }}
+                        />
+                      }
+                    >
+                      <Show
+                        when={mention.mentionResults().length > 0}
+                        fallback={<div class="file-mention-empty">No mentions found</div>}
+                      >
+                        <For each={mention.mentionResults()}>
+                          {(item, index) => (
+                            <div
+                              class="file-mention-item"
+                              data-type={item.type}
+                              classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                if (textareaRef) mention.selectMention(item, textareaRef, setPromptValue, restorePrompt)
+                              }}
+                              onMouseEnter={() => mention.setMentionIndex(index())}
+                            >
+                              <MentionRow item={item} />
+                            </div>
+                          )}
+                        </For>
+                      </Show>
+                    </Show>
+                  </Show>
+                </div>
+              </Show>
               <Show when={slash.show()}>
                 <div class="slash-command-dropdown am-slash-command-dropdown" data-component="popover-content">
                   <Show
@@ -775,6 +928,7 @@ export const NewWorktreeDialog: Component<{
                       persistPrompt(val)
                       adjustHeight()
                       slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
+                      mention.onInput(val, e.currentTarget.selectionStart ?? val.length)
                     }}
                     onKeyDown={onKey}
                     onKeyUp={speechUp}
