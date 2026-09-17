@@ -202,6 +202,7 @@ export const dict = {
   "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
+  "prompt.paste.expand": "Haz clic para expandir el texto pegado",
   "prompt.action.autoApprove.enable": "Activar aprobación automática",
   "prompt.action.autoApprove.disable": "Desactivar aprobación automática",
   "prompt.action.autoApprove.enabled":
@@ -324,7 +325,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nueva Tarea",
   "sidebar.topBar.history": "Historial",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Perfil",
   "sidebar.topBar.settings": "Configuración",
@@ -852,7 +852,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Habilidades",
 
   "settings.browser.description":
-    "Cuando está activado, el agente de IA puede interactuar con páginas web: navegar, hacer clic, escribir y capturar pantallas. Se abrirá una ventana de Chrome para que puedas ver al agente trabajar.",
+    "Configura la automatización de navegador integrada basada en Playwright. Kilo puede navegar, interactuar y capturar pantallas de páginas web en tus sesiones.",
   "settings.browser.enable.title": "Activar automatización del navegador",
   "settings.browser.enable.description": "Registrar el servidor Playwright MCP con el backend CLI.",
   "settings.browser.systemChrome.title": "Usar Chrome del sistema",
@@ -1370,5 +1370,11 @@ export const dict = {
   "chat.search.close": "Cerrar búsqueda",
   "chat.search.invalidRegex": "Expresión regular no válida",
   "chat.search.noResults": "Sin resultados",
+  "settings.experimental.browserAutomation.title": "Navegador integrado",
+  "settings.experimental.browserAutomation.description":
+    "Muestra vistas previas de aplicaciones locales en Agent Manager y expone la herramienta browser_open a las sesiones de Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome del sistema",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Usa el Google Chrome instalado para el Navegador integrado. Desactívalo solo si ya hay instalado un navegador Playwright Chromium compatible.",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
 }

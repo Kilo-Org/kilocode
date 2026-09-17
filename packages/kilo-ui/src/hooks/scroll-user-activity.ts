@@ -209,6 +209,9 @@ export const createUserActivity = (options: UserActivityOptions) => {
       return value
     },
     isRecent: () => gesture !== undefined || (time > 0 && performance.now() - time < options.grace),
+    // True while a pointer or touch gesture is still in progress, including a
+    // text-selection drag that has not scrolled yet.
+    isDragging: () => gesture !== undefined,
     clear,
     reset,
   }

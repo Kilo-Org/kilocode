@@ -35,7 +35,7 @@ Your sessions sync across all of these, so you can start a task on your phone an
 **The easiest way to configure Kilo is to ask the agent.** Just tell the agent what you want — "add this MCP server", "disable OpenAI", "add my Ollama endpoint". The agent has a built-in skill for reading and updating your `kilo.jsonc` configuration. [Learn more](/docs/getting-started/settings#configuring-with-the-agent)
 {% /callout %}
 
-New to AI coding assistants? Before learning what Kilo itself does, you can learn about agentic engineering at [path.kilo.ai](https://path.kilo.ai)
+New to AI coding assistants? Before learning what Kilo itself does, you can learn about agentic engineering in [Agentic Engineering for Humans](https://github.com/Kilo-Org/agentic-path)
 
 Coming from Cursor or Windsurf? See our [migration guide](/docs/getting-started/migrating)
 
