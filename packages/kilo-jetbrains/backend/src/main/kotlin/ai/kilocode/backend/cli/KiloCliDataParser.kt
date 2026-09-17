@@ -13,6 +13,7 @@ import ai.kilocode.backend.workspace.ModelTerminalBenchInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
@@ -69,6 +70,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
+import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionShareDto
@@ -413,6 +415,42 @@ object KiloCliDataParser {
     }
 
     /**
+     * Parse a shared agent board response
+     * (`GET`/`POST /kilocode/session/{id}/board[/reset]`) into [SessionBoardDto]. A message row
+     * missing `id`/`from`/`to`/`type`/`body` is dropped rather than failing the whole board, so one
+     * malformed row does not hide the rest.
+     */
+    fun parseSessionBoard(raw: String): SessionBoardDto {
+        val obj = json.parseToJsonElement(raw).jsonObject
+        val messages = obj["messages"].arr().orEmpty().mapNotNull { elem ->
+            val row = elem.obj() ?: return@mapNotNull null
+            val id = row.str("id") ?: return@mapNotNull null
+            val from = row.str("from") ?: return@mapNotNull null
+            val to = row.str("to") ?: return@mapNotNull null
+            val type = row.str("type") ?: return@mapNotNull null
+            val body = row.str("body") ?: return@mapNotNull null
+            BoardMessageDto(
+                id = id,
+                timestamp = row.long("timestamp") ?: 0L,
+                from = from,
+                to = to,
+                fromLabel = row.str("fromLabel"),
+                toLabel = row.str("toLabel"),
+                type = type,
+                body = body,
+                reply_to = row.str("reply_to"),
+            )
+        }
+        return SessionBoardDto(
+            ownerSessionID = obj.str("ownerSessionID").orEmpty(),
+            revision = obj.long("revision")?.safeInt() ?: 0,
+            messages = messages,
+            cursor = obj.str("cursor"),
+            hasMore = obj.bool("hasMore"),
+        )
+    }
+
+    /**
      * Parse message history response (`GET /session/{id}/message`)
      * into a list of messages with their parts.
      */
@@ -560,6 +598,7 @@ object KiloCliDataParser {
             mcp = parseMcpConfig(obj["mcp"].obj()),
             agent = parseAgentConfig(obj["agent"].obj()),
             permission = parsePermissionConfig(obj["permission"].obj()),
+            shared_agent_board = runCatching { obj.flagOrNull("shared_agent_board") }.getOrNull(),
         )
     }.getOrDefault(ConfigDto())
 
@@ -888,6 +927,9 @@ object KiloCliDataParser {
     /** Body for `POST /session/{id}/fork`. A whole-session fork sends no body at all; see the caller. */
     fun buildForkJson(messageId: String): String = """{"messageID":${escape(messageId)}}"""
 
+    /** Body for `POST /kilocode/session/{id}/board/reset`. */
+    fun buildResetSessionBoardJson(revision: Int): String = """{"revision":$revision}"""
+
     /**
      * Build the JSON body for `POST /session/{id}/summarize`.
      */
@@ -985,6 +1027,8 @@ object KiloCliDataParser {
 
             val permission = patch.permission
             if (permission != null) put("permission", buildPermission(permission))
+
+            if (patch.shared_agent_board != null) put("shared_agent_board", patch.shared_agent_board)
 
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {
