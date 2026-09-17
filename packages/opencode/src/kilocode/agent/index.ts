@@ -67,6 +67,23 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "gunzip *": "allow",
 }
 
+const gh: Record<string, "allow"> = {
+  "gh pr view *": "allow",
+  "gh pr list *": "allow",
+  "gh pr status *": "allow",
+  "gh pr diff *": "allow",
+  "gh pr checks *": "allow",
+  "gh issue view *": "allow",
+  "gh issue list *": "allow",
+  "gh issue status *": "allow",
+  "gh repo view *": "allow",
+  "gh run list *": "allow",
+  "gh run view *": "allow",
+  "gh release list *": "allow",
+  "gh release view *": "allow",
+  "gh search *": "allow",
+}
+
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
   ...readable,
@@ -92,6 +109,7 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
+  ...gh,
   // Everything below is a blocklist layered on the allowlist above: it catches ways
   // an "allowed" read-only command can still write files, chain commands, or exec an
   // arbitrary program. This is defense-in-depth, not a sandbox — the durable fix is

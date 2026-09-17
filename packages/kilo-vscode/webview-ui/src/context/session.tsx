@@ -2174,9 +2174,11 @@ export const SessionProvider: ParentComponent = (props) => {
     const messageID = input.messageID ?? Identifier.ascending("message")
     const scope = input.draftID ?? input.sessionID
     if (scope) {
-      clearClose(scope)
-      addOptimistic(scope, messageID, input.text, input.files, input.review, input.browserFeedback)
-      startSubmission(scope, messageID)
+      batch(() => {
+        clearClose(scope)
+        addOptimistic(scope, messageID, input.text, input.files, input.review, input.browserFeedback)
+        startSubmission(scope, messageID)
+      })
     }
     vscode.postMessage({ ...input, messageID })
   }

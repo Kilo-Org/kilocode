@@ -202,6 +202,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "تعطيل الموافقة التلقائية",
   "prompt.action.autoApprove.enabled": "الموافقة التلقائية مفعلة. ستتم الموافقة على طلبات الأذونات تلقائياً.",
   "prompt.action.autoApprove.disabled": "الموافقة التلقائية معطلة. انقر للموافقة على طلبات الأذونات تلقائياً.",
+  "prompt.action.autoApprove.sandboxExcluded": "تُستثنى دائماً مطالبات الخروج من البيئة المعزولة.",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
   "prompt.action.sandbox.enable": "تفعيل sandbox",
@@ -218,6 +219,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "مسموح بها",
   "prompt.action.sandbox.unrestricted": "غير مقيّد",
   "prompt.action.sandbox.description.enabled": "تقتصر عمليات الكتابة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "تنطبق قواعد الأذونات والموافقة التلقائية داخل البيئة المعزولة. الأوامر التي يجب أن تخرج منها تسأل دائماً.",
   "prompt.action.sandbox.description.disabled": "انقر لتقييد الكتابة في نظام الملفات والوصول إلى الشبكة.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
@@ -262,7 +265,9 @@ export const dict = {
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
-  "notification.permission.titleSandboxEscalation": "السماح بعملية Git خارج البيئة المعزولة؟",
+  "notification.permission.titleSandboxEscalation": "التشغيل خارج البيئة المعزولة؟",
+  "notification.permission.descriptionSandboxEscalation":
+    "يُشغّل هذا الأمر بالكامل مع إزالة قيود نظام الملفات والشبكة، لهذا الأمر فقط. يجب أن يكتب Git في .git، وهو للقراءة فقط داخل البيئة المعزولة ويقع خارج شجرة العمل في worktree مرتبط. لا توافق قواعد سماح Bash والموافقة التلقائية على هذا الطلب تلقائياً أبداً.",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.reject": "رفض",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
@@ -315,7 +320,6 @@ export const dict = {
   "sidebar.topBar.newTask": "مهمة جديدة",
   "sidebar.topBar.history": "السجل",
   "sidebar.topBar.agentManager": "مدير الوكلاء",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "المتجر",
   "sidebar.topBar.profile": "الملف الشخصي",
   "sidebar.topBar.settings": "الإعدادات",
@@ -898,6 +902,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text، أو حدد أدناه عنوان URL أساسيًا مخصصًا للنسخ.",
+  "settings.models.speechToText.remoteDescription":
+    "الإدخال الصوتي غير متاح في النوافذ البعيدة. افتح Kilo في نافذة محلية لاستخدام الميكروفون.",
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
@@ -1056,6 +1062,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "النموذج",
   "settings.agentBehaviour.workflows.variant": "المتغير",
   "settings.agentBehaviour.workflows.modelDescription": "تجاوز النموذج العام",
+  "settings.experimental.codeMode.title": "استدعاءات الأدوات البرمجية",
+  "settings.experimental.codeMode.description":
+    "يوجّه استدعاءات أدوات MCP عبر بيئة تشغيل JavaScript معزولة مع اكتشاف الأدوات عند الطلب بدلاً من عرض كل أداة MCP مباشرةً. يوفّر السياق عند توصيل العديد من أدوات MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
