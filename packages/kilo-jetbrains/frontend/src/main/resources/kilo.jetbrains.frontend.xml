@@ -198,6 +198,12 @@
                 class="ai.kilocode.client.actions.OpenSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
 
+        <action id="Kilo.OpenUserProfileSettings"
+                class="ai.kilocode.client.actions.OpenUserProfileSettingsAction"/>
+
+        <action id="Kilo.OpenMarketplaceSettings"
+                class="ai.kilocode.client.actions.OpenMarketplaceSettingsAction"/>
+
         <action id="Kilo.OpenLocalConfig"
                 class="ai.kilocode.client.actions.OpenLocalConfigAction"/>
 
@@ -226,6 +232,9 @@
 
         <group id="Kilo.SettingsGroup">
             <reference ref="Kilo.OpenSettings"/>
+            <separator/>
+            <reference ref="Kilo.OpenUserProfileSettings"/>
+            <reference ref="Kilo.OpenMarketplaceSettings"/>
             <separator/>
             <reference ref="Kilo.OpenConfigGroup"/>
             <separator/>
