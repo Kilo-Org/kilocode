@@ -165,6 +165,10 @@ export const dict = {
   "ui.mermaid.copyPng": "Copiar PNG",
   "ui.mermaid.downloadSvg": "Baixar SVG",
   "ui.mermaid.downloadPng": "Baixar PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Ampliar",
+  "ui.mermaid.zoomOut": "Reduzir",
+  "ui.mermaid.zoomReset": "Redefinir zoom",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "conteúdo rolável",
 

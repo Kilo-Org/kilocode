@@ -1,5 +1,34 @@
 # @kilocode/cli
 
+## 7.7.3
+
+### Major Changes
+
+- [#14209](https://github.com/Kilo-Org/kilocode/pull/14209) [`3eaf47b`](https://github.com/Kilo-Org/kilocode/commit/3eaf47ba52179d385a1945c0be323c5d8fa2b4ee) - Remove KiloClaw: the VS Code chat panel and sidebar button, the `/kiloclaw` TUI command and chat view, the Kilo Chat client and token handling, and the `kilo.claw.status` and `kilo.claw.chatCredentials` gateway endpoints.
+
+### Minor Changes
+
+- [#13519](https://github.com/Kilo-Org/kilocode/pull/13519) [`9e61d68`](https://github.com/Kilo-Org/kilocode/commit/9e61d686699002a0a940084b62974a73932d76c3) - Show ChatGPT Codex quota alongside other provider usage in the CLI and VS Code.
+
+### Patch Changes
+
+- [#14206](https://github.com/Kilo-Org/kilocode/pull/14206) [`634d1a7`](https://github.com/Kilo-Org/kilocode/commit/634d1a777803b71ba28d51da18fcc345d479cfec) - Make Agent Manager worktree deletion near-instant in large repositories: the directory is detached without waiting for other git operations, backend cleanup no longer boots an instance for the worktree, and checkpoint cleanup finishes in the background. A worktree whose conversations cannot be re-homed is still deleted instead of leaving an undeletable card.
+
+- [#14208](https://github.com/Kilo-Org/kilocode/pull/14208) [`1d187e8`](https://github.com/Kilo-Org/kilocode/commit/1d187e857d5e6a7af10438da11eec89d325633fe) - Remove the deprecated `/local-review` and `/local-review-uncommitted` command aliases. Use `/review` with its scopes instead.
+
+- [#14201](https://github.com/Kilo-Org/kilocode/pull/14201) [`5bf040e`](https://github.com/Kilo-Org/kilocode/commit/5bf040ea69cda7d53641acca8977037fef779792) - Load skills from `skills.paths` entries written with a leading slash, such as `/.github/skills`, by falling back to the project root when no such directory exists at the filesystem root. Show skills in the VS Code slash menu under their own Skills group and list a skill that shares a name with a command as `/name:skill`.
+
+- Updated dependencies [[`3eaf47b`](https://github.com/Kilo-Org/kilocode/commit/3eaf47ba52179d385a1945c0be323c5d8fa2b4ee)]:
+  - @kilocode/kilo-gateway@8.0.0
+  - @kilocode/sdk@8.0.0
+  - @kilocode/kilo-indexing@7.7.3
+  - @kilocode/kilo-telemetry@7.7.3
+  - @kilocode/plugin@7.7.3
+  - @opencode-ai/tui@7.7.3
+  - @opencode-ai/ui@7.7.3
+  - @opencode-ai/server@7.7.3
+  - @kilocode/plugin-atomic-chat@7.7.3
+
 ## 7.7.2
 
 ### Minor Changes
