@@ -82,7 +82,6 @@ const gh: Record<string, "allow"> = {
   "gh release list *": "allow",
   "gh release view *": "allow",
   "gh search *": "allow",
-  "gh auth status *": "allow",
 }
 
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {

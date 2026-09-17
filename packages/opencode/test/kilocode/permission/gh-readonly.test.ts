@@ -41,14 +41,20 @@ for (const name of ["plan", "ask", "explore"]) {
         "gh release list",
         "gh release view v1.0.0",
         "gh search issues bug",
-        "gh auth status",
       ]) {
         expect(Permission.resolve("bash", command, rules).action, command).toBe("allow")
       }
     })
 
     test("keeps other gh commands restricted despite the user allow", () => {
-      for (const command of ["gh pr create", "gh api repos/org/repo", "gh api repos/org/repo -X POST"]) {
+      for (const command of [
+        "gh pr create",
+        "gh api repos/org/repo",
+        "gh api repos/org/repo -X POST",
+        "gh auth status",
+        "gh auth status --show-token",
+        "gh auth status -t",
+      ]) {
         expect(Permission.resolve("bash", command, rules)).toEqual({
           permission: "bash",
           pattern: "gh *",
