@@ -27,24 +27,39 @@ export namespace KiloSessionRevert {
     return [...new Set(result)]
   }
 
+  export type Entry = { id: string; part: Snapshot.Patch }
+
   /**
-   * Patch parts recorded by descendant sessions at or after the revert point.
+   * Patch parts recorded by the session and its descendants, ordered by the message that recorded
+   * them.
    *
    * A delegated task runs in its own session with its own processor, so its edits land in patch
    * parts there. A child that keeps working after the parent's step window closed — a background
    * or goal-driven task, or one running in another worktree — is invisible to the parent's own
-   * messages, and reverting the parent would leave its files behind.
+   * messages, and reverting the parent leaves its files behind.
+   *
+   * The order matters: `Snapshot.revert` keeps the first hash it sees for a file, so the whole set
+   * has to be sorted together for the earliest snapshot, the state closest to the revert point, to
+   * win. A parent step that reports a file after a descendant already edited it would otherwise
+   * claim the file with its later snapshot.
    */
-  export const descendants = Effect.fn("KiloSessionRevert.descendants")(function* (
+  export const ordered = Effect.fn("KiloSessionRevert.ordered")(function* (
     sessions: Pick<Session.Interface, "children" | "messages">,
     sessionID: SessionID,
     from: string,
+    messages: MessageV2.WithParts[],
   ) {
-    const walk = (
-      parent: SessionID,
-    ): Effect.Effect<{ entries: { id: string; part: Snapshot.Patch }[]; files: string[] }> =>
+    const own: Entry[] = []
+    for (const msg of messages) {
+      if (msg.info.id < from) continue
+      for (const part of msg.parts) {
+        if (part.type === "patch") own.push({ id: msg.info.id, part })
+      }
+    }
+
+    const walk = (parent: SessionID): Effect.Effect<{ entries: Entry[]; files: string[] }> =>
       Effect.gen(function* () {
-        const entries: { id: string; part: Snapshot.Patch }[] = []
+        const entries: Entry[] = []
         const files: string[] = []
         for (const kid of yield* sessions.children(parent).pipe(Effect.orDie)) {
           const nested = yield* walk(kid.id)
@@ -61,10 +76,9 @@ export namespace KiloSessionRevert {
         }
         return { entries, files }
       })
+
     const found = yield* walk(sessionID)
-    // Restore in the order the edits were made: a file touched by two descendants keeps the
-    // earliest snapshot, which is the state the file had before the reverted turn.
-    const patches = found.entries
+    const patches = [...own, ...found.entries]
       .toSorted((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
       .map((entry) => entry.part)
     return { patches, files: [...new Set(found.files)] }
