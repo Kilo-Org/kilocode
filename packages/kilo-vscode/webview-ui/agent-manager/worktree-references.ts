@@ -92,3 +92,21 @@ export function createWorktreeReferences(
   })
   return createMemo(() => worktreeReferences(state(), sessions(), selection(), recency.recent()))
 }
+
+/**
+ * The chat list disables the current, stale, and busy worktrees. The New
+ * Worktree dialog has no current worktree, so it builds a second list with no
+ * selection: the worktree the user is in stays selectable while stale and busy
+ * ones stay disabled and are filtered out by the mention picker.
+ */
+export function createWorktreeMentionReferences(
+  vscode: Pick<ReturnType<typeof useVSCode>, "getState" | "setState">,
+  state: Accessor<ProjectStore>,
+  sessions: Accessor<Session[]>,
+  selection: Accessor<string | null>,
+) {
+  return {
+    references: createWorktreeReferences(vscode, state, sessions, selection),
+    dialogRefs: createWorktreeReferences(vscode, state, sessions, () => null),
+  }
+}

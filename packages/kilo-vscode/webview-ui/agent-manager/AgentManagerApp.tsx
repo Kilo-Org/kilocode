@@ -186,7 +186,7 @@ import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
 import { createWorktreeDiffs, diffDataKey, wireDiffId } from "./worktree-diffs"
-import { createWorktreeReferences } from "./worktree-references"
+import { createWorktreeMentionReferences as createMentionRefs } from "./worktree-references"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { createReviewComposers } from "./review-composers"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -831,7 +831,7 @@ const AgentManagerContent: Component = () => {
     managed: managedSessions,
     locals: localSet,
   })
-  const references = createWorktreeReferences(vscode, registry.active, projectSessionsLive.current, selection)
+  const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
 
   /** Session ids shown in the project-scoped history view (every session of the project). */
   const historySessionIds = createMemo(() => {
@@ -1815,7 +1815,7 @@ const AgentManagerContent: Component = () => {
         activeProjectId={activeProjectId()}
         defaultBase={defaultBase}
         onCreate={creation.schedule}
-        worktrees={references}
+        worktrees={dialogRefs}
       />
     ))
   }

@@ -135,23 +135,15 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     onSelect?: () => void
   } | null = null
 
-  // Unlike chat, the dialog does not hide `disabled` worktrees. In chat the
-  // flag marks the worktree the user is currently in, but the dialog has no
-  // current worktree and the selected one is the most useful reference. The
-  // mention is metadata only, so a stale path has no read-time side effect.
-  const worktreeCandidates = () => worktrees()
+  // Stale and busy worktrees stay out of the picker, like chat. The dialog
+  // receives a reference list built without a selection, so the worktree the
+  // user is currently in is still offered (see AgentManagerApp's dialog list).
+  const worktreeCandidates = () => worktrees().filter((worktree) => !worktree.disabled)
   const showMention = () => query() !== null
 
   /** Every token the query could stand for, for prose detection. */
   const tokens = () =>
-    new Set<string>([
-      MODEL_RESULT.value,
-      PAST_CHATS_RESULT.value,
-      WORKTREES_RESULT.value,
-      ...mentioned().keys(),
-      ...models,
-      ...worktreeCandidates().map((worktree) => worktree.path),
-    ])
+    new Set<string>([...mentioned().keys(), ...models, ...worktreeCandidates().map((worktree) => worktree.path)])
 
   const sessionResults = (value: string): MentionResult[] => {
     if (!value) return []
@@ -261,17 +253,22 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     const canExec =
       typeof document !== "undefined" && typeof document.execCommand === "function" && textarea.isConnected
     if (canExec) {
+      const snapshot = textarea.value
       textarea.focus()
       textarea.setSelectionRange(start, end)
-      // execCommand fires input synchronously, which syncs the prompt signal.
-      // If that ever does not happen, sync it here so the mention is not lost.
+      // execCommand can silently no-op (for example when focus did not land)
+      // and some edges skip the input event. Verify the insert and fall back to
+      // a direct write so a picked mention is never dropped.
       sawInput = false
       document.execCommand("insertText", false, inserted)
-      if (!sawInput) setText(textarea.value)
-      textarea.setSelectionRange(pos, pos)
-      return
+      if (sawInput && textarea.value !== snapshot) {
+        textarea.setSelectionRange(pos, pos)
+        return
+      }
+      textarea.value = `${snapshot.substring(0, start)}${inserted}${snapshot.substring(end)}`
+    } else {
+      textarea.value = `${textarea.value.substring(0, start)}${inserted}${textarea.value.substring(end)}`
     }
-    textarea.value = `${textarea.value.substring(0, start)}${inserted}${textarea.value.substring(end)}`
     textarea.setSelectionRange(pos, pos)
     textarea.focus()
     setText(textarea.value)
@@ -340,7 +337,10 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     textarea: HTMLTextAreaElement,
     setText: (text: string) => void,
     onSelect?: () => void,
-  ) => insertToken(worktree.path, textarea, setText, onSelect)
+  ) => {
+    if (worktree.disabled) return
+    insertToken(worktree.path, textarea, setText, onSelect)
+  }
 
   const selectModelReference = (providerID: string, modelID: string) => {
     const state = modelState

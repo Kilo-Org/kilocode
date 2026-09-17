@@ -157,6 +157,25 @@ describe("useWorktreeMention", () => {
     dispose.fn?.()
   })
 
+  it("excludes disabled worktrees from the picker and from selection", () => {
+    const stale: WorktreeReference = {
+      ...WORKTREE,
+      id: "wt-stale",
+      name: "stale",
+      path: "/repo/.kilo/worktrees/stale",
+      disabled: true,
+    }
+    const { mention, dispose } = harness([WORKTREE, stale])
+    mention.onInput("@", 1)
+    mention.selectMention(pick(mention, "worktrees")!, area("@", 1), () => {})
+    expect(mention.worktreeCandidates().map((worktree) => worktree.id)).toEqual(["wt-other"])
+
+    const input = area("@", 1)
+    mention.selectWorktree(stale, input, () => {})
+    expect(input.value).toBe("@")
+    dispose.fn?.()
+  })
+
   it("inserts a model token as plain text with no attachment", () => {
     const { mention, dispose } = harness()
     const input = area("@", 1)
