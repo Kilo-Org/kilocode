@@ -355,12 +355,12 @@ const layer = Layer.effect(
       permission?: PermissionV1.Ruleset
       networkRestricted?: boolean // kilocode_change
     }) {
+      if (input.networkRestricted) return // kilocode_change
       // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
       const kiloCfg = yield* config.get()
       const mode = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, kiloCfg)))
       if (!mode) return
       // kilocode_change end
-      if (input.networkRestricted) return // kilocode_change
       const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
       const tools = Permission.visibleTools(yield* mcp.tools(), ruleset)
       if (Object.keys(tools).length === 0) return
