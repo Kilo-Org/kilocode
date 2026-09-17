@@ -10,6 +10,8 @@ import ai.kilocode.rpc.dto.MarketplaceResultDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -18,7 +20,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -99,23 +100,27 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
     }
 
     /**
-     * Reads a result without going through a generated serializer.
-     *
-     * `shared` compiles against the platform's kotlinx-serialization while this module bundles its own,
-     * so asking a shared DTO for its serializer here resolves `KSerializer` from two different
-     * classloaders and fails with a `LinkageError`. Shared DTOs are therefore always built by hand from
-     * a parsed tree, the same way [list] builds its items.
+     * The wire shape here is a 1:1 match for [MarketplaceResultDto], so this decodes rather than
+     * hand-parsing like [toDecoded] has to. [WireResult] is declared in this module rather than
+     * decoded directly into the shared DTO: `shared` compiles against the platform's
+     * kotlinx-serialization while this module bundles its own, so asking a *shared* DTO for its
+     * serializer from here resolves `KSerializer` from two different classloaders and fails with a
+     * `LinkageError`. A module-local type's serializer is generated and consumed in the same
+     * classloader, so it decodes cleanly and is then mapped onto the shared DTO by hand.
      */
     private fun result(text: String): MarketplaceResultDto {
-        val root = JSON.parseToJsonElement(text).jsonObject
-        return MarketplaceResultDto(
-            success = (root["success"] as? JsonPrimitive)?.booleanOrNull ?: false,
-            slug = root.str("slug").orEmpty(),
-            error = root.str("error"),
-            filePath = root.str("filePath"),
-            line = (root["line"] as? JsonPrimitive)?.intOrNull,
-        )
+        val wire = JSON.decodeFromString<WireResult>(text)
+        return MarketplaceResultDto(wire.success, wire.slug, wire.error, wire.filePath, wire.line)
     }
+
+    @Serializable
+    private data class WireResult(
+        val success: Boolean = false,
+        val slug: String = "",
+        val error: String? = null,
+        val filePath: String? = null,
+        val line: Int? = null,
+    )
 
     private fun installedKeys(element: JsonElement?): Set<String> = element?.jsonObject?.keys ?: emptySet()
 

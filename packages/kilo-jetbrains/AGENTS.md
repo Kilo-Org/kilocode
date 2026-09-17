@@ -166,7 +166,10 @@ java.lang.LinkageError: loader constraint violation: when resolving method
 'kotlinx.serialization.KSerializer ai.kilocode.rpc.dto.SomeDto$Companion.serializer()'
 ```
 
-In `frontend/` and `backend/`, do not call `Json.decodeFromString<SharedDto>(...)`, `Json.encodeToString(dto)`, `decodeFromJsonElement<SharedDto>(...)`, or `SharedDto.serializer()`. Parse into a `JsonObject` and construct the shared DTO by hand — see `KiloBackendMarketplaceManager` and `KiloCliDataParser`. Module-local `@Serializable` types (for example `WorktreeNamesFile`) and built-ins like `List<String>` are fine, because the class and the serialization runtime come from the same loader.
+In `frontend/` and `backend/`, do not call `Json.decodeFromString<SharedDto>(...)`, `Json.encodeToString(dto)`, `decodeFromJsonElement<SharedDto>(...)`, or `SharedDto.serializer()`. Module-local `@Serializable` types (for example `WorktreeNamesFile`) and built-ins like `List<String>` are fine, because the class and the serialization runtime come from the same loader — this is the reason two different patterns are used in `KiloBackendMarketplaceManager`:
+
+- When the wire shape is a 1:1 match for the shared DTO (`MarketplaceResultDto`), decode into a private module-local wire type (e.g. `WireResult`) with `Json.decodeFromString<WireResult>(...)`, then map its fields onto the shared DTO by hand. Prefer this over raw `JsonObject` field extraction — it is real deserialization instead of hand-parsing, and any wire/DTO field mismatch fails at decode time instead of silently reading `null`.
+- When the wire shape doesn't match the DTO at all — a discriminated union, fields nested differently, or DTO fields that are computed rather than present on the wire (`MarketplaceItemDto`'s `installedProject`/`methods`/`relevant`) — there is no serializer to safely call regardless of classloaders, so parse into a `JsonObject` and construct the DTO by hand; see `toDecoded()` in `KiloBackendMarketplaceManager` and `KiloCliDataParser`.
 
 **Tests cannot catch this.** Gradle test runs put `shared`, the module under test, and kotlinx-serialization on one flat classpath, so the split only exists in a real IDE. Verify RPC paths that return shared DTOs in a sandbox run (`runIdeSplitMode`), not only under `./gradlew test`.
 
