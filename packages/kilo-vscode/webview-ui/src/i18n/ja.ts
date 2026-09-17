@@ -914,6 +914,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインするか、下でカスタム文字起こしベース URL を設定してください。",
+  "settings.models.speechToText.remoteDescription":
+    "音声入力はリモートウィンドウでは利用できません。マイクを使用するには、ローカルウィンドウで Kilo を開いてください。",
   "settings.models.speechToTextModel.title": "音声認識モデル",
   "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
