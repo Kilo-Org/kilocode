@@ -1081,6 +1081,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "model",
   "settings.agentBehaviour.workflows.variant": "wariant",
   "settings.agentBehaviour.workflows.modelDescription": "Globalne nadpisanie modelu",
+  "settings.experimental.codeMode.title": "Programmatyczne wywołania narzędzi",
+  "settings.experimental.codeMode.description":
+    "Kieruje wywołania narzędzi MCP przez odizolowane środowisko uruchomieniowe JavaScript z wykrywaniem narzędzi na żądanie, zamiast udostępniać każde narzędzie MCP bezpośrednio. Oszczędza kontekst, gdy podłączonych jest wiele narzędzi MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",

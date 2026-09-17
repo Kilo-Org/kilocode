@@ -991,6 +991,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "模型",
   "settings.agentBehaviour.workflows.variant": "變體",
   "settings.agentBehaviour.workflows.modelDescription": "全域模型覆寫",
+  "settings.experimental.codeMode.title": "程式化工具呼叫",
+  "settings.experimental.codeMode.description":
+    "透過受限的 JavaScript 執行階段按需探索工具來路由 MCP 工具呼叫，而不是直接公開每個 MCP 工具。連接大量 MCP 工具時可節省上下文。",
   "settings.sandboxing.enabled.title": "沙盒",
   "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",

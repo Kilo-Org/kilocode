@@ -1107,6 +1107,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "modèle",
   "settings.agentBehaviour.workflows.variant": "variante",
   "settings.agentBehaviour.workflows.modelDescription": "Remplacement global du modèle",
+  "settings.experimental.codeMode.title": "Appels d'outils programmatiques",
+  "settings.experimental.codeMode.description":
+    "Achemine les appels d'outils MCP via un environnement d'exécution JavaScript confiné avec découverte d'outils à la demande, au lieu d'exposer directement chaque outil MCP. Économise du contexte lorsque de nombreux outils MCP sont connectés.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",

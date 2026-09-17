@@ -1103,6 +1103,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "Modell",
   "settings.agentBehaviour.workflows.variant": "Variante",
   "settings.agentBehaviour.workflows.modelDescription": "Globale Modellüberschreibung",
+  "settings.experimental.codeMode.title": "Programmatische Werkzeugaufrufe",
+  "settings.experimental.codeMode.description":
+    "Leitet MCP-Tool-Aufrufe durch eine abgeschirmte JavaScript-Laufzeit mit bedarfsgesteuerter Tool-Erkennung, statt jedes MCP-Tool direkt bereitzustellen. Spart Kontext, wenn viele MCP-Tools verbunden sind.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Shell-Befehle des Agenten in einer Sandbox auf Betriebssystemebene ausführen, die Schreibvorgänge auf die Projekt- und Kilo-Statusverzeichnisse beschränkt",

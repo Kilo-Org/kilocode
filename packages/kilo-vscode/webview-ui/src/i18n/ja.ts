@@ -1075,6 +1075,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "モデル",
   "settings.agentBehaviour.workflows.variant": "バリアント",
   "settings.agentBehaviour.workflows.modelDescription": "グローバルモデルの上書き",
+  "settings.experimental.codeMode.title": "プログラムによるツール呼び出し",
+  "settings.experimental.codeMode.description":
+    "各 MCP ツールを直接公開する代わりに、オンデマンドのツール検出を備えた隔離された JavaScript ランタイム経由で MCP ツール呼び出しをルーティングします。多数の MCP ツールが接続されている場合にコンテキストを節約します。",
   "settings.sandboxing.enabled.title": "サンドボックス",
   "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",

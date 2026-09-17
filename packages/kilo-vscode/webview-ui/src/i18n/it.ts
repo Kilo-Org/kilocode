@@ -855,6 +855,9 @@ export const dict = {
     "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
+  "settings.experimental.codeMode.title": "Chiamate programmatiche agli strumenti",
+  "settings.experimental.codeMode.description":
+    "Instrada le chiamate agli strumenti MCP attraverso un runtime JavaScript confinato con rilevamento degli strumenti su richiesta, invece di esporre direttamente ogni strumento MCP. Risparmia contesto quando sono connessi molti strumenti MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",

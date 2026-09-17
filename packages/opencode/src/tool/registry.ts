@@ -31,6 +31,7 @@ import { Provider } from "@/provider/provider"
 
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
+import { KiloCodeMode } from "../kilocode/tool/code-mode" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
 import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
@@ -155,8 +156,13 @@ const layer = Layer.effect(
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
-        const codeModeTool = codeMode
-          ? yield* codeMode.CodeModeTool.pipe(
+        // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
+        const kiloCfg = yield* config.get()
+        const codeModeModule = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, kiloCfg)))
+        // kilocode_change end
+        const codeModeTool = codeModeModule // kilocode_change
+          ? yield* codeModeModule.CodeModeTool.pipe(
+              // kilocode_change
               Effect.provideService(MCP.Service, mcp),
               Effect.provideService(Agent.Service, agents),
               Effect.provideService(Session.Service, sessions),
@@ -350,12 +356,16 @@ const layer = Layer.effect(
       permission?: PermissionV1.Ruleset
       networkRestricted?: boolean // kilocode_change
     }) {
-      if (!codeMode) return
+      // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
+      const kiloCfg = yield* config.get()
+      const codeModeModule = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, kiloCfg)))
+      if (!codeModeModule) return
+      // kilocode_change end
       if (input.networkRestricted) return // kilocode_change
       const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
       const tools = Permission.visibleTools(yield* mcp.tools(), ruleset)
       if (Object.keys(tools).length === 0) return
-      return codeMode.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize))
+      return codeModeModule.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize)) // kilocode_change
     })
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {

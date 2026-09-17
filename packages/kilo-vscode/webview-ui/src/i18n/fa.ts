@@ -912,6 +912,9 @@ export const dict = {
     "ابزارهای آزمایشی برای خواندن، ویرایش و اجرای VS Code notebooks را فعال کنید",
   "settings.experimental.continueOnDeny.title": "ادامه در صورت رد",
   "settings.experimental.continueOnDeny.description": "حلقه عامل را هنگام رد شدن یک مجوز ادامه دهید",
+  "settings.experimental.codeMode.title": "فراخوانی برنامه‌نویسی ابزارها",
+  "settings.experimental.codeMode.description":
+    "فراخوانی‌های ابزار MCP را از طریق یک محیط اجرای JavaScript محدودشده و با کشف ابزار به‌صورت درخواستی هدایت می‌کند، به‌جای نمایش مستقیم هر ابزار MCP. در صورت اتصال ابزارهای MCP متعدد، در مصرف زمینه صرفه‌جویی می‌کند.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "اجرای دستورات شل عامل در یک Sandbox سطح سیستم‌عامل که نوشتن را به پوشه‌های پروژه و وضعیت Kilo محدود می‌کند",

@@ -950,6 +950,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Неактивний",
   "settings.experimental.remote.hint": "Використовуйте /remote у чаті для перемикання",
   "settings.experimental.toolToggles": "Перемикачі інструментів",
+  "settings.experimental.codeMode.title": "Програмні виклики інструментів",
+  "settings.experimental.codeMode.description":
+    "Спрямовує виклики інструментів MCP через ізольоване середовище виконання JavaScript із виявленням інструментів на вимогу замість прямого надання кожного інструменту MCP. Економить контекст, коли підключено багато інструментів MCP.",
   "settings.sandboxing.enabled.title": "Пісочниця",
   "settings.sandboxing.enabled.description":
     "Виконувати команди оболонки агента в пісочниці на рівні ОС, яка обмежує запис до каталогів стану проєкту та Kilo",
