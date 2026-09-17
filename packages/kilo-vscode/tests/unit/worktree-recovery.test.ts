@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { trackOrphanSizes } from "../../src/agent-manager/orphans/sizing"
 import { ProjectContext } from "../../src/agent-manager/project/context"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import { cleanOrphans, restoreWorktree, type RecoveryHost } from "../../src/agent-manager/worktree-recovery"
+import type { OrphanDirectory } from "../../src/agent-manager/worktree-reconcile"
 
 // Real state manager and real git repository: recovery is only interesting if it agrees with both.
 function git(args: string[]) {
@@ -19,6 +21,8 @@ describe("worktree recovery", () => {
   let ctx: ProjectContext
   let calls: string[]
   let host: RecoveryHost
+  /** Reassigned per test; stands in for the host push that carries new sizes to the webview. */
+  let onSized: () => void
 
   beforeEach(async () => {
     root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "am-recovery-")))
@@ -34,18 +38,39 @@ describe("worktree recovery", () => {
 
     calls = []
     state = new WorktreeStateManager(root, () => undefined)
-    ctx = new ProjectContext("project", root, true, { log: () => undefined, state: () => state })
+    onSized = () => undefined
+    ctx = new ProjectContext("project", root, true, {
+      log: () => undefined,
+      state: () => state,
+      sized: () => onSized(),
+    })
     // Recovery reads the state only if it is already loaded, which is what peekState() means.
     ctx.stateManager()
     host = {
       post: (message) => calls.push(`post:${message.type}`),
       push: () => calls.push("push"),
       log: () => undefined,
+      // Mirrors real usage: `host.reconcile` returns the current `ctx.report`, which the tests set
+      // up before calling `cleanOrphans` — the "fresh" reconcile agrees with the stale one unless a
+      // test deliberately swaps `ctx.report` out from under it to exercise revalidation.
       reconcile: async () => {
         calls.push("reconcile")
-        return undefined
+        return ctx.report
       },
       refresh: (worktreeId) => calls.push(`refresh:${worktreeId}`),
+      reveal: (path) => calls.push(`reveal:${path}`),
+      teardown: async (_root, path) => {
+        calls.push(`teardown:${path}`)
+      },
+      removeSnapshot: async (_root, path) => {
+        calls.push(`removeSnapshot:${path}`)
+        return true
+      },
+      withProgress: async (title, task) => {
+        calls.push(`progress:${title}`)
+        return task(() => false)
+      },
+      notifyResult: (kind) => calls.push(`notify:${kind}`),
     }
   })
 
@@ -96,7 +121,19 @@ describe("worktree recovery", () => {
 
     expect(fs.existsSync(orphan)).toBe(false)
     expect(fs.existsSync(unknown)).toBe(true)
-    expect(calls).toEqual(["reconcile", "push"])
+    // Deletion runs behind a progress notification, teardown before the directory is staged,
+    // removeSnapshot after, then a second reconcile + push so the banner recomputes.
+    expect(calls).toEqual([
+      "progress:Removing leftover worktree folders",
+      "reconcile",
+      `teardown:${orphan}`,
+      `removeSnapshot:${orphan}`,
+      "reconcile",
+      "push",
+      // One of the two requested paths was not a known orphan (the fresh reconcile never listed
+      // it), so the completion notification reports a partial result even though nothing failed.
+      "notify:warning",
+    ])
   })
 
   it("refuses to delete a live worktree even when it is listed as an orphan", async () => {
@@ -111,6 +148,105 @@ describe("worktree recovery", () => {
     await cleanOrphans(ctx, host, [target])
 
     expect(fs.existsSync(target)).toBe(true)
-    expect(calls).toEqual(["post:error"])
+    expect(calls).toEqual([
+      "progress:Removing leftover worktree folders",
+      "reconcile",
+      `teardown:${target}`,
+      "post:error",
+      // Reconciles even though nothing was removed: the size pass was paused for the delete, and this
+      // is what resumes measuring whatever is still on disk.
+      "reconcile",
+      "notify:error",
+    ])
+  })
+
+  it("re-validates against a fresh reconcile, not the possibly-stale ctx.report", async () => {
+    const orphan = path.join(root, ".kilo", "worktrees", "leftover")
+    fs.mkdirSync(orphan, { recursive: true })
+    // ctx.report (built before the dialog was shown) still lists it, but the fresh reconcile the
+    // host returns from inside cleanOrphans no longer does — e.g. the pool just claimed it.
+    ctx.report = {
+      entries: [],
+      orphans: [{ path: orphan, kind: "leftover" }],
+      dropped: [],
+      pruned: false,
+      degraded: false,
+    }
+    host.reconcile = async () => {
+      calls.push("reconcile")
+      return { entries: [], orphans: [], dropped: [], pruned: false, degraded: false }
+    }
+
+    await cleanOrphans(ctx, host, [orphan])
+
+    expect(fs.existsSync(orphan)).toBe(true)
+    expect(calls).toEqual(["progress:Removing leftover worktree folders", "reconcile", "reconcile", "notify:error"])
+  })
+
+  it("cancels the size pass when a delete starts, then measures only what survived", async () => {
+    const doomed = path.join(root, ".kilo", "worktrees", "doomed")
+    const survivor = path.join(root, ".kilo", "worktrees", "survivor")
+    fs.mkdirSync(doomed, { recursive: true })
+    fs.mkdirSync(survivor, { recursive: true })
+    fs.writeFileSync(path.join(doomed, "f.txt"), "x".repeat(100))
+    fs.writeFileSync(path.join(survivor, "f.txt"), "x".repeat(25))
+    const orphans: OrphanDirectory[] = [
+      { path: doomed, kind: "leftover" },
+      { path: survivor, kind: "leftover" },
+    ]
+    ctx.report = { entries: [], orphans, dropped: [], pruned: false, degraded: false }
+
+    // Mirrors production, where every reconcile re-runs sizing for the orphans it just listed and the
+    // context's `sized` hook pushes the numbers to the webview.
+    const landed = Promise.withResolvers<void>()
+    let sized = 0
+    onSized = () => {
+      sized++
+      landed.resolve()
+    }
+    host.reconcile = async () => {
+      calls.push("reconcile")
+      const live = (ctx.report?.orphans ?? []).filter((orphan) => fs.existsSync(orphan.path))
+      ctx.report = { entries: [], orphans: live, dropped: [], pruned: false, degraded: false }
+      trackOrphanSizes(ctx, live, () => undefined)
+      return ctx.report
+    }
+
+    // A walk is already in flight over both folders when the user confirms the delete.
+    trackOrphanSizes(ctx, orphans, () => undefined)
+
+    await cleanOrphans(ctx, host, [doomed])
+    await landed.promise
+
+    expect(fs.existsSync(doomed)).toBe(false)
+    expect(fs.existsSync(survivor)).toBe(true)
+    // Exactly one pass reports: the one after the delete. The pass that was walking the folder the
+    // user deleted is cancelled on the way in, and the reconcile inside the delete does not start a
+    // replacement for the doomed set either.
+    expect(sized).toBe(1)
+    // The leftover that is still there gets measured once the delete is done.
+    expect(ctx.report?.orphans.map((orphan) => orphan.path)).toEqual([survivor])
+    expect(ctx.report?.orphans[0]?.bytes).toBe(25)
+  })
+
+  it("stages the directory (rename) instead of a blocking recursive delete", async () => {
+    const orphan = path.join(root, ".kilo", "worktrees", "leftover")
+    fs.mkdirSync(path.join(orphan, "nested"), { recursive: true })
+    ctx.report = {
+      entries: [],
+      orphans: [{ path: orphan, kind: "leftover" }],
+      dropped: [],
+      pruned: false,
+      degraded: false,
+    }
+
+    await cleanOrphans(ctx, host, [orphan])
+
+    expect(fs.existsSync(orphan)).toBe(false)
+    // Nothing named .kilo-delete-* should survive once the background reap this awaits internally
+    // (via detachOrphanDirectory's `done`) has had a chance to run.
+    await ctx.worktreeManager().settle()
+    const leftovers = fs.readdirSync(path.dirname(orphan)).filter((name) => name.startsWith(".kilo-delete-"))
+    expect(leftovers).toEqual([])
   })
 })

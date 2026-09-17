@@ -374,10 +374,7 @@ export interface KiloData {
 // Prepare kilo-specific data derived from config. Call once per state initialization.
 export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">): KiloData {
   const mcpRules = getMcpRules(cfg)
-  const enabled = BoardEnabled.resolve({
-    config: cfg.shared_agent_board,
-    flag: flags.experimentalSharedAgentBoard,
-  })
+  const enabled = BoardEnabled.on(cfg, flags)
   const defaultsPatch = Permission.fromConfig({
     bash,
     ...board(enabled),

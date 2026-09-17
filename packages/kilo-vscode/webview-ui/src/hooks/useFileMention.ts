@@ -27,7 +27,6 @@ import {
   sessionMentionText,
   sessionMentionToken,
   syncMentionedSessions as _syncMentionedSessions,
-  FILE_PICKER_RESULT,
   type MentionResult,
   type PromptMentionDrop,
   type WorktreeReference,

@@ -4,6 +4,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -115,6 +116,16 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             assertFalse(view.getScrollableTracksViewportHeight())
             assertSame(pane, layout.getLayoutComponent(BorderLayout.CENTER))
             assertSame(panel.sources, layout.getLayoutComponent(BorderLayout.SOUTH))
+            true
+        }
+    }
+
+    fun `test toolbar offers marketplace as final button after separator`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            assertMarketplaceToolbarButton(panel)
             true
         }
     }
