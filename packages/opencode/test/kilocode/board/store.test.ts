@@ -730,7 +730,7 @@ describe("BoardStore", () => {
       }),
     )
     expect(result.other.messages).toEqual([])
-    expect(result.cursor._tag).toBe("Failure")
+    expect(result.cursor._tag).toBe("Success")
     expect(result.retained.messages).toMatchObject([{ id: result.post.id, from: id("child"), to: id("sibling") }])
     expect(result.retained.messages.at(0)).not.toHaveProperty("fromLabel")
     expect(result.retained.messages.at(0)).not.toHaveProperty("toLabel")

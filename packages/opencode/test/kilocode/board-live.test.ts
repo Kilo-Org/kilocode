@@ -477,7 +477,13 @@ for (const failed of [false, true]) {
             type: "INFO",
             body: "Explicit read regression body",
           })
-          yield* llm.push(reply().tool("board_read", { since: failed ? "board_missing" : null, limit: null }))
+          const probe = failed
+            ? spyOn(BoardStore, "read").mockImplementation(() =>
+                Effect.fail(new BoardStore.Error({ message: "Simulated board read failure" })),
+              )
+            : undefined
+          yield* Effect.addFinalizer(() => Effect.sync(() => probe?.mockRestore()))
+          yield* llm.push(reply().tool("board_read", { since: null, limit: null }))
           yield* llm.push(reply().tool("read", { filePath: "boundary.txt" }))
           yield* llm.push(reply().text("Done").stop())
           yield* prompt.prompt({

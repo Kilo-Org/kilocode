@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
-import { Effect, Exit, Fiber } from "effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import { sql } from "drizzle-orm"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
@@ -289,12 +289,16 @@ describe("shared board notifications", () => {
           const cache = BoardContext.cache()
           const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
           yield* post(child.id, "pending")
-          const failed = yield* read(root.id, { since: "board_missing" }).pipe(
+          const replayed = yield* read(root.id, { since: "board_missing" }).pipe(
             Effect.flatMap((page) => notify("board_read", page)),
             Effect.exit,
           )
-          expect(Exit.isFailure(failed)).toBe(true)
-          expect(cache.cursor).toBe(0)
+          expect(Exit.isFailure(replayed)).toBe(false)
+          if (Exit.isFailure(replayed))
+            throw new Error(`board_read must replay stale cursors: ${Cause.pretty(replayed.cause)}`)
+          expect(cache.cursor).toBeGreaterThan(0)
+          cache.cursor = 0
+          cache.failed = false
           const page = yield* read(root.id)
           const controller = new AbortController()
           controller.abort()

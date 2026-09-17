@@ -184,7 +184,8 @@ export namespace BoardStore {
         Effect.gen(function* () {
           const board = yield* get(tx, current.root)
           if (!board) return yield* fail("Board was not initialized")
-          const since = yield* cursor(tx, current.root, input.since)
+          const since = yield* cursor(tx, current.root, input.since, true)
+          const stale = input.since !== undefined && since === undefined
           const rows = yield* tx.all<MessageRow>(sql`
             SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
               source_message_id, source_call_id
@@ -209,7 +210,8 @@ export namespace BoardStore {
             participantsTruncated: members.truncated,
             messages,
             limit,
-            since: input.since,
+            since: stale ? undefined : input.since,
+            recovered: stale,
           })
         }),
       )
@@ -455,12 +457,13 @@ export namespace BoardStore {
     })
   }
 
-  function cursor(tx: DB | TX, root: string, id: string | undefined) {
+  function cursor(tx: DB | TX, root: string, id: string | undefined, recover = false) {
     return Effect.gen(function* () {
       if (id === undefined) return undefined
       const row = yield* tx.get<{ seq: number }>(sql`
         SELECT seq FROM kilo_board_message WHERE board_root_session_id = ${root} AND id = ${id}
       `)
+      if (!row && recover) return undefined
       if (!row) return yield* fail(`Board cursor is not valid for session ${root}`)
       return row.seq
     })
@@ -761,6 +764,7 @@ export namespace BoardStore {
     messages: Message[]
     limit: number
     since?: string
+    recovered?: boolean
   }): Effect.Effect<
     {
       observedAt: number
@@ -770,6 +774,7 @@ export namespace BoardStore {
       cursor?: string
       hasMore: boolean
       participantsTruncated?: boolean
+      recovered?: boolean
     },
     Error
   > {
@@ -785,6 +790,7 @@ export namespace BoardStore {
         hasMore: more,
         ...(cursor ? { cursor } : {}),
         ...(truncated ? { participantsTruncated: true } : {}),
+        ...(input.recovered ? { recovered: true } : {}),
       }
     }
     const size = (value: ReturnType<typeof base>) => Buffer.byteLength(JSON.stringify(value))
