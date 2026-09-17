@@ -130,6 +130,11 @@ export namespace KilocodeConfigOverlay {
   ] as const
 
   const collectionPaths = ["provider", "mcp", "permission", "agent", "formatter", "lsp"] as const
+
+  // Global-only settings: the effective value always comes from the global config, and a
+  // project value has no effect. Resolve them separately so the overlay never advertises a
+  // project value as an effective override or a project-editable setting.
+  const globalFieldPaths = [["require_approval_for_config_edits"]] as const
   const blocked = new Set(["__proto__", "constructor", "prototype"])
 
   export async function project(input: { directory: string; worktree?: string }): Promise<Config.Info> {
@@ -210,9 +215,14 @@ export namespace KilocodeConfigOverlay {
       project: local,
       sources: input.sources,
       targets,
-      fields: Object.fromEntries(
-        fieldPaths.map((parts) => [parts.join("."), field(input.scope, input.effective, global, local, [...parts])]),
-      ),
+      fields: {
+        ...Object.fromEntries(
+          fieldPaths.map((parts) => [parts.join("."), field(input.scope, input.effective, global, local, [...parts])]),
+        ),
+        ...Object.fromEntries(
+          globalFieldPaths.map((parts) => [parts.join("."), globalField(input.scope, global, local, [...parts])]),
+        ),
+      },
       collections: Object.fromEntries(
         collectionPaths.map((key) => [key, collection(input.scope, input.effective, global, local, key)]),
       ),
@@ -307,6 +317,23 @@ export namespace KilocodeConfigOverlay {
       hasGlobal: has(global, parts),
       hasLocal: has(local, parts),
     })
+  }
+
+  function globalField(scope: Scope, global: Config.Info, local: Config.Info, parts: string[]): Resolved {
+    const hasGlobal = has(global, parts)
+    return {
+      key: parts.join("."),
+      path: parts,
+      value: get(global, parts),
+      global: get(global, parts),
+      local: get(local, parts),
+      source: hasGlobal ? "global" : "default",
+      inherited: scope === "project" && hasGlobal,
+      overridden: false,
+      // Global-only settings are editable only from the global scope; project values never take effect.
+      editable: scope === "global",
+      reason: scope === "project" ? "Global-only setting; project values are ignored." : undefined,
+    }
   }
 
   function isIndexing(parts: string[]) {

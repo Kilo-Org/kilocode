@@ -1033,4 +1033,36 @@ describe("config overlay routes", () => {
     const overlay2 = await json<Overlay>(await req(project.path, "/config/overlay"))
     expect(overlay2.effective?.privacy_mode).toBe(false)
   })
+
+  test.serial("resolves the global-only config-edit approval setting from global scope", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ config: { require_approval_for_config_edits: false } })
+    await setGlobal(global.path, { require_approval_for_config_edits: true })
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(body.fields.require_approval_for_config_edits).toMatchObject({
+      source: "global",
+      value: true,
+      inherited: true,
+      overridden: false,
+      editable: false,
+    })
+  })
+
+  test.serial("edits the global-only config-edit approval setting only at global scope", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { require_approval_for_config_edits: false })
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+
+    expect(body.fields.require_approval_for_config_edits).toMatchObject({
+      source: "global",
+      value: false,
+      inherited: false,
+      overridden: false,
+      editable: true,
+    })
+  })
 })
