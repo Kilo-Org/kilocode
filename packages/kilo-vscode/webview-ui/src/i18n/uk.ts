@@ -272,6 +272,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.reject": "Відхилити",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",

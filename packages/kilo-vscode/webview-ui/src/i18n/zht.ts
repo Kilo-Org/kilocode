@@ -255,6 +255,8 @@ export const dict = {
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
   "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.reject": "拒絕",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",

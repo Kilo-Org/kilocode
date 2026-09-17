@@ -268,6 +268,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.reject": "Отклонить",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",

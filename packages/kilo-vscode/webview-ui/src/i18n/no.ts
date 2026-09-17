@@ -277,6 +277,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
   "notification.permission.titleSandboxEscalation": "Tillate Git-operasjon utenfor sandkassen?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.reject": "Avvis",
   "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",

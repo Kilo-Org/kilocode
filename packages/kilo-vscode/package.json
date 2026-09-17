@@ -1112,7 +1112,7 @@
         "kilo-code.new.autoApprove.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically."
+          "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically. Sandbox escalation prompts are always excluded."
         },
         "kilo-code.new.maxCost": {
           "type": "number",

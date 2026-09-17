@@ -268,6 +268,8 @@ export const dict = {
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
   "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
   "ui.permission.reject": "رد",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",

@@ -263,6 +263,8 @@ export const dict = {
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
   "notification.permission.titleSandboxEscalation": "السماح بعملية Git خارج البيئة المعزولة؟",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.reject": "رفض",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",

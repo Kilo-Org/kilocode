@@ -271,6 +271,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
   "notification.permission.titleSandboxEscalation": "Dozvoliti Git operaciju izvan sandboxa?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.reject": "Odbij",
   "ui.permission.feedbackPlaceholder": "Recite Kilu šta da uradi drugačije",

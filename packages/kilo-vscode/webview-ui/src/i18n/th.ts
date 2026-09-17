@@ -268,6 +268,8 @@ export const dict = {
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
   "notification.permission.titleSandboxEscalation": "อนุญาตการดำเนินการ Git นอกแซนด์บ็อกซ์หรือไม่?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
   "ui.permission.reject": "ปฏิเสธ",
   "ui.permission.feedbackPlaceholder": "บอก Kilo ว่าควรทำต่างออกไปอย่างไร",

@@ -270,6 +270,8 @@ export const dict = {
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
   "notification.permission.titleSandboxEscalation":
     "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.reject": "Reddet",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",

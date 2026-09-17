@@ -273,6 +273,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
   "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.reject": "Rejeter",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",

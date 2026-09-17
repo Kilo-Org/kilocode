@@ -270,6 +270,8 @@ export const dict = {
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
   "notification.permission.titleSandboxEscalation": "サンドボックス外での Git 操作を許可しますか？",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.reject": "拒否",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",

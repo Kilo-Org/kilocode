@@ -202,8 +202,10 @@ export const dict = {
   "prompt.action.indexing": "Indexing settings",
   "prompt.action.autoApprove.enable": "Enable auto-approve",
   "prompt.action.autoApprove.disable": "Disable auto-approve",
-  "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
-  "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
+  "prompt.action.autoApprove.enabled":
+    "Auto-approve is enabled. Permission prompts will be approved automatically. Sandbox escalation prompts are always excluded.",
+  "prompt.action.autoApprove.disabled":
+    "Auto-approve is disabled. Click to approve permission prompts automatically. Sandbox escalation prompts are always excluded.",
   "prompt.action.sandbox.enable": "Enable sandbox",
   "prompt.action.sandbox.disable": "Disable sandbox",
   "prompt.action.sandbox.enabled":
@@ -218,7 +220,8 @@ export const dict = {
   "prompt.action.sandbox.network.blocked": "Blocked",
   "prompt.action.sandbox.network.allowed": "Allowed",
   "prompt.action.sandbox.unrestricted": "Unrestricted",
-  "prompt.action.sandbox.description.enabled": "Writes are limited to the project and Kilo directories.",
+  "prompt.action.sandbox.description.enabled":
+    "Writes are limited to the project and Kilo directories. Permission rules and auto-approve apply inside the sandbox. Commands that must leave it always ask.",
   "prompt.action.sandbox.description.disabled": "Click to restrict filesystem writes and network access.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
@@ -264,7 +267,9 @@ export const dict = {
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
-  "notification.permission.titleSandboxEscalation": "Allow Git operation outside the sandbox?",
+  "notification.permission.titleSandboxEscalation": "Run outside the sandbox?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.reject": "Reject",
   "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",

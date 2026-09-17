@@ -271,6 +271,8 @@ export const dict = {
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
   "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 Git 작업을 허용할까요?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.reject": "거부",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",

@@ -270,6 +270,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
   "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.reject": "Afvis",
   "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
