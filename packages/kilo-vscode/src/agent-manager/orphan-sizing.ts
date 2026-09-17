@@ -20,6 +20,11 @@ type Tracker = {
   abort: AbortController | undefined
   paused: boolean
   /**
+   * Paths the in-flight walk (if any) is measuring. Tracked separately from `known` so a later call
+   * can tell whether that walk is still trustworthy — see the abort check in {@link trackOrphanSizes}.
+   */
+  pending: Set<string> | undefined
+  /**
    * Settled measurements by path. A present key means the walk is done with that directory; the value
    * is its size, or undefined when it could not be measured at all.
    *
@@ -37,9 +42,14 @@ const trackers = new WeakMap<ProjectContext, Tracker>()
 function tracker(ctx: ProjectContext): Tracker {
   const existing = trackers.get(ctx)
   if (existing) return existing
-  const created: Tracker = { abort: undefined, paused: false, known: new Map() }
+  const created: Tracker = { abort: undefined, paused: false, pending: undefined, known: new Map() }
   trackers.set(ctx, created)
   return created
+}
+
+function isSubset(a: Set<string>, b: Set<string>): boolean {
+  for (const path of a) if (!b.has(path)) return false
+  return true
 }
 
 /**
@@ -72,9 +82,15 @@ function apply(ctx: ProjectContext, known: Map<string, number | undefined>): boo
  * Called by every reconcile. Known sizes are re-applied to the objects that reconcile just built —
  * that part is not an optimization, it is what stops the banner from losing its total on every
  * worktree-health poll. Only genuinely new directories are walked, so a routine poll costs nothing and
- * one new leftover folder does not re-read the other forty. A pass in flight is abandoned when new
- * directories appear, since the walk is the expensive part and its results are cached per path
- * anyway: whatever it had not finished is simply picked up by the next pass.
+ * one new leftover folder does not re-read the other forty.
+ *
+ * A walk in flight is abandoned as soon as any path it covers leaves the orphan list — a directory
+ * removed outside Kilo, say — regardless of whether *this* call needs a walk of its own. Leaving it
+ * running would eventually write a size for a path nothing lists as an orphan anymore, and if that
+ * path reappears later, `apply` would resurrect the stale number with no new walk ever correcting it,
+ * since the path already has an entry in `known`. Checking this ahead of the usual "anything missing?"
+ * question below is what makes the abort happen even when this call's own path set does not need a
+ * walk (e.g. every orphan was removed at once, leaving nothing to be missing).
  */
 export function trackOrphanSizes(
   ctx: ProjectContext,
@@ -91,17 +107,24 @@ export function trackOrphanSizes(
   for (const path of state.known.keys()) {
     if (!covered.has(path)) state.known.delete(path)
   }
-  const missing = next.filter((path) => !state.known.has(path))
+  if (state.pending && !isSubset(state.pending, covered)) {
+    state.abort?.abort()
+    state.abort = undefined
+    state.pending = undefined
+  }
+  const missing = next.filter((path) => !state.known.has(path) && !state.pending?.has(path))
   if (missing.length === 0) return
   state.abort?.abort()
   const controller = new AbortController()
   state.abort = controller
+  state.pending = new Set(missing)
   sizes(missing, { signal: controller.signal })
     .then((result) => {
       if (controller.signal.aborted) return
       // Recorded for every path walked, with or without an answer: `sizes` omits a directory it could
       // not read rather than failing the batch, and "we tried" is what the UI needs to stop waiting.
       for (const path of missing) state.known.set(path, result.get(path))
+      state.pending = undefined
       if (apply(ctx, state.known)) ctx.notifySized()
     })
     .catch((err: unknown) => log(`Failed to compute orphan directory sizes: ${err}`))
@@ -125,6 +148,7 @@ export function pauseOrphanSizes(ctx: ProjectContext): void {
   state.paused = true
   state.abort?.abort()
   state.abort = undefined
+  state.pending = undefined
 }
 
 /**

@@ -11,7 +11,10 @@ import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
+import { createProjectWiring } from "../../src/agent-manager/project/wiring"
 import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
+import type { GitOps } from "../../src/agent-manager/GitOps"
+import type { Host } from "../../src/agent-manager/host"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -279,27 +282,42 @@ describe("Agent Manager leftover worktree folders", () => {
   /**
    * Sizing is kicked off by whichever reconcile runs first — startup, a repair, the doctor — and only
    * one of those used to carry a push callback, so the first pass's results never reached the webview
-   * and the banner said "calculating size…" forever. The hook on the context is the single wiring
-   * point that makes every path push; without it the banner silently goes back to lying.
+   * and the banner said "calculating size…" forever. This drives the real `createProjectWiring`
+   * (the only place a `ProjectContext`'s `sized` dep is set in production) end to end, so it fails on
+   * a broken wire regardless of how the fix is spelled — renaming the hook, restructuring the deps
+   * object, or reformatting the file all leave this red only if the push genuinely stops happening.
+   * `orphan-sizing.test.ts` covers the other half: that a completed pass actually calls the hook.
    */
-  it("pushes orphan sizes to the webview from whichever reconcile started the pass", () => {
-    const sizing = fs.readFileSync(path.join(ROOT, "src/agent-manager/orphan-sizing.ts"), "utf-8")
-    expect(sizing, "a completed pass has to notify the host").toContain("ctx.notifySized()")
+  it("wires a fresh project context's sized hook to a webview push, through the real construction path", () => {
+    const pushed: unknown[] = []
+    const disposable = { dispose: () => undefined }
+    const host = {
+      workspacePath: () => "/repo",
+      multiProject: () => false,
+      onDidChangeWorkspaceFolders: () => disposable,
+      onDidChangeMultiProject: () => disposable,
+      onDidChangeWorktreePool: () => disposable,
+    } as unknown as Host
 
-    const wiring = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/wiring.ts"), "utf-8")
-    expect(wiring, "every context needs the push hook").toContain("sized: (ctx) => opts.pushState(ctx)")
+    const wiring = createProjectWiring({
+      host,
+      git: undefined as unknown as GitOps,
+      log: () => undefined,
+      output: () => undefined,
+      activate: () => undefined,
+      expand: () => undefined,
+      ready: () => Promise.resolve({ ok: true, refsFixed: 0, current: true }),
+      push: () => undefined,
+      pushState: (ctx) => pushed.push(ctx),
+      changed: () => undefined,
+      selected: () => undefined,
+    })
 
-    // No reconcile entry point should be re-introducing a per-call sizing callback.
-    const init = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/init.ts"), "utf-8")
-    expect(init).not.toContain("onSized")
-  })
+    const ctx = wiring.contexts.pinned()
+    ctx?.notifySized()
 
-  it("stops claiming it is calculating once a folder turns out to be unmeasurable", () => {
-    const sizing = fs.readFileSync(path.join(ROOT, "src/agent-manager/orphan-sizing.ts"), "utf-8")
-    expect(sizing, "a covered folder settles even without a size").toContain("orphan.sized = true")
-
-    const notice = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanNotice.tsx"), "utf-8")
-    expect(notice, "the affordance is gated on settled, not on a missing size").toContain("orphanSizesSettled")
+    expect(ctx, "the fake host must be enough to produce a context").toBeDefined()
+    expect(pushed).toEqual([ctx])
   })
 
   it("uses the shared check glyph for selection instead of a bespoke one", () => {

@@ -34,12 +34,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
@@ -200,26 +202,44 @@ class KiloWorktreeRpcApiImplTest {
      * The frontend cancels a size pass whenever the orphan set changes or a delete starts, and
      * `Files.walkFileTree` cannot be interrupted — so the walk has to check cancellation itself rather
      * than leave a cancelled coroutine walking every remaining path on Dispatchers.IO.
+     *
+     * Cancelling before the call is ever reached (`job.cancel()` then `withContext(job) { ... }`) would
+     * only prove that `withContext` on an already-dead job throws without entering the block — true of
+     * any suspend function and unrelated to the `ensureActive()`/`isActive` checks this is meant to
+     * cover. This instead cancels a walk that is demonstrably still running: a full, uncancelled pass
+     * over a large tree is timed first, then a second pass over the same tree is cancelled partway
+     * through and shown to finish in a small fraction of that baseline — which a walk with no
+     * cancellation checks could not do, since nothing would tell it to stop.
      */
     @Test
-    fun `orphanSizes stops measuring once its caller is cancelled`() = runBlocking {
+    fun `orphanSizes stops mid-walk once cancelled, instead of running to completion`() = runBlocking {
         initRepo()
-        val first = repo.resolve(".kilo").resolve("worktrees").resolve("first")
-        val second = repo.resolve(".kilo").resolve("worktrees").resolve("second")
-        Files.createDirectories(first)
-        Files.createDirectories(second)
-        Files.write(first.resolve("a.bin"), ByteArray(10))
-        Files.write(second.resolve("b.bin"), ByteArray(20))
+        val big = repo.resolve(".kilo").resolve("worktrees").resolve("big")
+        Files.createDirectories(big)
+        repeat(20_000) { i -> Files.write(big.resolve("f$i.bin"), ByteArray(1)) }
+        val target = listOf(big.toString())
+
+        val baselineStart = System.nanoTime()
+        api.orphanSizes(repo.toString(), target)
+        val baseline = System.nanoTime() - baselineStart
 
         val job = Job()
+        val cancelledStart = System.nanoTime()
+        val deferred = CoroutineScope(Dispatchers.IO + job).async { api.orphanSizes(repo.toString(), target) }
+        // A quarter of the uncancelled duration is comfortably inside the walk, not before or after it.
+        delay(TimeUnit.NANOSECONDS.toMillis(baseline / 4).coerceAtLeast(1))
         job.cancel()
-        val outcome = runCatching<Map<String, Long>> {
-            withContext(job) { api.orphanSizes(repo.toString(), listOf(first.toString(), second.toString())) }
-        }
+        val outcome = runCatching { deferred.await() }
+        val elapsed = System.nanoTime() - cancelledStart
 
         assertTrue(
             outcome.exceptionOrNull() is CancellationException,
             "a cancelled pass must not answer with sizes -> ${outcome.getOrNull()}",
+        )
+        assertTrue(
+            elapsed < baseline * 3 / 4,
+            "cancelling took ${elapsed / 1_000_000}ms against an uncancelled ${baseline / 1_000_000}ms " +
+                "-- a walk with no cancellation checks would not finish any faster than the baseline",
         )
     }
 

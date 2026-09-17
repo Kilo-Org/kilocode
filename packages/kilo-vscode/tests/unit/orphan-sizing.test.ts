@@ -117,6 +117,46 @@ describe("trackOrphanSizes", () => {
     expect(sized, "and it must not need a second walk to get there").toBe(1)
   })
 
+  /**
+   * A directory that leaves the orphan list entirely while a walk covering it is still in flight (say
+   * it was removed outside Kilo) must not have that walk's eventual answer written into the cache —
+   * if it reappears later, the stale number would apply instantly with no new walk ever correcting it.
+   */
+  it("does not resurrect a stale size for a directory that leaves and rejoins the orphan list mid-walk", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-resurrect-"))
+    tempDirs.push(dir)
+    await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(10))
+    let onSized = () => undefined
+    const project = ctx(() => onSized())
+    project.report = reportWith([{ path: dir, kind: "leftover" }])
+
+    // A walk starts over `dir` and is still in flight when the next lines run synchronously.
+    trackOrphanSizes(project, project.report.orphans, () => undefined)
+
+    // `dir` leaves the orphan list entirely before that walk lands. The in-flight walk must be
+    // abandoned, not left to eventually write a result for a path nothing lists as an orphan anymore.
+    project.report = reportWith([])
+    trackOrphanSizes(project, [], () => undefined)
+
+    // Give the walk a turn to settle, in case it was not actually aborted.
+    await Bun.sleep(30)
+
+    // `dir` reappears with different content: 10 bytes -> 100 bytes.
+    await fs.appendFile(path.join(dir, "f.txt"), "x".repeat(90))
+    const landed = Promise.withResolvers<void>()
+    onSized = () => landed.resolve()
+    const revived: OrphanDirectory[] = [{ path: dir, kind: "leftover" }]
+    project.report = reportWith(revived)
+    trackOrphanSizes(project, revived, () => undefined)
+
+    // If the abandoned walk was allowed to land, this would already show the stale 10 bytes here,
+    // synchronously, with no new walk ever starting to correct it.
+    expect(revived[0]?.bytes, "must not apply a size from a walk that should have been abandoned").toBeUndefined()
+
+    await landed.promise
+    expect(revived[0]?.bytes, "the directory must be measured fresh once it reappears").toBe(100)
+  })
+
   it("does not re-run when called again with the same orphan path set", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-track-"))
     tempDirs.push(dir)
