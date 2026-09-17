@@ -38,11 +38,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-/** Lets tests drive the dialog without actually showing a window. */
-internal interface SessionBoardDialogHandle {
-    fun show()
-}
-
 /**
  * Viewer for a root session's shared agent board (see `ai.kilocode.jetbrains.client.session.SessionUi`
  * for the header icon / menu action that opens this). Pages backward through [KiloSessionService.sessionBoard]
@@ -61,7 +56,7 @@ internal class SessionBoardDialog(
     private val order: List<String>,
     private val service: KiloSessionService,
     private val onOpenAgent: (String, String?) -> Unit,
-) : DialogWrapper(parent, false), SessionBoardDialogHandle {
+) : DialogWrapper(parent, false) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var disposed = false

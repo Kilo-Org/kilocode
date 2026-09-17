@@ -1114,9 +1114,14 @@ class SessionUi(
         val dialog = SessionBoardDialog(this, project, session, title(), workspace.directory, order, sessions) { id, label ->
             openSubagent(id, label ?: id)
         }
-        // The dialog is non-modal, so show() returns immediately. The board can be reset while it is
-        // open, which must hide the entry points again, so re-probe when it closes rather than here.
-        Disposer.register(dialog.disposable) { refreshBoard() }
+        // A non-modal dialog outlives show(), so bound it to this session: disposing the dialog's
+        // disposable calls DialogWrapper.dispose(), so closing the session tab closes the board too
+        // instead of leaving a window holding a disposed SessionUi and its coroutine scope.
+        Disposer.register(this, dialog.disposable)
+        // The board can be reset while the dialog is open, which must hide the entry points again,
+        // so re-probe when it closes. Skipped when the session itself is going away, since that path
+        // disposes the dialog too.
+        Disposer.register(dialog.disposable) { if (!disposed) refreshBoard() }
         dialog.show()
     }
 
