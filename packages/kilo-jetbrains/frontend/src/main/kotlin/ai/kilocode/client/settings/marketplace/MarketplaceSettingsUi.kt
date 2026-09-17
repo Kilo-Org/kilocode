@@ -64,9 +64,6 @@ internal class MarketplaceSettingsUi(
     /** Set while a row action is in flight, so the finished reload hands focus back to the list. */
     private var refocus = false
 
-    /** Bumped by every filter change; [fetched] records the revision the last fetch ran under. */
-    private var filters = 0
-    private var fetched = 0
 
     private val allButton = textAction(this, allLabel()) { selectAllTypes() }
     private val agentChip = FilterChip(agentLabel(), UiStyle.Badge::typeAgent) { toggleType("agent") }
@@ -96,11 +93,8 @@ internal class MarketplaceSettingsUi(
     override suspend fun fetch(): List<ActiveListItem> {
         val result = service<KiloMarketplaceService>().list(dir)
         items = result.items
-        // Rows are built here but painted later by apply(), so record which filter revision they
-        // reflect; afterApply repaints if a toggle landed in between.
         return withContext(edt) {
             syncErrors(result.errors)
-            fetched = filters
             rows()
         }
     }
@@ -138,11 +132,9 @@ internal class MarketplaceSettingsUi(
     private fun divider(): JComponent = JSeparator(SwingConstants.VERTICAL)
         .align(HAlign.CENTER, VAlign.CENTER, maxH = { ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE.height })
 
-    /** Single entry point for a filter change, so every one of them records a new revision. */
+    /** Single entry point for a filter change, so every one of them repaints the same way. */
     private fun refilter(change: () -> Unit) {
         change()
-        filters++
-        fetched = filters
         view.update(rows())
     }
 
@@ -305,14 +297,14 @@ internal class MarketplaceSettingsUi(
     }
 
     /**
-     * A filter toggled while a reload was in flight repaints from the new filter state, and then the
-     * reload paints rows it had already computed under the old one — leaving the controls and the
-     * visible rows disagreeing. Comparing the filter revision the fetch ran under against the current
-     * one repaints in exactly that case, and leaves the common path a single update.
+     * Repaints from the live filter state after a reload paints.
+     *
+     * [fetch] builds its rows on one EDT hop and [apply] paints them on a later one, so a filter
+     * toggled in between is applied to the controls but not to the rows that land. Rebuilding here
+     * unconditionally keeps the two in agreement; tracking whether a toggle actually raced would add
+     * state whose corrective branch cannot be reached from a test, to save one list rebuild per reload.
      */
     private fun syncFilters() {
-        if (fetched == filters) return
-        fetched = filters
         view.update(rows())
     }
 
