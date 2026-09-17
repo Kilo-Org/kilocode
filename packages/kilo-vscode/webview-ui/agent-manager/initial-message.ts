@@ -22,6 +22,7 @@ interface PromptSession {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+    projectId?: string,
   ) => boolean
   submit: (input: SendMessageRequest) => void
 }
@@ -35,6 +36,7 @@ export function initialCommand(ev: AgentManagerSendInitialMessage): SendCommandR
   if (!ev.command) return undefined
   return {
     type: "sendCommand",
+    ...(ev.projectId ? { projectId: ev.projectId } : {}),
     command: ev.command,
     arguments: ev.arguments ?? "",
     sessionID: ev.sessionId,
@@ -80,6 +82,7 @@ export function dispatchInitialPrompt(session: PromptSession, ev: AgentManagerSe
       undefined,
       command.sessionID,
       { agent: command.agent, variant: command.variant },
+      command.projectId,
     )
     return
   }

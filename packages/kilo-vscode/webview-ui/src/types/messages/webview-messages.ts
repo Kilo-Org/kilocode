@@ -337,6 +337,7 @@ export interface RequestCommandsMessage {
 
 export interface SendCommandRequest {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string

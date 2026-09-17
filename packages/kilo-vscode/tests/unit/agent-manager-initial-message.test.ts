@@ -34,10 +34,11 @@ describe("dispatchInitialPrompt", () => {
       modelID: "claude-sonnet-4",
       agent: "code",
       variant: "high",
+      projectId: "project-b",
     })
 
     expect(ctx.calls).toHaveLength(1)
-    expect(ctx.calls[0]?.slice(0, 9)).toEqual([
+    expect(ctx.calls[0]?.slice(0, 10)).toEqual([
       "goal",
       "ship it",
       "anthropic",
@@ -47,6 +48,7 @@ describe("dispatchInitialPrompt", () => {
       undefined,
       "session-a",
       { agent: "code", variant: "high" },
+      "project-b",
     ])
   })
 
@@ -114,6 +116,19 @@ describe("Agent Manager initial command", () => {
         command: "grill",
       })?.arguments,
     ).toBe("")
+  })
+
+  it("forwards projectId so multi-project routing matches the text path", () => {
+    expect(
+      initialCommand({
+        type: "agentManager.sendInitialMessage",
+        sessionId: "session-a",
+        worktreeId: "wt-a",
+        command: "goal",
+        arguments: "ship it",
+        projectId: "project-b",
+      })?.projectId,
+    ).toBe("project-b")
   })
 
   it("returns undefined for a plain prompt", () => {
