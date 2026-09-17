@@ -25,6 +25,31 @@ const update = (part: Part, sessionID = "session-1") =>
   }) satisfies Extract<ExtensionMessage, { type: "partUpdated" }>
 
 describe("createPlanOpener", () => {
+  it("opens only completed open_plan parts from batched updates", async () => {
+    const opened: string[] = []
+    const opener = createPlanOpener(
+      () => "session-1",
+      (plan) => opened.push(`${plan.sessionID}:${plan.id}`),
+    )
+    const message = {
+      type: "partsUpdated",
+      updates: [
+        update(done("part-valid")),
+        update({ ...done("part-tool"), tool: "read" }),
+        update({ ...done("part-running"), state: { status: "running", input: {} } }),
+        update({
+          ...done("part-unmarked"),
+          state: { ...done("part-unmarked").state, metadata: { plan: ".kilo/plans/plan.md" } },
+        }),
+        update({ ...done("part-nopath"), state: { ...done("part-nopath").state, metadata: { open: true } } }),
+      ],
+    } satisfies Extract<ExtensionMessage, { type: "partsUpdated" }>
+
+    opener.accept(message)
+    await Promise.resolve()
+    expect(opened).toEqual(["session-1:part-valid"])
+  })
+
   it("defers inactive plans and replays them when the session becomes active", async () => {
     let active = "session-2"
     const opened: string[] = []
