@@ -208,6 +208,7 @@ export const dict = {
     "Automatyczne zatwierdzanie jest włączone. Prośby o uprawnienia będą zatwierdzane automatycznie.",
   "prompt.action.autoApprove.disabled":
     "Automatyczne zatwierdzanie jest wyłączone. Kliknij, aby automatycznie zatwierdzać prośby o uprawnienia.",
+  "prompt.action.autoApprove.sandboxExcluded": "Żądania wyjścia z sandboxa są zawsze wykluczone.",
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
   "prompt.action.indexing": "Ustawienia indeksowania",
@@ -226,6 +227,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Dozwolona",
   "prompt.action.sandbox.unrestricted": "Nieograniczony",
   "prompt.action.sandbox.description.enabled": "Zapisy są ograniczone do katalogów projektu i Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Reguły uprawnień i automatyczne zatwierdzanie obowiązują wewnątrz sandboxa. Polecenia, które muszą go opuścić, zawsze pytają.",
   "prompt.action.sandbox.description.disabled": "Kliknij, aby ograniczyć zapisy w systemie plików i dostęp do sieci.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Kliknij, aby ograniczyć zapisy w systemie plików. Ustawienia sandboxa nadal zezwalają na dostęp do sieci.",
@@ -270,7 +273,9 @@ export const dict = {
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Zezwolić na operację Git poza piaskownicą?",
+  "notification.permission.titleSandboxEscalation": "Uruchomić poza sandboxem?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Spowoduje to uruchomienie całego polecenia bez ograniczeń systemu plików i sieci, tylko dla tego polecenia. Git musi zapisywać w .git, który jest tylko do odczytu w sandboxie i znajduje się poza drzewem roboczym w połączonym worktree. Reguły zezwoleń Bash i automatyczne zatwierdzanie nigdy nie zatwierdzają tego żądania automatycznie.",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.reject": "Odrzuć",
   "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",

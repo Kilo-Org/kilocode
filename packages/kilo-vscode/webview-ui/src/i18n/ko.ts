@@ -209,6 +209,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
   "prompt.action.autoApprove.disabled": "자동 승인이 꺼져 있습니다. 클릭하면 권한 요청을 자동으로 승인합니다.",
+  "prompt.action.autoApprove.sandboxExcluded": "샌드박스 에스컬레이션 프롬프트는 항상 제외됩니다.",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
   "prompt.action.sandbox.enable": "샌드박스 활성화",
@@ -226,6 +227,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "허용됨",
   "prompt.action.sandbox.unrestricted": "제한 없음",
   "prompt.action.sandbox.description.enabled": "쓰기는 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.description.escalation":
+    "권한 규칙과 자동 승인은 샌드박스 안에서 적용됩니다. 샌드박스를 벗어나야 하는 명령은 항상 확인합니다.",
   "prompt.action.sandbox.description.disabled": "클릭하면 파일 시스템 쓰기와 네트워크 액세스를 제한합니다.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
@@ -270,7 +273,9 @@ export const dict = {
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
-  "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 Git 작업을 허용할까요?",
+  "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 실행할까요?",
+  "notification.permission.descriptionSandboxEscalation":
+    "이 명령에만 적용되며, 파일 시스템 및 네트워크 제한을 해제하고 명령 전체를 실행합니다. Git은 .git에 기록해야 하며, 이 경로는 샌드박스에서 읽기 전용이고 연결된 worktree에서는 해당 worktree 밖에 있습니다. Bash 허용 규칙과 자동 승인은 이 프롬프트를 자동으로 승인하지 않습니다.",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.reject": "거부",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",

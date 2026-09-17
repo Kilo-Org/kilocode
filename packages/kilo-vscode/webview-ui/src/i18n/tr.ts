@@ -207,6 +207,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
   "prompt.action.autoApprove.enabled": "Otomatik onay etkin. İzin istekleri otomatik olarak onaylanacak.",
   "prompt.action.autoApprove.disabled": "Otomatik onay devre dışı. İzin isteklerini otomatik onaylamak için tıklayın.",
+  "prompt.action.autoApprove.sandboxExcluded": "Korumalı alan yükseltme istemleri her zaman hariç tutulur.",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
   "prompt.action.sandbox.enable": "Sandbox'ı etkinleştir",
@@ -223,6 +224,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "İzin verildi",
   "prompt.action.sandbox.unrestricted": "Kısıtlanmamış",
   "prompt.action.sandbox.description.enabled": "Yazma işlemleri proje ve Kilo dizinleriyle sınırlıdır.",
+  "prompt.action.sandbox.description.escalation":
+    "İzin kuralları ve otomatik onay korumalı alan içinde geçerlidir. Korumalı alandan çıkması gereken komutlar her zaman sorar.",
   "prompt.action.sandbox.description.disabled":
     "Dosya sistemi yazma işlemlerini ve ağ erişimini kısıtlamak için tıklayın.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -268,8 +271,9 @@ export const dict = {
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
-  "notification.permission.titleSandboxEscalation":
-    "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
+  "notification.permission.titleSandboxEscalation": "Korumalı alan dışında çalıştırılsın mı?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Bu, tüm komutu dosya sistemi ve ağ kısıtlamaları kaldırılmış olarak yalnızca bu komut için çalıştırır. Git, korumalı alanda salt okunur olan ve bağlı bir worktree'de worktree dışında kalan .git dosyasına yazmalıdır. Bash izin kuralları ve otomatik onay bu istemi hiçbir zaman otomatik olarak onaylamaz.",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.reject": "Reddet",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",

@@ -200,6 +200,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "停用自動核准",
   "prompt.action.autoApprove.enabled": "自動核准已啟用。權限請求將自動獲准。",
   "prompt.action.autoApprove.disabled": "自動核准已停用。點擊以自動核准權限請求。",
+  "prompt.action.autoApprove.sandboxExcluded": "離開沙盒的提示一律被排除。",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
   "prompt.action.sandbox.enable": "啟用沙盒",
@@ -215,6 +216,7 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "允許",
   "prompt.action.sandbox.unrestricted": "不受限制",
   "prompt.action.sandbox.description.enabled": "寫入僅限於專案和 Kilo 目錄。",
+  "prompt.action.sandbox.description.escalation": "權限規則和自動核准在沙盒內生效。必須離開沙盒的命令一律會詢問。",
   "prompt.action.sandbox.description.disabled": "點擊以限制檔案系統寫入和網路存取。",
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
@@ -254,7 +256,9 @@ export const dict = {
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
-  "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
+  "notification.permission.titleSandboxEscalation": "要在沙盒外執行嗎？",
+  "notification.permission.descriptionSandboxEscalation":
+    "這會移除檔案系統和網路限制，執行整條命令，且僅限此命令。Git 必須寫入 .git，該路徑在沙盒中為唯讀，且在連結的 worktree 中位於該 worktree 之外。Bash 允許規則和自動核准永遠不會自動核准此提示。",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.reject": "拒絕",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
