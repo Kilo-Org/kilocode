@@ -1057,6 +1057,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "النموذج",
   "settings.agentBehaviour.workflows.variant": "المتغير",
   "settings.agentBehaviour.workflows.modelDescription": "تجاوز النموذج العام",
+  "settings.experimental.codeMode.title": "استدعاءات الأدوات البرمجية",
+  "settings.experimental.codeMode.description":
+    "يوجّه استدعاءات أدوات MCP عبر بيئة تشغيل JavaScript معزولة مع اكتشاف الأدوات عند الطلب بدلاً من عرض كل أداة MCP مباشرةً. يوفّر السياق عند توصيل العديد من أدوات MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",

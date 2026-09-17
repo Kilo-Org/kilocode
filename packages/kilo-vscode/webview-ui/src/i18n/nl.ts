@@ -959,6 +959,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
+  "settings.experimental.codeMode.title": "Programmatische toolaanroepen",
+  "settings.experimental.codeMode.description":
+    "Leidt MCP-toolaanroepen via een afgeschermde JavaScript-runtime met on-demand tooldetectie, in plaats van elke MCP-tool direct beschikbaar te stellen. Bespaart context wanneer veel MCP-tools zijn verbonden.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",
