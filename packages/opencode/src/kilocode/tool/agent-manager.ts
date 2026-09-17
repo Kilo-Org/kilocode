@@ -230,7 +230,13 @@ function select(
   }
   const selected = selectModel(task, providers, source, preferred)
   if ("error" in selected) return { error: `Task ${index + 1} ${selected.error}` }
-  return { task: { ...base, ...selected } }
+  // Naming the invoking model again must not drop the invoking reasoning variant.
+  const variant =
+    selected.variant ??
+    (source && selected.model.providerID === source.model.providerID && selected.model.modelID === source.model.modelID
+      ? source.variant
+      : undefined)
+  return { task: { ...base, ...selected, ...(variant ? { variant } : {}) } }
 }
 
 export const AgentManagerTool = Tool.define<
