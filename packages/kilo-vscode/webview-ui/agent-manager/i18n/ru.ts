@@ -493,6 +493,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} оставшихся папок worktree",
   "agentManager.orphans.summarySize": "{{count}} оставшихся папок worktree · {{size}}",
   "agentManager.orphans.calculating": "вычисление размера…",
+  "agentManager.orphans.sizeUnknown": "неизвестно",
   "agentManager.orphans.dialogTitle": "Оставшиеся папки worktree",
   "agentManager.orphans.helpIntro":
     "Kilo хранит все создаваемые worktree в папке .kilo/worktrees этого репозитория. Папки ниже находятся в этой папке, но git не считает ни одну из них worktree, поэтому они больше не используются.",

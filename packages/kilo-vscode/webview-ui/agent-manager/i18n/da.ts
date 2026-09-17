@@ -492,6 +492,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} efterladt(e) worktree-mappe(r)",
   "agentManager.orphans.summarySize": "{{count}} efterladt(e) worktree-mappe(r) · {{size}}",
   "agentManager.orphans.calculating": "beregner størrelse…",
+  "agentManager.orphans.sizeUnknown": "ukendt",
   "agentManager.orphans.dialogTitle": "Efterladte worktree-mapper",
   "agentManager.orphans.helpIntro":
     "Kilo gemmer alle worktrees, den opretter, i mappen .kilo/worktrees i dette repository. Mapperne nedenfor ligger i den mappe, men git viser ingen af dem som et worktree, så der er ikke længere noget, der bruger dem.",

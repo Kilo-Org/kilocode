@@ -500,6 +500,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} carpeta(s) de worktree sobrante(s)",
   "agentManager.orphans.summarySize": "{{count}} carpeta(s) de worktree sobrante(s) · {{size}}",
   "agentManager.orphans.calculating": "calculando el tamaño…",
+  "agentManager.orphans.sizeUnknown": "desconocido",
   "agentManager.orphans.dialogTitle": "Carpetas de worktree sobrantes",
   "agentManager.orphans.helpIntro":
     "Kilo guarda cada worktree que crea dentro de la carpeta .kilo/worktrees de este repositorio. Las carpetas siguientes están en esa carpeta, pero git no incluye ninguna de ellas como worktree, así que ya no se usan.",

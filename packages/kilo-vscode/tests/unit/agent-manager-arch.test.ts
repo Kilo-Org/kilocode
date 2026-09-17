@@ -276,6 +276,32 @@ describe("Agent Manager leftover worktree folders", () => {
     expect(css).toContain(".am-orphan-help-toggle {")
   })
 
+  /**
+   * Sizing is kicked off by whichever reconcile runs first — startup, a repair, the doctor — and only
+   * one of those used to carry a push callback, so the first pass's results never reached the webview
+   * and the banner said "calculating size…" forever. The hook on the context is the single wiring
+   * point that makes every path push; without it the banner silently goes back to lying.
+   */
+  it("pushes orphan sizes to the webview from whichever reconcile started the pass", () => {
+    const sizing = fs.readFileSync(path.join(ROOT, "src/agent-manager/orphan-sizing.ts"), "utf-8")
+    expect(sizing, "a completed pass has to notify the host").toContain("ctx.notifySized()")
+
+    const wiring = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/wiring.ts"), "utf-8")
+    expect(wiring, "every context needs the push hook").toContain("sized: (ctx) => opts.pushState(ctx)")
+
+    // No reconcile entry point should be re-introducing a per-call sizing callback.
+    const init = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/init.ts"), "utf-8")
+    expect(init).not.toContain("onSized")
+  })
+
+  it("stops claiming it is calculating once a folder turns out to be unmeasurable", () => {
+    const sizing = fs.readFileSync(path.join(ROOT, "src/agent-manager/orphan-sizing.ts"), "utf-8")
+    expect(sizing, "a covered folder settles even without a size").toContain("orphan.sized = true")
+
+    const notice = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanNotice.tsx"), "utf-8")
+    expect(notice, "the affordance is gated on settled, not on a missing size").toContain("orphanSizesSettled")
+  })
+
   it("uses the shared check glyph for selection instead of a bespoke one", () => {
     const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/OrphanDialog.tsx"), "utf-8")
     expect(source).toContain('icon={<Icon name="check-small" size="small" />}')

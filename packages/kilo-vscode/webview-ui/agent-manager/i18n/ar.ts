@@ -483,6 +483,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} مجلد worktree متبقٍ",
   "agentManager.orphans.summarySize": "{{count}} مجلد worktree متبقٍ · {{size}}",
   "agentManager.orphans.calculating": "جارٍ حساب الحجم…",
+  "agentManager.orphans.sizeUnknown": "غير معروف",
   "agentManager.orphans.dialogTitle": "مجلدات worktree متبقية",
   "agentManager.orphans.helpIntro":
     "يحفظ Kilo كل worktree يُنشئه داخل مجلد .kilo/worktrees في هذا المستودع. المجلدات أدناه موجودة في ذلك المجلد، لكن git لا يسرد أيًا منها باعتباره worktree، لذا لم يعد أي شيء يستخدمها.",

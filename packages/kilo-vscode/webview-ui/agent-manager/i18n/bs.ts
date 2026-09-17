@@ -491,6 +491,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} zaostalih worktree foldera",
   "agentManager.orphans.summarySize": "{{count}} zaostalih worktree foldera · {{size}}",
   "agentManager.orphans.calculating": "računanje veličine…",
+  "agentManager.orphans.sizeUnknown": "nepoznato",
   "agentManager.orphans.dialogTitle": "Zaostali worktree folderi",
   "agentManager.orphans.helpIntro":
     "Kilo čuva svaki worktree koji napravi u folderu .kilo/worktrees ovog repozitorija. Folderi ispod nalaze se u tom folderu, ali git ni jedan od njih ne navodi kao worktree, pa ih više ništa ne koristi.",

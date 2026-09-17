@@ -1172,11 +1172,8 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private reconcileAndPush(ctx: ProjectContext): Promise<WorktreeHealthReport | undefined> {
-    return reconcileProject(
-      ctx,
-      (...args: unknown[]) => this.log(...args),
-      () => this.pushState(ctx),
-    )
+    // Sizes that land later push themselves through the context's `sized` hook (see project/wiring).
+    return reconcileProject(ctx, (...args: unknown[]) => this.log(...args))
   }
 
   private recover(m: RecoveryMessage): Promise<null> {

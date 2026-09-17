@@ -500,6 +500,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} übrig gebliebene(r) Worktree-Ordner",
   "agentManager.orphans.summarySize": "{{count}} übrig gebliebene(r) Worktree-Ordner · {{size}}",
   "agentManager.orphans.calculating": "Größe wird berechnet…",
+  "agentManager.orphans.sizeUnknown": "unbekannt",
   "agentManager.orphans.dialogTitle": "Übrig gebliebene Worktree-Ordner",
   "agentManager.orphans.helpIntro":
     "Kilo legt jeden Worktree, den es erstellt, im Ordner .kilo/worktrees dieses Repositorys ab. Die folgenden Ordner liegen in diesem Ordner, aber git führt keinen davon als Worktree, sodass sie von nichts mehr verwendet werden.",

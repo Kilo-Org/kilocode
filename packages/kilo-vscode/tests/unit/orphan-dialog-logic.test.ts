@@ -11,6 +11,7 @@ import {
   defaultOrphanSelection,
   formatOrphanBytes,
   orphanSelectionStats,
+  orphanSizesSettled,
   orphanTotalBytes,
   revealPlatform,
 } from "../../webview-ui/agent-manager/orphan-dialog-logic"
@@ -38,7 +39,7 @@ describe("orphanSelectionStats", () => {
 
     const stats = orphanSelectionStats(orphans, new Set(["/a", "/b"]))
 
-    expect(stats).toEqual({ count: 2, bytes: 150, checkouts: 1 })
+    expect(stats).toEqual({ count: 2, bytes: 150, pending: false, checkouts: 1 })
   })
 
   it("reports an unknown total while any selected row's size is still pending", () => {
@@ -51,12 +52,45 @@ describe("orphanSelectionStats", () => {
 
     expect(stats.bytes).toBeUndefined()
     expect(stats.count).toBe(2)
+    expect(stats.pending).toBe(true)
+  })
+
+  it("stops reporting pending once a row the host could not measure has settled", () => {
+    const orphans: OrphanDirectory[] = [
+      { path: "/a", kind: "leftover", bytes: 100 },
+      // Walked, but unreadable: no size is ever coming for this one.
+      { path: "/b", kind: "leftover", sized: true },
+    ]
+
+    const stats = orphanSelectionStats(orphans, new Set(["/a", "/b"]))
+
+    expect(stats.bytes, "an incomplete total must not be presented as the size").toBeUndefined()
+    expect(stats.pending, "the footer must stop claiming it is calculating").toBe(false)
   })
 
   it("returns zeroes for an empty selection", () => {
     const orphans: OrphanDirectory[] = [{ path: "/a", kind: "leftover", bytes: 10 }]
 
-    expect(orphanSelectionStats(orphans, new Set())).toEqual({ count: 0, bytes: 0, checkouts: 0 })
+    expect(orphanSelectionStats(orphans, new Set())).toEqual({
+      count: 0,
+      bytes: 0,
+      pending: false,
+      checkouts: 0,
+    })
+  })
+})
+
+describe("orphanSizesSettled", () => {
+  it("is false while a pass is still expected to answer", () => {
+    expect(orphanSizesSettled([{ path: "/a", kind: "leftover" }])).toBe(false)
+  })
+
+  it("is true once every folder has a size", () => {
+    expect(orphanSizesSettled([{ path: "/a", kind: "leftover", bytes: 10 }])).toBe(true)
+  })
+
+  it("is true for a folder that was walked but could not be measured", () => {
+    expect(orphanSizesSettled([{ path: "/a", kind: "leftover", sized: true }])).toBe(true)
   })
 })
 

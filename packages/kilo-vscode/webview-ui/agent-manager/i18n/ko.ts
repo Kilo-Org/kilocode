@@ -485,6 +485,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "남은 worktree 폴더 {{count}}개",
   "agentManager.orphans.summarySize": "남은 worktree 폴더 {{count}}개 · {{size}}",
   "agentManager.orphans.calculating": "크기 계산 중…",
+  "agentManager.orphans.sizeUnknown": "알 수 없음",
   "agentManager.orphans.dialogTitle": "남은 worktree 폴더",
   "agentManager.orphans.helpIntro":
     "Kilo는 생성한 모든 worktree를 이 저장소의 .kilo/worktrees 폴더 안에 보관합니다. 아래 폴더들은 그 폴더 안에 있지만 git이 어느 것도 worktree로 표시하지 않으므로 더 이상 사용되지 않습니다.",

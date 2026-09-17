@@ -473,6 +473,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} 個殘留的 worktree 資料夾",
   "agentManager.orphans.summarySize": "{{count}} 個殘留的 worktree 資料夾 · {{size}}",
   "agentManager.orphans.calculating": "正在計算大小…",
+  "agentManager.orphans.sizeUnknown": "未知",
   "agentManager.orphans.dialogTitle": "殘留的 worktree 資料夾",
   "agentManager.orphans.helpIntro":
     "Kilo 會將建立的每個 worktree 都保存在本儲存庫的 .kilo/worktrees 資料夾中。下列資料夾位於該資料夾內，但 git 並未將它們列為 worktree，因此已經沒有任何項目在使用它們。",

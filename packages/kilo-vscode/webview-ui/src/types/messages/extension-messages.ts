@@ -901,8 +901,11 @@ export interface AgentManagerStateMessage {
    *
    * `broken` still holds a git checkout, so it can contain work that exists nowhere else; `leftover`
    * is a bare directory. The notice says which, because the two do not deserve the same warning.
+   *
+   * `sized` is set once the size pass is done with a folder; without `bytes` it means the folder
+   * could not be measured, which is how the UI knows to stop saying it is still calculating.
    */
-  orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number }[]
+  orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number; sized?: boolean }[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean

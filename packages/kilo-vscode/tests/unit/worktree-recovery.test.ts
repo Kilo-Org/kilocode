@@ -21,6 +21,8 @@ describe("worktree recovery", () => {
   let ctx: ProjectContext
   let calls: string[]
   let host: RecoveryHost
+  /** Reassigned per test; stands in for the host push that carries new sizes to the webview. */
+  let onSized: () => void
 
   beforeEach(async () => {
     root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "am-recovery-")))
@@ -36,7 +38,12 @@ describe("worktree recovery", () => {
 
     calls = []
     state = new WorktreeStateManager(root, () => undefined)
-    ctx = new ProjectContext("project", root, true, { log: () => undefined, state: () => state })
+    onSized = () => undefined
+    ctx = new ProjectContext("project", root, true, {
+      log: () => undefined,
+      state: () => state,
+      sized: () => onSized(),
+    })
     // Recovery reads the state only if it is already loaded, which is what peekState() means.
     ctx.stateManager()
     host = {
@@ -189,38 +196,34 @@ describe("worktree recovery", () => {
     ]
     ctx.report = { entries: [], orphans, dropped: [], pruned: false, degraded: false }
 
-    // Mirrors production, where every reconcile re-runs sizing for the orphans it just listed.
+    // Mirrors production, where every reconcile re-runs sizing for the orphans it just listed and the
+    // context's `sized` hook pushes the numbers to the webview.
     const landed = Promise.withResolvers<void>()
+    let sized = 0
+    onSized = () => {
+      sized++
+      landed.resolve()
+    }
     host.reconcile = async () => {
       calls.push("reconcile")
       const live = (ctx.report?.orphans ?? []).filter((orphan) => fs.existsSync(orphan.path))
       ctx.report = { entries: [], orphans: live, dropped: [], pruned: false, degraded: false }
-      trackOrphanSizes(
-        ctx,
-        live,
-        () => undefined,
-        () => landed.resolve(),
-      )
+      trackOrphanSizes(ctx, live, () => undefined)
       return ctx.report
     }
 
     // A walk is already in flight over both folders when the user confirms the delete.
-    let initialSized = 0
-    trackOrphanSizes(
-      ctx,
-      orphans,
-      () => undefined,
-      () => initialSized++,
-    )
+    trackOrphanSizes(ctx, orphans, () => undefined)
 
     await cleanOrphans(ctx, host, [doomed])
     await landed.promise
 
     expect(fs.existsSync(doomed)).toBe(false)
     expect(fs.existsSync(survivor)).toBe(true)
-    // The pass that was walking the folder the user deleted never reports: it is cancelled on the way
-    // in, and the reconcile inside the delete does not start a replacement for the doomed set either.
-    expect(initialSized).toBe(0)
+    // Exactly one pass reports: the one after the delete. The pass that was walking the folder the
+    // user deleted is cancelled on the way in, and the reconcile inside the delete does not start a
+    // replacement for the doomed set either.
+    expect(sized).toBe(1)
     // The leftover that is still there gets measured once the delete is done.
     expect(ctx.report?.orphans.map((orphan) => orphan.path)).toEqual([survivor])
     expect(ctx.report?.orphans[0]?.bytes).toBe(25)

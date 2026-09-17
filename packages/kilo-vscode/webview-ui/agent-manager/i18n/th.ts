@@ -482,6 +482,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "โฟลเดอร์ worktree ที่ตกค้าง {{count}} รายการ",
   "agentManager.orphans.summarySize": "โฟลเดอร์ worktree ที่ตกค้าง {{count}} รายการ · {{size}}",
   "agentManager.orphans.calculating": "กำลังคำนวณขนาด…",
+  "agentManager.orphans.sizeUnknown": "ไม่ทราบ",
   "agentManager.orphans.dialogTitle": "โฟลเดอร์ worktree ที่ตกค้าง",
   "agentManager.orphans.helpIntro":
     "Kilo จะเก็บ worktree ทุกรายการที่สร้างขึ้นไว้ในโฟลเดอร์ .kilo/worktrees ของที่เก็บนี้ โฟลเดอร์ด้านล่างอยู่ในโฟลเดอร์นั้น แต่ git ไม่ได้แสดงรายการใดเป็น worktree จึงไม่มีสิ่งใดใช้งานโฟลเดอร์เหล่านี้อีกต่อไป",

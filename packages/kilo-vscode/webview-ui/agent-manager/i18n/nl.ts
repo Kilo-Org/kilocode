@@ -500,6 +500,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} achtergebleven worktree-map(pen)",
   "agentManager.orphans.summarySize": "{{count}} achtergebleven worktree-map(pen) · {{size}}",
   "agentManager.orphans.calculating": "grootte berekenen…",
+  "agentManager.orphans.sizeUnknown": "onbekend",
   "agentManager.orphans.dialogTitle": "Achtergebleven worktree-mappen",
   "agentManager.orphans.helpIntro":
     "Kilo bewaart elke worktree die het aanmaakt in de map .kilo/worktrees van deze repository. De mappen hieronder staan in die map, maar git vermeldt er geen enkele als worktree, dus niets gebruikt ze nog.",

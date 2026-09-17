@@ -492,6 +492,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} پوشه باقی‌مانده worktree",
   "agentManager.orphans.summarySize": "{{count}} پوشه باقی‌مانده worktree · {{size}}",
   "agentManager.orphans.calculating": "در حال محاسبه حجم…",
+  "agentManager.orphans.sizeUnknown": "نامشخص",
   "agentManager.orphans.dialogTitle": "پوشه‌های باقی‌مانده worktree",
   "agentManager.orphans.helpIntro":
     "Kilo هر worktree‌ای که می‌سازد را داخل پوشه .kilo/worktrees همین مخزن نگه می‌دارد. پوشه‌های زیر در همان پوشه قرار دارند، اما git هیچ‌کدام را به عنوان worktree فهرست نمی‌کند، بنابراین دیگر چیزی از آن‌ها استفاده نمی‌کند.",

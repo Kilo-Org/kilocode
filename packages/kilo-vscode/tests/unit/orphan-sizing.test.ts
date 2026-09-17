@@ -17,8 +17,12 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0, tempDirs.length).map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
-function ctx(root = "/repo"): ProjectContext {
-  return new ProjectContext("p", root, true, { log: () => undefined })
+/**
+ * `sized` is the production wiring (see project/wiring.ts): the host pushes the new numbers to the
+ * webview through it, so a pass that never fires it is a pass the user never sees.
+ */
+function ctx(sized?: () => void, root = "/repo"): ProjectContext {
+  return new ProjectContext("p", root, true, { log: () => undefined, sized })
 }
 
 function reportWith(orphans: OrphanDirectory[]): WorktreeHealthReport {
@@ -27,16 +31,11 @@ function reportWith(orphans: OrphanDirectory[]): WorktreeHealthReport {
 
 describe("trackOrphanSizes", () => {
   it("does nothing for an empty orphan set", () => {
-    const project = ctx()
-    project.report = reportWith([])
     let sized = 0
+    const project = ctx(() => sized++)
+    project.report = reportWith([])
 
-    trackOrphanSizes(
-      project,
-      [],
-      () => undefined,
-      () => sized++,
-    )
+    trackOrphanSizes(project, [], () => undefined)
 
     expect(sized).toBe(0)
   })
@@ -45,53 +44,70 @@ describe("trackOrphanSizes", () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-track-"))
     tempDirs.push(dir)
     await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(50))
-    const project = ctx()
+    const landed = Promise.withResolvers<void>()
+    const project = ctx(() => landed.resolve())
     const orphans: OrphanDirectory[] = [{ path: dir, kind: "leftover" }]
     project.report = reportWith(orphans)
 
-    const landed = Promise.withResolvers<void>()
-    trackOrphanSizes(
-      project,
-      orphans,
-      () => undefined,
-      () => landed.resolve(),
-    )
+    trackOrphanSizes(project, orphans, () => undefined)
     await landed.promise
 
     expect(project.report?.orphans[0]?.bytes).toBe(50)
+    expect(project.report?.orphans[0]?.sized).toBe(true)
+  })
+
+  /**
+   * The banner waits on every folder having an answer, and `sizes` omits a directory it cannot read
+   * rather than failing the whole batch — so an unreadable folder used to leave it calculating forever.
+   */
+  it("marks a directory it could not measure as settled, with no size", async () => {
+    const ok = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-ok-"))
+    tempDirs.push(ok)
+    await fs.writeFile(path.join(ok, "f.txt"), "x".repeat(15))
+    const gone = path.join(os.tmpdir(), "kilo-orphan-never-existed")
+    const landed = Promise.withResolvers<void>()
+    const project = ctx(() => landed.resolve())
+    const orphans: OrphanDirectory[] = [
+      { path: ok, kind: "leftover" },
+      { path: gone, kind: "leftover" },
+    ]
+    project.report = reportWith(orphans)
+
+    trackOrphanSizes(project, orphans, () => undefined)
+    await landed.promise
+
+    expect(project.report?.orphans[0]?.bytes).toBe(15)
+    expect(project.report?.orphans[1]?.bytes, "an unmeasurable folder must not be reported as 0").toBeUndefined()
+    expect(
+      project.report?.orphans.every((orphan) => orphan.sized),
+      "every covered folder settles",
+    ).toBe(true)
   })
 
   it("does not re-run when called again with the same orphan path set", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-track-"))
     tempDirs.push(dir)
     await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(10))
-    const project = ctx()
+    const first = Promise.withResolvers<void>()
+    let sized = 0
+    const project = ctx(() => {
+      sized++
+      first.resolve()
+    })
     const orphans: OrphanDirectory[] = [{ path: dir, kind: "leftover" }]
     project.report = reportWith(orphans)
 
-    const first = Promise.withResolvers<void>()
-    trackOrphanSizes(
-      project,
-      orphans,
-      () => undefined,
-      () => first.resolve(),
-    )
+    trackOrphanSizes(project, orphans, () => undefined)
     await first.promise
     expect(project.report?.orphans[0]?.bytes).toBe(10)
 
     // A second call with the identical path set must not kick off a new walk: proven by growing the
     // file and confirming the cached byte count is untouched.
     await fs.appendFile(path.join(dir, "f.txt"), "x".repeat(100))
-    let resized = false
-    trackOrphanSizes(
-      project,
-      orphans,
-      () => undefined,
-      () => (resized = true),
-    )
+    trackOrphanSizes(project, orphans, () => undefined)
     await Bun.sleep(20)
 
-    expect(resized).toBe(false)
+    expect(sized).toBe(1)
     expect(project.report?.orphans[0]?.bytes).toBe(10)
   })
 
@@ -100,27 +116,17 @@ describe("trackOrphanSizes", () => {
     const dirB = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-track-b-"))
     tempDirs.push(dirA, dirB)
     await fs.writeFile(path.join(dirB, "f.txt"), "x".repeat(20))
-    const project = ctx()
+    let landed = Promise.withResolvers<void>()
+    const project = ctx(() => landed.resolve())
     project.report = reportWith([{ path: dirA, kind: "leftover" }])
 
-    const first = Promise.withResolvers<void>()
-    trackOrphanSizes(
-      project,
-      [{ path: dirA, kind: "leftover" }],
-      () => undefined,
-      () => first.resolve(),
-    )
-    await first.promise
+    trackOrphanSizes(project, [{ path: dirA, kind: "leftover" }], () => undefined)
+    await landed.promise
 
+    landed = Promise.withResolvers<void>()
     project.report = reportWith([{ path: dirB, kind: "leftover" }])
-    const second = Promise.withResolvers<void>()
-    trackOrphanSizes(
-      project,
-      [{ path: dirB, kind: "leftover" }],
-      () => undefined,
-      () => second.resolve(),
-    )
-    await second.promise
+    trackOrphanSizes(project, [{ path: dirB, kind: "leftover" }], () => undefined)
+    await landed.promise
 
     expect(project.report?.orphans[0]?.bytes).toBe(20)
   })
@@ -131,47 +137,39 @@ describe("trackOrphanSizes", () => {
     tempDirs.push(dirA, dirB)
     await fs.writeFile(path.join(dirA, "f.txt"), "x".repeat(30))
     await fs.writeFile(path.join(dirB, "f.txt"), "x".repeat(40))
-    const project = ctx()
+    const landed = Promise.withResolvers<void>()
+    let sized = 0
+    const project = ctx(() => {
+      sized++
+      landed.resolve()
+    })
     project.report = reportWith([{ path: dirA, kind: "leftover" }])
 
-    let firstSized = 0
-    trackOrphanSizes(
-      project,
-      [{ path: dirA, kind: "leftover" }],
-      () => undefined,
-      () => firstSized++,
-    )
+    trackOrphanSizes(project, [{ path: dirA, kind: "leftover" }], () => undefined)
     // Synchronously superseded: the first walk has not resumed from its first `opendir` yet, so the
     // abort lands before it can read anything.
     project.report = reportWith([{ path: dirB, kind: "leftover" }])
-    const second = Promise.withResolvers<void>()
-    trackOrphanSizes(
-      project,
-      [{ path: dirB, kind: "leftover" }],
-      () => undefined,
-      () => second.resolve(),
-    )
-    await second.promise
+    trackOrphanSizes(project, [{ path: dirB, kind: "leftover" }], () => undefined)
+    await landed.promise
 
     expect(project.report?.orphans[0]?.bytes).toBe(40)
-    expect(firstSized, "the superseded pass must not report").toBe(0)
+    expect(sized, "the superseded pass must not report").toBe(1)
   })
 
   it("pauses in-flight sizing for a delete and only measures again once resumed", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-orphan-pause-"))
     tempDirs.push(dir)
     await fs.writeFile(path.join(dir, "f.txt"), "x".repeat(70))
-    const project = ctx()
+    const landed = Promise.withResolvers<void>()
+    let sized = 0
+    const project = ctx(() => {
+      sized++
+      landed.resolve()
+    })
     const orphans: OrphanDirectory[] = [{ path: dir, kind: "leftover" }]
     project.report = reportWith(orphans)
 
-    let sized = 0
-    trackOrphanSizes(
-      project,
-      orphans,
-      () => undefined,
-      () => sized++,
-    )
+    trackOrphanSizes(project, orphans, () => undefined)
     pauseOrphanSizes(project)
     await Bun.sleep(20)
 
@@ -179,12 +177,7 @@ describe("trackOrphanSizes", () => {
     expect(project.report?.orphans[0]?.bytes).toBeUndefined()
 
     // A reconcile during the delete must not start a new walk over folders being removed.
-    trackOrphanSizes(
-      project,
-      orphans,
-      () => undefined,
-      () => sized++,
-    )
+    trackOrphanSizes(project, orphans, () => undefined)
     await Bun.sleep(20)
     expect(sized).toBe(0)
     expect(project.report?.orphans[0]?.bytes).toBeUndefined()
@@ -192,13 +185,7 @@ describe("trackOrphanSizes", () => {
     // Resuming does not measure by itself; the reconcile that follows the delete does, and it has to
     // actually run even though the surviving path set is the one the paused pass was already given.
     resumeOrphanSizes(project)
-    const landed = Promise.withResolvers<void>()
-    trackOrphanSizes(
-      project,
-      orphans,
-      () => undefined,
-      () => landed.resolve(),
-    )
+    trackOrphanSizes(project, orphans, () => undefined)
     await landed.promise
 
     expect(project.report?.orphans[0]?.bytes).toBe(70)

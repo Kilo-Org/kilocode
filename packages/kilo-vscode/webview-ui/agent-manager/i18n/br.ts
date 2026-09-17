@@ -495,6 +495,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} pasta(s) de worktree remanescente(s)",
   "agentManager.orphans.summarySize": "{{count}} pasta(s) de worktree remanescente(s) · {{size}}",
   "agentManager.orphans.calculating": "calculando o tamanho…",
+  "agentManager.orphans.sizeUnknown": "desconhecido",
   "agentManager.orphans.dialogTitle": "Pastas de worktree remanescentes",
   "agentManager.orphans.helpIntro":
     "O Kilo mantém cada worktree que cria dentro da pasta .kilo/worktrees deste repositório. As pastas abaixo estão nessa pasta, mas o git não lista nenhuma delas como worktree, portanto nada mais as usa.",

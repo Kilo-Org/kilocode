@@ -11,8 +11,10 @@ export function defaultOrphanSelection(orphans: OrphanDirectory[]): Set<string> 
 
 export interface OrphanSelectionStats {
   count: number
-  /** Total apparent size of the selected rows, or undefined while any of their sizes is pending. */
+  /** Total apparent size of the selected rows, or undefined unless every one of them is known. */
   bytes: number | undefined
+  /** True while a size pass is still expected to answer for one of the selected rows. */
+  pending: boolean
   /** How many selected rows still hold a git checkout. */
   checkouts: number
 }
@@ -24,13 +26,23 @@ export function orphanSelectionStats(orphans: OrphanDirectory[], selected: Reado
   const bytes = rows.some((orphan) => orphan.bytes === undefined)
     ? undefined
     : rows.reduce((sum, orphan) => sum + (orphan.bytes ?? 0), 0)
-  return { count: rows.length, bytes, checkouts }
+  return { count: rows.length, bytes, pending: !orphanSizesSettled(rows), checkouts }
 }
 
-/** Total known size across every orphan, or undefined while any size is still pending. */
+/** Total known size across every orphan, or undefined unless every one of them is known. */
 export function orphanTotalBytes(orphans: OrphanDirectory[]): number | undefined {
   if (orphans.some((orphan) => orphan.bytes === undefined)) return undefined
   return orphans.reduce((sum, orphan) => sum + (orphan.bytes ?? 0), 0)
+}
+
+/**
+ * Whether the size pass is done with every one of these folders.
+ *
+ * A folder the host could not walk never gets a `bytes`, so "no size yet" is not the same question as
+ * "is a size still coming?" — without this the UI would offer to keep calculating indefinitely.
+ */
+export function orphanSizesSettled(orphans: OrphanDirectory[]): boolean {
+  return orphans.every((orphan) => orphan.bytes !== undefined || orphan.sized === true)
 }
 
 /** Apparent size formatted for display, e.g. `1.2 GB`. Mirrors the host-side formatter. */

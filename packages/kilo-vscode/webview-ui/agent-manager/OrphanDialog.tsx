@@ -13,7 +13,13 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useLanguage } from "../src/context/language"
-import { defaultOrphanSelection, formatOrphanBytes, orphanSelectionStats, revealPlatform } from "./orphan-dialog-logic"
+import {
+  defaultOrphanSelection,
+  formatOrphanBytes,
+  orphanSelectionStats,
+  revealPlatform,
+  type OrphanSelectionStats,
+} from "./orphan-dialog-logic"
 import type { OrphanDirectory } from "./project/store"
 
 const REVEAL_KEYS = {
@@ -82,6 +88,16 @@ export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
       return next
     })
   }
+  /** Known total, "calculating…" while a pass is still coming, or "unknown" once it settled without one. */
+  const sizeLabel = (current: OrphanSelectionStats) => {
+    if (current.bytes !== undefined) return formatOrphanBytes(current.bytes)
+    return current.pending ? t("agentManager.orphans.calculating") : t("agentManager.orphans.sizeUnknown")
+  }
+  /** Same three states, but the pending case has to stay short enough to sit inside a button label. */
+  const buttonSize = (current: OrphanSelectionStats) => {
+    if (current.bytes !== undefined) return formatOrphanBytes(current.bytes)
+    return current.pending ? "…" : t("agentManager.orphans.sizeUnknown")
+  }
 
   return (
     <Dialog
@@ -132,7 +148,12 @@ export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
                       </span>
                     </td>
                     <td class="am-orphan-col-size">
-                      <Show when={orphan.bytes !== undefined} fallback={t("agentManager.orphans.calculating")}>
+                      <Show
+                        when={orphan.bytes !== undefined}
+                        fallback={
+                          orphan.sized ? t("agentManager.orphans.sizeUnknown") : t("agentManager.orphans.calculating")
+                        }
+                      >
                         {formatOrphanBytes(orphan.bytes ?? 0)}
                       </Show>
                     </td>
@@ -166,10 +187,7 @@ export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
             <span>
               {t("agentManager.orphans.footerSelected", {
                 count: stats().count,
-                size:
-                  stats().bytes !== undefined
-                    ? formatOrphanBytes(stats().bytes ?? 0)
-                    : t("agentManager.orphans.calculating"),
+                size: sizeLabel(stats()),
               })}
             </span>
             <Show when={stats().checkouts > 0}>
@@ -191,7 +209,7 @@ export const OrphanDialog: Component<OrphanDialogProps> = (props) => {
             >
               {t("agentManager.orphans.deleteButton", {
                 count: stats().count,
-                size: stats().bytes !== undefined ? formatOrphanBytes(stats().bytes ?? 0) : "…",
+                size: buttonSize(stats()),
               })}
             </Button>
           </div>

@@ -88,6 +88,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} leftover worktree folder(s)",
   "agentManager.orphans.summarySize": "{{count}} leftover worktree folder(s) · {{size}}",
   "agentManager.orphans.calculating": "calculating size…",
+  "agentManager.orphans.sizeUnknown": "unknown",
   "agentManager.orphans.dialogTitle": "Leftover worktree folders",
   "agentManager.orphans.helpIntro":
     "Kilo keeps every worktree it creates inside the .kilo/worktrees folder of this repository. The folders below are in that folder, but git does not list any of them as a worktree, so nothing is using them anymore.",

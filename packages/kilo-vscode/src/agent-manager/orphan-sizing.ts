@@ -48,7 +48,6 @@ export function trackOrphanSizes(
   ctx: ProjectContext,
   orphans: OrphanDirectory[],
   log: (...args: unknown[]) => void,
-  onSized?: () => void,
 ): void {
   const state = tracker(ctx)
   if (state.paused) return
@@ -59,15 +58,23 @@ export function trackOrphanSizes(
   if (next.length === 0) return
   const controller = new AbortController()
   state.abort = controller
+  const covered = new Set(next)
   sizes(next, { signal: controller.signal })
     .then((result) => {
       if (controller.signal.aborted) return
       const current = ctx.report?.orphans ?? []
+      let touched = false
       for (const orphan of current) {
+        // Only paths this pass actually covered: the report can already describe a different set.
+        if (!covered.has(orphan.path)) continue
         const bytes = result.get(orphan.path)
         if (bytes !== undefined) orphan.bytes = bytes
+        // Marked even when the walk could not measure it, so the UI stops waiting for a number that
+        // is never coming — `sizes` omits a directory it could not read rather than failing the batch.
+        orphan.sized = true
+        touched = true
       }
-      if (current.length > 0) onSized?.()
+      if (touched) ctx.notifySized()
     })
     .catch((err: unknown) => log(`Failed to compute orphan directory sizes: ${err}`))
 }

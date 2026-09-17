@@ -501,6 +501,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} залишених тек worktree",
   "agentManager.orphans.summarySize": "{{count}} залишених тек worktree · {{size}}",
   "agentManager.orphans.calculating": "обчислення розміру…",
+  "agentManager.orphans.sizeUnknown": "невідомо",
   "agentManager.orphans.dialogTitle": "Залишені теки worktree",
   "agentManager.orphans.helpIntro":
     "Kilo зберігає всі створені worktree у теці .kilo/worktrees цього репозиторію. Теки нижче містяться в цій теці, але git не вважає жодну з них worktree, тому ними більше ніщо не користується.",

@@ -5,12 +5,16 @@
  * itself only ever names how many there are and their total size. Size is asynchronous (a background
  * fs walk), so it is shown once every orphan's size has landed and a calculating affordance is shown
  * until then rather than a wrong or stale number.
+ *
+ * Three states, not two: a folder the host could not walk never reports a size, so once the pass has
+ * settled without covering everything the banner drops the size and says how many folders there are.
+ * Treating that as "still calculating" left the affordance up forever.
  */
 import { Component, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../src/context/language"
-import { formatOrphanBytes, orphanTotalBytes } from "./orphan-dialog-logic"
+import { formatOrphanBytes, orphanSizesSettled, orphanTotalBytes } from "./orphan-dialog-logic"
 import type { OrphanDirectory } from "./project/store"
 
 export const OrphanNotice: Component<{
@@ -19,6 +23,7 @@ export const OrphanNotice: Component<{
 }> = (props) => {
   const { t } = useLanguage()
   const total = () => orphanTotalBytes(props.orphans)
+  const calculating = () => total() === undefined && !orphanSizesSettled(props.orphans)
 
   return (
     <Show when={props.orphans.length > 0}>
@@ -36,7 +41,7 @@ export const OrphanNotice: Component<{
               })}
             </Show>
           </span>
-          <Show when={total() === undefined}>
+          <Show when={calculating()}>
             <span class="am-orphan-notice-calculating">{t("agentManager.orphans.calculating")}</span>
           </Show>
         </div>

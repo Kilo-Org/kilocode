@@ -494,6 +494,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} 件の残された worktree フォルダー",
   "agentManager.orphans.summarySize": "{{count}} 件の残された worktree フォルダー · {{size}}",
   "agentManager.orphans.calculating": "サイズを計算中…",
+  "agentManager.orphans.sizeUnknown": "不明",
   "agentManager.orphans.dialogTitle": "残された worktree フォルダー",
   "agentManager.orphans.helpIntro":
     "Kilo は作成した worktree をすべて、このリポジトリの .kilo/worktrees フォルダー内に保存します。以下のフォルダーはそのフォルダー内にありますが、git はいずれも worktree として認識していないため、どこからも使用されていません。",

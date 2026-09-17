@@ -31,6 +31,14 @@ export interface ProjectContextDeps {
   log: (msg: string) => void
   git?: GitOps
   exists?: (dir: string) => boolean
+  /**
+   * Orphan directory sizes landed for this project and the webview needs the new numbers.
+   *
+   * Wired once here rather than threaded through every reconcile call site: sizing is started by
+   * whichever reconcile happens to run first — startup, an explicit repair, the diagnostics report —
+   * and a pass whose results are never pushed leaves the banner calculating forever.
+   */
+  sized?: (ctx: ProjectContext) => void
   /** Whether background worktree pre-warming is enabled for this project. */
   worktreePool?: () => boolean
   /** Factory overrides for tests. */
@@ -85,6 +93,12 @@ export class ProjectContext {
 
   isCurrent(generation: number): boolean {
     return this.version === generation && this.phase !== "disposing" && this.phase !== "disposed"
+  }
+
+  /** Orphan sizes landed on {@link report}; ask the host to push them. Silent for a dead context. */
+  notifySized(): void {
+    if (this.phase === "disposing" || this.phase === "disposed") return
+    this.deps.sized?.(this)
   }
 
   /** Initialize repository state exactly once per context lifetime. */

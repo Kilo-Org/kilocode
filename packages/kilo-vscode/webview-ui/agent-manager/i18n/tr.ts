@@ -500,6 +500,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} artakalan worktree klasörü",
   "agentManager.orphans.summarySize": "{{count}} artakalan worktree klasörü · {{size}}",
   "agentManager.orphans.calculating": "boyut hesaplanıyor…",
+  "agentManager.orphans.sizeUnknown": "bilinmiyor",
   "agentManager.orphans.dialogTitle": "Artakalan worktree klasörleri",
   "agentManager.orphans.helpIntro":
     "Kilo, oluşturduğu her worktree'yi bu deponun .kilo/worktrees klasöründe tutar. Aşağıdaki klasörler bu klasörün içindedir, ancak git bunların hiçbirini worktree olarak listelemez; dolayısıyla artık hiçbir şey onları kullanmıyor.",

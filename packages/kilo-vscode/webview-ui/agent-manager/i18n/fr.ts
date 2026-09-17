@@ -500,6 +500,7 @@ export const dict = {
   "agentManager.orphans.summaryCount": "{{count}} dossier(s) de worktree résiduel(s)",
   "agentManager.orphans.summarySize": "{{count}} dossier(s) de worktree résiduel(s) · {{size}}",
   "agentManager.orphans.calculating": "calcul de la taille…",
+  "agentManager.orphans.sizeUnknown": "inconnue",
   "agentManager.orphans.dialogTitle": "Dossiers de worktree résiduels",
   "agentManager.orphans.helpIntro":
     "Kilo place chaque worktree qu'il crée dans le dossier .kilo/worktrees de ce dépôt. Les dossiers ci-dessous se trouvent dans ce dossier, mais git n'en répertorie aucun comme worktree : plus rien ne les utilise.",
