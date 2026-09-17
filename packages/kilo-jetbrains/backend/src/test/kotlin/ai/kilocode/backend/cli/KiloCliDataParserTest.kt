@@ -1992,18 +1992,18 @@ class KiloCliDataParserTest {
             // Regression: CLI serializes promise-backed templates as {} which used to
             // crash JetBrains startup before parsing was moved to this parser.
             val raw = """[
-                {"name":"local-review","description":"local review","template":{},"hints":[],"source":"command"},
-                {"name":"local-review-uncommitted","description":"local review (uncommitted)","template":{},"hints":[]}
+                {"name":"sample-one","description":"sample one","template":{},"hints":[],"source":"command"},
+                {"name":"sample-two","description":"sample two","template":{},"hints":[]}
             ]"""
 
             val result = KiloCliDataParser.parseCommands(raw)
 
             assertEquals(2, result.size)
-            assertEquals("local-review", result[0].name)
-            assertEquals("local review", result[0].description)
+            assertEquals("sample-one", result[0].name)
+            assertEquals("sample one", result[0].description)
             assertEquals("command", result[0].source)
             assertEquals(emptyList(), result[0].hints)
-            assertEquals("local-review-uncommitted", result[1].name)
+            assertEquals("sample-two", result[1].name)
         }
 
         @Test

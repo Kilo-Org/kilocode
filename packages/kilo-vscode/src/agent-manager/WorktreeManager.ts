@@ -1308,10 +1308,6 @@ export class WorktreeManager {
     return remotes.some((r) => r.name === "origin") ? "origin" : undefined
   }
 
-  async hasOriginRemote(): Promise<boolean> {
-    return (await this.resolveRemote()) !== undefined
-  }
-
   async refExistsLocally(ref: string): Promise<boolean> {
     try {
       await this.git.raw(["rev-parse", "--verify", `${ref}^{commit}`])

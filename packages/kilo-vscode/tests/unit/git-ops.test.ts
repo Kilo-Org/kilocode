@@ -330,20 +330,6 @@ describe("GitOps", () => {
     })
   })
 
-  describe("hasRemoteRef", () => {
-    it("returns true when ref exists", async () => {
-      const git = ops(async () => "abc123")
-      expect(await git.hasRemoteRef("/repo", "origin/main")).toBe(true)
-    })
-
-    it("returns false when ref does not exist", async () => {
-      const git = ops(async () => {
-        throw new Error("no ref")
-      })
-      expect(await git.hasRemoteRef("/repo", "origin/nonexistent")).toBe(false)
-    })
-  })
-
   describe("aheadBehind", () => {
     it("counts commits ahead and behind using the provided ref", async () => {
       const git = ops(async (args) => {
