@@ -1,5 +1,19 @@
 # Changelog
 
+## 7.8.0
+
+### Minor Changes
+
+- [#14137](https://github.com/Kilo-Org/kilocode/pull/14137) [`91040bc`](https://github.com/Kilo-Org/kilocode/commit/91040bcff4995784ad36ad9dcaa6f8d1bbb2b652) - Report worktree problems accurately and repair them: stale entries are cleaned up on their own, a deleted worktree can be restored from its branch or removed while keeping its sessions, leftover folders are listed with a cleanup action, and a failed status check now says so instead of showing a worktree as unchanged. Pull request lookups no longer stall on an unresponsive GitHub CLI, a single broken worktree no longer slows down the others, and deleting a worktree while its status is being checked no longer hides review and CI badges on every other worktree until the IDE restarts. The cleanup notice now marks leftover folders that still contain a git checkout and warns that they may hold uncommitted work, and removing a stale worktree entry no longer fails when its terminals cannot be stopped. New "Show Worktree Diagnostics" command in VS Code and "Copy report" action in JetBrains settings.
+
+### Patch Changes
+
+- [#14205](https://github.com/Kilo-Org/kilocode/pull/14205) [`42dddd0`](https://github.com/Kilo-Org/kilocode/commit/42dddd0ae3650cf117adad0b93646f0a3d65234c) - Collapse a pasted block into a `[Pasted ~N lines]` placeholder at 15 lines or 4000 characters instead of 5 lines or 800 characters, matching the VS Code composer so ordinary snippets are no longer folded too early.
+
+- [#14137](https://github.com/Kilo-Org/kilocode/pull/14137) [`dead6df`](https://github.com/Kilo-Org/kilocode/commit/dead6df706f6a7817e8783045ad1417cbe0194c3) - Explain why a pull request import failed instead of showing raw git output, recover automatically from stale remote branch refs, and refuse pull request URLs that belong to a different repository.
+
+- [#14137](https://github.com/Kilo-Org/kilocode/pull/14137) [`664be7d`](https://github.com/Kilo-Org/kilocode/commit/664be7d755a5f130280a21fea4972297464c2634) - Reorganize the worktree row context menu into clearer groups (rename; open in browser; diff actions; copy actions; setup script actions; delete) and shorten several action labels.
+
 ## 7.6.3
 
 ### Patch Changes

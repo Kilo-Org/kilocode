@@ -446,6 +446,9 @@
         <action id="Kilo.Session.Fork"
                 class="ai.kilocode.client.actions.ForkSessionAction"/>
 
+        <action id="Kilo.Session.Board"
+                class="ai.kilocode.client.actions.ShowSessionBoardAction"/>
+
         <action id="Kilo.Session.CompareToBase"
                 class="ai.kilocode.client.actions.CompareToBaseAction"/>
 
@@ -475,6 +478,7 @@
             <reference ref="Kilo.Session.AutoApprove"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
+            <reference ref="Kilo.Session.Board"/>
             <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>
@@ -499,6 +503,7 @@
             <reference ref="Kilo.Session.AutoApprove"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
+            <reference ref="Kilo.Session.Board"/>
             <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>

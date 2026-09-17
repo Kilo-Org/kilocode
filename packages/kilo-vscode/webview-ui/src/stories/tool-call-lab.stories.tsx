@@ -242,7 +242,7 @@ const failedSuggestion: SuggestionRequest = {
   id: "matrix-suggestion-failed",
   sessionID: SID,
   text: "Re-run the failed visual review.",
-  actions: [{ label: "Retry review", prompt: "/local-review-uncommitted" }],
+  actions: [{ label: "Retry review", prompt: "/review uncommitted" }],
 }
 
 const genericError: NonNullable<SDKAssistantMessage["error"]> = {
@@ -744,15 +744,15 @@ const blocks: SDKPart[] = [
   done(
     "suggest-accepted",
     "suggest",
-    { suggest: "Run a local review.", actions: [{ label: "Review UI", prompt: "/local-review-uncommitted" }] },
+    { suggest: "Run a local review.", actions: [{ label: "Review UI", prompt: "/review uncommitted" }] },
     "Review suggestion accepted",
-    "User accepted the suggestion. Run /local-review-uncommitted.",
-    { accepted: { label: "Review UI", prompt: "/local-review-uncommitted" }, dismissed: false },
+    "User accepted the suggestion. Run /review uncommitted.",
+    { accepted: { label: "Review UI", prompt: "/review uncommitted" }, dismissed: false },
   ),
   done(
     "suggest-dismissed",
     "suggest",
-    { suggest: "Run a local review.", actions: [{ label: "Review UI", prompt: "/local-review-uncommitted" }] },
+    { suggest: "Run a local review.", actions: [{ label: "Review UI", prompt: "/review uncommitted" }] },
     "Review suggestion dismissed",
     "User dismissed the suggestion.",
     { dismissed: true },

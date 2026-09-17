@@ -48,6 +48,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
                 "Kilo.Session.AutoApprove",
                 "---",
                 "Kilo.Session.Fork",
+                "Kilo.Session.Board",
                 "---",
                 "Kilo.Session.CompareToBase",
                 "Kilo.Session.OpenPr",
@@ -83,6 +84,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
                 "Kilo.Session.AutoApprove",
                 "---",
                 "Kilo.Session.Fork",
+                "Kilo.Session.Board",
                 "---",
                 "Kilo.Session.CompareToBase",
                 "Kilo.Session.OpenPr",
@@ -225,6 +227,34 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
 
     fun `test fork action does nothing without a session context`() {
         val action = ForkSessionAction()
+        val event = event(action, null)
+
+        ActionUtil.updateAction(action, event)
+        action.actionPerformed(event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    // ---- board ----
+
+    fun `test board action follows the surface's board capability`() {
+        val action = ShowSessionBoardAction()
+
+        val off = event(action, Fake(id = "ses_test", board = false))
+        ActionUtil.updateAction(action, off)
+        assertFalse(off.presentation.isEnabledAndVisible)
+
+        val actions = Fake(id = "ses_test", board = true)
+        val on = event(action, actions)
+        ActionUtil.updateAction(action, on)
+        assertTrue(on.presentation.isEnabledAndVisible)
+
+        action.actionPerformed(on)
+        assertEquals(1, actions.boardOpens)
+    }
+
+    fun `test board action does nothing without a session context`() {
+        val action = ShowSessionBoardAction()
         val event = event(action, null)
 
         ActionUtil.updateAction(action, event)
@@ -400,6 +430,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         override val share: String? = null,
         override val git: Boolean = true,
         override val forkable: Boolean = false,
+        override val board: Boolean = false,
         auto: Boolean = false,
     ) : SessionActions {
         // Backing field rather than `override var auto`: a var would generate setAuto(Z)V and clash
@@ -411,6 +442,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         var started = 0
         var stopped = 0
         var forks = 0
+        var boardOpens = 0
 
         override fun setAuto(value: Boolean) {
             autos.add(value)
@@ -431,6 +463,10 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
 
         override fun stopShare() {
             stopped++
+        }
+
+        override fun showBoard() {
+            boardOpens++
         }
     }
 }

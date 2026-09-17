@@ -403,6 +403,59 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("clears an empty draft without catalog work and keeps known mentions for restore", () => {
+    const ctx = { postMessage: () => {}, onMessage: () => () => {} }
+    let reads = 0
+    const keys = () => {
+      reads++
+      return new Set(["anthropic/claude-sonnet-4"])
+    }
+    createRoot((dispose) => {
+      const mention = useFileMention(ctx, undefined, undefined, undefined, keys)
+      const text = "@src/my file.ts @Earlier chat @anthropic/claude-sonnet-4"
+      mention.seedFromText("@anthropic/claude-sonnet-4")
+      mention.seedFromParts(["src/my file.ts"], text)
+      mention.seedSessions([{ id: "ses_earlier", title: "Earlier chat", directory: "/repo", updated: 1 }], text)
+      const count = reads
+
+      mention.seedFromText("")
+      expect(mention.mentionedPaths().size).toBe(0)
+      expect(mention.mentionedSessions().size).toBe(0)
+      expect(mention.mentionedModels().size).toBe(0)
+      const paths = mention.mentionedPaths()
+      const sessions = mention.mentionedSessions()
+      const models = mention.mentionedModels()
+      mention.seedFromText("")
+      expect(mention.mentionedPaths()).toBe(paths)
+      expect(mention.mentionedSessions()).toBe(sessions)
+      expect(mention.mentionedModels()).toBe(models)
+      expect(mention.parseFileAttachments("")).toEqual([])
+      expect(reads).toBe(count)
+
+      mention.onInput(text, text.length)
+      expect([...mention.mentionedPaths()]).toEqual(["src/my file.ts"])
+      expect([...mention.mentionedSessions().keys()]).toEqual(["Earlier chat"])
+      expect([...mention.mentionedModels()]).toEqual(["anthropic/claude-sonnet-4"])
+      dispose()
+    })
+  })
+
+  it("checks known paths without iterating the model catalog", () => {
+    const ctx = { postMessage: () => {}, onMessage: () => () => {} }
+    const catalog = new Set(["anthropic/claude-sonnet-4"])
+    catalog[Symbol.iterator] = () => {
+      throw new Error("Mention classification must not scan the model catalog")
+    }
+    createRoot((dispose) => {
+      const mention = useFileMention(ctx, undefined, undefined, undefined, () => catalog)
+      const text = "@src/file.ts @anthropic/claude-sonnet-4"
+      mention.seedFromParts(["src/file.ts", "anthropic/claude-sonnet-4"], text)
+      expect([...mention.mentionedPaths()]).toEqual(["src/file.ts"])
+      expect([...mention.mentionedModels()]).toEqual(["anthropic/claude-sonnet-4"])
+      dispose()
+    })
+  })
+
   it("reclassifies a restored model reference once the catalog loads after seeding", () => {
     const ctx = {
       postMessage: () => {},
