@@ -40,27 +40,34 @@ export namespace KiloSessionRevert {
     sessionID: SessionID,
     from: string,
   ) {
-    const walk = (parent: SessionID): Effect.Effect<{ patches: Snapshot.Patch[]; files: string[] }> =>
+    const walk = (
+      parent: SessionID,
+    ): Effect.Effect<{ entries: { id: string; part: Snapshot.Patch }[]; files: string[] }> =>
       Effect.gen(function* () {
-        const patches: Snapshot.Patch[] = []
+        const entries: { id: string; part: Snapshot.Patch }[] = []
         const files: string[] = []
         for (const kid of yield* sessions.children(parent).pipe(Effect.orDie)) {
           const nested = yield* walk(kid.id)
-          patches.push(...nested.patches)
+          entries.push(...nested.entries)
           files.push(...nested.files)
           for (const msg of yield* sessions.messages({ sessionID: kid.id }).pipe(Effect.orDie)) {
             if (msg.info.id < from) continue
             for (const part of msg.parts) {
               if (part.type !== "patch") continue
-              patches.push(part)
+              entries.push({ id: msg.info.id, part })
               files.push(...part.files)
             }
           }
         }
-        return { patches, files }
+        return { entries, files }
       })
     const found = yield* walk(sessionID)
-    return { patches: found.patches, files: [...new Set(found.files)] }
+    // Restore in the order the edits were made: a file touched by two descendants keeps the
+    // earliest snapshot, which is the state the file had before the reverted turn.
+    const patches = found.entries
+      .toSorted((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
+      .map((entry) => entry.part)
+    return { patches, files: [...new Set(found.files)] }
   })
 
   export const apply = Effect.fn("KiloSessionRevert.apply")(function* <A, E, R>(
