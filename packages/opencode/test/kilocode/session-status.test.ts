@@ -54,3 +54,26 @@ describe("SessionStatus idle publication", () => {
     )
   }
 })
+
+describe("SessionStatus busy publication", () => {
+  it.instance("does not record a busy status when its publication fails", () =>
+    Effect.gen(function* () {
+      const status = yield* SessionStatus.Service
+      const events = yield* EventV2Bridge.Service
+      const id = SessionID.make("ses_busy_publication_failure")
+      const error = new Error("deliberate busy publication failure")
+
+      const unsubscribe = yield* events.listen((event) =>
+        event.type === SessionStatus.Event.Status.type ? Effect.die(error) : Effect.void,
+      )
+      yield* Effect.addFinalizer(() => unsubscribe)
+
+      const exit = yield* status.set(id, { type: "busy" }).pipe(Effect.exit)
+
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBe(error)
+      expect((yield* status.list()).has(id)).toBe(false)
+      expect((yield* SessionStatus.listAll()).has(id)).toBe(false)
+    }),
+  )
+})
