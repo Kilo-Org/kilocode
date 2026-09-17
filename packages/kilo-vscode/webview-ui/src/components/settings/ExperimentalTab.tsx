@@ -205,6 +205,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.codeMode.title")}
+          description={language.t("settings.experimental.codeMode.description")}
+        >
+          <Switch
+            checked={experimental().code_mode ?? false}
+            onChange={(checked) => updateExperimental("code_mode", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.codeMode.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.multiProject.title")}
           description={language.t("settings.experimental.multiProject.description")}
         >

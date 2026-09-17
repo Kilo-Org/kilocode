@@ -155,10 +155,6 @@ import type {
   KiloAudioTranscriptionsResponses,
   KiloAuthStatusErrors,
   KiloAuthStatusResponses,
-  KiloClawChatCredentialsErrors,
-  KiloClawChatCredentialsResponses,
-  KiloClawStatusErrors,
-  KiloClawStatusResponses,
   KiloCloudSessionGetErrors,
   KiloCloudSessionGetResponses,
   KiloCloudSessionImportErrors,
@@ -6896,72 +6892,6 @@ export class Organization extends HeyApiClient {
   }
 }
 
-export class Claw extends HeyApiClient {
-  /**
-   * Get KiloClaw instance status
-   *
-   * Fetch the user's KiloClaw instance status via the KiloClaw worker
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloClawStatusResponses, KiloClawStatusErrors, ThrowOnError>({
-      url: "/kilo/claw/status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get KiloClaw chat credentials
-   *
-   * Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.
-   */
-  public chatCredentials<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KiloClawChatCredentialsResponses,
-      KiloClawChatCredentialsErrors,
-      ThrowOnError
-    >({
-      url: "/kilo/claw/chat-credentials",
-      ...options,
-      ...params,
-    })
-  }
-}
-
 export class Session3 extends HeyApiClient {
   /**
    * Get cloud session
@@ -7321,11 +7251,6 @@ export class Kilo extends HeyApiClient {
   private _organization?: Organization
   get organization(): Organization {
     return (this._organization ??= new Organization({ client: this.client }))
-  }
-
-  private _claw?: Claw
-  get claw(): Claw {
-    return (this._claw ??= new Claw({ client: this.client }))
   }
 
   private _cloud?: Cloud
