@@ -1,11 +1,11 @@
 # Kilo Configuration
 
-Load only the reference needed for the current task using the exact calls below. References are bundled in the CLI, not filesystem paths or separate skills; no Read or network request is needed.
+Use `read` to open only the reference needed for the current task. Paths below are relative to this skill's base directory.
 
-| Topic | Tool call |
+| Topic | Reference |
 |---|---|
-| Config paths, precedence, environment overrides, providers, top-level fields | `skill({name:"kilo-config",reference:"configuration"})` |
-| Commands, agents, legacy workflows, skills; finding a named command | `skill({name:"kilo-config",reference:"customization"})` |
-| Permissions and MCP servers/tool permissions | `skill({name:"kilo-config",reference:"tools"})` |
-| Agent Manager setup/run scripts, worktrees, integration/conflicts, state recovery | `skill({name:"kilo-config",reference:"agent-manager"})` |
-| TUI settings, themes, keybinds, slash commands | `skill({name:"kilo-config",reference:"tui"})` |
+| Config paths, precedence, environment overrides, providers, top-level fields | [Configuration](references/configuration.md) |
+| Commands, agents, legacy workflows, skills; finding a named command | [Customization](references/customization.md) |
+| Permissions and MCP servers/tool permissions | [Tools](references/tools.md) |
+| Agent Manager setup/run scripts, worktrees, integration/conflicts, state recovery | [Agent Manager](references/agent-manager.md) |
+| TUI settings, themes, keybinds, slash commands | [TUI](references/tui.md) |

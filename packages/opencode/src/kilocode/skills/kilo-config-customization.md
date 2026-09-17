@@ -1,6 +1,6 @@
 ## Commands (`.kilo/command/*.md`)
 
-Markdown files with YAML frontmatter. The filename (minus `.md`) becomes the command name invoked via `/name`. Commands can live in `.kilo/`, legacy `.kilocode/`, and global config roots, with both `command/` and `commands/` directory names supported. For the full search order, load `skill({name:"kilo-config",reference:"configuration"})` and see Config File Locations.
+Markdown files with YAML frontmatter. The filename (minus `.md`) becomes the command name invoked via `/name`. Commands can live in `.kilo/`, legacy `.kilocode/`, and global config roots, with both `command/` and `commands/` directory names supported. For the full search order, read [Config File Locations](configuration.md#config-file-locations).
 
 ```yaml
 ---

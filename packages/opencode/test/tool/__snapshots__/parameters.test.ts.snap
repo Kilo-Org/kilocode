@@ -356,10 +356,6 @@ exports[`tool parameters JSON Schema (wire shape) skill 1`] = `
       "description": "The name of the skill from available_skills",
       "type": "string",
     },
-    "reference": {
-      "description": "Load only a reference explicitly named by the loaded built-in skill guide.",
-      "type": "string",
-    },
   },
   "required": [
     "name",
