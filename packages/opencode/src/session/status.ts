@@ -71,15 +71,16 @@ export const layer = Layer.effect(
       const ctx = yield* InstanceState.context
       const projectID = String(ctx.project.id)
       // kilocode_change end
-      yield* events.publish(Event.Status, { sessionID, status })
+      // kilocode_change - commit status before publishing so listener failures cannot leave a stopped session busy
       if (status.type === "idle") {
-        yield* events.publish(Event.Idle, { sessionID })
         data.delete(sessionID)
         // kilocode_change start
         const store = stores.get(projectID)
         store?.delete(sessionID)
         if (store && store.size === 0) stores.delete(projectID)
         byDirectory.get(ctx.directory)?.delete(sessionID)
+        yield* events.publish(Event.Status, { sessionID, status })
+        yield* events.publish(Event.Idle, { sessionID })
         // kilocode_change end
         return
       }
@@ -97,6 +98,7 @@ export const layer = Layer.effect(
         byDirectory.set(ctx.directory, dir)
       }
       dir.set(sessionID, projectID)
+      yield* events.publish(Event.Status, { sessionID, status })
     })
     // kilocode_change end
 
