@@ -1,6 +1,6 @@
 package ai.kilocode.client.session.board
 
-import com.intellij.ui.JBColor
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import java.awt.Component
@@ -15,41 +15,34 @@ import javax.swing.Icon
  * Deterministic per-participant avatar for the shared agent board: a filled circle with the
  * participant's initial, colored by its position in the board's participant order (`main` first,
  * then child sessions in spawn order — see
- * [ai.kilocode.client.session.model.SessionModel.childSessions]). Mirrors the `AgentAvatarPalette`
- * semantics in `packages/kilo-ui`.
+ * [ai.kilocode.client.session.model.SessionModel.childSessions]).
  */
 internal object BoardAvatars {
-    // Mirrors packages/kilo-ui's AgentAvatarPalette hues; `main` gets a distinct neutral glyph
-    // below rather than one of these, so it never collides with a subagent's color.
-    private val palette = listOf(
-        JBColor(0x3574F0, 0x548AF7),
-        JBColor(0x1A9E77, 0x2FBE96),
-        JBColor(0xB5651D, 0xD4813A),
-        JBColor(0x8957E5, 0xA679F0),
-        JBColor(0xC74F4F, 0xE06666),
-        JBColor(0x2E8FB8, 0x4CB4DE),
-    )
-    private val mainColor = JBColor(0x6B7280, 0x9CA3AF)
-
-    private val cache = ConcurrentHashMap<Pair<String, Int>, Icon>()
+    /**
+     * Keyed by what the icon actually draws — its initial and colour slot — not by participant id.
+     * Session ids never repeat, so keying on them would grow this map for the life of the IDE; the
+     * glyph space is bounded by (alphanumeric initials x colour slots) and reuses entries instead.
+     */
+    private val cache = ConcurrentHashMap<Pair<Char, Int>, Icon>()
 
     /**
-     * [id]'s avatar. [order] is the board's participant order; [id]'s 0-based position in it picks
-     * a stable color from [palette]. `main`, `ALL`, and any id absent from [order] get [mainColor].
+     * [id]'s avatar. [order] is the board's participant order; [id]'s 0-based position in it picks a
+     * stable colour. `main`, `ALL`, and any id absent from [order] get the neutral fill.
      */
     fun icon(id: String, order: List<String>): Icon {
         val index = if (id == "main" || id == "ALL") -1 else order.indexOf(id)
-        return cache.computeIfAbsent(id to index) { AvatarIcon(initial(id), color(index)) }
+        val initial = initial(id)
+        return cache.computeIfAbsent(initial to index) { AvatarIcon(initial.toString(), index) }
     }
 
-    private fun color(index: Int): JBColor = if (index < 0) mainColor else palette[index % palette.size]
+    private fun initial(id: String): Char =
+        (id.firstOrNull { it.isLetter() || it.isDigit() } ?: '?').uppercaseChar()
 
-    private fun initial(id: String): String {
-        val letter = id.firstOrNull { it.isLetter() || it.isDigit() } ?: '?'
-        return letter.uppercaseChar().toString()
-    }
-
-    private class AvatarIcon(private val text: String, private val bg: JBColor) : Icon {
+    /**
+     * [index] is the participant's colour slot, resolved to a theme colour at paint time rather than
+     * captured, so a cached icon still follows a Look and Feel change. A negative slot is neutral.
+     */
+    private class AvatarIcon(private val text: String, private val index: Int) : Icon {
         override fun getIconWidth() = JBUI.scale(16)
         override fun getIconHeight() = JBUI.scale(16)
 
@@ -58,11 +51,11 @@ internal object BoardAvatars {
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
                 g2.translate(x, y)
-                g2.color = bg
+                g2.color = if (index < 0) UiStyle.Colors.swarmAvatarMain() else UiStyle.Colors.swarmAvatar(index)
                 val inset = JBUI.scale(1).toFloat()
                 val size = iconWidth - inset * 2
                 g2.fill(Ellipse2D.Float(inset, inset, size, size))
-                g2.color = JBColor.WHITE
+                g2.color = UiStyle.Colors.swarmAvatarForeground()
                 g2.font = JBFont.small().asBold()
                 val fm = g2.fontMetrics
                 val width = fm.stringWidth(text)
