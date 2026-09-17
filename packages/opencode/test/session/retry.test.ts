@@ -86,6 +86,31 @@ describe("session.retry.delay", () => {
     expect(SessionRetry.delay(1, error)).toBe(SessionRetry.RETRY_MAX_DELAY)
   })
 
+  test("extracts delay from error message", () => {
+    const error = new SessionV1.APIError({
+      message: "Rate limited.\nPlease retry in 1.108170405s",
+      isRetryable: true,
+    })
+    expect(SessionRetry.delay(1, error)).toBe(1108)
+  })
+
+  test("extracts fractional delay from responseBody", () => {
+    const error = new SessionV1.APIError({
+      message: "Overloaded",
+      responseBody: "Please retry in 1.108170405s",
+      isRetryable: true,
+    })
+    expect(SessionRetry.delay(1, error)).toBe(1108)
+  })
+
+  test("extracts delay from error message with milliseconds", () => {
+    const error = new SessionV1.APIError({
+      message: "Rate limited.\nPlease retry in 416.19114ms",
+      isRetryable: true,
+    })
+    expect(SessionRetry.delay(1, error)).toBe(416)
+  })
+
   it.instance("policy updates retry status and increments attempts", () =>
     Effect.gen(function* () {
       const sessionID = SessionID.make("session-retry-test")
