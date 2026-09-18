@@ -3,4 +3,4 @@
 "@kilocode/sdk": patch
 ---
 
-Show clear status feedback and safe recovery controls when permission approval responses stall.
+Recover permission approval dialogs that stall instead of leaving the approval buttons disabled.

@@ -47,7 +47,6 @@ export const PermissionDock: Component<{
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const blocked = () => props.responding || props.request.responseError === "unknown"
   const { config } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
@@ -162,7 +161,7 @@ export const PermissionDock: Component<{
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
   const submit = (response: "once" | "reject") => {
-    if (blocked()) return
+    if (props.responding) return
     const { approved, denied } = collectRules()
     props.onDecide(props.request.id, response, approved, denied, response === "reject" ? feedback() : undefined)
     setRejecting(false)
@@ -171,7 +170,7 @@ export const PermissionDock: Component<{
   }
 
   const startReject = () => {
-    if (blocked()) return
+    if (props.responding) return
     setRejecting(true)
     requestAnimationFrame(() => feedbackRef?.focus())
   }
@@ -298,7 +297,7 @@ export const PermissionDock: Component<{
                                 tone="success"
                                 data-active={decision(index()) === "approved" ? "" : undefined}
                                 aria-pressed={decision(index()) === "approved"}
-                                disabled={blocked()}
+                                disabled={props.responding}
                                 onClick={() => toggleRule(index(), "approved")}
                                 aria-label={approveTooltip(index())}
                               />
@@ -312,7 +311,7 @@ export const PermissionDock: Component<{
                                 tone="danger"
                                 data-active={decision(index()) === "denied" ? "" : undefined}
                                 aria-pressed={decision(index()) === "denied"}
-                                disabled={blocked()}
+                                disabled={props.responding}
                                 onClick={() => toggleRule(index(), "denied")}
                                 aria-label={denyTooltip(index())}
                               />
@@ -427,31 +426,15 @@ export const PermissionDock: Component<{
           </div>
         </Show>
 
-        <Show when={props.responding || props.request.responseError}>
-          <div role="status">
-            {language.t(
-              props.responding
-                ? "ui.permission.submitting"
-                : props.request.responseError === "unknown"
-                  ? "ui.permission.unknown"
-                  : "ui.permission.failed",
-            )}
-          </div>
-        </Show>
         <div data-slot="permission-actions">
-          <Show when={props.request.responseError === "unknown" && !props.responding}>
-            <Button variant="primary" size="small" onClick={() => session.checkPermissionStatus(props.request.id)}>
-              {language.t("ui.permission.checkStatus")}
-            </Button>
-          </Show>
           <Show
             when={rejecting()}
             fallback={
               <>
-                <Button variant="primary" size="small" onClick={() => submit("once")} disabled={blocked()}>
+                <Button variant="primary" size="small" onClick={() => submit("once")} disabled={props.responding}>
                   {language.t("ui.permission.allowOnce")}
                 </Button>
-                <Button variant="ghost" size="small" onClick={startReject} disabled={blocked()}>
+                <Button variant="ghost" size="small" onClick={startReject} disabled={props.responding}>
                   {language.t("ui.permission.deny")}
                 </Button>
               </>
@@ -462,11 +445,11 @@ export const PermissionDock: Component<{
               size="small"
               data-slot="permission-reject-confirm"
               onClick={() => submit("reject")}
-              disabled={blocked()}
+              disabled={props.responding}
             >
               {language.t("ui.permission.reject")}
             </Button>
-            <Button variant="ghost" size="small" onClick={cancelReject} disabled={blocked()}>
+            <Button variant="ghost" size="small" onClick={cancelReject} disabled={props.responding}>
               {language.t("ui.common.cancel")}
             </Button>
           </Show>

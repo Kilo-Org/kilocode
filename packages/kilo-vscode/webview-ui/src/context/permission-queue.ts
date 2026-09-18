@@ -4,8 +4,7 @@ export function upsertPermission(list: PermissionRequest[], permission: Permissi
   const idx = list.findIndex((item) => item.id === permission.id)
   if (idx === -1) return [...list, permission]
   const next = list.slice()
-  // Replayed requests are not confirmation that an earlier response failed.
-  next[idx] = { ...permission, responseError: list.at(idx)?.responseError }
+  next[idx] = permission
   return next
 }
 

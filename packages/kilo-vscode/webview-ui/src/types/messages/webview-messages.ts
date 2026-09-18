@@ -100,12 +100,6 @@ export interface PermissionResponseRequest {
   feedback?: string
 }
 
-export interface PermissionStatusRequest {
-  type: "permissionStatus"
-  permissionId: string
-  sessionID: string
-}
-
 export interface CreateSessionRequest {
   type: "createSession"
 }
@@ -1607,7 +1601,6 @@ export type WebviewMessage =
   | UnrevertSessionRequest
   | DeleteMessageRequest
   | PermissionResponseRequest
-  | PermissionStatusRequest
   | CreateSessionRequest
   | ClearSessionRequest
   | LoadMessagesRequest

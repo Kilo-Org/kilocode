@@ -120,7 +120,6 @@ export class KiloConnectionService {
     string,
     {
       sessionID: string
-      directory?: string
       promise?: Promise<PermissionResponseResult>
       result?: PermissionResponseResult
       expires: number
@@ -400,12 +399,11 @@ export class KiloConnectionService {
   }
 
   getPermissionDirectory(requestID: string): string | undefined {
-    return this.permissionDirectories.get(requestID) ?? this.permissionResponses.get(requestID)?.directory
+    return this.permissionDirectories.get(requestID)
   }
 
   getPermissionSession(requestID: string): string | undefined {
-    const record = this.permissionResponses.get(requestID)
-    return this.permissionSessions.get(requestID) ?? (record?.directory ? record.sessionID : undefined)
+    return this.permissionSessions.get(requestID)
   }
 
   clearPermissionDirectory(requestID: string): void {
@@ -446,29 +444,30 @@ export class KiloConnectionService {
     const promise = Promise.resolve().then(action)
     const record: {
       sessionID: string
-      directory?: string
       promise?: Promise<PermissionResponseResult>
       result?: PermissionResponseResult
       expires: number
       discard?: boolean
-    } = { sessionID, directory: this.getPermissionDirectory(requestID), promise, expires: Number.POSITIVE_INFINITY }
+    } = { sessionID, promise, expires: Number.POSITIVE_INFINITY }
     this.permissionResponses.set(requestID, record)
     void promise.then(
       (result) => {
         if (this.permissionResponses.get(requestID) !== record) return
+        if (result.kind === "error") {
+          this.permissionResponses.delete(requestID)
+          return
+        }
         if (record.discard) {
           this.permissionResponses.delete(requestID)
           return
         }
         record.promise = undefined
-        record.result = result.kind === "error" ? undefined : result
+        record.result = result
         record.expires = Date.now() + PERMISSION_RESPONSE_TTL_MS
         this.prunePermissionResponses()
       },
       () => {
-        if (this.permissionResponses.get(requestID) !== record) return
-        record.promise = undefined
-        this.clearPermissionResponse(requestID)
+        if (this.permissionResponses.get(requestID) === record) this.permissionResponses.delete(requestID)
       },
     )
     return promise
@@ -476,17 +475,11 @@ export class KiloConnectionService {
 
   isPermissionResponseClaimed(requestID: string): boolean {
     this.prunePermissionResponses()
-    const record = this.permissionResponses.get(requestID)
-    return Boolean(record?.promise || record?.result)
+    return this.permissionResponses.has(requestID)
   }
 
   clearPermissionResponse(requestID: string): void {
-    const record = this.permissionResponses.get(requestID)
-    if (!record || record.promise) return
-    record.result = undefined
-    record.expires = Date.now() + PERMISSION_RESPONSE_TTL_MS
-    if (record.discard) this.permissionResponses.delete(requestID)
-    this.prunePermissionResponses()
+    this.permissionResponses.delete(requestID)
   }
 
   // Preserve in-flight claims until their action settles; dropping one here can
@@ -494,7 +487,6 @@ export class KiloConnectionService {
   clearPermissionResponsesForSession(sessionID: string): void {
     for (const [id, record] of this.permissionResponses) {
       if (record.sessionID !== sessionID) continue
-      record.directory = undefined
       if (record.promise) record.discard = true
       else this.permissionResponses.delete(id)
     }
@@ -502,10 +494,8 @@ export class KiloConnectionService {
 
   private prunePermissionResponses(): void {
     const now = Date.now()
-    for (const record of this.permissionResponses.values()) {
-      // Keep the original route for read-only checks after a missed acknowledgement.
-      // Session cleanup and the size limit still bound these records.
-      if (record.expires <= now) record.result = undefined
+    for (const [id, record] of this.permissionResponses) {
+      if (record.expires !== Number.POSITIVE_INFINITY && record.expires <= now) this.permissionResponses.delete(id)
     }
     while (this.permissionResponses.size > PERMISSION_RESPONSE_LIMIT) {
       const id = [...this.permissionResponses].find(([, record]) => record.promise === undefined)?.[0]

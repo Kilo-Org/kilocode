@@ -35,7 +35,6 @@ export interface PermissionPatchFile {
 export interface PermissionRequest {
   id: string
   sessionID: string
-  responseError?: "failed" | "unknown"
   toolName: string
   patterns: string[]
   always: string[]

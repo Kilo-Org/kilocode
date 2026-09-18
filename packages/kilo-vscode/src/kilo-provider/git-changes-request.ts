@@ -20,12 +20,8 @@ export async function interceptMessage(
   if (next === null) {
     // Permission messages are handled by KiloProvider, never by an interceptor.
     // A failed project route must release the webview's submitting state.
-    if ((msg.type === "permissionResponse" || msg.type === "permissionStatus") && typeof msg.permissionId === "string") {
-      ctx.post({
-        type: "permissionError",
-        permissionID: msg.permissionId,
-        ...(msg.type === "permissionStatus" ? { retryable: false } : {}),
-      })
+    if (msg.type === "permissionResponse" && typeof msg.permissionId === "string") {
+      ctx.post({ type: "permissionError", permissionID: msg.permissionId })
     }
     return null
   }
