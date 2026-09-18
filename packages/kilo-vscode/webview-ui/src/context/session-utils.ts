@@ -9,6 +9,9 @@ import {
 } from "../../../src/shared/browser-feedback"
 import type { ReviewCommentEntry, ReviewMessageData } from "../../../src/shared/review-comments"
 import { partInjected } from "../../../src/shared/injected-prompt"
+import { childID } from "../../../src/kilo-provider/task-session"
+
+export { childID }
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -163,11 +166,6 @@ type TaskPart = {
   tool?: string
   metadata?: { sessionId?: string }
   state?: ToolState
-}
-
-export function childID(part: TaskPart): string | undefined {
-  if (part.type !== "tool" || part.tool !== "task") return undefined
-  return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
 }
 
 export function inUse(
