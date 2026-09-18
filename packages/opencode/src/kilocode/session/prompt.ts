@@ -372,6 +372,7 @@ export namespace KiloSessionPrompt {
     const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset })
 
     if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
+    if (outcome.plugin) return { source: "plugin" } satisfies PermissionProvenance.Approval
     return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })
   })
 
