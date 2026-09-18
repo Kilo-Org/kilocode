@@ -76,6 +76,12 @@ export interface IVectorStore {
   hasIndexedData(): Promise<boolean>
 
   /**
+   * Checks if the collection has any stored points (even if indexing is incomplete).
+   * Used to resume interrupted indexing passes.
+   */
+  hasPoints?(): Promise<boolean>
+
+  /**
    * Marks the indexing process as complete by storing metadata
    * Should be called after a successful full workspace scan or incremental scan
    */
