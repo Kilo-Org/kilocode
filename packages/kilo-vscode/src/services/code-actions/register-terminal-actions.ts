@@ -54,7 +54,7 @@ export function registerTerminalActions(
       if (view === provider) {
         await reveal()
       }
-      view.postMessage({ type: "triggerTask", text: prompt })
+      view.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Fix terminal command" })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.terminalExplainCommand", async (args: any) => {
@@ -74,7 +74,7 @@ export function registerTerminalActions(
       if (view === provider) {
         await reveal()
       }
-      view.postMessage({ type: "triggerTask", text: prompt })
+      view.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Explain terminal command" })
     }),
   )
 }

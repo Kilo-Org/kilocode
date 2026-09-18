@@ -421,6 +421,8 @@ export interface AppendReviewCommentsToTerminalMessage {
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ProfileDataMessage {
@@ -1293,6 +1295,9 @@ export interface AgentManagerSendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string

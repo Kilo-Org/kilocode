@@ -113,6 +113,7 @@ import {
   partFeedback,
   type BrowserReference,
 } from "../../../../src/shared/browser-feedback"
+import { partInjected } from "../../../../src/shared/injected-prompt"
 import { formatCodeContexts, mergeCodeContexts, type CodeContext } from "../../../../src/shared/code-context"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
@@ -643,7 +644,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const parts = session.getParts(m.id)
         return parts
           .filter((part): part is TextPart => part.type === "text")
-          .map((part) => partFeedback(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, ""))
+          .map((part) => {
+            const injected = partInjected(part.metadata)
+            if (injected) return injected.title.startsWith("/") ? injected.title : ""
+            return partFeedback(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, "")
+          })
           .join("")
       })
       history.seed(texts)
@@ -1147,7 +1152,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "triggerTask") {
       if (isDisabled()) return
       const sel = session.selected(sid())
-      session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
+      session.sendMessage(
+        message.text,
+        sel?.providerID,
+        sel?.modelID,
+        undefined,
+        undefined,
+        ctx(),
+        undefined,
+        undefined,
+        undefined,
+        message.injectedTitle,
+      )
     }
 
     if (message.type === "sendMessageFailed") {
