@@ -1093,14 +1093,20 @@ export class WorktreeManager {
    * `/var` versus `/private/var`. The anchored ignore patterns then point at
    * the real `.kilo` directory instead of the repository root.
    *
+   * `--git-path` is used without `--path-format=absolute`, because older Git
+   * echoes unsupported rev-parse flags to stdout with exit code 0, which would
+   * silently corrupt the path. Its result is relative to this command's cwd,
+   * so it is resolved against this root.
+   *
    * Failures propagate: callers decide whether to continue without excludes.
    * There is deliberately no silent fallback, because a guessed prefix would
    * write ignore patterns anchored to the wrong directory.
    */
   private async excludeTarget(): Promise<{ file: string; prefix: string }> {
-    const file = (await this.git.raw(["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"])).trim()
+    const exclude = (await this.git.raw(["rev-parse", "--git-path", "info/exclude"])).trim()
+    if (!exclude || exclude.startsWith("--")) throw new Error("git rev-parse did not return an exclude path")
     const prefix = (await this.git.raw(["rev-parse", "--show-prefix"])).trim()
-    return { file, prefix }
+    return { file: path.resolve(this.root, exclude), prefix }
   }
 
   /**
