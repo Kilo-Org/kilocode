@@ -21,8 +21,10 @@ import type { LanguageContextValue } from "../src/context/language"
 import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import SectionHeader from "./SectionHeader"
-import { OrphanNotice } from "./OrphanNotice"
+import { OrphanNotice } from "./orphans/OrphanNotice"
+import { OrphanDialog } from "./orphans/OrphanDialog"
 import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
@@ -76,6 +78,7 @@ interface Props {
 /** Permanent real sidebar body for one expanded project. */
 export const ProjectSidebarBody: Component<Props> = (props) => {
   const vscode = useVSCode()
+  const dialog = useDialog()
   const updateBase = useBaseUpdate()
   const store = props.store ?? createProjectStore(props.project.id)
   if (!props.store) {
@@ -125,6 +128,18 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members))
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
+  const openOrphanDialog = () =>
+    dialog.show(() => (
+      <OrphanDialog
+        orphans={store.orphanDirectories()}
+        onReveal={(path) => post({ type: "agentManager.revealPath", path })}
+        onDelete={(paths) => {
+          post({ type: "agentManager.cleanOrphanDirectories", paths })
+          dialog.close()
+        }}
+        onClose={() => dialog.close()}
+      />
+    ))
   const localState = () => props.activityFor(null)
 
   const selectAfterDelete = (id: string) => {
@@ -401,6 +416,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
 
       <div class="am-section">
         <div class="am-worktree-list">
+          <OrphanNotice orphans={store.orphanDirectories()} onResolve={openOrphanDialog} />
           <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider
               onDragStart={onDragStart}
@@ -465,10 +481,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               </DragOverlay>
             </DragDropProvider>
           </Show>
-          <OrphanNotice
-            orphans={store.orphanDirectories()}
-            onClean={(paths) => post({ type: "agentManager.cleanOrphanDirectories", paths })}
-          />
         </div>
       </div>
     </div>

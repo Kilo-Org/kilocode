@@ -82,18 +82,20 @@ export const layer = Layer.effect(
       const ctx = yield* InstanceState.context
       const projectID = String(ctx.project.id)
       // kilocode_change end
-      yield* events.publish(Event.Status, { sessionID, status })
+      // kilocode_change start - clear a stopped session before publishing, so a
+      // listener failure cannot leave it busy and block a later reload
       if (status.type === "idle") {
-        yield* events.publish(Event.Idle, { sessionID })
         data.delete(sessionID)
-        // kilocode_change start
         const store = stores.get(projectID)
         store?.delete(sessionID)
         if (store && store.size === 0) stores.delete(projectID)
         byDirectory.get(ctx.directory)?.delete(sessionID)
-        // kilocode_change end
+        yield* events.publish(Event.Status, { sessionID, status })
+        yield* events.publish(Event.Idle, { sessionID })
         return
       }
+      // kilocode_change end
+      yield* events.publish(Event.Status, { sessionID, status })
       data.set(sessionID, status)
       // kilocode_change start
       let store = stores.get(projectID)
@@ -108,8 +110,8 @@ export const layer = Layer.effect(
         byDirectory.set(ctx.directory, dir)
       }
       dir.set(sessionID, projectID)
+      // kilocode_change end
     })
-    // kilocode_change end
 
     // kilocode_change start - drop this instance's sessions from the project store
     // on dispose, so a busy status set here does not outlive the instance.

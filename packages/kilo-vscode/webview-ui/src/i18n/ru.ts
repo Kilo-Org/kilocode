@@ -206,6 +206,7 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
   "prompt.action.autoApprove.disabled":
     "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
+  "prompt.action.autoApprove.sandboxExcluded": "Запросы на выход из песочницы всегда исключены.",
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
@@ -223,6 +224,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Разрешена",
   "prompt.action.sandbox.unrestricted": "Без ограничений",
   "prompt.action.sandbox.description.enabled": "Запись разрешена только в каталогах проекта и Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Правила разрешений и автоодобрение действуют внутри песочницы. Команды, которым нужно выйти из неё, всегда спрашивают.",
   "prompt.action.sandbox.description.disabled": "Нажмите, чтобы ограничить запись в файловую систему и доступ к сети.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
@@ -267,7 +270,9 @@ export const dict = {
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
+  "notification.permission.titleSandboxEscalation": "Выполнить вне песочницы?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Команда целиком выполняется без ограничений файловой системы и сети, только для этой команды. Git должен записывать в .git, который доступен только для чтения в песочнице и находится вне рабочего дерева в связанном worktree. Правила разрешений Bash и автоодобрение никогда не одобряют этот запрос автоматически.",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.reject": "Отклонить",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
@@ -321,7 +326,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Новая задача",
   "sidebar.topBar.history": "История",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Маркетплейс",
   "sidebar.topBar.profile": "Профиль",
   "sidebar.topBar.settings": "Настройки",
@@ -556,38 +560,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Не удалось обновить разрешения",
 
-  "settings.permissions.tool.read.title": "Чтение",
   "settings.permissions.tool.read.description": "Чтение файла (по совпадению пути)",
-  "settings.permissions.tool.edit.title": "Редактирование",
   "settings.permissions.tool.edit.description":
     "Изменение файлов, включая редактирование, запись, патчи и мульти-редактирование",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Сопоставление файлов по паттернам glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Поиск по содержимому файлов с использованием регулярных выражений",
-  "settings.permissions.tool.list.title": "Список",
   "settings.permissions.tool.list.description": "Список файлов в директории",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Выполнение команд оболочки",
-  "settings.permissions.tool.task.title": "Задача",
   "settings.permissions.tool.task.description": "Запуск под-агентов",
-  "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "Загрузить навык по имени",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Выполнение запросов к языковому серверу",
-  "settings.permissions.tool.todoread.title": "Чтение списка задач",
   "settings.permissions.tool.todoread.description": "Чтение списка задач",
-  "settings.permissions.tool.todowrite.title": "Запись списка задач",
   "settings.permissions.tool.todowrite.description": "Обновление списка задач",
-  "settings.permissions.tool.webfetch.title": "Веб-загрузка",
   "settings.permissions.tool.webfetch.description": "Получить содержимое по URL",
-  "settings.permissions.tool.websearch.title": "Веб-поиск",
   "settings.permissions.tool.websearch.description": "Поиск в интернете",
-  "settings.permissions.tool.codesearch.title": "Поиск кода",
   "settings.permissions.tool.codesearch.description": "Поиск кода в интернете",
-  "settings.permissions.tool.external_directory.title": "Внешняя директория",
   "settings.permissions.tool.external_directory.description": "Доступ к файлам вне директории проекта",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Обнаружение повторных вызовов инструментов с одинаковым вводом",
 
   "session.delete.title": "Удалить сессию",
@@ -918,6 +906,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text, либо укажите ниже свой базовый URL транскрипции.",
+  "settings.models.speechToText.remoteDescription":
+    "Голосовой ввод недоступен в удалённых окнах. Откройте Kilo в локальном окне, чтобы использовать микрофон.",
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
@@ -1078,6 +1068,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "модель",
   "settings.agentBehaviour.workflows.variant": "вариант",
   "settings.agentBehaviour.workflows.modelDescription": "Глобальное переопределение модели",
+  "settings.experimental.codeMode.title": "Программные вызовы инструментов",
+  "settings.experimental.codeMode.description":
+    "Направляет вызовы инструментов MCP через изолированную среду выполнения JavaScript с обнаружением инструментов по запросу вместо прямого предоставления каждого инструмента MCP. Экономит контекст при подключении множества инструментов MCP.",
   "settings.sandboxing.enabled.title": "Песочница",
   "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",

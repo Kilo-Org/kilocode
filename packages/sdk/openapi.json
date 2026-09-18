@@ -14097,240 +14097,6 @@
         ]
       }
     },
-    "/kilo/claw/status": {
-      "get": {
-        "tags": ["kilo"],
-        "operationId": "kilo.claw.status",
-        "parameters": [
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Instance status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "provisioned",
-                            "starting",
-                            "restarting",
-                            "recovering",
-                            "running",
-                            "stopped",
-                            "destroying",
-                            "restoring"
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "sandboxId": {
-                      "type": "string"
-                    },
-                    "flyRegion": {
-                      "type": "string"
-                    },
-                    "machineSize": {
-                      "type": "object",
-                      "properties": {
-                        "cpus": {
-                          "type": "number"
-                        },
-                        "memory_mb": {
-                          "type": "number"
-                        }
-                      },
-                      "required": ["cpus", "memory_mb"],
-                      "additionalProperties": false
-                    },
-                    "openclawVersion": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "lastStartedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "lastStoppedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "channelCount": {
-                      "type": "number"
-                    },
-                    "secretCount": {
-                      "type": "number"
-                    },
-                    "userId": {
-                      "type": "string"
-                    },
-                    "botName": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    }
-                  },
-                  "required": ["status"],
-                  "additionalProperties": false,
-                  "description": "Instance status"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "ServiceUnavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
-                }
-              }
-            }
-          }
-        },
-        "description": "Fetch the user's KiloClaw instance status via the KiloClaw worker",
-        "summary": "Get KiloClaw instance status",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.claw.status({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/kilo/claw/chat-credentials": {
-      "get": {
-        "tags": ["kilo"],
-        "operationId": "kilo.claw.chatCredentials",
-        "parameters": [
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Kilo Chat credentials or null",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "token": {
-                          "type": "string"
-                        },
-                        "expiresAt": {
-                          "type": "string"
-                        },
-                        "kiloChatUrl": {
-                          "type": "string"
-                        },
-                        "eventServiceUrl": {
-                          "type": "string"
-                        }
-                      },
-                      "required": ["token", "expiresAt", "kiloChatUrl", "eventServiceUrl"],
-                      "additionalProperties": false
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "description": "Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.",
-        "summary": "Get KiloClaw chat credentials",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.claw.chatCredentials({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/kilo/cloud-sessions": {
       "get": {
         "tags": ["kilo"],
@@ -40381,17 +40147,6 @@
         "required": ["_tag"],
         "additionalProperties": false
       },
-      "effect_HttpApiError_ServiceUnavailable": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["ServiceUnavailable"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
-      },
       "CloudSessionImportError": {
         "type": "object",
         "properties": {
@@ -41223,6 +40978,17 @@
           }
         },
         "required": ["items", "generatedAt"],
+        "additionalProperties": false
+      },
+      "effect_HttpApiError_ServiceUnavailable": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["ServiceUnavailable"]
+          }
+        },
+        "required": ["_tag"],
         "additionalProperties": false
       },
       "NotebookOutput": {

@@ -53,6 +53,7 @@ export interface ExperimentalConfig {
   image_generation?: boolean
   image_generation_model?: string
   task_model_selection?: boolean
+  code_mode?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
   speech_to_text_base_url?: string
@@ -187,4 +188,5 @@ export interface FeatureFlags {
   indexing: boolean
   sandboxControls: boolean
   backgroundSubagents: boolean
+  speechToText: boolean
 }
