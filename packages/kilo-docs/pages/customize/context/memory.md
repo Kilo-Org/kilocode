@@ -12,7 +12,7 @@ Memory is disabled by default. Enable it per project. Kilo stores project memory
 {% /callout %}
 
 {% callout type="note" title="Not the deprecated Memory Bank" %}
-Kilo Memory is separate from the deprecated **memory bank**. The memory bank used rule files under `.kilo/rules/memory-bank/` and is replaced by [AGENTS.md](/docs/customize/agents-md). Kilo Memory stores project memory outside the repository and is managed with the `/memory` command.
+Kilo Memory is separate from the deprecated **memory bank**. The memory bank used rule files under `.kilo/rules/memory-bank/` and is replaced by [AGENTS.md](/docs/customize/agents-md). Kilo Memory stores project memory outside the repository, in Kilo's global data directory, and is managed with the `/memory` command.
 {% /callout %}
 
 ## What memory stores
@@ -27,6 +27,10 @@ Kilo keeps memory in three Markdown source files plus saved session digests:
 | Session digests | Short summaries of prior sessions |
 
 Each entry is a saved key-value note. Memory is saved per repository, so linked git worktrees share the same project memory.
+
+These files live in a per-project folder under Kilo's global data directory: `<data>/memory/<project-slug>-<sha1-12>/`. On typical systems `<data>` is `~/.local/share/kilo` (respecting `XDG_DATA_HOME` if set), so the folder is `~/.local/share/kilo/memory/<project-slug>-<sha1-12>/`. The folder name is derived from the git project root: a slugified basename of the root directory, plus the first 12 hex characters of a sha1 hash of the canonical root path. Because the folder is keyed by the project root, all worktrees of the same repository share one memory folder.
+
+Alongside the three source files, the folder holds a `sessions/` directory with saved session digest Markdown files, plus internal index and state files that Kilo manages automatically and that you should not edit by hand.
 
 ## Enable memory
 
@@ -114,7 +118,7 @@ The `/memory` command is also available as `/mem`.
 
 ## Storage and maintenance
 
-Kilo stores project memory outside your repository, under Kilo's global data directory in a per-project folder. Run `/memory inspect` to reveal the exact folder for the current project.
+Kilo stores project memory outside your repository, under Kilo's global data directory in a per-project folder (see [What memory stores](#what-memory-stores)). Run `/memory inspect` to reveal the exact folder for the current project.
 
 - **Rebuild** regenerates the memory index from the source files. Use it if the index looks stale or incomplete.
 - **Purge** permanently deletes all project memory files. It requires the explicit `confirm` argument: `/memory purge confirm`.
