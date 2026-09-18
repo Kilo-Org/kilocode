@@ -1106,17 +1106,16 @@ export const dict = {
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.autoCleanup.enable.title": "เปิดการล้างงานอัตโนมัติ",
   "settings.autoCleanup.enable.description":
-    "ล้างประวัติงานเก่าโดยอัตโนมัติเพื่อคืนพื้นที่ดิสก์ งานที่กำลังทำงานและงานที่มี fork ล่าสุดจะไม่ถูกลบเด็ดขาด การลบเป็นการถาวร",
+    "ล้างประวัติงานเก่าโดยอัตโนมัติหลังจากผ่านไปตามจำนวนวันที่กำหนด — ครอบคลุมทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้ ไม่ใช่แค่หน้าต่างนี้ งานที่กำลังทำงานและงานที่มี fork ล่าสุดจะไม่ถูกลบเด็ดขาด การลบเป็นการถาวร",
   "settings.autoCleanup.defaultRetention.title": "เก็บงานไว้ (วัน)",
   "settings.autoCleanup.defaultRetention.description": "ระยะเวลาที่เก็บประวัติงานก่อนการล้างอัตโนมัติจะลบ",
-  "settings.autoCleanup.incompleteRetention.title": "เก็บงานที่ถูกทิ้งไว้ (วัน)",
-  "settings.autoCleanup.incompleteRetention.description":
-    "งานที่ไม่เคยมีการแลกเปลี่ยนจริงถือว่าถูกทิ้งและถูกลบตามรอบที่สั้นกว่านี้",
   "settings.autoCleanup.lastRun.title": "การล้างล่าสุด",
   "settings.autoCleanup.lastRun.never": "ยังไม่เคยรัน",
   "settings.autoCleanup.result":
     "{{date}}: ลบ {{deleted}} จาก {{scanned}} งาน (ข้ามงานที่กำลังทำงาน {{active}} งาน, ล้มเหลว {{failed}}) ใน {{seconds}} วินาที",
   "settings.autoCleanup.runNow": "รันการล้างเดี๋ยวนี้",
+  "settings.autoCleanup.runNow.confirm":
+    "ลบงานที่หมดอายุอย่างถาวรทั่วทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้หรือไม่?",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
   "settings.context.compaction.title": "การบีบอัด",

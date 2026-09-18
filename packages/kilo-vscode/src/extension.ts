@@ -14,7 +14,7 @@ import { MarketplaceNotifier } from "./services/marketplace/notifier"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
-import { taskCleanup } from "./services/task-cleanup/service"
+import { retention } from "./services/task-cleanup/retention"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
@@ -103,8 +103,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(remoteService)
   connectionService.setRemoteService(remoteService)
 
-  // Scheduled task-history cleanup (auto-cleanup settings panel)
-  const cleanup = taskCleanup(connectionService, context)
+  // Daily trigger for the backend-owned session retention pass (Settings → Checkpoints)
+  const cleanup = retention(connectionService, context)
   cleanup.start()
   context.subscriptions.push({ dispose: () => cleanup.dispose() })
 

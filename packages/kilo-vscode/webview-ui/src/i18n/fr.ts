@@ -1157,18 +1157,17 @@ export const dict = {
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
   "settings.autoCleanup.enable.title": "Activer le nettoyage automatique des tâches",
   "settings.autoCleanup.enable.description":
-    "Supprime automatiquement l'ancien historique des tâches pour libérer de l'espace disque. Les tâches en cours et celles avec un fork récent ne sont jamais supprimées. La suppression est définitive.",
+    "Supprime automatiquement l'ancien historique des tâches après un nombre de jours fixe — dans tous les projets et tous les clients Kilo de cette machine, pas seulement dans cette fenêtre. Les tâches en cours et celles avec un fork récent ne sont jamais supprimées. La suppression est définitive.",
   "settings.autoCleanup.defaultRetention.title": "Conserver les tâches (jours)",
   "settings.autoCleanup.defaultRetention.description":
     "Durée de conservation de l'historique des tâches avant sa suppression par le nettoyage automatique.",
-  "settings.autoCleanup.incompleteRetention.title": "Conserver les tâches abandonnées (jours)",
-  "settings.autoCleanup.incompleteRetention.description":
-    "Les tâches sans véritable échange sont considérées comme abandonnées et supprimées selon ce délai plus court.",
   "settings.autoCleanup.lastRun.title": "Dernier nettoyage",
   "settings.autoCleanup.lastRun.never": "Jamais exécuté",
   "settings.autoCleanup.result":
     "{{date}} : {{deleted}} tâches supprimées sur {{scanned}} ({{active}} actives ignorées, {{failed}} échouées) en {{seconds}}s",
   "settings.autoCleanup.runNow": "Lancer le nettoyage maintenant",
+  "settings.autoCleanup.runNow.confirm":
+    "Supprimer définitivement les tâches expirées dans tous les projets et tous les clients Kilo de cette machine ?",
   "settings.context.autoCompaction.title": "Compaction automatique",
   "settings.context.autoCompaction.description":
     "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",

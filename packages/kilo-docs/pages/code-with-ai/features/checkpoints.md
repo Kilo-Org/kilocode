@@ -55,32 +55,30 @@ When enabled, the system automatically captures snapshots at each step of a task
 
 ## Automatic Task Cleanup
 
-{% callout type="info" %}
-Automatic task cleanup is available in the VS Code extension only.
-{% /callout %}
+Task history grows over time, and a long list of old tasks gets hard to navigate. **Auto-Cleanup** prunes old tasks for you on a schedule so you do not have to delete history by hand. It is off by default.
 
-Task history grows over time, and old tasks can take up meaningful disk space. **Auto-Cleanup** deletes old tasks for you on a schedule so you do not have to prune history by hand.
+Cleanup is a machine-wide policy, owned by the Kilo backend. When enabled, it applies to **all projects and every Kilo client on this machine** — the VS Code extension, the CLI, and JetBrains — not just the window where you turned it on.
 
 ### Enabling Auto-Cleanup
 
 1. Open Settings by clicking the gear icon {% codicon name="gear" /%}
 2. Go to the **Checkpoints** tab
 3. Toggle **Enable automatic task cleanup** on
-4. Set how long tasks are kept:
-   - **Keep tasks for (days)** — retention for regular task history (default 30 days)
-   - **Keep abandoned tasks for (days)** — retention for tasks that never ran a real exchange, such as empty or abandoned sessions (default 7 days)
+4. Set **Keep tasks for (days)** — how long task history is kept before cleanup deletes it (default 30 days)
 5. Click **Save** if you made changes
 
-Once enabled, cleanup runs shortly after the extension starts and then once a day. You can also run it immediately with the **Run Cleanup Now** button. After each run, the **Last cleanup** line shows what happened — how many tasks were deleted, how many were skipped, and whether anything failed.
+The policy lives in `kilo.json` under the `retention` key, so it applies no matter which client you use next. Archived tasks age out on the same clock as everything else.
 
-{% callout type="warning" %}
-Deleted tasks are gone permanently, including their conversation history. Running tasks are never deleted.
-{% /callout %}
+Once enabled, cleanup runs about once a day while a Kilo client is open. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. After each run, the **Last cleanup** line shows what happened — how many tasks were deleted, how many were skipped, and whether anything failed.
 
 ### What Is Protected
 
-- **Running tasks** — a task that is currently executing is never deleted
-- **Tasks with a recent fork** — deleting a task also deletes tasks forked from it, so an old task with a recent fork stays until the fork ages out too
+- **Active tasks** — a task that a client currently has open or that shows recent activity is skipped. Cleanup never deletes a task that could be running, even if the client running it is a different window or a terminal.
+- **Tasks with a recent fork** — deleting a task also deletes tasks forked from it, so an old task with a recent fork stays until the fork ages out too.
+
+{% callout type="warning" %}
+Deleted tasks are gone permanently, including their conversation history, across every project on this machine. Make sure the retention window fits how you work before enabling it.
+{% /callout %}
 
 ### Snapshots and Cleanup
 

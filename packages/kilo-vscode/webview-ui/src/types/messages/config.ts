@@ -138,6 +138,11 @@ export type CodeEditDisplay = "expanded" | "collapsed"
 export type McpToolDisplay = "expanded" | "collapsed"
 export type ReasoningDisplay = "expanded" | "preview" | "headline"
 
+export interface RetentionConfig {
+  enabled?: boolean
+  maxAgeDays?: number
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -155,6 +160,7 @@ export interface Config {
   instructions?: string[]
   skills?: SkillsConfig
   snapshot?: boolean
+  retention?: RetentionConfig
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay

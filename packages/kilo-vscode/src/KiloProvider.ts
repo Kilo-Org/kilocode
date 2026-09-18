@@ -195,8 +195,7 @@ import {
 } from "./kilo-provider/config-bindings"
 import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project/paths"
 import { buildTimelineSettingMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
-import { cleanupSettings, validAutoCleanupSetting } from "./services/task-cleanup/settings"
-import { taskCleanup } from "./services/task-cleanup/service"
+import { retention } from "./services/task-cleanup/retention"
 import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
 import {
   buildAutoApprovalReasonSettingMessage,
@@ -3399,12 +3398,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private autoCleanup() {
-    return this.extensionContext ? taskCleanup(this.connectionService, this.extensionContext) : undefined
+    return this.extensionContext ? retention(this.connectionService, this.extensionContext) : undefined
   }
 
   private async handleAutoCleanupMessage(message: TypedWebviewMessage): Promise<boolean> {
     if (message.type === "requestAutoCleanupState") {
-      this.sendAutoCleanupState()
+      const service = this.autoCleanup()
+      const status = await service?.status().catch(() => null)
+      this.postMessage({ type: "autoCleanupStateLoaded", last: status?.last ?? service?.lastResult() ?? null })
       return true
     }
     if (message.type === "runAutoCleanupNow") {
@@ -3414,8 +3415,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.sendAutoCleanupState()
         return true
       }
-      const result = await service.run()
-      if (!result) {
+      const status = await service.run(true).catch(() => null)
+      if (!status) {
         this.postMessage({ type: "error", message: "Task cleanup did not run — is the CLI backend connected?" })
       }
       this.sendAutoCleanupState()
@@ -4106,7 +4107,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private configSettings() {
     const naming = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
-    const cleanup = cleanupSettings()
     return {
       maxCost: this.maxCostSetting(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
@@ -4118,9 +4118,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),
       "agentManager.pushFixes": pushFixes(),
-      "autoCleanup.enabled": cleanup.enabled,
-      "autoCleanup.defaultRetentionDays": cleanup.defaultRetentionDays,
-      "autoCleanup.incompleteRetentionDays": cleanup.incompleteRetentionDays,
     }
   }
 
@@ -4799,7 +4796,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
     if (section === "indexing" && !validIndexingSetting(leaf, value)) return
     if (section === "chat" && !validChatSetting(leaf, value)) return
-    if (section === "autoCleanup" && !validAutoCleanupSetting(leaf, value)) return
     const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
     // Normalize a webview-side clear to `undefined` so VS Code removes the
     // key from settings.json rather than persisting a literal `null`. This

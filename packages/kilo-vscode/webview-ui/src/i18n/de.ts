@@ -1151,18 +1151,17 @@ export const dict = {
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
   "settings.autoCleanup.enable.title": "Automatische Aufgabenbereinigung aktivieren",
   "settings.autoCleanup.enable.description":
-    "Löscht alten Aufgabenverlauf automatisch, um Speicherplatz freizugeben. Laufende Aufgaben und Aufgaben mit jungem Fork werden nie gelöscht. Die Löschung ist dauerhaft.",
+    "Löscht alten Aufgabenverlauf automatisch nach einer festen Anzahl von Tagen — in allen Projekten und allen Kilo-Clients auf diesem Rechner, nicht nur in diesem Fenster. Laufende Aufgaben und Aufgaben mit jungem Fork werden nie gelöscht. Die Löschung ist dauerhaft.",
   "settings.autoCleanup.defaultRetention.title": "Aufgaben aufbewahren (Tage)",
   "settings.autoCleanup.defaultRetention.description":
     "Wie lange der Aufgabenverlauf aufbewahrt wird, bevor die automatische Bereinigung ihn löscht.",
-  "settings.autoCleanup.incompleteRetention.title": "Verlassene Aufgaben aufbewahren (Tage)",
-  "settings.autoCleanup.incompleteRetention.description":
-    "Aufgaben ohne echten Austausch gelten als verlassen und werden nach diesem kürzeren Zeitplan gelöscht.",
   "settings.autoCleanup.lastRun.title": "Letzte Bereinigung",
   "settings.autoCleanup.lastRun.never": "Nie ausgeführt",
   "settings.autoCleanup.result":
     "{{date}}: {{deleted}} von {{scanned}} Aufgaben gelöscht ({{active}} aktiv übersprungen, {{failed}} fehlgeschlagen) in {{seconds}}s",
   "settings.autoCleanup.runNow": "Bereinigung jetzt ausführen",
+  "settings.autoCleanup.runNow.confirm":
+    "Abgelaufene Aufgaben endgültig in allen Projekten und allen Kilo-Clients auf diesem Rechner löschen?",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
   "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
   "settings.context.compaction.title": "Komprimierung",

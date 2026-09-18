@@ -1097,18 +1097,17 @@ export const dict = {
     "Maak checkpoints aan voor het bewerken van bestanden zodat je eerdere staten kunt herstellen",
   "settings.autoCleanup.enable.title": "Automatische taakopschoning inschakelen",
   "settings.autoCleanup.enable.description":
-    "Verwijdert oude taakgeschiedenis automatisch om schijfruimte vrij te maken. Actieve taken en taken met een recente fork worden nooit verwijderd. Verwijderen is definitief.",
+    "Verwijdert oude taakgeschiedenis automatisch na een vast aantal dagen — in alle projecten en alle Kilo-clients op deze machine, niet alleen in dit venster. Actieve taken en taken met een recente fork worden nooit verwijderd. Verwijderen is definitief.",
   "settings.autoCleanup.defaultRetention.title": "Taken bewaren (dagen)",
   "settings.autoCleanup.defaultRetention.description":
     "Hoe lang taakgeschiedenis wordt bewaard voordat automatische opschoning deze verwijdert.",
-  "settings.autoCleanup.incompleteRetention.title": "Verlaten taken bewaren (dagen)",
-  "settings.autoCleanup.incompleteRetention.description":
-    "Taken zonder echte uitwisseling worden als verlaten beschouwd en volgens dit kortere schema verwijderd.",
   "settings.autoCleanup.lastRun.title": "Laatste opschoning",
   "settings.autoCleanup.lastRun.never": "Nooit uitgevoerd",
   "settings.autoCleanup.result":
     "{{date}}: {{deleted}} van {{scanned}} taken verwijderd ({{active}} actief overgeslagen, {{failed}} mislukt) in {{seconds}}s",
   "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
+  "settings.autoCleanup.runNow.confirm":
+    "Verlopen taken definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",

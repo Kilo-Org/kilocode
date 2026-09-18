@@ -1141,18 +1141,17 @@ export const dict = {
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
   "settings.autoCleanup.enable.title": "Habilitar limpieza automática de tareas",
   "settings.autoCleanup.enable.description":
-    "Elimina automáticamente el historial de tareas antiguo para liberar espacio en disco. Las tareas en ejecución y las tareas con una bifurcación reciente nunca se eliminan. La eliminación es permanente.",
+    "Elimina automáticamente el historial de tareas antiguo tras una cantidad fija de días — en todos los proyectos y en todos los clientes de Kilo de esta máquina, no solo en esta ventana. Las tareas en ejecución y las tareas con una bifurcación reciente nunca se eliminan. La eliminación es permanente.",
   "settings.autoCleanup.defaultRetention.title": "Mantener tareas durante (días)",
   "settings.autoCleanup.defaultRetention.description":
     "Cuánto tiempo se conserva el historial de tareas antes de que la limpieza automática lo elimine.",
-  "settings.autoCleanup.incompleteRetention.title": "Mantener tareas abandonadas durante (días)",
-  "settings.autoCleanup.incompleteRetention.description":
-    "Las tareas que nunca tuvieron un intercambio real se consideran abandonadas y se eliminan en este plazo más corto.",
   "settings.autoCleanup.lastRun.title": "Última limpieza",
   "settings.autoCleanup.lastRun.never": "Nunca ejecutada",
   "settings.autoCleanup.result":
     "{{date}}: eliminadas {{deleted}} de {{scanned}} tareas ({{active}} activas omitidas, {{failed}} fallidas) en {{seconds}}s",
   "settings.autoCleanup.runNow": "Ejecutar limpieza ahora",
+  "settings.autoCleanup.runNow.confirm":
+    "¿Eliminar permanentemente las tareas caducadas en todos los proyectos y en todos los clientes de Kilo de esta máquina?",
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",

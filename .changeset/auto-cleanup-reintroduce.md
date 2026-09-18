@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Reintroduce Auto-Cleanup for task history: optionally delete old tasks automatically on a daily schedule, with configurable retention for regular and abandoned tasks. Running tasks and tasks with a recent fork are never deleted. Find it under Settings → Checkpoints, including a "Run Cleanup Now" button and a summary of the last run.
+Reintroduce Auto-Cleanup for task history as a backend-owned retention policy. Off by default; when enabled in Settings → Checkpoints (stored in `kilo.json` under `retention`), it deletes sessions older than a configurable age across all projects and every Kilo client on the machine. Running tasks and tasks with a recent fork are never deleted, and "Run Cleanup Now" asks for confirmation first.

@@ -1120,17 +1120,16 @@ export const dict = {
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
   "settings.autoCleanup.enable.title": "自動タスククリーンアップを有効化",
   "settings.autoCleanup.enable.description":
-    "古いタスク履歴を自動削除してディスク容量を解放します。実行中のタスクや最近フォークを持つタスクは決して削除されません。削除は元に戻せません。",
+    "決まった日数が経過すると古いタスク履歴を自動削除します。対象はこのマシン上のすべてのプロジェクトとすべての Kilo クライアントで、このウィンドウだけではありません。実行中のタスクや最近フォークを持つタスクは決して削除されません。削除は元に戻せません。",
   "settings.autoCleanup.defaultRetention.title": "タスクを保持する期間（日数）",
   "settings.autoCleanup.defaultRetention.description": "自動クリーンアップがタスク履歴を削除するまでの保持期間。",
-  "settings.autoCleanup.incompleteRetention.title": "放置されたタスクを保持する期間（日数）",
-  "settings.autoCleanup.incompleteRetention.description":
-    "実際のやり取りが一度もなかったタスクは放置されたものとみなされ、このより短い期間で削除されます。",
   "settings.autoCleanup.lastRun.title": "前回のクリーンアップ",
   "settings.autoCleanup.lastRun.never": "未実行",
   "settings.autoCleanup.result":
     "{{date}}: {{scanned}} 件中 {{deleted}} 件のタスクを削除（{{active}} 件のアクティブをスキップ、{{failed}} 件失敗）、{{seconds}} 秒",
   "settings.autoCleanup.runNow": "今すぐクリーンアップを実行",
+  "settings.autoCleanup.runNow.confirm":
+    "このマシン上のすべてのプロジェクトとすべての Kilo クライアントにわたる、削除対象の古いタスクを完全に削除しますか？",
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",

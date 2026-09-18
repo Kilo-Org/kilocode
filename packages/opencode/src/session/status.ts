@@ -45,6 +45,17 @@ export const listAll = Effect.fn("SessionStatus.listAll")(function* () {
   const ctx = yield* InstanceState.context
   return new Map(stores.get(String(ctx.project.id)) ?? [])
 })
+
+// Machine-wide busy read for the session retention pass, which spans every
+// project and directory in this process. Lives in the same kilocode_change
+// block so it can reach the private process-global stores.
+export const busyAll = Effect.fn("SessionStatus.busyAll")(function* () {
+  const out = new Set<SessionID>()
+  for (const store of stores.values()) {
+    for (const id of store.keys()) out.add(id)
+  }
+  return out
+})
 // kilocode_change end
 
 export const layer = Layer.effect(
