@@ -3,12 +3,16 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.diff.GIT_COMMAND_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
+import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
@@ -32,9 +36,15 @@ import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.OrphanDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
+import ai.kilocode.jetbrains.api.model.KilocodeRemoveSnapshotRequest
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.ide.actions.RevealFileAction
 import com.intellij.ide.impl.OpenProjectTask
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationManager
@@ -46,6 +56,10 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -63,15 +77,21 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import java.awt.Frame
+import java.io.IOException
+import java.net.URLEncoder
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ConcurrentHashMap
 
 class KiloWorktreeRpcApiImpl(
@@ -93,8 +113,11 @@ class KiloWorktreeRpcApiImpl(
         private const val PR_TTL = 90_000L
         // The rename+prune path returns long before this ever matters; it only bounds the fallback
         // `git worktree remove --force`, which recursively deletes the checkout synchronously and
-        // therefore needs far more headroom than the 30s default query timeout.
+        // therefore needs far more headroom than the default query timeout.
         private const val REMOVE_TIMEOUT_MS = 600_000
+        // Total git/gh processes this service will run at once for one repository. Each poll used to
+        // create its own Semaphore(4), so stats + dirty + PR polls could fan out three times that.
+        private const val PROCESS_BUDGET = 4
         // Above this, a caller waiting on the per-repo mutation lock is worth a log line — most waits
         // are a few ms and would just be noise.
         private const val LOCK_WAIT_LOG_THRESHOLD_MS = 200L
@@ -105,9 +128,11 @@ class KiloWorktreeRpcApiImpl(
         }
     }
 
+    /** Shared across every polling path in this service; see [parallel]. */
+    private val budget = Semaphore(PROCESS_BUDGET)
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
-    private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
+    private val resolver = PrResolver(gh = { dir, args, ms -> runGh(dir, args, ms) }, git = ::runGit)
     private val ghLock = Any()
     // Serializes the git-mutating operations (create/import/remove/rename/adopt/reorder/session-list)
     // for one repository, keyed by its main worktree's real path, so concurrent calls cannot interleave
@@ -122,21 +147,20 @@ class KiloWorktreeRpcApiImpl(
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
-        val res = runGit(base, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreeListDto()
-        val all = parseWorktreeList(res.stdout)
-        val items = managedWorktrees(all)
-        val alive = live(items.filter { it.main || Files.isDirectory(Path.of(it.path)) })
+        // Same reconcile the stats/dirty polls use, so the rows and their status can never disagree
+        // about which worktrees exist.
+        val reconciled = reconcile(base) ?: return@withContext WorktreeListDto()
+        val alive = reconciled.items
         val store = worktreeNameStore(alive)
         val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
         // Cheap and non-blocking: sweeps orphaned `.kilo-delete-*` directories left by an interrupted
         // delete (this plugin's or the VS Code extension's) every time the list is polled, so they do
         // not require a fresh remove() to be cleaned up.
-        all.firstOrNull { it.main }?.let {
+        alive.firstOrNull { it.main }?.let {
             trash?.sweep(Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize())
         }
-        WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
+        WorktreeListDto(orderWorktrees(named, state.worktreeOrder), orphans = reconciled.orphans)
     }
 
     override suspend fun open(directory: String): Boolean {
@@ -189,17 +213,48 @@ class KiloWorktreeRpcApiImpl(
         return true
     }
 
+    /**
+     * Closes and disposes the frame of an already-open project whose base directory is [dir], using
+     * the same matching as [focusIfOpen]. A live IDE frame rooted at a worktree being deleted is the
+     * most likely source of leftover `.idea`-only directories: the frame keeps rewriting project
+     * files into the checkout while it is being renamed/removed out from under it. Returns false
+     * when nothing matched, which is also the common case — most deletes target a worktree that was
+     * never opened as its own project.
+     */
+    @RequiresEdt
+    private fun closeIfOpen(dir: Path): Boolean {
+        val target = dir.toString()
+        val project: Project = ProjectManager.getInstance().openProjects.firstOrNull {
+            ProjectUtil.isSameProject(dir, it) || FileUtil.pathsEqual(it.basePath, target) || FileUtil.pathsEqual(it.presentableUrl, target)
+        } ?: return false
+        LOG.info("worktree close (backend): closing frame for ${project.name} dir=$dir")
+        val closed = ProjectManager.getInstance().closeAndDispose(project)
+        LOG.info("worktree close (backend): closed=$closed dir=$dir")
+        return closed
+    }
+
+    /**
+     * [closeIfOpen], hopping to the EDT first — a no-op outside an IntelliJ Application (a plain
+     * unit test, or split-mode's own backend process with no frame to close in the first place).
+     */
+    private suspend fun closeIfOpenSafe(dir: Path) {
+        if (ApplicationManager.getApplication() == null) return
+        withContext(Dispatchers.EDT) { closeIfOpen(dir) }
+    }
+
     override suspend fun listBranches(directory: String): WorktreeBranchesDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
         val refs = runGit(base, "for-each-ref", "--format=%(refname:short)", "refs/heads")
         val branches = if (!refs.ok) emptyList() else refs.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val current = runGit(base, "branch", "--show-current").stdout.trim().takeIf { it.isNotEmpty() }
-        WorktreeBranchesDto(branches, current)
+        val remote = runGit(base, "remote", "get-url", "origin")
+        val origin = if (remote.ok) parseRepoSlug(remote.stdout) else null
+        WorktreeBranchesDto(branches, current, origin)
     }
 
     override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val items = sync(root) ?: return@withContext WorktreeStatsListDto()
+        val items = sync(root) ?: return@withContext WorktreeStatsListDto(unavailable = true)
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> statsSafe(item, fallback) })
     }
@@ -212,7 +267,7 @@ class KiloWorktreeRpcApiImpl(
      */
     override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
+        val items = sync(root) ?: return@withContext WorktreeDirtyListDto(unavailable = true)
         WorktreeDirtyListDto(parallel(items) { item -> dirtySafe(item) })
     }
 
@@ -227,7 +282,12 @@ class KiloWorktreeRpcApiImpl(
      * `$GIT_DIR/worktrees` bookkeeping for a checkout it finds missing, never any files, and never a
      * locked worktree (the documented guard for worktrees on unmounted volumes).
      */
-    private fun sync(root: Path): List<WorktreeDto>? {
+    private fun sync(root: Path): List<WorktreeDto>? = reconcile(root)?.items
+
+    /** Managed worktrees of one repository, plus directories nothing claims. */
+    internal data class Reconciled(val items: List<WorktreeDto>, val orphans: List<OrphanDto>)
+
+    private fun reconcile(root: Path): Reconciled? {
         if (!Files.isDirectory(root)) {
             LOG.info("worktree sync skipped, directory does not exist: $root")
             return null
@@ -236,16 +296,89 @@ class KiloWorktreeRpcApiImpl(
         if (!res.ok) return null
         val raw = parseWorktreeList(res.stdout)
         val stale = staleWorktrees(raw, trash)
-        val synced = if (stale.isEmpty()) managedWorktrees(raw) else {
+        val all = if (stale.isEmpty()) raw else {
             LOG.info("worktree sync pruning stale managed worktrees: ${stale.joinToString(", ") { it.path }}")
-            val prune = runGit(root, "worktree", "prune", "-v")
-            if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
-            if (prune.ok && prune.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(prune.stdout)}")
-            val again = runGit(root, "worktree", "list", "--porcelain")
-            if (!again.ok) return null
-            managedWorktrees(parseWorktreeList(again.stdout))
+            // Pruning rewrites the same `$GIT_DIR/worktrees` bookkeeping create/import/remove/rename
+            // are serialised on, and `git worktree add` registers a worktree before it has finished
+            // writing the checkout — so a poll that pruned mid-add would delete the metadata of a
+            // worktree being created. The most frequent caller in the backend must not be the one
+            // path that skips that mutex.
+            val pruned = exclusive(main(raw), "prune") { prune(root) }
+            // Not pruning is harmless: the entry is still stale on the next poll, and this pass
+            // simply reports what git reported. Waiting for the mutation instead would park every
+            // status poll behind a `git worktree add` on a large repository.
+            if (pruned == null) raw
+            else {
+                val again = runGit(root, "worktree", "list", "--porcelain")
+                if (!again.ok) return null
+                parseWorktreeList(again.stdout)
+            }
         }
-        return live(synced.filter { Files.isDirectory(Path.of(it.path)) })
+        val items = live(managedWorktrees(all).filter { Files.isDirectory(Path.of(it.path)) })
+        return Reconciled(items, orphanDirs(all, main(all)))
+    }
+
+    private fun main(all: List<WorktreeDto>): Path? =
+        all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
+
+    /**
+     * `git worktree prune`, on a budget short enough to bound how long a mutation waits for a poll.
+     *
+     * See [GIT_PRUNE_TIMEOUT_MS]: this runs holding the repository's mutation lock, so the write
+     * budget would let one wedged prune park a user-initiated create for three minutes.
+     */
+    private fun prune(root: Path): Boolean {
+        val res = runGit(root, listOf("worktree", "prune", "-v"), GIT_PRUNE_TIMEOUT_MS)
+        if (!res.ok) LOG.warn("worktree prune during sync failed: exit=${res.exit} stderr=${snippet(res.stderr)}")
+        if (res.ok && res.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(res.stdout)}")
+        return res.ok
+    }
+
+    /**
+     * Runs [block] holding this repository's mutation lock, or answers null when a mutation holds it.
+     *
+     * Keyed exactly like [lock], so a poll and a mutation on the same repository contend on the same
+     * mutex. A null [main] means git did not name a main working tree, and a prune needs one.
+     */
+    private fun <T> exclusive(main: Path?, op: String, block: () -> T): T? {
+        val key = (main ?: return null).toString()
+        return exclusive(locks.computeIfAbsent(key) { Mutex() }, op, key, block)
+    }
+
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track.
+     *
+     * Reported, never removed automatically: a leftover directory can still hold files that exist
+     * nowhere else, so deleting one is the user's decision (see [removeOrphans]). They are worth
+     * naming because they accumulate silently — an interrupted delete or a hand-removed
+     * `.git/worktrees` entry leaves one behind every time.
+     *
+     * Classified into [OrphanKind.BROKEN] (still holds a `.git` file/dir — an interrupted delete
+     * left a real checkout behind) or [OrphanKind.LEFTOVER] (a plain directory, e.g. a hand-removed
+     * `.idea`/`.kilo-dev` folder), mirroring the VS Code extension's `worktree-reconcile.ts` so both
+     * clients agree on which rows are risky to delete.
+     */
+    private fun orphanDirs(all: List<WorktreeDto>, base: Path?): List<OrphanDto> {
+        val dir = base?.resolve(".kilo")?.resolve("worktrees")?.normalize() ?: return emptyList()
+        if (!Files.isDirectory(dir)) return emptyList()
+        val tracked = all.map { Path.of(it.path).normalize().toString() }.toSet()
+        val orphans = runCatching {
+            Files.list(dir).use { stream ->
+                stream.filter { Files.isDirectory(it) }
+                    .map { it.normalize() }
+                    .filter { it.fileName.toString().startsWith(".kilo-delete-").not() }
+                    .filter { it.toString() !in tracked }
+                    .map { OrphanDto(it.toString(), if (Files.exists(it.resolve(".git"))) OrphanKind.BROKEN else OrphanKind.LEFTOVER) }
+                    .toList()
+            }
+        }.getOrElse { err ->
+            LOG.info("worktree orphan scan skipped dir=$dir reason=${err.message}")
+            emptyList()
+        }
+        if (orphans.isNotEmpty()) {
+            LOG.info("worktree orphan directories (not removed): ${orphans.joinToString(", ") { it.path }}")
+        }
+        return orphans
     }
 
     override suspend fun ghStatus(directory: String, github: Boolean, maxAge: Long?): GhAvailability = withContext(Dispatchers.IO) {
@@ -489,6 +622,28 @@ class KiloWorktreeRpcApiImpl(
         withContext(Dispatchers.IO) {
             val base = Path.of(directory).normalize()
             val ref = parsePrUrl(url) ?: return@withContext CreateWorktreeResultDto(error = "Enter a valid GitHub pull request URL")
+            // `gh pr view` resolves against the URL's own repo, but every fetch below targets this
+            // checkout's local `origin` — so a foreign PR URL either fails obscurely or, if the local
+            // origin happens to have a PR sharing that number, silently imports the wrong PR. Catch it
+            // before spawning `gh` at all. A null origin (no remote, non-GitHub remote, GitHub
+            // Enterprise) skips the guard rather than blocking an import we cannot verify.
+            //
+            // The comparison is by remote URL, so an origin left stale by a GitHub rename or transfer
+            // reads as foreign even though it still reaches the same repository through GitHub's
+            // redirect. Resolving the canonical name needs a network round trip on every import to
+            // repair one stale remote, so the message names the remote as the other possible cause
+            // instead.
+            val slug = "${ref.owner}/${ref.repo}"
+            val remote = runGit(base, "remote", "get-url", "origin")
+            val origin = if (remote.ok) parseRepoSlug(remote.stdout) else null
+            if (foreignPr(slug, origin)) {
+                LOG.warn("pr import rejected: url=$url pr=$slug origin=$origin")
+                return@withContext CreateWorktreeResultDto(
+                    error = "This pull request belongs to $slug, but this project's origin is $origin. " +
+                        "Open a project on $slug to import it there, or update this project's origin " +
+                        "remote if it is out of date.",
+                )
+            }
             lock(base, "import") {
                 when (ghAvailable(base)) {
                     GhAvailability.GIT_MISSING -> return@lock CreateWorktreeResultDto(error = "Git is not installed")
@@ -498,6 +653,11 @@ class KiloWorktreeRpcApiImpl(
                     // fail anyway, so say why instead of leaving a half-made worktree behind.
                     GhAvailability.RATE_LIMITED -> return@lock CreateWorktreeResultDto(
                         error = "GitHub is rate limiting this token. Try again later.",
+                    )
+                    // Same reasoning as a spent budget: several gh calls follow, and a gh that just
+                    // failed to answer within its budget would strand the import part-way.
+                    GhAvailability.TIMEOUT -> return@lock CreateWorktreeResultDto(
+                        error = "GitHub CLI (gh) did not respond in time. Try again.",
                     )
                     GhAvailability.OK -> Unit
                 }
@@ -509,10 +669,12 @@ class KiloWorktreeRpcApiImpl(
                 }
                 val head = parsePrHead(view.stdout)
                 val branch = prBranchName(head, ref.number)
-                val failure = fetchPrBranch({ args -> runGit(base, args) }, ref.number, head, branch)
+                // Write budget: `git fetch` talks to the remote, and the read budget turns a slow
+                // network into a reported failure.
+                val failure = fetchPrBranch({ args -> runGit(base, args, GIT_WRITE_TIMEOUT_MS) }, ref.number, head, branch)
                 if (failure != null) {
-                    LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()}")
-                    return@lock CreateWorktreeResultDto(error = failure.stderr.ifBlank { "Failed to check out the pull request branch" })
+                    LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()} timeout=${failure.timeout}")
+                    return@lock CreateWorktreeResultDto(error = fetchReason(failure, branch))
                 }
                 addWorktree(base, branch, existing = true, baseRef = null)
             }
@@ -542,8 +704,8 @@ class KiloWorktreeRpcApiImpl(
         LOG.info("worktree add requested: branch=$branch existing=$existing base=${baseRef ?: "(current)"} dir=$dir")
         val res = add(base, args)
         if (!res.ok) {
-            LOG.warn("worktree add failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()}")
-            return CreateWorktreeResultDto(error = res.stderr.ifBlank { "git worktree add failed" })
+            LOG.warn("worktree add failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()} timeout=${res.timeout}")
+            return CreateWorktreeResultDto(error = reason(res, "git worktree add failed"))
         }
         LOG.info("worktree created: branch=$branch dir=$dir")
         invalidate()
@@ -592,6 +754,12 @@ class KiloWorktreeRpcApiImpl(
                     return@lock RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$names")
                 }
                 val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+                // A live IDE frame rooted at the worktree keeps rewriting project files into the
+                // checkout while it is being renamed/removed underneath it — the most likely source
+                // of leftover `.idea`-only directories. Close it before anything else touches disk.
+                // No-op outside an IntelliJ Application (a plain unit test): there is no EDT to hop
+                // to and nothing could have opened a frame in the first place.
+                closeIfOpenSafe(Path.of(target.path))
                 trash?.mark(target.path)
                 try {
                     removeManaged(base, target, branch, force, store, storage, start)
@@ -624,6 +792,10 @@ class KiloWorktreeRpcApiImpl(
             val unlock = runGit(base, "worktree", "unlock", target.path)
             if (!unlock.ok) LOG.info("worktree unlock skipped: path=${target.path} exit=${unlock.exit} stderr=${unlock.stderr.trim()}")
         }
+        // Best-effort, before anything touches disk: kill PTYs rooted here and dispose a loaded CLI
+        // backend instance for this worktree, so the CLI cannot rewrite `.kilo`/`.opencode` into a
+        // path this call is about to rename or delete. Never blocks or fails the removal.
+        teardownWorktree(base, target.path)
         val targetPath = Path.of(target.path)
         // Only skip git's own removal when the checkout directory is actually gone. Git also flags a
         // worktree prunable when its admin metadata is stale while the files remain; those must still
@@ -671,12 +843,15 @@ class KiloWorktreeRpcApiImpl(
         if (!prune.ok) {
             LOG.warn("worktree prune failed: path=${target.path} exit=${prune.exit} stderr=${snippet(prune.stderr)}")
         }
+        // Best-effort, mirroring [teardownWorktree] above: the snapshot repository for this worktree
+        // is no longer reachable from any live checkout once the prune above lands.
+        removeSnapshot(base, target.path)
         // The worktree is gone; a failed branch delete must not fail the removal, only warn.
         branch?.trim()?.takeIf { it.isNotEmpty() }?.let {
             val del = runGit(base, "branch", "-D", it)
             if (!del.ok) LOG.warn("worktree branch delete failed: branch=$it exit=${del.exit} stderr=${del.stderr.trim()}")
         }
-        staged?.let { trash?.reap(it) }
+        staged?.let { temp -> trash?.reap(temp) { checkReappearance(target.path, temp) } }
         LOG.info("worktree removed: path=${target.path} branch=${branch ?: "(none)"} mode=$mode ms=${System.currentTimeMillis() - start}")
         invalidate()
         removeWorktreeState(store, target.path)
@@ -684,6 +859,186 @@ class KiloWorktreeRpcApiImpl(
             .onFailure { err -> LOG.info("workspace cache eviction skipped: path=${target.path} message=${err.message}") }
         storage?.let { trash?.sweep(it) }
         return RemoveWorktreeResultDto(ok = true)
+    }
+
+    /**
+     * Checks whether [originalPath] exists again once the reap of its staged sibling [temp] has
+     * settled, and if so stages and reaps it once more. Bounded to exactly one retry: anything that
+     * survives that simply reappears in the next reconcile and therefore in the orphan banner, which
+     * is an acceptable outcome for something actively recreating the directory (e.g. a JetBrains dev
+     * backend still writing `.kilo-dev` while its own worktree is deleted).
+     */
+    internal fun checkReappearance(originalPath: String, temp: Path) {
+        val original = Path.of(originalPath)
+        if (!Files.exists(original)) return
+        LOG.warn("worktree reappeared after reap: path=$originalPath temp=$temp — staging once more")
+        val retry = trash?.stage(original)
+        if (retry != null) {
+            trash.reap(retry)
+        } else {
+            LOG.warn("worktree reappearance retry could not stage: path=$originalPath")
+        }
+    }
+
+    /**
+     * Best-effort CLI call to kill the PTYs rooted in [path] and dispose a loaded backend instance
+     * for it, without booting an instance for the directory. Never throws into the caller and never
+     * blocks the removal it guards: a CLI that cannot be reached, or a pinned CLI release that
+     * predates this endpoint, is exactly the same as "nothing to tear down" from here.
+     *
+     * Called via a raw HTTP POST rather than the generated [ai.kilocode.jetbrains.api.client.DefaultApi]
+     * client: `kilocode.teardownWorktree` is new enough that a plugin pinned to an older CLI release
+     * has a client with no matching method at all, and this call must still compile and no-op against
+     * that CLI rather than fail to build.
+     */
+    private fun teardownWorktree(base: Path, path: String) {
+        val app = runCatching { service<KiloBackendAppService>() }.getOrNull() ?: return
+        val http = app.http ?: return
+        val port = app.port
+        if (port <= 0) return
+        val body = JsonObject(mapOf("worktree" to JsonPrimitive(path))).toString()
+        postKilocode(http, port, "kilocode/worktree/teardown", base, body, "teardown")
+    }
+
+    /**
+     * Best-effort CLI call to remove the snapshot repository for an already-deleted worktree. Uses
+     * the generated client because `kilocode.removeSnapshot` predates this feature and is present in
+     * every pinned CLI release this plugin supports.
+     */
+    private fun removeSnapshot(base: Path, path: String) {
+        val client = runCatching { service<KiloBackendAppService>().api }.getOrNull() ?: return
+        runCatching {
+            client.kilocodeRemoveSnapshot(directory = base.toString(), kilocodeRemoveSnapshotRequest = KilocodeRemoveSnapshotRequest(worktree = path))
+        }.onFailure { err -> LOG.info("worktree remove-snapshot skipped: path=$path message=${err.message}") }
+    }
+
+    private fun postKilocode(http: OkHttpClient, port: Int, path: String, directory: Path, body: String, op: String) {
+        try {
+            val url = "http://127.0.0.1:$port/$path?directory=${URLEncoder.encode(directory.toString(), "UTF-8")}"
+            val req = Request.Builder()
+                .url(url)
+                .header("Accept", "application/json")
+                .post(body.toRequestBody("application/json".toMediaType()))
+                .build()
+            http.newCall(req).execute().use { res ->
+                if (!res.isSuccessful) LOG.info("worktree $op skipped: HTTP ${res.code}")
+            }
+        } catch (e: Exception) {
+            LOG.info("worktree $op skipped: ${e.message}")
+        }
+    }
+
+    /**
+     * Delegates to [ai.kilocode.backend.worktree.orphans.orphanSizes] — a pure filesystem walk with no
+     * dependency on this class's worktree machinery, extracted so it can be read and tested on its own.
+     * [directory] is unused: sizing has never needed the repository root, only the paths themselves.
+     */
+    override suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> =
+        ai.kilocode.backend.worktree.orphans.orphanSizes(paths)
+
+    /** One orphan path submitted to [removeOrphans], resolved and guard-checked. */
+    private data class OrphanTarget(val raw: String, val path: Path, val error: String?)
+
+    override suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto =
+        withContext(Dispatchers.IO) {
+            if (paths.isEmpty()) return@withContext RemoveOrphansResultDto()
+            val base = Path.of(directory).normalize()
+            lock(base, "removeOrphans") {
+                // Fail-closed, exactly like `remove()`'s own `git worktree list` re-check: the dialog's
+                // selection can be stale by the time delete runs, so every path is re-validated against
+                // a fresh scan immediately before it is touched.
+                val reconciled = reconcile(base)
+                    ?: return@lock RemoveOrphansResultDto(paths.map { OrphanRemoveResultDto(it, false, "git worktree list failed") })
+                val freshOrphans = reconciled.orphans.mapTo(HashSet()) { Path.of(it.path).normalize().toString() }
+                val managed = reconciled.items.mapTo(HashSet()) { Path.of(it.path).normalize().toString() }
+                val main = reconciled.items.firstOrNull { it.main }
+                val storage = main?.let { Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize() }
+                val targets = paths.map { raw ->
+                    val norm = Path.of(raw).normalize()
+                    val error = when {
+                        // Checked first so an unrelated path gets the precise reason instead of the
+                        // more general "not an orphan" — it was never a candidate at all.
+                        storage == null || norm.parent != storage -> "Refusing to remove a path outside managed storage: $raw"
+                        // Defense in depth: a registered worktree should never appear in the orphan
+                        // list this was validated against, but nothing here should ever point a
+                        // filesystem delete at one if it somehow did.
+                        norm.toString() in managed -> "Refusing to remove a managed worktree: $raw"
+                        norm.toString() !in freshOrphans -> "No longer an orphan directory: $raw"
+                        else -> null
+                    }
+                    if (error != null) LOG.warn("worktree orphan remove rejected: path=$raw reason=$error")
+                    OrphanTarget(raw, norm, error)
+                }
+                val ready = targets.filter { it.error == null }
+                // A live IDE frame rooted at an orphan directory (e.g. someone opened a hand-removed
+                // worktree's leftover folder directly) would keep rewriting project files into it,
+                // the same reason `remove()` closes one before staging.
+                ready.forEach { closeIfOpenSafe(it.path) }
+                val results = targets.map { target -> target.error?.let { OrphanRemoveResultDto(target.raw, false, it) } ?: removeOrphan(base, target.path) }
+                invalidate()
+                storage?.let { trash?.sweep(it) }
+                RemoveOrphansResultDto(results)
+            }
+        }
+
+    /**
+     * Removes one already-validated orphan directory [target]: CLI teardown, stage-rename +
+     * background reap (the same primitive [removeManaged] uses for a managed worktree — orphans are
+     * never git-tracked, so no `git worktree` command ever runs against one), CLI snapshot removal,
+     * and the same post-reap reappearance guard.
+     */
+    private fun removeOrphan(base: Path, target: Path): OrphanRemoveResultDto {
+        val key = target.toString()
+        teardownWorktree(base, key)
+        trash?.mark(key)
+        try {
+            val temp = trash?.stage(target)
+            if (temp != null) {
+                LOG.info("worktree orphan staged: path=$key temp=$temp")
+                trash.reap(temp) { checkReappearance(key, temp) }
+            } else {
+                val failure = runCatching { deleteOrphanSync(target) }.exceptionOrNull()
+                if (failure != null) {
+                    LOG.warn("worktree orphan delete failed: path=$key message=${failure.message}", failure)
+                    return OrphanRemoveResultDto(key, false, failure.message ?: "delete failed")
+                }
+                LOG.info(
+                    "worktree orphan deleted synchronously: path=$key " +
+                        "reason=${if (trash == null) "trash-unavailable" else "rename-failed"}",
+                )
+            }
+        } finally {
+            trash?.unmark(key)
+        }
+        removeSnapshot(base, key)
+        LOG.info("worktree orphan removed: path=$key")
+        return OrphanRemoveResultDto(key, true)
+    }
+
+    /** Synchronous recursive delete, used only when [trash] is unavailable or staging failed. */
+    private fun deleteOrphanSync(target: Path) {
+        if (!Files.exists(target)) return
+        Files.walkFileTree(
+            target,
+            object : SimpleFileVisitor<Path>() {
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    Files.deleteIfExists(file)
+                    return FileVisitResult.CONTINUE
+                }
+
+                override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
+                    Files.deleteIfExists(dir)
+                    return FileVisitResult.CONTINUE
+                }
+            },
+        )
+    }
+
+    override suspend fun revealPath(path: String): Boolean = withContext(Dispatchers.IO) {
+        if (!RevealFileAction.isSupported()) return@withContext false
+        val target = Path.of(path).normalize()
+        if (!Files.isDirectory(target)) return@withContext false
+        runCatching { RevealFileAction.openDirectory(target) }.isSuccess
     }
 
     override suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto =
@@ -801,25 +1156,33 @@ class KiloWorktreeRpcApiImpl(
 
     private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
 
-    private fun runGh(base: Path, args: List<String>): CmdOut {
+    private fun runGh(base: Path, args: List<String>, timeoutMs: Int = GH_READ_TIMEOUT_MS): CmdOut {
         return try {
             val cmd = GeneralCommandLine(listOf("gh") + args)
                 .withWorkDirectory(base.toFile())
                 .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
-            val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            if (out.isTimeout) LOG.warn("gh command timed out: dir=$base args=${args.joinToString(" ")} ms=30000")
+            val out = CapturingProcessHandler(cmd).runProcess(timeoutMs)
+            if (out.isTimeout) {
+                LOG.warn("gh command timed out: dir=$base args=${args.joinToString(" ")} ms=$timeoutMs")
+            }
             CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr, out.isTimeout)
         } catch (e: Exception) {
             CmdOut(-1, "", e.message ?: "gh failed")
         }
     }
 
+    /**
+     * `git worktree add`, with one prune-and-retry when a stale registration is in the way.
+     *
+     * Runs on the write budget: checking out a working tree is not a metadata query, and the read
+     * budget cuts off perfectly healthy adds on large repositories.
+     */
     private fun add(base: Path, args: List<String>): CmdOut {
-        val first = runGit(base, *args.toTypedArray())
+        val first = runGit(base, args, GIT_WRITE_TIMEOUT_MS)
         if (first.ok || !stale(first.stderr)) return first
-        val prune = runGit(base, "worktree", "prune")
+        val prune = runGit(base, listOf("worktree", "prune"), GIT_WRITE_TIMEOUT_MS)
         if (!prune.ok) LOG.warn("worktree prune before retry failed: exit=${prune.exit} stderr=${prune.stderr.trim()}")
-        return runGit(base, *args.toTypedArray())
+        return runGit(base, args, GIT_WRITE_TIMEOUT_MS)
     }
 
     private fun stale(text: String): Boolean {
@@ -828,9 +1191,15 @@ class KiloWorktreeRpcApiImpl(
             text.contains("missing but already registered worktree", ignoreCase = true)
     }
 
+    /**
+     * Run [block] for every item, bounded by one service-wide process budget.
+     *
+     * The budget is shared across stats, dirty, and PR polling on purpose: those loops run on the
+     * same cadence, and a per-call semaphore let them multiply into a process storm where even
+     * `git --version` timed out.
+     */
     private suspend fun <T, R> parallel(items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
-        val sem = Semaphore(4)
-        items.map { item -> async { sem.withPermit { block(item) } } }.map { it.await() }
+        items.map { item -> async { budget.withPermit { block(item) } } }.map { it.await() }
     }
 
     /**
@@ -843,12 +1212,16 @@ class KiloWorktreeRpcApiImpl(
         stats(item, fallback)
     }.getOrElse { err ->
         if (err is CancellationException) throw err
-        if (badDir(err.message.orEmpty())) {
+        val gone = badDir(err.message.orEmpty())
+        if (gone) {
             LOG.info("worktree poll skipped: op=stats path=${item.path} reason=gone")
         } else {
             LOG.warn("worktree poll failed: op=stats path=${item.path} message=${err.message}", err)
         }
-        WorktreeStatsDto(item.path)
+        // A directory that is gone has genuinely nothing to report; anything else is unknown, and
+        // zeros would read as "clean" in the UI.
+        if (gone) WorktreeStatsDto(item.path)
+        else WorktreeStatsDto(item.path, unavailable = true, reason = err.message.orEmpty())
     }
 
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
@@ -872,12 +1245,14 @@ class KiloWorktreeRpcApiImpl(
         dirty(item)
     }.getOrElse { err ->
         if (err is CancellationException) throw err
-        if (badDir(err.message.orEmpty())) {
+        val gone = badDir(err.message.orEmpty())
+        if (gone) {
             LOG.info("worktree poll skipped: op=dirty path=${item.path} reason=gone")
         } else {
             LOG.warn("worktree poll failed: op=dirty path=${item.path} message=${err.message}", err)
         }
-        WorktreeDirtyDto(item.path)
+        if (gone) WorktreeDirtyDto(item.path)
+        else WorktreeDirtyDto(item.path, unavailable = true, reason = err.message.orEmpty())
     }
 
     private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
@@ -965,7 +1340,7 @@ class KiloWorktreeRpcApiImpl(
             return@synchronized GhAvailability.OK
         }
         val res = runGh(root, "auth", "status")
-        val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
+        val value = if (res.ok) GhAvailability.OK else classifyGhError(res)
         ghCache = Timed(System.currentTimeMillis(), value)
         LOG.info("gh probe result reason=$reason value=$value exit=${res.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(res.stderr)}")
         value
@@ -987,6 +1362,38 @@ class KiloWorktreeRpcApiImpl(
     internal fun reason(res: CmdOut, fallback: String): String {
         if (res.timeout) return "timed out"
         return res.stderr.ifBlank { fallback }
+    }
+
+    /** Import-specific wording for a failed PR fetch of [branch]. Raw git output stays in the log. */
+    internal fun fetchReason(res: CmdOut, branch: String): String {
+        if (res.timeout) return "Fetching the pull request timed out. Check your connection and try again."
+        if (refConflict(res)) {
+            // Only the summary form of the conflict is guaranteed; when git named the blocking ref,
+            // say which branch to deal with rather than leaving the user to find it.
+            val blocking = conflictBranch(res)
+            if (blocking == null || blocking == branch) {
+                return "Another branch name blocks \"$branch\". " +
+                    "Delete or rename the conflicting branch, then import again."
+            }
+            return "Another branch named \"$blocking\" blocks \"$branch\". " +
+                "Delete or rename that branch, then import again."
+        }
+        if (res.stderr.contains("find remote ref")) {
+            return "This pull request's head is no longer on the remote. Reopen or re-push the branch, then import again."
+        }
+        val text = snippet(res.stderr)
+        return if (text.isBlank()) "Couldn't check out the pull request branch." else "Couldn't check out the pull request branch: $text"
+    }
+
+    /**
+     * The ref git reported as blocking the fetch, trimmed to a branch-like name, or null when git
+     * printed only the summary form. Both namespaces appear here: the tracking fetches collide under
+     * `refs/remotes/origin/`, while the cross-repo pull-ref fetch and the closing `branch --force`
+     * write `refs/heads/`.
+     */
+    private fun conflictBranch(res: CmdOut): String? {
+        val match = Regex("'([^']+)' exists; cannot create").find(res.stderr) ?: return null
+        return match.groupValues[1].removePrefix("refs/remotes/origin/").removePrefix("refs/heads/")
     }
 
 }
@@ -1016,6 +1423,37 @@ internal fun badDir(text: String): Boolean {
     val msg = text.lowercase()
     if (msg.contains("working directory") && (msg.contains("does not exist") || msg.contains("not a directory"))) return true
     return msg.contains("unable to read current working directory")
+}
+
+/**
+ * Runs [block] holding [mutex], or answers null without waiting when something else holds it.
+ *
+ * The suspending per-repository lock cannot be used from a polling path: a poll that waited would
+ * queue behind mutations budgeted in minutes, and it is reached from plain functions. [Mutex.tryLock]
+ * gives the mutual exclusion without the wait, and callers treat a refusal as "not this pass" —
+ * correct for work that is only ever opportunistic, like pruning stale worktree metadata.
+ */
+internal fun <T> exclusive(mutex: Mutex, op: String, path: String, block: () -> T): T? {
+    if (!mutex.tryLock()) {
+        KiloWorktreeRpcApiImpl.LOG.info("worktree poll skipped: op=$op path=$path reason=mutating")
+        return null
+    }
+    return try {
+        block()
+    } finally {
+        mutex.unlock()
+    }
+}
+
+/**
+ * Classifies a failing `gh` command, using the timeout flag rather than guessing from text.
+ *
+ * A timed-out command has no stderr to classify, so text-only classification fell through to [OK] —
+ * which told the probe loop everything was fine and reset its backoff.
+ */
+internal fun classifyGhError(out: CmdOut): GhAvailability {
+    if (out.timeout) return GhAvailability.TIMEOUT
+    return classifyGhError(out.stderr.ifBlank { out.stdout })
 }
 
 internal fun classifyGhError(text: String): GhAvailability {
@@ -1172,26 +1610,52 @@ internal fun prBranchName(head: PrHead, number: Int): String {
 }
 
 /**
+ * Git's ref directory/file conflict: a branch deleted upstream leaves a stale remote-tracking ref
+ * that occupies the path a nested head needs (`origin/docs/auto-sync` vs
+ * `origin/docs/auto-sync/jetbrains`).
+ *
+ * Two forms are matched because git does not always print both. The detail line names the blocking
+ * ref, in either direction:
+ *   'refs/remotes/origin/a' exists; cannot create 'refs/remotes/origin/a/b'
+ *   cannot lock ref 'refs/remotes/origin/a': 'refs/remotes/origin/a/b' exists; cannot create 'refs/remotes/origin/a'
+ * Some builds emit only the summary `fetch` writes for this specific failure — the one naming
+ * `git remote prune` as the fix. Matching the detail line alone made the recovery depend on the git
+ * build: it is absent on the Linux CI image, where the fetch reported nothing but that summary.
+ */
+internal fun refConflict(out: CmdOut): Boolean =
+    out.stderr.contains("exists; cannot create") || out.stderr.contains("old, conflicting branches")
+
+/**
  * Fetches the PR head into [branch] and records which PR it belongs to, mirroring `gh pr checkout`:
  * a same-repo PR gets an ordinary upstream (so `git push`/`git pull` work in the imported worktree),
  * while a fork PR is tracked through `refs/pull/<number>/head`, which `gh` resolves back to the PR
  * by number. [run] executes git in the repository. Returns the failing command, or null on success.
  */
 internal fun fetchPrBranch(run: (List<String>) -> CmdOut, number: Int, head: PrHead, branch: String): CmdOut? {
+    // Git names its own fix for a stale remote-tracking ref blocking a fetch (`git remote prune
+    // origin`); take it once rather than reporting a wall of git output. This prunes every stale
+    // ref under origin, not just the blocking one — acceptable, since "stale" already means gone
+    // upstream, and it only runs after a confirmed conflict.
+    val fetch = fun(args: List<String>): CmdOut {
+        val first = run(args)
+        if (first.ok || !refConflict(first)) return first
+        run(listOf("remote", "prune", "origin"))
+        return run(args)
+    }
     val pull = "refs/pull/$number/head"
     // A fork head lives in a repository we may have no remote for. The pull ref reaches it without
     // adding one, and '+' force-updates a stale branch left by an earlier import attempt.
     if (head.cross || head.ref.isBlank()) {
-        val fetch = run(listOf("fetch", "origin", "+$pull:$branch"))
-        if (!fetch.ok) return fetch
+        val result = fetch(listOf("fetch", "origin", "+$pull:$branch"))
+        if (!result.ok) return result
         recordPrBranch(run, branch, pull)
         return null
     }
     val tracking = "refs/remotes/origin/${head.ref}"
-    val direct = run(listOf("fetch", "origin", "+refs/heads/${head.ref}:$tracking"))
+    val direct = fetch(listOf("fetch", "origin", "+refs/heads/${head.ref}:$tracking"))
     if (!direct.ok) {
         // The head branch is gone — merged PR, or the author deleted it — but the pull ref survives.
-        val fallback = run(listOf("fetch", "origin", "+$pull:$tracking"))
+        val fallback = fetch(listOf("fetch", "origin", "+$pull:$tracking"))
         if (!fallback.ok) return fallback
     }
     val point = run(listOf("branch", "--force", branch, tracking))

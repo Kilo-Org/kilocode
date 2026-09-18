@@ -28,6 +28,7 @@ import { reviewRequest } from "../agent-manager/pr/pr-review-request"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { createPRDiffs } from "./pr-diff"
 import { DiffViewerNotice as DiffViewerNoticeBanner } from "./DiffViewerNotice"
+import { notice as noticeFor } from "./review-setup"
 
 // Compare only the PR identity. Ref-only refreshes must not clear local comments.
 function samePR(a: PRTarget | undefined, b: PRTarget | undefined) {
@@ -38,10 +39,6 @@ import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
 import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
 import { SpeechToTextModelsProvider } from "../src/context/speech-to-text-models"
-
-const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
-  "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
-}
 
 type DiffStyle = "unified" | "split"
 
@@ -104,11 +101,7 @@ const DiffViewerContent: Component = () => {
     return desc?.type === "workspace"
   }
 
-  const noticeText = () => {
-    const n = notice()
-    if (!n) return ""
-    return t(NOTICE_KEYS[n])
-  }
+  const noticeText = () => noticeFor(t, notice())
 
   const markReverting = (file: string, active: boolean) => {
     setReverting((prev) => {

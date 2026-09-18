@@ -21,11 +21,12 @@ import type { LanguageContextValue } from "../src/context/language"
 import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import SectionHeader from "./SectionHeader"
-import { SidebarSectionHeader } from "./SidebarSectionHeader"
-import { WorktreeItem } from "./WorktreeItem"
+import { OrphanNotice } from "./orphans/OrphanNotice"
+import { OrphanDialog } from "./orphans/OrphanDialog"
+import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
-import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
 import {
@@ -40,7 +41,6 @@ import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
-import { randomColor } from "./section-colors"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 import { rootSessions } from "./project/session-filter"
 import { createWorktreeCompletion } from "./worktree-completion"
@@ -69,13 +69,16 @@ interface Props {
   onSelectWorktree: (projectId: string, worktreeId: string) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
   onOpenPR?: (projectId: string, worktreeId: string) => void
-  onNewWorktree: (projectId: string) => void
+  onCreateSection: (worktreeIds?: string[]) => void
+  renamingSection: () => string | undefined
+  onRenameEnd: () => void
   shortcutMap?: () => Map<string, number>
 }
 
 /** Permanent real sidebar body for one expanded project. */
 export const ProjectSidebarBody: Component<Props> = (props) => {
   const vscode = useVSCode()
+  const dialog = useDialog()
   const updateBase = useBaseUpdate()
   const store = props.store ?? createProjectStore(props.project.id)
   if (!props.store) {
@@ -86,10 +89,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   }
   const [pending, setPending] = createSignal<string>()
   const [renaming, setRenaming] = createSignal<string>()
-  const [renamingSection, setRenamingSection] = createSignal<string>()
-  const [pendingSection, setPendingSection] = createSignal<
-    { ids: Set<string>; state?: AgentManagerStateMessage } | undefined
-  >()
   const [dragging, setDragging] = createSignal<string>()
   const [dragOrigin, setDragOrigin] = createSignal<string[]>()
   const [name, setName] = createSignal("")
@@ -129,6 +128,18 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members))
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
+  const openOrphanDialog = () =>
+    dialog.show(() => (
+      <OrphanDialog
+        orphans={store.orphanDirectories()}
+        onReveal={(path) => post({ type: "agentManager.revealPath", path })}
+        onDelete={(paths) => {
+          post({ type: "agentManager.cleanOrphanDirectories", paths })
+          dialog.close()
+        }}
+        onClose={() => dialog.close()}
+      />
+    ))
   const localState = () => props.activityFor(null)
 
   const selectAfterDelete = (id: string) => {
@@ -163,27 +174,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     const prefix = `${props.project.id}:${kind}:`
     return value.startsWith(prefix) ? value.slice(prefix.length) : undefined
   }
-
-  const createSection = (worktreeIds?: string[]) => {
-    setPendingSection({ ids: new Set(sections().map((section) => section.id)), state: state() })
-    post({
-      type: "agentManager.createSection",
-      name: props.t("agentManager.section.defaultName"),
-      color: randomColor(),
-      worktreeIds,
-    })
-  }
-
-  createEffect(() => {
-    const previous = pendingSection()
-    if (!previous) return
-    const current = state()
-    if (current === previous.state) return
-    const created = (current?.sections ?? []).find((section) => !previous.ids.has(section.id))
-    setPendingSection(undefined)
-    if (!created) return
-    setRenamingSection(created.id)
-  })
 
   const worktreeIds = createMemo(() => new Set(worktrees().map((wt) => wt.id)))
   const sectionIds = createMemo(() => new Set(sections().map((section) => scope("section", section.id))))
@@ -304,7 +294,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           busy={props.busy(worktree.id)}
           activity={props.activityFor(worktree.id)}
           blocked={props.blocked(worktree.id)}
-          stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
+          stale={
+            state()?.staleWorktreeIds?.includes(worktree.id) === true ||
+            actionable(state()?.worktreeHealth?.[worktree.id])
+          }
+          health={state()?.worktreeHealth?.[worktree.id]}
           stats={props.stats?.[worktree.id]}
           shortcut={values().shortcut}
           navHint={values().navHint}
@@ -324,7 +318,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onMoveToSection={(sectionId) =>
             post({ type: "agentManager.moveToSection", worktreeIds: [worktree.id], sectionId })
           }
-          onMoveToNewSection={() => createSection([worktree.id])}
+          onMoveToNewSection={() => props.onCreateSection([worktree.id])}
           onClick={() => props.onSelectWorktree(props.project.id, worktree.id)}
           onCancelDelete={() => setPending(undefined)}
           onDelete={(event) => {
@@ -342,6 +336,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
             selectAfterDelete(worktree.id)
           }}
+          onRemoveKeepSessions={() => {
+            post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id, keepSessions: true })
+            selectAfterDelete(worktree.id)
+          }}
+          onRestore={() => post({ type: "agentManager.restoreWorktree", worktreeId: worktree.id })}
           onUpdateBase={() =>
             updateBase(
               worktree.id,
@@ -416,25 +415,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       </button>
 
       <div class="am-section">
-        <SidebarSectionHeader
-          class="am-section-header"
-          label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
-          actions={
-            <ProjectActions
-              branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
-              bindings={props.bindings}
-              loaded={state() !== undefined}
-              t={props.t}
-              onCreate={() => post({ type: "agentManager.createWorktree" })}
-              onNew={() => props.onNewWorktree(props.project.id)}
-              onSection={() => createSection()}
-              onSettings={() =>
-                vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.project.id })
-              }
-            />
-          }
-        />
         <div class="am-worktree-list">
+          <OrphanNotice orphans={store.orphanDirectories()} onResolve={openOrphanDialog} />
           <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider
               onDragStart={onDragStart}
@@ -458,9 +440,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
                         section={section}
                         dropId={scope("section", section.id)}
                         count={list.length}
-                        autoRename={renamingSection() === section.id}
+                        autoRename={props.renamingSection() === section.id}
                         onRenameEnd={() => {
-                          if (renamingSection() === section.id) setRenamingSection(undefined)
+                          if (props.renamingSection() === section.id) props.onRenameEnd()
                         }}
                         onToggle={() => post({ type: "agentManager.toggleSectionCollapsed", sectionId: section.id })}
                         onRename={(value: string) =>

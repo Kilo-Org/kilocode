@@ -179,6 +179,7 @@ export const dict = {
   "prompt.action.send.blocked": "Rispondi alla domanda in sospeso o ignorala prima di continuare",
   "prompt.action.stop": "Ferma",
   "prompt.action.enhance": "Migliora prompt",
+  "prompt.paste.expand": "Fai clic per espandere il testo incollato",
   "prompt.action.indexing": "Impostazioni indicizzazione",
   "prompt.action.autoApprove.enable": "Abilita approvazione automatica",
   "prompt.action.autoApprove.disable": "Disabilita approvazione automatica",
@@ -186,6 +187,7 @@ export const dict = {
     "L'approvazione automatica è abilitata. Le richieste di autorizzazione saranno approvate automaticamente.",
   "prompt.action.autoApprove.disabled":
     "L'approvazione automatica è disabilitata. Fai clic per approvare automaticamente le richieste di autorizzazione.",
+  "prompt.action.autoApprove.sandboxExcluded": "Le richieste di escalation della sandbox sono sempre escluse.",
   "prompt.action.enhanceDescription":
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
@@ -206,7 +208,9 @@ export const dict = {
   "notification.permission.title": "Autorizzazione richiesta",
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
   "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Consentire l'operazione Git al di fuori della sandbox?",
+  "notification.permission.titleSandboxEscalation": "Eseguire fuori dalla sandbox?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Questo esegue l'intero comando senza le restrizioni di filesystem e rete, solo per questo comando. Git deve scrivere in .git, che è di sola lettura nella sandbox e si trova fuori dall'albero di lavoro in un worktree collegato. Le regole di autorizzazione Bash e l'approvazione automatica non approvano mai automaticamente questa richiesta.",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.reject": "Rifiuta",
   "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
@@ -402,37 +406,21 @@ export const dict = {
   "settings.config.source.projectOpencode": "Config legacy progetto .opencode",
   "settings.models.title": "Modelli",
   "settings.permissions.toast.updateFailed.title": "Aggiornamento autorizzazioni non riuscito",
-  "settings.permissions.tool.read.title": "Lettura (Read)",
   "settings.permissions.tool.read.description": "Legge un file (corrisponde al percorso file)",
-  "settings.permissions.tool.edit.title": "Modifica (Edit)",
   "settings.permissions.tool.edit.description": "Modifica file, incluse edits, writes, patches e multi-edits",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Trova file tramite pattern glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Cerca contenuti file tramite espressione regolare",
-  "settings.permissions.tool.list.title": "Elenco (List)",
   "settings.permissions.tool.list.description": "Elenca i file in una cartella",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Esegue comandi shell",
-  "settings.permissions.tool.task.title": "Task",
   "settings.permissions.tool.task.description": "Avvia sub-agent",
-  "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "Carica skill per nome",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Esegue query language server",
-  "settings.permissions.tool.todoread.title": "Lettura to-do (Todo Read)",
   "settings.permissions.tool.todoread.description": "Legge la lista to-do",
-  "settings.permissions.tool.todowrite.title": "Scrittura to-do (Todo Write)",
   "settings.permissions.tool.todowrite.description": "Scrive la lista to-do",
-  "settings.permissions.tool.webfetch.title": "Web fetch (Web Fetch)",
   "settings.permissions.tool.webfetch.description": "Recupera contenuti da una pagina web",
-  "settings.permissions.tool.websearch.title": "Ricerca web (Web Search)",
   "settings.permissions.tool.websearch.description": "Cerca sul web",
-  "settings.permissions.tool.codesearch.title": "Ricerca codice (Code Search)",
   "settings.permissions.tool.codesearch.description": "Cerca codice sul web",
-  "settings.permissions.tool.external_directory.title": "Directory esterna",
   "settings.permissions.tool.external_directory.description": "Accede a file fuori dalla directory del progetto",
-  "settings.permissions.tool.doom_loop.title": "Loop ripetuto (Doom Loop)",
   "settings.permissions.tool.doom_loop.description": "Rileva chiamate tool ripetute con input identico",
   "session.delete.title": "Elimina sessione",
   "session.delete.confirm": 'Eliminare la sessione "{{name}}"?',
@@ -521,6 +509,7 @@ export const dict = {
   "profile.usage.source.direct": "Diretto",
   "profile.usage.state.stale": "Vengono mostrati i dati di utilizzo dell'ultimo aggiornamento.",
   "profile.usage.state.unavailable": "Dati di utilizzo non disponibili.",
+  "profile.usage.state.empty": "Nessun limite di utilizzo segnalato.",
   "profile.usage.plan.pastDue": "Piano: Pagamento scaduto",
   "profile.usage.plan.canceling": "Piano: Si annulla al termine del periodo",
   "profile.usage.plan.unknown": "Piano: Stato sconosciuto",
@@ -626,7 +615,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nuova Attività",
   "sidebar.topBar.history": "Cronologia",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profilo",
   "sidebar.topBar.settings": "Impostazioni",
@@ -709,7 +697,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Workflow",
   "settings.agentBehaviour.subtab.skills": "Skill",
   "settings.browser.description":
-    "Quando è abilitato, l'agente AI può interagire con pagine web: navigare, fare clic, scrivere e acquisire screenshot. Si aprirà una finestra Chrome così puoi osservare il lavoro dell'agente.",
+    "Configura l'automazione del browser integrata basata su Playwright. Kilo può navigare, interagire e acquisire screenshot delle pagine web nelle tue sessioni.",
   "settings.browser.enable.title": "Abilita automazione browser",
   "settings.browser.enable.description": "Registra il server MCP Playwright con il backend CLI.",
   "settings.browser.systemChrome.title": "Usa Chrome di sistema",
@@ -766,8 +754,8 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Condividi una board tra una sessione principale e i suoi sotto-agenti incaricati dei task, inclusi quelli annidati. Usala per tentativi di soluzione in parallelo o attività complementari, non per ogni task.",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",
   "settings.experimental.imageGenerationModel.description": "Modello di generazione di immagini",
@@ -849,10 +837,15 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Consentita",
   "prompt.action.sandbox.unrestricted": "Senza restrizioni",
   "prompt.action.sandbox.description.enabled": "Le scritture sono limitate alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Le regole di autorizzazione e l'approvazione automatica si applicano all'interno della sandbox. I comandi che devono uscirne chiedono sempre.",
   "prompt.action.sandbox.description.disabled":
     "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
+  "settings.experimental.codeMode.title": "Chiamate programmatiche agli strumenti",
+  "settings.experimental.codeMode.description":
+    "Instrada le chiamate agli strumenti MCP attraverso un runtime JavaScript confinato con rilevamento degli strumenti su richiesta, invece di esporre direttamente ogni strumento MCP. Risparmia contesto quando sono connessi molti strumenti MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",
@@ -1039,9 +1032,12 @@ export const dict = {
   "settings.display.fontSize.title": "Dimensione font",
   "settings.display.fontSize.description":
     "Regola la dimensione del font della webview Kilo indipendentemente da VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Comprimi automaticamente ragionamento",
-  "settings.display.reasoningAutoCollapse.description":
-    "Comprimi i blocchi di ragionamento dopo che l'agente ha finito di scriverli. Lascia disattivato per tenerli espansi finché non li comprimi manualmente.",
+  "settings.display.reasoningDisplay.title": "Blocchi di ragionamento",
+  "settings.display.reasoningDisplay.description":
+    "Scegli come iniziano i blocchi di ragionamento. Espansi mostra il testo completo, Anteprima lo limita a una breve anteprima scorrevole, e Intestazione mostra solo il titolo e l'indicatore di streaming finché non lo apri.",
+  "settings.display.reasoningDisplay.expanded": "Espansi",
+  "settings.display.reasoningDisplay.preview": "Anteprima",
+  "settings.display.reasoningDisplay.headline": "Intestazione",
   "settings.display.shiftTabCycle.title": "Cambia lo sforzo di ragionamento con Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Premi Shift+Tab in un campo di inserimento del prompt per passare al livello di sforzo di ragionamento successivo. Disattiva l'opzione per mantenere Shift+Tab per la navigazione del focus tramite tastiera.",
@@ -1234,8 +1230,21 @@ export const dict = {
   "session.costAlert.stop": "Interrompi",
 
   // Speech to Text
+  "settings.models.speechToTextModel.customDescription":
+    "ID del modello inviato al tuo endpoint di trascrizione personalizzato, ad esempio whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "URL di base Da voce a testo",
+  "settings.models.speechToTextBaseUrl.description":
+    "Usa un'API di trascrizione compatibile con OpenAI al posto di Kilo Gateway. I modelli vengono letti da /models e l'audio viene inviato a /audio/transcriptions. Lascia vuoto per usare Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Chiave API Da voce a testo",
+  "settings.models.speechToTextApiKey.description":
+    "Token bearer inviato all'URL di base di trascrizione personalizzato. Salvato nel tuo file di configurazione Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Abilita e accedi al provider Kilo per usare Da voce a testo. Da voce a testo è attualmente supportato solo tramite Kilo Gateway.",
+    "Abilita e accedi al provider Kilo per usare Da voce a testo, oppure imposta di seguito un URL di base di trascrizione personalizzato.",
+  "settings.models.speechToText.remoteDescription":
+    "L'input vocale non è disponibile nelle finestre remote. Apri Kilo in una finestra locale per usare il microfono.",
   "settings.models.speechToTextModel.title": "Modello Da voce a testo",
   "settings.models.speechToTextModel.description": "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
 
@@ -1301,7 +1310,7 @@ export const dict = {
     "Accedi di nuovo con ChatGPT, quindi invia di nuovo il tuo messaggio per continuare a usare i modelli Codex.",
 
   // Speech to Text tooltips and errors
-  "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.start": "Avvia input vocale",
   "speechToText.tooltip.shortcut":
     "Tocca o premi Cmd/Ctrl+K per avviare o interrompere la registrazione; tieni premuto mentre parli e rilascia per trascrivere e inviare.",
   "speechToText.tooltip.starting": "Avvio del microfono... Attendi prima di parlare.",
@@ -1321,5 +1330,11 @@ export const dict = {
   "chat.search.close": "Chiudi ricerca",
   "chat.search.invalidRegex": "Espressione regolare non valida",
   "chat.search.noResults": "Nessun risultato",
+  "settings.experimental.browserAutomation.title": "Browser integrato",
+  "settings.experimental.browserAutomation.description":
+    "Mostra le anteprime delle applicazioni locali in Agent Manager ed esponi lo strumento browser_open alle sessioni di Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Usa Chrome di sistema",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Usa il Google Chrome installato per il Browser integrato. Disattivalo solo se è già installato un browser Playwright Chromium compatibile.",
   "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
 } as const

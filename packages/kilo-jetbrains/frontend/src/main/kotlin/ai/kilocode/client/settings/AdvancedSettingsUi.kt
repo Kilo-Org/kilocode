@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.agentManager.worktree.WorktreeDiagnosticsAction
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsRows
@@ -121,17 +122,28 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
 
     private fun count(): Int? = preview.text.trim().toIntOrNull()
 
+    /** Worktree health in one paste-able block, rather than inferred from the log. */
+    private fun diagnosticsRow(): SettingsRow = SettingsRow(
+        KiloBundle.message("worktree.diagnostics.title"),
+        KiloBundle.message("worktree.diagnostics.description"),
+        ActionLink(KiloBundle.message("worktree.diagnostics.copy")) { WorktreeDiagnosticsAction.copy() },
+    )
+
     // In monolith mode one reveal opens the shared log; in split mode the client log is revealed
     // locally and the remote backend log is downloaded.
     private fun logRows(): List<SettingsRow> {
         if (IdeProductMode.isMonolith) {
-            return listOf(SettingsRow(
-                KiloBundle.message("settings.advanced.logs.title"),
-                KiloBundle.message("settings.advanced.logs.description"),
-                ActionLink(AdvancedLogActions.revealLabel()) { AdvancedLogActions.reveal() },
-            ))
+            return listOf(
+                SettingsRow(
+                    KiloBundle.message("settings.advanced.logs.title"),
+                    KiloBundle.message("settings.advanced.logs.description"),
+                    ActionLink(AdvancedLogActions.revealLabel()) { AdvancedLogActions.reveal() },
+                ),
+                diagnosticsRow(),
+            )
         }
         return listOf(
+            diagnosticsRow(),
             SettingsRow(
                 KiloBundle.message("settings.advanced.logs.client.title"),
                 KiloBundle.message("settings.advanced.logs.client.description"),

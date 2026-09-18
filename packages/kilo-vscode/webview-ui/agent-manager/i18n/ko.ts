@@ -51,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "새 worktree에서 agent가 시작하기 전에 실행합니다.",
   "agentManager.settings.setupScript.create": "script 만들기",
   "agentManager.settings.setupScript.edit": "script 편집",
-  "agentManager.project.add": "프로젝트 추가",
+  "agentManager.project.add": "프로젝트 추가...",
   "agentManager.project.remove": "Agent Manager에서 제거",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
+  "agentManager.project.settings": "프로젝트 설정",
   "agentManager.project.restricted":
     "현재 VS Code 작업 영역이 홈 폴더 또는 파일 시스템 루트입니다. Agent Manager를 사용하려면 VS Code에서 특정 프로젝트 폴더를 여세요.",
   "agentManager.notGitRepo": "git 저장소가 아닙니다",
@@ -135,6 +136,12 @@ export const dict = {
     "이 리포지토리는 Git LFS를 사용하지만 git-lfs를 찾을 수 없습니다. Git LFS를 설치하세요.",
   "agentManager.setup.error.no_commits":
     "이 리포지토리에는 아직 커밋이 없습니다. worktrees를 사용하기 전에 초기 커밋을 생성하세요.",
+  "agentManager.setup.error.worktree_missing":
+    "이 worktree의 폴더가 더 이상 없습니다. 브랜치에서 복원하거나 worktree를 제거하세요.",
+  "agentManager.setup.error.worktree_unregistered":
+    "git이 이 폴더를 worktree로 추적하지 않습니다. 제거한 뒤 새 worktree를 만드세요.",
+  "agentManager.setup.error.git_timeout":
+    "Git이 제때 응답하지 않았습니다. 저장소에 접근할 수 있는지 확인하고 다시 시도하세요.",
   "agentManager.shortcuts.title": "키보드 단축키",
   "agentManager.shortcuts.category.sidebar": "사이드바",
   "agentManager.shortcuts.category.tabs": "탭",
@@ -309,6 +316,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "오래됨",
   "agentManager.pr.comment.sent": "전송됨",
   "agentManager.pr.comment.copy": "댓글 복사",
+  "agentManager.pr.comment.copyLink": "댓글 링크 복사",
   "agentManager.pr.comment.openOnGitHub": "GitHub에서 열기",
   "agentManager.pr.comment.showInDiff": "diff에서 보기",
   "agentManager.pr.comment.unplaced": "현재 diff에 없는 댓글",
@@ -417,7 +425,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Kilo 에이전트용 절전 방지 모드가 활성화되었습니다. 클릭하여 비활성화",
   "agentManager.caffeination.active": "Kilo 에이전트가 작업하는 동안 컴퓨터를 절전 모드로 전환하지 않습니다",
   "agentManager.caffeination.unavailable": "이 플랫폼에서는 절전 방지 모드를 사용할 수 없습니다",
-  "agentManager.browser.title": "브라우저",
+  "agentManager.browser.title": "통합 브라우저",
   "agentManager.browser.url": "로컬 애플리케이션 URL",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "열기",
@@ -426,7 +434,7 @@ export const dict = {
   "agentManager.browser.inspect": "요소 선택",
   "agentManager.browser.devtoolsTitle": "개발자 도구",
   "agentManager.browser.empty": "로컬 애플리케이션을 열어 여기에서 미리 보세요.",
-  "agentManager.browser.noSession": "먼저 Agent Manager 세션을 선택하세요.",
+  "agentManager.browser.noSession": "로컬 애플리케이션을 탐색하려면 Agent Manager에서 세션을 시작하거나 선택하세요.",
   "agentManager.browser.screenshotAlt": "현재 브라우저 페이지",
   "agentManager.browser.errors": "브라우저 문제: {{count}}개",
   "agentManager.browser.diagnostics": "브라우저 진단",
@@ -459,4 +467,47 @@ export const dict = {
   "agentManager.intro.guide": "가이드 읽기",
   "agentManager.intro.dismiss": "소개 건너뛰기",
   "agentManager.intro.reopen": "Agent Manager 작동 방식",
+  "agentManager.worktree.health.absent-restorable": "폴더 삭제됨",
+  "agentManager.worktree.health.absent-restorableNote":
+    "폴더는 없지만 브랜치 {{branch}}는 남아 있습니다. 복원하면 계속 작업할 수 있습니다.",
+  "agentManager.worktree.health.absent-gone": "폴더와 브랜치 삭제됨",
+  "agentManager.worktree.health.absent-goneNote":
+    "폴더와 브랜치가 모두 없습니다. 항목을 제거해 정리하세요. 세션은 로컬에 보존됩니다.",
+  "agentManager.worktree.health.unregistered": "git worktree 아님",
+  "agentManager.worktree.health.unregisteredNote":
+    "폴더는 있지만 git이 더 이상 worktree로 추적하지 않아 상태를 읽을 수 없습니다.",
+  "agentManager.worktree.health.unavailable": "상태를 확인할 수 없음",
+  "agentManager.worktree.health.unavailableNote":
+    "Git 또는 GitHub CLI가 제때 응답하지 않았습니다. 이 worktree의 폴링을 일시 중지했으며 다시 시도합니다.",
+  "agentManager.worktree.restore": "worktree 복원",
+  "agentManager.worktree.removeKeepSessions": "제거하고 세션 유지",
+  "agentManager.orphans.resolve": "해결…",
+  "agentManager.orphans.summaryCount": "남은 worktree 폴더 {{count}}개",
+  "agentManager.orphans.summarySize": "남은 worktree 폴더 {{count}}개 · {{size}}",
+  "agentManager.orphans.calculating": "크기 계산 중…",
+  "agentManager.orphans.sizeUnknown": "알 수 없음",
+  "agentManager.orphans.dialogTitle": "남은 worktree 폴더",
+  "agentManager.orphans.helpIntro":
+    "Kilo는 생성한 모든 worktree를 이 저장소의 .kilo/worktrees 폴더 안에 보관합니다. 아래 폴더들은 그 폴더 안에 있지만 git이 어느 것도 worktree로 표시하지 않으므로 더 이상 사용되지 않습니다.",
+  "agentManager.orphans.helpCheckout":
+    "git 체크아웃이 남아 있다고 표시된 폴더에는 아직 .git 항목이 있으며 커밋하지 않은 작업이 남아 있을 수 있습니다. 이러한 폴더는 선택되지 않은 상태로 두므로 삭제하기 전에 열어서 확인하세요.",
+  "agentManager.orphans.helpCauses":
+    "남은 폴더는 보통 중단된 삭제, Kilo 외부에서 제거된 worktree 또는 폴더가 제거된 뒤에 그 안에 기록한 도구 때문에 생깁니다. 아직 진행 중인 삭제는 여기에 표시되지 않습니다.",
+  "agentManager.orphans.helpDelete":
+    "삭제하면 선택한 폴더가 휴지통을 거치지 않고 디스크에서 영구적으로 제거됩니다. 브랜치와 사용 중인 worktree는 변경되지 않습니다. 크기는 각 폴더가 현재 디스크에서 차지하는 용량입니다.",
+  "agentManager.orphans.helpMore": "더보기",
+  "agentManager.orphans.helpLess": "간략히 보기",
+  "agentManager.orphans.columnPath": "경로",
+  "agentManager.orphans.columnSize": "크기",
+  "agentManager.orphans.columnContents": "내용",
+  "agentManager.orphans.checkoutWarning": "git 체크아웃이 남아 있음",
+  "agentManager.orphans.footerSelected": "{{count}}개 선택됨 · {{size}}",
+  "agentManager.orphans.footerCheckouts": "{{count}}개에 여전히 git 체크아웃이 있습니다",
+  "agentManager.orphans.reveal": "OS에서 표시",
+  "agentManager.orphans.revealMac": "Finder에서 표시",
+  "agentManager.orphans.revealWindows": "탐색기에서 표시",
+  "agentManager.orphans.revealLinux": "파일 관리자에서 표시",
+  "agentManager.orphans.deleteButton": "폴더 {{count}}개 삭제 ({{size}})",
+  "agentManager.orphans.cancel": "취소",
+  "agentManager.error.title": "Agent Manager 오류",
 }

@@ -12955,8 +12955,8 @@
             }
           }
         },
-        "description": "Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.",
-        "summary": "Reload instance",
+        "description": "Atomically dispose and reboot every loaded instance of the project, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if any session in the project is actively running.",
+        "summary": "Reload project",
         "x-codeSamples": [
           {
             "lang": "js",
@@ -14093,240 +14093,6 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.organization.set({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/kilo/claw/status": {
-      "get": {
-        "tags": ["kilo"],
-        "operationId": "kilo.claw.status",
-        "parameters": [
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Instance status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "provisioned",
-                            "starting",
-                            "restarting",
-                            "recovering",
-                            "running",
-                            "stopped",
-                            "destroying",
-                            "restoring"
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "sandboxId": {
-                      "type": "string"
-                    },
-                    "flyRegion": {
-                      "type": "string"
-                    },
-                    "machineSize": {
-                      "type": "object",
-                      "properties": {
-                        "cpus": {
-                          "type": "number"
-                        },
-                        "memory_mb": {
-                          "type": "number"
-                        }
-                      },
-                      "required": ["cpus", "memory_mb"],
-                      "additionalProperties": false
-                    },
-                    "openclawVersion": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "lastStartedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "lastStoppedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "channelCount": {
-                      "type": "number"
-                    },
-                    "secretCount": {
-                      "type": "number"
-                    },
-                    "userId": {
-                      "type": "string"
-                    },
-                    "botName": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    }
-                  },
-                  "required": ["status"],
-                  "additionalProperties": false,
-                  "description": "Instance status"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "ServiceUnavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
-                }
-              }
-            }
-          }
-        },
-        "description": "Fetch the user's KiloClaw instance status via the KiloClaw worker",
-        "summary": "Get KiloClaw instance status",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.claw.status({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/kilo/claw/chat-credentials": {
-      "get": {
-        "tags": ["kilo"],
-        "operationId": "kilo.claw.chatCredentials",
-        "parameters": [
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Kilo Chat credentials or null",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "token": {
-                          "type": "string"
-                        },
-                        "expiresAt": {
-                          "type": "string"
-                        },
-                        "kiloChatUrl": {
-                          "type": "string"
-                        },
-                        "eventServiceUrl": {
-                          "type": "string"
-                        }
-                      },
-                      "required": ["token", "expiresAt", "kiloChatUrl", "eventServiceUrl"],
-                      "additionalProperties": false
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "description": "Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.",
-        "summary": "Get KiloClaw chat credentials",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.claw.chatCredentials({\n  ...\n})"
           }
         ]
       }
@@ -15531,6 +15297,211 @@
         ]
       }
     },
+    "/kilocode/marketplace": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.marketplace.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marketplace catalog and installed metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketplaceListResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Fetch marketplace catalog items and detect the items installed for the routed workspace.",
+        "summary": "List marketplace items",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.marketplace.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/marketplace/install": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.marketplace.install",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marketplace install result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketplaceInstallResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+        "summary": "Install a marketplace item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item": {
+                    "$ref": "#/components/schemas/MarketplaceInstallItem"
+                  },
+                  "target": {
+                    "type": "string",
+                    "enum": ["project", "global"]
+                  },
+                  "parameters": {
+                    "type": "object"
+                  }
+                },
+                "required": ["item"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.marketplace.install({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/marketplace/remove": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.marketplace.remove",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marketplace removal result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketplaceRemoveResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
+        "summary": "Remove a marketplace item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item": {
+                    "$ref": "#/components/schemas/MarketplaceItemRef"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"]
+                  }
+                },
+                "required": ["item", "scope"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.marketplace.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/snapshot/remove": {
       "post": {
         "tags": ["kilocode"],
@@ -15605,6 +15576,91 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeSnapshot({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/worktree/teardown": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.teardownWorktree",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Worktree backend teardown result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "disposed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["disposed"],
+                  "additionalProperties": false,
+                  "description": "Worktree backend teardown result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Kill the PTYs rooted in an Agent Manager worktree and dispose its backend instance when one is loaded, without booting an instance for the directory.",
+        "summary": "Tear down backend state for a managed worktree",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "worktree": {
+                    "type": "string"
+                  }
+                },
+                "required": ["worktree"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.teardownWorktree({\n  ...\n})"
           }
         ]
       }
@@ -16776,6 +16832,76 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJob.promote({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/wakeups": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.wakeups",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending wakeups for the routed directory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "pending": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["sessionID", "pending"],
+                    "additionalProperties": false
+                  },
+                  "description": "Pending wakeups for the routed directory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the sessions that hold scheduled wakeups in the routed directory, with each session's pending count.",
+        "summary": "List pending wakeups",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.wakeups({\n  ...\n})"
           }
         ]
       }
@@ -26951,6 +27077,9 @@
             "$ref": "#/components/schemas/EventSessionDrainInterrupted1"
           },
           {
+            "$ref": "#/components/schemas/EventSessionWakeup1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
@@ -27303,6 +27432,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionDrainInterrupted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionWakeup"
           },
           {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
@@ -30422,6 +30554,9 @@
                 "$ref": "#/components/schemas/EventSessionDrainInterrupted"
               },
               {
+                "$ref": "#/components/schemas/EventSessionWakeup"
+              },
+              {
                 "type": "object",
                 "properties": {
                   "id": {
@@ -33534,6 +33669,36 @@
                 "additionalProperties": false
               },
               {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.wakeup"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "pending": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["sessionID", "pending"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
                 "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
@@ -34632,6 +34797,13 @@
           "auto_collapse_reasoning": {
             "type": "boolean"
           },
+          "reasoning_display": {
+            "type": "string",
+            "enum": ["expanded", "preview", "headline"]
+          },
+          "shared_agent_board": {
+            "type": "boolean"
+          },
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },
@@ -35041,10 +35213,13 @@
               "speech_to_text_model": {
                 "type": "string"
               },
-              "openTelemetry": {
-                "type": "boolean"
+              "speech_to_text_base_url": {
+                "type": "string"
               },
-              "shared_agent_board": {
+              "speech_to_text_api_key": {
+                "type": "string"
+              },
+              "openTelemetry": {
                 "type": "boolean"
               },
               "primary_tools": {
@@ -39450,17 +39625,6 @@
         "required": ["_tag"],
         "additionalProperties": false
       },
-      "effect_HttpApiError_ServiceUnavailable": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["ServiceUnavailable"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
-      },
       "CloudSessionImportError": {
         "type": "object",
         "properties": {
@@ -39595,6 +39759,551 @@
           }
         },
         "required": ["name", "builtin", "location", "editable", "hints"],
+        "additionalProperties": false
+      },
+      "VscodeExtensionRef": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "id"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "MarketplaceSuggestFor": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vscode_extension": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VscodeExtensionRef"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "McpParameter": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "optional": {
+            "type": "boolean"
+          }
+        },
+        "required": ["name", "key"],
+        "additionalProperties": false
+      },
+      "McpInstallationMethod": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpParameter"
+            }
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["name", "content"],
+        "additionalProperties": false
+      },
+      "McpMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp"]
+          },
+          "url": {
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/McpInstallationMethod"
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpParameter"
+            }
+          }
+        },
+        "required": ["id", "name", "description", "category", "type", "url", "content"],
+        "additionalProperties": false
+      },
+      "AgentMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["agent"]
+          },
+          "content": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["primary", "subagent", "all"]
+              },
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "permission": {
+                "type": "object"
+              },
+              "requirements": {
+                "type": "object",
+                "properties": {
+                  "skills": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "mcps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "vscode_extensions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "id"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": ["mode", "description", "prompt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "name", "description", "category", "type", "content"],
+        "additionalProperties": false
+      },
+      "SkillMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["skill"]
+          },
+          "githubUrl": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "displayCategory": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "category",
+          "type",
+          "githubUrl",
+          "content",
+          "displayName",
+          "displayCategory"
+        ],
+        "additionalProperties": false
+      },
+      "MarketplaceItem": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/McpMarketplaceItem"
+          },
+          {
+            "$ref": "#/components/schemas/AgentMarketplaceItem"
+          },
+          {
+            "$ref": "#/components/schemas/SkillMarketplaceItem"
+          }
+        ]
+      },
+      "MarketplaceInstalledMetadata": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            }
+          },
+          "global": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["project", "global"],
+        "additionalProperties": false
+      },
+      "MarketplaceListResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketplaceItem"
+            }
+          },
+          "installed": {
+            "$ref": "#/components/schemas/MarketplaceInstalledMetadata"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["items", "installed"],
+        "additionalProperties": false
+      },
+      "McpInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["mcp"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/McpInstallationMethod"
+                }
+              }
+            ]
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
+      "AgentInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["agent"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["primary", "subagent", "all"]
+              },
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "permission": {
+                "type": "object"
+              },
+              "requirements": {
+                "type": "object",
+                "properties": {
+                  "skills": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "mcps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "vscode_extensions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "id"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": ["mode", "description", "prompt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
+      "SkillInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["skill"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
+      "MarketplaceInstallItem": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/McpInstallItem"
+          },
+          {
+            "$ref": "#/components/schemas/AgentInstallItem"
+          },
+          {
+            "$ref": "#/components/schemas/SkillInstallItem"
+          }
+        ]
+      },
+      "MarketplaceInstallResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "filePath": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer"
+          }
+        },
+        "required": ["success", "slug"],
+        "additionalProperties": false
+      },
+      "MarketplaceItemRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp", "agent", "skill"]
+          }
+        },
+        "required": ["id", "type"],
+        "additionalProperties": false
+      },
+      "MarketplaceRemoveResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": ["success", "slug"],
         "additionalProperties": false
       },
       "ProviderUsagePeriod": {
@@ -39747,6 +40456,17 @@
           }
         },
         "required": ["items", "generatedAt"],
+        "additionalProperties": false
+      },
+      "effect_HttpApiError_ServiceUnavailable": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["ServiceUnavailable"]
+          }
+        },
+        "required": ["_tag"],
         "additionalProperties": false
       },
       "NotebookOutput": {
@@ -41574,6 +42294,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionDrainInterrupted"
+          },
+          {
+            "$ref": "#/components/schemas/SessionWakeup"
           }
         ]
       },
@@ -46647,6 +47370,35 @@
               }
             },
             "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionWakeup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.wakeup"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["sessionID", "pending"],
             "additionalProperties": false
           }
         },
@@ -55709,6 +56461,58 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SessionWakeup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.wakeup"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["sessionID", "pending"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionV2Request": {
         "type": "object",
         "properties": {
@@ -58931,6 +59735,36 @@
               }
             },
             "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionWakeup1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.wakeup"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["sessionID", "pending"],
             "additionalProperties": false
           }
         },

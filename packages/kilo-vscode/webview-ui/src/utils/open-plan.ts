@@ -27,10 +27,6 @@ function read(message: ExtensionMessage): PlanOpen[] {
   })
 }
 
-export function planOpens(message: ExtensionMessage, activeSessionID: string | undefined): PlanOpen[] {
-  return read(message).filter((plan) => plan.sessionID === activeSessionID)
-}
-
 /** Defer plans from inactive sessions until their session becomes active. */
 export function createPlanOpener(active: () => string | undefined, open: (plan: PlanOpen) => void) {
   const id = (plan: PlanOpen) => `${plan.sessionID}:${plan.id}`

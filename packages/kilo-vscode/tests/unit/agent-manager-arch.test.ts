@@ -11,7 +11,10 @@ import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
+import { createProjectWiring } from "../../src/agent-manager/project/wiring"
 import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
+import type { GitOps } from "../../src/agent-manager/GitOps"
+import type { Host } from "../../src/agent-manager/host"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -61,10 +64,14 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectsFooter.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
@@ -220,6 +227,114 @@ describe("Agent Manager edit preview", () => {
     const view = fs.readFileSync(path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"), "utf-8")
     expect(view).toContain("value.fileDiff.hunks.length")
     expect(view).toContain("virtualized={heavy()}")
+  })
+})
+
+describe("Agent Manager leftover worktree folders", () => {
+  const bodies = [
+    path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+    path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
+  ]
+
+  it("puts the notice above the worktrees instead of below them", () => {
+    for (const file of bodies) {
+      const source = fs.readFileSync(file, "utf-8")
+      const list = source.indexOf('<div class="am-worktree-list">')
+      const notice = source.indexOf("<OrphanNotice", list)
+      const first = source.indexOf("fallback={<WorktreeSkeleton />}", list)
+      expect(list, `${path.basename(file)} renders the worktree list`).toBeGreaterThan(-1)
+      expect(notice, `${path.basename(file)} renders the orphan notice inside the list`).toBeGreaterThan(list)
+      expect(notice, `${path.basename(file)} renders the orphan notice before the first worktree`).toBeLessThan(first)
+    }
+  })
+
+  it("offers the cleanup as an ordinary action button, not a ghost affordance", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"), "utf-8")
+    expect(source).toContain('<Button variant="primary" size="small" onClick={props.onResolve}>')
+  })
+
+  it("keeps the banner headline in the normal foreground", () => {
+    const css = readAllCss()
+    expect(css).toContain(".am-orphan-notice-title {\n  color: var(--text-base);\n}")
+  })
+
+  it("explains the list in the dialog header before offering a bulk delete", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
+    expect(source).toMatch(/description=\{<OrphanHelp\b/)
+    for (const key of ["helpIntro", "helpCheckout", "helpCauses", "helpDelete", "helpMore", "helpLess"]) {
+      expect(source, `header explanation covers ${key}`).toContain(`agentManager.orphans.${key}`)
+    }
+  })
+
+  it("collapses the bullet detail behind a toggle, keeping the intro sentence always visible", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
+    const helpIntro = source.indexOf("agentManager.orphans.helpIntro")
+    const showGate = source.indexOf("<Show when={props.expanded}>")
+    const toggle = source.indexOf('class="am-orphan-help-toggle"')
+    expect(helpIntro, "intro renders unconditionally").toBeGreaterThan(-1)
+    expect(showGate, "bullets are gated behind expanded state").toBeGreaterThan(helpIntro)
+    expect(toggle, "toggle button follows the bullets").toBeGreaterThan(showGate)
+
+    const css = readAllCss()
+    expect(css).toContain(".am-orphan-help-toggle {")
+  })
+
+  /**
+   * Sizing is kicked off by whichever reconcile runs first — startup, a repair, the doctor — and only
+   * one of those used to carry a push callback, so the first pass's results never reached the webview
+   * and the banner said "calculating size…" forever. This drives the real `createProjectWiring`
+   * (the only place a `ProjectContext`'s `sized` dep is set in production) end to end, so it fails on
+   * a broken wire regardless of how the fix is spelled — renaming the hook, restructuring the deps
+   * object, or reformatting the file all leave this red only if the push genuinely stops happening.
+   * `orphan-sizing.test.ts` covers the other half: that a completed pass actually calls the hook.
+   */
+  it("wires a fresh project context's sized hook to a webview push, through the real construction path", () => {
+    const pushed: unknown[] = []
+    const disposable = { dispose: () => undefined }
+    const host = {
+      workspacePath: () => "/repo",
+      multiProject: () => false,
+      onDidChangeWorkspaceFolders: () => disposable,
+      onDidChangeMultiProject: () => disposable,
+      onDidChangeWorktreePool: () => disposable,
+    } as unknown as Host
+
+    const wiring = createProjectWiring({
+      host,
+      git: undefined as unknown as GitOps,
+      log: () => undefined,
+      output: () => undefined,
+      activate: () => undefined,
+      expand: () => undefined,
+      ready: () => Promise.resolve({ ok: true, refsFixed: 0, current: true }),
+      push: () => undefined,
+      pushState: (ctx) => pushed.push(ctx),
+      changed: () => undefined,
+      selected: () => undefined,
+    })
+
+    const ctx = wiring.contexts.pinned()
+    ctx?.notifySized()
+
+    expect(ctx, "the fake host must be enough to produce a context").toBeDefined()
+    expect(pushed).toEqual([ctx])
+  })
+
+  it("uses the shared check glyph for selection instead of a bespoke one", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
+    expect(source).toContain('icon={<Icon name="check-small" size="small" />}')
+    expect(source).toContain('icon={<Icon name={someChecked() ? "dash" : "check-small"} size="small" />}')
+  })
+
+  it("gives the dialog body the same gutter as its header", () => {
+    const css = readAllCss()
+    expect(css).toContain('.am-orphan-dialog-root [data-slot="dialog-body"] {\n  padding: 0 20px 20px;\n}')
+  })
+
+  it("left-aligns every cell, including the git checkout flag", () => {
+    const css = readAllCss()
+    const table = css.slice(css.indexOf(".am-orphan-table th {"), css.indexOf(".am-orphan-table tbody tr:last-child"))
+    expect(table.match(/text-align: left;/g)?.length).toBe(2)
   })
 })
 

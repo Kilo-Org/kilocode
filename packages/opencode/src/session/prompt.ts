@@ -11,6 +11,7 @@ import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/d
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KiloSessionTitle } from "@/kilocode/session/title" // kilocode_change
 import { SessionTranscript } from "@/kilocode/session/transcript" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
@@ -24,7 +25,6 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
-import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -318,19 +318,10 @@ export const layer = Layer.effect(
       if (input.session.parentID) return
       if (!Session.isDefaultTitle(input.session.title)) return
 
-      const real = (m: SessionV1.WithParts) =>
-        m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic)
-      const idx = input.history.findIndex(real)
-      if (idx === -1) return
-      if (input.history.filter(real).length !== 1) return
-
-      const context = input.history.slice(0, idx + 1)
-      const firstUser = context[idx]
-      if (!firstUser || firstUser.info.role !== "user") return
-      const firstInfo = firstUser.info
-
-      const subtasks = firstUser.parts.filter((p): p is SessionV1.SubtaskPart => p.type === "subtask")
-      const onlySubtasks = subtasks.length > 0 && firstUser.parts.every((p) => p.type === "subtask")
+      // kilocode_change start - Kilo defers titles and owns the context policy
+      const built = KiloSessionTitle.build(input.history)
+      if (!built) return
+      // kilocode_change end
 
       const ag = yield* agents.get("title")
       if (!ag) return
@@ -338,22 +329,17 @@ export const layer = Layer.effect(
         ? yield* provider.getModel(ag.model.providerID, ag.model.modelID)
         : ((yield* provider.getSmallModel(input.providerID)) ??
           (yield* provider.getModel(input.providerID, input.modelID)))
-      const msgs = onlySubtasks
-        ? [{ role: "user" as const, content: subtasks.map((p) => p.prompt).join("\n") }]
-        : yield* MessageV2.toModelMessagesEffect(context, mdl).pipe(
-            Effect.provideService(Database.Service, database), // kilocode_change - provide the migrated message store
-          )
       const text = yield* llm
         .stream({
           agent: ag,
-          user: firstInfo,
+          user: built.user,
           system: [],
           small: true,
           tools: {},
           model: mdl,
           sessionID: KiloSessionPrompt.titleID(input.session.id), // kilocode_change - isolate title requests from the agent task
           retries: 2,
-          messages: [{ role: "user", content: "Generate a title for this conversation:\n" }, ...msgs],
+          messages: built.messages,
         })
         .pipe(
           Stream.filter(LLMEvent.is.textDelta),
@@ -1639,13 +1625,6 @@ export const layer = Layer.effect(
         }
 
         step++
-        if (step === 1)
-          yield* title({
-            session,
-            modelID: lastUser.model.modelID,
-            providerID: lastUser.model.providerID,
-            history: msgs,
-          }).pipe(Effect.ignore, Effect.forkIn(scope))
 
         const model = yield* getModel(lastUser.model.providerID, lastUser.model.modelID, sessionID)
         const task = tasks.pop()
@@ -2007,6 +1986,8 @@ export const layer = Layer.effect(
       }
 
       yield* compaction.prune({ sessionID, reason: "normal" }).pipe(Effect.ignore, Effect.forkIn(scope))
+      // kilocode_change - Kilo defers session titles; see kilocode/session/title.ts
+      yield* KiloSessionTitle.deferred({ sessionID, scope, sessions, database, generate: title }).pipe(Effect.ignore)
       return yield* lastAssistant(sessionID)
     })
 
@@ -2365,74 +2346,6 @@ export const layer = Layer.effect(
         return yield* handleResume({ cmdInput: input, format: fmt })
       }
       // kilocode_change end
-      // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
-      const legacy = legacyReviewMessage(input.command)
-      if (legacy) {
-        const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
-        if (!agent) {
-          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-          yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-          throw error
-        }
-        const model = yield* Effect.gen(function* () {
-          if (cmd.model) return Provider.parseModel(cmd.model)
-          if (cmd.agent && agent.model) return agent.model
-          if (input.model) return Provider.parseModel(input.model)
-          return yield* currentModel(input.sessionID)
-        })
-        yield* getModel(model.providerID, model.modelID, input.sessionID)
-        const text = `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`
-        if (!ticket.current()) return yield* Effect.interrupt
-        const user = yield* KiloSessionPrompt.intake(
-          input.sessionID,
-          createUserMessage({
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-            model,
-            agent: agent.name,
-            variant: input.variant,
-            parts: [{ type: "text", text }, ...(input.parts ?? [])],
-          }),
-        )
-        yield* sessions.touch(input.sessionID)
-        const ctx = yield* InstanceState.context
-        const completed = Date.now()
-        const info: MessageV2.Assistant = yield* sessions.updateMessage({
-          id: MessageID.ascending(),
-          role: "assistant",
-          parentID: user.info.id,
-          sessionID: input.sessionID,
-          mode: agent.name,
-          agent: agent.name,
-          variant: user.info.model.variant,
-          path: { cwd: ctx.directory, root: ctx.worktree },
-          cost: 0,
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: user.info.model.modelID,
-          providerID: user.info.model.providerID,
-          time: { created: completed, completed },
-          finish: "stop",
-        })
-        const part: MessageV2.TextPart = yield* sessions.updatePart({
-          id: PartID.ascending(),
-          messageID: info.id,
-          sessionID: input.sessionID,
-          type: "text",
-          text: legacy,
-        })
-        const result = { info, parts: [part] }
-        yield* events.publish(Command.Event.Executed, {
-          name: input.command,
-          sessionID: input.sessionID,
-          arguments: input.arguments,
-          messageID: result.info.id,
-        })
-        return result
-      }
-      // kilocode_change end
-
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
       const templateCommand = yield* Effect.promise(async () => cmd.template)

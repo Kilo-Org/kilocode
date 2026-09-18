@@ -42,7 +42,7 @@ const it = testEffect(
     ]),
   ),
 )
-const options = { config: { experimental: { shared_agent_board: true }, snapshot: false } }
+const options = { config: { shared_agent_board: true, snapshot: false } }
 
 const seed = Effect.fn("BoardToolTest.seed")(function* (title: string) {
   const sessions = yield* Session.Service
@@ -202,9 +202,80 @@ describe("shared board tools", () => {
           if (Exit.isFailure(invalid))
             expect(Cause.pretty(invalid.cause)).toContain("Reply message is not on this board")
           const cursor = yield* Effect.exit(read.execute({ since: "board_missing" }, ctx))
-          expect(Exit.isFailure(cursor)).toBe(true)
-          if (Exit.isFailure(cursor)) expect(Cause.pretty(cursor.cause)).toContain("Board cursor is not valid")
+          expect(Exit.isFailure(cursor)).toBe(false)
+          if (Exit.isFailure(cursor))
+            throw new Error(`board_read must recover from stale cursors: ${Cause.pretty(cursor.cause)}`)
+          const replayed = JSON.parse(cursor.value.output).messages as { id: string }[]
+          expect(replayed).toHaveLength(2)
+          expect(cursor.value.metadata.cursor).toBeDefined()
+          expect(cursor.value.metadata.recovered).toBe(true)
           expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(2)
+        }),
+      options,
+    ),
+  )
+
+  it.live("recovers from a stale board cursor instead of failing the sub-agent", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* seed("Stale cursor recovery")
+          const child = yield* sessions.create({ parentID: root.session.id, title: "Reviewer" })
+          const ctx = yield* context(child.id, MessageID.ascending())
+          const post = yield* Tool.init(yield* BoardPostTool)
+          const read = yield* Tool.init(yield* BoardReadTool)
+
+          const first = yield* post.execute({ to: "ALL", type: "INFO", body: "Initial finding" }, ctx)
+          yield* post.execute(
+            { to: "main", type: "RESULT", body: "Conclusion", reply_to: first.metadata.id },
+            { ...ctx, callID: "follow-up" },
+          )
+
+          const other = yield* seed("Foreign cursor")
+          const foreign = yield* BoardStore.post({
+            sessionID: other.session.id,
+            messageID: MessageID.ascending(),
+            callID: "foreign-post",
+            to: "ALL",
+            type: "INFO",
+            body: "Foreign note",
+          })
+
+          const recovered = yield* Effect.exit(read.execute({ since: foreign.id, limit: null }, ctx))
+          if (Exit.isFailure(recovered)) {
+            throw new Error(`board_read must replay from the beginning: ${Cause.pretty(recovered.cause)}`)
+          }
+          expect(JSON.parse(recovered.value.output)).toMatchObject({
+            messages: [{ body: "Initial finding" }, { body: "Conclusion" }],
+            recovered: true,
+          })
+          expect(recovered.value.metadata.recovered).toBe(true)
+          const cursor = recovered.value.metadata.cursor
+          if (!cursor) throw new Error("Recovered board_read must return a cursor")
+
+          const consumed = yield* read.execute({ since: cursor, limit: null }, ctx)
+          expect(JSON.parse(consumed.output).messages).toEqual([])
+          expect(consumed.metadata.recovered).toBeUndefined()
+
+          yield* BoardStore.post({
+            sessionID: child.id,
+            messageID: MessageID.ascending(),
+            callID: "next-post",
+            to: "main",
+            type: "INFO",
+            body: "Next note",
+          })
+          const next = yield* read.execute({ since: cursor, limit: null }, ctx)
+          expect(JSON.parse(next.output).messages).toMatchObject([{ body: "Next note" }])
+          expect(next.metadata.recovered).toBeUndefined()
+
+          const empty = yield* seed("Empty stale cursor recovery")
+          const emptyCtx = yield* context(empty.session.id, empty.message)
+          const emptyResult = yield* read.execute({ since: foreign.id, limit: null }, emptyCtx)
+          expect(JSON.parse(emptyResult.output)).toMatchObject({ messages: [], recovered: true })
+          expect(emptyResult.metadata.cursor).toBeUndefined()
+          expect(emptyResult.metadata.recovered).toBe(true)
         }),
       options,
     ),
@@ -403,7 +474,7 @@ describe("shared board tools", () => {
           if (Exit.isFailure(result)) expect(Cause.pretty(result.cause)).toContain("shared agent board is disabled")
           expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(0)
         }),
-      { config: { experimental: { shared_agent_board: false } } },
+      { config: { shared_agent_board: false } },
     ),
   )
 
@@ -466,7 +537,7 @@ describe("shared board tools", () => {
           expect(Exit.isFailure(result)).toBe(true)
         }),
       {
-        config: { experimental: { shared_agent_board: true }, permission: { board_read: "deny", board_post: "deny" } },
+        config: { shared_agent_board: true, permission: { board_read: "deny", board_post: "deny" } },
       },
     ),
   )

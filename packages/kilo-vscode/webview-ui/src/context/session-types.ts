@@ -112,6 +112,10 @@ export interface SessionContextValue {
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
+  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
+  preferencesReady: Accessor<boolean>
+  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
+  trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
@@ -147,6 +151,7 @@ export interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
+  variantPreference: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
@@ -189,6 +194,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+    projectId?: string,
   ) => boolean
   abort: () => void
   compact: () => void

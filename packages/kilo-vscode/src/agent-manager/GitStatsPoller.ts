@@ -3,6 +3,7 @@ import * as path from "path"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import type { Semaphore } from "./semaphore"
+import { Quarantine } from "./quarantine"
 import { findTrackedBranch } from "./project/paths"
 import {
   GitStatsSnapshot,
@@ -34,6 +35,12 @@ export interface LocalStats {
 export interface WorktreePresence {
   worktreeId: string
   missing: boolean
+  /**
+   * Why the worktree is missing, so the UI can say something true. `absent` means the directory is
+   * gone; `unregistered` means it is still on disk but git no longer tracks it, which is a different
+   * problem with a different fix.
+   */
+  reason?: "absent" | "unregistered"
   /** Current branch from `git worktree list`, if available. */
   branch?: string
 }
@@ -59,6 +66,8 @@ interface GitStatsPollerOptions {
   semaphore?: Semaphore
   hiddenIntervalMs?: number
   dormantIntervalMs?: number
+  /** True for worktrees the health reconcile says cannot answer; they are skipped, not measured. */
+  isUnhealthy?: (worktreeId: string) => boolean
 }
 
 export class GitStatsPoller {
@@ -77,6 +86,8 @@ export class GitStatsPoller {
   private readonly cache = new Map<string, CachedStats>()
   private localCache: CachedStats | undefined
   private skipWorktreeIds = new Set<string>()
+  /** Per-worktree backoff, so one unmeasurable worktree does not fan out git on every tick. */
+  private readonly quarantine = new Quarantine()
   private visible = true
   private generation = 0
   private cursor = 0
@@ -119,6 +130,29 @@ export class GitStatsPoller {
     this.skipWorktreeIds.delete(id)
   }
 
+  /**
+   * Worktrees currently parked after repeated status failures. Reported by the diagnostics command.
+   *
+   * Reads with `peek`, so generating a report does not spend the retry an elapsed window allows.
+   */
+  paused(): string[] {
+    return this.options
+      .getWorktrees()
+      .map((wt) => wt.id)
+      .filter((id) => this.quarantine.peek(id))
+  }
+
+  /**
+   * Drop a worktree's status-failure history so the next tick measures it again.
+   *
+   * The backoff exists to stop spending git on a worktree that cannot answer; once the user has done
+   * something about it, the recorded failures are stale evidence. Without this the only way out is
+   * the half-open probe at the end of a window that reaches 30 minutes.
+   */
+  revive(id: string): void {
+    this.quarantine.clear(id)
+  }
+
   setEnabled(enabled: boolean): void {
     if (enabled) {
       if (this.active) return
@@ -144,6 +178,7 @@ export class GitStatsPoller {
     this.cache.clear()
     this.localCache = undefined
     this.cursor = 0
+    this.quarantine.reset()
   }
 
   async snapshot(refresh = false): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }> {
@@ -208,15 +243,26 @@ export class GitStatsPoller {
     const missing = new Set(
       presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
     )
-    const available = worktrees.filter((wt) => !missing.has(wt.id))
+    const available = worktrees.filter((wt) => !missing.has(wt.id) && this.options.isUnhealthy?.(wt.id) !== true)
     const ids = new Set(available.map((wt) => wt.id))
+    this.quarantine.retain(ids)
     for (const id of Object.keys(this.lastStats)) {
       if (!ids.has(id)) {
         delete this.lastStats[id]
         this.cache.delete(id)
       }
     }
-    const candidates = includeSkipped ? available : available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
+    // A worktree whose status keeps failing is parked for a while. `unhealthy` covers the states the
+    // reconcile can name, but a status scan can also fail for reasons it cannot see — a locked index,
+    // a permission problem, an unmounted volume — and every one of those otherwise costs a full
+    // status plus diff fan-out on every tick, forever.
+    //
+    // Two ways out, because a backoff nobody can clear is just a badge that stopped moving: any
+    // successful measurement, and `revive`, which the recovery actions call. `includeSkipped` (a
+    // refresh that asks for everything) also measures a parked worktree. An absent worktree is
+    // filtered out above before it can ever be parked.
+    const measurable = includeSkipped ? available : available.filter((wt) => !this.quarantine.blocked(wt.id))
+    const candidates = includeSkipped ? measurable : measurable.filter((wt) => !this.skipWorktreeIds.has(wt.id))
     const active = includeSkipped ? candidates : this.select(candidates)
     if (active.length === 0) {
       if (available.length > 0) return
@@ -260,9 +306,15 @@ export class GitStatsPoller {
             !refresh && baseOID && cached?.head === status.head && cached.baseOID === baseOID
               ? cached.ahead
               : await this.git.aheadBehind(wt.path, base)
+          this.quarantine.clear(wt.id)
           return { wt, base, baseOID, status, diff, ahead }
         } catch (err) {
           this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
+          if (this.quarantine.fail(wt.id)) {
+            this.options.log(
+              `Stats polling paused for ${wt.branch} after ${this.quarantine.failures(wt.id)} consecutive failures`,
+            )
+          }
           return { wt, prior: this.lastStats[wt.id] }
         }
       }),
@@ -333,18 +385,7 @@ export class GitStatsPoller {
       return { worktrees: [], degraded: true }
     }
 
-    const worktreeStatuses = await Promise.all(
-      worktrees.map(async (wt) => {
-        const abs = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
-        const exists = await fs.promises.access(abs).then(
-          () => true,
-          () => false,
-        )
-        const branch = exists ? findTrackedBranch(tracked, abs) : undefined
-        const missing = !exists || branch === undefined
-        return { worktreeId: wt.id, missing, branch }
-      }),
-    )
+    const worktreeStatuses = await Promise.all(worktrees.map((wt) => this.presence(wt, root, tracked)))
 
     return { worktrees: worktreeStatuses, degraded: false }
   }
@@ -356,7 +397,9 @@ export class GitStatsPoller {
       () => false,
     )
     const branch = exists ? findTrackedBranch(paths, abs) : undefined
-    return { worktreeId: wt.id, missing: !exists || branch === undefined, branch }
+    if (!exists) return { worktreeId: wt.id, missing: true, reason: "absent" }
+    if (branch === undefined) return { worktreeId: wt.id, missing: true, reason: "unregistered" }
+    return { worktreeId: wt.id, missing: false, branch }
   }
 
   private async fetchLocalStats(generation = this.generation, refs?: RefSnapshot, refresh = false): Promise<void> {

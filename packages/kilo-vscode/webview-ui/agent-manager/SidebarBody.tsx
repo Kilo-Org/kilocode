@@ -28,9 +28,13 @@ import { beginPromptMentionDrop, endPromptMentionDrop } from "../src/utils/promp
 import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { OrphanNotice } from "./orphans/OrphanNotice"
+import { OrphanDialog } from "./orphans/OrphanDialog"
+import type { OrphanDirectory } from "./project/store"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
-import { WorktreeItem } from "./WorktreeItem"
+import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
@@ -85,6 +89,14 @@ export interface SidebarBodyProps {
   busy: (id: string) => boolean
   blocked: (id: string) => boolean
   isStaleWorktree: (id: string) => boolean
+  /** Why an unhealthy worktree is unhealthy, when known. */
+  worktreeHealth?: (id: string) => "absent-restorable" | "absent-gone" | "unregistered" | "unavailable" | undefined
+  /** Leftover folders under `.kilo/worktrees/` that no worktree claims. */
+  orphanDirectories?: () => OrphanDirectory[]
+  /** Restore a deleted worktree folder from its branch. */
+  onRestoreWorktree?: (id: string) => void
+  /** Drop the entry but move its sessions to Local. */
+  onRemoveStaleKeepSessions?: (id: string) => void
   shortcutMap: () => Map<string, number>
   worktreeStats: () => Record<string, WorktreeGitStats>
   prStatuses: () => Record<string, PRStatus | null>
@@ -104,7 +116,20 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
     buildTopLevelItems(props.sections(), ungrouped(), sorted(), props.sidebarWorktreeOrder()),
   )
   const vscode = useVSCode()
+  const dialog = useDialog()
   const updateBase = useBaseUpdate()
+  const openOrphanDialog = () =>
+    dialog.show(() => (
+      <OrphanDialog
+        orphans={props.orphanDirectories?.() ?? []}
+        onReveal={(path) => vscode.postMessage({ type: "agentManager.revealPath", path })}
+        onDelete={(paths) => {
+          vscode.postMessage({ type: "agentManager.cleanOrphanDirectories", paths })
+          dialog.close()
+        }}
+        onClose={() => dialog.close()}
+      />
+    ))
   const localState = () => props.activityFor(null)
   // Captured at worktree drag start so a release outside the sidebar, or a drop
   // on the prompt, can undo a reorder applied while passing over sibling rows.
@@ -212,6 +237,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
           }
         />
         <div class="am-worktree-list">
+          <OrphanNotice orphans={props.orphanDirectories?.() ?? []} onResolve={openOrphanDialog} />
           <Show when={props.worktreesLoaded() && props.sessionsLoaded()} fallback={<WorktreeSkeleton />}>
             <Show when={!props.isGitRepo()}>
               <div class="am-not-git-notice">
@@ -358,7 +384,8 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 busy={props.busy(wt.id)}
                                 activity={props.activityFor(wt.id)}
                                 blocked={props.blocked(wt.id)}
-                                stale={props.isStaleWorktree(wt.id)}
+                                stale={props.isStaleWorktree(wt.id) || actionable(props.worktreeHealth?.(wt.id))}
+                                health={props.worktreeHealth?.(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}
                                 navHint={navHint()}
@@ -395,6 +422,12 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 onCommitRename={() => commitRename(wt.id)}
                                 onCancelRename={cancelRename}
                                 onRemoveStale={() => props.confirmRemoveStaleWorktree(wt.id)}
+                                onRestore={props.onRestoreWorktree ? () => props.onRestoreWorktree?.(wt.id) : undefined}
+                                onRemoveKeepSessions={
+                                  props.onRemoveStaleKeepSessions
+                                    ? () => props.onRemoveStaleKeepSessions?.(wt.id)
+                                    : undefined
+                                }
                                 onUpdateBase={() =>
                                   updateBase(
                                     wt.id,

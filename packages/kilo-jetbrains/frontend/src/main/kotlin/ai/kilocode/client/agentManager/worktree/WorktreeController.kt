@@ -8,6 +8,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.MoveStage
+import ai.kilocode.rpc.dto.orphans.OrphanDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDto
@@ -65,6 +66,14 @@ class WorktreeController(
     private var kinds: Map<String, SessionActivityKind> = emptyMap()
 
     init {
+        // The New Worktree dialog rejects a pull request from another repository using [origin], and
+        // it can open before any reload has run — the chat dock and worktree editor actions call
+        // configure() directly, and only selecting the Agent Manager tab triggers a reload. Resolve
+        // it here so the check is armed on every entry path, not just the tab one.
+        cs.launch {
+            val info = service.listBranches(directory)
+            edt { origin = info.origin }
+        }
         cs.launch {
             activity.collect { snap ->
                 edt {
@@ -94,6 +103,21 @@ class WorktreeController(
     @Volatile
     private var known: Set<String> = emptySet()
 
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track, from the most recent [reload].
+     * [ai.kilocode.client.agentManager.orphans.OrphanBanner] reads this on the EDT after [onReload]
+     * fires — never polled independently, so the banner and the worktree list always agree on which
+     * paths are orphans.
+     */
+    @Volatile
+    var orphans: List<OrphanDto> = emptyList()
+        private set
+
+    /** `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. */
+    @Volatile
+    var origin: String? = null
+        private set
+
     fun isPending(id: String): Boolean = id in pending
 
     fun progress(id: String): String? = tasks[id]
@@ -116,6 +140,8 @@ class WorktreeController(
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
+                origin = branchInfo.origin
+                orphans = result.orphans
                 onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
