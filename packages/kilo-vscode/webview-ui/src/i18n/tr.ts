@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Hata veya bağlantı kaybı.",
   "session.activity.retry": "Otomatik olarak yeniden deneniyor.",
   "session.activity.busy": "Devam ediyor.",
+  "session.activity.scheduled": "Zamanlanmış bir uyandırmayı bekliyor.",
   "session.activity.done": "Tur tamamlandı.",
   "session.activity.idle": "Çalışmıyor.",
 
@@ -543,6 +544,7 @@ export const dict = {
   "session.tabs.switcher.current": "Geçerli",
   "session.tabs.switcher.pending": "Yeni",
   "session.tabs.switcher.busy": "Çalışıyor",
+  "session.tabs.switcher.scheduled": "Zamanlandı",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Çalışma ağacı",

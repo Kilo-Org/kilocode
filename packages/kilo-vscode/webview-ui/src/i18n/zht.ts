@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "錯誤或連線已中斷。",
   "session.activity.retry": "正在自動重試。",
   "session.activity.busy": "進行中。",
+  "session.activity.scheduled": "正在等待已排程的喚醒。",
   "session.activity.done": "回合已完成。",
   "session.activity.idle": "未執行。",
 
@@ -530,6 +531,7 @@ export const dict = {
   "session.tabs.switcher.current": "目前",
   "session.tabs.switcher.pending": "新增",
   "session.tabs.switcher.busy": "工作中",
+  "session.tabs.switcher.scheduled": "已排程",
   "session.tab.local": "本機",
   "session.tab.cloud": "雲端",
   "session.tab.worktree": "工作樹",

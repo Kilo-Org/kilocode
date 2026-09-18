@@ -1,4 +1,4 @@
-export type Activity = "waiting" | "error" | "retry" | "busy" | "done" | "idle"
+export type Activity = "waiting" | "error" | "retry" | "busy" | "done" | "scheduled" | "idle"
 
 export type Status = "idle" | "busy" | "retry" | "offline"
 
@@ -7,6 +7,7 @@ export interface ActivityInput {
   blocked?: boolean
   errored?: boolean
   finished?: boolean
+  scheduled?: boolean
   disconnected?: boolean
 }
 
@@ -17,6 +18,7 @@ export function activity(input: ActivityInput): Activity {
   if (input.status === "retry") return "retry"
   if (input.status === "busy") return "busy"
   if (input.finished) return "done"
+  if (input.scheduled) return "scheduled"
   return "idle"
 }
 
@@ -27,17 +29,20 @@ export function activities(input: {
   blocked: Iterable<string>
   submitting?: Iterable<string>
   suggested?: Iterable<string>
+  scheduled?: Iterable<string>
   disconnected: boolean
 }): Record<string, Activity> {
   const blocked = new Set(input.blocked)
   const submitting = new Set(input.submitting)
   const suggested = new Set(input.suggested)
+  const scheduled = new Set(input.scheduled)
   const ids = new Set([
     ...Object.keys(input.statuses),
     ...Object.keys(input.outcomes),
     ...blocked,
     ...submitting,
     ...suggested,
+    ...scheduled,
   ])
   const result: Record<string, Activity> = {}
   for (const id of ids) {
@@ -50,6 +55,7 @@ export function activities(input: {
       disconnected: input.disconnected,
       errored: close === "error",
       finished: close ? close === "completed" && !input.outcomes[id]?.seen : suggested.has(id),
+      scheduled: scheduled.has(id),
     })
     result[id] = strongest([result[id] ?? "idle", own])
     if (active === "idle") continue
@@ -66,7 +72,7 @@ export function running(state: Activity): boolean {
   return state === "busy" || state === "retry"
 }
 
-const STATES: Activity[] = ["done", "busy", "retry", "error", "waiting"]
+const STATES: Activity[] = ["scheduled", "done", "busy", "retry", "error", "waiting"]
 
 export function score(state: Activity): number {
   return STATES.indexOf(state) + 1
@@ -86,6 +92,7 @@ const LABELS: Record<Activity, string> = {
   retry: "session.status.retry",
   busy: "session.tabs.switcher.busy",
   done: "task.backgroundAgents.status.completed",
+  scheduled: "session.tabs.switcher.scheduled",
   idle: "session.current",
 }
 

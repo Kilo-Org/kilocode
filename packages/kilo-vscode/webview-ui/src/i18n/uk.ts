@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Помилка або втрата з'єднання.",
   "session.activity.retry": "Автоматична повторна спроба.",
   "session.activity.busy": "Виконується.",
+  "session.activity.scheduled": "Очікування запланованого пробудження.",
   "session.activity.done": "Хід завершено.",
   "session.activity.idle": "Не запущено.",
 
@@ -548,6 +549,7 @@ export const dict = {
   "session.tabs.switcher.current": "Поточна",
   "session.tabs.switcher.pending": "Нова",
   "session.tabs.switcher.busy": "Працює",
+  "session.tabs.switcher.scheduled": "Заплановано",
   "session.tab.local": "Локальний",
   "session.tab.cloud": "Хмарний",
   "session.tab.worktree": "Робоче дерево",

@@ -78,6 +78,7 @@ export const dict = {
   "session.activity.error": "오류 또는 연결 끊김.",
   "session.activity.retry": "자동으로 재시도하는 중입니다.",
   "session.activity.busy": "진행 중입니다.",
+  "session.activity.scheduled": "예약된 웨이크업을 기다리는 중입니다.",
   "session.activity.done": "턴이 완료되었습니다.",
   "session.activity.idle": "실행 중이 아닙니다.",
 
@@ -551,6 +552,7 @@ export const dict = {
   "session.tabs.switcher.current": "현재",
   "session.tabs.switcher.pending": "새 항목",
   "session.tabs.switcher.busy": "작업 중",
+  "session.tabs.switcher.scheduled": "예약됨",
   "session.tab.local": "로컬",
   "session.tab.cloud": "클라우드",
   "session.tab.worktree": "작업 트리",

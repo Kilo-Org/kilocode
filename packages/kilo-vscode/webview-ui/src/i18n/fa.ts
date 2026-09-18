@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "خطا یا قطع اتصال.",
   "session.activity.retry": "تلاش مجدد خودکار.",
   "session.activity.busy": "در حال انجام.",
+  "session.activity.scheduled": "در انتظار بیدارشدن زمان‌بندی‌شده.",
   "session.activity.done": "نوبت به پایان رسید.",
   "session.activity.idle": "در حال اجرا نیست.",
 
@@ -510,6 +511,7 @@ export const dict = {
   "session.tabs.switcher.current": "فعلی",
   "session.tabs.switcher.pending": "جدید",
   "session.tabs.switcher.busy": "در حال کار",
+  "session.tabs.switcher.scheduled": "زمان‌بندی‌شده",
   "session.tab.local": "محلی",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",

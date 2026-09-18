@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Greška ili prekinuta veza.",
   "session.activity.retry": "Automatski novi pokušaj.",
   "session.activity.busy": "U toku.",
+  "session.activity.scheduled": "Čeka se zakazano buđenje.",
   "session.activity.done": "Potez završen.",
   "session.activity.idle": "Ne radi.",
 
@@ -598,6 +599,7 @@ export const dict = {
   "session.tabs.switcher.current": "Trenutno",
   "session.tabs.switcher.pending": "Novo",
   "session.tabs.switcher.busy": "Radi",
+  "session.tabs.switcher.scheduled": "Zakazano",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
   "session.tab.worktree": "Radno stablo",

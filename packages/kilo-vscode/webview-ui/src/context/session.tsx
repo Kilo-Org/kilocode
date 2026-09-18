@@ -86,6 +86,7 @@ import { PartStash } from "./part-stash"
 import { isolate, mergeOptimisticPart, mergeOptimisticParts, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { createFrameQueue, streamMessage } from "./frame-queue"
+import { handleWakeupMessage, wakeups } from "./session-wakeup"
 import { state as todoState } from "./todo-revert"
 import { preserveVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
@@ -855,6 +856,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleStreamMessage(message: ExtensionMessage): boolean {
+    if (handleWakeupMessage(message)) return true
     if (!streamMessage(message)) return false
     if (message.type === "partUpdated") {
       handlePartUpdated(message.sessionID, message.messageID, message.part, message.delta)
@@ -1861,6 +1863,7 @@ export const SessionProvider: ParentComponent = (props) => {
           ),
           submitting: Object.keys(submissionMap),
           suggested: suggestions().map((item) => item.sessionID),
+          scheduled: Object.keys(wakeups()),
           disconnected: disconnected(),
         }),
       ),

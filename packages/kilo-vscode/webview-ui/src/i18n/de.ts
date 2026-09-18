@@ -80,6 +80,7 @@ export const dict = {
   "session.activity.error": "Fehler oder Verbindung verloren.",
   "session.activity.retry": "Automatischer erneuter Versuch.",
   "session.activity.busy": "In Bearbeitung.",
+  "session.activity.scheduled": "Wartet auf ein geplantes Aufwachen.",
   "session.activity.done": "Turn abgeschlossen.",
   "session.activity.idle": "Nicht aktiv.",
 
@@ -606,6 +607,7 @@ export const dict = {
   "session.tabs.switcher.current": "Aktuell",
   "session.tabs.switcher.pending": "Neu",
   "session.tabs.switcher.busy": "In Arbeit",
+  "session.tabs.switcher.scheduled": "Geplant",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbeitsbaum",

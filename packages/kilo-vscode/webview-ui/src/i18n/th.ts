@@ -73,6 +73,7 @@ export const dict = {
   "session.activity.error": "เกิดข้อผิดพลาดหรือการเชื่อมต่อขาดหาย",
   "session.activity.retry": "กำลังลองใหม่โดยอัตโนมัติ",
   "session.activity.busy": "กำลังดำเนินการ",
+  "session.activity.scheduled": "กำลังรอการปลุกตามกำหนดเวลา",
   "session.activity.done": "จบรอบการทำงานแล้ว",
   "session.activity.idle": "ไม่ได้ทำงานอยู่",
 
@@ -588,6 +589,7 @@ export const dict = {
   "session.tabs.switcher.current": "ปัจจุบัน",
   "session.tabs.switcher.pending": "ใหม่",
   "session.tabs.switcher.busy": "กำลังทำงาน",
+  "session.tabs.switcher.scheduled": "ตั้งเวลาไว้",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
   "session.tab.worktree": "เวิร์กทรี Git",

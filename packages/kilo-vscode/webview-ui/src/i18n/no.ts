@@ -77,6 +77,7 @@ export const dict = {
   "session.activity.error": "Feil eller tilkobling brutt.",
   "session.activity.retry": "Prøver automatisk på nytt.",
   "session.activity.busy": "Pågår.",
+  "session.activity.scheduled": "Venter på en planlagt vekking.",
   "session.activity.done": "Runde fullført.",
   "session.activity.idle": "Kjører ikke.",
 
@@ -558,6 +559,7 @@ export const dict = {
   "session.tabs.switcher.current": "Gjeldende",
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Jobber",
+  "session.tabs.switcher.scheduled": "Planlagt",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbeidstre",

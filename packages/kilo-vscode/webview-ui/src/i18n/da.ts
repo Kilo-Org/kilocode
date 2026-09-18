@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Fejl eller mistet forbindelse.",
   "session.activity.retry": "Prøver automatisk igen.",
   "session.activity.busy": "I gang.",
+  "session.activity.scheduled": "Venter på en planlagt vækning.",
   "session.activity.done": "Tur afsluttet.",
   "session.activity.idle": "Kører ikke.",
 
@@ -595,6 +596,7 @@ export const dict = {
   "session.tabs.switcher.current": "Aktuel",
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Arbejder",
+  "session.tabs.switcher.scheduled": "Planlagt",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbejdstræ",
