@@ -5,6 +5,6 @@ const nativeEscape = (RegExp as { escape?: (value: string) => string }).escape
 
 /** Escape a string so it matches literally inside a RegExp source. */
 export function escapeRegExp(value: string): string {
-  if (typeof nativeEscape === "function") return nativeEscape.call(RegExp, value)
+  if (typeof nativeEscape === "function") return nativeEscape(value)
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
