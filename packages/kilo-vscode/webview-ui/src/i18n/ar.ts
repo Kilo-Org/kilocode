@@ -1285,8 +1285,6 @@ export const dict = {
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "حفظ محليًا",
-  "diffViewer.comment.sendToAgent": "إرسال إلى الوكيل",
   "diffViewer.comment.postToGithub": "نشر على GitHub",
   "diffViewer.comment.loadFailed": "تعذر تحميل تغييرات طلب السحب.",
   "diffViewer.comment.unavailable": "هذا السطر غير متاح في اللقطة الحالية لطلب السحب.",

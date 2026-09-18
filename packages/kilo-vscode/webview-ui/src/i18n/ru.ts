@@ -1314,8 +1314,6 @@ export const dict = {
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Сохранить локально",
-  "diffViewer.comment.sendToAgent": "Отправить агенту",
   "diffViewer.comment.postToGithub": "Опубликовать на GitHub",
   "diffViewer.comment.loadFailed": "Не удалось загрузить изменения запроса на слияние.",
   "diffViewer.comment.unavailable": "Эта строка недоступна в текущем снимке запроса на слияние.",

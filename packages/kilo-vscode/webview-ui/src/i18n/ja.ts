@@ -1307,8 +1307,6 @@ export const dict = {
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "ローカルに保存",
-  "diffViewer.comment.sendToAgent": "エージェントに送信",
   "diffViewer.comment.postToGithub": "GitHubに投稿",
   "diffViewer.comment.loadFailed": "プルリクエストの変更を読み込めませんでした。",
   "diffViewer.comment.unavailable": "この行は現在のプルリクエストのスナップショットでは利用できません。",

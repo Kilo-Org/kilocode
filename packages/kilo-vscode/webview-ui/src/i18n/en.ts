@@ -1308,8 +1308,6 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
-  "diffViewer.comment.saveLocal": "Save local",
-  "diffViewer.comment.sendToAgent": "Send to agent",
   "diffViewer.comment.postToGithub": "Post to GitHub",
   "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
   "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",

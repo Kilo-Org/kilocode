@@ -1183,8 +1183,6 @@ export const dict = {
     "File modificati da Kilo durante la sessione corrente, basati su snapshot per turno. Si resetta quando inizi una nuova sessione.",
   "diffViewer.group.session": "Sessione",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Salva in locale",
-  "diffViewer.comment.sendToAgent": "Invia all'agente",
   "diffViewer.comment.postToGithub": "Pubblica su GitHub",
   "diffViewer.comment.loadFailed": "Impossibile caricare le modifiche della pull request.",
   "diffViewer.comment.unavailable": "Questa riga non è disponibile nell'istantanea attuale della pull request.",

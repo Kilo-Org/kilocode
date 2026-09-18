@@ -1330,8 +1330,6 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Зберегти локально",
-  "diffViewer.comment.sendToAgent": "Надіслати агенту",
   "diffViewer.comment.postToGithub": "Опублікувати на GitHub",
   "diffViewer.comment.loadFailed": "Не вдалося завантажити зміни пул-реквесту.",
   "diffViewer.comment.unavailable": "Цей рядок недоступний у поточному знімку пул-реквесту.",

@@ -1294,8 +1294,6 @@ export const dict = {
     "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "로컬에 저장",
-  "diffViewer.comment.sendToAgent": "에이전트로 보내기",
   "diffViewer.comment.postToGithub": "GitHub에 게시",
   "diffViewer.comment.loadFailed": "풀 리퀘스트 변경 사항을 불러올 수 없습니다.",
   "diffViewer.comment.unavailable": "이 줄은 현재 풀 리퀘스트 스냅샷에서 사용할 수 없습니다.",

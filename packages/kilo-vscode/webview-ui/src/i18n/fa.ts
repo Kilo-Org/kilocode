@@ -1314,8 +1314,6 @@ export const dict = {
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "ذخیرهٔ محلی",
-  "diffViewer.comment.sendToAgent": "ارسال به عامل",
   "diffViewer.comment.postToGithub": "انتشار در GitHub",
   "diffViewer.comment.loadFailed": "بارگذاری تغییرات درخواست ادغام ممکن نشد.",
   "diffViewer.comment.unavailable": "این خط در تصویر لحظه‌ای فعلی درخواست ادغام موجود نیست.",

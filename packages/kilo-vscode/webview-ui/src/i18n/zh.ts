@@ -1243,8 +1243,6 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "保存到本地",
-  "diffViewer.comment.sendToAgent": "发送给智能体",
   "diffViewer.comment.postToGithub": "发布到 GitHub",
   "diffViewer.comment.loadFailed": "无法加载拉取请求的更改。",
   "diffViewer.comment.unavailable": "此行在当前拉取请求快照中不可用。",

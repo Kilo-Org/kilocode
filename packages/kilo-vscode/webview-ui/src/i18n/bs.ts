@@ -1321,8 +1321,6 @@ export const dict = {
     "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
   "diffViewer.group.session": "Sesija",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Sačuvaj lokalno",
-  "diffViewer.comment.sendToAgent": "Pošalji agentu",
   "diffViewer.comment.postToGithub": "Objavi na GitHubu",
   "diffViewer.comment.loadFailed": "Nije moguće učitati izmjene zahtjeva za povlačenje.",
   "diffViewer.comment.unavailable": "Ovaj red nije dostupan u trenutnom snimku zahtjeva za povlačenje.",
