@@ -2278,6 +2278,7 @@ export const SessionProvider: ParentComponent = (props) => {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+    projectId?: string,
   ): boolean {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
@@ -2366,6 +2367,7 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
+      projectId,
       ...settings,
       files,
       agentManagerContext: context,
