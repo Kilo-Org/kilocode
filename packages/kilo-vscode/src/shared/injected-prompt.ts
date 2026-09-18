@@ -26,6 +26,18 @@ export function injectedMetadata(title: string): Record<string, unknown> {
   return { kilo: { injected: { title } } }
 }
 
+/**
+ * Merge the injected marker into an existing metadata record, keeping other
+ * `kilo` entries such as review feedback.
+ */
+export function mergeInjected(
+  metadata: Record<string, unknown> | undefined,
+  title: string | undefined,
+): Record<string, unknown> | undefined {
+  if (!title) return metadata
+  return { ...metadata, kilo: { ...record(metadata?.kilo), injected: { title } } }
+}
+
 export function partInjected(metadata: unknown): InjectedPrompt | undefined {
   const kilo = record(record(metadata)?.kilo)
   const value = record(kilo?.injected)

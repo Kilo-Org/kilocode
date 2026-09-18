@@ -183,6 +183,7 @@ export interface SessionContextValue {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ) => boolean
   sendCommand: (
     command: string,

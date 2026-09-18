@@ -1,10 +1,23 @@
 import { describe, expect, it } from "bun:test"
-import { injectedMetadata, injectedPreview, injectedView, partInjected } from "../../src/shared/injected-prompt"
+import {
+  injectedMetadata,
+  injectedPreview,
+  injectedView,
+  mergeInjected,
+  partInjected,
+} from "../../src/shared/injected-prompt"
 import { PUSH_INSTRUCTION } from "../../src/shared/review-comments"
 
 describe("injected prompt metadata", () => {
   it("round-trips the title", () => {
     expect(partInjected(injectedMetadata("Update from main"))).toEqual({ title: "Update from main" })
+  })
+
+  it("merges the title without dropping other kilo metadata", () => {
+    expect(mergeInjected({ kilo: { review: { version: 1 } } }, "Explain selected code")).toEqual({
+      kilo: { review: { version: 1 }, injected: { title: "Explain selected code" } },
+    })
+    expect(mergeInjected({ existing: "keep" }, undefined)).toEqual({ existing: "keep" })
   })
 
   it("ignores missing or malformed metadata", () => {
