@@ -10,7 +10,7 @@ import {
   unregisterProjectRoutes,
   type ProjectSessionListing,
 } from "../../src/agent-manager/project/init"
-import { ProjectRouteService, type SessionRef, type WorktreeRef } from "../../src/agent-manager/project/route"
+import { ProjectRouteService } from "../../src/agent-manager/project/route"
 
 const ROOT = "/repo/main"
 const WT_PATH = "/repo/main/.kilo/worktrees/fix"
@@ -353,7 +353,7 @@ describe("Agent Manager per-project session discovery", () => {
 })
 
 describe("Agent Manager route registration during project-init", () => {
-  it("registerProjectSessions registers the project root, worktrees, and managed session routes", () => {
+  it("registerProjectSessions registers the project root and managed session routes", () => {
     const routes = new ProjectRouteService()
     const wt: Worktree = { id: "wt-1", branch: "fix", path: WT_PATH, parentBranch: "main", createdAt: "" }
     const managed: ManagedSession[] = [
@@ -365,18 +365,12 @@ describe("Agent Manager route registration during project-init", () => {
 
     registerProjectSessions(ctx, listing)
 
-    // Project root route
     expect(routes.projectRoot({ projectId: ctx.id })).toBe(ROOT)
-    // Worktree route
-    expect(routes.worktreeDirectory({ projectId: ctx.id, worktreeId: "wt-1" })).toBe(WT_PATH)
-    // Session routes resolve exactly
-    const wtRef: SessionRef = { projectId: ctx.id, sessionId: "ses-wt" }
-    const localRef: SessionRef = { projectId: ctx.id, sessionId: "ses-local" }
-    expect(routes.sessionDirectory(wtRef)).toBe(WT_PATH)
-    expect(routes.sessionDirectory(localRef)).toBe(ROOT)
+    expect(routes.trySessionDirectoryFor({ projectId: ctx.id, sessionId: "ses-wt" })).toBe(WT_PATH)
+    expect(routes.trySessionDirectoryFor({ projectId: ctx.id, sessionId: "ses-local" })).toBe(ROOT)
   })
 
-  it("collectProjectSessions registers routes for every live session and worktree", async () => {
+  it("collectProjectSessions registers routes for every live session", async () => {
     const routes = new ProjectRouteService()
     const wt: Worktree = { id: "wt-1", branch: "fix", path: WT_PATH, parentBranch: "main", createdAt: "" }
     const ctx = makeContext(ROOT, fakeState([wt]))
@@ -387,10 +381,8 @@ describe("Agent Manager route registration during project-init", () => {
     await collectProjectSessions(ctx, listing)
 
     expect(routes.projectRoot({ projectId: ctx.id })).toBe(ROOT)
-    const wtDirRef: WorktreeRef = { projectId: ctx.id, worktreeId: "wt-1" }
-    expect(routes.worktreeDirectory(wtDirRef)).toBe(WT_PATH)
-    expect(routes.sessionDirectory({ projectId: ctx.id, sessionId: "ses-root" })).toBe(ROOT)
-    expect(routes.sessionDirectory({ projectId: ctx.id, sessionId: "ses-wt" })).toBe(WT_PATH)
+    expect(routes.trySessionDirectoryFor({ projectId: ctx.id, sessionId: "ses-root" })).toBe(ROOT)
+    expect(routes.trySessionDirectoryFor({ projectId: ctx.id, sessionId: "ses-wt" })).toBe(WT_PATH)
   })
 
   it("same raw session id in two projects is ambiguous after both register", () => {
@@ -422,10 +414,10 @@ describe("Agent Manager route registration during project-init", () => {
     const { listing } = routeListing(routes, {}, ctx.id, ctx.generation)
 
     registerProjectSessions(ctx, listing)
-    expect(routes.hasSession({ projectId: ctx.id, sessionId: "ses-wt" })).toBe(true)
+    expect(routes.trySessionDirectoryFor({ projectId: ctx.id, sessionId: "ses-wt" })).toBe(WT_PATH)
 
     unregisterProjectRoutes(ctx, listing)
-    expect(routes.hasSession({ projectId: ctx.id, sessionId: "ses-wt" })).toBe(false)
+    expect(routes.trySessionDirectoryFor({ projectId: ctx.id, sessionId: "ses-wt" })).toBeUndefined()
     expect(routes.trySessionDirectory("ses-wt")).toBeUndefined()
   })
 

@@ -13,9 +13,3 @@ export type {
   MarketplaceRelevance,
   MarketplaceRelevanceMetadata,
 } from "../../../src/services/marketplace/types"
-
-export interface MarketplaceFilters {
-  type?: string
-  search?: string
-  categories?: string[]
-}

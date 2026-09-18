@@ -434,6 +434,7 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
+  | { type: "sessionWakeup"; sessionID: string; pending: number }
   | {
       type: "sessionTurnClosed"
       sessionID: string
@@ -531,42 +532,46 @@ function statusExtra(info: Extract<Event, { type: "session.status" }>["propertie
   return {}
 }
 
-export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: string | undefined): WebviewMessage {
-  if (event.type === "sync") {
-    switch (event.name) {
-      case "message.updated.1": {
-        const info = event.data.info
-        return {
-          type: "messageCreated",
-          message: {
-            ...info,
-            createdAt: new Date(info.time.created).toISOString(),
-          },
-        }
+function mapSyncEvent(event: SyncEvent, sessionID: string | undefined): WebviewMessage {
+  switch (event.name) {
+    case "message.updated.1": {
+      const info = event.data.info
+      return {
+        type: "messageCreated",
+        message: {
+          ...info,
+          createdAt: new Date(info.time.created).toISOString(),
+        },
       }
-      case "message.removed.1":
-        return {
-          type: "messageRemoved",
-          sessionID: event.data.sessionID,
-          messageID: event.data.messageID,
-        }
-      case "message.part.updated.1":
-      case "message.part.removed.1":
-        return mapPartEvent(event, sessionID)
-      case "session.created.1":
-        return {
-          type: "sessionCreated",
-          session: sessionToWebview(event.data.info),
-        }
-      case "session.updated.1":
-        return null
-      case "session.deleted.1":
-        return {
-          type: "sessionDeleted",
-          sessionID: event.data.sessionID,
-        }
     }
+    case "message.removed.1":
+      return {
+        type: "messageRemoved",
+        sessionID: event.data.sessionID,
+        messageID: event.data.messageID,
+      }
+    case "message.part.updated.1":
+    case "message.part.removed.1":
+      return mapPartEvent(event, sessionID)
+    case "session.created.1":
+      return {
+        type: "sessionCreated",
+        session: sessionToWebview(event.data.info),
+      }
+    case "session.updated.1":
+      return null
+    case "session.deleted.1":
+      return {
+        type: "sessionDeleted",
+        sessionID: event.data.sessionID,
+      }
+    default:
+      return null
   }
+}
+
+export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: string | undefined): WebviewMessage {
+  if (event.type === "sync") return mapSyncEvent(event, sessionID)
   if (event.type === "message.part.delta") return mapPartEvent(event, sessionID)
   switch (event.type) {
     case "session.status": {
@@ -580,6 +585,12 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
         ...extra,
       }
     }
+    case "session.wakeup":
+      return {
+        type: "sessionWakeup" as const,
+        sessionID: event.properties.sessionID,
+        pending: event.properties.pending,
+      }
     case "session.turn.close":
       return {
         type: "sessionTurnClosed",

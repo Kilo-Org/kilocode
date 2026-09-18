@@ -1,5 +1,56 @@
 # kilo-code
 
+## 7.7.5
+
+### Minor Changes
+
+- [#14251](https://github.com/Kilo-Org/kilocode/pull/14251) [`b3ef153`](https://github.com/Kilo-Org/kilocode/commit/b3ef15319edd94b481f50821fc350a467f28e327) - Add `@model`, `@past-chats`, and `@worktrees` mentions to the Agent Manager New Worktree prompt. Past chats and worktrees are sent as attachments to the new session, and model references stay inline text.
+
+- [#14249](https://github.com/Kilo-Org/kilocode/pull/14249) [`d73b514`](https://github.com/Kilo-Org/kilocode/commit/d73b5145d6b8bc75125549c02c436eb94f987046) - Run worktree-independent slash commands from the Agent Manager New Worktree prompt. Custom commands, skills, MCP prompts, and /goal now appear in the prompt menu and execute when a new worktree is created. Typing /goal alone starts a two-step flow, so the objective can be entered before the session starts.
+
+### Patch Changes
+
+- [#14274](https://github.com/Kilo-Org/kilocode/pull/14274) [`d162846`](https://github.com/Kilo-Org/kilocode/commit/d162846963f2e82196b1a7f58c004c166e8587a3) - Keep the Agent Manager `.kilo` directory out of git in subdirectory workspaces and avoid creating it in folders that are not git repositories.
+
+- [#14277](https://github.com/Kilo-Org/kilocode/pull/14277) [`d8eaefd`](https://github.com/Kilo-Org/kilocode/commit/d8eaefdf1d84fa6779c8cb1634ef516948d76f06) - Recover permission approval dialogs that stall instead of leaving the approval buttons disabled.
+
+- [#14280](https://github.com/Kilo-Org/kilocode/pull/14280) [`815a81b`](https://github.com/Kilo-Org/kilocode/commit/815a81b46cadc7854af1e4a89524fed0080db070) - Fix a memory leak that made Agent Manager session switching slower the longer the window stayed open. Tool card fade animations kept unmounted transcript rows alive.
+
+- Updated dependencies [[`d8eaefd`](https://github.com/Kilo-Org/kilocode/commit/d8eaefdf1d84fa6779c8cb1634ef516948d76f06)]:
+  - @kilocode/sdk@7.7.5
+  - @kilocode/kilo-ui@7.7.5
+  - @kilocode/plugin@7.7.5
+  - @opencode-ai/ui@7.7.5
+  - @opencode-ai/core@7.7.5
+  - @kilocode/kilo-gateway@7.7.5
+  - @kilocode/kilo-indexing@7.7.5
+
+## 7.7.4
+
+### Minor Changes
+
+- [#14233](https://github.com/Kilo-Org/kilocode/pull/14233) [`b07646f`](https://github.com/Kilo-Org/kilocode/commit/b07646fc078dd7d5bc117a36f195a879f228b201) - Open Mermaid diagrams in a fullscreen zoom viewer with zoom in/out, reset, mouse-wheel zoom, and drag-to-pan
+
+- [#14255](https://github.com/Kilo-Org/kilocode/pull/14255) [`4881829`](https://github.com/Kilo-Org/kilocode/commit/4881829c38d41ae92671508784d3523ece54a8fe) - Leftover worktree folders now show a count and total size in the warning banner, with a "Resolve…" action that opens a dialog listing each folder's path, size, and whether it still holds a git checkout. While the total is still being measured the banner says so, and if the measurement fails it reports the count alone instead of claiming 0 B. Measuring stops as soon as you start a delete, or whenever the folder list changes, rather than walking folders that are on their way out, and then re-measures whatever is left. The dialog's explanation starts collapsed to its first paragraph behind a "Show more" link, and its checkboxes are drawn the way each IDE draws its own. Deletion runs in the background so the UI never freezes, folders that still contain a checkout are unchecked by default, and a completion notification reports how many were removed. Worktree deletion is also more thorough: JetBrains now tears down backend state and removes the snapshot repository for a deleted worktree the same way VS Code already does, and a directory that reappears immediately after deletion is cleaned up once more automatically.
+
+### Patch Changes
+
+- [#14230](https://github.com/Kilo-Org/kilocode/pull/14230) [`6b5e8a0`](https://github.com/Kilo-Org/kilocode/commit/6b5e8a04e4d73a03c2a9a47c11f3639114588a32) - Add an experimental Programmatic Tool Calling setting under Settings > Experimental. When enabled, the agent calls MCP tools from a confined JavaScript program and discovers tools on demand, so fewer MCP tool definitions are sent to the model. The `KILO_EXPERIMENTAL_CODE_MODE` environment variable still enables it.
+
+- [#14231](https://github.com/Kilo-Org/kilocode/pull/14231) [`7e0ce5e`](https://github.com/Kilo-Org/kilocode/commit/7e0ce5ec6db0d9472dbcc94f8e4a50f1adaa50a0) - Generate chat session titles after a turn provides enough context instead of from the first message alone. A short first message now keeps the placeholder title until the session has a longer request, a second message, or real tool work, so titles describe the actual task rather than a bare URL or a truncated first line.
+
+- [#14225](https://github.com/Kilo-Org/kilocode/pull/14225) [`88d2315`](https://github.com/Kilo-Org/kilocode/commit/88d23150b6b0a5f24d120f7ebe5ce43b0c95a718) - Prevent failed status notifications from leaving completed sessions marked busy and blocking reload.
+
+- [#14015](https://github.com/Kilo-Org/kilocode/pull/14015) [`12b44cb`](https://github.com/Kilo-Org/kilocode/commit/12b44cb7cb09fdfa175804897f59716cc51f8141) Thanks [@intentionally-left-nil](https://github.com/intentionally-left-nil)! - Fix "missing x-opencode-session" errors from memory consolidation, prompt enhancement, and the roll-call diagnostic command when using an OpenCode-managed model.
+
+- [#14255](https://github.com/Kilo-Org/kilocode/pull/14255) [`8bc3e84`](https://github.com/Kilo-Org/kilocode/commit/8bc3e84d2be23d9b96900071ec3fcf901de01794) - Move the Agent Manager leftover worktree folder notice to the top of the worktree list and rework its cleanup dialog to match VS Code, including an explanation of what the listed folders are before any bulk delete
+
+- [#14221](https://github.com/Kilo-Org/kilocode/pull/14221) [`6c066a5`](https://github.com/Kilo-Org/kilocode/commit/6c066a58771bc9c2a9c20ca5de4bd2ff9f1a0467) - Hide voice input in remote VS Code windows, where microphone capture runs on the remote machine and fails, and explain the limit in the Speech to Text settings
+
+- [#14226](https://github.com/Kilo-Org/kilocode/pull/14226) [`9f45df5`](https://github.com/Kilo-Org/kilocode/commit/9f45df567e1b77090d1f28925e42eecb16ae566c) - Explain sandbox escalation prompts accurately: approval runs the whole command outside the sandbox for that command only, and Bash allow rules and auto-approve never cover it.
+
+- [#14237](https://github.com/Kilo-Org/kilocode/pull/14237) [`9d2a46f`](https://github.com/Kilo-Org/kilocode/commit/9d2a46fbc491e27a3494ca1fa90d053aec8d1c37) - Improve chat responsiveness when switching sessions and sending prompts, and keep the transcript pinned without flicker while a turn streams
+
 ## 7.7.3
 
 ### Major Changes
