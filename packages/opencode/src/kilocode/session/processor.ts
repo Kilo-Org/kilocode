@@ -73,6 +73,25 @@ export namespace KiloSessionProcessor {
     return tel
   }
 
+  /**
+   * Tag the expanded slash-command template so clients can show the user the
+   * command they typed (`/review branch`) instead of the full template, while
+   * keeping the template inspectable. Shape matches
+   * `packages/kilo-vscode/src/shared/injected-prompt.ts`.
+   */
+  export function markCommand(
+    parts: Array<{ type: string; metadata?: Record<string, unknown> }>,
+    command: string,
+    args: string,
+  ) {
+    const title = `/${command} ${args}`.trim()
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      const kilo = isRecord(part.metadata?.kilo) ? part.metadata.kilo : {}
+      part.metadata = { ...part.metadata, kilo: { ...kilo, injected: { title } } }
+    }
+  }
+
   export function extractReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
     for (const part of parts) {
       if (part.type !== "text") continue
