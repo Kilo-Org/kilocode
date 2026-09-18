@@ -1246,8 +1246,6 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "儲存至本機",
-  "diffViewer.comment.sendToAgent": "傳送給代理程式",
   "diffViewer.comment.postToGithub": "發佈到 GitHub",
   "diffViewer.comment.loadFailed": "無法載入提取請求的變更。",
   "diffViewer.comment.unavailable": "此行在目前的提取請求快照中無法使用。",

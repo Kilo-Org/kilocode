@@ -1343,8 +1343,6 @@ export const dict = {
     "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
   "diffViewer.group.session": "Sitzung",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Lokal speichern",
-  "diffViewer.comment.sendToAgent": "An Agent senden",
   "diffViewer.comment.postToGithub": "Auf GitHub veröffentlichen",
   "diffViewer.comment.loadFailed": "Die Änderungen des Pull Requests konnten nicht geladen werden.",
   "diffViewer.comment.unavailable": "Diese Zeile ist im aktuellen Snapshot des Pull Requests nicht verfügbar.",

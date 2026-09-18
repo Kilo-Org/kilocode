@@ -1291,8 +1291,6 @@ export const dict = {
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
   "diffViewer.group.session": "เซสชัน",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "บันทึกในเครื่อง",
-  "diffViewer.comment.sendToAgent": "ส่งไปยังเอเจนต์",
   "diffViewer.comment.postToGithub": "โพสต์ไปยัง GitHub",
   "diffViewer.comment.loadFailed": "ไม่สามารถโหลดการเปลี่ยนแปลงของคำขอรวมโค้ดได้",
   "diffViewer.comment.unavailable": "บรรทัดนี้ไม่มีอยู่ในสแนปช็อตปัจจุบันของคำขอรวมโค้ด",

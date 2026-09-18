@@ -1320,8 +1320,6 @@ export const dict = {
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Zapisz lokalnie",
-  "diffViewer.comment.sendToAgent": "Wyślij do agenta",
   "diffViewer.comment.postToGithub": "Opublikuj na GitHubie",
   "diffViewer.comment.loadFailed": "Nie udało się wczytać zmian pull requesta.",
   "diffViewer.comment.unavailable": "Ten wiersz nie jest dostępny w bieżącej migawce pull requesta.",

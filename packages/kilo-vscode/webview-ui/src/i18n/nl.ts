@@ -1343,8 +1343,6 @@ export const dict = {
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Lokaal opslaan",
-  "diffViewer.comment.sendToAgent": "Naar agent sturen",
   "diffViewer.comment.postToGithub": "Op GitHub plaatsen",
   "diffViewer.comment.loadFailed": "De wijzigingen van de pull request konden niet worden geladen.",
   "diffViewer.comment.unavailable": "Deze regel is niet beschikbaar in de huidige snapshot van de pull request.",

@@ -1311,8 +1311,6 @@ export const dict = {
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Lagre lokalt",
-  "diffViewer.comment.sendToAgent": "Send til agent",
   "diffViewer.comment.postToGithub": "Publiser på GitHub",
   "diffViewer.comment.loadFailed": "Kunne ikke laste inn endringene i pull requesten.",
   "diffViewer.comment.unavailable":

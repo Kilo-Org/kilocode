@@ -1315,8 +1315,6 @@ export const dict = {
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Gem lokalt",
-  "diffViewer.comment.sendToAgent": "Send til agent",
   "diffViewer.comment.postToGithub": "Udgiv på GitHub",
   "diffViewer.comment.loadFailed": "Kunne ikke indlæse ændringerne i pull requesten.",
   "diffViewer.comment.unavailable": "Denne linje er ikke tilgængelig i det aktuelle snapshot af pull requesten.",
