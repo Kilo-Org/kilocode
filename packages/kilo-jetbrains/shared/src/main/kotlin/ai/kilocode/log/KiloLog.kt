@@ -209,7 +209,18 @@ internal class RotatingLogHandler(
         Files.createDirectories(path.parent)
         // `fresh` rolls a non-empty file aside so this process owns the whole file from its first
         // record. A tailing reader sees the shrink and reopens from offset 0 on its own.
-        if (fresh && count > 0 && runCatching { Files.size(path) }.getOrDefault(0L) > 0L) rotate()
+        //
+        // Guarded like the rotation in `publish`, and it matters more here: `FileLog` builds this
+        // handler in a `by lazy`, which does not cache a thrown exception, so an escaping failure
+        // would make every later log call re-run the initializer and rethrow — trading one failed
+        // roll for no logging at all, with no IntelliJ fallback in sandbox mode. A locked previous
+        // `kilo.log` is the realistic cause. Falling back to appending is the correct degradation.
+        if (fresh && count > 0 && runCatching { Files.size(path) }.getOrDefault(0L) > 0L) {
+            runCatching { rotate() }.onFailure {
+                val err = if (it is Exception) it else RuntimeException(it)
+                reportError("could not start a new $path", err, ErrorManager.OPEN_FAILURE)
+            }
+        }
     }
 
     @Synchronized

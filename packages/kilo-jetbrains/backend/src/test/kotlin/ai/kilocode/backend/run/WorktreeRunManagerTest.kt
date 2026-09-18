@@ -261,6 +261,27 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertEquals(Path.of("$wt/packages/kilo-vscode/package.json").toString(), cfg.pkg)
     }
 
+    fun testNpmStyleConfigWithoutItsPathElementIsRefused() = runBlocking {
+        // If the serialized location stops matching, the clone would keep the main checkout's path
+        // while supports() has already advertised the type as runnable. Refusing beats running there.
+        val settings = add(register(npmType()), "VSCode")
+        (settings.configuration as PkgConfig).pkg = null
+        val repo = requireNotNull(project.basePath)
+
+        val result = manager().run(settings.uniqueID, "$repo/.kilo/worktrees/npm-nopath-wt")
+        assertFalse(result.ok)
+        assertTrue(launched.isEmpty())
+    }
+
+    fun testModuleBasedConfigIsNeverDirectlyTransplantedEvenWhenItsTypeHasSerializedPaths() {
+        // The module-based exclusion has to hold unconditionally: such a config takes its classpath
+        // from the main checkout's module, so no amount of location rewriting makes a transplant safe.
+        val type = paramsType("js.build_tools.npm")
+        val module = ModuleParamsConfig(project, type.configurationFactories.single(), "app")
+
+        assertFalse(WorktreeRunAdapter.supports(module))
+    }
+
     fun testSkippedConfigsAreReportedWithTheirReason() = runBlocking {
         // The popup renders these, so "my run configuration is missing" stops being a silent omission.
         add(register(plainType("kilo.test.plain.skipreason")), "app")

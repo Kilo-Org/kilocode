@@ -3,6 +3,7 @@ package ai.kilocode.log
 import java.util.logging.Formatter
 import java.util.logging.Level
 import java.util.logging.LogRecord
+import kotlin.io.path.createDirectory
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.exists
 import kotlin.io.path.readText
@@ -83,6 +84,25 @@ class KiloLogTest {
         handler.publish(LogRecord(Level.INFO, "first"))
 
         assertEquals("first\n", log.readText())
+        assertFalse(dir.resolve("kilo.log.0").exists())
+    }
+
+    @Test
+    fun `fresh handler falls back to appending when the roll cannot be performed`() {
+        // A failing roll must not escape the constructor: FileLog builds the handler in a `by lazy`,
+        // which does not cache a thrown exception, so every later log call would rethrow and sandbox
+        // mode would lose logging entirely. The failure is reported to the ErrorManager instead.
+        val dir = createTempDirectory("kilo-log")
+        val log = dir.resolve("kilo.log")
+        log.writeText("previous run\n")
+        // rotate() deletes kilo.log.1 first, and a non-empty directory cannot be deleted.
+        dir.resolve("kilo.log.1").createDirectory().resolve("blocker").writeText("x")
+
+        val handler = RotatingLogHandler(log, 10_000, 2, fresh = true)
+        handler.formatter = LineFormatter()
+        handler.publish(LogRecord(Level.INFO, "this run"))
+
+        assertEquals("previous run\nthis run\n", log.readText())
         assertFalse(dir.resolve("kilo.log.0").exists())
     }
 

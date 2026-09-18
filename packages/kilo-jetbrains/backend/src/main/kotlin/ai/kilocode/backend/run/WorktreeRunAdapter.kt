@@ -101,9 +101,13 @@ internal object WorktreeRunAdapter {
 
     fun supports(config: RunConfiguration): Boolean {
         if (config is ExternalSystemRunConfiguration) return true
+        // Checked before anything else so the invariant holds unconditionally: a module-based
+        // configuration takes its classpath from the main checkout's module, so no amount of
+        // location rewriting makes a direct transplant correct. Those go through
+        // WorktreeRunDelegate, which asks the build system to produce the worktree's own output.
+        if (config is ModuleBasedConfiguration<*, *>) return false
         if (config.type.id in PATHS) return true
-        if (config !is CommonProgramRunConfigurationParameters) return false
-        return config !is ModuleBasedConfiguration<*, *>
+        return config is CommonProgramRunConfigurationParameters
     }
 
     /**
@@ -163,8 +167,10 @@ internal object WorktreeRunAdapter {
      * happens a level up in `RunnerAndConfigurationSettingsImpl`, not here. [rebase] therefore sees a
      * real path, and leaves anything outside [repo] alone.
      *
-     * Returns null when the state cannot be read or restored, which [transplant] reports as an
-     * unsupported configuration rather than a failed run.
+     * Returns null when no location was rewritten or the state cannot be read or restored, which
+     * [transplant] reports as an unsupported configuration rather than a failed run. Refusing is the
+     * only safe answer: [supports] has already advertised the type as directly transplantable, so a
+     * clone that still carries the main checkout's path would run there instead of the worktree.
      */
     private fun relocate(
         settings: RunnerAndConfigurationSettings,
@@ -173,29 +179,36 @@ internal object WorktreeRunAdapter {
         worktree: String,
     ): RunConfiguration? {
         val source = settings.configuration
-        val element = Element("configuration")
         try {
+            val element = Element("configuration")
             source.writeExternal(element)
-        } catch (e: Exception) {
-            LOG.warn("worktree run: cannot read ${source.name}'s state", e)
-            return null
-        }
-        val moved = spots.count { (tag, attr) ->
-            val child = element.getChild(tag) ?: return@count false
-            val raw = child.getAttributeValue(attr)?.takeIf { it.isNotBlank() } ?: return@count false
-            child.setAttribute(attr, rebase(raw, repo, worktree))
-            true
-        }
-        inject(element, worktree, repo)
-        val clone = settings.factory.createTemplateConfiguration(source.project)
-        try {
+            val moved = spots.count { (tag, attr) ->
+                val child = element.getChild(tag) ?: return@count false
+                val raw = child.getAttributeValue(attr)?.takeIf { it.isNotBlank() } ?: return@count false
+                child.setAttribute(attr, rebase(raw, repo, worktree))
+                true
+            }
+            // Nothing matched, so this configuration's location is not where PATHS says it is —
+            // a platform-side serialization rename, or a config that simply has no such path.
+            if (moved == 0) {
+                LOG.warn(
+                    "worktree run: ${source.name} [${source.type.id}] has none of " +
+                        spots.joinToString { "<${it.first} ${it.second}>" } +
+                        ", refusing to run it against the main checkout",
+                )
+                return null
+            }
+            inject(element, worktree, repo)
+            val clone = settings.factory.createTemplateConfiguration(source.project)
             clone.readExternal(element)
+            LOG.info("worktree run: relocated ${source.name} [${source.type.id}] via $moved serialized path(s)")
+            return clone
         } catch (e: Exception) {
-            LOG.warn("worktree run: cannot restore ${source.name}'s state", e)
+            // Covers writeExternal, createTemplateConfiguration and readExternal: any of them can
+            // throw, and all of them mean the same thing here — no clone we are willing to run.
+            LOG.warn("worktree run: cannot relocate ${source.name} [${source.type.id}]", e)
             return null
         }
-        LOG.info("worktree run: relocated ${source.name} [${source.type.id}] via $moved serialized path(s)")
-        return clone
     }
 
     /**
