@@ -8,6 +8,7 @@ import {
   clearMaskStyles,
   COLLAPSIBLE_SPRING,
   GROW_SPRING,
+  settle,
   WIPE_MASK,
 } from "./motion"
 
@@ -201,8 +202,8 @@ export function useCollapsible(options: {
 
   onCleanup(() => {
     ++gen
-    heightAnim?.stop()
-    fadeAnim?.stop()
+    settle(heightAnim)
+    settle(fadeAnim)
   })
 }
 
@@ -262,7 +263,7 @@ export function useGrowIn(el: () => HTMLElement | undefined, enabled: boolean) {
   onCleanup(() => {
     ++gen
     obs?.disconnect()
-    height?.stop()
+    settle(height)
     const node = el()
     if (node) clear(node)
   })
@@ -354,6 +355,7 @@ export function useRowWipe(opts: {
         cancelAnimationFrame(frame)
         clear()
       }
+      settle(anim)
     })
   })
 }
@@ -401,6 +403,13 @@ export function useToolFade(
       frame = undefined
       const node = ref()
       if (!node) return
+      // A node outside the document never finishes a Web Animation, and the
+      // pending animation keeps the node and its owner tree alive. Show it as is.
+      if (!node.isConnected) {
+        clearFadeStyles(node)
+        if (mask) clearMaskStyles(node)
+        return
+      }
 
       anim = wipe
         ? mask
@@ -423,6 +432,6 @@ export function useToolFade(
 
   onCleanup(() => {
     if (frame !== undefined) cancelAnimationFrame(frame)
-    anim?.stop()
+    settle(anim)
   })
 }
