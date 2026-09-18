@@ -41,6 +41,8 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "terminal_command_display",
   "code_edit_display",
   "mcp_tool_display",
+  "inline_code_background",
+  "inline_code_color",
   "hide_prompt_training_models",
   "sandbox",
   "indexing",

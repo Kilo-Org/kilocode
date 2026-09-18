@@ -1172,6 +1172,13 @@ export const dict = {
   "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
   "settings.display.mcpTool.expanded": "Expanded",
   "settings.display.mcpTool.collapsed": "Collapsed",
+  "settings.display.inlineCodeBackground.title": "Highlight Inline Code",
+  "settings.display.inlineCodeBackground.description":
+    "Add a theme-aware background and spacing to inline code in chat. Off keeps the current text-only style.",
+  "settings.display.inlineCodeColor.title": "Inline Code Color",
+  "settings.display.inlineCodeColor.description":
+    "Color for inline code spans in chat. Keep 'Match editor theme' on to follow your VS Code theme, or turn it off to choose a custom color.",
+  "settings.display.inlineCodeColor.matchTheme": "Match editor theme",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",

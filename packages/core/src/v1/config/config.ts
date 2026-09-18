@@ -140,6 +140,14 @@ export const Info = Schema.Struct({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  inline_code_background: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Add a theme-aware background and spacing to inline code spans in the VS Code chat UI. When unset/false, inline code keeps the current text-only styling.",
+  }),
+  inline_code_color: Schema.optional(Schema.String).annotate({
+    description:
+      "Hex color (e.g. '#9dbefe') for inline code spans in the VS Code chat UI. When unset, inline code matches the editor theme.",
+  }),
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),

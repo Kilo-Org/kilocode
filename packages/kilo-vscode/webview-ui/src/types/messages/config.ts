@@ -160,6 +160,8 @@ export interface Config {
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay
   mcp_tool_display?: McpToolDisplay
+  inline_code_background?: boolean
+  inline_code_color?: string
   hide_prompt_training_models?: boolean
   share?: "manual" | "auto" | "disabled"
   username?: string

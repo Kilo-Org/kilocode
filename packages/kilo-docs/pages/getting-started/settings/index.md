@@ -141,6 +141,19 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 
 Valid values are `expanded` and `collapsed`.
 
+### Inline Code
+
+Inline code keeps its current text-only appearance by default. Enable **Highlight Inline Code** in the Display tab, or set `inline_code_background` to `true`, to add a theme-aware background and spacing. You can independently set `inline_code_color` to a hex color:
+
+```json
+{
+  "inline_code_background": true,
+  "inline_code_color": "#9dbefe"
+}
+```
+
+Omit either setting to keep its current theme-controlled behavior.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
