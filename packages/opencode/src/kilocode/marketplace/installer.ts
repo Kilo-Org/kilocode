@@ -374,15 +374,20 @@ async function stripPluginFromFile(file: string, pkg: string): Promise<StripResu
 function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   return Effect.promise(async (): Promise<MarketplaceRemoveResult> => {
     const pkg = pluginPackageName(item.id) ?? item.id
-    let failed = false
+    let removed = false
+    let unreadable = false
     for (const file of pluginFiles(scope, svc)) {
       const status = await stripPluginFromFile(file, pkg).catch((err) => {
         console.warn("Failed to remove plugin from marketplace config", err)
         return "error" as StripResult
       })
-      if (status === "error") failed = true
+      if (status === "removed") removed = true
+      if (status === "error") unreadable = true
     }
-    if (failed) return { success: false, slug: item.id, error: "Failed to update plugin config" }
+    // A successful write elsewhere wins, so an unparseable sibling config (for
+    // example a malformed tui.json when the plugin lives in opencode.json) does
+    // not report a failure after the entry was already removed.
+    if (!removed && unreadable) return { success: false, slug: item.id, error: "Could not read plugin config" }
     return { success: true, slug: item.id }
   })
 }
