@@ -16,7 +16,7 @@ Auto Model is a smart routing system that selects an underlying model for each r
 ## How It Works
 
 1. Select an Auto Model tier (e.g. `kilo-auto/frontier`) in the model dropdown
-2. Start working in any mode (Code, Architect, Debug, etc.)
+2. Start working with any agent (Code, Plan, Debug, etc.)
 3. The system automatically routes your requests to the best model for that task
 
 That's it. No configuration needed.
@@ -79,7 +79,7 @@ Automatically uses the best model for a given task, selecting the best balance o
 
 ### No Configuration Required
 
-No need to manually switch models when changing modes. Auto Model handles routing transparently in the background.
+No need to manually switch models when changing agents. Auto Model handles routing transparently in the background.
 
 ### Flexible Cost Control
 
@@ -100,7 +100,7 @@ Select an Auto Model tier from the model dropdown in the Kilo Code chat interfac
 1. Open Kilo Code in VS Code or JetBrains
 2. Click the model selector dropdown
 3. Choose an Auto Model such as `kilo-auto/frontier` or `kilo-auto/efficient`
-4. Start chatting - the right model is selected automatically based on your current mode
+4. Start chatting - the right model is selected automatically based on your current agent
 
 ## When to Use Auto Model
 
