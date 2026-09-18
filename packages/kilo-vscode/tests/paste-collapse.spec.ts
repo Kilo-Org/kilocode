@@ -1,16 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
+import { open } from "./helpers/prompt-input"
 
-const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
 const PLACEHOLDER = "[Pasted ~15 lines]"
-
-async function open(page: Page) {
-  await page.goto(`/iframe.html?id=prompt-input--default-420&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
-  const input = page.locator("textarea.prompt-input")
-  await expect(input).toBeVisible()
-  await page.evaluate(() => window.postMessage({ type: "connectionState", state: "connected" }, window.origin))
-  await expect(input).toBeEnabled()
-  return input
-}
 
 function block(tag: string) {
   return Array.from({ length: 15 }, (_, index) => `${tag}${index} ${"x".repeat(40)}`).join("\n")

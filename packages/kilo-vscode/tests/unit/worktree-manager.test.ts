@@ -1231,6 +1231,32 @@ describe("WorktreeManager.ensureGitExclude", () => {
     const count = content.split(".kilo/worktrees/").length - 1
     expect(count).toBe(1)
   })
+
+  it("prefixes ignore entries when the root is a subdirectory of the repository", async () => {
+    const root = await createTempRepo()
+    const sub = path.join(root, "packages", "app")
+    await fs.mkdir(sub, { recursive: true })
+    const mgr = createManager(sub)
+
+    await mgr.ensureGitExclude()
+
+    const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
+    expect(content).toContain("packages/app/.kilo/worktrees/")
+    expect(content).toContain("packages/app/.kilo/agent-manager.json")
+  })
+
+  it("keeps a subdirectory workspace clean after pool reconcile", async () => {
+    const root = await createTempRepo()
+    const sub = path.join(root, "packages", "app")
+    await fs.mkdir(sub, { recursive: true })
+    const mgr = createManager(sub)
+
+    await mgr.reconcilePool()
+
+    const status = await simpleGit(root).raw(["status", "--porcelain", "--untracked-files=all"])
+    expect(status.trim()).toBe("")
+    expect(existsSync(path.join(sub, ".kilo", "worktrees"))).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
