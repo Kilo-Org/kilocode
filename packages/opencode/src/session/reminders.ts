@@ -37,7 +37,8 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
   // kilocode_change end
 
   const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
-  if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
+  const wasPlanning = assistantMessage?.info.agent === "plan" || assistantMessage?.info.agent === "architect"
+  if (input.agent.name === "code" && wasPlanning) {
     const ctx = yield* InstanceState.context
     const plan = Session.plan(input.session, ctx)
     const exists = yield* fsys.existsSafe(plan)

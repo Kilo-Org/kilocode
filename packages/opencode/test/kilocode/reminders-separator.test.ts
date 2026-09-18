@@ -40,7 +40,7 @@ function userMsg(text: string): MessageV2.WithParts {
   }
 }
 
-function assistantPlan(): MessageV2.WithParts {
+function assistant(agent = "plan"): MessageV2.WithParts {
   const id = MessageID.ascending()
   return {
     info: {
@@ -48,7 +48,7 @@ function assistantPlan(): MessageV2.WithParts {
       role: "assistant",
       sessionID,
       time: { created: 0 },
-      agent: "plan",
+      agent,
       modelID: model.modelID,
       providerID: model.providerID,
       parentID: "",
@@ -63,11 +63,11 @@ function assistantPlan(): MessageV2.WithParts {
 
 const session = { slug: "ses_reminders", time: { created: 0 } } as unknown as Session.Info
 
-function apply(ctx: InstanceContext, messages: MessageV2.WithParts[]) {
+function apply(ctx: InstanceContext, messages: MessageV2.WithParts[], name = "code") {
   return Effect.runPromise(
     SessionReminders.apply({
       messages,
-      agent: { name: "code" } as unknown as Agent.Info,
+      agent: { name } as unknown as Agent.Info,
       session,
     }).pipe(
       Effect.provideService(InstanceRef, ctx),
@@ -90,7 +90,7 @@ describe("SessionReminders plan-to-code switch", () => {
       directory: tmp.path,
       fn: async (ctx) => {
         const user = userMsg("write this to a file:")
-        const messages = [assistantPlan(), user]
+        const messages = [assistant(), user]
         const result = await apply(ctx, messages)
 
         expect(result).toBe(messages)
@@ -115,12 +115,42 @@ describe("SessionReminders plan-to-code switch", () => {
         await Bun.write(file, "step 1")
 
         const user = userMsg("implement the plan:")
-        const messages = [assistantPlan(), user]
+        const messages = [assistant(), user]
         const result = await apply(ctx, messages)
 
         expect(result).toBe(messages)
         const reminder = user.parts.at(-1) as MessageV2.TextPart
         expect(reminder.text).toContain(`A plan file exists at ${file}`)
+      },
+    })
+  })
+
+  test("does not append the code switch reminder when entering a non-code agent", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async (ctx) => {
+        const user = userMsg("plan something:")
+        const result = await apply(ctx, [assistant(), user], "ask")
+
+        expect(result).toBeDefined()
+        expect(user.parts).toHaveLength(1)
+      },
+    })
+  })
+
+  test("appends the reminder when switching from architect to code", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async (ctx) => {
+        const user = userMsg("implement the plan:")
+        const result = await apply(ctx, [assistant("architect"), user])
+
+        expect(result).toBeDefined()
+        const reminder = user.parts.at(-1) as MessageV2.TextPart
+        expect(reminder.synthetic).toBe(true)
+        expect(reminder.text.startsWith("\n\n<system-reminder>")).toBe(true)
       },
     })
   })
