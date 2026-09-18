@@ -1347,6 +1347,40 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - shared_agent_board true`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"shared_agent_board":true}""")
+            assertEquals(true, cfg.shared_agent_board)
+        }
+
+        @Test
+        fun `parseConfig - shared_agent_board false`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"shared_agent_board":false}""")
+            assertEquals(false, cfg.shared_agent_board)
+        }
+
+        @Test
+        fun `parseConfig - shared_agent_board missing stays null so the default applies`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt"}""")
+            assertNull(cfg.shared_agent_board)
+        }
+
+        @Test
+        fun `parseConfig - retired experimental shared_agent_board is ignored`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"model":"openai/gpt","experimental":{"shared_agent_board":false}}"""
+            )
+            assertEquals("openai/gpt", cfg.model)
+            assertNull(cfg.shared_agent_board)
+        }
+
+        @Test
+        fun `parseConfig - malformed shared_agent_board does not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","shared_agent_board":{}}""")
+            assertEquals("openai/gpt", cfg.model)
+            assertNull(cfg.shared_agent_board)
+        }
+
+        @Test
         fun `parseConfig - agent overrides and permissions`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""
@@ -1487,6 +1521,64 @@ class KiloCliDataParserTest {
             }"""
 
             assertEquals("https://app.kilo.ai/s/tok", KiloCliDataParser.parseSession(raw).share?.url)
+        }
+
+        // ---- parseSessionBoard ----
+
+        @Test
+        fun `parseSessionBoard - full board response`() {
+            val raw = """{
+                "ownerSessionID": "ses_root",
+                "revision": 3,
+                "hasMore": true,
+                "cursor": "m2",
+                "messages": [
+                    { "id": "m1", "timestamp": 1000, "from": "main", "to": "ALL", "type": "INFO", "body": "first" },
+                    { "id": "m2", "timestamp": 2000, "from": "ses_a", "to": "main", "fromLabel": "Explorer", "toLabel": "Main", "type": "RESULT", "body": "second", "reply_to": "m1" }
+                ]
+            }"""
+
+            val result = KiloCliDataParser.parseSessionBoard(raw)
+            assertEquals("ses_root", result.ownerSessionID)
+            assertEquals(3, result.revision)
+            assertTrue(result.hasMore)
+            assertEquals("m2", result.cursor)
+            assertEquals(2, result.messages.size)
+            assertEquals("m1", result.messages[0].id)
+            assertEquals(1000L, result.messages[0].timestamp)
+            assertNull(result.messages[0].fromLabel)
+            assertEquals("Explorer", result.messages[1].fromLabel)
+            assertEquals("Main", result.messages[1].toLabel)
+            assertEquals("m1", result.messages[1].reply_to)
+        }
+
+        @Test
+        fun `parseSessionBoard - empty board`() {
+            val raw = """{"ownerSessionID":"ses_root","revision":0,"hasMore":false,"messages":[]}"""
+
+            val result = KiloCliDataParser.parseSessionBoard(raw)
+            assertEquals(emptyList(), result.messages)
+            assertNull(result.cursor)
+            assertFalse(result.hasMore)
+        }
+
+        @Test
+        fun `parseSessionBoard - drops a message row missing required fields`() {
+            val raw = """{"ownerSessionID":"ses_root","revision":1,"hasMore":false,"messages":[""" +
+                """{"id":"m1","from":"main","to":"ALL","type":"INFO","body":"ok"},""" +
+                """{"id":"m2","to":"ALL","type":"INFO","body":"missing from"}""" +
+                """]}"""
+
+            val result = KiloCliDataParser.parseSessionBoard(raw)
+            assertEquals(1, result.messages.size)
+            assertEquals("m1", result.messages.single().id)
+        }
+
+        // ---- buildResetSessionBoardJson ----
+
+        @Test
+        fun `buildResetSessionBoardJson - encodes the revision`() {
+            assertEquals("""{"revision":3}""", KiloCliDataParser.buildResetSessionBoardJson(3))
         }
 
         @Test
@@ -1992,18 +2084,18 @@ class KiloCliDataParserTest {
             // Regression: CLI serializes promise-backed templates as {} which used to
             // crash JetBrains startup before parsing was moved to this parser.
             val raw = """[
-                {"name":"local-review","description":"local review","template":{},"hints":[],"source":"command"},
-                {"name":"local-review-uncommitted","description":"local review (uncommitted)","template":{},"hints":[]}
+                {"name":"sample-one","description":"sample one","template":{},"hints":[],"source":"command"},
+                {"name":"sample-two","description":"sample two","template":{},"hints":[]}
             ]"""
 
             val result = KiloCliDataParser.parseCommands(raw)
 
             assertEquals(2, result.size)
-            assertEquals("local-review", result[0].name)
-            assertEquals("local review", result[0].description)
+            assertEquals("sample-one", result[0].name)
+            assertEquals("sample one", result[0].description)
             assertEquals("command", result[0].source)
             assertEquals(emptyList(), result[0].hints)
-            assertEquals("local-review-uncommitted", result[1].name)
+            assertEquals("sample-two", result[1].name)
         }
 
         @Test
@@ -2376,6 +2468,31 @@ class KiloCliDataParserTest {
                 "{\"compaction\":{\"threshold_percent\":null}}",
                 KiloCliDataParser.buildConfigPatch(patch),
             )
+        }
+
+        @Test
+        fun `buildConfigPatch - shared_agent_board set true`() {
+            val patch = ConfigPatchDto(shared_agent_board = true)
+
+            assertEquals(
+                "{\"shared_agent_board\":true}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - shared_agent_board set false`() {
+            val patch = ConfigPatchDto(shared_agent_board = false)
+
+            assertEquals(
+                "{\"shared_agent_board\":false}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - shared_agent_board omitted when null`() {
+            assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
         }
 
         @Test

@@ -21,6 +21,8 @@ import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
@@ -30,11 +32,16 @@ import com.intellij.openapi.util.SystemInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
+import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
@@ -136,10 +143,180 @@ class KiloWorktreeRpcApiImplTest {
 
         // Orphan paths are resolved the way git reports worktree paths (realpath), so they compare
         // equal to the other DTOs' paths on a symlinked temp dir.
-        assertEquals(listOf(leftover.toRealPath().toString()), listed.orphans)
+        assertEquals(listOf(leftover.toRealPath().toString()), listed.orphans.map { it.path })
+        assertEquals(listOf(OrphanKind.LEFTOVER), listed.orphans.map { it.kind }, "a plain directory is a leftover, not a broken checkout")
         assertTrue(listed.worktrees.any { it.path == created.path }, "a live worktree is not an orphan")
         // Reported, never deleted: a leftover directory can hold files that exist nowhere else.
         assertTrue(Files.isDirectory(leftover.resolve(".kilo-dev")))
+    }
+
+    @Test
+    fun `list classifies an orphan that still holds a git checkout as broken`() = runBlocking {
+        initRepo()
+        val broken = repo.resolve(".kilo").resolve("worktrees").resolve("broken")
+        Files.createDirectories(broken)
+        // A plain file named `.git` is what a linked worktree checkout actually has (it points back
+        // at the shared `.git` dir) — a directory named `.git` is the primary repo's own shape. Either
+        // is enough to call the leftover "still holds a checkout".
+        Files.writeString(broken.resolve(".git"), "gitdir: /nowhere\n")
+
+        val listed = api.list(repo.toString())
+
+        assertEquals(listOf(broken.toRealPath().toString()), listed.orphans.map { it.path })
+        assertEquals(listOf(OrphanKind.BROKEN), listed.orphans.map { it.kind })
+    }
+
+    @Test
+    fun `orphanSizes sums regular file sizes and never follows symlinks`() = runBlocking {
+        initRepo()
+        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(orphan)
+        Files.write(orphan.resolve("a.bin"), ByteArray(10))
+        Files.write(orphan.resolve("b.bin"), ByteArray(20))
+        val target = Files.createTempDirectory("kilo-orphan-symlink-target")
+        Files.write(target.resolve("outside.bin"), ByteArray(1_000))
+        runCatching { Files.createSymbolicLink(orphan.resolve("link"), target) }
+        try {
+            val sizes = api.orphanSizes(repo.toString(), listOf(orphan.toString()))
+            assertEquals(30L, sizes[orphan.toString()], "size must exclude the symlinked tree entirely")
+        } finally {
+            delete(target)
+        }
+    }
+
+    @Test
+    fun `orphanSizes omits a path that fails to walk instead of failing the batch`() = runBlocking {
+        initRepo()
+        val ok = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(ok)
+        Files.write(ok.resolve("a.bin"), ByteArray(5))
+        val missing = repo.resolve(".kilo").resolve("worktrees").resolve("does-not-exist")
+
+        val sizes = api.orphanSizes(repo.toString(), listOf(ok.toString(), missing.toString()))
+
+        assertEquals(5L, sizes[ok.toString()])
+        assertFalse(sizes.containsKey(missing.toString()), "a path that could not be measured must be omitted, not zero")
+    }
+
+    /**
+     * The frontend cancels a size pass whenever the orphan set changes or a delete starts, and
+     * `Files.walkFileTree` cannot be interrupted — so the walk has to check cancellation itself rather
+     * than leave a cancelled coroutine walking every remaining path on Dispatchers.IO.
+     *
+     * Cancelling before the call is ever reached (`job.cancel()` then `withContext(job) { ... }`) would
+     * only prove that `withContext` on an already-dead job throws without entering the block — true of
+     * any suspend function and unrelated to the `ensureActive()`/`isActive` checks this is meant to
+     * cover. This instead cancels a walk that is demonstrably still running: a full, uncancelled pass
+     * over a large tree is timed first, then a second pass over the same tree is cancelled partway
+     * through and shown to finish in a small fraction of that baseline — which a walk with no
+     * cancellation checks could not do, since nothing would tell it to stop.
+     */
+    @Test
+    fun `orphanSizes stops mid-walk once cancelled, instead of running to completion`() = runBlocking {
+        initRepo()
+        val big = repo.resolve(".kilo").resolve("worktrees").resolve("big")
+        Files.createDirectories(big)
+        repeat(20_000) { i -> Files.write(big.resolve("f$i.bin"), ByteArray(1)) }
+        val target = listOf(big.toString())
+
+        val baselineStart = System.nanoTime()
+        api.orphanSizes(repo.toString(), target)
+        val baseline = System.nanoTime() - baselineStart
+
+        val job = Job()
+        val cancelledStart = System.nanoTime()
+        val deferred = CoroutineScope(Dispatchers.IO + job).async { api.orphanSizes(repo.toString(), target) }
+        // A quarter of the uncancelled duration is comfortably inside the walk, not before or after it.
+        delay(TimeUnit.NANOSECONDS.toMillis(baseline / 4).coerceAtLeast(1))
+        job.cancel()
+        val outcome = runCatching { deferred.await() }
+        val elapsed = System.nanoTime() - cancelledStart
+
+        assertTrue(
+            outcome.exceptionOrNull() is CancellationException,
+            "a cancelled pass must not answer with sizes -> ${outcome.getOrNull()}",
+        )
+        assertTrue(
+            elapsed < baseline * 3 / 4,
+            "cancelling took ${elapsed / 1_000_000}ms against an uncancelled ${baseline / 1_000_000}ms " +
+                "-- a walk with no cancellation checks would not finish any faster than the baseline",
+        )
+    }
+
+    @Test
+    fun `removeOrphans deletes a validated leftover directory`() = runBlocking {
+        initRepo()
+        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(orphan.resolve("nested"))
+        Files.writeString(orphan.resolve("nested").resolve("file.txt"), "hi")
+        val real = orphan.toRealPath().toString()
+
+        val result = api.removeOrphans(repo.toString(), listOf(real))
+
+        assertEquals(listOf(OrphanRemoveResultDto(real, ok = true)), result.results)
+        assertFalse(Files.exists(orphan), "the trash-unavailable fallback must delete synchronously, not defer")
+        assertTrue(api.list(repo.toString()).orphans.isEmpty())
+    }
+
+    @Test
+    fun `removeOrphans refuses a path outside managed storage`() = runBlocking {
+        initRepo()
+        val outside = repo.resolve("outside")
+        Files.createDirectories(outside)
+
+        val result = api.removeOrphans(repo.toString(), listOf(outside.toString()))
+
+        val entry = result.results.single()
+        assertFalse(entry.ok)
+        assertTrue(entry.error?.contains("Refusing") == true, entry.error)
+        assertTrue(Files.isDirectory(outside), "unmanaged directory must not be touched")
+    }
+
+    @Test
+    fun `removeOrphans refuses a path that is actually a registered worktree`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        val result = api.removeOrphans(repo.toString(), listOf(created.path))
+
+        val entry = result.results.single()
+        assertFalse(entry.ok)
+        assertTrue(entry.error?.contains("managed worktree") == true, entry.error)
+        assertTrue(Files.isDirectory(Path.of(created.path)), "a live managed worktree must not be touched")
+    }
+
+    @Test
+    fun `removeOrphans rejects a stale selection that is no longer an orphan`() = runBlocking {
+        initRepo()
+        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(orphan)
+        val real = orphan.toRealPath().toString()
+        // Someone else already cleaned it up between the dialog's scan and this call.
+        delete(orphan)
+
+        val result = api.removeOrphans(repo.toString(), listOf(real))
+
+        val entry = result.results.single()
+        assertFalse(entry.ok)
+        assertTrue(entry.error?.contains("No longer an orphan") == true, entry.error)
+    }
+
+    @Test
+    fun `removeOrphans reports independent results per path`() = runBlocking {
+        initRepo()
+        val ok = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(ok)
+        val okReal = ok.toRealPath().toString()
+        val outside = repo.resolve("outside")
+        Files.createDirectories(outside)
+
+        val result = api.removeOrphans(repo.toString(), listOf(okReal, outside.toString()))
+
+        assertEquals(2, result.results.size)
+        assertTrue(result.results.first { it.path == okReal }.ok)
+        assertFalse(result.results.first { it.path == outside.toString() }.ok)
+        assertFalse(Files.exists(ok))
+        assertTrue(Files.isDirectory(outside))
     }
 
     @Test
@@ -415,6 +592,53 @@ class KiloWorktreeRpcApiImplTest {
         assertTrue(api.stats(repo.toString()).items.none { it.path == created.path })
         val listed = output(repo, "worktree", "list", "--porcelain")
         assertFalse(listed.contains(created.path), "a poll with a free lock should prune: $listed")
+    }
+
+    @Test
+    fun `checkReappearance re-stages and reaps once when the original path came back`() = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val trash = WorktreeTrash(scope)
+        val trashApi = KiloWorktreeRpcApiImpl(trash)
+        try {
+            val dir = repo.resolve("reappeared")
+            Files.createDirectories(dir)
+            // Simulate a reap that already settled (the sibling from the original stage is long gone)
+            // while something recreated the original path afterward — the exact race the guard exists
+            // to catch, made deterministic instead of racing a real background reap.
+            val temp = assertNotNull(trash.stage(dir))
+            trash.reap(temp)
+            trash.drain()
+            Files.createDirectories(dir)
+
+            trashApi.checkReappearance(dir.toString(), temp)
+            trash.drain()
+
+            assertFalse(Files.exists(dir), "a path that reappeared after reap must be staged and reaped once more")
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `checkReappearance does nothing when the original path did not come back`() = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val trash = WorktreeTrash(scope)
+        val trashApi = KiloWorktreeRpcApiImpl(trash)
+        try {
+            val dir = repo.resolve("gone-for-good")
+            Files.createDirectories(dir)
+            val temp = assertNotNull(trash.stage(dir))
+            trash.reap(temp)
+            trash.drain()
+
+            trashApi.checkReappearance(dir.toString(), temp)
+            trash.drain()
+
+            assertFalse(Files.exists(dir))
+            assertEquals(0, trash.pending(), "nothing should have been staged again")
+        } finally {
+            scope.cancel()
+        }
     }
 
     @Test

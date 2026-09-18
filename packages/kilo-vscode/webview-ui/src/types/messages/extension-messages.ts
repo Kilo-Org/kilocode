@@ -181,6 +181,12 @@ export interface SessionStatusMessage {
   next?: number
 }
 
+export interface SessionWakeupMessage {
+  type: "sessionWakeup"
+  sessionID: string
+  pending: number
+}
+
 export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
@@ -421,6 +427,8 @@ export interface AppendReviewCommentsToTerminalMessage {
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ProfileDataMessage {
@@ -901,8 +909,11 @@ export interface AgentManagerStateMessage {
    *
    * `broken` still holds a git checkout, so it can contain work that exists nowhere else; `leftover`
    * is a bare directory. The notice says which, because the two do not deserve the same warning.
+   *
+   * `sized` is set once the size pass is done with a folder; without `bytes` it means the folder
+   * could not be measured, which is how the UI knows to stop saying it is still calculating.
    */
-  orphanDirectories?: { path: string; kind: "broken" | "leftover" }[]
+  orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number; sized?: boolean }[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
@@ -1290,6 +1301,9 @@ export interface AgentManagerSendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -1611,6 +1625,7 @@ export type ExtensionMessage =
   | PartsUpdatedMessage
   | PartRemovedMessage
   | SessionStatusMessage
+  | SessionWakeupMessage
   | SessionTurnClosedMessage
   | SessionErrorMessage
   | PermissionRequestMessage
