@@ -2,6 +2,7 @@ import fuzzysort from "fuzzysort"
 import type { FileAttachment, FileSearchItem, SessionSearchItem } from "../types/messages"
 import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
+import { escapeRegExp } from "../utils/escape-regexp"
 
 /**
  * The in-progress `@mention` query ending at the cursor.
@@ -611,4 +612,33 @@ export function buildSessionAttachments(text: string, mentioned: Map<string, Ses
     })
   }
   return result
+}
+
+export interface MentionSegment {
+  text: string
+  mention: boolean
+}
+
+/**
+ * Split prompt text into plain and mention segments for the highlight overlay.
+ * Tokens are matched longest first so a title that contains another token still
+ * highlights as one mention. A leading `@` is required, so bare tokens in prose
+ * stay plain.
+ */
+export function segmentMentionText(text: string, tokens: Set<string>): MentionSegment[] {
+  const list = [...tokens].filter((token) => token.length > 0).sort((a, b) => b.length - a.length)
+  if (list.length === 0 || !text) return text ? [{ text, mention: false }] : []
+  const escaped = list.map((token) => escapeRegExp(token))
+  const pattern = new RegExp(`@(?:${escaped.join("|")})`, "g")
+  const segments: MentionSegment[] = []
+  let last = 0
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? 0
+    const plain = text.slice(last, index)
+    if (plain) segments.push({ text: plain, mention: false })
+    segments.push({ text: match[0], mention: true })
+    last = index + match[0].length
+  }
+  if (last < text.length) segments.push({ text: text.slice(last), mention: false })
+  return segments
 }

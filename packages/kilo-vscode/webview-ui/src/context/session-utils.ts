@@ -8,6 +8,10 @@ import {
   type BrowserReference,
 } from "../../../src/shared/browser-feedback"
 import type { ReviewCommentEntry, ReviewMessageData } from "../../../src/shared/review-comments"
+import { partInjected } from "../../../src/shared/injected-prompt"
+import { childID } from "../../../src/kilo-provider/task-session"
+
+export { childID }
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -99,6 +103,8 @@ export function revertPromptState(parts: readonly Part[]): RevertPromptState {
       .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
       .map((p) => {
         if (p.type !== "text") return ""
+        const injected = partInjected(p.metadata)
+        if (injected) return injected.title.startsWith("/") ? injected.title : ""
         return partFeedback(p.metadata, p.text)?.body ?? p.text
       })
       .join(""),
@@ -160,11 +166,6 @@ type TaskPart = {
   tool?: string
   metadata?: { sessionId?: string }
   state?: ToolState
-}
-
-export function childID(part: TaskPart): string | undefined {
-  if (part.type !== "tool" || part.tool !== "task") return undefined
-  return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
 }
 
 export function inUse(
