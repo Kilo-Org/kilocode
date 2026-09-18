@@ -203,9 +203,10 @@ export function BasicTool(props: BasicToolProps) {
   )
 
   onCleanup(() => {
-    // kilocode_change - complete, not stop: a stopped animation keeps Motion's
-    // reference cycle to the removed element alive (see kilo-ui motion.tsx settle)
+    // kilocode_change start - complete, not stop: a stopped animation keeps
+    // Motion's reference cycle to the removed element alive (see kilo-ui motion.tsx settle)
     heightAnim?.complete()
+    // kilocode_change end
   })
 
   const handleOpenChange = (value: boolean) => {
