@@ -2,7 +2,7 @@
  * Provider action handlers extracted from KiloProvider to stay under max-lines.
  * These are pure async functions that operate on the SDK client — no vscode dependency.
  */
-import type { Config, KiloClient } from "./backend/index"
+import type { Config, KiloClient, Provider } from "./backend/index"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
 import {
   resolveCustomProviderAuth,
@@ -71,7 +71,7 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
   ])
   const authStates: Record<string, AuthState> = {}
   const storedKeys: Record<string, StoredProviderKey> = {}
-  const all = response.all.map((item) => {
+  const all = response.all.map((item: Provider) => {
     const raw = item as Record<string, unknown>
     if (typeof raw.id === "string" && typeof raw.key === "string" && raw.key) {
       authStates[raw.id] = "api"
@@ -381,7 +381,7 @@ export async function disconnectProvider(
     const configured = !!cfg || !!effective
     const custom = customProvider(cfg) || customProvider(effective)
     const { response } = await fetchProviderData(ctx.client, ctx.workspaceDir)
-    const active = response.all.find((item) => item.id === id)
+    const active = response.all.find((item: Provider) => item.id === id)
     const oauth = active?.source === "custom" && configured && !custom
 
     // Config-sourced providers may not have auth store entries because

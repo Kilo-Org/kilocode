@@ -9,6 +9,7 @@ import type { Layout } from "../../kilo-cli/src/paths"
 import { launch } from "../../kilo-cli/src/interactive-server"
 import { connectV2 } from "../src/connection"
 import { createSettingsMethods } from "../src/backend/settings"
+import type { Config } from "../src/backend/index"
 
 function makeLayout(root: string): Layout {
   const paths = {
@@ -181,7 +182,7 @@ test("config adapter translates v1 config calls through native reads and the set
               .data!
             expect(updated.shell).toBe("/bin/sh")
             await expect(
-              methods.config.update({ config: { nope_provider: { name: "nope" } } }, { throwOnError: true }),
+              methods.config.update({ config: { nope_provider: { name: "nope" } } as Partial<Config> }, { throwOnError: true }),
             ).rejects.toThrow("unsupported config keys: nope_provider")
 
             // Global writes route to the profile scope; the project scope keeps
@@ -207,7 +208,7 @@ test("config adapter translates v1 config calls through native reads and the set
             expect(globalWritten.global.shell).toBe("/bin/global-shell")
             expect(globalWritten.effective.shell).toBe("/bin/sh")
 
-            const globalGet = (await methods.global.config.get({}, { throwOnError: true })).data!
+            const globalGet = (await methods.global.config.get({ throwOnError: true })).data!
             expect(globalGet.shell).toBe("/bin/global-shell")
             expect(globalGet.tool_output?.max_lines).toBeUndefined()
             expect((await methods.config.get({}, { throwOnError: true })).data!.shell).toBe("/bin/sh")

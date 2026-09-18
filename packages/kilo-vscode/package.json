@@ -1192,7 +1192,8 @@
   "scripts": {
     "extension": "bun script/dev.ts",
     "build": "bun script/build.ts",
-    "typecheck": "tsgo --noEmit",
+    "typecheck": "bun script/typecheck.ts",
+    "typecheck:port": "tsgo --noEmit",
     "test": "bun test test/connection.test.ts test/web-server.test.ts test/extension-entry.test.ts",
     "test:native": "bun script/test-existing-extension.ts",
     "package": "bun script/package.ts"

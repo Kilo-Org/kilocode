@@ -2793,10 +2793,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const action = await vscode.window.showWarningMessage(`Config: ${summary}`, "Show Details")
       if (action === "Show Details") {
-        const lines = list.map((w) => {
-          const base = `${w.path}\n  ${w.message}`
-          return w.detail ? `${base}\n  ${w.detail}` : base
-        })
+        const lines = list.map((w) => `${w.path}\n  ${w.message}`)
         const channel = vscode.window.createOutputChannel("Kilo Config Warnings")
         channel.clear()
         channel.appendLine(lines.join("\n\n"))
@@ -3685,7 +3682,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               agent,
               variant,
               editorContext,
-              snapshotInitialization: this.opts.snapshotInitialization,
             }),
           sid,
           messageID,
@@ -3771,7 +3767,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               agent,
               variant,
               parts,
-              snapshotInitialization: this.opts.snapshotInitialization,
             }),
           sid,
           messageID,

@@ -10,14 +10,15 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
+    "verbatimModuleSyntax": false,
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
     "lib": ["es2023", "dom", "dom.iterable"],
     // Type Checking & Safety
     "strict": true,
+    "noUncheckedIndexedAccess": false,
     "types": ["vite/client", "bun"],
-    "baseUrl": ".",
     "paths": {
       "@kilocode/client/*": ["../kilo-client/src/*"]
     }

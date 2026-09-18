@@ -1,9 +1,10 @@
 import type { KiloClient } from "../backend/index"
+import type { SessionMetadata } from "@opencode-ai/client/promise"
 import type { SandboxPreference } from "../services/sandbox-preference"
 
 export const SANDBOX_METADATA_KEY = "kilocode.sandbox"
 
-export function sandboxMetadata(enabled: boolean, metadata?: Record<string, unknown>) {
+export function sandboxMetadata(enabled: boolean, metadata?: SessionMetadata): SessionMetadata {
   return {
     ...metadata,
     [SANDBOX_METADATA_KEY]: {
@@ -25,7 +26,7 @@ export async function sandboxSessionMetadata(
   preference: SandboxPreference | undefined,
   client: KiloClient,
   directory: string,
-  metadata?: Record<string, unknown>,
+  metadata?: SessionMetadata,
 ) {
   return sandboxMetadata(await sandboxDefault(preference, client, directory), metadata)
 }
