@@ -951,6 +951,15 @@ describe("segmentMentionText", () => {
     expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual(["@Fix auth bug"])
   })
 
+  it("matches tokens that contain regex metacharacters literally", () => {
+    const tokens = new Set(["pkg.name(v2)+beta", "C:\\repo\\wt"])
+    const segments = segmentMentionText("@pkg.name(v2)+beta and @C:\\repo\\wt", tokens)
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual([
+      "@pkg.name(v2)+beta",
+      "@C:\\repo\\wt",
+    ])
+  })
+
   it("returns one plain segment when there are no tokens or no text", () => {
     expect(segmentMentionText("plain", new Set())).toEqual([{ text: "plain", mention: false }])
     expect(segmentMentionText("", new Set(["model"]))).toEqual([])

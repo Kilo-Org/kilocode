@@ -2,6 +2,7 @@ import fuzzysort from "fuzzysort"
 import type { FileAttachment, FileSearchItem, SessionSearchItem } from "../types/messages"
 import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
+import { escapeRegExp } from "../utils/escape-regexp"
 
 /**
  * The in-progress `@mention` query ending at the cursor.
@@ -627,7 +628,7 @@ export interface MentionSegment {
 export function segmentMentionText(text: string, tokens: Set<string>): MentionSegment[] {
   const list = [...tokens].filter((token) => token.length > 0).sort((a, b) => b.length - a.length)
   if (list.length === 0 || !text) return text ? [{ text, mention: false }] : []
-  const escaped = list.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  const escaped = list.map((token) => escapeRegExp(token))
   const pattern = new RegExp(`@(?:${escaped.join("|")})`, "g")
   const segments: MentionSegment[] = []
   let last = 0
