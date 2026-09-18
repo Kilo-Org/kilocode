@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Error o conexión perdida.",
   "session.activity.retry": "Reintentando automáticamente.",
   "session.activity.busy": "En curso.",
+  "session.activity.scheduled": "Esperando un despertar programado.",
   "session.activity.done": "Turno completado.",
   "session.activity.idle": "No está en ejecución.",
 
@@ -599,6 +600,7 @@ export const dict = {
   "session.tabs.switcher.current": "Actual",
   "session.tabs.switcher.pending": "Nueva",
   "session.tabs.switcher.busy": "Trabajando",
+  "session.tabs.switcher.scheduled": "Programado",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nube",
   "session.tab.worktree": "Árbol de trabajo",

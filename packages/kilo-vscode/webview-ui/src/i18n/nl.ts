@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Fout of verbinding verbroken.",
   "session.activity.retry": "Automatisch opnieuw proberen.",
   "session.activity.busy": "In uitvoering.",
+  "session.activity.scheduled": "Wacht op een geplande wekactie.",
   "session.activity.done": "Beurt voltooid.",
   "session.activity.idle": "Niet actief.",
 
@@ -548,6 +549,7 @@ export const dict = {
   "session.tabs.switcher.current": "Huidig",
   "session.tabs.switcher.pending": "Nieuw",
   "session.tabs.switcher.busy": "Bezig",
+  "session.tabs.switcher.scheduled": "Gepland",
   "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Werkboom",

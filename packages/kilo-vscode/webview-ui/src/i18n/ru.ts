@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Ошибка или потеря соединения.",
   "session.activity.retry": "Автоматический повтор.",
   "session.activity.busy": "Выполняется.",
+  "session.activity.scheduled": "Ожидание запланированного пробуждения.",
   "session.activity.done": "Ход завершён.",
   "session.activity.idle": "Агент не запущен.",
 
@@ -593,6 +594,7 @@ export const dict = {
   "session.tabs.switcher.current": "Текущая",
   "session.tabs.switcher.pending": "Новая",
   "session.tabs.switcher.busy": "В работе",
+  "session.tabs.switcher.scheduled": "Запланировано",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
   "session.tab.worktree": "Рабочее дерево",

@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "エラーまたは接続切断。",
   "session.activity.retry": "自動的に再試行中。",
   "session.activity.busy": "進行中。",
+  "session.activity.scheduled": "予約されたウェイクアップを待機しています。",
   "session.activity.done": "ターン完了。",
   "session.activity.idle": "実行されていません。",
 
@@ -590,6 +591,7 @@ export const dict = {
   "session.tabs.switcher.current": "現在",
   "session.tabs.switcher.pending": "新規",
   "session.tabs.switcher.busy": "作業中",
+  "session.tabs.switcher.scheduled": "予約済み",
   "session.tab.local": "ローカル",
   "session.tab.cloud": "クラウド",
   "session.tab.worktree": "ワークツリー",

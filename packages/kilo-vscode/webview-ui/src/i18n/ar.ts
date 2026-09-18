@@ -73,6 +73,7 @@ export const dict = {
   "session.activity.error": "حدث خطأ أو فُقد الاتصال.",
   "session.activity.retry": "إعادة المحاولة تلقائيًا.",
   "session.activity.busy": "قيد التنفيذ.",
+  "session.activity.scheduled": "في انتظار استيقاظ مجدول.",
   "session.activity.done": "اكتمل الدور.",
   "session.activity.idle": "غير قيد التشغيل.",
 
@@ -543,6 +544,7 @@ export const dict = {
   "session.tabs.switcher.current": "الحالي",
   "session.tabs.switcher.pending": "جديد",
   "session.tabs.switcher.busy": "جارٍ العمل",
+  "session.tabs.switcher.scheduled": "مجدولة",
   "session.tab.local": "محلي",
   "session.tab.cloud": "السحابة",
   "session.tab.worktree": "شجرة العمل",
