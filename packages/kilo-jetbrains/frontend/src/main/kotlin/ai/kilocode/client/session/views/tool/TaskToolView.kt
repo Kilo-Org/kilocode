@@ -369,7 +369,7 @@ private class TaskBody(glyph: JBLabel) {
         override fun updateUI() {
             super.updateUI()
             background = SessionUiStyle.Colors.codeBlockBackground()
-            border = taskBodyBorder(glyph)
+            border = toolBodyBorder(glyph)
         }
     }.apply {
         add(rows, BorderLayout.CENTER)
@@ -416,20 +416,6 @@ private fun rowTitleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
     UiStyle.Colors.errorLabelForeground()
 } else {
     SessionUiStyle.Text.Secondary.foreground()
-}
-
-private fun taskBodyBorder(glyph: JBLabel) = run {
-    val width = maxOf(
-        glyph.preferredSize.width,
-        glyph.icon?.iconWidth ?: 0,
-        JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
-    )
-    JBUI.Borders.empty(
-        UiStyle.Gap.sm(),
-        width + JBUI.scale(SessionUiStyle.View.Layout.GAP) + UiStyle.Gap.md(),
-        UiStyle.Gap.sm(),
-        UiStyle.Gap.md(),
-    )
 }
 
 private fun agentTitle(tool: Tool): String {

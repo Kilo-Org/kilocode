@@ -477,7 +477,7 @@ for (const failed of [false, true]) {
             type: "INFO",
             body: "Explicit read regression body",
           })
-          yield* llm.push(reply().tool("board_read", { since: failed ? "board_missing" : null, limit: null }))
+          yield* llm.push(reply().tool("board_read", { since: null, limit: failed ? 0 : null }))
           yield* llm.push(reply().tool("read", { filePath: "boundary.txt" }))
           yield* llm.push(reply().text("Done").stop())
           yield* prompt.prompt({

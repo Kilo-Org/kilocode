@@ -54,6 +54,7 @@ export const SandboxTooltipContent: Component<{ enabled: boolean; network: boole
               ? "prompt.action.sandbox.description.disabled"
               : "prompt.action.sandbox.description.disabledNetworkAllowed",
         )}
+        {props.enabled ? ` ${language.t("prompt.action.sandbox.description.escalation")}` : ""}
       </div>
     </div>
   )

@@ -93,15 +93,6 @@ paru -S kilo-bin
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-在 [app.kilo.ai/claw](https://app.kilo.ai/claw) 启动你的常驻 AI 代理。
-
-</details>
-
-<details>
 <summary>从 GitHub Releases 安装 CLI（二进制文件）</summary>
 
 从 [Releases 页面](https://github.com/Kilo-Org/kilocode/releases) 下载最新二进制文件。
