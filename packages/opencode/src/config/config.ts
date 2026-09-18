@@ -59,6 +59,7 @@ import {
 } from "@kilocode/kilo-indexing/config"
 import { unique } from "remeda"
 import { installLocalPluginDependency, needsLocalPluginDependency } from "@/kilocode/config/plugin-deps"
+import { KiloLocalOverride } from "@/kilocode/config/local-override"
 // kilocode_change end
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
@@ -649,6 +650,8 @@ const layer = Layer.effect(
           return result
         }
 
+        const protection = KiloLocalOverride.make()
+
         const merge = Effect.fnUntraced(function* (
           source: string,
           next: Info,
@@ -658,6 +661,7 @@ const layer = Layer.effect(
           const scope = kind ?? (yield* pluginScopeForSource(source))
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
+          protection.observe(scoped, scope) // kilocode_change - track a project override for the config-edit protection field
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
@@ -848,6 +852,9 @@ const layer = Layer.effect(
               )
               plugins.push(...(next.plugin ?? []))
               yield* merge(source, next, dirScope, dirTrusted)
+              // kilocode_change - the explicit env dir's own config is an eligible source even though
+              // it is merged with the global trust policy; only the field is tracked.
+              if (dir === Flag.KILO_CONFIG_DIR) protection.observe(next, "local")
               result.agent ??= {}
               result.mode ??= {}
               result.plugin ??= []
@@ -898,6 +905,10 @@ const layer = Layer.effect(
           }
           // kilocode_change end
         }
+
+        // kilocode_change start - re-apply the last eligible project/env value before inline/env/cloud/managed.
+        result = protection.apply(result)
+        // kilocode_change end
 
         if (process.env.KILO_CONFIG_CONTENT) {
           // kilocode_change start - capture KILO_CONFIG_CONTENT parse failures as warnings

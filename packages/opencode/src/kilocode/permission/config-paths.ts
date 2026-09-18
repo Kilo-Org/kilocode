@@ -1,5 +1,5 @@
 import path from "path"
-import { existsSync, realpathSync } from "fs"
+import { lstatSync, readlinkSync } from "fs"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
@@ -46,11 +46,13 @@ export namespace ConfigProtection {
    * - `global`: inside a Kilo global config directory (a global config dir inside the
    *   project still counts as global).
    * - `inside`: a protected config path proven to be inside the project boundary.
-   * - `outside`: a protected config path outside the boundary, or one that could not be
-   *   proven inside (symlink escape, failed resolution). Falls back to the global policy.
+   * - `outside`: a protected config path proven outside the boundary (symlink escape).
+   * - `unproven`: a protected config path whose physical location cannot be proven (unreadable
+   *   component, link cycle, or a `..` behind a missing component). It is neither inside nor
+   *   outside, so an opt-out in either policy alone cannot weaken it.
    * - `none`: not a protected config path.
    */
-  type Scope = "global" | "inside" | "outside" | "none"
+  type Scope = "global" | "inside" | "outside" | "unproven" | "none"
 
   /** Per-request outcome of applying the global and project protection policies. */
   export type Verdict = {
@@ -130,20 +132,92 @@ export namespace ConfigProtection {
     ).filter(Boolean)
   }
 
-  function physical(filepath: string): string | undefined {
+  /** Symlink hops allowed before a chain is treated as a cycle. Mirrors the common SYMLOOP_MAX bound. */
+  const MAX_LINKS = 40
+
+  /** ENOENT/ENOTDIR mean the entry is absent; any other lstat failure is uncertain. */
+  function absent(err: unknown): boolean {
+    if (typeof err !== "object" || err === null || !("code" in err)) return false
+    return err.code === "ENOENT" || err.code === "ENOTDIR"
+  }
+
+  /** lstat without following the final symlink. null when absent, undefined when uncertain. */
+  function lstat(file: string) {
     try {
-      const parts: string[] = []
-      let current = path.resolve(filepath)
-      while (!existsSync(current)) {
-        const parent = path.dirname(current)
-        if (parent === current) return
-        parts.unshift(path.basename(current))
-        current = parent
-      }
-      return path.join(realpathSync.native(current), ...parts)
-    } catch {
-      return
+      return lstatSync(file)
+    } catch (err) {
+      return absent(err) ? null : undefined
     }
+  }
+
+  function readlink(file: string): string | undefined {
+    try {
+      return readlinkSync(file)
+    } catch {
+      // A link we cannot read cannot be trusted; the caller treats it as unproven.
+      return undefined
+    }
+  }
+
+  /** Join a raw path without normalizing `..`, so the OS, not `path.resolve`, applies it. */
+  function joinRaw(base: string, child: string): string {
+    return base.endsWith(path.sep) ? base + child : base + path.sep + child
+  }
+
+  /**
+   * Resolve `input` to its physical location component by component, following symlinks as they are
+   * encountered and applying `..` to the already-resolved physical parent. The runtime `realpath`
+   * collapses a `..` that follows a symlink lexically, which can disagree with the kernel, so it is
+   * not used here. A nonexistent trailing run is re-appended only while it is made of plain names,
+   * so an ordinary new file keeps its lexical project scope. Returns undefined when the result
+   * cannot be proven (unreadable component, link cycle, hop overflow, or a `..` behind a
+   * missing/non-directory component); callers then treat the path as unproven, never as inside.
+   */
+  function canonical(input: string, links: number): string | undefined {
+    if (links > MAX_LINKS) return undefined
+    const root = path.parse(input).root
+    const parts = input
+      .slice(root.length)
+      .split(/[\\/]+/)
+      .filter((part) => part.length > 0)
+    const dirs: boolean[] = []
+    let current = root
+    let i = 0
+    while (i < parts.length) {
+      const name = parts[i++]
+      if (name === ".") continue
+      if (name === "..") {
+        const dir = dirs.at(-1)
+        if (dir === undefined) continue
+        if (!dir) return undefined
+        dirs.pop()
+        current = path.dirname(current)
+        continue
+      }
+      const candidate = joinRaw(current, name)
+      const info = lstat(candidate)
+      if (info === undefined) return undefined
+      if (info === null) {
+        const tail = parts.slice(i - 1)
+        if (tail.some((part) => part === "." || part === "..")) return undefined
+        if (dirs.at(-1) === false) return undefined
+        return tail.reduce((acc, part) => joinRaw(acc, part), current)
+      }
+      if (info.isSymbolicLink()) {
+        const target = readlink(candidate)
+        if (target === undefined || target.length === 0) return undefined
+        const next = path.isAbsolute(target) ? target : joinRaw(current, target)
+        const rest = parts.slice(i)
+        return canonical(rest.length > 0 ? joinRaw(next, rest.join(path.sep)) : next, links + 1)
+      }
+      dirs.push(info.isDirectory())
+      current = candidate
+    }
+    return current
+  }
+
+  function physical(filepath: string): string | undefined {
+    return canonical(path.isAbsolute(filepath) ? filepath : path.resolve(filepath), 0)
   }
 
   function skillRoot(pattern: string): string | undefined {
@@ -280,7 +354,9 @@ export namespace ConfigProtection {
     const canonRoot = physical(root)
     const canon = physical(abs)
     if (!protectedTarget(target, abs, root, canon, canonRoot)) return "none"
-    return canon && canonRoot && within(canon, canonRoot) ? "inside" : "outside"
+    // A protected target whose physical location is unprovable is neither inside nor outside.
+    if (!canon || !canonRoot) return "unproven"
+    return within(canon, canonRoot) ? "inside" : "outside"
   }
 
   /** Whether the requested (lexical) or canonical path is a protected config shape. */
@@ -326,27 +402,31 @@ export namespace ConfigProtection {
     readonly external: boolean
     /** Some protected target is proven inside the project boundary. */
     readonly inside: boolean
+    /** Some protected target's location is unprovable (cycle, unreadable, ambiguous traversal). */
+    readonly unproven?: boolean
     /** Exact global skill subtree that may bypass protection, resolved on first read. */
     readonly skill?: string
   }
 
   /**
    * Classify every target path of one request against the project boundary. This is the single
-   * filesystem-resolution pass: the returned scopes drive `candidate`, `external`, and `inside`,
-   * and the lazy skill probe is memoized. Prefer this plus `verdict` over `evaluate` when the same
-   * request is both gated (does policy loading apply?) and evaluated.
+   * filesystem-resolution pass: the returned scopes drive `candidate`, `external`, `inside`, and
+   * `unproven`, and the lazy skill probe is memoized. Prefer this plus `verdict` over `evaluate`
+   * when the same request is both gated (does policy loading apply?) and evaluated.
    */
   export function classify(request: Target, root: string): Classification {
     const scopes = targets(request).map((target) => level(target, root))
     const candidate = scopes.some((scope) => scope !== "none")
     const external = scopes.some((scope) => scope === "global" || scope === "outside")
     const inside = scopes.some((scope) => scope === "inside")
+    const unproven = scopes.some((scope) => scope === "unproven")
     let skill: string | undefined
     let resolved = false
     return {
       candidate,
       external,
       inside,
+      unproven,
       get skill() {
         if (!resolved) {
           skill = globalSkillPattern(request)
@@ -361,8 +441,14 @@ export namespace ConfigProtection {
   export function verdict(classification: Classification, input: { global?: Config; project?: Config } = {}): Verdict {
     if (!classification.candidate)
       return { candidate: false, protect: false, external: false, skill: classification.skill }
+    const global = enabled(input.global)
+    const project = enabled(input.project)
+    // Unproven targets are protected when either policy is active, so one opt-out cannot weaken the
+    // other policy for a location that cannot be proven inside or outside the project.
     const protect =
-      (classification.external && enabled(input.global)) || (classification.inside && enabled(input.project))
+      (classification.external && global) ||
+      (classification.inside && project) ||
+      (classification.unproven === true && (global || project))
     return {
       candidate: true,
       protect,
@@ -386,9 +472,10 @@ export namespace ConfigProtection {
    * Apply the global and project protection policies to one permission request.
    *
    * Targets proven inside the project boundary use the effective project policy; global config
-   * dirs, out-of-boundary targets, and targets that cannot be proven inside use the global
-   * policy. A request is protected when any of its targets is protected under its own policy,
-   * so a project opt-out can never bypass protection for an out-of-project target.
+   * dirs and out-of-boundary targets use the global policy. A target whose physical location is
+   * unprovable is protected when either policy is enabled, so one opt-out cannot weaken the other.
+   * A request is protected when any of its targets is protected under its own policy, so a project
+   * opt-out can never bypass protection for an out-of-project target.
    */
   export function evaluate(request: Target, input: { root: string; global?: Config; project?: Config }): Verdict {
     return verdict(classify(request, input.root), input)

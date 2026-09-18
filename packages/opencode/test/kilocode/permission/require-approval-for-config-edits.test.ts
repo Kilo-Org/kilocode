@@ -1696,6 +1696,330 @@ describe("require_approval_for_config_edits", () => {
       ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
     }),
   )
+
+  it.live("project false overrides a legacy home global true", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }) }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => auto("per_project_beats_legacy_off", target), {
+          git: true,
+          config: { require_approval_for_config_edits: false },
+        }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("project true overrides legacy home globals that disable protection", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({
+          ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
+          ".kilocode/kilo.jsonc": JSON.stringify({ require_approval_for_config_edits: false }),
+        }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => prompts("per_project_beats_legacy_on", target), {
+          git: true,
+          config: { require_approval_for_config_edits: true },
+        }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("keeps the legacy global fallback when the project does not set the value", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }) }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => prompts("per_legacy_fallback_project", target), { git: true }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("a project override does not change the global policy for global targets", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }) }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              // The project value overrides the legacy global value for the project's own files...
+              yield* auto("per_project_override_local", target)
+              // ...but the legacy global policy still protects global config targets.
+              yield* prompts("per_project_override_global", path.join(home, ".kilo", "kilo.json"))
+            }),
+          { git: true, config: { require_approval_for_config_edits: false } },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("an explicit project value overrides KILO_CONFIG when they conflict", () => {
+    const previous = process.env["KILO_CONFIG"]
+    const file = path.join(os.tmpdir(), "opencode-test-kiloconfig-" + Math.random().toString(36).slice(2) + ".json")
+    process.env["KILO_CONFIG"] = file
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG"]
+      else process.env["KILO_CONFIG"] = previous
+    }
+    return Effect.gen(function* () {
+      yield* withGlobal(undefined)
+      yield* Effect.promise(() => fs.writeFile(file, JSON.stringify({ require_approval_for_config_edits: false })))
+      yield* provideTmpdirInstance(
+        () =>
+          Effect.gen(function* () {
+            // KILO_CONFIG loads before the project files, so an explicit project true still wins.
+            yield* prompts("per_kiloconfig_project", target)
+          }),
+        { git: true, config: { require_approval_for_config_edits: true } },
+      )
+    }).pipe(Effect.ensuring(Effect.sync(restore)), Effect.ensuring(Effect.promise(() => fs.rm(file, { force: true }))))
+  })
+
+  it.live("keeps KILO_CONFIG_DIR precedence over an explicit project value", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const conf = path.join(os.tmpdir(), "opencode-test-confdir-priority-" + Math.random().toString(36).slice(2))
+    process.env["KILO_CONFIG_DIR"] = conf
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      yield* withGlobal(undefined)
+      yield* Effect.promise(async () => {
+        await fs.mkdir(conf, { recursive: true })
+        await fs.writeFile(path.join(conf, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false }))
+      })
+      yield* provideTmpdirInstance(() => auto("per_confdir_beats_project", target), {
+        git: true,
+        config: { require_approval_for_config_edits: true },
+      })
+    }).pipe(
+      Effect.ensuring(Effect.sync(restore)),
+      Effect.ensuring(Effect.promise(() => fs.rm(conf, { recursive: true, force: true }))),
+    )
+  })
+
+  it.live("keeps KILO_CONFIG_DIR precedence when it aliases a legacy .kilo home dir", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }) }),
+      )
+      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilo")
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => auto("per_env_alias_kilo", target), {
+          git: true,
+          config: { require_approval_for_config_edits: true },
+        }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
+
+  it.live("keeps KILO_CONFIG_DIR precedence when it aliases a legacy .kilocode home dir", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }) }),
+      )
+      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilocode")
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => auto("per_env_alias_kilocode", target), {
+          git: true,
+          config: { require_approval_for_config_edits: true },
+        }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
+
+  it.live("keeps an aliased KILO_CONFIG_DIR ahead of the project and other legacy home dirs", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({
+          ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }),
+          ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
+        }),
+      )
+      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilo")
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => auto("per_env_alias_kilo_beats", target), {
+          git: true,
+          config: { require_approval_for_config_edits: true },
+        }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
+
+  it.live("keeps KILO_CONFIG_DIR precedence when it aliases the primary global config dir", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const prevConfig = Global.Path.config
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+      ;(Global.Path as { config: string }).config = prevConfig
+    }
+    return Effect.gen(function* () {
+      const globalDir = yield* Effect.promise(() => fs.mkdtemp(path.join(os.tmpdir(), "opencode-env-primary-")))
+      ;(Global.Path as { config: string }).config = globalDir
+      process.env["KILO_CONFIG_DIR"] = globalDir
+      yield* Effect.promise(() =>
+        fs.writeFile(path.join(globalDir, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false })),
+      )
+      yield* provideTmpdirInstance(() => auto("per_env_alias_primary", target), {
+        git: true,
+        config: { require_approval_for_config_edits: true },
+      }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(globalDir, { recursive: true, force: true }))))
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
+
+  it.live("keeps a project value when KILO_CONFIG_DIR aliases the primary global dir without its own field", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }) }),
+      )
+      process.env["KILO_CONFIG_DIR"] = Global.Path.config
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => prompts("per_env_primary_no_field_on", target), {
+          git: true,
+          config: { require_approval_for_config_edits: true },
+        }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
+
+  it.live("keeps a project opt-out when KILO_CONFIG_DIR aliases the primary global dir without its own field", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }) }),
+      )
+      process.env["KILO_CONFIG_DIR"] = Global.Path.config
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => auto("per_env_primary_no_field_off", target), {
+          git: true,
+          config: { require_approval_for_config_edits: false },
+        }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
+
+  it.live("keeps an explicit aliased KILO_CONFIG_DIR field ahead of a later legacy home dir", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({
+          ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
+          ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }),
+        }),
+      )
+      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilocode")
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(() => auto("per_env_field_beats_later_legacy_off", target), { git: true }),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
+
+  it.live(
+    "keeps an explicit aliased KILO_CONFIG_DIR field that enables protection ahead of a later legacy home dir",
+    () => {
+      const previous = process.env["KILO_CONFIG_DIR"]
+      const restore = () => {
+        if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+        else process.env["KILO_CONFIG_DIR"] = previous
+      }
+      return Effect.gen(function* () {
+        const home = yield* Effect.promise(() =>
+          legacyHome({
+            ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }),
+            ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
+          }),
+        )
+        process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilocode")
+        yield* withGlobal(undefined)
+        yield* withHome(
+          home,
+          provideTmpdirInstance(() => prompts("per_env_field_beats_later_legacy_on", target), { git: true }),
+        ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+      }).pipe(Effect.ensuring(Effect.sync(restore)))
+    },
+  )
+
+  it.live("keeps a project .kilo directory that loads after an aliased primary KILO_CONFIG_DIR", () => {
+    const previous = process.env["KILO_CONFIG_DIR"]
+    const restore = () => {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+    }
+    return Effect.gen(function* () {
+      process.env["KILO_CONFIG_DIR"] = Global.Path.config
+      yield* withGlobal({ require_approval_for_config_edits: false })
+      yield* provideTmpdirInstance(
+        (dir) =>
+          Effect.gen(function* () {
+            yield* Effect.promise(async () => {
+              await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+              await fs.writeFile(
+                path.join(dir, ".kilo", "kilo.json"),
+                JSON.stringify({ require_approval_for_config_edits: true }),
+              )
+            })
+            yield* prompts("per_env_primary_project_dir_on", target)
+          }),
+        { git: true },
+      )
+    }).pipe(Effect.ensuring(Effect.sync(restore)))
+  })
 })
 
 const editRequest = (id: string, file: string): Permission.AskInput =>
