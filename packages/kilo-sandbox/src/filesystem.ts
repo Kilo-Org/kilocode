@@ -142,6 +142,16 @@ export function decorateFileSystem(fs: FileSystem.FileSystem): FileSystem.FileSy
       Effect.gen(function* () {
         const profile = yield* current
         if (!profile) return yield* fs.makeDirectory(path, options)
+        if (options?.recursive) {
+          const info = yield* fs.stat(path).pipe(
+            Effect.catchIf(
+              (err) => err.reason._tag === "NotFound",
+              () => Effect.succeed(undefined),
+            ),
+          )
+          // mkdir -p of an existing directory has no filesystem effect.
+          if (info?.type === "Directory") return
+        }
         return yield* execute(profile, { op: "makeDirectory", path, options }, assertPath(path, "makeDirectory"))
       }),
     makeTempDirectory: (options) => temporary("makeTempDirectory", options, fs.makeTempDirectory),

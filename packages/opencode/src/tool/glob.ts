@@ -8,21 +8,7 @@ import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
 
 // kilocode_change start — support absolute glob patterns (e.g. ~/.config/kilo/command/*.md)
-function normalize(p: string) {
-  return p.replaceAll("\\", "/")
-}
-
-function split(pattern: string) {
-  const normalized = normalize(pattern)
-  if (!path.isAbsolute(normalized)) return
-  const index = normalized.search(/[*?{[]/)
-  if (index === -1) return { dir: normalized, pattern: "*" }
-  const slice = normalized.slice(0, index)
-  const cut = slice.lastIndexOf("/")
-  const dir = cut > 0 ? slice.slice(0, cut) : "/"
-  const next = normalized.slice(cut + 1)
-  return { dir, pattern: next || "*" }
-}
+import { split } from "@/kilocode/tool/glob-pattern"
 // kilocode_change end
 
 export const Parameters = Schema.Struct({

@@ -2,6 +2,8 @@ import type * as Arr from "effect/Array"
 import { NodeFileSystem, NodeSink, NodeStream } from "@effect/platform-node"
 import * as NodePath from "@effect/platform-node/NodePath"
 import { prepareCommand as prepareSandbox } from "@kilocode/sandbox" // kilocode_change
+import { ExecutionObservation } from "@kilocode/sandbox" // kilocode_change
+import { completion } from "./kilocode/process-observation" // kilocode_change
 import { tap as tapStdio, tapped } from "./kilocode/stdio-tap" // kilocode_change - Bun drops buffered stdio on close
 import * as SpawnExit from "./kilocode/spawn-exit" // kilocode_change
 import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
@@ -413,6 +415,10 @@ export const make = Effect.gen(function* () {
             )
           // kilocode_change end
 
+          // kilocode_change start - final policy check immediately before native spawn
+          const observer = yield* ExecutionObservation
+          observer?.verify()
+          // kilocode_change end
           const [proc, signal] = yield* Effect.acquireRelease(
             // kilocode_change start - spawn the prepared command and options
             spawn(
@@ -461,6 +467,11 @@ export const make = Effect.gen(function* () {
             }),
           )
 
+          // kilocode_change start - a successful native spawn is execution evidence
+          observer?.emit("execution_started", { boundary: "process", pid: proc.pid })
+          const completed = completion(Deferred.await(signal), observer, proc.pid)
+          if (observer) yield* Effect.forkScoped(completed)
+          // kilocode_change end
           const fd = yield* setupFds(command, proc, extra)
           const out = setupOutput(command, proc, sout, serr)
           let ref = true
@@ -473,7 +484,7 @@ export const make = Effect.gen(function* () {
             getInputFd: fd.getInputFd,
             getOutputFd: fd.getOutputFd,
             isRunning: Effect.map(Deferred.isDone(signal), (done) => !done),
-            exitCode: Effect.flatMap(Deferred.await(signal), settle), // kilocode_change - signal termination settles as 128 + signum
+            exitCode: Effect.flatMap(completed, settle), // kilocode_change - observe actual exit and settle signals
             kill: (opts?: ChildProcess.KillOptions) => {
               const sig = opts?.killSignal ?? "SIGTERM"
               const send = (s: NodeJS.Signals) =>
