@@ -271,10 +271,6 @@ export class KiloConnectionService {
     }
   }
 
-  private isRemoteEnabled(): boolean {
-    return this.remoteService?.getState().enabled ?? false
-  }
-
   /**
    * Current connection state.
    */
