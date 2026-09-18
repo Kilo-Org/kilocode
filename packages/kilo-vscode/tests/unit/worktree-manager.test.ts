@@ -1110,16 +1110,30 @@ describe("WorktreeManager.createFromPR", () => {
   })
 })
 
-describe("WorktreeManager.removeOrphanDirectory", () => {
+describe("WorktreeManager.detachOrphanDirectory", () => {
   it("removes an untracked leftover directory", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
     const leftover = path.join(root, ".kilo", "worktrees", "leftover")
     await fs.mkdir(path.join(leftover, ".kilo-dev"), { recursive: true })
 
-    await mgr.removeOrphanDirectory(leftover)
+    const { done } = await mgr.detachOrphanDirectory(leftover)
+    await done
 
     expect(existsSync(leftover)).toBe(false)
+  })
+
+  it("stages the directory instantly, before the background reap finishes", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(leftover, { recursive: true })
+
+    const { done } = await mgr.detachOrphanDirectory(leftover)
+    // The rename already happened by the time detachOrphanDirectory resolves: the original path is
+    // gone even before `done` (the background reap) settles.
+    expect(existsSync(leftover)).toBe(false)
+    await done
   })
 
   it("refuses to remove a live worktree", async () => {
@@ -1127,7 +1141,7 @@ describe("WorktreeManager.removeOrphanDirectory", () => {
     const mgr = createManager(root)
     const wt = await mgr.createWorktree({ prompt: "live" })
 
-    await expect(mgr.removeOrphanDirectory(wt.path)).rejects.toThrow(/live worktree/)
+    await expect(mgr.detachOrphanDirectory(wt.path)).rejects.toThrow(/live worktree/)
     expect(existsSync(wt.path)).toBe(true)
   })
 
@@ -1136,7 +1150,7 @@ describe("WorktreeManager.removeOrphanDirectory", () => {
     const mgr = createManager(root)
     await fs.mkdir(path.join(root, "outside"), { recursive: true })
 
-    await expect(mgr.removeOrphanDirectory(path.join(root, "outside"))).rejects.toThrow(/outside/)
+    await expect(mgr.detachOrphanDirectory(path.join(root, "outside"))).rejects.toThrow(/outside/)
     expect(existsSync(path.join(root, "outside"))).toBe(true)
   })
 
@@ -1150,8 +1164,29 @@ describe("WorktreeManager.removeOrphanDirectory", () => {
     const leftover = path.join(root, ".kilo", "worktrees", "leftover")
     await fs.mkdir(leftover, { recursive: true })
 
-    await expect(mgr.removeOrphanDirectory(leftover)).rejects.toThrow(/cannot list worktrees/)
+    await expect(mgr.detachOrphanDirectory(leftover)).rejects.toThrow(/cannot list worktrees/)
     expect(existsSync(leftover)).toBe(true)
+  })
+
+  // Deterministic reappearance test: rather than racing the background reap (timing-dependent), the
+  // original path is recreated *before* the private reap step runs, then the reap is invoked
+  // directly so the retry path is exercised without depending on scheduling.
+  it("retries once when the original path reappears after the reap", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const leftover = path.join(root, ".kilo", "worktrees", "leftover")
+    await fs.mkdir(leftover, { recursive: true })
+    const temp = path.join(root, ".kilo", "worktrees", ".kilo-delete-test")
+    await fs.rename(leftover, temp)
+    // Simulate a dev backend or the worktree pool recreating the directory while the reap of `temp`
+    // was still in flight.
+    await fs.mkdir(leftover, { recursive: true })
+
+    const internal = mgr as unknown as { reapOrphan: (original: string, temp: string) => Promise<void> }
+    await internal.reapOrphan(leftover, temp)
+
+    expect(existsSync(leftover)).toBe(false)
+    expect(existsSync(temp)).toBe(false)
   })
 })
 
@@ -1421,20 +1456,6 @@ describe("WorktreeManager.checkedOutBranches", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager helpers", () => {
-  it("hasOriginRemote returns false when no remote exists", async () => {
-    const root = await createTempRepo()
-    const mgr = createManager(root)
-    expect(await mgr.hasOriginRemote()).toBe(false)
-  })
-
-  it("hasOriginRemote returns true when origin exists", async () => {
-    const root = await createTempRepo()
-    const git = simpleGit(root)
-    await git.addRemote("origin", "https://example.com/repo.git")
-    const mgr = createManager(root)
-    expect(await mgr.hasOriginRemote()).toBe(true)
-  })
-
   it("refExistsLocally verifies refs", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)

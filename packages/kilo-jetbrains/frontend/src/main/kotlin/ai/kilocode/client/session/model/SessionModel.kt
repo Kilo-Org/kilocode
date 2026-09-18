@@ -107,6 +107,16 @@ class SessionModel {
     @RequiresEdt
     fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
 
+    /**
+     * Every `task` tool's spawned child session id, in the order the tools first appeared —
+     * insertion order of [entries] and of each [Message.parts] map, both `LinkedHashMap`s. Used to
+     * give the shared agent board a stable per-participant avatar (see
+     * `ai.kilocode.client.session.board.BoardAvatars`), not [childRefs], which is unordered.
+     */
+    @RequiresEdt
+    fun childSessions(): List<String> =
+        entries.values.flatMap { it.parts.values }.filterIsInstance<Tool>().mapNotNull { it.childSessionId }
+
     @RequiresEdt
     fun turns(): Collection<Turn> = turnEntries.values
 

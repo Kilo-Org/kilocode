@@ -22,6 +22,11 @@ describe("speech-to-text availability", () => {
     expect(canUseSpeechToText({ enabled_providers: ["kilo"] }, { kilo: "oauth" })).toBe(true)
   })
 
+  it("hides speech input when the window cannot capture audio", () => {
+    expect(canUseSpeechToText({}, { kilo: "oauth" }, false)).toBe(false)
+    expect(canUseSpeechToText({}, { kilo: "oauth" }, true)).toBe(true)
+  })
+
   it("normalizes configured and unknown transcription models", () => {
     expect(
       selectedSpeechToTextModel({ experimental: { speech_to_text_model: "google/chirp-3" } }, [
