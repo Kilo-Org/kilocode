@@ -1,10 +1,12 @@
 import { generateText } from "ai"
+import { randomUUID } from "crypto"
 import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import { opencodeSessionHeaders } from "@/kilocode/provider/opencode-session-headers"
 
 const log = Log.create({ service: "enhance-prompt" })
 
@@ -50,6 +52,9 @@ export async function enhancePrompt(text: string): Promise<string> {
     ),
     maxRetries: 3,
     system: INSTRUCTION,
+    // Each call is a standalone rewrite, not part of a multi-turn conversation; a fresh ID
+    // per call still satisfies the opencode API's "stable per-conversation ID" requirement.
+    headers: opencodeSessionHeaders({ providerID: resolved.model.providerID, sessionID: randomUUID() }),
     messages: [{ role: "user" as const, content: `Draft prompt to enhance, not answer:\n\n${text}` }],
   })
 

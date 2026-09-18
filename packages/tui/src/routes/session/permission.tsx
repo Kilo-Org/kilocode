@@ -356,13 +356,23 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               )
               return {
                 icon: "!",
-                title: "Allow Git operation outside the sandbox?",
+                title: "Run outside the sandbox",
                 body: (
                   <box paddingLeft={1} flexDirection="column">
                     <Show when={command}>
                       <text fg={theme.text}>{"$ " + command}</text>
                     </Show>
-                    <text fg={theme.textMuted}>This approval applies to this command only.</text>
+                    <text fg={theme.textMuted}>
+                      This runs the whole command with filesystem and network restrictions removed, for this command
+                      only.
+                    </text>
+                    <text fg={theme.textMuted}>
+                      Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked
+                      worktree.
+                    </text>
+                    <text fg={theme.textMuted}>
+                      Bash allow rules and auto-approve never approve this prompt automatically.
+                    </text>
                   </box>
                 ),
               }

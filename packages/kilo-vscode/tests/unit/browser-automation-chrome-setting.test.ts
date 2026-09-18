@@ -6,7 +6,6 @@ import {
 } from "../../src/services/browser-automation/chrome-setting"
 
 const INTEGRATED_BROWSER = "kilo-code.new.agentManager.browser"
-const BROWSER_AUTOMATION = "kilo-code.new.browserAutomation"
 
 describe("Integrated Browser Chrome preference", () => {
   const descriptors = Object.getOwnPropertyDescriptors(vscode.workspace)

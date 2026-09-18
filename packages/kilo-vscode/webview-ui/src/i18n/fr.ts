@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Erreur ou connexion perdue.",
   "session.activity.retry": "Nouvelle tentative automatique.",
   "session.activity.busy": "En cours.",
+  "session.activity.scheduled": "En attente d'un réveil programmé.",
   "session.activity.done": "Tour terminé.",
   "session.activity.idle": "Inactif.",
 
@@ -209,6 +210,7 @@ export const dict = {
     "L'approbation automatique est activée. Les demandes d'autorisation seront approuvées automatiquement.",
   "prompt.action.autoApprove.disabled":
     "L'approbation automatique est désactivée. Cliquez pour approuver automatiquement les demandes d'autorisation.",
+  "prompt.action.autoApprove.sandboxExcluded": "Les demandes d’escalade du bac à sable sont toujours exclues.",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
@@ -227,6 +229,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Autorisé",
   "prompt.action.sandbox.unrestricted": "Sans restriction",
   "prompt.action.sandbox.description.enabled": "Les écritures sont limitées aux répertoires du projet et de Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Les règles d’autorisation et l’approbation automatique s’appliquent à l’intérieur du bac à sable. Les commandes qui doivent en sortir demandent toujours.",
   "prompt.action.sandbox.description.disabled":
     "Cliquez pour restreindre les écritures dans le système de fichiers et l'accès au réseau.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,7 +276,9 @@ export const dict = {
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
-  "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
+  "notification.permission.titleSandboxEscalation": "Exécuter en dehors du bac à sable ?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Cette action exécute toute la commande sans les restrictions de système de fichiers et de réseau, pour cette commande uniquement. Git doit écrire dans .git, qui est en lecture seule dans le bac à sable et se trouve hors de l’arborescence de travail pour un worktree lié. Les règles d’autorisation Bash et l’approbation automatique n’approuvent jamais cette demande automatiquement.",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.reject": "Rejeter",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
@@ -325,7 +331,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nouvelle Tâche",
   "sidebar.topBar.history": "Historique",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Paramètres",
@@ -564,39 +569,23 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Échec de la mise à jour des permissions",
 
-  "settings.permissions.tool.read.title": "Lire",
   "settings.permissions.tool.read.description": "Lecture d'un fichier (correspond au chemin du fichier)",
-  "settings.permissions.tool.edit.title": "Modifier",
   "settings.permissions.tool.edit.description":
     "Modifier des fichiers, y compris les modifications, écritures, patchs et multi-modifications",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Correspondre aux fichiers utilisant des modèles glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description":
     "Rechercher dans le contenu des fichiers à l'aide d'expressions régulières",
-  "settings.permissions.tool.list.title": "Lister",
   "settings.permissions.tool.list.description": "Lister les fichiers dans un répertoire",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Exécuter des commandes shell",
-  "settings.permissions.tool.task.title": "Tâche",
   "settings.permissions.tool.task.description": "Lancer des sous-agents",
-  "settings.permissions.tool.skill.title": "Compétence",
   "settings.permissions.tool.skill.description": "Charger une compétence par son nom",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Exécuter des requêtes de serveur de langage",
-  "settings.permissions.tool.todoread.title": "Lire Todo",
   "settings.permissions.tool.todoread.description": "Lire la liste de tâches",
-  "settings.permissions.tool.todowrite.title": "Écrire Todo",
   "settings.permissions.tool.todowrite.description": "Mettre à jour la liste de tâches",
-  "settings.permissions.tool.webfetch.title": "Récupération Web",
   "settings.permissions.tool.webfetch.description": "Récupérer le contenu d'une URL",
-  "settings.permissions.tool.websearch.title": "Recherche Web",
   "settings.permissions.tool.websearch.description": "Rechercher sur le web",
-  "settings.permissions.tool.codesearch.title": "Recherche de code",
   "settings.permissions.tool.codesearch.description": "Rechercher du code sur le web",
-  "settings.permissions.tool.external_directory.title": "Répertoire externe",
   "settings.permissions.tool.external_directory.description": "Accéder aux fichiers en dehors du répertoire du projet",
-  "settings.permissions.tool.doom_loop.title": "Boucle infernale",
   "settings.permissions.tool.doom_loop.description": "Détecter les appels d'outils répétés avec une entrée identique",
 
   "session.delete.title": "Supprimer la session",
@@ -614,6 +603,7 @@ export const dict = {
   "session.tabs.switcher.current": "Actuel",
   "session.tabs.switcher.pending": "Nouveau",
   "session.tabs.switcher.busy": "En cours",
+  "session.tabs.switcher.scheduled": "Programmé",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbre de travail",
@@ -941,6 +931,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Activez et connectez-vous au fournisseur Kilo pour utiliser Speech to Text, ou définissez ci-dessous une URL de base de transcription personnalisée.",
+  "settings.models.speechToText.remoteDescription":
+    "La saisie vocale n'est pas disponible dans les fenêtres distantes. Ouvrez Kilo dans une fenêtre locale pour utiliser le microphone.",
   "settings.models.speechToTextModel.title": "Modèle de transcription vocale",
   "settings.models.speechToTextModel.description":
     "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",
@@ -1107,6 +1099,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "modèle",
   "settings.agentBehaviour.workflows.variant": "variante",
   "settings.agentBehaviour.workflows.modelDescription": "Remplacement global du modèle",
+  "settings.experimental.codeMode.title": "Appels d'outils programmatiques",
+  "settings.experimental.codeMode.description":
+    "Achemine les appels d'outils MCP via un environnement d'exécution JavaScript confiné avec découverte d'outils à la demande, au lieu d'exposer directement chaque outil MCP. Économise du contexte lorsque de nombreux outils MCP sont connectés.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",
@@ -1359,8 +1354,6 @@ export const dict = {
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Enregistrer localement",
-  "diffViewer.comment.sendToAgent": "Envoyer à l’agent",
   "diffViewer.comment.postToGithub": "Publier sur GitHub",
   "diffViewer.comment.loadFailed": "Impossible de charger les modifications de la pull request.",
   "diffViewer.comment.unavailable": "Cette ligne n’est pas disponible dans l’instantané actuel de la pull request.",

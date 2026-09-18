@@ -55,7 +55,7 @@ import { removeMcp } from "./kilo-provider/remove-config-item"
 import { MarketplaceService } from "./services/marketplace"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
-import { seedSessionStatuses } from "./session-status"
+import { seedSessionStatuses, seedSessionWakeups } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
 import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
@@ -142,6 +142,7 @@ import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
 import type { PRReviewCommentData, ReviewMessageData } from "./shared/review-comments"
 import { feedbackMetadata, parseFeedback, type BrowserFeedbackData } from "./shared/browser-feedback"
+import { mergeInjected } from "./shared/injected-prompt"
 import { completesWithoutStatus, goalControl } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
 
@@ -234,6 +235,7 @@ type SendWebviewMessage = {
   browserFeedback?: unknown
   agentManagerContext?: unknown
   contextDirectory?: unknown
+  injectedTitle?: unknown
 }
 type SandboxSupportClient = {
   support: (
@@ -442,6 +444,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly refreshes = new Map<string, number>()
   private readonly anacondaDesktop = new AnacondaDesktopBridge()
   private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
+  private wakeupSessions = new Set<string>() // Sessions with a pending wakeup at the last seed.
+  private wakeupSeeding = false // In-flight guard so concurrent transitions share one seed.
+  private wakeupLive = new Map<string, number>() // Live pending counts seen during an in-flight seed.
   private activity: Activity = "idle"
   private active = false
   private caption: string | undefined
@@ -803,6 +808,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
 
       void this.seedSessionStatusMap()
+      void this.seedSessionWakeups()
 
       this.sendRemoteStatus()
     }
@@ -1306,9 +1312,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab, message.projectId)
           break
-        case "openKiloClaw":
-          vscode.commands.executeCommand("kilo-code.new.kiloClawOpen")
-          break
         case "openVSCodeSettings":
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
           break
@@ -1576,6 +1579,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
             feedback?.browserFeedback,
+            typeof message.injectedTitle === "string" ? message.injectedTitle : undefined,
           )
           break
         }
@@ -1669,6 +1673,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
       typeof message.contextDirectory === "string" ? message.contextDirectory : undefined,
       feedback?.browserFeedback,
+      typeof message.injectedTitle === "string" ? message.injectedTitle : undefined,
     )
   }
 
@@ -1954,6 +1959,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // sessions, but it needs session.status to populate sessionStatusMap and allStatusMap
           // for the busy-session warning on Save.
           if (event.type === "session.status") return true
+
+          // session.wakeup must also always pass through. Wakeups are cheap and
+          // worktree sessions without an open tab still need their scheduled
+          // indicator kept current.
+          if (event.type === "session.wakeup") return true
 
           // session.deleted must always pass through so the webview can run its cleanup
           // (messages, parts, stash, todos, permissions, drafts, etc.) — including for
@@ -3288,6 +3298,53 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     )
   }
 
+  private async seedSessionWakeups(): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    if (this.wakeupSeeding) return
+    this.wakeupSeeding = true
+    // Snapshot before the awaits and record live events that arrive while the
+    // seed requests are in flight: they are newer than the responses, so they
+    // override both the snapshot and `seen` below.
+    const before = new Set(this.wakeupSessions)
+    this.wakeupLive = new Map()
+    try {
+      const { seen, complete } = await seedSessionWakeups(
+        this.client,
+        this.connectionService.getKnownDirectories(),
+        (message) => this.postMessage(message),
+        (sessionID) => !this.removedSessionIds.has(sessionID),
+      )
+      // Only reconcile when every directory answered. A failed directory is
+      // absent from `seen`, so clearing on a partial result would drop valid
+      // wakeups for that directory's sessions.
+      if (complete) {
+        const live = this.wakeupLive
+        const next = new Set(seen)
+        for (const [sessionID, pending] of live) {
+          if (pending > 0) next.add(sessionID)
+          else next.delete(sessionID)
+        }
+        // A wakeup that fired or was cancelled while disconnected is absent
+        // from the seed response, so clear any session the previous seed saw
+        // that no live event has since updated. A session scheduled during the
+        // seed is absent from `seen` but present in `live`, so it survives.
+        for (const sessionID of before) {
+          if (!seen.has(sessionID) && !live.has(sessionID))
+            this.postMessage({ type: "sessionWakeup", sessionID, pending: 0 })
+        }
+        this.wakeupSessions = next
+      } else {
+        // Keep tracking sessions from failed directories so a later complete
+        // seed can still reconcile them.
+        this.wakeupSessions = new Set([...this.wakeupSessions, ...seen])
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to seed session wakeups:", error)
+    } finally {
+      this.wakeupSeeding = false
+    }
+  }
+
   /**
    * Fetch the latest merged config and push it as configUpdated.
    * Called when global.config.updated SSE fires (config changed without a full dispose).
@@ -4305,6 +4362,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     context?: string,
     contextDirectory?: string,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -4338,7 +4396,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text, metadata: feedbackMetadata(review, browserFeedback) })
+      parts.push({
+        type: "text",
+        text,
+        metadata: mergeInjected(feedbackMetadata(review, browserFeedback), injectedTitle),
+      })
 
       const editorContext = await this.gatherEditorContext(dir)
       if (draftID && this.closedDrafts.delete(draftID)) {
@@ -5134,6 +5196,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    // session.wakeup also passes the pre-filter for all providers. Forward it
+    // before the trackedSessionIds guard so worktree sessions without an open
+    // tab keep their scheduled indicator current.
+    if (event.type === "session.wakeup") {
+      const sid = event.properties.sessionID
+      if (this.removedSessionIds.has(sid)) return
+      // Track live sessions too, so a wakeup cancelled while disconnected is
+      // still reconciled to zero by the next complete seed.
+      if (event.properties.pending > 0) this.wakeupSessions.add(sid)
+      else this.wakeupSessions.delete(sid)
+      // While a seed is in flight, remember the live pending count. It is newer
+      // than the seed response and must win over the seed's reconcile step.
+      if (this.wakeupSeeding) this.wakeupLive.set(sid, event.properties.pending)
+      this.postMessage({ type: "sessionWakeup", sessionID: sid, pending: event.properties.pending })
+      return
+    }
+
     // Extract sessionID from the event
     if (event.type === "session.created" && this.adoptPendingFollowup(event.properties.info)) {
       return
@@ -5857,6 +5936,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.requests.clear()
     this.epochs.clear()
     this.sessionStatusMap.clear()
+    this.wakeupSessions.clear()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
     disposeGitChangesTarget()

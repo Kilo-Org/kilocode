@@ -80,6 +80,7 @@ export const dict = {
   "session.activity.error": "Fehler oder Verbindung verloren.",
   "session.activity.retry": "Automatischer erneuter Versuch.",
   "session.activity.busy": "In Bearbeitung.",
+  "session.activity.scheduled": "Wartet auf ein geplantes Aufwachen.",
   "session.activity.done": "Turn abgeschlossen.",
   "session.activity.idle": "Nicht aktiv.",
 
@@ -214,6 +215,7 @@ export const dict = {
     "Automatische Genehmigung ist aktiviert. Berechtigungsanfragen werden automatisch genehmigt.",
   "prompt.action.autoApprove.disabled":
     "Automatische Genehmigung ist deaktiviert. Klicken, um Berechtigungsanfragen automatisch zu genehmigen.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox-Eskalationsanfragen sind immer ausgeschlossen.",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
   "prompt.action.sandbox.enable": "Sandbox aktivieren",
@@ -232,6 +234,8 @@ export const dict = {
   "prompt.action.sandbox.unrestricted": "Uneingeschränkt",
   "prompt.action.sandbox.description.enabled":
     "Schreibvorgänge sind auf die Projekt- und Kilo-Verzeichnisse beschränkt.",
+  "prompt.action.sandbox.description.escalation":
+    "Berechtigungsregeln und automatische Genehmigung gelten innerhalb der Sandbox. Befehle, die sie verlassen müssen, fragen immer.",
   "prompt.action.sandbox.description.disabled":
     "Klicken, um Schreibvorgänge im Dateisystem und den Netzwerkzugriff einzuschränken.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -277,7 +281,9 @@ export const dict = {
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
-  "notification.permission.titleSandboxEscalation": "Git-Vorgang außerhalb der Sandbox zulassen?",
+  "notification.permission.titleSandboxEscalation": "Außerhalb der Sandbox ausführen?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Dies führt den gesamten Befehl mit entfernten Dateisystem- und Netzwerkeinschränkungen aus, nur für diesen Befehl. Git muss in .git schreiben, das in der Sandbox schreibgeschützt ist und bei einem verknüpften Worktree außerhalb des Worktrees liegt. Bash-Erlaubnisregeln und die automatische Genehmigung genehmigen diese Anfrage nie automatisch.",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.reject": "Ablehnen",
   "ui.permission.feedbackPlaceholder": "Teile Kilo mit, was es anders machen soll",
@@ -330,7 +336,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Neue Aufgabe",
   "sidebar.topBar.history": "Verlauf",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marktplatz",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Einstellungen",
@@ -569,38 +574,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Berechtigungen konnten nicht aktualisiert werden",
 
-  "settings.permissions.tool.read.title": "Lesen",
   "settings.permissions.tool.read.description": "Lesen einer Datei (stimmt mit dem Dateipfad überein)",
-  "settings.permissions.tool.edit.title": "Bearbeiten",
   "settings.permissions.tool.edit.description":
     "Dateien ändern, einschließlich Bearbeitungen, Schreibvorgängen, Patches und Mehrfachbearbeitungen",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Dateien mithilfe von Glob-Mustern abgleichen",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Dateiinhalte mit regulären Ausdrücken durchsuchen",
-  "settings.permissions.tool.list.title": "Auflisten",
   "settings.permissions.tool.list.description": "Dateien in einem Verzeichnis auflisten",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Shell-Befehle ausführen",
-  "settings.permissions.tool.task.title": "Aufgabe",
   "settings.permissions.tool.task.description": "Unteragenten starten",
-  "settings.permissions.tool.skill.title": "Fähigkeit",
   "settings.permissions.tool.skill.description": "Eine Fähigkeit nach Namen laden",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Language-Server-Abfragen ausführen",
-  "settings.permissions.tool.todoread.title": "Todo lesen",
   "settings.permissions.tool.todoread.description": "Die Todo-Liste lesen",
-  "settings.permissions.tool.todowrite.title": "Todo schreiben",
   "settings.permissions.tool.todowrite.description": "Die Todo-Liste aktualisieren",
-  "settings.permissions.tool.webfetch.title": "Web-Abruf",
   "settings.permissions.tool.webfetch.description": "Inhalt von einer URL abrufen",
-  "settings.permissions.tool.websearch.title": "Web-Suche",
   "settings.permissions.tool.websearch.description": "Das Web durchsuchen",
-  "settings.permissions.tool.codesearch.title": "Code-Suche",
   "settings.permissions.tool.codesearch.description": "Code im Web durchsuchen",
-  "settings.permissions.tool.external_directory.title": "Externes Verzeichnis",
   "settings.permissions.tool.external_directory.description": "Zugriff auf Dateien außerhalb des Projektverzeichnisses",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Wiederholte Tool-Aufrufe mit identischer Eingabe erkennen",
 
   "session.delete.title": "Sitzung löschen",
@@ -618,6 +607,7 @@ export const dict = {
   "session.tabs.switcher.current": "Aktuell",
   "session.tabs.switcher.pending": "Neu",
   "session.tabs.switcher.busy": "In Arbeit",
+  "session.tabs.switcher.scheduled": "Geplant",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbeitsbaum",
@@ -939,6 +929,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Aktivieren Sie den Kilo-Anbieter und melden Sie sich an, um Speech to Text zu verwenden, oder legen Sie unten eine eigene Transkriptions-Basis-URL fest.",
+  "settings.models.speechToText.remoteDescription":
+    "Spracheingabe ist in Remote-Fenstern nicht verfügbar. Öffnen Sie Kilo in einem lokalen Fenster, um das Mikrofon zu verwenden.",
   "settings.models.speechToTextModel.title": "Sprache-zu-Text-Modell",
   "settings.models.speechToTextModel.description":
     "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
@@ -1103,6 +1095,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "Modell",
   "settings.agentBehaviour.workflows.variant": "Variante",
   "settings.agentBehaviour.workflows.modelDescription": "Globale Modellüberschreibung",
+  "settings.experimental.codeMode.title": "Programmatische Werkzeugaufrufe",
+  "settings.experimental.codeMode.description":
+    "Leitet MCP-Tool-Aufrufe durch eine abgeschirmte JavaScript-Laufzeit mit bedarfsgesteuerter Tool-Erkennung, statt jedes MCP-Tool direkt bereitzustellen. Spart Kontext, wenn viele MCP-Tools verbunden sind.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Shell-Befehle des Agenten in einer Sandbox auf Betriebssystemebene ausführen, die Schreibvorgänge auf die Projekt- und Kilo-Statusverzeichnisse beschränkt",
@@ -1350,8 +1345,6 @@ export const dict = {
     "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
   "diffViewer.group.session": "Sitzung",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Lokal speichern",
-  "diffViewer.comment.sendToAgent": "An Agent senden",
   "diffViewer.comment.postToGithub": "Auf GitHub veröffentlichen",
   "diffViewer.comment.loadFailed": "Die Änderungen des Pull Requests konnten nicht geladen werden.",
   "diffViewer.comment.unavailable": "Diese Zeile ist im aktuellen Snapshot des Pull Requests nicht verfügbar.",

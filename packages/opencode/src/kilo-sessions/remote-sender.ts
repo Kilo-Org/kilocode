@@ -1,6 +1,7 @@
 import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
+import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 // kilocode_change - set_pr_link: parse the app-supplied PR URL into the stored override.
 import { parsePrUrl, type PrLinkOverride } from "@/kilo-sessions/pr-link"
@@ -227,7 +228,12 @@ export namespace RemoteSender {
     // these paths simply omit them and the defaults supply no-op-safe
     // shims so the production call sites stay the only places that
     // actually touch the AttachedState).
-    attachSession?: (sessionID: SessionID) => Promise<void>
+    //
+    // `attachSession`'s `requireShare` option belongs to the create_session
+    // command: it makes the attach fail unless the relay accepted the
+    // session's ingest bootstrap, so the command rolls the new session back
+    // instead of hosting one the relay refuses (KiloSessions.ensureSharedSession).
+    attachSession?: (sessionID: SessionID, opts?: { requireShare?: boolean }) => Promise<void>
     detachSession?: (sessionID: SessionID) => Promise<void>
     hasSession?: (sessionID: SessionID) => boolean
     ownedCount?: () => number
@@ -372,9 +378,9 @@ export namespace RemoteSender {
       })
     const attachSession =
       options.attachSession ??
-      (async (id: SessionID) => {
+      (async (id: SessionID, opts?: { requireShare?: boolean }) => {
         const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-        await KiloSessions.attachRemoteSession(id)
+        await KiloSessions.attachRemoteSession(id, opts)
       })
     const detachSession =
       options.detachSession ??
@@ -928,6 +934,9 @@ export namespace RemoteSender {
             await cancelPrompt(target)
             // 2. Detach + await the negative-containment heartbeat.
             await detachSession(target)
+            // The session this run hosted has ended; log its end before the ACK
+            // so the trace exists even if a later step fails.
+            RemoteSessionLog.end(options.log, { sessionID: target, reason: "detached" })
             // 3. Snapshot remaining sessions AFTER detach. Headless hosts
             //    (`kilo remote`) never register a RemoteExit callback, so
             //    `exit` is undefined there and the host stays alive.
@@ -1077,6 +1086,11 @@ export namespace RemoteSender {
                   // Restore workspace files and write storage keys only after
                   // the attach succeeded. finalize never rejects.
                   await imported.finalize()
+                  RemoteSessionLog.start(options.log, {
+                    sessionID: imported.session.id,
+                    model: RemoteSessionLog.modelLabel(imported.session.model),
+                    directory: imported.session.directory ?? targetDirectory,
+                  })
                   return { id: imported.session.id }
                 },
               })
@@ -1099,14 +1113,20 @@ export namespace RemoteSender {
                 // attached set exactly once and fires conn.heartbeat() only
                 // when the set actually changes, so the relay learns about
                 // the new session before we respond.
+                //
+                // requireShare makes the attach wait for the relay's answer to
+                // the session's ingest bootstrap (POST /api/session). A relay
+                // that refuses the session leaves nothing to share, so the
+                // session is rolled back below and never logged as started.
                 try {
-                  await attachSession(created.id)
+                  await attachSession(created.id, { requireShare: true })
                 } catch (attachError) {
                   // Roll back the newly-created root session so the DB does
-                  // not keep an orphan the relay never learned about.
+                  // not keep an orphan the relay never accepted.
                   // Swallow the cleanup error here — the original attach
                   // failure is what the caller must see, so we re-throw it
                   // below.
+                  options.log.warn("create session rolled back", { id: msg.id, sessionID: created.id })
                   try {
                     await sessionRemove(created.id)
                   } catch (cleanupError) {
@@ -1117,6 +1137,13 @@ export namespace RemoteSender {
                   }
                   throw attachError
                 }
+                // The session is attached and this run hosts it; log its start
+                // with the model and directory already in hand.
+                RemoteSessionLog.start(options.log, {
+                  sessionID: created.id,
+                  model: RemoteSessionLog.modelLabel(created.model ?? createInput.model),
+                  directory: created.directory ?? targetDirectory,
+                })
                 return created
               },
             })

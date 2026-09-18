@@ -98,6 +98,8 @@ export async function createMultiVersion(
         { providerID, modelID },
         {
           text,
+          command: msg.command,
+          arguments: msg.arguments,
           agent,
           variant: msg.variant,
           files,
@@ -339,12 +341,24 @@ function sendInitialPrompt(
   resolved: { providerID: string | undefined; modelID: string | undefined },
   input: {
     text: string | undefined
+    command: string | undefined
+    arguments: string | undefined
     agent: string | undefined
     variant: string | undefined
     files: Extract<AgentManagerInMessage, { type: "agentManager.createMultiVersion" }>["files"]
   },
 ): void {
-  const msg = buildInitialMessages([created], models, resolved, input.text, input.agent, input.variant, input.files)[0]!
+  const initial = buildInitialMessages(
+    [created],
+    models,
+    resolved,
+    input.text,
+    input.agent,
+    input.variant,
+    input.files,
+    input.command ? { command: input.command, arguments: input.arguments ?? "" } : undefined,
+  )
+  const msg = initial[0]!
   if (input.text) {
     host.log(`Sending initial message to version ${created.versionIndex + 1} (session=${msg.sessionId})`)
     host.promptName({
