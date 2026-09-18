@@ -67,45 +67,6 @@ export const OrganizationBody = Schema.Struct({
   organizationId: Schema.NullOr(Schema.String),
 })
 
-export const ClawStatus = Schema.Struct({
-  status: Schema.NullOr(
-    Schema.Literals([
-      "provisioned",
-      "starting",
-      "restarting",
-      "recovering",
-      "running",
-      "stopped",
-      "destroying",
-      "restoring",
-    ]),
-  ),
-  sandboxId: Schema.optional(Schema.String),
-  flyRegion: Schema.optional(Schema.String),
-  machineSize: Schema.optional(
-    Schema.Struct({
-      cpus: Schema.Finite,
-      memory_mb: Schema.Finite,
-    }),
-  ),
-  openclawVersion: Schema.optional(Schema.NullOr(Schema.String)),
-  lastStartedAt: Schema.optional(Schema.NullOr(Schema.String)),
-  lastStoppedAt: Schema.optional(Schema.NullOr(Schema.String)),
-  channelCount: Schema.optional(Schema.Finite),
-  secretCount: Schema.optional(Schema.Finite),
-  userId: Schema.optional(Schema.String),
-  botName: Schema.optional(Schema.NullOr(Schema.String)),
-})
-
-export const ClawChatCredentials = Schema.NullOr(
-  Schema.Struct({
-    token: Schema.String,
-    expiresAt: Schema.String,
-    kiloChatUrl: Schema.String,
-    eventServiceUrl: Schema.String,
-  }),
-)
-
 export const CloudSession = Schema.Struct({
   session_id: Schema.String,
   title: Schema.NullOr(Schema.String),
@@ -281,8 +242,6 @@ export const KiloGatewayPaths = {
   transcriptionModels: `${root}/models/transcriptions`,
   notifications: `${root}/notifications`,
   organization: `${root}/organization`,
-  clawStatus: `${root}/claw/status`,
-  clawChatCredentials: `${root}/claw/chat-credentials`,
   cloudSessions: `${root}/cloud-sessions`,
   cloudSession: `${root}/cloud/session/:id`,
   cloudSessionImport: `${root}/cloud/session/import`,
@@ -405,31 +364,6 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             identifier: "kilo.organization.set",
             summary: "Update Kilo Gateway organization",
             description: "Switch to a different Kilo Gateway organization",
-          }),
-        ),
-        HttpApiEndpoint.get("clawStatus", KiloGatewayPaths.clawStatus, {
-          query: WorkspaceRoutingQuery,
-          success: described(ClawStatus, "Instance status"),
-          error: [HttpApiError.Unauthorized, HttpApiError.ServiceUnavailable],
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "kilo.claw.status",
-            summary: "Get KiloClaw instance status",
-            description: "Fetch the user's KiloClaw instance status via the KiloClaw worker",
-          }),
-        ),
-        HttpApiEndpoint.get("clawChatCredentials", KiloGatewayPaths.clawChatCredentials, {
-          query: WorkspaceRoutingQuery,
-          success: described(ClawChatCredentials, "Kilo Chat credentials or null"),
-          error: HttpApiError.Unauthorized,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "kilo.claw.chatCredentials",
-            summary: "Get KiloClaw chat credentials",
-            description:
-              "Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker " +
-              "and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and " +
-              "event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.",
           }),
         ),
         HttpApiEndpoint.get("cloudSessions", KiloGatewayPaths.cloudSessions, {

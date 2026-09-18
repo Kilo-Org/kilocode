@@ -116,9 +116,18 @@ class WorktreeTrash(private val cs: CoroutineScope) {
         }
     }
 
-    /** Deletes [temp] recursively on this service's own scope. Never throws into the caller. */
-    fun reap(temp: Path) {
-        track(cs.launch(Dispatchers.IO) { reapNow(temp) })
+    /**
+     * Deletes [temp] recursively on this service's own scope. Never throws into the caller.
+     *
+     * [onDone] runs after the reap attempt finishes (success or failure), still on this service's
+     * own IO dispatcher — callers use it for the post-reap reappearance guard: staging a worktree
+     * created a fresh sibling that vanished the moment the rename completed, but something can still
+     * recreate the original path while the recursive delete of its sibling is still in flight (a
+     * dev-run backend re-materializing `.kilo-dev`, for example), and only checking after the delete
+     * settles observes that reliably.
+     */
+    fun reap(temp: Path, onDone: () -> Unit = {}) {
+        track(cs.launch(Dispatchers.IO) { reapNow(temp); onDone() })
     }
 
     /**
