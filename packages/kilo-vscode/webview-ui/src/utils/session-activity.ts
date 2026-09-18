@@ -68,6 +68,13 @@ export function activities(input: {
   return result
 }
 
+export function blockedSessionIds(
+  permissions: ReadonlyArray<{ sessionID: string }>,
+  questions: ReadonlyArray<{ sessionID: string; blocking?: boolean }>,
+): string[] {
+  return [...permissions, ...questions.filter((item) => item.blocking !== false)].map((item) => item.sessionID)
+}
+
 export function running(state: Activity): boolean {
   return state === "busy" || state === "retry"
 }

@@ -104,13 +104,12 @@ import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { createPreferenceLoader } from "./session-preference-loader"
-import { activities, type Activity } from "../utils/session-activity"
+import { activities, blockedSessionIds, type Activity } from "../utils/session-activity"
 import { hold, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
-
 // Store structure for messages and parts
 interface SessionStore {
   sessions: Record<string, SessionInfo>
@@ -1858,9 +1857,7 @@ export const SessionProvider: ParentComponent = (props) => {
           parents: lineage().parents,
           statuses: statusMap,
           outcomes: closeMap,
-          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false)].map(
-            (item) => item.sessionID,
-          ),
+          blocked: blockedSessionIds(permissions(), questions()),
           submitting: Object.keys(submissionMap),
           suggested: suggestions().map((item) => item.sessionID),
           scheduled: Object.keys(wakeups()),
