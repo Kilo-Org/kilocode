@@ -681,6 +681,9 @@ describe("ConfigProtection.classify", () => {
       expect(classification.candidate).toBe(false)
       expect(classification.skill).toBe(pattern)
       expect(classification.candidate || classification.skill !== undefined).toBe(true)
+      // The read is ungated but still carries the canonical skill through the verdict.
+      expect(ConfigProtection.verdict(classification).skill).toBe(pattern)
+      expect(ConfigProtection.skillScope(ConfigProtection.verdict(classification))).toBe(pattern)
     } finally {
       ;(Global.Path as { config: string }).config = prev
     }
@@ -694,5 +697,15 @@ describe("ConfigProtection.classify", () => {
     expect(classification.candidate).toBe(false)
     expect(classification.skill).toBeUndefined()
     expect(classification.skill).toBeUndefined()
+  })
+})
+
+describe("ConfigProtection.skillScope", () => {
+  test("keeps the canonical skill for ungated reads but drops it for disabled edits", () => {
+    const skill = "/global/skills/a/*"
+    expect(ConfigProtection.skillScope({ candidate: false, protect: false, external: false, skill })).toBe(skill)
+    expect(ConfigProtection.skillScope({ candidate: true, protect: true, external: true, skill })).toBe(skill)
+    expect(ConfigProtection.skillScope({ candidate: true, protect: false, external: true, skill })).toBeUndefined()
+    expect(ConfigProtection.skillScope({ candidate: true, protect: false, external: false })).toBeUndefined()
   })
 })

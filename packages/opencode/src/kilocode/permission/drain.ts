@@ -40,10 +40,11 @@ export function drainCovered(
     for (const [id, entry] of pending) {
       if (id === exclude) continue
       // Never auto-resolve config file edit permissions while config protection is active for
-      // this entry. The caller resolves the global or project policy per entry. When protection
-      // is disabled we use ordinary resolve/base rules instead of the exact global-skill guard.
+      // this entry. The caller resolves the global or project policy per entry and hands back an
+      // already-narrowed skill: protection uses the canonical global skill, a file-tool read keeps
+      // it despite being ungated, and a disabled config edit keeps its requested rule.
       const verdict = policy(entry)
-      const skill = verdict.protect ? verdict.skill : undefined
+      const skill = verdict.skill
       if (verdict.protect && !skill) continue
 
       // Never auto-resolve a skill shell batch; it must get an explicit reply.

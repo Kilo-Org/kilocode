@@ -13,7 +13,9 @@ import { Bus } from "../../../src/bus"
 import { Config } from "../../../src/config/config"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { Permission } from "../../../src/permission"
-import { SessionID } from "../../../src/session/schema"
+import { MessageID, SessionID } from "../../../src/session/schema"
+import type { Tool } from "../../../src/tool/tool"
+import { assertExternalDirectoryEffect } from "../../../src/tool/external-directory"
 import { disposeAllInstances, provideInstance, provideTmpdirInstance, tmpdirScoped } from "../../fixture/fixture"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 
@@ -110,6 +112,70 @@ const wait = (count: number) =>
     `timed out waiting for ${count} pending permission request(s)`,
     "4 seconds",
   )
+
+// A Tool.Context that forwards external_directory prompts into the real Permission service.
+const toolCtx = (permission: Permission.Interface, id: string): Tool.Context => {
+  const sessionID = SessionID.make("ses_" + id)
+  return {
+    sessionID,
+    messageID: MessageID.make("msg_" + id),
+    callID: id,
+    agent: "build",
+    abort: AbortSignal.any([]),
+    messages: [],
+    metadata: () => Effect.void,
+    ask: (req) =>
+      permission
+        .ask({ ...req, id: PermissionV1.ID.make(id), sessionID, ruleset: [] })
+        .pipe(Effect.asVoid, Effect.orDie),
+  }
+}
+
+// Point both the loader's home (KILO_TEST_HOME) and the classifier's home (HOME) at one directory so
+// legacy global config dirs resolve consistently, and restore them even when an assertion fails.
+function withHome<T, E, R>(home: string, effect: Effect.Effect<T, E, R>) {
+  const prevHome = process.env["HOME"]
+  const prevTestHome = process.env["KILO_TEST_HOME"]
+  process.env["HOME"] = home
+  process.env["KILO_TEST_HOME"] = home
+  return effect.pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (prevHome === undefined) delete process.env["HOME"]
+        else process.env["HOME"] = prevHome
+        if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+        else process.env["KILO_TEST_HOME"] = prevTestHome
+      }),
+    ),
+  )
+}
+
+async function legacyHome(files: Record<string, string | undefined>) {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-legacy-home-"))
+  for (const [rel, body] of Object.entries(files)) {
+    const file = path.join(home, rel)
+    await fs.rm(file, { force: true })
+    if (body === undefined) continue
+    await fs.mkdir(path.dirname(file), { recursive: true })
+    await fs.writeFile(file, body)
+  }
+  return home
+}
+
+const auto = (id: string, file: string) =>
+  Effect.gen(function* () {
+    const outcome = yield* ask(editRequest(id, file))
+    expect(outcome.manual).toBe(false)
+  })
+
+const prompts = (id: string, file: string) =>
+  Effect.gen(function* () {
+    const fiber = yield* ask(editRequest(id, file)).pipe(Effect.forkScoped)
+    const items = yield* wait(1)
+    expect(items.some((item) => item.id === PermissionV1.ID.make(id))).toBe(true)
+    yield* reject(id)
+    yield* Fiber.await(fiber)
+  })
 
 afterEach(async () => {
   await setGlobal(undefined)
@@ -416,10 +482,10 @@ describe("require_approval_for_config_edits", () => {
             expect(yield* wait(3)).toHaveLength(3)
             expect(spy.mock.calls.length).toBe(3)
 
-            // "always" builds a plan over its entry and every pending sibling, then drain reuses it.
+            // Protection is on, so the reply entry is classified and blocks before any sibling scan.
             yield* reply({ requestID: PermissionV1.ID.make("per_class_1"), reply: "always" })
             yield* Fiber.await(first)
-            expect(spy.mock.calls.length).toBe(6)
+            expect(spy.mock.calls.length).toBe(4)
 
             yield* reject("per_class_2")
             yield* reject("per_class_3")
@@ -448,9 +514,10 @@ describe("require_approval_for_config_edits", () => {
             expect(yield* wait(3)).toHaveLength(3)
             expect(spy.mock.calls.length).toBe(3)
 
-            // The saved request is still in the pending map; the plan must not classify it twice.
+            // The saved request is still in the pending map; the lazy plan dedupes it and blocks
+            // before classifying the unprotected siblings.
             yield* saveAlwaysRules({ requestID: PermissionV1.ID.make("per_save_class_1"), approvedAlways: [target] })
-            expect(spy.mock.calls.length).toBe(6)
+            expect(spy.mock.calls.length).toBe(4)
 
             yield* reject("per_save_class_1")
             yield* reject("per_save_class_2")
@@ -485,7 +552,8 @@ describe("require_approval_for_config_edits", () => {
             yield* Fiber.await(second)
             yield* Fiber.await(third)
             expect(yield* list()).toEqual([])
-            // The reply plan covered its entry and both siblings; drain made no more classifications.
+            // The gate short-circuits on the reply entry; drain then lazily classifies just the
+            // siblings it reaches, so every entry is still resolved exactly once.
             expect(spy.mock.calls.length).toBe(6)
 
             // A later operation classifies again instead of reusing a retained plan.
@@ -517,7 +585,8 @@ describe("require_approval_for_config_edits", () => {
             yield* Fiber.await(second)
             yield* Fiber.await(third)
             expect(yield* list()).toEqual([])
-            // One classification per pending entry; the covered() checks reuse the plan.
+            // The gate stops at the first config-shaped entry; the covered() checks lazily classify
+            // the rest, so each pending entry is still resolved exactly once.
             expect(spy.mock.calls.length).toBe(6)
           } finally {
             spy.mockRestore()
@@ -1328,6 +1397,303 @@ describe("require_approval_for_config_edits", () => {
           yield* Fiber.await(fiber)
         }),
       )
+    }),
+  )
+
+  it.live("still loads the policy for an ordinary reply with a config sibling", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const config = yield* ask(request("per_mixed_config")).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+
+          const ordinary = yield* ask(
+            request("per_mixed_ordinary", {
+              patterns: ["src/index.ts"],
+              metadata: { filepath: "src/index.ts" },
+              always: ["src/index.ts"],
+              ruleset: [],
+            }),
+          ).pipe(Effect.forkScoped)
+          expect(yield* wait(2)).toHaveLength(2)
+
+          // The reply entry is not config-shaped, so the lazy gate must still resolve the config
+          // sibling and load the policy before drain skips that sibling.
+          yield* reply({ requestID: PermissionV1.ID.make("per_mixed_ordinary"), reply: "always" })
+          yield* Fiber.await(ordinary)
+          expect((yield* list()).map((item) => item.id)).toEqual([PermissionV1.ID.make("per_mixed_config")])
+
+          yield* reject("per_mixed_config")
+          yield* Fiber.await(config)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("narrows an aliased global-skill read to the canonical skill before persisting", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const permission = yield* Permission.Service
+          const { skill, concrete } = yield* Effect.promise(() => paths("per_read_alias"))
+          const skillDir = path.dirname(concrete)
+          const alias = path.join(os.tmpdir(), `opencode-read-alias-${process.pid}-${Date.now()}`)
+          const aliasGlob = path.join(alias, "*").replaceAll("\\", "/")
+          const link = process.platform === "win32" ? "junction" : "dir"
+          yield* Effect.promise(() => fs.writeFile(concrete, "body"))
+          yield* Effect.promise(() => fs.symlink(skillDir, alias, link))
+
+          yield* Effect.gen(function* () {
+            const first = yield* assertExternalDirectoryEffect(
+              toolCtx(permission, "per_read_alias_first"),
+              path.join(alias, "SKILL.md"),
+              { kind: "file" },
+            ).pipe(Effect.forkScoped)
+            const items = yield* wait(1)
+            // A file-tool read is not config-protected, but its canonical skill scope must still
+            // replace the alias so an "always" reply cannot persist the alias itself.
+            expect(items[0]?.always).toEqual([skill])
+            expect(items[0]?.metadata).toMatchObject({ rules: [skill] })
+            yield* reply({ requestID: items[0].id, reply: "always" })
+            expect(Exit.isSuccess(yield* Fiber.await(first))).toBe(true)
+
+            const written = yield* Effect.promise(() => text())
+            expect(written).toContain(skill)
+            expect(written).not.toContain(aliasGlob)
+
+            // Retarget the alias outside any skill. The saved canonical rule must not authorize the read.
+            const other = path.join(os.tmpdir(), `opencode-read-other-${process.pid}-${Date.now()}`)
+            yield* Effect.promise(() => fs.mkdir(other, { recursive: true }))
+            yield* Effect.promise(() => fs.writeFile(path.join(other, "secret.txt"), "x"))
+            yield* Effect.promise(() => fs.rm(alias, { force: true }))
+            yield* Effect.promise(() => fs.symlink(other, alias, link))
+
+            const second = yield* assertExternalDirectoryEffect(
+              toolCtx(permission, "per_read_alias_second"),
+              path.join(alias, "secret.txt"),
+              { kind: "file" },
+            ).pipe(Effect.forkScoped)
+            expect(yield* wait(1)).toHaveLength(1)
+            yield* reject("per_read_alias_second")
+            expect(Exit.isFailure(yield* Fiber.await(second))).toBe(true)
+            yield* Effect.promise(() => fs.rm(other, { recursive: true, force: true }))
+          }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))))
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("persists the canonical skill when saving always rules for an aliased read", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          const permission = yield* Permission.Service
+          const { skill, concrete } = yield* Effect.promise(() => paths("per_read_save"))
+          const skillDir = path.dirname(concrete)
+          const alias = path.join(os.tmpdir(), `opencode-read-save-${process.pid}-${Date.now()}`)
+          const aliasGlob = path.join(alias, "*").replaceAll("\\", "/")
+          const link = process.platform === "win32" ? "junction" : "dir"
+          yield* Effect.promise(() => fs.writeFile(concrete, "body"))
+          yield* Effect.promise(() => fs.symlink(skillDir, alias, link))
+
+          yield* Effect.gen(function* () {
+            const fiber = yield* assertExternalDirectoryEffect(
+              toolCtx(permission, "per_read_save_first"),
+              path.join(alias, "SKILL.md"),
+              { kind: "file" },
+            ).pipe(Effect.forkScoped)
+            const items = yield* wait(1)
+            yield* saveAlwaysRules({ requestID: items[0].id, approvedAlways: [skill] })
+
+            const written = yield* Effect.promise(() => text())
+            expect(written).toContain(skill)
+            expect(written).not.toContain(aliasGlob)
+
+            yield* reject("per_read_save_first")
+            yield* Fiber.await(fiber)
+          }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))))
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("uses legacy home global sources for the global policy", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({
+          ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
+          ".kilocode/kilo.jsonc": JSON.stringify({ require_approval_for_config_edits: false }),
+        }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              // Project targets already read the effective config; legacy global targets must too.
+              yield* auto("per_legacy_project", target)
+              yield* auto("per_legacy_kilo", path.join(home, ".kilo", "kilo.json"))
+              yield* auto("per_legacy_kilocode", path.join(home, ".kilocode", "kilo.jsonc"))
+            }),
+          { git: true },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("uses the primary global false for legacy home targets", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() => legacyHome({}))
+      yield* withGlobal({ require_approval_for_config_edits: false })
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              yield* auto("per_primary_false_kilo", path.join(home, ".kilo", "kilo.json"))
+            }),
+          { git: true },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("lets a legacy global value win over the primary global value, matching the loader", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }) }),
+      )
+      yield* withGlobal({ require_approval_for_config_edits: false })
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              // The loader merges legacy home dirs after the primary global config, so true wins and
+              // the effective project value is true too.
+              yield* prompts("per_legacy_precedence_project", target)
+              yield* prompts("per_legacy_precedence_kilo", path.join(home, ".kilo", "kilo.json"))
+            }),
+          { git: true },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("re-reads legacy global files on every policy load", () =>
+    Effect.gen(function* () {
+      const file = ".kilo/kilo.json"
+      const home = yield* Effect.promise(() =>
+        legacyHome({ [file]: JSON.stringify({ require_approval_for_config_edits: false }) }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              const legacy = path.join(home, file)
+              yield* auto("per_legacy_fresh_1", legacy)
+              yield* Effect.promise(() =>
+                fs.writeFile(legacy, JSON.stringify({ require_approval_for_config_edits: true })),
+              )
+              yield* prompts("per_legacy_fresh_2", legacy)
+              yield* Effect.promise(() =>
+                fs.writeFile(legacy, JSON.stringify({ require_approval_for_config_edits: false })),
+              )
+              yield* auto("per_legacy_fresh_3", legacy)
+            }),
+          { git: true },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("tolerates malformed legacy global config without aborting a permission ask", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({
+          ".kilo/kilo.json": '{ "require_approval_for_config_edits": ',
+          ".kilocode/kilo.jsonc": JSON.stringify({ require_approval_for_config_edits: "nope" }),
+        }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              // A broken legacy file is skipped like the normal loader's directory pass, so the default
+              // strict policy still applies and the ask prompts instead of dying during policy load.
+              yield* prompts("per_legacy_malformed_jsonc", path.join(home, ".kilo", "kilo.json"))
+              yield* prompts("per_legacy_malformed_schema", path.join(home, ".kilocode", "kilo.jsonc"))
+            }),
+          { git: true },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("preserves a valid primary global value when a legacy global file is malformed", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() => legacyHome({ ".kilo/kilo.json": "{ not json" }))
+      yield* withGlobal({ require_approval_for_config_edits: false })
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              // The malformed legacy file is skipped, so the primary explicit false still opts out; the
+              // project target confirms no other setting is responsible.
+              yield* auto("per_primary_kept_malformed_project", target)
+              yield* auto("per_primary_kept_malformed_kilo", path.join(home, ".kilo", "kilo.json"))
+            }),
+          { git: true },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+    }),
+  )
+
+  it.live("matches the loader precedence between conflicting .kilocode and .kilo globals", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(() =>
+        legacyHome({
+          ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
+          ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }),
+        }),
+      )
+      yield* withGlobal(undefined)
+      yield* withHome(
+        home,
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              // The loader discovers home dirs in [.kilocode, .kilo] order and later merges win, so the
+              // .kilo true overrides the .kilocode false for every global target.
+              yield* prompts("per_home_order_prompt", path.join(home, ".kilo", "kilo.json"))
+
+              // Reversing the values flips the policy, proving the order and the per-load freshness.
+              yield* Effect.promise(() =>
+                fs.writeFile(
+                  path.join(home, ".kilocode", "kilo.json"),
+                  JSON.stringify({ require_approval_for_config_edits: true }),
+                ),
+              )
+              yield* Effect.promise(() =>
+                fs.writeFile(
+                  path.join(home, ".kilo", "kilo.json"),
+                  JSON.stringify({ require_approval_for_config_edits: false }),
+                ),
+              )
+              yield* auto("per_home_order_auto", path.join(home, ".kilo", "kilo.json"))
+            }),
+          { git: true },
+        ),
+      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
     }),
   )
 })

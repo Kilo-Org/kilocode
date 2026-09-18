@@ -60,8 +60,19 @@ export namespace ConfigProtection {
     protect: boolean
     /** Some protected target is global or outside the project boundary. */
     external: boolean
-    /** Exact global skill subtree that may bypass protection, when the request is one skill. */
+    /** Exact global skill subtree resolved for this request, when it is one skill. */
     skill?: string
+  }
+
+  /**
+   * The canonical global skill subtree that may narrow this request, or undefined when the request
+   * keeps its requested patterns. Protection applies it while config protection is active; a
+   * file-tool read is never config-gated but still resolves the same canonical skill, so an "Allow
+   * always" reply cannot persist an alias that a later retarget points outside the skill. A config
+   * edit with protection disabled keeps its requested rule instead.
+   */
+  export function skillScope(verdict: Verdict): string | undefined {
+    return verdict.protect || !verdict.candidate ? verdict.skill : undefined
   }
 
   /**
@@ -348,7 +359,8 @@ export namespace ConfigProtection {
 
   /** Apply the global and project protection policies to one already-classified request. */
   export function verdict(classification: Classification, input: { global?: Config; project?: Config } = {}): Verdict {
-    if (!classification.candidate) return { candidate: false, protect: false, external: false }
+    if (!classification.candidate)
+      return { candidate: false, protect: false, external: false, skill: classification.skill }
     const protect =
       (classification.external && enabled(input.global)) || (classification.inside && enabled(input.project))
     return {
