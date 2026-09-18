@@ -33,6 +33,12 @@ internal interface SessionActions {
     /** Whether this session can be forked; false in the sidebar and in read-only hosts. */
     val forkable: Boolean
 
+    /**
+     * Whether the shared agent board is available: a created, non-read-only session with
+     * Kilo Swarm enabled (`shared_agent_board`, Settings > Agent Behavior; on by default).
+     */
+    val board: Boolean
+
     fun setAuto(value: Boolean)
 
     /** Copies this session's history into a new session and opens it. */
@@ -46,6 +52,9 @@ internal interface SessionActions {
 
     /** Revokes the session share, then reports the outcome. */
     fun stopShare()
+
+    /** Opens the shared agent board viewer for this session. No-op when [board] is false. */
+    fun showBoard()
 }
 
 internal object SessionActionsKeys {

@@ -45,6 +45,8 @@ import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
+import { GoalHeader } from "../src/components/chat/goal/GoalHeader"
+import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import type { MentionResult, WorktreeReference } from "../src/hooks/file-mention-utils"
 import { segmentMentionText } from "../src/hooks/file-mention-utils"
@@ -59,10 +61,16 @@ import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
 import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
+import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
+// Local dialog actions offered by the prompt slash menu. Server commands
+// (custom commands, skills, MCP prompts, /goal) are always offered; the
+// exclude set hides the session/global/navigation commands that do not apply
+// to creating a worktree.
 const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox", "project"])
+const WORKTREE_PROMPT_HIDDEN = ["init", "review", "resume-claude", "resume-codex"]
 const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 // The `@model` entry opens the shared model selector through its programmatic
 // open event, keyed to this prompt scope so the footer model selector and slash
@@ -210,6 +218,7 @@ export const NewWorktreeDialog: Component<{
   const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [starting, setStarting] = createSignal(false)
+  const [goalMode, setGoalMode] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
@@ -350,7 +359,7 @@ export const NewWorktreeDialog: Component<{
     vscode,
     { action: toggleSandbox, enabled: () => sandboxVisible() && sandbox() !== undefined && sandboxAvailable() },
     () => {
-      const hidden = new Set<string>()
+      const hidden = new Set<string>(WORKTREE_PROMPT_HIDDEN)
       if (session.agents().length < 2) hidden.add("agents")
       if (variants().length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
@@ -390,6 +399,9 @@ export const NewWorktreeDialog: Component<{
   })
 
   onMount(() => {
+    // Server commands must be known before submit so a pasted `/command`
+    // prompt can be routed through the command path, not only via the menu.
+    vscode.postMessage({ type: "requestCommands" })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
     const focus = () => {
@@ -430,6 +442,9 @@ export const NewWorktreeDialog: Component<{
   const canSubmit = () => {
     if (starting()) return false
     if (speech.active()) return false
+    // In goal mode the objective replaces the prompt, so a session can only
+    // start once the objective has been typed.
+    if (goalMode() && !prompt().trim()) return false
     return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
@@ -459,9 +474,19 @@ export const NewWorktreeDialog: Component<{
       })
       return
     }
+    const draft = prompt().trim()
+    if (shouldComposeGoal(goalMode(), draft)) {
+      // First step of the two-step goal flow: switch to goal composition and
+      // start the session only after the objective is entered.
+      setGoalMode(true)
+      setPromptValue("")
+      slash.close()
+      requestAnimationFrame(() => textareaRef?.focus({ preventScroll: true }))
+      return
+    }
     setStarting(true)
 
-    const text = prompt().trim() || undefined
+    const payload = submitPayload(goalMode(), draft, slash.commands())
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
 
@@ -475,7 +500,9 @@ export const NewWorktreeDialog: Component<{
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
       projectId: target,
-      text,
+      text: payload.text,
+      command: payload.command,
+      arguments: payload.arguments,
       name: name().trim() || undefined,
       versions: count,
       providerID: sel?.providerID,
@@ -486,7 +513,7 @@ export const NewWorktreeDialog: Component<{
       branchName: customBranch,
       modelAllocations: allocations,
       sandbox: sandboxVisible() ? sandboxOverride() : undefined,
-      files: resolveFiles(text),
+      files: resolveFiles(payload.text),
     })
 
     persistPrompt("")
@@ -535,6 +562,18 @@ export const NewWorktreeDialog: Component<{
     if (mention.onKeyDown(e, textareaRef, setPromptValue, restorePrompt)) {
       e.stopPropagation()
       return
+    }
+
+    // The chat composer submits on Enter, so mirror that for the two-step goal
+    // flow. Use the shared IME guard so confirming a composition does not submit.
+    // Plain prompts keep Enter as a newline and still create with Cmd/Ctrl+Enter.
+    if (isEnterKeyCommitNotIme(e) && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (goalMode() || prompt().trim() === "/goal") {
+        e.preventDefault()
+        e.stopPropagation()
+        handleSubmit()
+        return
+      }
     }
 
     // Shift+Tab cycles reasoning effort variants (setting: chat.shiftTabCyclesVariant).
@@ -866,6 +905,9 @@ export const NewWorktreeDialog: Component<{
                   </Show>
                 </div>
               </Show>
+              <Show when={goalMode()}>
+                <GoalHeader onCancel={() => setGoalMode(false)} />
+              </Show>
               <Show when={slash.show()}>
                 <div class="slash-command-dropdown am-slash-command-dropdown" data-component="popover-content">
                   <Show
@@ -948,7 +990,8 @@ export const NewWorktreeDialog: Component<{
                       setPrompt(val)
                       persistPrompt(val)
                       adjustHeight()
-                      slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
+                      if (goalMode()) slash.close()
+                      else slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
                       mention.onInput(val, e.currentTarget.selectionStart ?? val.length)
                     }}
                     onKeyDown={onKey}
@@ -1289,7 +1332,7 @@ export const NewWorktreeDialog: Component<{
                   </>
                 }
               >
-                {t("agentManager.dialog.createWorktree")}
+                {goalMode() ? t("prompt.goal.start") : t("agentManager.dialog.createWorktree")}
               </Show>
             </Button>
           </div>

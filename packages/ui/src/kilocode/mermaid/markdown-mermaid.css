@@ -31,28 +31,6 @@
     padding-right: 32px;
   }
 
-  [data-slot="markdown-mermaid-menu-chevron"] {
-    align-items: center;
-    color: var(--text-weak);
-    display: inline-flex;
-    flex: 0 0 12px;
-    height: 12px;
-    justify-content: center;
-    transform: rotate(0deg);
-    transition: transform 0.15s ease;
-    width: 12px;
-  }
-
-  [data-slot="markdown-mermaid-menu-chevron"] > svg {
-    display: block;
-    height: 12px;
-    width: 12px;
-  }
-
-  [data-expanded] [data-slot="markdown-mermaid-menu-chevron"] {
-    transform: rotate(180deg);
-  }
-
   [data-component="markdown-mermaid"][data-state="rendered"] > svg {
     display: block;
     margin: 0 auto;
