@@ -246,6 +246,7 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
+- **Programmatic Tool Calling** - call connected MCP tools from a confined JavaScript program instead of sending every MCP tool definition to the model (off by default)
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
@@ -291,3 +292,11 @@ The migration imports:
 - Top-level MCP server definitions from `~/.claude.json`, disabled until you enable them.
 
 Existing Kilo content takes precedence; conflicts and unsupported items are skipped. Your original Claude files are not changed or deleted. After the attempt, Kilo stops loading global Claude instructions and skills as a fallback, but project-level compatibility such as a repository's `CLAUDE.md` is unaffected. A notification reports the outcome and points to a receipt with imported, skipped, and failed items.
+
+### Programmatic tool calling
+
+Enable **Programmatic Tool Calling** in **Settings → Experimental**, or set `experimental.code_mode` to `true` in `kilo.jsonc`. It is off by default.
+
+When enabled, the agent calls connected MCP tools from a confined JavaScript program instead of receiving every MCP tool definition in its context. The program can sequence calls, filter results, and discover remaining tools on demand, which reduces context use when many MCP tools are connected.
+
+The `KILO_EXPERIMENTAL_CODE_MODE` environment variable also enables it. Programmatic tool calling is unavailable while a session has network restrictions, because it relies on MCP tools.

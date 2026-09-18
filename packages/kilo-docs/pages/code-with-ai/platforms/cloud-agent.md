@@ -111,6 +111,12 @@ Select a file to open its saved diff and, when available, full contents in a rea
 
 These are saved snapshots, not a live view of the checkout. Diffs or contents may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
 
+## Forking to a new Cloud Agent session
+
+Fork a Cloud Agent session to copy its conversation into a new Cloud Agent session. Open the session's **Share/Fork** actions from the sessions list or a session, then choose **Fork to a new Cloud Agent session**. The fork inherits the source session's repository, model, mode, and custom agents, and the new session opens when it is ready.
+
+Cloud-to-cloud forking is available for Cloud Agent sessions on GitHub and GitLab repositories; Bitbucket and other providers are not supported. Sessions that are not Cloud Agent sessions can still be forked to your editor or CLI.
+
 ## Agent Environment Profiles
 
 Agent environment profiles are reusable bundles of environment settings for cloud-agent sessions. A profile can include:

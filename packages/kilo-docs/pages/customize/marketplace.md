@@ -5,9 +5,9 @@ description: "Install agents, skills, and MCP servers from the Kilo Marketplace"
 
 # Marketplace
 
-The Kilo Marketplace provides reusable extensions for Kilo. Open **Marketplace** from the Kilo sidebar to browse, install, and remove items.
+The Kilo Marketplace provides reusable extensions for Kilo. Open **Marketplace** from the Kilo sidebar in VS Code, or from **Settings → Tools → Kilo Code → Marketplace** in the JetBrains plugin, to browse, install, and remove items.
 
-Marketplace items are configuration and instruction files, not VS Code extensions. Installing an item adds files to either the current project or your user configuration. Kilo then discovers those files through its normal configuration system.
+Marketplace items are configuration and instruction files, not editor extensions. Installing an item adds files to either the current project or your user configuration. Kilo then discovers those files through its normal configuration system.
 
 ## What you can install
 

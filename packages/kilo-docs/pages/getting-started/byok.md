@@ -59,6 +59,18 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 - Xiaomi Token Plan (Singapore)
 - Z.ai Coding Plan
 
+### ChatGPT subscription
+
+Instead of pasting a key, connect your ChatGPT subscription on the [BYOK page](https://app.kilo.ai/byok):
+
+1. Find the **OpenAI (ChatGPT subscription)** card and click **Sign in with ChatGPT**.
+2. Complete the ChatGPT consent in your browser. Connecting takes one click and no API key.
+3. While the connection is enabled, eligible OpenAI model requests use it ahead of other billing paths. The card shows a connected or disconnected state, and **Disconnect** removes the stored connection in one click.
+
+A connection that fails or expires shows a readable reconnect message with a reconnect action. If it cannot be recovered, requests for that connection report that you need to reconnect instead of silently falling back to another billing path.
+
+The pasted OpenAI key entry is labelled **OpenAI API key** so it stays distinct from the ChatGPT subscription connection.
+
 ## Add a BYOK key
 
 1. Log into the Kilo platform and select the account or organization you want to add the BYOK key to.

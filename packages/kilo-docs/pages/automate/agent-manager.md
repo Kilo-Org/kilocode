@@ -142,6 +142,12 @@ Managed worktrees are created under `.kilo/worktrees/` in your project. Kilo als
 Worktrees share Git object storage with the main repository, but each worktree is still a separate checkout on disk. Files created inside each worktree, such as `node_modules`, build output, local databases, generated files, and package-manager caches, can multiply disk usage across parallel agents. Closing a managed worktree removes its checkout directory, but it does not remove external caches, containers, volumes, simulators, or databases that your scripts created outside the worktree.
 {% /callout %}
 
+### Leftover worktree folders
+
+When a worktree is removed outside Kilo, a deletion is interrupted, or something writes into the folder after git stops tracking it, the directory stays under `.kilo/worktrees/` while git no longer lists it as a worktree. A warning notice above the worktree list reports how many leftover folders there are and how much disk they use. While the total is still being measured the notice says so, and if it cannot be measured it reports the count alone.
+
+Select **Resolve…** to review the folders before deleting. The dialog lists each folder's full path, its apparent size, and whether it still contains a git checkout. Folders that still contain a checkout may hold uncommitted work, so they start unselected; select them only after checking. The explanation of where these folders come from starts collapsed behind **Show more**, and the reveal action opens a folder in your OS file manager. Deletion runs in the background, and a notification reports how many folders were removed.
+
 ### PR Status Badges
 
 Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the internal PR panel. Use **Open in browser** in the panel header to open the pull request on GitHub.

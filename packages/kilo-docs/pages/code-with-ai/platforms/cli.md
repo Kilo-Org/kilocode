@@ -183,6 +183,18 @@ Review your code locally before pushing — catch issues early without waiting f
 | `/review <commit-hash>` | Review a specific commit |
 | `/review <PR URL or number>` | Review a pull request |
 
+## Linking Pull Requests
+
+A session links the pull request its output mentions, whether it is a GitHub pull request, a GitLab merge request, or a Bitbucket pull request. The link outlives the session, so `kilo pr status` still reports it after the session exits.
+
+| Command | What it does |
+|---|---|
+| `kilo pr status` | Shows the linked request's platform and URL. |
+| `kilo pr link <url>` | Links the current worktree to a request. |
+| `kilo pr unlink` | Clears the linked request. |
+
+GitLab `/-/merge_requests/N` and Bitbucket `/pull-requests/N` URLs work with a trailing page path such as `/diffs` or `/overview`, and a self-hosted GitLab host links the same way as `gitlab.com`. A URL that does not match a supported pull request shape is rejected with `Invalid PR URL` and changes nothing.
+
 ## Config Reference
 
 Configuration is managed through:

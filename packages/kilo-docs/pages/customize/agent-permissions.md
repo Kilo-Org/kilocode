@@ -132,7 +132,11 @@ cd "/project"; git status
 
 Kilo checks the parsed command patterns. The `git status` command matches `git *`, so the request is denied. Directory changes and commands that access paths outside the worktree can also trigger `external_directory` checks.
 
-Built-in read-only agents include additional shell restrictions for write-like patterns such as output redirection, command substitution, pipes, and command chains. If you create your own read-only agent, prefer an explicit deny fallback and allow only the commands you trust:
+Built-in read-only agents include additional shell restrictions for write-like patterns such as output redirection, command substitution, pipes, and command chains.
+
+Plan and Ask modes, and the Explore agent, allow a fixed set of read-only GitHub CLI commands without prompting: `gh pr view`, `gh pr list`, `gh pr status`, `gh pr diff`, `gh pr checks`, `gh issue view`, `gh issue list`, `gh issue status`, `gh repo view`, `gh run list`, `gh run view`, `gh release list`, `gh release view`, and `gh search`. Each command matches with or without arguments. Other `gh` commands still ask in Plan and Ask modes and are denied in Explore. `gh api` is never auto-allowed because it can send mutations, and `gh auth status` is excluded because `--show-token` and `-t` can expose authentication tokens. These mode rules are applied after global Bash rules, so a saved global allow does not by itself let other `gh` commands run without a prompt in a read-only mode.
+
+If you create your own read-only agent, prefer an explicit deny fallback and allow only the commands you trust:
 
 ```yaml
 permission:

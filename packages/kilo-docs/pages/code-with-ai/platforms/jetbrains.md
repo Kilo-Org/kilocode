@@ -16,6 +16,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
+- **Marketplace** — browse and install marketplace agents, MCP servers, and skills into the current workspace or globally, without leaving the IDE. Reach it from **Settings → Tools → Kilo Code → Marketplace** or from the Agents, MCP Servers, and Skills settings pages. See [Marketplace](/docs/customize/marketplace) for scopes, destinations, and security.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
 
@@ -48,6 +49,12 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 ### Forking a session
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
+
+### Leftover worktree folders
+
+When a worktree is removed outside Kilo, a deletion is interrupted, or something writes into the folder after git stops tracking it, the directory stays under `.kilo/worktrees/` while git no longer lists it as a worktree. A warning banner above the worktree list reports how many leftover folders there are and how much disk they use. While the total is still being measured the banner says so, and if it cannot be measured it reports the count alone.
+
+Select **Resolve…** to review the folders before deleting. The dialog lists each folder's full path, its apparent size, and whether it still contains a git checkout. Folders that still contain a checkout may hold uncommitted work, so they start unselected; select them only after checking. The explanation of where these folders come from starts collapsed behind **Show more**, and the reveal action opens a folder in your file manager. Deletion runs in the background, and a notification reports how many folders were removed.
 
 ## Diagrams in chat
 
@@ -83,3 +90,11 @@ These shortcuts work while a Kilo session is active. They use `Ctrl` on macOS to
 ## Permission requests
 
 When the agent asks for several approvals at once, permission requests queue up instead of replacing each other. Resolve the current request to advance to the next one in the queue.
+
+## Kilo Swarm
+
+[Kilo Swarm](/docs/getting-started/settings#kilo-swarm) lets a main session and its task subagents, including nested ones, exchange messages on a shared board. It uses the existing `task` tool, and the board is scoped to that session tree rather than every Agent Manager session. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for how the board tools work.
+
+Kilo Swarm is on by default. Turn it off with **Enable Kilo Swarm** in **Settings → Tools → Kilo Code → Agent Behavior**, or set `shared_agent_board` to `false` in `kilo.jsonc`.
+
+`board_post` and `board_read` render in the transcript as cards showing the route and message instead of raw tool JSON. When the session has board messages, open the board from the **View Kilo Swarm** action in the session menu or the board icon in the session header. The viewer loads the newest messages first and pages backward with **Load more**, opens a participating subagent in a read-only tab, and offers **Reset board**. Resetting clears the visible messages for every participant; it does not stop agents or change conversations, and it reports a conflict if the board changed since it was loaded.
