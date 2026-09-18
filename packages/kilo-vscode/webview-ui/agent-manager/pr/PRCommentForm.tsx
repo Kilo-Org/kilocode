@@ -27,10 +27,6 @@ interface Draft {
 type Props = {
   projectId?: string
   worktreeId: string
-  /** Submit on plain Enter. Diff composers keep their existing Enter-to-send behavior. */
-  submitOnEnter?: boolean
-  /** Called when Escape is pressed in the editor. */
-  onEscape?: () => void
   inline?: boolean
 } & (
   | { action: "reply"; threadId: string }
@@ -454,11 +450,6 @@ export function PRCommentForm(props: Props) {
                 }}
                 onKeyDown={(event: KeyboardEvent) => {
                   if (event.isComposing || event.keyCode === 229) return
-                  if (event.key === "Escape" && props.onEscape) {
-                    event.preventDefault()
-                    props.onEscape()
-                    return
-                  }
                   if (props.action === "diff") {
                     if (event.key !== "Enter" || event.shiftKey) return
                     // Cmd/Ctrl+Enter saves the comment. Plain Enter sends it to Kilo,
@@ -478,10 +469,6 @@ export function PRCommentForm(props: Props) {
                     event.preventDefault()
                     submit()
                     return
-                  }
-                  if (props.submitOnEnter && !event.shiftKey) {
-                    event.preventDefault()
-                    submit()
                   }
                 }}
               />
