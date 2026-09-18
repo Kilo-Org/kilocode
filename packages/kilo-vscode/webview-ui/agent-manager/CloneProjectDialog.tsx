@@ -7,6 +7,7 @@ import { useVSCode } from "../src/context/vscode"
 import { useLanguage } from "../src/context/language"
 import { joinPath, repoName } from "./project-utils"
 import { ProjectParentField } from "./ProjectParentField"
+import { validateCloneUrl } from "../../src/agent-manager/project/clone"
 
 interface CloneProjectDialogProps {
   /** Roots already attached to Agent Manager, used for the "already added" hint. */
@@ -34,7 +35,7 @@ export const CloneProjectDialog: Component<CloneProjectDialogProps> = (props) =>
   }
   const added = () => Boolean(destination()) && (props.roots ?? []).includes(destination())
   const clone = () => {
-    if (!parent() || !url().trim()) return
+    if (!parent() || validateCloneUrl(url().trim())) return
     vscode.postMessage({ type: "agentManager.cloneProject", url: url().trim(), parent: parent() })
     props.onClose()
   }
@@ -72,7 +73,12 @@ export const CloneProjectDialog: Component<CloneProjectDialogProps> = (props) =>
           <Button variant="secondary" size="large" onClick={props.onClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" size="large" disabled={!parent() || !url().trim()} onClick={clone}>
+          <Button
+            variant="primary"
+            size="large"
+            disabled={!parent() || Boolean(validateCloneUrl(url().trim()))}
+            onClick={clone}
+          >
             {t("agentManager.project.cloneTitle")}
           </Button>
         </div>

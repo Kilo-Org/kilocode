@@ -4,15 +4,8 @@ import * as os from "node:os"
 import * as path from "node:path"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import { canonicalizePath } from "../../src/agent-manager/project/paths"
-import {
-  commit,
-  configure,
-  create,
-  identity,
-  initialize,
-  inspect,
-  validName,
-} from "../../src/agent-manager/project/prepare"
+import { commit, configure, create, identity, initialize, inspect } from "../../src/agent-manager/project/prepare"
+import { validName } from "../../src/agent-manager/project/validation"
 
 let dir: string
 let env: NodeJS.ProcessEnv

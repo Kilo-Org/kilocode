@@ -7,6 +7,7 @@ import { useVSCode } from "../src/context/vscode"
 import { useLanguage } from "../src/context/language"
 import { joinPath } from "./project-utils"
 import { ProjectParentField } from "./ProjectParentField"
+import { validName } from "../../src/agent-manager/project/validation"
 
 interface NewProjectDialogProps {
   onClose: () => void
@@ -28,7 +29,7 @@ export const NewProjectDialog: Component<NewProjectDialogProps> = (props) => {
 
   const destination = () => (parent() && name().trim() ? joinPath(parent(), name().trim()) : "")
   const create = () => {
-    if (!parent() || !name().trim()) return
+    if (!parent() || !validName(name().trim())) return
     vscode.postMessage({ type: "agentManager.createProject", parent: parent(), name: name().trim() })
     props.onClose()
   }
@@ -63,7 +64,7 @@ export const NewProjectDialog: Component<NewProjectDialogProps> = (props) => {
           <Button variant="secondary" size="large" onClick={props.onClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" size="large" disabled={!parent() || !name().trim()} onClick={create}>
+          <Button variant="primary" size="large" disabled={!parent() || !validName(name().trim())} onClick={create}>
             {t("agentManager.project.create")}
           </Button>
         </div>

@@ -105,6 +105,7 @@ async function prepareTarget(
 
 /** Import an existing local folder through the native folder picker. */
 export async function onboard(deps: Onboarding): Promise<string | undefined> {
+  // Even an existing repository will be attached through state recovery and Git exclude writes.
   trusted(deps)
   const primary = await defaultParent(deps.primary, deps.git)
   const dir = await deps.pickFolder({

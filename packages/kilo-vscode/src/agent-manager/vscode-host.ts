@@ -328,14 +328,17 @@ export class VscodeHost implements Host {
     return dir
   }
 
+  private async directory(dir: string, message: string): Promise<string> {
+    const real = await fs.realpath(dir).catch(() => undefined)
+    if (!real || !(await fs.stat(real).catch(() => undefined))?.isDirectory()) throw new Error(message)
+    return real
+  }
+
   async cloneRepository(url: string, parent: string): Promise<string | undefined> {
     const invalid = validateCloneUrl(url)
     if (invalid) throw new Error(vscode.l10n.t(invalid))
     const git = await this.git()
-    const selected = await fs.realpath(parent)
-    if (!(await fs.stat(selected)).isDirectory()) {
-      throw new Error(vscode.l10n.t("Select a parent folder for the cloned repository."))
-    }
+    const selected = await this.directory(parent, vscode.l10n.t("Select a parent folder for the cloned repository."))
     if (!this.multiProject() || !vscode.workspace.isTrusted) {
       throw new Error(
         vscode.l10n.t(
@@ -375,21 +378,14 @@ export class VscodeHost implements Host {
       result = recovered
     }
     if (result === undefined) return undefined
-    if (
-      typeof result !== "string" ||
-      !path.isAbsolute(result) ||
-      !(await fs.stat(result).then(
-        (stats) => stats.isDirectory(),
-        () => false,
-      ))
-    ) {
-      throw new Error(
-        vscode.l10n.t("Git did not return a repository folder. Use Open local folder to attach the checkout."),
-      )
-    }
-    const root = await fs.realpath(result)
-    const repo = await git.openRepository(vscode.Uri.file(root))
-    if (!repo || !samePath(await fs.realpath(repo.rootUri.fsPath), root)) {
+    const message = vscode.l10n.t(
+      "Git did not return a repository folder. Use Open local folder to attach the checkout.",
+    )
+    if (typeof result !== "string" || !path.isAbsolute(result)) throw new Error(message)
+    const root = await this.directory(result, message)
+    const repo = await Promise.resolve(git.openRepository(vscode.Uri.file(root))).catch(() => undefined)
+    const canonical = repo && (await fs.realpath(repo.rootUri.fsPath).catch(() => undefined))
+    if (!canonical || !samePath(canonical, root)) {
       throw new Error(vscode.l10n.t("The folder returned by Git is not a repository: {0}", root))
     }
     if (

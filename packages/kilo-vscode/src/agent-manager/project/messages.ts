@@ -138,7 +138,7 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
-  const result = await deps.ready(ctx)
+  const result = await deps.ready(ctx, { warm: true })
   if (!result.current || !result.ok) {
     deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
     deps.push()
@@ -174,7 +174,7 @@ async function openSessionLocally(projectId: string, sessionId: string, deps: Pr
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
-  const result = await deps.ready(ctx)
+  const result = await deps.ready(ctx, { warm: true })
   if (!result.current || !result.ok) {
     deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
     deps.push()
@@ -297,6 +297,7 @@ async function attachPrepared(
 
 /** Register a prepared root, then select it without warming a worktree of its own. */
 async function attach(root: string, deps: ProjectMessageDeps, git: GitOps): Promise<void> {
+  root = canonicalizePath(root)
   if (!deps.enabled())
     throw new Error(
       "Multi-project Agent Manager was disabled. Enable it and use Open local folder to attach this project.",
@@ -332,6 +333,7 @@ function selectProject(id: string, deps: ProjectMessageDeps): void {
     return
   }
   deps.activate(ctx)
+  ctx.warmPool()
   deps.push()
 }
 
@@ -345,7 +347,10 @@ async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDe
   await deps.registry.setExpanded(id, expanded)
   if (expanded) {
     const next = deps.contexts.expand(id)
-    if (next) deps.expand(next)
+    if (next) {
+      await deps.ready(next, { warm: true })
+      deps.expand(next)
+    }
   }
   if (!expanded) deps.contexts.collapse(id)
   deps.push()

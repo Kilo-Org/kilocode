@@ -17,7 +17,13 @@ export function validateCloneUrl(value: string): string | undefined {
       : invalid
   }
   const url = URL.parse(value)
-  if (!url || !["https:", "ssh:", "git:"].includes(url.protocol) || !url.hostname || url.pathname.length < 2) {
+  if (
+    !url ||
+    !["https:", "ssh:", "git:"].includes(url.protocol) ||
+    !url.hostname ||
+    url.hostname.startsWith("-") ||
+    url.pathname.length < 2
+  ) {
     return invalid
   }
   if (url.password || (url.username && url.protocol !== "ssh:") || /%3a|%40/i.test(url.username)) {

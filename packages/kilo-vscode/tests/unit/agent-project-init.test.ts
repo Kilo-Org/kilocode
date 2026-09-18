@@ -29,7 +29,7 @@ async function project(pool: boolean) {
 
 describe("project initialization pool policy", () => {
   it("keeps attachment and concurrent hydration free of pooled worktrees", async () => {
-    const { ctx, git } = await project(true)
+    const { ctx, git } = await project(false)
     const manager = ctx.worktreeManager()
     const reconcile = spyOn(manager, "reconcilePool")
     const warm = spyOn(manager, "warmPool")
@@ -42,6 +42,25 @@ describe("project initialization pool policy", () => {
     expect(reconcile).not.toHaveBeenCalled()
     expect(warm).not.toHaveBeenCalled()
     expect((await git.raw(["worktree", "list", "--porcelain"])).match(/^worktree /gm)).toHaveLength(1)
+    expect(await initContextState(ctx, () => {}, { warm: true })).toBe(result)
+    await reconcile.mock.results.at(0)?.value
+    expect(reconcile).toHaveBeenCalledTimes(1)
+    expect(warm).toHaveBeenCalledTimes(1)
+    await initContextState(ctx, () => {})
+    expect(reconcile).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not warm after disposal during pool reconciliation", async () => {
+    const { ctx } = await project(false)
+    const pending = Promise.withResolvers<void>()
+    const manager = ctx.worktreeManager()
+    spyOn(manager, "reconcilePool").mockImplementation(() => pending.promise)
+    const warm = spyOn(manager, "warmPool")
+    await initContextState(ctx, () => {})
+    const disposal = ctx.dispose()
+    pending.resolve()
+    await disposal
+    expect(warm).not.toHaveBeenCalled()
   })
 
   it.each([undefined, true])("preserves pool initialization when warm is %s", async (value) => {

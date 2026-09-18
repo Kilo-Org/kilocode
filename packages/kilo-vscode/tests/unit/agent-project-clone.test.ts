@@ -10,9 +10,16 @@ import { samePath } from "../../src/agent-manager/project/paths"
 
 // Compile the actual adapter methods without loading its unrelated panel/provider imports.
 const source = new Project().addSourceFileAtPath(path.join(import.meta.dir, "../../src/agent-manager/vscode-host.ts"))
-const methods = ["pickFolder", "input", "confirm", "git", "multiProject", "existingCheckout", "cloneRepository"].map(
-  (name) => source.getClassOrThrow("VscodeHost").getMethodOrThrow(name).getText(),
-)
+const methods = [
+  "pickFolder",
+  "input",
+  "confirm",
+  "git",
+  "multiProject",
+  "existingCheckout",
+  "directory",
+  "cloneRepository",
+].map((name) => source.getClassOrThrow("VscodeHost").getMethodOrThrow(name).getText())
 const code = new Bun.Transpiler({ loader: "ts" }).transformSync(`class Native { ${methods.join("\n")} }`)
 const adapter = new Function(
   "vscode",
@@ -105,6 +112,12 @@ async function setup() {
 }
 
 describe("clone URL validation", () => {
+  it.each(["ssh://-host/repo", "ssh://git@-host/repo", "git://-host/repo", "https://-host/repo"])(
+    "rejects option-like hosts: %s",
+    (url) => {
+      expect(validateCloneUrl(url)).toBeDefined()
+    },
+  )
   it.each([
     "https://code.example/team/repo.git",
     "ssh://git@work-alias:2222/~/repo.git",
@@ -152,6 +165,13 @@ describe("clone destination name", () => {
 })
 
 describe("native clone adapter", () => {
+  it("explains a missing clone parent without leaking a filesystem error", async () => {
+    const { host, parent, calls } = await setup()
+    await expect(host.cloneRepository("alias:repo", path.join(parent, "missing"))).rejects.toThrow(
+      "Select a parent folder",
+    )
+    expect(calls).toEqual([])
+  })
   it.each(["https://code.example/repo.git", "git@work-alias:~/repo.git", "ssh://git@work-alias/repo.git"])(
     "passes raw URL and both workspace-safe options: %s",
     async (url) => {

@@ -42,6 +42,8 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       state: () => state,
       worktrees: () =>
         ({
+          reconcilePool: async () => {},
+          warmPool: async () => {},
           detachWorktree: mock(async () => {
             calls.push("disk")
             return { done: Promise.resolve() }

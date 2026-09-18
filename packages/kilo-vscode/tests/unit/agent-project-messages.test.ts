@@ -130,6 +130,25 @@ function msg(type: string, extra: Record<string, unknown> = {}): AgentManagerInM
 }
 
 describe("handleProjectMessage", () => {
+  it("reuses the registered project when cloning through a symlink parent", async () => {
+    const root = gitRepo()
+    const parent = directory()
+    const alias = path.join(parent, "alias")
+    fs.symlinkSync(path.dirname(root), alias, process.platform === "win32" ? "junction" : "dir")
+    const { deps, registry, calls } = setup()
+    const id = projectIdFor(root)
+    await registry.add({ id, root })
+    await handleProjectMessage(
+      msg("agentManager.cloneProject", {
+        url: `https://example.com/${path.basename(root)}.git`,
+        parent: alias,
+      }),
+      deps,
+    )
+    expect(calls.error).toEqual([])
+    expect(calls.clone).toEqual([])
+    expect(calls.selected).toEqual([id])
+  })
   it("ignores non-project messages", async () => {
     const { deps } = setup()
     expect(await handleProjectMessage(msg("agentManager.createWorktree"), deps)).toBe(false)

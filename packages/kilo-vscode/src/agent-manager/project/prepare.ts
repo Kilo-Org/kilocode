@@ -4,6 +4,7 @@ import type { GitOps } from "../GitOps"
 import { MISSING_GIT } from "../git-errors"
 import { isRestrictedRoot } from "../home-workspace"
 import { canonicalizePath, resolveProjectRoot, samePath } from "./paths"
+import { validName } from "./validation"
 
 type Git = Pick<GitOps, "execGit">
 
@@ -67,20 +68,6 @@ async function exists(file: string) {
       if (err.code === "ENOENT") return false
       throw err
     },
-  )
-}
-
-/** A portable single child-directory name, including Windows device-name rules. */
-export function validName(name: string): boolean {
-  return (
-    name.length > 0 &&
-    Buffer.byteLength(name) <= 255 &&
-    name.trim() === name &&
-    !/[<>:"/\\|?*\x00-\x1f\x7f]/.test(name) &&
-    !/[. ]$/.test(name) &&
-    !/^(?:\.git|con|conin\$|conout\$|prn|aux|nul|com[1-9\u00b9\u00b2\u00b3]|lpt[1-9\u00b9\u00b2\u00b3])(?:\.|$)/i.test(
-      name,
-    )
   )
 }
 
@@ -168,7 +155,7 @@ export async function create(parent: string, name: string, git: Git): Promise<{ 
   }
   try {
     const root = await initialize(dir, git)
-    if (!samePath(root, dir)) throw new Error(`Cannot create a nested Git repository: ${dir}`)
+    if (!samePath(root, canonicalizePath(dir))) throw new Error(`Cannot create a nested Git repository: ${dir}`)
     return { root, created: true }
   } catch (err) {
     throw new Error(`Project folder remains at ${dir}. ${err instanceof Error ? err.message : String(err)}`)
