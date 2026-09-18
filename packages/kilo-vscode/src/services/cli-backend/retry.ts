@@ -11,6 +11,7 @@ const TRANSIENT = [
   "econnrefused",
   "etimedout",
   "socket hang up",
+  "terminated",
 ]
 
 function transient(error: unknown): boolean {

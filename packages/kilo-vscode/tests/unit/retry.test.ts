@@ -63,6 +63,7 @@ describe("retry", () => {
       "ECONNREFUSED",
       "ETIMEDOUT",
       "socket hang up",
+      "terminated",
     ]
     for (const msg of messages) {
       let calls = 0
