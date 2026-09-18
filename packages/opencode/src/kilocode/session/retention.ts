@@ -29,7 +29,7 @@ export namespace KiloSessionRetention {
    */
   export const BUSY_WINDOW_MS = 60 * 60_000
   /** Scheduled passes wait at least this long since the last one; manual passes bypass the check. */
-  export const MIN_SPACING_MS = 20 * DAY_MS
+  export const MIN_SPACING_MS = 23 * 60 * 60_000
 
   export interface Policy {
     enabled: boolean
@@ -234,17 +234,16 @@ export namespace KiloSessionRetention {
     }
     // Children stored in another project are not covered by the parent's
     // cascade — sweep whatever expired rows are still present. NotFound here
-    // means an earlier cascade already removed the row.
-    if (expired.size > 0) {
+    // means an earlier cascade already removed the row. Chunked because a
+    // machine with retention off for a while can expire thousands at once.
+    const expiredIds = [...expired].map((id) => SessionID.make(id))
+    const chunkSize = 500
+    for (let start = 0; start < expiredIds.length; start += chunkSize) {
+      const chunk = expiredIds.slice(start, start + chunkSize)
       const leftover = yield* db
         .select({ id: SessionTable.id })
         .from(SessionTable)
-        .where(
-          inArray(
-            SessionTable.id,
-            [...expired].map((id) => SessionID.make(id)),
-          ),
-        )
+        .where(inArray(SessionTable.id, chunk))
         .all()
         .pipe(Effect.orDie)
       for (const row of leftover) {

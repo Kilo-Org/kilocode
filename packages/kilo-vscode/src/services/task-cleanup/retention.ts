@@ -16,6 +16,12 @@ export interface RetentionStatus {
 }
 
 const DAY_MS = 86_400_000
+/**
+ * First attempt goes out shortly after start so a pass isn't a full day away
+ * for users who don't keep a window open. The backend spacing guard makes
+ * these early pings harmless.
+ */
+const FIRST_TICK_MS = 2 * 60_000
 const STATE_KEY = "taskCleanup.lastResult"
 
 /**
@@ -35,7 +41,7 @@ export class RetentionService {
 
   start(): void {
     this.disposed = false
-    this.schedule(DAY_MS)
+    this.schedule(FIRST_TICK_MS)
   }
 
   dispose(): void {

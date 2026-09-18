@@ -144,18 +144,22 @@ describe("policy", () => {
 
 describe("shouldRun", () => {
   const active: KiloSessionRetention.Policy = { enabled: true, maxAgeDays: 30 }
-  const state = (daysAgo: number): KiloSessionRetention.State => ({
-    at: NOW - daysAgo * KiloSessionRetention.DAY_MS,
+  const state = (msAgo: number): KiloSessionRetention.State => ({
+    at: NOW - msAgo,
     scanned: 1,
     deleted: 1,
     skippedActive: 0,
     failed: 0,
     durationMs: 5,
   })
+  const HOUR = 3_600_000
 
   it("refuses every pass, forced or not, while the policy is disabled", () => {
     const off: KiloSessionRetention.Policy = { enabled: false, maxAgeDays: 30 }
-    expect(KiloSessionRetention.shouldRun(off, {}, state(10), NOW)).toEqual({ ok: false, reason: "disabled" })
+    expect(KiloSessionRetention.shouldRun(off, {}, state(10 * 24 * HOUR), NOW)).toEqual({
+      ok: false,
+      reason: "disabled",
+    })
     expect(KiloSessionRetention.shouldRun(off, { force: true }, null, NOW)).toEqual({
       ok: false,
       reason: "disabled",
@@ -163,12 +167,15 @@ describe("shouldRun", () => {
   })
 
   it("waits out the spacing window for scheduled passes", () => {
-    expect(KiloSessionRetention.shouldRun(active, {}, state(1), NOW)).toEqual({ ok: false, reason: "recent" })
-    expect(KiloSessionRetention.shouldRun(active, {}, state(21), NOW)).toEqual({ ok: true })
+    expect(KiloSessionRetention.shouldRun(active, {}, state(10 * HOUR), NOW)).toEqual({
+      ok: false,
+      reason: "recent",
+    })
+    expect(KiloSessionRetention.shouldRun(active, {}, state(24 * HOUR), NOW)).toEqual({ ok: true })
   })
 
   it("lets a forced pass through once enabled, and a fresh policy with no prior state", () => {
-    expect(KiloSessionRetention.shouldRun(active, { force: true }, state(1), NOW)).toEqual({ ok: true })
+    expect(KiloSessionRetention.shouldRun(active, { force: true }, state(10 * HOUR), NOW)).toEqual({ ok: true })
     expect(KiloSessionRetention.shouldRun(active, {}, null, NOW)).toEqual({ ok: true })
   })
 })
