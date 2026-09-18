@@ -1,20 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
-import fs from "fs/promises"
-import path from "path"
-import { FSUtil } from "@opencode-ai/core/fs-util"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
-import { RuntimeFlags } from "../../src/effect/runtime-flags"
-import { InstanceRef } from "../../src/effect/instance-ref"
 import { Session } from "../../src/session/session"
 import { SessionReminders } from "../../src/session/reminders"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { KiloModeReminders } from "../../src/kilocode/session/mode-reminders"
-import { provideTestInstance, tmpdir } from "../fixture/fixture"
 
 const sessionID = SessionID.make("ses_mode")
 const model = { providerID: ProviderV2.ID.make("openai"), modelID: ModelV2.ID.make("gpt-4") }
@@ -137,16 +131,12 @@ describe("KiloModeReminders.apply", () => {
         session: {} as unknown as Session.Info,
       }).pipe(
         Effect.provide(
-          Layer.mergeAll(
-            RuntimeFlags.layer({ experimentalPlanMode: false }),
-            Layer.mock(Session.Service, {
-              updatePart: <T extends MessageV2.Part>(part: T) => {
-                stored.push(part)
-                return Effect.succeed(part)
-              },
-            }),
-            FSUtil.defaultLayer,
-          ),
+          Layer.mock(Session.Service, {
+            updatePart: <T extends MessageV2.Part>(part: T) => {
+              stored.push(part)
+              return Effect.succeed(part)
+            },
+          }),
         ),
       ),
     )
@@ -200,48 +190,5 @@ describe("KiloModeReminders.apply", () => {
 
     expect(texts(later)).toEqual(["Also add tests."])
     expect(stored).toHaveLength(0)
-  })
-
-  test("experimental plan -> code appends the plan file hint", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await provideTestInstance({
-      directory: tmp.path,
-      fn: async (ctx) => {
-        const session = { slug: "ses_mode", time: { created: 0 } } as unknown as Session.Info
-        const file = Session.plan(session, ctx)
-        await fs.mkdir(path.dirname(file), { recursive: true })
-        await Bun.write(file, "step 1")
-
-        const stored: MessageV2.Part[] = []
-        const prior = user("plan", "Make a plan.")
-        const next = user("code", "Implement it.")
-        await Effect.runPromise(
-          SessionReminders.apply({
-            messages: [prior, assistant("plan", prior.info.id), next],
-            agent: code as Agent.Info,
-            session,
-          }).pipe(
-            Effect.provideService(InstanceRef, ctx),
-            Effect.provide(
-              Layer.mergeAll(
-                RuntimeFlags.layer({ experimentalPlanMode: true }),
-                Layer.mock(Session.Service, {
-                  updatePart: <T extends MessageV2.Part>(part: T) => {
-                    stored.push(part)
-                    return Effect.succeed(part)
-                  },
-                }),
-                FSUtil.defaultLayer,
-              ),
-            ),
-          ),
-        )
-
-        const text = texts(next).at(-1) ?? ""
-        expect(text).toContain("changed from plan to code")
-        expect(text).toContain(`A plan file exists at ${file}`)
-        expect(stored).toHaveLength(1)
-      },
-    })
   })
 })

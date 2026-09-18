@@ -1,9 +1,6 @@
 import { Effect } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
-import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Agent } from "@/agent/agent"
-import { InstanceState } from "@/effect/instance-state"
-import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Permission } from "@/permission"
 import { PartID } from "@/session/schema"
 import { Session } from "@/session/session"
@@ -55,8 +52,6 @@ export namespace KiloModeReminders {
     agent: Agent.Info
     session: Session.Info
   }) {
-    const flags = yield* RuntimeFlags.Service
-    const fsys = yield* FSUtil.Service
     const sessions = yield* Session.Service
     const user = input.messages.findLast((msg) => msg.info.role === "user")
     if (!user) return input.messages
@@ -71,17 +66,8 @@ export namespace KiloModeReminders {
     )
 
     const prior = input.messages.findLast((msg) => msg.info.id !== user.info.id)
-    const base = transition({ current: input.agent, prior: prior?.info.agent })
-    if (!base) return input.messages
-
-    const hint = yield* Effect.gen(function* () {
-      if (!flags.experimentalPlanMode || prior?.info.agent !== "plan") return ""
-      const ctx = yield* InstanceState.context
-      const plan = Session.plan(input.session, ctx)
-      const exists = yield* fsys.existsSafe(plan)
-      return exists ? `\n\nA plan file exists at ${plan}. You should execute on the plan defined within it` : ""
-    })
-    const text = `${base}${hint}`
+    const text = transition({ current: input.agent, prior: prior?.info.agent })
+    if (!text) return input.messages
     if (user.parts.some((part) => part.type === "text" && part.text === text)) return input.messages
 
     const part = yield* sessions.updatePart({
