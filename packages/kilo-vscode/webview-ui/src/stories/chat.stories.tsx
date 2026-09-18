@@ -46,7 +46,7 @@ import type {
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { feedbackMetadata, formatBrowserFeedback } from "../../../src/shared/browser-feedback"
-import { reviewMetadata, PUSH_INSTRUCTION } from "../../../src/shared/review-comments"
+import { PUSH_INSTRUCTION } from "../../../src/shared/review-comments"
 import { injectedMetadata } from "../../../src/shared/injected-prompt"
 
 const SESSION_ID = "story-session-chat-001"
@@ -274,7 +274,7 @@ function reviewMessage(comments: ReviewCommentEntry[]) {
       messageID: message.id,
       type: "text",
       text: `${prefix}\n\nPlease address these review comments.`,
-      metadata: reviewMetadata({ version: 1, comments }),
+      metadata: { kilo: { review: { version: 1, comments } } },
     },
   ]
   return <VscodeUserMessage message={message} parts={parts} />
