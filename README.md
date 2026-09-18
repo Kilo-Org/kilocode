@@ -32,7 +32,7 @@ Pick where you want to run Kilo.
 
 <br>
 
-Install the [Kilo Code extension](vscode:extension/kilocode.kilo-code) directly, or grab it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code). Create an account and you'll have access to 500+ models including GPT-6 Astra, Claude Fable 5.1, Claude Opus 5, Gemini 3.8 Flash, and DeepSeek V4.1 Flash, all at provider pricing.
+Install the [Kilo Code extension](vscode:extension/kilocode.kilo-code) directly, or grab it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code). Create an account and you'll have access to 500+ models including GPT-6 Astra, Claude Fable 5.1, Gemini 3.8 Flash, Grok 4.6, and DeepSeek V4.1 Flash, all at provider pricing.
 
 </details>
 
