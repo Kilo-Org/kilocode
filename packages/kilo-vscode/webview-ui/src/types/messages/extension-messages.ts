@@ -1301,6 +1301,9 @@ export interface AgentManagerSendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string

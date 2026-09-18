@@ -338,6 +338,7 @@ export interface RequestCommandsMessage {
 
 export interface SendCommandRequest {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string
@@ -1001,6 +1002,9 @@ export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
   projectId?: string
   text?: string
+  // When set, the first prompt runs this server command instead of `text`.
+  command?: string
+  arguments?: string
   name?: string
   versions: number
   providerID?: string

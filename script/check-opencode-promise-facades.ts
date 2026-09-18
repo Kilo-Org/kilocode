@@ -55,7 +55,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     reason: "production default snapshot hooks require the shared runtime and instance context",
   },
   "kilocode/kilo-sessions.test.ts": {
-    count: 42,
+    count: 44,
     reason:
       "K1 W1: real integration test for SessionStatus→detach→heartbeat-fence; " +
       "the test creates a session and sets its status via the global AppRuntime, " +
@@ -76,7 +76,10 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "directory and meta()'s launch-directory fallback does not throw without an " +
       "instance context. The repository-metadata self-heal test creates its session " +
       "through that same global AppRuntime to verify heartbeat rows drop repository " +
-      "metadata while .git is unreadable and restore it on the next gather.",
+      "metadata while .git is unreadable and restore it on the next gather. " +
+      "The create_session share gate tests create the session through that same global " +
+      "AppRuntime because the command hosts it through the module-level attachRemoteSession " +
+      "seam while the relay bootstrap is stubbed, so no scoped layer can observe the gate.",
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },
