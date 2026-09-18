@@ -4,10 +4,10 @@ import { parse as parseJsonc } from "jsonc-parser"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { ConfigPaths } from "@/config/paths"
-import { parsePluginSpecifier } from "@/plugin/shared"
 import type { Skill } from "@/skill"
 import type { MarketplaceInstalledMetadata, Scope } from "./schema"
 import * as Paths from "./paths"
+import { pluginPackageName } from "./plugin-spec"
 
 const log = Log.create({ service: "marketplace" })
 
@@ -82,12 +82,6 @@ async function detectScope(scope: Scope, input: DetectInput): Promise<Record<str
   ])
 }
 
-function pluginName(spec: unknown) {
-  if (typeof spec === "string") return parsePluginSpecifier(spec).pkg || undefined
-  if (Array.isArray(spec) && typeof spec[0] === "string") return parsePluginSpecifier(spec[0]).pkg || undefined
-  return undefined
-}
-
 async function readPluginList(file: string): Promise<unknown[]> {
   try {
     const cfg = Bun.file(file)
@@ -122,7 +116,7 @@ async function pluginEntries(scope: Scope, input: DetectInput): Promise<Entry[]>
   const out: Entry[] = []
   for (const file of new Set(files)) {
     for (const spec of await readPluginList(file)) {
-      const name = pluginName(spec)
+      const name = pluginPackageName(spec)
       if (name) out.push(entry(name, "plugin"))
     }
   }

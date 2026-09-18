@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { mkdir } from "fs/promises"
 import path from "path"
+import { Effect } from "effect"
 import { detect } from "../../src/kilocode/marketplace/detection"
-import { pluginPackageName } from "../../src/kilocode/marketplace/installer"
+import { install } from "../../src/kilocode/marketplace/installer"
+import { pluginPackageName } from "../../src/kilocode/marketplace/plugin-spec"
 import { tmpdir } from "../fixture/fixture"
 
 describe("marketplace plugin helpers", () => {
@@ -13,6 +15,17 @@ describe("marketplace plugin helpers", () => {
     expect(pluginPackageName(["pkg", { option: true }])).toBe("pkg")
     expect(pluginPackageName("file:///tmp/plugin")).toBe("file:///tmp/plugin")
     expect(pluginPackageName(42)).toBeUndefined()
+  })
+
+  test("rejects plugin items whose id is not the package name", async () => {
+    const out = await Effect.runPromise(
+      install({} as never, {
+        item: { type: "plugin", id: "slug", content: "opencode-models-discovery" },
+        target: "project",
+      }),
+    )
+    expect(out.success).toBe(false)
+    expect(out.error).toContain("must match the package name")
   })
 
   test("detects installed plugins from project config", async () => {
