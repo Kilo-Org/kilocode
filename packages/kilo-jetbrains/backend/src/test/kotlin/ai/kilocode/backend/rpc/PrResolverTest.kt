@@ -16,8 +16,18 @@ class PrResolverTest {
     /** Timeout budget each `gh` call was given, so the short probe budget stays verifiable. */
     private val budgets = mutableListOf<Int>()
 
+    /**
+     * The local `git` reads, kept apart from the networked [calls] the ladder assertions are about.
+     * Every entry is the head-commit read, which the resolver now takes once up front rather than only
+     * inside the search strategy — so how many of these ran is its own claim, not part of a ladder.
+     */
+    private val heads = mutableListOf<List<String>>()
+
     /** The checkout the command in flight runs in, so a test can answer differently per repository. */
     private var dir = ""
+
+    /** What `git rev-parse HEAD` answers, so a test can move the commit under a cached absence. */
+    private var head = "$SHA\n"
 
     @Test
     fun `resolves through the branch selector without falling back`() {
@@ -259,11 +269,93 @@ class PrResolverTest {
     }
 
     @Test
-    fun `skips the head search for the base branch`() {
+    fun `spends only the branch selector on the working tree holding the base branch`() {
         val resolver = resolver(view = { missing() }, list = { throw IllegalStateException("must not search") })
 
         assertNull(resolver.resolve("/repo", "main", base = "main").pr)
-        assertEquals(2, calls.size, "only the two view forms should run for the base branch")
+
+        // Strategies 2 and 3 exist for heads a branch name cannot reach — a fork PR via
+        // `branch.<name>.merge`, a `refs/pull/N/head` checkout, a locally renamed branch. Git will not
+        // let a second worktree hold the base branch, so this is the main working tree and is none of
+        // those. It is also the row that reliably has no PR, so before this it fell all the way through
+        // the ladder every poll and spent the hang-prone selector-less budget to re-learn that.
+        assertEquals(listOf(listOf("pr", "view", "main", "--json", PR_RICH_FIELDS)), calls)
+        assertEquals(listOf(GH_READ_TIMEOUT_MS), budgets, "the selector-less probe budget must not be spent here")
+    }
+
+    @Test
+    fun `stops re-asking about a checkout already proven to have no pull request`() {
+        val resolver = resolver(view = { missing() })
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        val first = calls.size
+        assertTrue(first >= 2, "a PR-less branch should have walked the ladder once, got $calls")
+        calls.clear()
+
+        // Same checkout, same commit, nothing happened locally. This is the row that costs the most of
+        // any: it is the only one that runs every strategy to completion, and it did so on every poll
+        // forever. The ladder is what made the machine slow enough to miss a budget in the first place.
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        assertEquals(emptyList(), calls, "a proven absence must not be re-bought")
+        assertEquals(2, heads.size, "the commit is what the absence is keyed by, so it must be re-read")
+    }
+
+    @Test
+    fun `re-asks once the commit moves under a proven absence`() {
+        val resolver = resolver(view = { if (head.startsWith(SHA)) missing() else pr(7, "OPEN") })
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        calls.clear()
+
+        // Committing, amending, rebasing, resetting or checking out is what can give the branch a pull
+        // request, and every one of them moves HEAD. Keying the absence to the commit is what makes it
+        // expire on exactly those events instead of on a clock.
+        head = "2222222222222222222222222222222222222222\n"
+        assertEquals(7, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).number)
+        assertTrue(calls.isNotEmpty(), "a moved commit is a different question and must be asked")
+    }
+
+    @Test
+    fun `re-asks when the caller will not accept an answer this old`() {
+        val resolver = resolver(view = { missing() })
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        calls.clear()
+
+        // A pull request can be opened on github.com for a head that is already pushed, with nothing
+        // happening locally to move the commit. maxAge is how a caller returning to the IDE after a real
+        // absence says it will not accept an answer that predates the absence — the same ceiling it
+        // already applies to every other cache — so that return still re-checks.
+        assertNull(resolver.resolve(path, "feature/x", base = "main", maxAge = 0).pr)
+        assertTrue(calls.isNotEmpty(), "a rejected ceiling must reach gh, got $calls")
+    }
+
+    @Test
+    fun `does not remember an absence a timed-out ladder never established`() {
+        val resolver = resolver(view = { CmdOut(-1, "", "", timeout = true) })
+
+        assertEquals(GhAvailability.TIMEOUT, resolver.resolve(path, "feature/x", base = "main").availability)
+        calls.clear()
+
+        // A spent budget answered nothing. Remembering it as "no pull request here" would turn one slow
+        // command into a checkout that silently shows no PR for the whole absence TTL.
+        assertEquals(GhAvailability.TIMEOUT, resolver.resolve(path, "feature/x", base = "main").availability)
+        assertTrue(calls.isNotEmpty(), "a non-answer must not be cached as an answer")
+    }
+
+    @Test
+    fun `forgets proven absences when a mutation could have created a pull request`() {
+        val resolver = resolver(view = { missing() })
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        calls.clear()
+
+        // A PR import can hand a checkout the pull request this just proved absent while leaving the
+        // head commit alone, so the commit key alone would keep serving the stale absence.
+        resolver.clear()
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        assertTrue(calls.isNotEmpty(), "an invalidated absence must be re-asked")
     }
 
     @Test
@@ -468,9 +560,9 @@ class PrResolverTest {
         },
         git = { at, args ->
             dir = at.toString()
-            calls.add(args)
+            heads.add(args)
             assertEquals(listOf("rev-parse", "HEAD"), args)
-            ok("$SHA\n")
+            ok(head)
         },
     )
 

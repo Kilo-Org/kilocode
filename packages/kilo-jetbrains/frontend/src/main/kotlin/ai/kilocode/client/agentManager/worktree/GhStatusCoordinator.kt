@@ -55,6 +55,14 @@ class GhStatusCoordinator(
         // the probe finishes, so timing from the start would let a sync clear this floor and still be
         // served that entry.
         private const val EVENT_THROTTLE = 3_000L
+        // Observations of [GhAvailability.TIMEOUT] required before it is published. A PR fan-out runs
+        // one `gh` process per worktree and reports the whole repository unavailable if any single one
+        // of them overruns its budget, so on a busy machine with many worktrees one slow process out of
+        // dozens raised a banner that the very next probe cleared. Two observations is the difference
+        // between "a command was slow once" and "gh is not answering", which is what the banner claims.
+        // Deliberately a count and not a timer: the PR poll is the only thing that can observe this
+        // state, so waiting on a clock would just publish whatever the same single overrun already said.
+        internal const val TIMEOUT_CONFIRMATIONS = 2
     }
 
     /** An event-driven sync that could not run when it arrived, held for one trailing probe. */
@@ -74,6 +82,8 @@ class GhStatusCoordinator(
     /** When the last probe finished, whatever its outcome. See [EVENT_THROTTLE]. */
     private var probed = 0L
     private var pending: Sync? = null
+    /** Unpublished [GhAvailability.TIMEOUT] observations. See [TIMEOUT_CONFIRMATIONS]. */
+    private var slow = 0
     private val away = Away { timers.now() }
     private val projects = linkedMapOf<Project, Int>()
 
@@ -241,7 +251,38 @@ class GhStatusCoordinator(
         job = null
         busy = false
         failures = 0
+        slow = 0
         LOG.info("gh probe loop stop")
+    }
+
+    /**
+     * Whether [next] may be published yet, holding back an unconfirmed [GhAvailability.TIMEOUT].
+     *
+     * Only TIMEOUT is rationed, and only on the way in: it is the one verdict a *single* slow process
+     * can produce out of a fan-out of dozens, and the only one the user can do nothing about. Every
+     * other state is either actionable (MISSING, UNAUTH, GIT_MISSING) or self-correcting on GitHub's
+     * own schedule (RATE_LIMITED), so delaying those would only make the banner slower to tell the
+     * user something true.
+     *
+     * Any other observation clears the tally, including OK. That is what makes this a run of
+     * consecutive timeouts rather than a lifetime count that eventually trips on unrelated blips.
+     * A TIMEOUT arriving while TIMEOUT is already published falls through to [apply]'s own
+     * `value == next` check and changes nothing.
+     */
+    @RequiresEdt
+    private fun confirmed(next: GhAvailability): Boolean {
+        if (next != GhAvailability.TIMEOUT) {
+            slow = 0
+            return true
+        }
+        if (value == GhAvailability.TIMEOUT) return true
+        slow++
+        if (slow >= TIMEOUT_CONFIRMATIONS) return true
+        LOG.info("gh timeout held, unconfirmed count=$slow of $TIMEOUT_CONFIRMATIONS state=$value refs=$refs")
+        // Nothing is re-armed here on purpose. The probe loop's timer is owned by [schedule], which
+        // every probe completion path calls independently, and the next observation of this state comes
+        // from a PR fan-out rather than from this loop — so holding the verdict cannot strand the loop.
+        return false
     }
 
     @RequiresEdt
@@ -250,6 +291,7 @@ class GhStatusCoordinator(
         // resolves after the user turned the integration off — anything but OK/GIT_MISSING implies
         // gh ran, which cannot be trusted once disabled.
         if (!github && next != GhAvailability.OK && next != GhAvailability.GIT_MISSING) return
+        if (!confirmed(next)) return
         if (value == next) return
         val previous = value
         value = next
@@ -320,6 +362,9 @@ class GhStatusCoordinator(
         job = null
         busy = false
         failures = 0
+        // A timeout tally collected under the other setting says nothing about what gh does now, and
+        // must not let a single overrun after the toggle trip a verdict it only half-earned before it.
+        slow = 0
         generation++
         notified = false
         // The toggle probes (or publishes OK) on its own, so a sync held from before it is redundant
