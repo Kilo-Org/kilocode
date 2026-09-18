@@ -40,7 +40,8 @@ export const COLLAPSE_LINES = 4
 export function injectedPreview(text: string): string | undefined {
   const body = text.trim()
   if (body.split("\n").length <= COLLAPSE_LINES) return undefined
-  return body.split(/\n\s*\n/, 1)[0]?.trim() || undefined
+  const first = body.split(/\n\s*\n/, 1)[0]?.trim()
+  return first && first !== body ? first : undefined
 }
 
 /**

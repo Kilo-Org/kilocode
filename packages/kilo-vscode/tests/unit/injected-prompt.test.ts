@@ -18,6 +18,10 @@ describe("injected prompt metadata", () => {
     expect(injectedPreview("one\ntwo\nthree\nfour")).toBeUndefined()
     expect(injectedPreview("First paragraph.\n\nSecond.\nThird.\nFourth.\nFifth.")).toBe("First paragraph.")
   })
+
+  it("has no preview when a long body has no paragraph break", () => {
+    expect(injectedPreview("one\ntwo\nthree\nfour\nfive")).toBeUndefined()
+  })
 })
 
 describe("injectedView", () => {
@@ -28,6 +32,12 @@ describe("injectedView", () => {
       preview: "Update the branch.",
     })
     expect(injectedView(injectedMetadata("/init"), "short")).toEqual({ label: "Sent by Kilo \u00B7 /init" })
+  })
+
+  it("does not collapse a long body that has no paragraph break", () => {
+    expect(injectedView(injectedMetadata("/demo"), "one\ntwo\nthree\nfour\nfive")).toEqual({
+      label: "Sent by Kilo \u00B7 /demo",
+    })
   })
 
   it("labels an auto-sent pull request fix as sent by Kilo", () => {
