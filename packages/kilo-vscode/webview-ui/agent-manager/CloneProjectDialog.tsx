@@ -6,6 +6,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { useVSCode } from "../src/context/vscode"
 import { useLanguage } from "../src/context/language"
 import { joinPath, repoName } from "./project-utils"
+import { ProjectParentField } from "./ProjectParentField"
 
 interface CloneProjectDialogProps {
   /** Roots already attached to Agent Manager, used for the "already added" hint. */
@@ -56,22 +57,7 @@ export const CloneProjectDialog: Component<CloneProjectDialogProps> = (props) =>
               }}
             />
           </label>
-          <div class="am-project-dialog-field">
-            <span class="am-nv-config-label">{t("agentManager.project.parentLabel")}</span>
-            <div class="am-project-dialog-parent">
-              <input class="am-nv-name-input" type="text" value={parent()} readOnly />
-              <Button
-                variant="secondary"
-                size="small"
-                class="am-project-dialog-browse"
-                onClick={() =>
-                  vscode.postMessage({ type: "agentManager.pickProjectParent", defaultPath: parent() || undefined })
-                }
-              >
-                {t("agentManager.project.browse")}
-              </Button>
-            </div>
-          </div>
+          <ProjectParentField parent={parent()} />
           <Show when={destination()}>
             <label class="am-project-dialog-field">
               <span class="am-nv-config-label">{t("agentManager.project.destination")}</span>
