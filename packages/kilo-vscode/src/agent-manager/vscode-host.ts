@@ -375,7 +375,14 @@ export class VscodeHost implements Host {
       result = recovered
     }
     if (result === undefined) return undefined
-    if (typeof result !== "string" || !path.isAbsolute(result) || !(await fs.stat(result)).isDirectory()) {
+    if (
+      typeof result !== "string" ||
+      !path.isAbsolute(result) ||
+      !(await fs.stat(result).then(
+        (stats) => stats.isDirectory(),
+        () => false,
+      ))
+    ) {
       throw new Error(
         vscode.l10n.t("Git did not return a repository folder. Use Open local folder to attach the checkout."),
       )

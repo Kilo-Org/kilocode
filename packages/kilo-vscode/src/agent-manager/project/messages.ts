@@ -12,7 +12,7 @@ import type { AgentManagerInMessage, AgentManagerOutMessage } from "../types"
 import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
-import { projectIdFor, resolveProjectRoot, samePath } from "./paths"
+import { canonicalizePath, projectIdFor, resolveProjectRoot, samePath } from "./paths"
 import type { SidebarTarget, SessionRef } from "./route"
 import { cloneProject, createProject, defaultParent, onboard, type Onboarding } from "./onboarding"
 import { runner } from "./prepare"
@@ -236,7 +236,7 @@ function onboardingDeps(deps: ProjectMessageDeps, git: GitOps): Onboarding {
     primary: deps.contexts.pinned()?.root,
     git,
     enabled: deps.enabled,
-    registered: (dir) => Boolean(deps.registry.get(projectIdFor(dir))),
+    registered: (dir) => Boolean(deps.registry.get(projectIdFor(canonicalizePath(dir)))),
   }
 }
 

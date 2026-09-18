@@ -25,6 +25,7 @@ function environment(): NodeJS.ProcessEnv {
     "GIT_ASKPASS",
     "SSH_ASKPASS",
     "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_PARAMETERS",
   ]) {
     delete env[key]
   }
