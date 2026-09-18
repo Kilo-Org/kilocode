@@ -43,10 +43,24 @@ function directory() {
   return dir
 }
 
-function gitRepo(): string {
-  const dir = directory()
+function gitRepo(dir = directory()): string {
   execFileSync("git", ["-c", "init.templateDir=", "init", "-q", dir])
-  execFileSync("git", ["commit", "--allow-empty", "-qm", "Initial commit"], { cwd: dir })
+  execFileSync(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "--allow-empty",
+      "-qm",
+      "Initial commit",
+    ],
+    { cwd: dir },
+  )
   return dir
 }
 
@@ -265,8 +279,7 @@ describe("handleProjectMessage", () => {
     const parent = directory()
     const root = path.join(parent, "existing")
     fs.mkdirSync(root)
-    execFileSync("git", ["-c", "init.templateDir=", "init", "-q", root])
-    execFileSync("git", ["commit", "--allow-empty", "-qm", "Initial commit"], { cwd: root })
+    gitRepo(root)
     const { deps, calls, registry, contexts } = setup({ workspace })
     await handleProjectMessage(msg("agentManager.createProject", { parent, name: "existing" }), deps)
     expect(calls.confirm).toEqual([])
@@ -284,8 +297,7 @@ describe("handleProjectMessage", () => {
     const parent = directory()
     const root = path.join(parent, "repo")
     fs.mkdirSync(root)
-    execFileSync("git", ["-c", "init.templateDir=", "init", "-q", root])
-    execFileSync("git", ["commit", "--allow-empty", "-qm", "Initial commit"], { cwd: root })
+    gitRepo(root)
     const { deps, calls, pick, registry, contexts } = setup({ workspace })
     pick(root)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
