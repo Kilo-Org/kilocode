@@ -46,6 +46,10 @@ export const dict = {
     "Proje dosyaları sürüm kontrolüne eklenebilir. Yapılandırma bir ortam değişkenine başvurmuyorsa gizli bilgileri burada saklamayın.",
   "marketplace.install.learnMore": "Marketplace yüklemelerinin nasıl çalıştığını öğrenin",
   "marketplace.install.learnMcp": "MCP hakkında daha fazla bilgi edinin",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "{{path}} konumuna yüklendi",
   "marketplace.intro":
     "Yeniden kullanılabilir ajanları, yetenekleri ve MCP araçlarını bir proje veya tüm projeler için yükleyin.",
@@ -76,6 +80,7 @@ export const dict = {
   "marketplace.scope.project": "proje",
   "marketplace.scope.global": "genel",
   "marketplace.remove.type.mcp": "MCP sunucusu",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "yetenek",
   "marketplace.remove.type.agent": "ajan",
   "marketplace.remove.failed": "{{name}} kaldırılamadı",

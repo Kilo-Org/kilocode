@@ -4256,7 +4256,21 @@ export type SkillMarketplaceItem = {
   displayCategory: string
 }
 
-export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem
+export type PluginMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "plugin"
+  content: string
+  url?: string
+}
+
+export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem | PluginMarketplaceItem
 
 export type MarketplaceInstalledMetadata = {
   project: {
@@ -4313,7 +4327,13 @@ export type SkillInstallItem = {
   content: string
 }
 
-export type MarketplaceInstallItem = McpInstallItem | AgentInstallItem | SkillInstallItem
+export type PluginInstallItem = {
+  type: "plugin"
+  id: string
+  content: string
+}
+
+export type MarketplaceInstallItem = McpInstallItem | AgentInstallItem | SkillInstallItem | PluginInstallItem
 
 export type MarketplaceInstallResult = {
   success: boolean
@@ -4325,7 +4345,7 @@ export type MarketplaceInstallResult = {
 
 export type MarketplaceItemRef = {
   id: string
-  type: "mcp" | "agent" | "skill"
+  type: "mcp" | "agent" | "skill" | "plugin"
 }
 
 export type MarketplaceRemoveResult = {

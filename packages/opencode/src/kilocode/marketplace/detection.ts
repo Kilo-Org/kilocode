@@ -2,6 +2,9 @@ import path from "path"
 import { readdir } from "fs/promises"
 import { parse as parseJsonc } from "jsonc-parser"
 import * as Log from "@opencode-ai/core/util/log"
+import { Global } from "@opencode-ai/core/global"
+import { ConfigPaths } from "@/config/paths"
+import { parsePluginSpecifier } from "@/plugin/shared"
 import type { Skill } from "@/skill"
 import type { MarketplaceInstalledMetadata, Scope } from "./schema"
 import * as Paths from "./paths"
@@ -16,7 +19,9 @@ type DetectInput = {
   skills?: readonly Pick<Skill.Info, "name" | "location">[]
 }
 
-function entry(id: string, type: "agent" | "mcp" | "skill"): Entry {
+const TYPES = ["mcp", "agent", "skill", "plugin"] as const
+
+function entry(id: string, type: (typeof TYPES)[number]): Entry {
   return [`${type}:${id}`, { type }]
 }
 
@@ -72,8 +77,56 @@ async function detectScope(scope: Scope, input: DetectInput): Promise<Record<str
   return Object.fromEntries([
     ...(await agentFiles(scope, input.directory)),
     ...(await configEntries(scope, input.directory, input.worktree)),
+    ...(await pluginEntries(scope, input)),
     ...skillEntries(input.skills, input.directory, scope === "project"),
   ])
+}
+
+function pluginName(spec: unknown) {
+  if (typeof spec === "string") return parsePluginSpecifier(spec).pkg || undefined
+  if (Array.isArray(spec) && typeof spec[0] === "string") return parsePluginSpecifier(spec[0]).pkg || undefined
+  return undefined
+}
+
+async function readPluginList(file: string): Promise<unknown[]> {
+  try {
+    const cfg = Bun.file(file)
+    if (!(await cfg.exists())) return []
+    const parsed = parseJsonc(await cfg.text())
+    if (parsed && typeof parsed === "object" && Array.isArray((parsed as { plugin?: unknown }).plugin)) {
+      return (parsed as { plugin: unknown[] }).plugin
+    }
+    return []
+  } catch (err) {
+    log.warn("plugin detection failed", { file, err })
+    return []
+  }
+}
+
+async function pluginEntries(scope: Scope, input: DetectInput): Promise<Entry[]> {
+  const dirs =
+    scope === "global"
+      ? [Global.Path.config]
+      : [
+          ...new Set(
+            [path.join(input.directory, ".kilo"), input.worktree ? path.join(input.worktree, ".kilo") : undefined].filter(
+              (dir): dir is string => Boolean(dir),
+            ),
+          ),
+        ]
+  const files = dirs.flatMap((dir) =>
+    (["opencode", "tui"] as const).flatMap((name) => ConfigPaths.fileInDirectory(dir, name)),
+  )
+  files.push(await Paths.configPath(scope, input.directory, input.worktree))
+
+  const out: Entry[] = []
+  for (const file of new Set(files)) {
+    for (const spec of await readPluginList(file)) {
+      const name = pluginName(spec)
+      if (name) out.push(entry(name, "plugin"))
+    }
+  }
+  return out
 }
 
 export async function detect(input: DetectInput): Promise<MarketplaceInstalledMetadata> {

@@ -67,6 +67,7 @@ export const InstallModal = (props: Props) => {
     const base = target === "project" ? ".kilo" : "~/.config/kilo"
     if (props.item.type === "mcp") return `${base}/kilo.json`
     if (props.item.type === "agent") return `${base}/agents/${props.item.id}.md`
+    if (props.item.type === "plugin") return `${base}/opencode.json`
     if (target === "project") return `.kilo/skills/${props.item.id}/`
     return `~/.kilo/skills/${props.item.id}/`
   }
@@ -199,10 +200,13 @@ export const InstallModal = (props: Props) => {
             </div>
           </div>
 
-          <Show when={props.item.type === "mcp" || scope().value === "project"}>
+          <Show when={props.item.type === "mcp" || props.item.type === "plugin" || scope().value === "project"}>
             <div class="install-modal-warning">
               <Show when={props.item.type === "mcp"}>
                 <p>{t("marketplace.install.mcp.warning")}</p>
+              </Show>
+              <Show when={props.item.type === "plugin"}>
+                <p>{t("marketplace.install.plugin.warning")}</p>
               </Show>
               <Show when={scope().value === "project"}>
                 <p>{t("marketplace.install.project.warning")}</p>

@@ -44,6 +44,10 @@ export const dict = {
     "프로젝트 파일이 버전 관리에 추가될 수 있습니다. 구성에서 환경 변수를 참조하는 경우가 아니면 여기에 비밀 정보를 저장하지 마세요.",
   "marketplace.install.learnMore": "Marketplace 설치 방식 알아보기",
   "marketplace.install.learnMcp": "MCP 자세히 알아보기",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "{{path}}에 설치됨",
   "marketplace.intro": "재사용 가능한 에이전트, 스킬 및 MCP 도구를 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
   "marketplace.intro.learnMore": "Marketplace 정보",
@@ -72,6 +76,7 @@ export const dict = {
   "marketplace.scope.project": "프로젝트",
   "marketplace.scope.global": "글로벌",
   "marketplace.remove.type.mcp": "MCP 서버",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "스킬",
   "marketplace.remove.type.agent": "에이전트",
   "marketplace.remove.failed": "{{name}} 제거 실패",

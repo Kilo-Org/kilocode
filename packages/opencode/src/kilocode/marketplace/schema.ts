@@ -3,7 +3,7 @@ import { Schema } from "effect"
 export const Scope = Schema.Literals(["project", "global"])
 export type Scope = typeof Scope.Type
 
-export const Kind = Schema.Literals(["mcp", "agent", "skill"])
+export const Kind = Schema.Literals(["mcp", "agent", "skill", "plugin"])
 export type Kind = typeof Kind.Type
 
 export const McpParameter = Schema.Struct({
@@ -106,10 +106,20 @@ export const SkillMarketplaceItem = Schema.Struct({
 }).annotate({ identifier: "SkillMarketplaceItem" })
 export type SkillMarketplaceItem = typeof SkillMarketplaceItem.Type
 
+export const PluginMarketplaceItem = Schema.Struct({
+  ...Base,
+  type: Schema.Literal("plugin"),
+  // content is the npm spec to install (for example "opencode-models-discovery" or "pkg@1.2.3").
+  content: Schema.String,
+  url: Schema.optional(Schema.String),
+}).annotate({ identifier: "PluginMarketplaceItem" })
+export type PluginMarketplaceItem = typeof PluginMarketplaceItem.Type
+
 export const MarketplaceItem = Schema.Union([
   McpMarketplaceItem,
   AgentMarketplaceItem,
   SkillMarketplaceItem,
+  PluginMarketplaceItem,
 ]).annotate({ identifier: "MarketplaceItem" })
 export type MarketplaceItem = typeof MarketplaceItem.Type
 
@@ -157,10 +167,18 @@ export const SkillInstallItem = Schema.Struct({
 }).annotate({ identifier: "SkillInstallItem" })
 export type SkillInstallItem = typeof SkillInstallItem.Type
 
+export const PluginInstallItem = Schema.Struct({
+  type: Schema.Literal("plugin"),
+  id: Schema.String,
+  content: Schema.String,
+}).annotate({ identifier: "PluginInstallItem" })
+export type PluginInstallItem = typeof PluginInstallItem.Type
+
 export const MarketplaceInstallItem = Schema.Union([
   McpInstallItem,
   AgentInstallItem,
   SkillInstallItem,
+  PluginInstallItem,
 ]).annotate({ identifier: "MarketplaceInstallItem" })
 export type MarketplaceInstallItem = typeof MarketplaceInstallItem.Type
 

@@ -48,6 +48,10 @@ export const dict = {
     "Projectbestanden kunnen aan versiebeheer worden toegevoegd. Sla hier geen geheimen op, tenzij de configuratie naar een omgevingsvariabele verwijst.",
   "marketplace.install.learnMore": "Lees hoe installaties vanuit Marketplace werken",
   "marketplace.install.learnMcp": "Meer informatie over MCP",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "Geïnstalleerd in {{path}}",
   "marketplace.intro":
     "Installeer herbruikbare agenten, vaardigheden en MCP-hulpmiddelen voor één project of voor alle projecten.",
@@ -78,6 +82,7 @@ export const dict = {
   "marketplace.scope.project": "project",
   "marketplace.scope.global": "globaal",
   "marketplace.remove.type.mcp": "MCP server",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "skill",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Verwijderen van {{name}} mislukt",

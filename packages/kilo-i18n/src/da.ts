@@ -45,6 +45,10 @@ export const dict = {
     "Projektfiler kan føjes til versionsstyring. Gem ikke hemmeligheder her, medmindre konfigurationen henviser til en miljøvariabel.",
   "marketplace.install.learnMore": "Se, hvordan installationer fra Marketplace fungerer",
   "marketplace.install.learnMcp": "Få mere at vide om MCP",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "Installeret i {{path}}",
   "marketplace.intro": "Installer genanvendelige agenter, færdigheder og MCP-værktøjer til ét eller alle projekter.",
   "marketplace.intro.learnMore": "Om Marketplace",
@@ -74,6 +78,7 @@ export const dict = {
   "marketplace.scope.project": "projekt",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "færdighed",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Kunne ikke fjerne {{name}}",

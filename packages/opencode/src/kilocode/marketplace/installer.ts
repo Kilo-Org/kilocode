@@ -3,12 +3,16 @@ import { access, mkdir, mkdtemp, readdir, realpath, rename, rm } from "fs/promis
 import path from "path"
 import os from "os"
 import { stringify as stringifyYaml } from "yaml"
-import { parse as parseJsonc } from "jsonc-parser"
+import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { Effect } from "effect"
+import { Global } from "@opencode-ai/core/global"
+import { ConfigPaths } from "@/config/paths"
 import { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
 import { Skill } from "@/skill"
 import { Process } from "@/util/process"
+import { installPlugin as stagePlugin, patchPluginConfig, readPluginManifest } from "@/plugin/install"
+import { parsePluginSpecifier } from "@/plugin/shared"
 import type {
   AgentInstallItem,
   MarketplaceInstallPayload,
@@ -17,6 +21,7 @@ import type {
   MarketplaceRemoveResult,
   McpInstallationMethod,
   McpInstallItem,
+  PluginInstallItem,
   Scope,
   SkillInstallItem,
 } from "./schema"
@@ -28,6 +33,7 @@ type Services = {
   skills: Skill.Interface
   directory: string
   worktree?: string
+  vcs?: string
 }
 
 async function exists(file: string) {
@@ -268,10 +274,103 @@ function installSkill(item: SkillInstallItem, scope: Scope, directory: string) {
   })
 }
 
+function errorText(err: unknown) {
+  if (!err || typeof err !== "object") return String(err)
+  if ("cause" in err && err.cause instanceof Error) return err.cause.message
+  return err instanceof Error ? err.message : String(err)
+}
+
+export function pluginPackageName(spec: unknown): string | undefined {
+  if (typeof spec === "string") return parsePluginSpecifier(spec).pkg || undefined
+  if (Array.isArray(spec) && typeof spec[0] === "string") return parsePluginSpecifier(spec[0]).pkg || undefined
+  return undefined
+}
+
+function installPlugin(svc: Services, item: PluginInstallItem, scope: Scope) {
+  return Effect.promise(async (): Promise<MarketplaceInstallResult> => {
+    try {
+      const spec = item.content.trim()
+      if (!spec) return { success: false, slug: item.id, error: "Plugin has no package spec" }
+
+      const staged = await stagePlugin(spec)
+      if (!staged.ok) return { success: false, slug: item.id, error: errorText(staged.error) }
+
+      const manifest = await readPluginManifest(staged.target)
+      if (!manifest.ok) {
+        const error =
+          manifest.code === "manifest_no_targets"
+            ? `Plugin ${spec} does not expose a server or tui entrypoint`
+            : `Could not read plugin package manifest: ${errorText(manifest.error)}`
+        return { success: false, slug: item.id, error }
+      }
+
+      const out = await patchPluginConfig({
+        spec,
+        targets: manifest.targets,
+        global: scope === "global",
+        vcs: svc.vcs,
+        worktree: svc.worktree ?? svc.directory,
+        directory: svc.directory,
+      })
+      if (!out.ok) {
+        const error =
+          out.code === "invalid_json"
+            ? `Invalid JSON in ${out.file} (${out.parse} at line ${out.line}, column ${out.col})`
+            : errorText(out.error)
+        return { success: false, slug: item.id, error }
+      }
+
+      const file = out.items[0]?.file
+      return { success: true, slug: item.id, ...(file ? { filePath: file, line: 1 } : {}) }
+    } catch (err) {
+      return { success: false, slug: item.id, error: errorText(err) }
+    }
+  })
+}
+
+function pluginFiles(scope: Scope, svc: Services) {
+  const root = svc.worktree && svc.worktree !== "/" && svc.vcs === "git" ? svc.worktree : svc.directory
+  const dirs = scope === "global" ? [Global.Path.config] : [path.join(root, ".kilo")]
+  return dirs.flatMap((dir) =>
+    (["opencode", "tui"] as const).flatMap((name) => ConfigPaths.fileInDirectory(dir, name)),
+  )
+}
+
+async function stripPluginFromFile(file: string, pkg: string) {
+  const cfg = Bun.file(file)
+  if (!(await cfg.exists())) return false
+  const text = await cfg.text()
+  const data = parseJsonc(text) as { plugin?: unknown } | undefined
+  const list = data && Array.isArray(data.plugin) ? data.plugin : undefined
+  if (!list) return false
+  const next = list.filter((entry) => pluginPackageName(entry) !== pkg)
+  if (next.length === list.length) return false
+  const out = applyEdits(
+    text,
+    modify(text, ["plugin"], next, { formattingOptions: { tabSize: 2, insertSpaces: true } }),
+  )
+  await Bun.write(file, out)
+  return true
+}
+
+function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
+  return Effect.promise(async (): Promise<MarketplaceRemoveResult> => {
+    const pkg = pluginPackageName(item.id) ?? item.id
+    for (const file of pluginFiles(scope, svc)) {
+      await stripPluginFromFile(file, pkg).catch((err) => {
+        console.warn("Failed to remove plugin from marketplace config", err)
+        return false
+      })
+    }
+    return { success: true, slug: item.id }
+  })
+}
+
 export function install(svc: Services, payload: MarketplaceInstallPayload) {
   const scope = payload.target ?? "project"
   if (payload.item.type === "mcp") return installMcp(svc, payload.item, payload, scope)
   if (payload.item.type === "agent") return installAgent(svc, payload.item, scope)
+  if (payload.item.type === "plugin") return installPlugin(svc, payload.item, scope)
   return installSkill(payload.item, scope, svc.directory)
 }
 
@@ -329,5 +428,6 @@ function removeSkill(svc: Services, item: MarketplaceItemRef, scope: Scope) {
 export function remove(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   if (item.type === "mcp") return removeMcp(svc, item, scope)
   if (item.type === "agent") return removeAgent(svc, item, scope)
+  if (item.type === "plugin") return removePlugin(svc, item, scope)
   return removeSkill(svc, item, scope)
 }

@@ -44,6 +44,10 @@ export const dict = {
     "ไฟล์โปรเจกต์อาจถูกเพิ่มลงในระบบควบคุมเวอร์ชัน อย่าเก็บข้อมูลลับไว้ที่นี่ เว้นแต่การกำหนดค่าจะอ้างอิงตัวแปรสภาพแวดล้อม",
   "marketplace.install.learnMore": "เรียนรู้วิธีการติดตั้งจาก Marketplace",
   "marketplace.install.learnMcp": "เรียนรู้เพิ่มเติมเกี่ยวกับ MCP",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "ติดตั้งไปยัง {{path}} แล้ว",
   "marketplace.intro": "ติดตั้งเอเจนต์ ทักษะ และเครื่องมือ MCP ที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
   "marketplace.intro.learnMore": "เกี่ยวกับ Marketplace",
@@ -73,6 +77,7 @@ export const dict = {
   "marketplace.scope.project": "โปรเจ็กต์",
   "marketplace.scope.global": "โกลบอล",
   "marketplace.remove.type.mcp": "เซิร์ฟเวอร์ MCP",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "ทักษะ",
   "marketplace.remove.type.agent": "เอเจนต์",
   "marketplace.remove.failed": "ไม่สามารถลบ {{name}} ได้",
