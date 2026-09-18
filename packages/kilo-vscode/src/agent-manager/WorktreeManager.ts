@@ -277,8 +277,10 @@ export class WorktreeManager {
   /** Adopt leftover pooled slots at startup and discard broken ones. */
   async reconcilePool(): Promise<void> {
     await this.ensureMigrated()
-    await this.ensureDir()
+    // Exclude before creating anything: a repository that cannot be excluded
+    // must not leave an untracked `.kilo/worktrees` directory behind.
     await this.ensureGitExclude()
+    await this.ensureDir()
     return this.pool.reconcile()
   }
 
@@ -427,7 +429,8 @@ export class WorktreeManager {
 
     const requested = params.existingBranch ?? params.branchName
     const { resolvedRemote } = await this.preflight(params, requested)
-    await Promise.all([this.ensureDir(), this.ensureGitExclude()])
+    await this.ensureGitExclude()
+    await this.ensureDir()
 
     // Resolve start point (parent branch + remote)
     let parent: string
@@ -1057,8 +1060,7 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const gitDir = await resolveGitDir(this.root)
-    const excludePath = path.join(gitDir, "info", "exclude")
+    const target = await this.excludeTarget()
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
       [".kilo/agent-manager.json", "Kilo Agent Manager state"],
@@ -1077,8 +1079,28 @@ export class WorktreeManager {
     ] as const
 
     for (const [entry, comment] of items) {
-      await this.addExcludeEntry(excludePath, entry, comment)
+      await this.addExcludeEntry(target.file, `${target.prefix}${entry}`, comment)
     }
+  }
+
+  /**
+   * Resolve the repository exclude file and the repository-relative path to
+   * this manager's root.
+   *
+   * Git answers both questions for a linked worktree and for a workspace that
+   * is a subdirectory of a repository. `--show-prefix` is already relative and
+   * uses forward slashes, so it avoids symlink mismatches such as macOS
+   * `/var` versus `/private/var`. The anchored ignore patterns then point at
+   * the real `.kilo` directory instead of the repository root.
+   *
+   * Failures propagate: callers decide whether to continue without excludes.
+   * There is deliberately no silent fallback, because a guessed prefix would
+   * write ignore patterns anchored to the wrong directory.
+   */
+  private async excludeTarget(): Promise<{ file: string; prefix: string }> {
+    const file = (await this.git.raw(["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"])).trim()
+    const prefix = (await this.git.raw(["rev-parse", "--show-prefix"])).trim()
+    return { file, prefix }
   }
 
   /**
@@ -1102,7 +1124,7 @@ export class WorktreeManager {
     let content = ""
     if (fs.existsSync(excludePath)) {
       content = await fs.promises.readFile(excludePath, "utf-8")
-      if (content.includes(entry)) return
+      if (content.split(/\r?\n/).includes(entry)) return
     }
 
     const pad = content.endsWith("\n") || content === "" ? "" : "\n"
