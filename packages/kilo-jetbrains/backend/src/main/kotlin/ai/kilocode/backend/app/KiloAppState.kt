@@ -57,4 +57,6 @@ data class AppData(
     val profile: KiloProfile200Response?,
     val config: ConfigDto,
     val notifications: List<KiloNotifications200ResponseInner>,
+    /** CLI background-subagent capability; false when it could not be read. See [KiloAppStateDto.backgroundSubagents]. */
+    val backgroundSubagents: Boolean = false,
 )

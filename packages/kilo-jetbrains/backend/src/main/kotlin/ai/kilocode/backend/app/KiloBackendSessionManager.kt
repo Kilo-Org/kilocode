@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.GlobalSession
 import ai.kilocode.jetbrains.api.model.SessionStatus
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.SessionChangeDto
@@ -19,14 +20,22 @@ import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -53,6 +62,11 @@ class KiloBackendSessionManager(
     private val cs: CoroutineScope,
     private val log: KiloLog,
 ) {
+    companion object {
+        private const val FAST_POLL_MS = 1_000L
+        private const val SLOW_POLL_MS = 5_000L
+    }
+
     /** Per-session directory overrides (sessionId → worktree path). */
     private val directories = ConcurrentHashMap<String, String>()
 
@@ -70,6 +84,9 @@ class KiloBackendSessionManager(
     private var http: OkHttpClient? = null
     private var base: String? = null
     private var watcher: Job? = null
+
+    /** One shared, poll-backed flow per (directory, parent session) key — see [backgroundJobs]. */
+    private val jobFlows = ConcurrentHashMap<String, Flow<List<BackgroundJobDto>>>()
 
     fun start(api: DefaultApi, httpClient: OkHttpClient, port: Int, events: SharedFlow<SseEvent>) {
         client = api
@@ -323,6 +340,100 @@ class KiloBackendSessionManager(
                 throw IllegalStateException("Session $id is not the board's root session")
             }
             return board
+        }
+    }
+
+    // ------ background subagents ------
+
+    /**
+     * Observe background subagent jobs owned by root session [id] in [dir].
+     *
+     * Backed by a single poller per (directory, id) pair, shared across every subscriber via
+     * [kotlinx.coroutines.flow.shareIn] with [SharingStarted.WhileSubscribed] — the underlying
+     * `flow{}` coroutine starts on first collector and stops automatically once the last one leaves,
+     * so an open session's own subscription and a re-opened editor tab reuse the same poll loop
+     * instead of hitting the CLI twice. [http]/[base] are read fresh every iteration, so the poller
+     * pauses while disconnected (both go null in [stop]) and resumes on the next [start] without
+     * needing to be recreated. Cadence adapts: 1 s while any job is running, 5 s once the list is
+     * empty or every job is terminal, matching the VS Code webview's poll rate for the fast case.
+     */
+    fun backgroundJobs(id: String, dir: String): Flow<List<BackgroundJobDto>> =
+        jobFlows.getOrPut(jobKey(dir, id)) { pollBackgroundJobs(id, dir) }
+
+    private fun jobKey(dir: String, id: String) = "$dir\u0000$id"
+
+    private fun pollBackgroundJobs(id: String, dir: String): Flow<List<BackgroundJobDto>> = flow {
+        var cadence = FAST_POLL_MS
+        while (true) {
+            val h = http
+            val url = base
+            if (h != null && url != null) {
+                val jobs = withContext(Dispatchers.IO) {
+                    runCatching { fetchBackgroundJobs(h, url, id, dir) }
+                        .onFailure { log.warn("${ChatLogSummary.sid(id)} kind=background-jobs poll=true failed message=${it.message}", it) }
+                        .getOrNull()
+                }
+                if (jobs != null) {
+                    emit(jobs)
+                    cadence = if (jobs.any { it.status == "running" }) FAST_POLL_MS else SLOW_POLL_MS
+                }
+            }
+            delay(cadence)
+        }
+    }.distinctUntilChanged().shareIn(cs, SharingStarted.WhileSubscribed(), replay = 1)
+
+    private fun fetchBackgroundJobs(h: OkHttpClient, url: String, id: String, dir: String): List<BackgroundJobDto> {
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("kilocode")
+            .addPathSegment("background-jobs")
+            .addQueryParameter("directory", dir)
+            .addQueryParameter("sessionID", id)
+            .build()
+        val request = Request.Builder().url(target).get().build()
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                throw RuntimeException("Background jobs list failed: HTTP ${response.code} — $raw")
+            }
+            return KiloCliDataParser.parseBackgroundJobs(raw!!)
+        }
+    }
+
+    /**
+     * Cancel background job [id] via `POST /kilocode/background-jobs/{id}/cancel?directory={dir}`.
+     * Cancels the job's child session tree, not just the job entry. Raw HTTP — these routes are
+     * newer than the generated client built from the pinned CLI release, matching [sessionBoard].
+     */
+    fun cancelBackgroundJob(id: String, dir: String): Boolean =
+        postBackgroundJobAction(id, dir, "cancel")
+
+    /**
+     * Continue background job [id] in the background via
+     * `POST /kilocode/background-jobs/{id}/promote?directory={dir}`. Returns `false` when the CLI's
+     * `KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS` kill switch is off — callers must not assume success.
+     */
+    fun promoteBackgroundJob(id: String, dir: String): Boolean =
+        postBackgroundJobAction(id, dir, "promote")
+
+    private fun postBackgroundJobAction(id: String, dir: String, action: String): Boolean {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("kilocode")
+            .addPathSegment("background-jobs")
+            .addPathSegment(id)
+            .addPathSegment(action)
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Background job $action: POST $target")
+        val request = Request.Builder().url(target).post(ByteArray(0).toRequestBody(null)).build()
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Background job $action failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Background job $action failed: HTTP ${response.code} — $raw")
+            }
+            return raw?.trim() == "true"
         }
     }
 

@@ -179,6 +179,7 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
             ),
             config = state.data.config,
             profile = state.data.profile?.let(::profileDto),
+            backgroundSubagents = state.data.backgroundSubagents,
         )
         is KiloAppState.Error -> KiloAppStateDto(
             status = KiloAppStatusDto.ERROR,

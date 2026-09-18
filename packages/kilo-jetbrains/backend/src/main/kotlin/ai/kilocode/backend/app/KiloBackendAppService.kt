@@ -392,6 +392,7 @@ class KiloBackendAppService private constructor(
                 var cfg: ConfigDto? = null
                 var prof: KiloProfile200Response? = null
                 var notifs: List<KiloNotifications200ResponseInner> = emptyList()
+                var capabilities = false
 
                 try {
                     withTimeout(loadTimeoutMs) {
@@ -436,6 +437,10 @@ class KiloBackendAppService private constructor(
                                 throw LoadFailure(err)
                             }
                         }
+                        // Best-effort and deliberately not part of LoadProgress: an unreadable
+                        // capability must not fail or stall the connection, it just leaves the
+                        // background-subagent affordances hidden.
+                        launch { capabilities = fetchCapabilities() }
                         }
                     }
 
@@ -460,6 +465,7 @@ class KiloBackendAppService private constructor(
                             profile = prof,
                             config = cfg!!,
                             notifications = notifs,
+                            backgroundSubagents = capabilities,
                         )
                     )
                     log.info(
@@ -656,6 +662,22 @@ class KiloBackendAppService private constructor(
             log.warn("Notifications fetch failed: ${e.message}", e)
             logResponseBody("notifications", e)
             FetchResult.fail("notifications", e)
+        }
+    }
+
+    /**
+     * Reads the CLI's background-subagent capability. Returns false when it cannot be read — an older
+     * CLI has no `/experimental/capabilities` route at all — which matches VS Code's
+     * `data?.backgroundSubagents === true` fallback and hides the affordance rather than offering one
+     * that would fail.
+     */
+    private suspend fun fetchCapabilities(): Boolean {
+        val client = connection.appLoadApi ?: return false
+        return try {
+            withContext(Dispatchers.IO) { client.experimentalCapabilitiesGet().backgroundSubagents }
+        } catch (e: Exception) {
+            log.warn("Experimental capabilities fetch failed: ${e.message}", e)
+            false
         }
     }
 

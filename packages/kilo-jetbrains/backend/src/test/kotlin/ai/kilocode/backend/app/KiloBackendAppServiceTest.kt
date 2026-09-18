@@ -113,6 +113,40 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `ready reports the background subagent capability`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertTrue((svc.appState.value as KiloAppState.Ready).data.backgroundSubagents)
+        assertNotNull(mock.lastCapabilitiesPath)
+    }
+
+    @Test
+    fun `background subagent capability is false when the CLI reports it off`() = runBlocking {
+        mock.capabilities = """{"backgroundSubagents":false}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertFalse((svc.appState.value as KiloAppState.Ready).data.backgroundSubagents)
+    }
+
+    @Test
+    fun `unreadable capability leaves it off without failing the load`() = runBlocking {
+        // An older CLI has no /experimental/capabilities route at all; that must not block Ready.
+        mock.capabilitiesStatus = 404
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertFalse((svc.appState.value as KiloAppState.Ready).data.backgroundSubagents)
+    }
+
+    @Test
     fun `download progress maps to app state before ready`() = runBlocking {
         val resolved = CompletableDeferred<Unit>()
         val signal = CompletableDeferred<Unit>()

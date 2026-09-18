@@ -2979,6 +2979,100 @@ class KiloCliDataParserTest {
     }
 
     // ================================================================
+    // parseBackgroundJobs
+    // ================================================================
+
+    @Nested
+    inner class BackgroundJobs {
+        @Test
+        fun `parseBackgroundJobs - flattens metadata into typed fields`() {
+            val raw = """
+                [
+                    {
+                        "id": "job1",
+                        "type": "task",
+                        "status": "running",
+                        "title": "Explore",
+                        "started_at": 1700000000000,
+                        "metadata": {
+                            "sessionId": "ses_child1",
+                            "parentSessionId": "ses_parent",
+                            "background": true
+                        }
+                    }
+                ]
+            """.trimIndent()
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals("job1", job.id)
+            assertEquals("task", job.type)
+            assertEquals("running", job.status)
+            assertEquals("Explore", job.title)
+            assertEquals(1700000000000L, job.startedAt)
+            assertNull(job.completedAt)
+            assertNull(job.error)
+            assertEquals("ses_child1", job.sessionId)
+            assertEquals("ses_parent", job.parentSessionId)
+            assertTrue(job.background)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - defaults when metadata is absent`() {
+            val raw = """[{"id": "job1", "type": "task", "status": "completed"}]"""
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals(0L, job.startedAt)
+            assertNull(job.completedAt)
+            assertNull(job.sessionId)
+            assertNull(job.parentSessionId)
+            assertFalse(job.background)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - tolerates non-finite timestamps from the widened SDK types`() {
+            val raw = """
+                [
+                    {
+                        "id": "job1",
+                        "type": "task",
+                        "status": "error",
+                        "started_at": "NaN",
+                        "completed_at": "Infinity",
+                        "error": "boom"
+                    }
+                ]
+            """.trimIndent()
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals(0L, job.startedAt)
+            assertNull(job.completedAt)
+            assertEquals("boom", job.error)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - drops a row missing a required field instead of failing the list`() {
+            val raw = """
+                [
+                    {"id": "job1", "type": "task", "status": "running"},
+                    {"id": "job2", "type": "task"}
+                ]
+            """.trimIndent()
+
+            val jobs = KiloCliDataParser.parseBackgroundJobs(raw)
+
+            assertEquals(listOf("job1"), jobs.map { it.id })
+        }
+
+        @Test
+        fun `parseBackgroundJobs - malformed json returns an empty list`() {
+            assertEquals(emptyList(), KiloCliDataParser.parseBackgroundJobs("not json"))
+        }
+    }
+
+    // ================================================================
     // Helpers
     // ================================================================
 

@@ -71,6 +71,7 @@ class MessageView(
     // Forks the session at this message. Null on surfaces that cannot fork (sidebar, read-only tabs).
     private val fork: ((String) -> Unit)? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
+    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -411,9 +412,15 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
+        ViewFactory.createUser(
+            content, openFile, openUrl, selection, repo, promptMentions(msg),
+            { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent, onPromoteBackgroundAgent,
+        )
     } else {
-        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
+        ViewFactory.create(
+            content, openFile, openUrl, selection, repo,
+            { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent, onPromoteBackgroundAgent,
+        )
     }
 
     private fun syncPromptMentions() {

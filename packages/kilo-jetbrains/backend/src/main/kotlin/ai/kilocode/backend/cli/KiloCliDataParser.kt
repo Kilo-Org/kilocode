@@ -13,6 +13,7 @@ import ai.kilocode.backend.workspace.ModelTerminalBenchInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
@@ -448,6 +449,40 @@ object KiloCliDataParser {
             cursor = obj.str("cursor"),
             hasMore = obj.bool("hasMore"),
         )
+    }
+
+    /**
+     * Parse a background-jobs list response (`GET /kilocode/background-jobs`) into
+     * [BackgroundJobDto]s, flattening the open `metadata` map's `sessionId`/`parentSessionId`/
+     * `background` keys into typed fields. A row missing `id`/`type`/`status` is dropped rather
+     * than failing the whole list.
+     *
+     * `started_at`/`completed_at` normally arrive as numbers, but the generated SDK types widen them
+     * to `"NaN"`/`"Infinity"`/`"-Infinity"` strings — [JsonObject.num] parses both via
+     * [String.toDoubleOrNull], and a non-finite result falls back to the given default rather than a
+     * garbage [Long].
+     */
+    fun parseBackgroundJobs(raw: String): List<BackgroundJobDto> {
+        val arr = tryParseArray(raw) ?: return emptyList()
+        return arr.mapNotNull { elem ->
+            val row = elem.obj() ?: return@mapNotNull null
+            val id = row.str("id") ?: return@mapNotNull null
+            val type = row.str("type") ?: return@mapNotNull null
+            val status = row.str("status") ?: return@mapNotNull null
+            val metadata = row["metadata"].obj()
+            BackgroundJobDto(
+                id = id,
+                type = type,
+                status = status,
+                title = row.str("title"),
+                startedAt = row.num("started_at")?.takeIf { it.isFinite() }?.toLong() ?: 0L,
+                completedAt = row.num("completed_at")?.takeIf { it.isFinite() }?.toLong(),
+                error = row.str("error"),
+                sessionId = metadata?.str("sessionId"),
+                parentSessionId = metadata?.str("parentSessionId"),
+                background = metadata.bool("background"),
+            )
+        }
     }
 
     /**
