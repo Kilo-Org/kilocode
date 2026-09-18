@@ -634,7 +634,8 @@ export function segmentMentionText(text: string, tokens: Set<string>): MentionSe
   let last = 0
   for (const match of text.matchAll(pattern)) {
     const index = match.index ?? 0
-    if (index > last) segments.push({ text: text.slice(last, index), mention: false })
+    const plain = text.slice(last, index)
+    if (plain) segments.push({ text: plain, mention: false })
     segments.push({ text: match[0], mention: true })
     last = index + match[0].length
   }
