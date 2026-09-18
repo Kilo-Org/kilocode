@@ -31,8 +31,10 @@ import { Provider } from "@/provider/provider"
 
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
+import { KiloCodeMode } from "../kilocode/tool/code-mode" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
+import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
@@ -154,8 +156,12 @@ const layer = Layer.effect(
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
-        const codeModeTool = codeMode
-          ? yield* codeMode.CodeModeTool.pipe(
+        // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
+        const kiloCfg = yield* config.get()
+        const mode = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, kiloCfg)))
+        const codeModeTool = mode
+          ? yield* mode.CodeModeTool.pipe(
+              // kilocode_change end
               Effect.provideService(MCP.Service, mcp),
               Effect.provideService(Agent.Service, agents),
               Effect.provideService(Session.Service, sessions),
@@ -248,7 +254,7 @@ const layer = Layer.effect(
         }
 
         // kilocode_change start
-        const cfg = yield* config.get()
+        const cfg = kiloCfg
         const global = yield* config.getGlobal()
         const indexing = KiloToolRegistry.indexing(cfg, global)
         // kilocode_change end
@@ -344,17 +350,26 @@ const layer = Layer.effect(
       return ["Available agent types and the tools they have access to:", description].join("\n")
     })
 
-    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (input: {
-      agent: Agent.Info
-      permission?: PermissionV1.Ruleset
-      networkRestricted?: boolean // kilocode_change
-    }) {
-      if (!codeMode) return
+    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (
+      input: {
+        agent: Agent.Info
+        permission?: PermissionV1.Ruleset
+        networkRestricted?: boolean // kilocode_change
+      },
+      cfg: Config.Info,
+    ) {
+      // kilocode_change - reuse the config already fetched by the caller
       if (input.networkRestricted) return // kilocode_change
+      // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
+      const mode = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, cfg)))
+      if (!mode) return
+      // kilocode_change end
       const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
       const tools = Permission.visibleTools(yield* mcp.tools(), ruleset)
       if (Object.keys(tools).length === 0) return
-      return codeMode.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize))
+      // kilocode_change start - describe the catalog with the resolved Code Mode module
+      return mode.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize))
+      // kilocode_change end
     })
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
@@ -375,7 +390,7 @@ const layer = Layer.effect(
       const kiloFiltered = yield* KiloToolRegistry.applyVisibility(filtered) // kilocode_change
 
       const codeModeDescription = filtered.some((tool) => tool.id === "execute")
-        ? yield* describeCodeMode(input)
+        ? yield* describeCodeMode(input, cfg) // kilocode_change - pass the config fetched above
         : undefined
       const visible = kiloFiltered.filter((tool) => tool.id !== "execute" || codeModeDescription) // kilocode_change
 
@@ -541,6 +556,7 @@ export const node = LayerNode.suspend(() =>
       Notebook.node,
       RepositoryCache.node,
       KiloSessions.node,
+      Wakeup.node, // kilocode_change - provides Wakeup.Service to the schedule_wakeup/cancel_wakeup tools
     ],
   }),
 )

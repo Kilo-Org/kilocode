@@ -11,7 +11,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import { normalizePath } from "./git-import"
+import { pathKey } from "./project/paths"
 import type { SidebarTarget } from "./project/route"
 
 /** Accept a persisted sidebar target only when its shape matches a known kind. */
@@ -156,11 +156,17 @@ export class WorktreeStateManager {
     return this.worktrees.get(id)
   }
 
-  /** Find worktree by its filesystem path. */
+  /**
+   * Find worktree by its filesystem path.
+   *
+   * Compares with `pathKey`, so a symlinked parent (`/tmp` -> `/private/tmp` on macOS) or a case
+   * variant still finds the row. A lexical compare misses both, and every caller uses the answer to
+   * decide which worktree a session, a terminal, or a tool call belongs to.
+   */
   findWorktreeByPath(wtPath: string): Worktree | undefined {
-    const target = normalizePath(wtPath)
+    const target = pathKey(wtPath)
     for (const wt of this.worktrees.values()) {
-      if (normalizePath(wt.path) === target) return wt
+      if (pathKey(wt.path) === target) return wt
     }
     return undefined
   }
@@ -414,11 +420,6 @@ export class WorktreeStateManager {
 
   setTabOrder(key: string, order: string[]): void {
     this.tabOrder[key] = order
-    void this.save()
-  }
-
-  removeTabOrder(key: string): void {
-    delete this.tabOrder[key]
     void this.save()
   }
 
@@ -790,31 +791,14 @@ export class WorktreeStateManager {
     }
   }
 
-  /** Remove worktrees whose directories no longer exist on disk and prune orphaned sessions. */
-  async validate(root: string): Promise<void> {
-    let changed = false
-    for (const wt of [...this.worktrees.values()]) {
-      const resolved = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
-      if (!fs.existsSync(resolved)) {
-        this.log(`Worktree ${wt.id} directory missing (${resolved}), removing`)
-        this.removeWorktree(wt.id)
-        changed = true
-      }
-    }
-    // Preserve local sessions; prune only sessions that reference missing worktrees.
-    for (const s of [...this.sessions.values()]) {
-      const ref = s.worktreeId
-      if (ref === null) continue
-      if (!ref || !this.worktrees.has(ref)) {
-        this.sessions.delete(s.id)
-        changed = true
-      }
-    }
-    if (changed) {
-      this.log(`Pruned orphaned sessions during validation`)
-      await this.save()
-    }
-  }
+  /*
+   * `validate(root)` used to live here: it removed every worktree row whose directory was missing
+   * and deleted the session mappings with it. That silently discarded conversation history for
+   * worktrees a user could still restore from their branch, and it never ran — nothing in src/
+   * called it. Worktree health now lives in worktree-reconcile.ts, which classifies rows instead of
+   * deleting them and only drops a row when the directory, the branch, and the sessions are all
+   * gone.
+   */
 
   /** Wait for any in-flight save to complete without triggering a new one. */
   async flush(): Promise<void> {

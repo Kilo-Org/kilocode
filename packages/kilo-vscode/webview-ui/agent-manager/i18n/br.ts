@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefixo da branch",
   "agentManager.settings.branchPrefix.description":
     "Prefixo para branches nomeadas automaticamente em todos os projetos, por exemplo feature/. Não se aplica a nomes explícitos de branches. Deixe vazio para não usar prefixo.",
+  "agentManager.settings.worktreePool.title": "Pré-aquecimento de worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare um worktree pronto em segundo plano para que novas sessões do Agent Manager iniciem mais rápido. Usa espaço em disco extra para um checkout por projeto aberto.",
   "agentManager.settings.project.title": "Projeto",
   "agentManager.settings.project.description":
     "Escolha o repository cujas configurações de worktree você deseja editar.",
@@ -50,9 +53,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Execute antes que um agent comece em um novo worktree.",
   "agentManager.settings.setupScript.create": "Criar script",
   "agentManager.settings.setupScript.edit": "Editar script",
-  "agentManager.project.add": "Adicionar projeto",
+  "agentManager.project.add": "Adicionar projeto...",
   "agentManager.project.remove": "Remover do Agent Manager",
   "agentManager.project.missing": "Repositório não encontrado",
+  "agentManager.project.settings": "Configurações do projeto",
   "agentManager.project.restricted":
     "Seu espaço de trabalho atual do VS Code é sua pasta pessoal ou a raiz do sistema de arquivos. Abra uma pasta de projeto específica no VS Code para usar o Agent Manager.",
   "agentManager.notGitRepo": "Não é um repositório git",
@@ -135,6 +139,12 @@ export const dict = {
     "Este repositório usa Git LFS, mas o git-lfs não foi encontrado. Instale o Git LFS.",
   "agentManager.setup.error.no_commits":
     "Este repositório ainda não possui commits. Crie um commit inicial antes de usar worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "A pasta deste worktree não existe mais. Restaure a partir do branch ou remova o worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "O git não rastreia mais esta pasta como worktree. Remova-a e crie um novo worktree.",
+  "agentManager.setup.error.git_timeout":
+    "O Git não respondeu em tempo. Verifique se o repositório está acessível e tente de novo.",
   "agentManager.shortcuts.title": "Atalhos de Teclado",
   "agentManager.shortcuts.category.sidebar": "Barra lateral",
   "agentManager.shortcuts.category.tabs": "Abas",
@@ -233,6 +243,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Enviar tudo para o chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Enviar {{count}} para o GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Envio interrompido por um erro do GitHub: {{error}}",
   "agentManager.review.inlineCount": "Comentários locais ({{count}})",
   "agentManager.review.prCount": "Comentários de PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} arquivos",
@@ -307,6 +319,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Desatualizado",
   "agentManager.pr.comment.sent": "Enviado",
   "agentManager.pr.comment.copy": "Copiar comentário",
+  "agentManager.pr.comment.copyLink": "Copiar link do comentário",
   "agentManager.pr.comment.openOnGitHub": "Abrir no GitHub",
   "agentManager.pr.comment.showInDiff": "Mostrar no diff",
   "agentManager.pr.comment.unplaced": "Comentários fora do diff atual",
@@ -418,7 +431,7 @@ export const dict = {
   "agentManager.caffeination.active": "Mantendo o computador acordado enquanto os agentes Kilo trabalham",
   "agentManager.caffeination.unavailable":
     "O modo de manter o computador acordado não está disponível nesta plataforma",
-  "agentManager.browser.title": "Navegador",
+  "agentManager.browser.title": "Navegador Integrado",
   "agentManager.browser.url": "URL da aplicação local",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Abrir",
@@ -427,7 +440,8 @@ export const dict = {
   "agentManager.browser.refresh": "Atualizar navegador",
   "agentManager.browser.close": "Fechar navegador",
   "agentManager.browser.empty": "Abra uma aplicação local para visualizá-la aqui.",
-  "agentManager.browser.noSession": "Selecione primeiro uma sessão do Agent Manager.",
+  "agentManager.browser.noSession":
+    "Inicie ou selecione uma sessão no Agent Manager para navegar em um aplicativo local.",
   "agentManager.browser.screenshotAlt": "Página atual do navegador",
   "agentManager.browser.errors": "Problemas do navegador: {{count}}",
   "agentManager.browser.diagnostics": "Diagnóstico do navegador",
@@ -463,4 +477,47 @@ export const dict = {
   "agentManager.intro.guide": "Ler o guia",
   "agentManager.intro.dismiss": "Pular introdução",
   "agentManager.intro.reopen": "Como o Agent Manager funciona",
+  "agentManager.worktree.health.absent-restorable": "Pasta excluída",
+  "agentManager.worktree.health.absent-restorableNote":
+    "A pasta não existe mais, mas o branch {{branch}} continua lá. Restaure para continuar trabalhando aqui.",
+  "agentManager.worktree.health.absent-gone": "Pasta e branch excluídos",
+  "agentManager.worktree.health.absent-goneNote":
+    "Nem a pasta nem o branch existem mais. Remova a entrada para organizar; as sessões ficam em Local.",
+  "agentManager.worktree.health.unregistered": "Não é um worktree do git",
+  "agentManager.worktree.health.unregisteredNote":
+    "A pasta existe, mas o git não a rastreia mais como worktree. Não é possível ler o status.",
+  "agentManager.worktree.health.unavailable": "Status indisponível",
+  "agentManager.worktree.health.unavailableNote":
+    "O Git ou o GitHub CLI não respondeu em tempo. A consulta deste worktree está pausada e será repetida.",
+  "agentManager.worktree.restore": "Restaurar worktree",
+  "agentManager.worktree.removeKeepSessions": "Remover e manter sessões",
+  "agentManager.orphans.resolve": "Resolver…",
+  "agentManager.orphans.summaryCount": "{{count}} pasta(s) de worktree remanescente(s)",
+  "agentManager.orphans.summarySize": "{{count}} pasta(s) de worktree remanescente(s) · {{size}}",
+  "agentManager.orphans.calculating": "calculando o tamanho…",
+  "agentManager.orphans.sizeUnknown": "desconhecido",
+  "agentManager.orphans.dialogTitle": "Pastas de worktree remanescentes",
+  "agentManager.orphans.helpIntro":
+    "O Kilo mantém cada worktree que cria dentro da pasta .kilo/worktrees deste repositório. As pastas abaixo estão nessa pasta, mas o git não lista nenhuma delas como worktree, portanto nada mais as usa.",
+  "agentManager.orphans.helpCheckout":
+    "Uma pasta sinalizada como contendo um checkout do git ainda tem uma entrada .git dentro dela e pode guardar trabalho sem commit. Essas pastas ficam desmarcadas, então abra uma e verifique-a antes de excluí-la.",
+  "agentManager.orphans.helpCauses":
+    "As pastas remanescentes geralmente vêm de uma exclusão interrompida, de um worktree removido fora do Kilo ou de uma ferramenta que gravou na pasta depois que ela foi removida. Exclusões que ainda estão em andamento não aparecem aqui.",
+  "agentManager.orphans.helpDelete":
+    "A exclusão remove as pastas selecionadas do disco definitivamente, sem passar pela Lixeira. Nenhuma branch e nenhum worktree ativo é afetado. Os tamanhos são o espaço que cada pasta ocupa no disco neste momento.",
+  "agentManager.orphans.helpMore": "Mostrar mais",
+  "agentManager.orphans.helpLess": "Mostrar menos",
+  "agentManager.orphans.columnPath": "Caminho",
+  "agentManager.orphans.columnSize": "Tamanho",
+  "agentManager.orphans.columnContents": "Conteúdo",
+  "agentManager.orphans.checkoutWarning": "contém um checkout do git",
+  "agentManager.orphans.footerSelected": "{{count}} selecionada(s) · {{size}}",
+  "agentManager.orphans.footerCheckouts": "{{count}} ainda contêm um checkout do git",
+  "agentManager.orphans.reveal": "Mostrar no sistema",
+  "agentManager.orphans.revealMac": "Mostrar no Finder",
+  "agentManager.orphans.revealWindows": "Mostrar no Explorador",
+  "agentManager.orphans.revealLinux": "Mostrar nos Arquivos",
+  "agentManager.orphans.deleteButton": "Excluir {{count}} pastas ({{size}})",
+  "agentManager.orphans.cancel": "Cancelar",
+  "agentManager.error.title": "Erro do Agent Manager",
 }

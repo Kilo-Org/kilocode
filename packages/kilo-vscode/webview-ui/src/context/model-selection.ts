@@ -8,6 +8,7 @@ export function resolveModelSelection(input: {
   organizationId?: string | null
   defaults?: Record<string, string>
   session?: ModelSelection | null
+  preferred?: ModelSelection | null
   override?: ModelSelection | null
   mode?: ModelSelection | null
   global?: ModelSelection | null
@@ -20,7 +21,11 @@ export function resolveModelSelection(input: {
     return isModelValid(input.providers, input.connected, selection) ? selection : null
   }
   const preference =
-    validate(input.session) ?? validate(input.override) ?? validate(input.mode) ?? validate(input.global)
+    validate(input.session) ??
+    validate(input.preferred) ??
+    validate(input.override) ??
+    validate(input.mode) ??
+    validate(input.global)
   if (preference) return preference
   if (pending) return null
   if (input.organizationId) {

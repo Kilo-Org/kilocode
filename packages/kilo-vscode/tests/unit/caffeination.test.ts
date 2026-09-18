@@ -8,18 +8,20 @@ import type { SSEPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 import { CaffeinationService } from "../../src/services/caffeination"
 import { confirmCaffeination } from "../../src/services/caffeination/confirm"
 
-type Snapshot = Record<string, Pick<SessionStatus, "type">>
+type Status = Record<string, Pick<SessionStatus, "type">>
+type Wake = Record<string, number>
+type Snapshot = { status: Status; wake: Wake }
 const root = "/workspace"
 const tree = "/workspace/tree"
 
-function setup(data: Record<string, Snapshot> = {}) {
+function setup(data: Record<string, Status> = {}, wake: Record<string, Wake> = {}) {
   const events = new Set<(event: SSEPayload, dir?: string) => void>()
   const states = new Set<(state: ConnectionState) => void>()
   const connection = {
     state: "connected" as ConnectionState,
     dirs: Object.keys(data).length ? Object.keys(data) : [root],
     calls: [] as string[],
-    load: async (dir: string): Promise<Snapshot> => data[dir] ?? {},
+    load: async (dir: string): Promise<Snapshot> => ({ status: data[dir] ?? {}, wake: wake[dir] ?? {} }),
     onEvent: (listener: (event: SSEPayload, dir?: string) => void) => {
       events.add(listener)
       return () => events.delete(listener)
@@ -35,7 +37,13 @@ function setup(data: Record<string, Snapshot> = {}) {
         session: {
           status: async ({ directory }: { directory: string }) => {
             connection.calls.push(directory)
-            return { data: await connection.load(directory) }
+            return { data: (await connection.load(directory)).status }
+          },
+        },
+        kilocode: {
+          wakeups: async ({ directory }: { directory: string }) => {
+            const pending = (await connection.load(directory)).wake
+            return { data: Object.entries(pending).map(([sessionID, count]) => ({ sessionID, pending: count })) }
           },
         },
       }) as unknown as KiloClient,
@@ -69,11 +77,13 @@ function setup(data: Record<string, Snapshot> = {}) {
       { id: "status", type: "session.status", properties: { sessionID: id, status: { type } as SessionStatus } },
       dir,
     )
+  const wakeup = (id: string, pending: number, dir = root) =>
+    emit({ id: "wakeup", type: "session.wakeup", properties: { sessionID: id, pending } } as SSEPayload, dir)
   const change = (state: ConnectionState) => {
     connection.state = state
     for (const listener of states) listener(state)
   }
-  return { service, driver, connection, status, emit, change, events, states }
+  return { service, driver, connection, status, wakeup, emit, change, events, states }
 }
 
 describe("keep-awake", () => {
@@ -95,14 +105,90 @@ describe("keep-awake", () => {
     await test.service.dispose()
   })
 
+  it("keeps the inhibitor while a wakeup is pending after the session goes idle", async () => {
+    const test = setup()
+    await test.service.setEnabled(true)
+    test.status("one", "busy")
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    test.wakeup("one", 1)
+    test.status("one", "idle")
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    test.wakeup("one", 0)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(false)
+    await test.service.dispose()
+  })
+
+  it("restores pending wakeups from the snapshot when enabling", async () => {
+    const test = setup({}, { [root]: { one: 2 } })
+    await test.service.setEnabled(true)
+    expect(test.driver.held).toBe(true)
+    test.wakeup("one", 0)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(false)
+    await test.service.dispose()
+  })
+
+  it("aggregates pending wakeups across worktrees independently", async () => {
+    const test = setup()
+    await test.service.setEnabled(true)
+    test.wakeup("a", 1, root)
+    test.wakeup("b", 1, tree)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    test.wakeup("a", 0, root)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    test.wakeup("b", 0, tree)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(false)
+    await test.service.dispose()
+  })
+
+  it("releases the inhibitor when a session with a pending wakeup is deleted", async () => {
+    const test = setup()
+    await test.service.setEnabled(true)
+    test.wakeup("one", 1)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    test.emit({
+      id: "deleted",
+      type: "session.deleted",
+      properties: { sessionID: "one", info: {} as never },
+    } as SSEPayload)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(false)
+    await test.service.dispose()
+  })
+
+  it("keeps tracked wakeups when the wakeups refresh fails", async () => {
+    const test = setup()
+    await test.service.setEnabled(true)
+    test.wakeup("one", 1)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    const inner = test.connection.getClient
+    test.connection.getClient = (() => ({
+      ...inner(),
+      kilocode: { wakeups: () => Promise.reject(new Error("transient")) },
+    })) as never
+    await test.service.refresh()
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    await test.service.dispose()
+  })
+
   it("replays live updates over stale snapshots and includes newly observed directories", async () => {
     const test = setup()
     const gate = Promise.withResolvers<Snapshot>()
-    test.connection.load = (dir) => (dir === root ? gate.promise : Promise.resolve({ two: { type: "busy" } }))
+    test.connection.load = (dir) =>
+      dir === root ? gate.promise : Promise.resolve({ status: { two: { type: "busy" } }, wake: {} })
     const enabled = test.service.setEnabled(true)
     test.status("one", "idle")
     test.status("two", "busy", tree)
-    gate.resolve({ one: { type: "busy" } })
+    gate.resolve({ status: { one: { type: "busy" } }, wake: {} })
     await enabled
     expect(test.driver.held).toBe(true)
     test.emit({ id: "deleted", type: "session.deleted", properties: { sessionID: "two" } } as SSEPayload, tree)
@@ -121,9 +207,9 @@ describe("keep-awake", () => {
       const refresh = test.service.refresh()
       await Bun.sleep(0)
       test.change(state)
-      test.connection.load = async () => ({})
+      test.connection.load = async () => ({ status: {}, wake: {} })
       test.change("connected")
-      gate.resolve({ one: { type: "busy" } })
+      gate.resolve({ status: { one: { type: "busy" } }, wake: {} })
       await refresh
       await Bun.sleep(0)
       expect(test.driver.held).toBe(false)

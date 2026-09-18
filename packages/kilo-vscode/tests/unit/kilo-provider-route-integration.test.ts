@@ -88,6 +88,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       getConnectionError: () => null,
       resolveEventSessionId: () => undefined,
       recordMessageSessionId: () => undefined,
+      prepareTools: async () => {},
       notifyNotificationDismissed: () => undefined,
     } as unknown as ConstructorParameters<typeof KiloProvider>[1],
   }

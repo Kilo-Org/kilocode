@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefiks grane",
   "agentManager.settings.branchPrefix.description":
     "Prefiks za automatski imenovane grane u svim projektima, na primjer feature/. Ne primjenjuje se na izričite nazive grana. Ostavite prazno ako ne želite prefiks.",
+  "agentManager.settings.worktreePool.title": "Prethodno zagrijavanje worktree-a",
+  "agentManager.settings.worktreePool.description":
+    "Pripremite spreman worktree u pozadini da nove sesije Agent Manager-a počinju brže. Koristi dodatni prostor na disku za jedan checkout po otvorenom projektu.",
   "agentManager.settings.project.title": "Projekat",
   "agentManager.settings.project.description": "Izaberite repository čije worktree postavke želite urediti.",
   "agentManager.settings.project.empty": "Nema dostupnih projekata u Agent Manager.",
@@ -48,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Pokrenite prije nego što agent počne u novom worktree.",
   "agentManager.settings.setupScript.create": "Kreiraj script",
   "agentManager.settings.setupScript.edit": "Uredi script",
-  "agentManager.project.add": "Dodaj projekat",
+  "agentManager.project.add": "Dodaj projekat...",
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
   "agentManager.project.missing": "Repozitorij nije pronađen",
+  "agentManager.project.settings": "Postavke projekta",
   "agentManager.project.restricted":
     "Vaš trenutni VS Code radni prostor je vaša početna fascikla ili korijen sistema datoteka. Otvorite određenu projektnu fasciklu u VS Code-u da koristite Agent Manager.",
   "agentManager.notGitRepo": "Nije git repozitorij",
@@ -133,6 +137,12 @@ export const dict = {
     "Ovaj repozitorijum koristi Git LFS, ali git-lfs nije pronađen. Molimo instalirajte Git LFS.",
   "agentManager.setup.error.no_commits":
     "Ovaj repozitorijum još uvek nema commit-ova. Napravite početni commit pre korišćenja worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Folder ovog worktreeja više ne postoji. Vrati ga iz njegove grane ili ukloni worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git više ne prati ovaj folder kao worktree. Ukloni ga i napravi novi worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git nije odgovorio na vrijeme. Provjeri je li repozitorij dostupan i pokušaj ponovo.",
   "agentManager.shortcuts.title": "Prečice na tastaturi",
   "agentManager.shortcuts.category.sidebar": "Bočna traka",
   "agentManager.shortcuts.category.tabs": "Kartice",
@@ -231,6 +241,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Pošalji sve u chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Pošalji {{count}} na GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Slanje je zaustavljeno zbog greške na GitHubu: {{error}}",
   "agentManager.review.inlineCount": "Lokalni komentari ({{count}})",
   "agentManager.review.prCount": "PR komentari ({{count}})",
   "agentManager.review.fileCount": "{{count}} datoteka",
@@ -305,6 +317,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Zastarjelo",
   "agentManager.pr.comment.sent": "Poslano",
   "agentManager.pr.comment.copy": "Kopiraj komentar",
+  "agentManager.pr.comment.copyLink": "Kopiraj vezu komentara",
   "agentManager.pr.comment.openOnGitHub": "Otvori na GitHub",
   "agentManager.pr.comment.showInDiff": "Prikaži u diffu",
   "agentManager.pr.comment.unplaced": "Komentari izvan trenutnog diffa",
@@ -414,7 +427,7 @@ export const dict = {
     "Režim održavanja računara budnim je uključen za Kilo agente; kliknite da ga isključite",
   "agentManager.caffeination.active": "Računar se održava budnim dok Kilo agenti rade",
   "agentManager.caffeination.unavailable": "Režim održavanja računara budnim nije dostupan na ovoj platformi",
-  "agentManager.browser.title": "Preglednik",
+  "agentManager.browser.title": "Integrirani preglednik",
   "agentManager.browser.url": "URL lokalne aplikacije",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Otvori",
@@ -423,7 +436,8 @@ export const dict = {
   "agentManager.browser.refresh": "Osvježi preglednik",
   "agentManager.browser.close": "Zatvori preglednik",
   "agentManager.browser.empty": "Otvorite lokalnu aplikaciju da biste je ovdje pregledali.",
-  "agentManager.browser.noSession": "Najprije odaberite sesiju aplikacije Agent Manager.",
+  "agentManager.browser.noSession":
+    "Pokrenite ili odaberite sesiju u Agent Manageru da biste pregledali lokalnu aplikaciju.",
   "agentManager.browser.screenshotAlt": "Trenutna stranica preglednika",
   "agentManager.browser.errors": "Problemi preglednika: {{count}}",
   "agentManager.browser.diagnostics": "Dijagnostika preglednika",
@@ -459,4 +473,47 @@ export const dict = {
   "agentManager.intro.guide": "Pročitajte vodič",
   "agentManager.intro.dismiss": "Preskoči uvod",
   "agentManager.intro.reopen": "Kako radi Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Folder izbrisan",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Folder je nestao, ali grana {{branch}} još postoji. Vrati ga da nastaviš rad ovdje.",
+  "agentManager.worktree.health.absent-gone": "Folder i grana izbrisani",
+  "agentManager.worktree.health.absent-goneNote":
+    "Ni folder ni grana više ne postoje. Ukloni unos radi urednosti; sesije se čuvaju pod Lokalno.",
+  "agentManager.worktree.health.unregistered": "Nije git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Folder postoji, ali ga git više ne prati kao worktree. Status se ne može pročitati.",
+  "agentManager.worktree.health.unavailable": "Status nedostupan",
+  "agentManager.worktree.health.unavailableNote":
+    "Git ili GitHub CLI nije odgovorio na vrijeme. Provjera ovog worktreeja je pauzirana i biće ponovljena.",
+  "agentManager.worktree.restore": "Vrati worktree",
+  "agentManager.worktree.removeKeepSessions": "Ukloni, zadrži sesije",
+  "agentManager.orphans.resolve": "Riješi…",
+  "agentManager.orphans.summaryCount": "{{count}} zaostalih worktree foldera",
+  "agentManager.orphans.summarySize": "{{count}} zaostalih worktree foldera · {{size}}",
+  "agentManager.orphans.calculating": "računanje veličine…",
+  "agentManager.orphans.sizeUnknown": "nepoznato",
+  "agentManager.orphans.dialogTitle": "Zaostali worktree folderi",
+  "agentManager.orphans.helpIntro":
+    "Kilo čuva svaki worktree koji napravi u folderu .kilo/worktrees ovog repozitorija. Folderi ispod nalaze se u tom folderu, ali git ni jedan od njih ne navodi kao worktree, pa ih više ništa ne koristi.",
+  "agentManager.orphans.helpCheckout":
+    "Folder označen kao folder koji sadrži git checkout još ima .git zapis unutra i može sadržavati nekomitovan rad. Takvi folderi ostaju neodabrani, pa otvorite jedan i provjerite ga prije nego što ga izbrišete.",
+  "agentManager.orphans.helpCauses":
+    "Zaostali folderi najčešće nastaju zbog prekinutog brisanja, worktreeja uklonjenog izvan aplikacije Kilo ili alata koji je pisao u folder nakon što je uklonjen. Brisanja koja su još u toku nisu navedena ovdje.",
+  "agentManager.orphans.helpDelete":
+    "Brisanje trajno uklanja odabrane foldere s diska, bez prebacivanja u Korpu za smeće. Nijedna grana niti aktivan worktree se ne dira. Veličine pokazuju koliko prostora svaki folder trenutno zauzima na disku.",
+  "agentManager.orphans.helpMore": "Prikaži još",
+  "agentManager.orphans.helpLess": "Prikaži manje",
+  "agentManager.orphans.columnPath": "Putanja",
+  "agentManager.orphans.columnSize": "Veličina",
+  "agentManager.orphans.columnContents": "Sadržaj",
+  "agentManager.orphans.checkoutWarning": "sadrži git checkout",
+  "agentManager.orphans.footerSelected": "{{count}} odabrano · {{size}}",
+  "agentManager.orphans.footerCheckouts": "{{count}} još sadrži git checkout",
+  "agentManager.orphans.reveal": "Prikaži u sistemu",
+  "agentManager.orphans.revealMac": "Prikaži u Finderu",
+  "agentManager.orphans.revealWindows": "Prikaži u Exploreru",
+  "agentManager.orphans.revealLinux": "Prikaži u datotekama",
+  "agentManager.orphans.deleteButton": "Izbriši {{count}} foldera ({{size}})",
+  "agentManager.orphans.cancel": "Otkaži",
+  "agentManager.error.title": "Greška Agent Managera",
 }

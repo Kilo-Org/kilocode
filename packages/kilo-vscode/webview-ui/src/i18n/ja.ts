@@ -201,10 +201,12 @@ export const dict = {
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
   "prompt.action.autoApprove.disabled": "自動承認が無効です。クリックすると権限リクエストを自動的に承認します。",
+  "prompt.action.autoApprove.sandboxExcluded": "サンドボックスからの脱出プロンプトは常に対象外です。",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
@@ -223,12 +225,14 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "許可",
   "prompt.action.sandbox.unrestricted": "制限なし",
   "prompt.action.sandbox.description.enabled": "書き込みはプロジェクトおよびKiloディレクトリ内に制限されます。",
+  "prompt.action.sandbox.description.escalation":
+    "許可ルールと自動承認はサンドボックス内で適用されます。サンドボックスから出る必要があるコマンドは常に確認します。",
   "prompt.action.sandbox.description.disabled":
     "クリックすると、ファイルシステムへの書き込みとネットワークアクセスを制限します。",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
-  "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
+  "speechToText.tooltip.start": "音声入力を開始",
   "speechToText.tooltip.shortcut":
     "タップまたは Cmd/Ctrl+K を押して録音を開始／停止し、話している間は押し続け、離すと文字起こしして送信します。",
   "speechToText.tooltip.starting": "マイクを起動中... まだ話さないでください。",
@@ -268,8 +272,13 @@ export const dict = {
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
-  "notification.permission.titleSandboxEscalation": "サンドボックス外での Git 操作を許可しますか？",
+  "notification.permission.titleSandboxEscalation": "サンドボックス外で実行しますか？",
+  "notification.permission.descriptionSandboxEscalation":
+    "このコマンドに限り、ファイルシステムとネットワークの制限を外してコマンド全体を実行します。Git は .git に書き込む必要があります。.git はサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.reject": "拒否",
+  "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
+  "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
   "ui.permission.rule.addToAllowed": "許可リストに追加",
@@ -318,7 +327,6 @@ export const dict = {
   "sidebar.topBar.newTask": "新規タスク",
   "sidebar.topBar.history": "履歴",
   "sidebar.topBar.agentManager": "エージェントマネージャー",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "マーケットプレイス",
   "sidebar.topBar.profile": "プロフィール",
   "sidebar.topBar.settings": "設定",
@@ -458,6 +466,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "カスタムプロバイダー",
   "settings.providers.connected.environmentDescription": "環境変数から接続されています",
   "settings.providers.action.signInChatGPT": "ChatGPT でサインイン",
+  "settings.providers.action.changeApiKey": "APIキーを変更",
   "settings.providers.custom.description": "ベース URL でカスタムプロバイダーを追加します。",
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
@@ -549,37 +558,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "権限の更新に失敗しました",
 
-  "settings.permissions.tool.read.title": "読み込み",
   "settings.permissions.tool.read.description": "ファイルの読み込み (ファイルパスに一致)",
-  "settings.permissions.tool.edit.title": "編集",
   "settings.permissions.tool.edit.description": "ファイルの変更（編集、書き込み、パッチ、複数編集を含む）",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Globパターンを使用したファイルの一致",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "正規表現を使用したファイル内容の検索",
-  "settings.permissions.tool.list.title": "リスト",
   "settings.permissions.tool.list.description": "ディレクトリ内のファイル一覧表示",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "シェルコマンドの実行",
-  "settings.permissions.tool.task.title": "タスク",
   "settings.permissions.tool.task.description": "サブエージェントの起動",
-  "settings.permissions.tool.skill.title": "スキル",
   "settings.permissions.tool.skill.description": "名前によるスキルの読み込み",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "言語サーバークエリの実行",
-  "settings.permissions.tool.todoread.title": "Todo読み込み",
   "settings.permissions.tool.todoread.description": "Todoリストの読み込み",
-  "settings.permissions.tool.todowrite.title": "Todo書き込み",
   "settings.permissions.tool.todowrite.description": "Todoリストの更新",
-  "settings.permissions.tool.webfetch.title": "ウェブ取得",
   "settings.permissions.tool.webfetch.description": "URLからコンテンツを取得",
-  "settings.permissions.tool.websearch.title": "ウェブ検索",
   "settings.permissions.tool.websearch.description": "ウェブを検索",
-  "settings.permissions.tool.codesearch.title": "コード検索",
   "settings.permissions.tool.codesearch.description": "ウェブ上のコードを検索",
-  "settings.permissions.tool.external_directory.title": "外部ディレクトリ",
   "settings.permissions.tool.external_directory.description": "プロジェクトディレクトリ外のファイルへのアクセス",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "同一入力による繰り返しのツール呼び出しを検出",
 
   "session.delete.title": "セッションの削除",
@@ -672,6 +665,7 @@ export const dict = {
   "profile.usage.source.direct": "直接",
   "profile.usage.state.stale": "最後に更新された使用状況を表示しています。",
   "profile.usage.state.unavailable": "使用状況を取得できません。",
+  "profile.usage.state.empty": "使用量の上限は報告されていません。",
   "profile.usage.plan.pastDue": "プラン：支払い期限切れ",
   "profile.usage.plan.canceling": "プラン：期間終了時に解約",
   "profile.usage.plan.unknown": "プラン：ステータス不明",
@@ -835,7 +829,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "スキル",
 
   "settings.browser.description":
-    "有効にすると、AIエージェントがWebページを操作できるようになります — ナビゲーション、クリック、入力、スクリーンショットの撮影。Chromeウィンドウが開き、エージェントの作業を確認できます。",
+    "Playwrightを利用した組み込みブラウザ自動化を設定します。Kiloはセッション内でWebページのナビゲーション、操作、スクリーンショット撮影を行えます。",
   "settings.browser.enable.title": "ブラウザ自動化を有効にする",
   "settings.browser.enable.description": "Playwright MCPサーバーをCLIバックエンドに登録します。",
   "settings.browser.systemChrome.title": "システムChromeを使用",
@@ -889,15 +883,28 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "メインセッションと、そのタスクを担当するサブエージェント（ネストされたサブエージェントを含む）の間でボードを共有します。すべてのタスクで使うのではなく、並行して解決策を試す場合や、互いに補完し合う作業に使用してください。",
   "settings.experimental.imageGenerationModel.title": "画像モデル",
   "settings.experimental.imageGenerationModel.description": "画像生成モデル",
   "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "カスタム文字起こしエンドポイントに送信するモデル ID です。例: whisper-1。",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "音声認識ベース URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Kilo Gateway の代わりに OpenAI 互換の文字起こし API を使用します。モデルは /models から読み込まれ、音声は /audio/transcriptions に送信されます。空欄にすると Kilo Gateway を使用します。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "音声認識 API キー",
+  "settings.models.speechToTextApiKey.description":
+    "カスタム文字起こしベース URL に送信するベアラートークンです。Kilo の設定ファイルに保存されます。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインしてください。現在、Speech to Text は Kilo Gateway でのみサポートされています。",
+    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインするか、下でカスタム文字起こしベース URL を設定してください。",
+  "settings.models.speechToText.remoteDescription":
+    "音声入力はリモートウィンドウでは利用できません。マイクを使用するには、ローカルウィンドウで Kilo を開いてください。",
   "settings.models.speechToTextModel.title": "音声認識モデル",
   "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
@@ -1058,6 +1065,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "モデル",
   "settings.agentBehaviour.workflows.variant": "バリアント",
   "settings.agentBehaviour.workflows.modelDescription": "グローバルモデルの上書き",
+  "settings.experimental.codeMode.title": "プログラムによるツール呼び出し",
+  "settings.experimental.codeMode.description":
+    "各 MCP ツールを直接公開する代わりに、オンデマンドのツール検出を備えた隔離された JavaScript ランタイム経由で MCP ツール呼び出しをルーティングします。多数の MCP ツールが接続されている場合にコンテキストを節約します。",
   "settings.sandboxing.enabled.title": "サンドボックス",
   "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
@@ -1152,9 +1162,12 @@ export const dict = {
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
   "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
-  "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
-  "settings.display.reasoningAutoCollapse.description":
-    "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
+  "settings.display.reasoningDisplay.title": "推論ブロック",
+  "settings.display.reasoningDisplay.description":
+    "推論ブロックの開始時の表示方法を選択します。展開では全文を表示し、プレビューでは短いスクロール可能なプレビューに制限し、見出しではブロックを開くまでタイトルとストリーミングインジケーターのみを表示します。",
+  "settings.display.reasoningDisplay.expanded": "展開",
+  "settings.display.reasoningDisplay.preview": "プレビュー",
+  "settings.display.reasoningDisplay.headline": "見出し",
   "settings.display.shiftTabCycle.title": "Shift+Tab で推論の強度を切り替える",
   "settings.display.shiftTabCycle.description":
     "プロンプト入力欄で Shift+Tab を押すと、次の推論の強度レベルに切り替わります。Shift+Tab をキーボードフォーカスの移動に使用する場合は、無効にしてください。",
@@ -1294,6 +1307,18 @@ export const dict = {
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "ローカルに保存",
+  "diffViewer.comment.sendToAgent": "エージェントに送信",
+  "diffViewer.comment.postToGithub": "GitHubに投稿",
+  "diffViewer.comment.loadFailed": "プルリクエストの変更を読み込めませんでした。",
+  "diffViewer.comment.unavailable": "この行は現在のプルリクエストのスナップショットでは利用できません。",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "プルリクエストを開く",
+  "diffViewer.comment.localChanges": "ローカルの変更",
+  "diffViewer.comment.prChanges": "PRの変更",
+  "diffViewer.comment.sendToKilo": "Kiloに送信",
+  "diffViewer.comment.sendToGithub": "GitHub #{{number}}に送信",
+  "diffViewer.comment.chooseDestination": "送信先を選択",
   "diffViewer.notice.snapshotsDisabled":
     "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
 
@@ -1315,5 +1340,11 @@ export const dict = {
   "chat.search.close": "検索を閉じる",
   "chat.search.invalidRegex": "正規表現が無効です",
   "chat.search.noResults": "見つかりませんでした",
+  "settings.experimental.browserAutomation.title": "統合ブラウザー",
+  "settings.experimental.browserAutomation.description":
+    "Agent Manager でローカルアプリケーションのプレビューを表示し、browser_open ツールを Agent Manager セッションに公開します。",
+  "settings.experimental.browserAutomation.systemChrome.title": "システムChromeを使用",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
 }

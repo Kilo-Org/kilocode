@@ -17,6 +17,7 @@ import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
 import { PromptInput } from "../components/chat/PromptInput"
 import { SandboxTooltipContent } from "../components/shared/SandboxButton"
+import { contextDrafts } from "../utils/draft-store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -162,4 +163,71 @@ export const WithThinking200: Story = {
       <PromptInput />
     </PromptProviders>
   ),
+}
+
+// ---------------------------------------------------------------------------
+// Stories — code context pills (added from the editor "Add as context" command)
+// ---------------------------------------------------------------------------
+
+const CODE_CONTEXT_BOX = "story-code-context"
+const codeContexts = [
+  {
+    id: "context-1",
+    filePath: "tests/unit/services/test_subchannel_sharing.py",
+    startLine: 271,
+    endLine: 277,
+    text: 'writer_count.return_value = 2\nwith pytest.raises(Forbidden, match="Unpaid organizations can only have 2 collaborators"):',
+  },
+  {
+    id: "context-2",
+    filePath: "packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx",
+    startLine: 12,
+    endLine: 18,
+    text: "export const PromptInput: Component<PromptInputProps> = (props) => {",
+  },
+]
+
+const manyContexts = Array.from({ length: 8 }, (_, index) => ({
+  id: `many-${index}`,
+  filePath: `packages/kilo-vscode/src/services/code-actions/file-${index}.ts`,
+  startLine: index * 10 + 1,
+  endLine: index * 10 + 12,
+  text: `export function action${index}() {\n  return ${index}\n}`,
+}))
+
+const largeContext = {
+  id: "large-1",
+  filePath: "packages/opencode/src/session/session.ts",
+  startLine: 1,
+  endLine: 400,
+  text: Array.from({ length: 400 }, (_, index) => `const line${index + 1} = ${index + 1}`).join("\n"),
+}
+
+function CodeContextPrompt(props: { box: string; contexts: typeof codeContexts }) {
+  contextDrafts.set(`${props.box}:session:story-session-001`, props.contexts)
+  return (
+    <PromptProviders>
+      <PromptInput boxId={props.box} />
+    </PromptProviders>
+  )
+}
+
+export const WithCodeContext420: Story = {
+  name: "With code context pills — 420px",
+  render: () => <CodeContextPrompt box={CODE_CONTEXT_BOX} contexts={codeContexts} />,
+}
+
+export const WithCodeContext200: Story = {
+  name: "With code context pills — 200px",
+  render: () => <CodeContextPrompt box={CODE_CONTEXT_BOX} contexts={codeContexts} />,
+}
+
+export const WithManyCodeContexts420: Story = {
+  name: "With many code contexts — 420px",
+  render: () => <CodeContextPrompt box="story-code-context-many" contexts={manyContexts} />,
+}
+
+export const WithLargeCodeContext420: Story = {
+  name: "With large code context — 420px",
+  render: () => <CodeContextPrompt box="story-code-context-large" contexts={[largeContext]} />,
 }

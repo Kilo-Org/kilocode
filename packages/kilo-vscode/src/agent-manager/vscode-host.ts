@@ -8,6 +8,7 @@
 import * as vscode from "vscode"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import type { PRMergeMethod } from "./types"
 import { ProjectRouteService } from "./project/route"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
@@ -22,7 +23,6 @@ import type { CaffeinationService } from "../services/caffeination"
 
 const INTRO_KEY = "kilo.agentManager.introDismissed"
 const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
-type PRMergeMethod = "merge" | "squash" | "rebase"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -284,6 +284,10 @@ export class VscodeHost implements Host {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
   }
 
+  worktreePool(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.agentManager").get("worktreePool", true)
+  }
+
   readProjects(): unknown {
     return this.context.globalState.get("agentManager.projects")
   }
@@ -318,6 +322,12 @@ export class VscodeHost implements Host {
     })
   }
 
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable {
+    return vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.agentManager.worktreePool")) cb(this.worktreePool())
+    })
+  }
+
   isTrusted(): boolean {
     return vscode.workspace.isTrusted
   }
@@ -332,6 +342,27 @@ export class VscodeHost implements Host {
 
   showError(msg: string): void {
     void vscode.window.showErrorMessage(msg)
+  }
+
+  notify(kind: "info" | "warning" | "error", msg: string): void {
+    if (kind === "info") void vscode.window.showInformationMessage(msg)
+    else if (kind === "warning") void vscode.window.showWarningMessage(msg)
+    else void vscode.window.showErrorMessage(msg)
+  }
+
+  revealInOS(path: string): void {
+    if (vscode.env.remoteName) {
+      console.warn(`[Kilo New] Cannot reveal ${path} in the OS file manager on a remote workspace`)
+      return
+    }
+    void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(path))
+  }
+
+  async withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T> {
+    return await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title, cancellable: true },
+      (_progress, token) => task(() => token.isCancellationRequested),
+    )
   }
 
   async openDocument(path: string): Promise<void> {
@@ -356,6 +387,7 @@ export class VscodeHost implements Host {
     const channel = vscode.window.createOutputChannel(name)
     return {
       appendLine: (msg) => channel.appendLine(msg),
+      show: () => channel.show(true),
       dispose: () => channel.dispose(),
     }
   }
