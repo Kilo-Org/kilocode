@@ -1,4 +1,4 @@
-import { createEffect, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from "solid-js"
+import { createEffect, createMemo, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from "solid-js" // kilocode_change: added createMemo
 import { animate, type AnimationPlaybackControls } from "motion"
 import { useI18n } from "../context/i18n"
 import { createStore } from "solid-js/store"
@@ -105,6 +105,16 @@ export function BasicTool(props: BasicToolProps) {
   const open = () => props.open ?? state.open
   const ready = () => state.ready
   const pending = () => props.status === "pending" || props.status === "running"
+  // kilocode_change start - read the trigger getter once. A JSX trigger is
+  // rebuilt on every read of `props.trigger`, and the copy built only for the
+  // Match condition is never inserted, so its mounted effects (fade
+  // animations) outlive the card and leak the transcript row.
+  const node = createMemo(() => props.trigger)
+  const title = () => {
+    const value = node()
+    return isTriggerTitle(value) ? value : undefined
+  }
+  // kilocode_change end
   // kilocode_change start - testing for children must not evaluate them. Reading
   // the `children` getter constructs the whole collapsed body tree (and runs
   // Markdown/diff parsing inside it) on every mount, even while closed, which
@@ -193,7 +203,9 @@ export function BasicTool(props: BasicToolProps) {
   )
 
   onCleanup(() => {
-    heightAnim?.stop()
+    // kilocode_change - complete, not stop: a stopped animation keeps Motion's
+    // reference cycle to the removed element alive (see kilo-ui motion.tsx settle)
+    heightAnim?.complete()
   })
 
   const handleOpenChange = (value: boolean) => {
@@ -226,7 +238,7 @@ export function BasicTool(props: BasicToolProps) {
         {/* kilocode_change end */}
         <div data-slot="basic-tool-tool-info">
           <Switch>
-            <Match when={isTriggerTitle(props.trigger) && props.trigger}>
+            <Match when={title()}>{/* kilocode_change */}
               {(title) => (
                 <div data-slot="basic-tool-tool-info-structured">
                   <div data-slot="basic-tool-tool-info-main">
@@ -278,7 +290,7 @@ export function BasicTool(props: BasicToolProps) {
                 </div>
               )}
             </Match>
-            <Match when={true}>{props.trigger as JSX.Element}</Match>
+            <Match when={true}>{node() as JSX.Element}</Match>{/* kilocode_change */}
           </Switch>
         </div>
       </div>
