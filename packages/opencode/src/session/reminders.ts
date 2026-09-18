@@ -4,20 +4,16 @@ import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
-import { RuntimeFlags } from "@/effect/runtime-flags"
 import { PartID } from "./schema"
-import { MessageV2 } from "./message-v2"
 import { Session } from "./session"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import CODE_SWITCH from "./prompt/code-switch.txt" // kilocode_change
-import ASK_CODE_SWITCH from "@/kilocode/session/ask-code-switch.txt" // kilocode_change
 
 export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
   messages: SessionV1.WithParts[]
   agent: Agent.Info
   session: Session.Info
 }) {
-  const flags = yield* RuntimeFlags.Service
   const fsys = yield* FSUtil.Service
   const sessions = yield* Session.Service
   const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
@@ -39,26 +35,6 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
   })
   if (switched) userMessage.parts.push(yield* sessions.updatePart(switched))
   // kilocode_change end
-
-  if (!flags.experimentalPlanMode) {
-    const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
-    if (
-      wasPlan &&
-      input.agent.name === "code" &&
-      !userMessage.parts.some((part) => part.type === "text" && part.text === ASK_CODE_SWITCH)
-    ) {
-      // kilocode_change - renamed from "build" to "code"
-      userMessage.parts.push({
-        id: PartID.ascending(),
-        messageID: userMessage.info.id,
-        sessionID: userMessage.info.sessionID,
-        type: "text",
-        text: `\n\n${CODE_SWITCH}`, // kilocode_change - separated from user content
-        synthetic: true,
-      })
-    }
-    return input.messages
-  }
 
   const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
   if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
