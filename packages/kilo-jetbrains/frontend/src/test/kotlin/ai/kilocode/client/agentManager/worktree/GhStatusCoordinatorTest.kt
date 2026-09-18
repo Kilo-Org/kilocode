@@ -151,10 +151,26 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         assertEquals(GhAvailability.OK, service.current())
         assertEquals("one overrun must not reach the banner", emptyList<GhAvailability>(), events)
 
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
         report(GhAvailability.TIMEOUT)
 
         assertEquals(GhAvailability.TIMEOUT, service.current())
         assertEquals(listOf(GhAvailability.TIMEOUT), events)
+    }
+
+    fun `test one slow lookup replayed from the backend cache confirms nothing`() {
+        // The backend re-serves a timed-out verdict to whoever asks next, so one overrun arrives here
+        // several times: from the probe that suffered it, from a prStatus handed the cached verdict, and
+        // from each other attached project polling the same root. Counting those confirms a timeout with
+        // itself, which is exactly what the confirmation exists to prevent.
+        repeat(6) { report(GhAvailability.TIMEOUT) }
+
+        assertEquals(GhAvailability.OK, service.current())
+
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        report(GhAvailability.TIMEOUT)
+
+        assertEquals(GhAvailability.TIMEOUT, service.current())
     }
 
     fun `test a slow lookup answered by a healthy one starts the tally over`() {
@@ -163,9 +179,11 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
 
         // The claim is a run of consecutive timeouts, not a lifetime count. Without the reset, two
         // unrelated overruns an hour apart would eventually trip a banner between two healthy probes.
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
         report(GhAvailability.TIMEOUT)
         assertEquals(GhAvailability.OK, service.current())
 
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
         report(GhAvailability.TIMEOUT)
         assertEquals(GhAvailability.TIMEOUT, service.current())
     }
@@ -197,6 +215,7 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
 
     fun `test a confirmed timeout does not re-arm its own confirmation`() {
         report(GhAvailability.TIMEOUT)
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
         report(GhAvailability.TIMEOUT)
         assertEquals(GhAvailability.TIMEOUT, service.current())
 
@@ -204,6 +223,7 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         // makes the *next* recovery-then-overrun publish on a single observation.
         report(GhAvailability.TIMEOUT)
         report(GhAvailability.OK)
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
         report(GhAvailability.TIMEOUT)
 
         assertEquals(GhAvailability.OK, service.current())

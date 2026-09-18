@@ -10,6 +10,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Budgets for `gh` reads.
@@ -145,18 +146,26 @@ internal class PrResolver(
     private var threads = true
 
     /**
-     * Checkouts whose head commit the ladder has already proven has no pull request, by path.
+     * Checkouts the ladder has already proven have no pull request, by path.
      *
      * The expensive case this exists for is a worktree with no PR at all: it is the only one that runs
      * every strategy to completion, so it costs the most `gh` calls of any row and does it on every
-     * poll, forever. Keyed by head commit rather than by time alone, so it is spent the moment anything
-     * is committed, reset, rebased, or checked out — the events that could give the branch a pull
-     * request — and only the "nothing happened here" case is actually reused.
+     * poll, forever. Keyed by branch *and* head commit rather than by time alone, so it is spent by the
+     * things that can give a checkout a pull request — committing, amending, rebasing, resetting,
+     * checking out, or renaming the branch under the same commit — and only the "nothing happened here"
+     * case is actually reused.
      */
     private val absent = ConcurrentHashMap<String, Absent>()
 
-    /** A proven-absent pull request for one checkout at one commit. */
-    private data class Absent(val head: String, val time: Long)
+    /** A proven-absent pull request for one checkout on one branch at one commit. */
+    private data class Absent(val branch: String, val head: String, val time: Long)
+
+    /**
+     * Bumped by [clear]. A ladder that started before a mutation can finish after it, so the epoch it
+     * observed on entry is what decides whether its answer still describes the repository that exists
+     * now — without it, such a run re-inserts the absence [clear] just dropped.
+     */
+    private val epoch = AtomicLong()
 
     /**
      * Resolves the PR for the checkout at [path] on [branch]. [base] is the repository's base
@@ -173,6 +182,7 @@ internal class PrResolver(
 
     /** Drops every proven-absent entry, for a mutation that can have created a pull request. */
     fun clear() {
+        epoch.incrementAndGet()
         absent.clear()
     }
 
@@ -188,55 +198,68 @@ internal class PrResolver(
      * spawns a full ladder costs — so [absent] can answer a checkout that has already been proven to
      * have no pull request without running the ladder at all. [search] is then handed the same commit
      * rather than reading it again.
+     *
+     * Every strategy still runs for every checkout. Skipping the selector-less form for the working tree
+     * whose branch *is* [base] looks free — that row reliably has no pull request — but [base] is simply
+     * whatever branch the main working tree happens to be on, not the repository's default branch. After
+     * a `gh pr checkout` in the primary checkout it is the PR branch, and the selector-less form is the
+     * only strategy that can resolve a fork PR or a `refs/pull/N/head` head. [absent] already removes the
+     * repeated cost this would have saved, without being able to hide a badge.
      */
     private fun find(dir: Path, path: String, branch: String, base: String?, maxAge: Long?): PrLookup {
         val head = git(dir, listOf("rev-parse", "HEAD")).stdout.trim()
-        if (spent(path, head, maxAge)) return PrLookup()
-        val slow = Timeouts()
-        view(dir, path, branch, GH_READ_TIMEOUT_MS, slow)?.let { return it }
-        // Strategies 2 and 3 exist for heads the branch name alone cannot reach — a fork PR resolved
-        // through `branch.<name>.merge`, a `refs/pull/N/head` checkout, a branch renamed locally. The
-        // working tree holding the repository's own base branch is none of those (git will not let a
-        // second worktree check that branch out, so this is the main one), and it is the row that pays
-        // for them on every single poll: it reliably has no pull request, so it always falls through to
-        // the end of the ladder. Skipping both there is what stops the base-branch row from spending the
-        // hang-prone selector-less budget forever to re-learn the same answer.
-        if (branch != base) {
-            view(dir, path, null, GH_PROBE_TIMEOUT_MS, slow)?.let { return it }
-            search(dir, path, head, slow)?.let { return it }
-        }
+        if (spent(path, branch, head, maxAge)) return PrLookup()
+        val epoch = epoch.get()
+        val run = Run()
+        view(dir, path, branch, GH_READ_TIMEOUT_MS, run)?.let { return it }
+        view(dir, path, null, GH_PROBE_TIMEOUT_MS, run)?.let { return it }
+        if (branch != base) search(dir, path, head, run)?.let { return it }
         // Nothing answered. A ladder that timed out has not established that there is no PR, so it
         // must not report one absent — the frontend keeps the previous answer for an unavailable gh.
-        if (slow.hit) return PrLookup(availability = GhAvailability.TIMEOUT)
-        // Only a ladder that ran to completion proves an absence worth remembering.
-        remember(path, head)
+        if (run.slow) return PrLookup(availability = GhAvailability.TIMEOUT)
+        if (run.sure) remember(path, branch, head, epoch)
         return PrLookup()
     }
 
     /**
-     * Whether [path] at [head] is already known to have no pull request, within [maxAge].
+     * Whether [path] on [branch] at [head] is already known to have no pull request, within [maxAge].
      *
      * A blank [head] means `git rev-parse` could not answer (an empty repository, or a checkout that
      * vanished mid-poll), which is not a commit this can be keyed by — so it never hits and never
      * records, and the ladder runs exactly as it did before.
      */
-    private fun spent(path: String, head: String, maxAge: Long?): Boolean {
+    private fun spent(path: String, branch: String, head: String, maxAge: Long?): Boolean {
         if (head.isEmpty()) return false
         val entry = absent[path] ?: return false
-        if (entry.head != head) return false
+        if (entry.head != head || entry.branch != branch) return false
         if (!usable(entry.time, System.currentTimeMillis(), PR_ABSENT_TTL, maxAge)) return false
-        LOG.debug { "pr lookup skipped, no pull request known for this commit: path=$path head=$head" }
+        LOG.debug { "pr lookup skipped, no pull request known here: path=$path branch=$branch head=$head" }
         return true
     }
 
-    private fun remember(path: String, head: String) {
+    /** Records a proven absence, unless [clear] ran while the ladder that proved it was still going. */
+    private fun remember(path: String, branch: String, head: String, epoch: Long) {
         if (head.isEmpty()) return
-        absent[path] = Absent(head, System.currentTimeMillis())
+        if (this.epoch.get() != epoch) return
+        absent[path] = Absent(branch, head, System.currentTimeMillis())
     }
 
-    /** Records whether any strategy in one ladder run exceeded its budget. */
-    private class Timeouts {
-        var hit = false
+    /** What one ladder run learned about its own reliability. */
+    private class Run {
+        /** A strategy exceeded its budget, so the run answered nothing about this pull request. */
+        var slow = false
+
+        /**
+         * Every strategy that ran got a definite answer from GitHub, so falling off the end of the
+         * ladder really does mean there is no pull request.
+         *
+         * False for anything that merely *failed*. [prError] reports an unrecognised stderr as OK
+         * because a missing PR is the normal case and a broken `gh` is caught by the upfront probe —
+         * which means a DNS failure, a refused connection, a 5xx or an EOF all reach the end of the
+         * ladder looking exactly like "no pull request here". Costing one poll, that was fine; cached
+         * as a proven absence it would suppress a real badge for [PR_ABSENT_TTL].
+         */
+        var sure = true
     }
 
     /**
@@ -278,7 +301,7 @@ internal class PrResolver(
     }
 
     /** Null means "no PR here, keep looking"; a value is terminal (a PR, or gh being unusable). */
-    private fun view(dir: Path, path: String, branch: String?, timeoutMs: Int, slow: Timeouts): PrLookup? {
+    private fun view(dir: Path, path: String, branch: String?, timeoutMs: Int, run: Run): PrLookup? {
         val out = query(dir, timeoutMs) { fields ->
             buildList {
                 add("pr")
@@ -288,7 +311,7 @@ internal class PrResolver(
                 add(fields)
             }
         }
-        if (!out.ok) return unusable(out, slow)
+        if (!out.ok) return unusable(out, run)
         return parsePr(path, out.stdout)?.let { PrLookup(it, node = parsePrNodeId(out.stdout)) }
     }
 
@@ -317,13 +340,22 @@ internal class PrResolver(
     }
 
     /** Strategy 3. [head] is the checkout's head commit, already read by [find]. */
-    private fun search(dir: Path, path: String, head: String, slow: Timeouts): PrLookup? {
-        if (head.isEmpty()) return null
+    private fun search(dir: Path, path: String, head: String, run: Run): PrLookup? {
+        if (head.isEmpty()) {
+            // No commit to search by, so this strategy never ran and cannot vouch for an absence.
+            run.sure = false
+            return null
+        }
         val out = query(dir) { fields ->
             listOf("pr", "list", "--state", "all", "--search", "$head is:pr", "--limit", "5", "--json", "$fields,headRefOid")
         }
-        if (!out.ok) return unusable(out, slow)
-        val items = runCatching { json.parseToJsonElement(out.stdout) as? JsonArray }.getOrNull() ?: return null
+        if (!out.ok) return unusable(out, run)
+        val items = runCatching { json.parseToJsonElement(out.stdout) as? JsonArray }.getOrNull()
+        if (items == null) {
+            // gh exited cleanly but this is not a list, so nothing was actually learned.
+            run.sure = false
+            return null
+        }
         for (item in items) {
             val obj = item as? JsonObject ?: continue
             // The search matches commit mentions too, so only an exact head match is our PR.
@@ -338,14 +370,28 @@ internal class PrResolver(
      * A timed-out lookup is not evidence that the PR does not exist, so it does not end the ladder —
      * but it is recorded, so a ladder that never answers reports a timeout instead of "no PR".
      */
-    private fun unusable(out: CmdOut, slow: Timeouts): PrLookup? {
+    private fun unusable(out: CmdOut, run: Run): PrLookup? {
         if (out.timeout) {
-            slow.hit = true
+            run.slow = true
+            run.sure = false
             return null
         }
         val status = prError(out.stderr)
-        return if (status == GhAvailability.OK) null else PrLookup(availability = status)
+        if (status != GhAvailability.OK) return PrLookup(availability = status)
+        // Keep looking either way, but only gh's own "there is no pull request" wording is an answer
+        // this may be remembered by. See [Run.sure].
+        if (!vacant(out.stderr)) run.sure = false
+        return null
     }
+}
+
+/**
+ * Whether [stderr] is `gh` positively reporting that the branch has no pull request, as opposed to any
+ * of the ways a lookup can simply fail.
+ */
+internal fun vacant(stderr: String): Boolean {
+    val text = stderr.lowercase()
+    return text.contains("no pull requests found") || text.contains("no pull request found")
 }
 
 /**

@@ -6,6 +6,7 @@ import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -269,18 +270,24 @@ class PrResolverTest {
     }
 
     @Test
-    fun `spends only the branch selector on the working tree holding the base branch`() {
+    fun `skips the head search for the base branch`() {
         val resolver = resolver(view = { missing() }, list = { throw IllegalStateException("must not search") })
 
         assertNull(resolver.resolve("/repo", "main", base = "main").pr)
+        assertEquals(2, calls.size, "only the two view forms should run for the base branch")
+    }
 
-        // Strategies 2 and 3 exist for heads a branch name cannot reach — a fork PR via
-        // `branch.<name>.merge`, a `refs/pull/N/head` checkout, a locally renamed branch. Git will not
-        // let a second worktree hold the base branch, so this is the main working tree and is none of
-        // those. It is also the row that reliably has no PR, so before this it fell all the way through
-        // the ladder every poll and spent the hang-prone selector-less budget to re-learn that.
-        assertEquals(listOf(listOf("pr", "view", "main", "--json", PR_RICH_FIELDS)), calls)
-        assertEquals(listOf(GH_READ_TIMEOUT_MS), budgets, "the selector-less probe budget must not be spent here")
+    @Test
+    fun `still asks branch config for the working tree whose branch is the base branch`() {
+        // `base` is whatever branch the main working tree is on, not the repository's default branch, so
+        // `branch == base` is also true right after `gh pr checkout` in the primary checkout. Skipping
+        // the selector-less form there dropped the only strategy that resolves a fork PR or a
+        // `refs/pull/N/head` head, and `absent` would then have cached that false absence for 10 minutes.
+        val resolver = resolver(view = { args -> if (args.contains("fork-work")) missing() else pr(7, "OPEN") })
+
+        val lookup = resolver.resolve("/repo", "fork-work", base = "fork-work")
+
+        assertEquals(7, assertNotNull(lookup.pr, "branch config must still be consulted").number)
     }
 
     @Test
@@ -341,6 +348,75 @@ class PrResolverTest {
         // command into a checkout that silently shows no PR for the whole absence TTL.
         assertEquals(GhAvailability.TIMEOUT, resolver.resolve(path, "feature/x", base = "main").availability)
         assertTrue(calls.isNotEmpty(), "a non-answer must not be cached as an answer")
+    }
+
+    @Test
+    fun `does not remember an absence a transient failure never established`() {
+        // prError reports an unrecognised stderr as OK, because a missing PR is the normal case and a
+        // broken gh is caught by the upfront probe. So every one of these reaches the end of the ladder
+        // looking exactly like "no pull request here" while having established nothing at all.
+        val blips = listOf(
+            "dial tcp: lookup api.github.com: no such host",
+            "HTTP 502: Bad Gateway",
+            "unexpected EOF",
+            "connection refused",
+            "error connecting to api.github.com",
+        )
+        for (blip in blips) {
+            calls.clear()
+            val resolver = resolver(view = { CmdOut(1, "", blip) }, list = { CmdOut(1, "", blip) })
+
+            assertNull(resolver.resolve(path, "feature/x", base = "main").pr, "for: $blip")
+            calls.clear()
+
+            // Costing one poll this was fine. Cached as a proven absence it suppresses a real badge for
+            // the full PR_ABSENT_TTL.
+            assertNull(resolver.resolve(path, "feature/x", base = "main").pr, "for: $blip")
+            assertTrue(calls.isNotEmpty(), "a blip must not be remembered as an absence: $blip")
+        }
+    }
+
+    @Test
+    fun `remembers an absence gh positively reported`() {
+        // The counterpart to the blips above: this is the wording that actually means "there is no pull
+        // request", and it is the only thing the absence cache may be built on.
+        assertTrue(vacant("""no pull requests found for branch "feature/x""""))
+        assertTrue(vacant("""no pull request found for branch "feature/x""""))
+        assertFalse(vacant("HTTP 502: Bad Gateway"))
+        assertFalse(vacant(""))
+    }
+
+    @Test
+    fun `does not remember an absence proven against a repository a mutation has since changed`() {
+        // clear() cannot cancel a ladder already in flight, so a resolve that began before a PR import
+        // can finish after it and re-insert the absence the import just dropped. When the import leaves
+        // HEAD alone, nothing else would dislodge it for 10 minutes.
+        lateinit var resolver: PrResolver
+        resolver = resolver(
+            view = {
+                resolver.clear()
+                missing()
+            },
+        )
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        calls.clear()
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        assertTrue(calls.isNotEmpty(), "an absence proven against a stale repository must not be kept")
+    }
+
+    @Test
+    fun `re-asks when the branch changes under the same commit`() {
+        // `git branch -m`, or checking out a sibling ref at the same commit, leaves HEAD alone — and a
+        // branch renamed and pushed at the same commit is one of the cases the head search exists for.
+        val resolver = resolver(view = { args -> if (args.contains("renamed")) pr(7, "OPEN") else missing() })
+
+        assertNull(resolver.resolve(path, "feature/x", base = "main").pr)
+        calls.clear()
+
+        assertEquals(7, assertNotNull(resolver.resolve(path, "renamed", base = "main").pr).number)
+        assertTrue(calls.isNotEmpty(), "a different branch is a different question")
     }
 
     @Test

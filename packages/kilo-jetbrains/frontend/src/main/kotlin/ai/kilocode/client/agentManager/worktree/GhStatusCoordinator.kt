@@ -63,6 +63,17 @@ class GhStatusCoordinator(
         // Deliberately a count and not a timer: the PR poll is the only thing that can observe this
         // state, so waiting on a clock would just publish whatever the same single overrun already said.
         internal const val TIMEOUT_CONFIRMATIONS = 2
+
+        /**
+         * How long after a counted timeout further ones are read as echoes of it rather than as fresh
+         * observations. See [confirmed].
+         *
+         * Must exceed the longest the backend will re-serve a cached timed-out verdict, which is the PR
+         * list's own short timeout TTL — the auth probe's is far shorter. A genuinely unresponsive gh is
+         * observed again on the next poll, comfortably outside this window, so the cost of being wrong
+         * here is one extra poll before the banner appears.
+         */
+        internal const val TIMEOUT_WINDOW = 20_000L
     }
 
     /** An event-driven sync that could not run when it arrived, held for one trailing probe. */
@@ -84,6 +95,12 @@ class GhStatusCoordinator(
     private var pending: Sync? = null
     /** Unpublished [GhAvailability.TIMEOUT] observations. See [TIMEOUT_CONFIRMATIONS]. */
     private var slow = 0
+
+    /**
+     * When the most recent counted timeout was observed, to tell a fresh one from an echo. Only read
+     * while [slow] is above zero, so clearing the tally is enough to retire it.
+     */
+    private var slowAt = 0L
     private val away = Away { timers.now() }
     private val projects = linkedMapOf<Project, Int>()
 
@@ -268,6 +285,13 @@ class GhStatusCoordinator(
      * consecutive timeouts rather than a lifetime count that eventually trips on unrelated blips.
      * A TIMEOUT arriving while TIMEOUT is already published falls through to [apply]'s own
      * `value == next` check and changes nothing.
+     *
+     * Two reports are not two observations. The backend caches a timed-out verdict — briefly for the
+     * auth probe, longer for a PR list — and hands the same one to whoever asks next, so a single
+     * overrun arrives here repeatedly: once from the probe that suffered it, again from a `prStatus`
+     * served the cached verdict, again from each of the other attached projects polling the same root.
+     * Counting those would confirm a timeout with itself and defeat the whole point, so reports within
+     * [TIMEOUT_WINDOW] of the one already counted are treated as echoes of it.
      */
     @RequiresEdt
     private fun confirmed(next: GhAvailability): Boolean {
@@ -276,7 +300,13 @@ class GhStatusCoordinator(
             return true
         }
         if (value == GhAvailability.TIMEOUT) return true
+        val now = timers.now()
+        if (slow > 0 && now - slowAt < TIMEOUT_WINDOW) {
+            LOG.info("gh timeout echo ignored, ${now - slowAt}ms after the counted one state=$value refs=$refs")
+            return false
+        }
         slow++
+        slowAt = now
         if (slow >= TIMEOUT_CONFIRMATIONS) return true
         LOG.info("gh timeout held, unconfirmed count=$slow of $TIMEOUT_CONFIRMATIONS state=$value refs=$refs")
         // Nothing is re-armed here on purpose. The probe loop's timer is owned by [schedule], which
