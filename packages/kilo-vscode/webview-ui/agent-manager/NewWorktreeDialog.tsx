@@ -46,6 +46,7 @@ import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
 import { GoalHeader } from "../src/components/chat/goal/GoalHeader"
+import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
@@ -477,9 +478,9 @@ export const NewWorktreeDialog: Component<{
     }
 
     // The chat composer submits on Enter, so mirror that for the two-step goal
-    // flow. Plain prompts keep Enter as a newline and still create with
-    // Cmd/Ctrl+Enter.
-    if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    // flow. Use the shared IME guard so confirming a composition does not submit.
+    // Plain prompts keep Enter as a newline and still create with Cmd/Ctrl+Enter.
+    if (isEnterKeyCommitNotIme(e) && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
       if (goalMode() || prompt().trim() === "/goal") {
         e.preventDefault()
         e.stopPropagation()
