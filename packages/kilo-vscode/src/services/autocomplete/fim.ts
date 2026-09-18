@@ -43,7 +43,7 @@ export async function generateFim(
     {
       signal,
       sseMaxRetryAttempts: 1,
-      onSseError: (error) => {
+      onSseError: (error: unknown) => {
         sseError = error instanceof Error ? error : new Error(String(error))
       },
     },

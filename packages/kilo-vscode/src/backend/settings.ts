@@ -728,7 +728,7 @@ export function createSettingsMethods(client: OpenCodeClient, defaultDirectory: 
     },
     global: {
       config: {
-        get: <Throw extends boolean = false>(_input: Record<string, never> = {}, options?: AdapterOptions<Throw>) =>
+        get: <Throw extends boolean = false>(options?: AdapterOptions<Throw>) =>
           result(async () => (await views(undefined, options)).globalView, options),
         update: <Throw extends boolean = false>(
           input: { config: Partial<Config>; directory?: string; workspace?: string },
