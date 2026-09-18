@@ -12,7 +12,7 @@ Memory is disabled by default. Enable it per project. Kilo stores project memory
 {% /callout %}
 
 {% callout type="note" title="Not the deprecated Memory Bank" %}
-Kilo Memory is separate from the deprecated **memory bank**. The memory bank used rule files under `.kilo/rules/memory-bank/` and is replaced by [AGENTS.md](/docs/customize/agents-md). 
+Kilo Memory is separate from the deprecated **memory bank**. The memory bank used rule files under `.kilo/rules/memory-bank/` and is replaced by [AGENTS.md](/docs/customize/agents-md). Kilo Memory stores project memory outside the repository and is managed with the `/memory` command.
 {% /callout %}
 
 ## What memory stores
