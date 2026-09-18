@@ -21,7 +21,7 @@ function identity(context: PRReviewContext) {
   ])
 }
 
-function endpoint(context: PRReviewContext) {
+export function endpoint(context: PRReviewContext): string {
   const url = new URL(context.pr.url)
   const match = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)\/?$/.exec(url.pathname)
   if (

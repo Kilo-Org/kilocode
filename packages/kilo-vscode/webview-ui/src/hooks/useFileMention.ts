@@ -27,7 +27,6 @@ import {
   sessionMentionText,
   sessionMentionToken,
   syncMentionedSessions as _syncMentionedSessions,
-  FILE_PICKER_RESULT,
   type MentionResult,
   type PromptMentionDrop,
   type WorktreeReference,
@@ -573,6 +572,12 @@ export function useFileMention(
   }
 
   const syncMentionedPaths = (text: string) => {
+    if (!text) {
+      setMentionedPaths((prev) => (prev.size ? new Set<string>() : prev))
+      setMentionedSessions((prev) => (prev.size ? new Map<string, SessionSearchItem>() : prev))
+      setMentionedModels((prev) => (prev.size ? new Set<string>() : prev))
+      return
+    }
     references()
     reclassifyModels()
     setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
@@ -585,10 +590,11 @@ export function useFileMention(
   // live catalog so a model reference that was momentarily treated as a file
   // moves to the model set instead of becoming a bogus attachment.
   const reclassifyModels = () => {
+    if (!knownPaths.size) return
     const keys = modelKeys?.()
     if (!keys?.size) return
-    for (const key of keys) {
-      if (!knownPaths.has(key)) continue
+    for (const key of knownPaths) {
+      if (!keys.has(key)) continue
       knownPaths.delete(key)
       knownModels.add(key)
     }
@@ -951,6 +957,7 @@ export function useFileMention(
   const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys(), ...mentionedModels()])
 
   const parseFileAttachments = (text: string): FileAttachment[] => {
+    if (!text) return []
     const worktrees = references()
     reclassifyModels()
     const keys = modelKeys?.()

@@ -60,7 +60,12 @@ export function createProjectWiring(opts: {
       opts.host.unregisterProjectRoutes(id)
       opts.removed?.(id)
     },
-    deps: { log: opts.output, git: opts.git, worktreePool: () => opts.host.worktreePool() },
+    deps: {
+      log: opts.output,
+      git: opts.git,
+      worktreePool: () => opts.host.worktreePool(),
+      sized: (ctx) => opts.pushState(ctx),
+    },
   })
   const messages: ProjectMessageDeps = {
     registry,

@@ -10,6 +10,7 @@
 import * as fs from "fs"
 import { restoreWorktrees } from "../state-recovery"
 import { reconcileWorktrees, summarize, type WorktreeHealthReport } from "../worktree-reconcile"
+import { trackOrphanSizes } from "../orphans/sizing"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./route"
@@ -145,6 +146,7 @@ export async function reconcileProject(
   if (!report) return undefined
   ctx.report = report
   log(`worktree health: ${summarize(report)}`)
+  trackOrphanSizes(ctx, report.orphans, log)
   return report
 }
 

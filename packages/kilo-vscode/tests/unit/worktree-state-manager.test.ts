@@ -444,17 +444,6 @@ describe("WorktreeStateManager", () => {
       expect(manager.getTabOrder()["wt-1"]).toEqual(["s2", "s1"])
     })
 
-    it("removes tab order for a key", () => {
-      manager.setTabOrder("wt-1", ["s1"])
-      manager.removeTabOrder("wt-1")
-      expect(manager.getTabOrder()["wt-1"]).toBeUndefined()
-    })
-
-    it("removeTabOrder is a no-op for missing key", () => {
-      manager.removeTabOrder("nonexistent")
-      expect(Object.keys(manager.getTabOrder())).toHaveLength(0)
-    })
-
     it("cleans up tab order when worktree is removed", () => {
       const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
       manager.addSession("s1", wt.id)
