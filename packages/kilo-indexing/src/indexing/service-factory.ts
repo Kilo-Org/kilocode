@@ -212,6 +212,26 @@ export class CodeIndexServiceFactory {
       return new LanceDBVectorStore(workspacePath, profile.dimension, dbDir, profile)
     }
 
+    if (config.vectorStoreProvider === "valkey") {
+      if (!config.valkeyUrl) throw new Error("Valkey URL is required.")
+      log.info("creating vector store", {
+        provider: config.embedderProvider,
+        vectorStore: "valkey",
+        model: profile.modelId,
+        vectorSize: profile.dimension,
+      })
+      // Lazy import: @valkey/valkey-glide ships native binaries only for Darwin/Linux.
+      // Importing eagerly would break indexing on Windows even when Valkey is not selected.
+      const { ValkeyVectorStore } = require("./vector-store/valkey-vector-store") as typeof import("./vector-store/valkey-vector-store")
+      return new ValkeyVectorStore(
+        workspacePath,
+        config.valkeyUrl,
+        profile.dimension,
+        config.valkeyPassword,
+        profile,
+      )
+    }
+
     if (!config.qdrantUrl) throw new Error("Qdrant URL is required.")
     log.info("creating vector store", {
       provider: config.embedderProvider,
