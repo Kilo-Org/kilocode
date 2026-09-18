@@ -54,7 +54,7 @@ export namespace KiloConfigPolicy {
         state.projectStamp = digest
       }
       const project = yield* deps.config.get()
-      const global = yield* deps.config.getGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
+      const global = yield* deps.config.getEffectiveGlobal().pipe(Effect.catch(() => Effect.succeed({} as Config.Info)))
       return { global, project }
     })
 
@@ -62,25 +62,37 @@ export namespace KiloConfigPolicy {
     // operation, so the load gate and the policy verdict share the same filesystem resolution.
     const classify = (request: ConfigProtection.Target, root: string) => ConfigProtection.classify(request, root)
 
-    // Apply the already-loaded policies to one classification without re-resolving any path.
-    const apply = (classification: ConfigProtection.Classification, policy?: Policy) =>
-      ConfigProtection.verdict(classification, policy ?? {})
+    // Apply the already-loaded policies to one classification without re-resolving any path. The
+    // canonical skill scope is resolved here so every caller sees the same narrowing: protection uses
+    // it while active, a file-tool read keeps it despite being ungated, and a disabled config edit
+    // keeps its requested rule.
+    const apply = (classification: ConfigProtection.Classification, policy?: Policy) => {
+      const verdict = ConfigProtection.verdict(classification, policy ?? {})
+      return { ...verdict, skill: ConfigProtection.skillScope(verdict) }
+    }
 
-    // Classify every unique entry once and reuse the results for the gate and for each verdict. The
-    // set dedupes before classification, so a caller that passes the same entry twice (for example
-    // the request being saved while it is still in the pending map) cannot cause a second filesystem
-    // pass. The map is scoped to this call only; the next ask/reply reclassifies because paths and
+    // Classify entries lazily and memoize per call. Callers pass the entry being decided first, so
+    // the gate stops at the first config-shaped entry instead of resolving every pending sibling;
+    // drain then reuses the memoized classifications and classifies only the siblings it reaches.
+    // The map is scoped to this call only; the next ask/reply reclassifies because paths and
     // symlinks change.
     const plan = (root: string, entries: Iterable<Entry>) => {
-      const unique = new Set(entries)
+      const all = [...new Set(entries)]
       const classes = new Map<Entry, ConfigProtection.Classification>()
-      for (const entry of unique) classes.set(entry, classify(entry.info, entry.root ?? root))
-      let needs = false
-      for (const item of classes.values()) needs = needs || item.candidate
+      const inspect = (entry: Entry) => {
+        const cached = classes.get(entry)
+        if (cached) return cached
+        const value = classify(entry.info, entry.root ?? root)
+        classes.set(entry, value)
+        return value
+      }
+      const needs = () => {
+        for (const entry of all) if (inspect(entry).candidate) return true
+        return false
+      }
       return {
         needs,
-        verdict: (entry: Entry, policy?: Policy) =>
-          apply(classes.get(entry) ?? classify(entry.info, entry.root ?? root), policy),
+        verdict: (entry: Entry, policy?: Policy) => apply(inspect(entry), policy),
       }
     }
 

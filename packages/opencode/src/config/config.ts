@@ -192,6 +192,7 @@ export interface Interface {
   // kilocode_change end
   readonly invalidate: () => Effect.Effect<void>
   readonly invalidateInstance: () => Effect.Effect<void> // kilocode_change - instance-only invalidation for project config freshness
+  readonly getEffectiveGlobal: () => Effect.Effect<Info> // kilocode_change - primary + legacy home global config sources
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
   readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
@@ -514,6 +515,31 @@ const layer = Layer.effect(
     const getGlobal = Effect.fn("Config.getGlobal")(function* () {
       return (yield* getGlobalState()).config // kilocode_change
     })
+
+    // kilocode_change start - config-protection policies must observe the primary global config and
+    // the legacy home config directories, not only Global.Path.config. The loader merges the legacy
+    // home dirs after the primary global config (later wins), so merge their files through the same
+    // loadFile and mergeConfigConcatArrays path rather than re-parsing config here. The primary
+    // global stays cached; legacy files are read on each call so direct edits are observed. A
+    // malformed legacy file is logged and skipped like the normal loader's directory pass, so it
+    // cannot abort a permission decision or erase a valid primary/legacy value.
+    const getEffectiveGlobal = Effect.fn("Config.getEffectiveGlobal")(function* () {
+      let result = yield* getGlobal()
+      for (const dir of [path.join(Global.Path.home, ".kilocode"), path.join(Global.Path.home, ".kilo")]) {
+        for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
+          const source = path.join(dir, name)
+          const next = yield* loadFile(source, undefined, true).pipe(
+            Effect.catchDefect((err: unknown) => {
+              log.warn("skipping malformed legacy global config", { path: source, err })
+              return Effect.succeed({} as Info)
+            }),
+          )
+          result = mergeConfigConcatArrays(result, next)
+        }
+      }
+      return result
+    })
+    // kilocode_change end
 
     const ensureGitignore = Effect.fn("Config.ensureGitignore")(function* (dir: string) {
       // kilocode_change start - optional config setup must not abort tools after entering filesystem confinement or read-only locations
@@ -1218,6 +1244,7 @@ const layer = Layer.effect(
       updateGlobal,
       invalidate,
       invalidateInstance, // kilocode_change
+      getEffectiveGlobal, // kilocode_change
       directories,
       waitForDependencies,
       warnings, // kilocode_change

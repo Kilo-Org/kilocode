@@ -226,7 +226,7 @@ const layer = Layer.effect(
       const verdict = guard.verdict(classified, policy)
       const global = policy?.global
       const isProtected = verdict.protect
-      const skill = verdict.protect ? verdict.skill : undefined
+      const skill = verdict.skill // already narrowed to the applicable canonical skill by the policy
       const trusted = skill
         ? (() => {
             const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, approved)
@@ -367,14 +367,15 @@ const layer = Layer.effect(
 
       // kilocode_change start - downgrade "always" to "once" for protected config paths. Re-resolve the
       // per-entry policy at this boundary so project config changes are observed and global skill trust
-      // is preserved. Classify this reply's entry and every pending sibling once; the plan reuses those
-      // results for drain so each target path is resolved a single time per operation. Ordinary traffic
-      // still skips the config scan and resolves via evaluate() without a policy.
+      // is preserved. The plan classifies lazily and memoizes: the reply entry is first, so a blocked
+      // config edit returns without scanning pending siblings, and drain reuses the results for the
+      // siblings it reaches. Ordinary traffic still skips the config scan and resolves via evaluate()
+      // without a policy.
       const ctx = yield* InstanceState.context
       const root = ConfigProtection.boundary(ctx)
       const s = yield* InstanceState.get(state)
       const plan = guard.plan(root, [existing, ...pending.values()])
-      const policy = plan.needs ? yield* guard.load(s) : undefined
+      const policy = plan.needs() ? yield* guard.load(s) : undefined
       const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
       const existingVerdict = decide(existing)
       if (existingVerdict.protect && existingVerdict.skill === undefined) return
@@ -425,17 +426,17 @@ const layer = Layer.effect(
       if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
 
       // kilocode_change start - protected config paths only persist selected always-rules when their
-      // per-entry policy allows it and the request is not a trusted global skill. Classify the entry
-      // and every pending sibling once so drain reuses the same resolution; ordinary requests skip
-      // the config scan and use evaluate() without a policy.
+      // per-entry policy allows it and the request is not a trusted global skill. The plan starts from
+      // the selected entry so a blocked config edit returns without classifying every pending sibling;
+      // drain lazily reuses the memoized classifications.
       const ctx = yield* InstanceState.context
       const root = ConfigProtection.boundary(ctx)
-      const plan = guard.plan(root, s.pending.values())
-      const policy = plan.needs ? yield* guard.load(s) : undefined
+      const plan = guard.plan(root, [existing, ...s.pending.values()])
+      const policy = plan.needs() ? yield* guard.load(s) : undefined
       const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
       const verdict = decide(existing)
       if (verdict.protect && verdict.skill === undefined) return
-      const skill = verdict.protect ? verdict.skill : undefined
+      const skill = verdict.skill
       // kilocode_change end
       const validRules = new Set(
         skill ? [skill] : [...((existing.info.metadata?.rules as string[] | undefined) ?? []), ...existing.info.always],
@@ -486,12 +487,12 @@ const layer = Layer.effect(
       else s.approved.push(rule)
 
       // kilocode_change start - YOLO/auto-approve must not silently clear protected config edits
-      // unless the per-entry policy allows it. Classify every pending entry once and reuse the
-      // results for each covered() check, so ordinary YOLO traffic stays cheap.
+      // unless the per-entry policy allows it. The plan classifies lazily and memoizes, so ordinary
+      // YOLO traffic stops at the first config-shaped entry.
       const ctx = yield* InstanceState.context
       const root = ConfigProtection.boundary(ctx)
       const plan = guard.plan(root, s.pending.values())
-      const policy = plan.needs ? yield* guard.load(s) : undefined
+      const policy = plan.needs() ? yield* guard.load(s) : undefined
       const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
       // kilocode_change end
 
