@@ -15,6 +15,7 @@ import { plan, type Start } from "./creation-plan"
 import { copyEnvFiles } from "./env-copy"
 import { runWorktreeSetupScript } from "./setup-script-task"
 import { broken } from "./worktree-reconcile"
+import type { PanelContext } from "./host"
 
 export async function runLifecycleSetup(
   input: Parameters<typeof runWorktreeSetupScript>[0],
@@ -133,6 +134,29 @@ export interface LifecycleHost {
   post: (message: AgentManagerOutMessage) => void
   notify: (message: string) => void
   log: (...args: unknown[]) => void
+}
+
+/**
+ * Build the `sessions` sub-object of {@link LifecycleHost} from the panel and its supporting state.
+ *
+ * Every call routes through the panel's `SessionProvider` (or is a safe no-op without one), closing
+ * a directory-scoped browser session first so a session move or removal never leaves a stale browser
+ * tab pointed at a directory it no longer owns.
+ */
+export function lifecycleSessions(
+  panel: PanelContext | undefined,
+  browserLifecycle: { close: (sessionId: string) => void } | undefined,
+  panelSessions: Set<string>,
+): LifecycleHost["sessions"] {
+  return {
+    register: (session) => panel?.sessions.registerSession(session),
+    clearDirectory: (sid) => (browserLifecycle?.close(sid), panel?.sessions.clearSessionDirectory(sid)),
+    setSessionDirectory: (sid, dir) => (browserLifecycle?.close(sid), panel?.sessions.setSessionDirectory(sid, dir)),
+    registerSessionRoute: (ref, dir, gen) => panel?.sessions.registerSessionRoute?.(ref, dir, gen),
+    directories: () => panel?.sessions.getSessionDirectories(),
+    abort: (ids) => panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
+    forget: (sid) => void panelSessions.delete(sid),
+  }
 }
 
 /** Create a new worktree with an auto-created first session. */

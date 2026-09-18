@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
 import ai.kilocode.client.settings.base.SettingsListPanel
@@ -14,6 +15,7 @@ import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.settings.base.settingsChoosePath
 import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
+import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -33,6 +35,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.EDT
@@ -62,7 +65,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
-class SkillsConfigurable : AgentBehaviorConfigurableBase<JComponent>() {
+class SkillsConfigurable : DirectoryReadyConfigurable<JComponent>() {
     override fun getId(): String = ID
     override fun getDisplayName(): String = KiloBundle.message("settings.agentBehavior.skills.displayName")
     override fun create(cs: CoroutineScope, dir: String): JComponent = SkillsSettingsUi(cs, dir)
@@ -139,6 +142,8 @@ internal class SkillsSettingsUi(
     override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.skills.search")
 
     override fun emptyText() = KiloBundle.message("settings.agentBehavior.skills.empty")
+
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_skills"))
 
     internal fun updateSources(paths: List<String>, urls: List<String>) {
         state.update { copy(sources = SkillsConfigDto(paths = paths, urls = urls)) }

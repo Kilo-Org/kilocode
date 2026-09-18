@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -361,6 +362,14 @@ class KiloSessionService internal constructor(
 
     suspend fun attachmentPart(id: String, dir: String, message: String, part: String, key: String?): PartDto? =
         call { attachmentPart(id, dir, message, part, key) }
+
+    /** Load the shared agent board for root session [id], paging backward from [before]. */
+    suspend fun sessionBoard(id: String, dir: String, before: String?, limit: Int?): SessionBoardDto =
+        call { sessionBoard(id, dir, before, limit) }
+
+    /** Clear the shared agent board for root session [id]. Null means [revision] is stale. */
+    suspend fun resetSessionBoard(id: String, dir: String, revision: Int): SessionBoardDto? =
+        call { resetSessionBoard(id, dir, revision) }
 
     /** Subscribe to streaming chat events for a session. */
     fun events(id: String, dir: String): Flow<ChatEventDto> {

@@ -29,6 +29,7 @@ import {
   markAutoTitle,
 } from "../../../src/kilo-sessions/rename-adoptions"
 import { KiloSessions } from "../../../src/kilo-sessions/kilo-sessions"
+import { KiloSessionTitle } from "../../../src/kilocode/session/title"
 import { LSP } from "../../../src/lsp/lsp"
 import { MCP } from "../../../src/mcp"
 import { Permission } from "../../../src/permission"
@@ -58,7 +59,7 @@ import { pollWithTimeout, testEffect } from "../../lib/effect"
 import { TestLLMServer } from "../../lib/llm-server"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 
-// Drives the real SessionPrompt.ensureTitle path (forked on loop step 1) for:
+// Drives the real SessionPrompt.ensureTitle path (forked at normal turn end) for:
 // - mid-generation non-default skip (re-check before mark/setTitle)
 // - mark-before-setTitle + clear mark when setTitle fails
 
@@ -273,26 +274,8 @@ function resetHooks() {
   hooks.failSetTitle = false
   hooks.setTitleCalls = []
   clearRenameMarks()
+  KiloSessionTitle.clearAll()
 }
-
-/** Match prompt.test.ts: turn a Deferred into a thenable for TestLLMServer.hold. */
-const deferredAsPromise = <A>(deferred: Deferred.Deferred<A>): PromiseLike<A> => ({
-  then: (onfulfilled, onrejected) => {
-    Effect.runFork(
-      Deferred.await(deferred).pipe(
-        Effect.match({
-          onFailure: (error) => {
-            onrejected?.(error)
-          },
-          onSuccess: (value) => {
-            onfulfilled?.(value)
-          },
-        }),
-      ),
-    )
-    return deferredAsPromise(deferred) as PromiseLike<never>
-  },
-})
 
 it.instance(
   "ensureTitle skips write when title turns non-default mid-generation",
@@ -317,11 +300,11 @@ it.instance(
           sessionID: chat.id,
           agent: "build",
           model: ref,
-          parts: [{ type: "text", text: "hello for title" }],
+          parts: [{ type: "text", text: "hello for title ".repeat(20) }],
         })
         .pipe(Effect.forkChild)
 
-      // Wait until ensureTitle has entered the stalled title stream.
+      // The title runs at turn end. Wait until ensureTitle entered the stalled title stream.
       yield* pollWithTimeout(
         Effect.sync(() => (hooks.titleStreamEntered ? true : undefined)),
         "ensureTitle never entered title stream",
@@ -360,18 +343,15 @@ it.instance(
       const chat = yield* sessions.create({})
       expect(Session.isDefaultTitle(chat.title)).toBe(true)
 
-      // Keep the prompt scope open (hold main LLM) until ensureTitle's setTitle runs;
-      // the title fork is scoped to the prompt and is interrupted when it ends.
       hooks.failSetTitle = true
-      const releaseMain = yield* Deferred.make<void>()
-      yield* llm.hold("assistant reply", deferredAsPromise(releaseMain))
+      yield* llm.text("assistant reply")
 
       const fiber = yield* prompt
         .prompt({
           sessionID: chat.id,
           agent: "build",
           model: ref,
-          parts: [{ type: "text", text: "hello for title fail" }],
+          parts: [{ type: "text", text: "hello for title fail ".repeat(20) }],
         })
         .pipe(Effect.forkChild)
 
@@ -382,7 +362,6 @@ it.instance(
       )
       yield* Effect.sleep(100)
 
-      yield* Deferred.succeed(releaseMain, undefined).pipe(Effect.ignore)
       yield* Fiber.join(fiber)
 
       const final = yield* sessions.get(chat.id)
@@ -410,17 +389,15 @@ it.instance(
       expect(Session.isDefaultTitle(chat.title)).toBe(true)
       consumeAutoTitle(chat.id, "E2E Title")
 
-      // Hold main open until title setTitle runs (title fork is prompt-scoped).
-      // Do not stall the title stream — let TestLLMServer auto-reply "E2E Title".
-      const releaseMain = yield* Deferred.make<void>()
-      yield* llm.hold("assistant reply", deferredAsPromise(releaseMain))
+      // Do not stall the title stream. TestLLMServer auto-replies "E2E Title".
+      yield* llm.text("assistant reply")
 
       const fiber = yield* prompt
         .prompt({
           sessionID: chat.id,
           agent: "build",
           model: ref,
-          parts: [{ type: "text", text: "hello for title success" }],
+          parts: [{ type: "text", text: "hello for title success ".repeat(20) }],
         })
         .pipe(Effect.forkChild)
 
@@ -443,7 +420,85 @@ it.instance(
       const titled = yield* sessions.get(chat.id)
       expect(titled.title).toBe("E2E Title")
 
-      yield* Deferred.succeed(releaseMain, undefined).pipe(Effect.ignore)
+      yield* Fiber.join(fiber)
+    }),
+  40_000,
+)
+
+it.instance(
+  "ensureTitle defers a short first turn and names on the second",
+  () =>
+    Effect.gen(function* () {
+      resetHooks()
+      yield* installHooks()
+      const { llm } = yield* useServerConfig()
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+
+      const chat = yield* sessions.create({})
+      expect(Session.isDefaultTitle(chat.title)).toBe(true)
+
+      yield* llm.text("assistant reply")
+      const first = yield* prompt
+        .prompt({ sessionID: chat.id, agent: "build", model: ref, parts: [{ type: "text", text: "hi" }] })
+        .pipe(Effect.forkChild)
+      yield* Fiber.join(first)
+      yield* Effect.sleep(200)
+
+      // No tool work, one short message: the title is not generated yet.
+      const deferred = yield* sessions.get(chat.id)
+      expect(Session.isDefaultTitle(deferred.title)).toBe(true)
+      expect(hooks.setTitleCalls).toHaveLength(0)
+
+      yield* llm.text("assistant reply")
+      const second = yield* prompt
+        .prompt({ sessionID: chat.id, agent: "build", model: ref, parts: [{ type: "text", text: "fix the parser" }] })
+        .pipe(Effect.forkChild)
+
+      yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const s = yield* sessions.get(chat.id).pipe(Effect.orElseSucceed(() => null))
+          return s?.title === "E2E Title" ? true : undefined
+        }),
+        `ensureTitle never named the second turn; calls=${JSON.stringify(hooks.setTitleCalls)}`,
+        "20 seconds",
+      )
+      yield* Fiber.join(second)
+    }),
+  40_000,
+)
+
+it.instance(
+  "ensureTitle names after a substantial single message",
+  () =>
+    Effect.gen(function* () {
+      resetHooks()
+      yield* installHooks()
+      const { llm } = yield* useServerConfig()
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+
+      const chat = yield* sessions.create({})
+      expect(Session.isDefaultTitle(chat.title)).toBe(true)
+
+      yield* llm.text("assistant reply")
+      const fiber = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          model: ref,
+          parts: [{ type: "text", text: "describe the failing parser path ".repeat(10) }],
+        })
+        .pipe(Effect.forkChild)
+
+      yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const s = yield* sessions.get(chat.id).pipe(Effect.orElseSucceed(() => null))
+          return s?.title === "E2E Title" ? true : undefined
+        }),
+        `ensureTitle never named a substantial first message; calls=${JSON.stringify(hooks.setTitleCalls)}`,
+        "20 seconds",
+      )
       yield* Fiber.join(fiber)
     }),
   40_000,

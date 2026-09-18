@@ -208,6 +208,7 @@ export const dict = {
     "A aprovação automática está ativada. Solicitações de permissão serão aprovadas automaticamente.",
   "prompt.action.autoApprove.disabled":
     "A aprovação automática está desativada. Clique para aprovar solicitações de permissão automaticamente.",
+  "prompt.action.autoApprove.sandboxExcluded": "Solicitações de escalonamento da sandbox são sempre excluídas.",
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.unrestricted": "Sem restrições",
   "prompt.action.sandbox.description.enabled":
     "As operações de escrita são limitadas aos diretórios do projeto e do Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Regras de permissão e aprovação automática se aplicam dentro da sandbox. Comandos que precisam sair dela sempre perguntam.",
   "prompt.action.sandbox.description.disabled":
     "Clique para restringir as operações de escrita no sistema de arquivos e o acesso à rede.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -272,7 +275,9 @@ export const dict = {
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.titleSkillShell": "Executar comandos de shell da skill “{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Permitir operação do Git fora da sandbox?",
+  "notification.permission.titleSandboxEscalation": "Executar fora da sandbox?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Isto executa todo o comando sem as restrições de sistema de arquivos e rede, apenas para este comando. O Git precisa gravar em .git, que é somente leitura na sandbox e fica fora da árvore de trabalho em um worktree vinculado. Regras de permissão do Bash e a aprovação automática nunca aprovam esta solicitação automaticamente.",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
   "ui.permission.reject": "Rejeitar",
   "ui.permission.feedbackPlaceholder": "Diga ao Kilo o que fazer de forma diferente",
@@ -518,38 +523,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Falha ao atualizar permissões",
 
-  "settings.permissions.tool.read.title": "Ler",
   "settings.permissions.tool.read.description": "Ler um arquivo (corresponde ao caminho do arquivo)",
-  "settings.permissions.tool.edit.title": "Editar",
   "settings.permissions.tool.edit.description":
     "Modificar arquivos, incluindo edições, escritas, patches e multi-edições",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Corresponder arquivos usando padrões glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Buscar conteúdo de arquivos usando expressões regulares",
-  "settings.permissions.tool.list.title": "Listar",
   "settings.permissions.tool.list.description": "Listar arquivos dentro de um diretório",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Executar comandos shell",
-  "settings.permissions.tool.task.title": "Tarefa",
   "settings.permissions.tool.task.description": "Lançar sub-agentes",
-  "settings.permissions.tool.skill.title": "Habilidade",
   "settings.permissions.tool.skill.description": "Carregar uma habilidade por nome",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Executar consultas de servidor de linguagem",
-  "settings.permissions.tool.todoread.title": "Ler Tarefas",
   "settings.permissions.tool.todoread.description": "Ler a lista de tarefas",
-  "settings.permissions.tool.todowrite.title": "Escrever Tarefas",
   "settings.permissions.tool.todowrite.description": "Atualizar a lista de tarefas",
-  "settings.permissions.tool.webfetch.title": "Buscar Web",
   "settings.permissions.tool.webfetch.description": "Buscar conteúdo de uma URL",
-  "settings.permissions.tool.websearch.title": "Pesquisa Web",
   "settings.permissions.tool.websearch.description": "Pesquisar na web",
-  "settings.permissions.tool.codesearch.title": "Pesquisa de Código",
   "settings.permissions.tool.codesearch.description": "Pesquisar código na web",
-  "settings.permissions.tool.external_directory.title": "Diretório Externo",
   "settings.permissions.tool.external_directory.description": "Acessar arquivos fora do diretório do projeto",
-  "settings.permissions.tool.doom_loop.title": "Loop Infinito",
   "settings.permissions.tool.doom_loop.description": "Detectar chamadas de ferramentas repetidas com entrada idêntica",
 
   "session.delete.title": "Excluir sessão",
@@ -926,6 +915,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Ative e faça login no provedor Kilo para usar o Speech to Text, ou defina abaixo uma URL base de transcrição própria.",
+  "settings.models.speechToText.remoteDescription":
+    "A entrada de voz não está disponível em janelas remotas. Abra o Kilo em uma janela local para usar o microfone.",
   "settings.models.speechToTextModel.title": "Modelo de fala para texto",
   "settings.models.speechToTextModel.description":
     "Escolha o modelo de transcrição do Kilo Gateway para entrada de voz.",
@@ -1090,6 +1081,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "modelo",
   "settings.agentBehaviour.workflows.variant": "variante",
   "settings.agentBehaviour.workflows.modelDescription": "Substituição global do modelo",
+  "settings.experimental.codeMode.title": "Chamadas programáticas de ferramentas",
+  "settings.experimental.codeMode.description":
+    "Encaminha as chamadas de ferramentas MCP por um ambiente de execução JavaScript confinado com descoberta de ferramentas sob demanda, em vez de expor cada ferramenta MCP diretamente. Economiza contexto quando muitas ferramentas MCP estão conectadas.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Executar os comandos shell do agente dentro de um sandbox a nível de sistema operacional que restringe escritas aos diretórios de estado do projeto e do Kilo",

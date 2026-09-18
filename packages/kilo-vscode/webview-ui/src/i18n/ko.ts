@@ -209,6 +209,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
   "prompt.action.autoApprove.disabled": "자동 승인이 꺼져 있습니다. 클릭하면 권한 요청을 자동으로 승인합니다.",
+  "prompt.action.autoApprove.sandboxExcluded": "샌드박스 에스컬레이션 프롬프트는 항상 제외됩니다.",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
   "prompt.action.sandbox.enable": "샌드박스 활성화",
@@ -226,6 +227,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "허용됨",
   "prompt.action.sandbox.unrestricted": "제한 없음",
   "prompt.action.sandbox.description.enabled": "쓰기는 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.description.escalation":
+    "권한 규칙과 자동 승인은 샌드박스 안에서 적용됩니다. 샌드박스를 벗어나야 하는 명령은 항상 확인합니다.",
   "prompt.action.sandbox.description.disabled": "클릭하면 파일 시스템 쓰기와 네트워크 액세스를 제한합니다.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
@@ -270,7 +273,9 @@ export const dict = {
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
-  "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 Git 작업을 허용할까요?",
+  "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 실행할까요?",
+  "notification.permission.descriptionSandboxEscalation":
+    "이 명령에만 적용되며, 파일 시스템 및 네트워크 제한을 해제하고 명령 전체를 실행합니다. Git은 .git에 기록해야 하며, 이 경로는 샌드박스에서 읽기 전용이고 연결된 worktree에서는 해당 worktree 밖에 있습니다. Bash 허용 규칙과 자동 승인은 이 프롬프트를 자동으로 승인하지 않습니다.",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.reject": "거부",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
@@ -514,37 +519,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "권한 업데이트 실패",
 
-  "settings.permissions.tool.read.title": "읽기",
   "settings.permissions.tool.read.description": "파일 읽기 (파일 경로와 일치)",
-  "settings.permissions.tool.edit.title": "편집",
   "settings.permissions.tool.edit.description": "파일 수정 (편집, 쓰기, 패치 및 다중 편집 포함)",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "glob 패턴을 사용하여 파일 일치",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "정규식을 사용하여 파일 내용 검색",
-  "settings.permissions.tool.list.title": "목록",
   "settings.permissions.tool.list.description": "디렉터리 내 파일 나열",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "셸 명령어 실행",
-  "settings.permissions.tool.task.title": "작업",
   "settings.permissions.tool.task.description": "하위 에이전트 실행",
-  "settings.permissions.tool.skill.title": "기술",
   "settings.permissions.tool.skill.description": "이름으로 기술 로드",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "언어 서버 쿼리 실행",
-  "settings.permissions.tool.todoread.title": "할 일 읽기",
   "settings.permissions.tool.todoread.description": "할 일 목록 읽기",
-  "settings.permissions.tool.todowrite.title": "할 일 쓰기",
   "settings.permissions.tool.todowrite.description": "할 일 목록 업데이트",
-  "settings.permissions.tool.webfetch.title": "웹 가져오기",
   "settings.permissions.tool.webfetch.description": "URL에서 콘텐츠 가져오기",
-  "settings.permissions.tool.websearch.title": "웹 검색",
   "settings.permissions.tool.websearch.description": "웹 검색",
-  "settings.permissions.tool.codesearch.title": "코드 검색",
   "settings.permissions.tool.codesearch.description": "웹에서 코드 검색",
-  "settings.permissions.tool.external_directory.title": "외부 디렉터리",
   "settings.permissions.tool.external_directory.description": "프로젝트 디렉터리 외부의 파일에 액세스",
-  "settings.permissions.tool.doom_loop.title": "무한 반복",
   "settings.permissions.tool.doom_loop.description": "동일한 입력으로 반복되는 도구 호출 감지",
 
   "session.delete.title": "세션 삭제",
@@ -911,6 +900,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하거나, 아래에서 사용자 지정 변환 기본 URL을 설정하세요.",
+  "settings.models.speechToText.remoteDescription":
+    "음성 입력은 원격 창에서 사용할 수 없습니다. 마이크를 사용하려면 로컬 창에서 Kilo를 여세요.",
   "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
@@ -1068,6 +1059,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "모델",
   "settings.agentBehaviour.workflows.variant": "변형",
   "settings.agentBehaviour.workflows.modelDescription": "전역 모델 재정의",
+  "settings.experimental.codeMode.title": "프로그래밍 방식 도구 호출",
+  "settings.experimental.codeMode.description":
+    "각 MCP 도구를 직접 노출하는 대신 주문형 도구 검색을 지원하는 격리된 JavaScript 런타임을 통해 MCP 도구 호출을 라우팅합니다. 많은 MCP 도구가 연결되어 있을 때 컨텍스트를 절약합니다.",
   "settings.sandboxing.enabled.title": "샌드박스",
   "settings.sandboxing.enabled.description":
     "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
