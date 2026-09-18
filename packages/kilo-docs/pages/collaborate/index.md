@@ -33,7 +33,7 @@ Kilo Code's paid plans provide powerful team management features:
 - [**Dashboard**](/docs/collaborate/teams/dashboard) — Team overview and activity
 - [**Analytics**](/docs/collaborate/teams/analytics) — Usage insights and trends
 - [**Billing**](/docs/collaborate/teams/billing) — Manage payments and invoices
-- [**Custom Modes for Organizations**](/docs/collaborate/teams/custom-modes-org) — Share custom modes across your team
+- [**Custom Modes for Organizations**](/docs/collaborate/teams/custom-modes-org) — Share custom agents across your team
 
 ## Enterprise
 
