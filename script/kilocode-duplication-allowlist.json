@@ -145,18 +145,6 @@
       "kind": "legacy",
       "owner": "opencode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/opencode/src/kilocode/tool/agent-manager.ts",
-        "packages/opencode/src/kilocode/tool/notebook-host.ts"
-      ],
-      "fingerprint": "a1b1dcac57a91162",
-      "maxMatches": 1,
-      "maxTokens": 110,
-      "kind": "legacy",
-      "owner": "opencode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     }
   ]
 }
