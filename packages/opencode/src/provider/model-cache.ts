@@ -57,6 +57,23 @@ const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional
 const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
 
+// kilocode_change start - MindsHub (https://mindshub.ai), an OpenAI/Anthropic-compatible
+// inference gateway. GET /v1/models returns a richer shape than plain OpenAI: aliases carry
+// a human label, a reasoning-effort ladder, and an `embedding` flag for embedding-only rows
+// that don't belong in the chat model picker. See https://docs.mindshub.ai/inference/models
+const MINDSHUB_BASE_URL = "https://api.mindshub.ai/v1"
+const MindsHubItem = Schema.Struct({
+  id: Schema.String,
+  label: Schema.optional(Schema.String),
+  reasoning_efforts: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
+  embedding: Schema.optional(Schema.Boolean),
+  provider: Schema.optional(Schema.String),
+  family: Schema.optional(Schema.String),
+})
+const MindsHubResponse = Schema.Struct({ data: Schema.optional(Schema.Array(MindsHubItem)) })
+type MindsHubItem = Schema.Schema.Type<typeof MindsHubItem>
+// kilocode_change end
+
 export const layer: Layer.Layer<
   Service,
   never,
@@ -119,8 +136,58 @@ export const layer: Layer.Layer<
       return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
     })
 
+    // kilocode_change start
+    const mindshubModel = (item: MindsHubItem): Models[string] => {
+      const efforts = Array.isArray(item.reasoning_efforts) ? item.reasoning_efforts : []
+      // Preserve the full effort ladder (including "max") as `reasoning_options` so
+      // fromModelsDevModel()/ProviderTransform.reasoningVariants() build the real variants
+      // instead of falling back to the @ai-sdk/openai-compatible low|medium|high heuristic,
+      // which never reaches "max" and produces no variants at all for aliases whose ids
+      // don't match its hardcoded family list (kimi, qwen, etc).
+      return {
+        id: item.id,
+        name: item.label ?? item.id,
+        family: item.family ?? item.provider ?? "",
+        release_date: "",
+        attachment: true,
+        reasoning: efforts.length > 0,
+        ...(efforts.length > 0 ? { reasoning_options: [{ type: "effort", values: efforts }] } : {}),
+        temperature: true,
+        tool_call: true,
+        cost: { input: 0, output: 0 },
+        limit: { context: 128000, output: 16384 },
+        modalities: { input: ["text", "image"], output: ["text"] },
+      }
+    }
+
+    const fetchMindsHubModels = Effect.fn("ModelCache.fetchMindsHubModels")(function* (options: Options) {
+      const baseURL = options.baseURL ?? MINDSHUB_BASE_URL
+      if (!options.apiKey) {
+        log.debug("no API key for mindshub, skipping model fetch")
+        return {}
+      }
+
+      const url = `${baseURL.replace(/\/+$/, "")}/models`
+      const response = yield* HttpClientRequest.get(url).pipe(
+        HttpClientRequest.acceptJson,
+        HttpClientRequest.bearerToken(options.apiKey),
+        http.execute,
+        Effect.timeout("10 seconds"),
+      )
+      if (response.status < 200 || response.status >= 300) {
+        log.error("mindshub model fetch failed", { status: response.status })
+        return {}
+      }
+
+      const json = yield* HttpClientResponse.schemaBodyJson(MindsHubResponse)(response)
+      return Object.fromEntries(
+        (json.data ?? []).filter((item) => !item.embedding).map((item) => [item.id, mindshubModel(item)]),
+      )
+    })
+    // kilocode_change end
+
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
-      if (providerID !== "kilo" && providerID !== "apertis") return {}
+      if (providerID !== "kilo" && providerID !== "apertis" && providerID !== "mindshub") return {}
       const config = yield* cfg.get()
       const options: Options = {}
 
@@ -152,12 +219,31 @@ export const layer: Layer.Layer<
         })
       }
 
+      // kilocode_change start
+      if (providerID === "mindshub") {
+        const item = config.provider?.[providerID]
+        if (item?.options?.apiKey) options.apiKey = item.options.apiKey
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
+
+        const info = yield* auth.get(providerID)
+        if (info?.type === "api") options.apiKey = info.key
+        if (process.env.MINDSHUB_API_KEY) options.apiKey = process.env.MINDSHUB_API_KEY
+        if (process.env.MINDSHUB_BASE_URL) options.baseURL = process.env.MINDSHUB_BASE_URL
+        log.debug("mindshub auth options resolved", {
+          providerID,
+          hasKey: !!options.apiKey,
+          hasBaseURL: !!options.baseURL,
+        })
+      }
+      // kilocode_change end
+
       return options
     })
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      if (providerID === "mindshub") return fetchMindsHubModels(options).pipe(Effect.map((models) => ({ models }))) // kilocode_change
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
@@ -181,6 +267,7 @@ export const layer: Layer.Layer<
         return JSON.stringify([providerID, options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
       }
       if (providerID === "apertis") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      if (providerID === "mindshub") return JSON.stringify([providerID, options?.baseURL, options?.apiKey]) // kilocode_change
       return providerID
     }
 
