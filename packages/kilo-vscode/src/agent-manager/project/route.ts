@@ -19,12 +19,7 @@ export type SidebarTarget =
   | { projectId: string; kind: "worktree"; worktreeId: string }
   | { projectId: string; kind: "session"; sessionId: string }
 
-export type ProjectRouteErrorCode =
-  | "project_unknown"
-  | "project_stale"
-  | "worktree_unknown"
-  | "session_unknown"
-  | "session_ambiguous"
+export type ProjectRouteErrorCode = "project_unknown" | "project_stale"
 
 export class ProjectRouteError extends Error {
   constructor(
