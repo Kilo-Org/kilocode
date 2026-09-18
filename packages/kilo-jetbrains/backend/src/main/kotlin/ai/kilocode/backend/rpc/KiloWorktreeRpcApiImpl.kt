@@ -36,9 +36,15 @@ import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.OrphanDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
+import ai.kilocode.jetbrains.api.model.KilocodeRemoveSnapshotRequest
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.ide.actions.RevealFileAction
 import com.intellij.ide.impl.OpenProjectTask
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationManager
@@ -50,6 +56,10 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -67,15 +77,21 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import java.awt.Frame
+import java.io.IOException
+import java.net.URLEncoder
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ConcurrentHashMap
 
 class KiloWorktreeRpcApiImpl(
@@ -197,6 +213,35 @@ class KiloWorktreeRpcApiImpl(
         return true
     }
 
+    /**
+     * Closes and disposes the frame of an already-open project whose base directory is [dir], using
+     * the same matching as [focusIfOpen]. A live IDE frame rooted at a worktree being deleted is the
+     * most likely source of leftover `.idea`-only directories: the frame keeps rewriting project
+     * files into the checkout while it is being renamed/removed out from under it. Returns false
+     * when nothing matched, which is also the common case — most deletes target a worktree that was
+     * never opened as its own project.
+     */
+    @RequiresEdt
+    private fun closeIfOpen(dir: Path): Boolean {
+        val target = dir.toString()
+        val project: Project = ProjectManager.getInstance().openProjects.firstOrNull {
+            ProjectUtil.isSameProject(dir, it) || FileUtil.pathsEqual(it.basePath, target) || FileUtil.pathsEqual(it.presentableUrl, target)
+        } ?: return false
+        LOG.info("worktree close (backend): closing frame for ${project.name} dir=$dir")
+        val closed = ProjectManager.getInstance().closeAndDispose(project)
+        LOG.info("worktree close (backend): closed=$closed dir=$dir")
+        return closed
+    }
+
+    /**
+     * [closeIfOpen], hopping to the EDT first — a no-op outside an IntelliJ Application (a plain
+     * unit test, or split-mode's own backend process with no frame to close in the first place).
+     */
+    private suspend fun closeIfOpenSafe(dir: Path) {
+        if (ApplicationManager.getApplication() == null) return
+        withContext(Dispatchers.EDT) { closeIfOpen(dir) }
+    }
+
     override suspend fun listBranches(directory: String): WorktreeBranchesDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
         val refs = runGit(base, "for-each-ref", "--format=%(refname:short)", "refs/heads")
@@ -240,7 +285,7 @@ class KiloWorktreeRpcApiImpl(
     private fun sync(root: Path): List<WorktreeDto>? = reconcile(root)?.items
 
     /** Managed worktrees of one repository, plus directories nothing claims. */
-    internal data class Reconciled(val items: List<WorktreeDto>, val orphans: List<String>)
+    internal data class Reconciled(val items: List<WorktreeDto>, val orphans: List<OrphanDto>)
 
     private fun reconcile(root: Path): Reconciled? {
         if (!Files.isDirectory(root)) {
@@ -303,11 +348,17 @@ class KiloWorktreeRpcApiImpl(
     /**
      * Directories under `.kilo/worktrees/` that git does not track.
      *
-     * Reported, never removed: a leftover directory can still hold files that exist nowhere else, so
-     * deleting one is a user's decision. They are worth naming because they accumulate silently — an
-     * interrupted delete or a hand-removed `.git/worktrees` entry leaves one behind every time.
+     * Reported, never removed automatically: a leftover directory can still hold files that exist
+     * nowhere else, so deleting one is the user's decision (see [removeOrphans]). They are worth
+     * naming because they accumulate silently — an interrupted delete or a hand-removed
+     * `.git/worktrees` entry leaves one behind every time.
+     *
+     * Classified into [OrphanKind.BROKEN] (still holds a `.git` file/dir — an interrupted delete
+     * left a real checkout behind) or [OrphanKind.LEFTOVER] (a plain directory, e.g. a hand-removed
+     * `.idea`/`.kilo-dev` folder), mirroring the VS Code extension's `worktree-reconcile.ts` so both
+     * clients agree on which rows are risky to delete.
      */
-    private fun orphanDirs(all: List<WorktreeDto>, base: Path?): List<String> {
+    private fun orphanDirs(all: List<WorktreeDto>, base: Path?): List<OrphanDto> {
         val dir = base?.resolve(".kilo")?.resolve("worktrees")?.normalize() ?: return emptyList()
         if (!Files.isDirectory(dir)) return emptyList()
         val tracked = all.map { Path.of(it.path).normalize().toString() }.toSet()
@@ -317,7 +368,7 @@ class KiloWorktreeRpcApiImpl(
                     .map { it.normalize() }
                     .filter { it.fileName.toString().startsWith(".kilo-delete-").not() }
                     .filter { it.toString() !in tracked }
-                    .map { it.toString() }
+                    .map { OrphanDto(it.toString(), if (Files.exists(it.resolve(".git"))) OrphanKind.BROKEN else OrphanKind.LEFTOVER) }
                     .toList()
             }
         }.getOrElse { err ->
@@ -325,7 +376,7 @@ class KiloWorktreeRpcApiImpl(
             emptyList()
         }
         if (orphans.isNotEmpty()) {
-            LOG.info("worktree orphan directories (not removed): ${orphans.joinToString(", ")}")
+            LOG.info("worktree orphan directories (not removed): ${orphans.joinToString(", ") { it.path }}")
         }
         return orphans
     }
@@ -703,6 +754,12 @@ class KiloWorktreeRpcApiImpl(
                     return@lock RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$names")
                 }
                 val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+                // A live IDE frame rooted at the worktree keeps rewriting project files into the
+                // checkout while it is being renamed/removed underneath it — the most likely source
+                // of leftover `.idea`-only directories. Close it before anything else touches disk.
+                // No-op outside an IntelliJ Application (a plain unit test): there is no EDT to hop
+                // to and nothing could have opened a frame in the first place.
+                closeIfOpenSafe(Path.of(target.path))
                 trash?.mark(target.path)
                 try {
                     removeManaged(base, target, branch, force, store, storage, start)
@@ -735,6 +792,10 @@ class KiloWorktreeRpcApiImpl(
             val unlock = runGit(base, "worktree", "unlock", target.path)
             if (!unlock.ok) LOG.info("worktree unlock skipped: path=${target.path} exit=${unlock.exit} stderr=${unlock.stderr.trim()}")
         }
+        // Best-effort, before anything touches disk: kill PTYs rooted here and dispose a loaded CLI
+        // backend instance for this worktree, so the CLI cannot rewrite `.kilo`/`.opencode` into a
+        // path this call is about to rename or delete. Never blocks or fails the removal.
+        teardownWorktree(base, target.path)
         val targetPath = Path.of(target.path)
         // Only skip git's own removal when the checkout directory is actually gone. Git also flags a
         // worktree prunable when its admin metadata is stale while the files remain; those must still
@@ -782,12 +843,15 @@ class KiloWorktreeRpcApiImpl(
         if (!prune.ok) {
             LOG.warn("worktree prune failed: path=${target.path} exit=${prune.exit} stderr=${snippet(prune.stderr)}")
         }
+        // Best-effort, mirroring [teardownWorktree] above: the snapshot repository for this worktree
+        // is no longer reachable from any live checkout once the prune above lands.
+        removeSnapshot(base, target.path)
         // The worktree is gone; a failed branch delete must not fail the removal, only warn.
         branch?.trim()?.takeIf { it.isNotEmpty() }?.let {
             val del = runGit(base, "branch", "-D", it)
             if (!del.ok) LOG.warn("worktree branch delete failed: branch=$it exit=${del.exit} stderr=${del.stderr.trim()}")
         }
-        staged?.let { trash?.reap(it) }
+        staged?.let { temp -> trash?.reap(temp) { checkReappearance(target.path, temp) } }
         LOG.info("worktree removed: path=${target.path} branch=${branch ?: "(none)"} mode=$mode ms=${System.currentTimeMillis() - start}")
         invalidate()
         removeWorktreeState(store, target.path)
@@ -795,6 +859,186 @@ class KiloWorktreeRpcApiImpl(
             .onFailure { err -> LOG.info("workspace cache eviction skipped: path=${target.path} message=${err.message}") }
         storage?.let { trash?.sweep(it) }
         return RemoveWorktreeResultDto(ok = true)
+    }
+
+    /**
+     * Checks whether [originalPath] exists again once the reap of its staged sibling [temp] has
+     * settled, and if so stages and reaps it once more. Bounded to exactly one retry: anything that
+     * survives that simply reappears in the next reconcile and therefore in the orphan banner, which
+     * is an acceptable outcome for something actively recreating the directory (e.g. a JetBrains dev
+     * backend still writing `.kilo-dev` while its own worktree is deleted).
+     */
+    internal fun checkReappearance(originalPath: String, temp: Path) {
+        val original = Path.of(originalPath)
+        if (!Files.exists(original)) return
+        LOG.warn("worktree reappeared after reap: path=$originalPath temp=$temp — staging once more")
+        val retry = trash?.stage(original)
+        if (retry != null) {
+            trash.reap(retry)
+        } else {
+            LOG.warn("worktree reappearance retry could not stage: path=$originalPath")
+        }
+    }
+
+    /**
+     * Best-effort CLI call to kill the PTYs rooted in [path] and dispose a loaded backend instance
+     * for it, without booting an instance for the directory. Never throws into the caller and never
+     * blocks the removal it guards: a CLI that cannot be reached, or a pinned CLI release that
+     * predates this endpoint, is exactly the same as "nothing to tear down" from here.
+     *
+     * Called via a raw HTTP POST rather than the generated [ai.kilocode.jetbrains.api.client.DefaultApi]
+     * client: `kilocode.teardownWorktree` is new enough that a plugin pinned to an older CLI release
+     * has a client with no matching method at all, and this call must still compile and no-op against
+     * that CLI rather than fail to build.
+     */
+    private fun teardownWorktree(base: Path, path: String) {
+        val app = runCatching { service<KiloBackendAppService>() }.getOrNull() ?: return
+        val http = app.http ?: return
+        val port = app.port
+        if (port <= 0) return
+        val body = JsonObject(mapOf("worktree" to JsonPrimitive(path))).toString()
+        postKilocode(http, port, "kilocode/worktree/teardown", base, body, "teardown")
+    }
+
+    /**
+     * Best-effort CLI call to remove the snapshot repository for an already-deleted worktree. Uses
+     * the generated client because `kilocode.removeSnapshot` predates this feature and is present in
+     * every pinned CLI release this plugin supports.
+     */
+    private fun removeSnapshot(base: Path, path: String) {
+        val client = runCatching { service<KiloBackendAppService>().api }.getOrNull() ?: return
+        runCatching {
+            client.kilocodeRemoveSnapshot(directory = base.toString(), kilocodeRemoveSnapshotRequest = KilocodeRemoveSnapshotRequest(worktree = path))
+        }.onFailure { err -> LOG.info("worktree remove-snapshot skipped: path=$path message=${err.message}") }
+    }
+
+    private fun postKilocode(http: OkHttpClient, port: Int, path: String, directory: Path, body: String, op: String) {
+        try {
+            val url = "http://127.0.0.1:$port/$path?directory=${URLEncoder.encode(directory.toString(), "UTF-8")}"
+            val req = Request.Builder()
+                .url(url)
+                .header("Accept", "application/json")
+                .post(body.toRequestBody("application/json".toMediaType()))
+                .build()
+            http.newCall(req).execute().use { res ->
+                if (!res.isSuccessful) LOG.info("worktree $op skipped: HTTP ${res.code}")
+            }
+        } catch (e: Exception) {
+            LOG.info("worktree $op skipped: ${e.message}")
+        }
+    }
+
+    /**
+     * Delegates to [ai.kilocode.backend.worktree.orphans.orphanSizes] — a pure filesystem walk with no
+     * dependency on this class's worktree machinery, extracted so it can be read and tested on its own.
+     * [directory] is unused: sizing has never needed the repository root, only the paths themselves.
+     */
+    override suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> =
+        ai.kilocode.backend.worktree.orphans.orphanSizes(paths)
+
+    /** One orphan path submitted to [removeOrphans], resolved and guard-checked. */
+    private data class OrphanTarget(val raw: String, val path: Path, val error: String?)
+
+    override suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto =
+        withContext(Dispatchers.IO) {
+            if (paths.isEmpty()) return@withContext RemoveOrphansResultDto()
+            val base = Path.of(directory).normalize()
+            lock(base, "removeOrphans") {
+                // Fail-closed, exactly like `remove()`'s own `git worktree list` re-check: the dialog's
+                // selection can be stale by the time delete runs, so every path is re-validated against
+                // a fresh scan immediately before it is touched.
+                val reconciled = reconcile(base)
+                    ?: return@lock RemoveOrphansResultDto(paths.map { OrphanRemoveResultDto(it, false, "git worktree list failed") })
+                val freshOrphans = reconciled.orphans.mapTo(HashSet()) { Path.of(it.path).normalize().toString() }
+                val managed = reconciled.items.mapTo(HashSet()) { Path.of(it.path).normalize().toString() }
+                val main = reconciled.items.firstOrNull { it.main }
+                val storage = main?.let { Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize() }
+                val targets = paths.map { raw ->
+                    val norm = Path.of(raw).normalize()
+                    val error = when {
+                        // Checked first so an unrelated path gets the precise reason instead of the
+                        // more general "not an orphan" — it was never a candidate at all.
+                        storage == null || norm.parent != storage -> "Refusing to remove a path outside managed storage: $raw"
+                        // Defense in depth: a registered worktree should never appear in the orphan
+                        // list this was validated against, but nothing here should ever point a
+                        // filesystem delete at one if it somehow did.
+                        norm.toString() in managed -> "Refusing to remove a managed worktree: $raw"
+                        norm.toString() !in freshOrphans -> "No longer an orphan directory: $raw"
+                        else -> null
+                    }
+                    if (error != null) LOG.warn("worktree orphan remove rejected: path=$raw reason=$error")
+                    OrphanTarget(raw, norm, error)
+                }
+                val ready = targets.filter { it.error == null }
+                // A live IDE frame rooted at an orphan directory (e.g. someone opened a hand-removed
+                // worktree's leftover folder directly) would keep rewriting project files into it,
+                // the same reason `remove()` closes one before staging.
+                ready.forEach { closeIfOpenSafe(it.path) }
+                val results = targets.map { target -> target.error?.let { OrphanRemoveResultDto(target.raw, false, it) } ?: removeOrphan(base, target.path) }
+                invalidate()
+                storage?.let { trash?.sweep(it) }
+                RemoveOrphansResultDto(results)
+            }
+        }
+
+    /**
+     * Removes one already-validated orphan directory [target]: CLI teardown, stage-rename +
+     * background reap (the same primitive [removeManaged] uses for a managed worktree — orphans are
+     * never git-tracked, so no `git worktree` command ever runs against one), CLI snapshot removal,
+     * and the same post-reap reappearance guard.
+     */
+    private fun removeOrphan(base: Path, target: Path): OrphanRemoveResultDto {
+        val key = target.toString()
+        teardownWorktree(base, key)
+        trash?.mark(key)
+        try {
+            val temp = trash?.stage(target)
+            if (temp != null) {
+                LOG.info("worktree orphan staged: path=$key temp=$temp")
+                trash.reap(temp) { checkReappearance(key, temp) }
+            } else {
+                val failure = runCatching { deleteOrphanSync(target) }.exceptionOrNull()
+                if (failure != null) {
+                    LOG.warn("worktree orphan delete failed: path=$key message=${failure.message}", failure)
+                    return OrphanRemoveResultDto(key, false, failure.message ?: "delete failed")
+                }
+                LOG.info(
+                    "worktree orphan deleted synchronously: path=$key " +
+                        "reason=${if (trash == null) "trash-unavailable" else "rename-failed"}",
+                )
+            }
+        } finally {
+            trash?.unmark(key)
+        }
+        removeSnapshot(base, key)
+        LOG.info("worktree orphan removed: path=$key")
+        return OrphanRemoveResultDto(key, true)
+    }
+
+    /** Synchronous recursive delete, used only when [trash] is unavailable or staging failed. */
+    private fun deleteOrphanSync(target: Path) {
+        if (!Files.exists(target)) return
+        Files.walkFileTree(
+            target,
+            object : SimpleFileVisitor<Path>() {
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    Files.deleteIfExists(file)
+                    return FileVisitResult.CONTINUE
+                }
+
+                override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
+                    Files.deleteIfExists(dir)
+                    return FileVisitResult.CONTINUE
+                }
+            },
+        )
+    }
+
+    override suspend fun revealPath(path: String): Boolean = withContext(Dispatchers.IO) {
+        if (!RevealFileAction.isSupported()) return@withContext false
+        val target = Path.of(path).normalize()
+        if (!Files.isDirectory(target)) return@withContext false
+        runCatching { RevealFileAction.openDirectory(target) }.isSuccess
     }
 
     override suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto =

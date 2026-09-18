@@ -1,8 +1,6 @@
-package ai.kilocode.client.settings.agents
+package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.app.KiloWorkspaceService
-import ai.kilocode.client.settings.base.DraftReadyConfigurable
-import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
@@ -16,7 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.swing.JComponent
 
-abstract class AgentBehaviorConfigurableBase<T : JComponent> : DraftReadyConfigurable<T>() {
+abstract class DirectoryReadyConfigurable<T : JComponent> : DraftReadyConfigurable<T>() {
     final override fun create(cs: CoroutineScope): T {
         val projects = ProjectManager.getInstance().openProjects.filter { !it.isDefault }
         val ctx = project?.takeIf { !it.isDefault }
@@ -24,13 +22,13 @@ abstract class AgentBehaviorConfigurableBase<T : JComponent> : DraftReadyConfigu
         val hint = selected?.basePath.orEmpty()
         val ui = create(cs, hint)
         if (hint.isBlank()) {
-            LOG.warn("agent behavior settings directory unavailable projects=${projects.size}")
+            LOG.warn("directory ready settings unavailable projects=${projects.size}")
             return ui
         }
         (ui as? SettingsListPanel)?.deferInitialReload()
         cs.launch {
             val dir = service<KiloWorkspaceService>().resolveProjectDirectory(selected?.projectIdOrNull(), hint)
-            LOG.info("agent behavior settings directory selected dir=$dir hint=$hint context=${ctx == selected} projects=${projects.size}")
+            LOG.info("directory ready settings directory selected dir=$dir hint=$hint context=${ctx == selected} projects=${projects.size}")
             withContext(Dispatchers.EDT + ModalityState.any().asContextElement()) {
                 update(ui, dir)
                 (ui as? SettingsListPanel)?.reload()
@@ -49,6 +47,6 @@ abstract class AgentBehaviorConfigurableBase<T : JComponent> : DraftReadyConfigu
     protected open fun update(ui: T, dir: String) = Unit
 
     private companion object {
-        val LOG = KiloLog.create(AgentBehaviorConfigurableBase::class.java)
+        val LOG = KiloLog.create(DirectoryReadyConfigurable::class.java)
     }
 }

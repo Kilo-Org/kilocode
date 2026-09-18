@@ -4,10 +4,13 @@ import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.JBValue
+import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import javax.swing.AbstractButton
@@ -240,6 +243,55 @@ object UiStyle {
 
             override fun fg(): Color = accent
         }
+
+        /**
+         * A marketplace type accent, used by the marketplace type filters.
+         *
+         * Active pills paint the saturated accent under white text — the filled treatment
+         * [ActivityRunning] and its siblings already use, which carries its own contrast in both light
+         * and dark themes rather than depending on the panel behind it. Inactive pills fade the same
+         * accent back to a tint and drop to the platform's inactive-text color, so a toggled-off filter
+         * keeps its identity while reading as switched off.
+         *
+         * Colors resolve per paint, so a theme switch or an IDE zoom is picked up without rebuilding.
+         *
+         * A data class on purpose: list badge icons are cached by style equality, so a value-equal
+         * style lets a repaint reuse the existing icon instead of allocating one per render.
+         */
+        data class Type(private val accent: Color, private val active: Boolean) : Style {
+            override fun bg(): Color = if (active) accent else ColorUtil.withAlpha(accent, TYPE_FADED_ALPHA)
+
+            override fun fg(): Color = if (active) JBColor.WHITE else NamedColorUtil.getInactiveTextColor()
+        }
+
+        /** Agents — the success accent the VS Code marketplace uses for agents. */
+        fun typeAgent(active: Boolean): Style = Type(AGENT_ACCENT, active)
+
+        /** MCP servers — the info accent the VS Code marketplace uses for MCP servers. */
+        fun typeMcp(active: Boolean): Style = Type(MCP_ACCENT, active)
+
+        /** Skills — the warning accent the VS Code marketplace uses for skills. */
+        fun typeSkill(active: Boolean): Style = Type(SKILL_ACCENT, active)
+
+        private const val TYPE_FADED_ALPHA = 0.18
+
+        private val AGENT_ACCENT = JBColor.namedColor(
+            "Kilo.Marketplace.agentBadgeBackground",
+            JBColor(Color(0x55, 0xA7, 0x6A), Color(0x57, 0x96, 0x5C)),
+        )
+
+        // An explicit pair like its siblings rather than the theme's link foreground: that colour is
+        // tuned to be read as text on the panel, and in dark themes it is light enough that white pill
+        // text on it has visibly less contrast than the agent and skill pills.
+        private val MCP_ACCENT = JBColor.namedColor(
+            "Kilo.Marketplace.mcpBadgeBackground",
+            JBColor(Color(0x35, 0x73, 0xD9), Color(0x3E, 0x6D, 0xA8)),
+        )
+
+        private val SKILL_ACCENT = JBColor.namedColor(
+            "Kilo.Marketplace.skillBadgeBackground",
+            JBColor(Color(0xE6, 0x6D, 0x17), Color(0xC7, 0x7D, 0x55)),
+        )
     }
 
     /** Theme-aware colors and color math used by multiple UI surfaces. */
@@ -414,6 +466,52 @@ object UiStyle {
     }
 
     /** Small component helpers that keep repeated Swing setup in one place. */
+    /** Multi-line copy. Long descriptions and tooltips wrap instead of stretching into one strip. */
+    object Text {
+        /**
+         * Width the platform wraps its own help tooltips at, so wrapped copy lines up with IDE
+         * tooltips and follows a theme that overrides the key.
+         */
+        private val TIP = JBValue.UIInteger("HelpTooltip.maxWidth", 250)
+
+        /** Width for wrapped body copy in dialogs — wide enough to read, narrow enough to not stretch one. */
+        private val BODY = JBValue.UIInteger("Kilo.Text.bodyWidth", 420)
+
+        fun tipWidth(): Int = TIP.get()
+
+        fun bodyWidth(): Int = BODY.get()
+
+        /**
+         * Wraps [text] as HTML capped to [width], giving Swing a hard column to break lines at.
+         * [width] is device pixels — pass [tipWidth] or [bodyWidth], which are already scaled.
+         */
+        fun wrap(text: String, width: Int): String = HtmlChunk.div()
+            .attr("width", width)
+            .addText(text)
+            .wrapWith(HtmlChunk.body())
+            .wrapWith("html")
+            .toString()
+
+        /** Tooltip copy that breaks into readable lines rather than one long strip. */
+        fun tip(text: String): String = wrap(text, tipWidth())
+
+        /**
+         * Tooltip copy that keeps [lines] as separate lines and still wraps each one at the tooltip
+         * column, so a single long line cannot stretch the tooltip past the window.
+         */
+        fun tipLines(lines: List<String>): String = HtmlChunk.div()
+            .attr("width", tipWidth())
+            .children(
+                lines.flatMapIndexed { i, line ->
+                    if (i == lines.lastIndex) listOf(HtmlChunk.text(line))
+                    else listOf(HtmlChunk.text(line), HtmlChunk.br())
+                },
+            )
+            .wrapWith(HtmlChunk.body())
+            .wrapWith("html")
+            .toString()
+    }
+
     object Components {
         fun transparent(vararg components: JComponent) {
             components.forEach { it.isOpaque = false }
