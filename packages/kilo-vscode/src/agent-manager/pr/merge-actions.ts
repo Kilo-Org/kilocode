@@ -1,10 +1,10 @@
 import type { PRMergeRequest, PRMergeResult } from "../../shared/pr-comment-actions"
 import { oid } from "../../shared/pr-comment-preview"
 import { execGhRead } from "../gh"
+import type { PRMergeMethod } from "../types"
 import { ghErrorReason } from "./am-pr-utils"
 import type { PRReviewContext, PRReviewHost } from "./review-context"
-
-type Method = "merge" | "squash" | "rebase"
+import { endpoint } from "./review-actions"
 
 function request(message: Record<string, unknown>): PRMergeRequest | undefined {
   const base = {
@@ -30,33 +30,14 @@ function request(message: Record<string, unknown>): PRMergeRequest | undefined {
   return undefined
 }
 
-function method(value: unknown): value is Method {
+function method(value: unknown): value is PRMergeMethod {
   return value === "merge" || value === "squash" || value === "rebase"
 }
 
-function flag(value: Method): "--merge" | "--squash" | "--rebase" {
+function flag(value: PRMergeMethod): "--merge" | "--squash" | "--rebase" {
   if (value === "merge") return "--merge"
   if (value === "rebase") return "--rebase"
   return "--squash"
-}
-
-function endpoint(context: PRReviewContext): string {
-  const url = new URL(context.pr.url)
-  const match = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)\/?$/.exec(url.pathname)
-  if (
-    url.protocol !== "https:" ||
-    url.hostname !== "github.com" ||
-    url.port ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    !match ||
-    Number(match[3]) !== context.pr.number
-  )
-    throw new Error("Unsupported pull request URL.")
-  if (!/^[\w.-]+$/.test(match[1]!) || !/^[\w.-]+$/.test(match[2]!)) throw new Error("Invalid repository.")
-  return `repos/${match[1]}/${match[2]}/pulls/${context.pr.number}`
 }
 
 function result(request: PRMergeRequest, success: boolean, error?: string): PRMergeResult {
@@ -193,7 +174,7 @@ export class PRMergeActions {
     return {}
   }
 
-  private async save(repo: string, method: Method): Promise<void> {
+  private async save(repo: string, method: PRMergeMethod): Promise<void> {
     const save = this.host.savePRMergeMethod
     if (!save) return
     await save(repo, method).catch((error) => console.error("[Kilo New] Failed to save PR merge method", error))

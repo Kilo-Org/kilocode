@@ -104,7 +104,7 @@ import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { createPreferenceLoader } from "./session-preference-loader"
 import { activities, type Activity } from "../utils/session-activity"
-import { active as activeTiming, hold, type Timing } from "./session-timing"
+import { hold, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
@@ -2174,9 +2174,11 @@ export const SessionProvider: ParentComponent = (props) => {
     const messageID = input.messageID ?? Identifier.ascending("message")
     const scope = input.draftID ?? input.sessionID
     if (scope) {
-      clearClose(scope)
-      addOptimistic(scope, messageID, input.text, input.files, input.review, input.browserFeedback)
-      startSubmission(scope, messageID)
+      batch(() => {
+        clearClose(scope)
+        addOptimistic(scope, messageID, input.text, input.files, input.review, input.browserFeedback)
+        startSubmission(scope, messageID)
+      })
     }
     vscode.postMessage({ ...input, messageID })
   }

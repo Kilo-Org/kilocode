@@ -8,6 +8,7 @@ import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
 import ai.kilocode.client.agentManager.worktree.NewWorktreePlan
 import ai.kilocode.client.agentManager.worktree.GhBanner
+import ai.kilocode.client.agentManager.orphans.OrphanBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
@@ -47,6 +48,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -160,6 +162,7 @@ class AgentManagerPanel(
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
     private var hovered: String? = null
+    private var orphanBanner: OrphanBanner? = null
 
     init {
         Disposer.register(parent, this)
@@ -168,7 +171,11 @@ class AgentManagerPanel(
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         list.onScroll = { popup.hideAll() }
         isOpaque = true
-        project?.let { addToTop(GhBanner(it, this)) }
+        project?.let {
+            val orphan = OrphanBanner(it, controller, this)
+            orphanBanner = orphan
+            addToTop(Stack.vertical().next(GhBanner(it, this)).next(orphan))
+        }
         addToCenter(body())
         list.installPopup(group)
         sync()
@@ -187,7 +194,7 @@ class AgentManagerPanel(
             project?.service<WorktreeStatusService>()?.refreshPr(force = true, maxAge = 0)
             autoRunSetupScript(created)
         }
-        controller.onReload = { sync() }
+        controller.onReload = { sync(); orphanBanner?.refresh() }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onMoveFailure = { err -> notifyMoveFailed(err) }
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }

@@ -17,7 +17,7 @@ import type { Provider } from "../../types/messages"
 import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
-import { CUSTOM_PROVIDER_ID, isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
+import { isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
 import {
   canChangeProviderKey,
   disabledProviderOptions,
