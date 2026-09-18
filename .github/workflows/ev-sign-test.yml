@@ -1,11 +1,10 @@
 # kilocode_change - new file
 # Temporary workflow for validating Azure Key Vault EV code signing end-to-end.
-# Runs on the draft PR. Before merging: delete this file and its entry in
+# Manual trigger only. Before merging: delete this file and its entry in
 # script/check-workflows.ts (the allowlist check fails if only one is removed).
 name: ev-sign-test
 
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
