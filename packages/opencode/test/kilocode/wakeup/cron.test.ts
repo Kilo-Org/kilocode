@@ -125,6 +125,43 @@ describe("next", () => {
     expect(new Date(day).getDay()).toBe(0)
   })
 
+  test("resolves a leap-day schedule more than a year out", () => {
+    // Feb 29 next falls in 2028, beyond the old 366-day window.
+    const from = new Date(2026, 2, 1, 0, 0, 0, 0).getTime()
+    expect(validate("0 0 29 2 *")).toBeUndefined()
+    const at = next("0 0 29 2 *", from)
+    const date = new Date(at)
+    expect(date.getMonth()).toBe(1)
+    expect(date.getDate()).toBe(29)
+    expect(date.getHours()).toBe(0)
+    expect(date.getMinutes()).toBe(0)
+    expect(at).toBeGreaterThan(from)
+  })
+
+  test("resolves the next leap day across a skipped century year", () => {
+    // 2100 is not a leap year, so the next Feb 29 after 2097 is in 2104, about
+    // seven years out: the walk must skip whole stretches of non-matching days.
+    const from = new Date(2097, 2, 1, 0, 0, 0, 0).getTime()
+    const at = next("0 0 29 2 *", from)
+    const date = new Date(at)
+    expect(date.getFullYear()).toBe(2104)
+    expect(date.getMonth()).toBe(1)
+    expect(date.getDate()).toBe(29)
+    expect(date.getHours()).toBe(0)
+    expect(date.getMinutes()).toBe(0)
+  })
+
+  test("searches a far-out schedule without scanning every minute", () => {
+    // A schedule that never matches walks the whole horizon. Skipping whole
+    // non-matching days keeps that to a few thousand steps instead of the
+    // millions of minutes a linear scan would test (which blocked the event
+    // loop for ~650 ms), so this must finish well under a second.
+    const from = new Date(2026, 0, 1, 0, 0, 0, 0).getTime()
+    const start = performance.now()
+    expect(() => next("0 0 30 2 *", from)).toThrow(/No match within/)
+    expect(performance.now() - start).toBeLessThan(250)
+  })
+
   test("throws on invalid expressions", () => {
     const from = new Date(2026, 0, 1, 0, 0, 0, 0).getTime()
     for (const expr of ["* * * *", "* * * * * *", "60 * * * *", "* * * 13 *", "*/0 * * * *", "5-1 * * * *"]) {

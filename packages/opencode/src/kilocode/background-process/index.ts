@@ -971,10 +971,7 @@ export namespace BackgroundProcess {
     proc.once("error", (err) => failed(active, err))
     proc.once("exit", (code, signal) => {
       if (processes.get(id) !== active || active.disposed) return
-      if (lifetime !== "persistent") {
-        exited(active, code, signal)
-        return
-      }
+      if (lifetime !== "persistent") return
       void output(active)
         .then(async () => {
           const status = await probe(active)
@@ -986,6 +983,15 @@ export namespace BackgroundProcess {
           await forget(state.shared, active)
         })
         .catch((err) => log.warn("failed to finalize persistent process", { err, id }))
+    })
+    // A non-persistent process finalizes on `close`, which fires only after its
+    // stdio pipes drain. `exit` can arrive before the last output chunk is
+    // appended, which would publish a terminal status with trailing output
+    // missing (the monitor would then stop early and lose it).
+    proc.once("close", (code, signal) => {
+      if (processes.get(id) !== active || active.disposed) return
+      if (lifetime === "persistent") return
+      exited(active, code, signal)
     })
     try {
       if (lifetime === "persistent") {

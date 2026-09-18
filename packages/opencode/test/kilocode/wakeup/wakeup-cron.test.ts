@@ -4,13 +4,14 @@ import { rm } from "fs/promises"
 import os from "os"
 import path from "path"
 import { Context, Effect, Layer } from "effect"
+import * as TestClock from "effect/testing/TestClock"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Git } from "@/git"
 import { Wakeup } from "@/kilocode/wakeup"
-import { jitter, next } from "@/kilocode/wakeup/cron"
+import { JITTER_MS, next } from "@/kilocode/wakeup/cron"
 import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
@@ -143,8 +144,12 @@ describe("Wakeup cron", () => {
       expect(task.recurring).toBe(true)
       expect(task.schedule).toBe("*/5 * * * *")
       expect(task.expiresAt).toBe(task.created + Wakeup.CRON_TTL_MS)
-      // The due time is the engine's next match plus the id's deterministic jitter.
-      expect(task.dueAt).toBe(next("*/5 * * * *", task.created) + jitter(task.id))
+      // The due time is the engine's next match shifted by the id's jitter, so
+      // it lands in [next match, next match + JITTER_MS) without re-deriving the
+      // exact value the implementation computes.
+      const match = next("*/5 * * * *", task.created)
+      expect(task.dueAt).toBeGreaterThanOrEqual(match)
+      expect(task.dueAt).toBeLessThan(match + JITTER_MS)
 
       expect((yield* wake.cronList({ sessionID })).map((item) => item.id)).toEqual([task.id])
 
@@ -168,10 +173,12 @@ describe("Wakeup cron", () => {
         )
       }
 
-      const offsets = new Set(tasks.map((task) => jitter(task.id)))
+      // Measure the jitter the service applied, rather than recomputing it.
+      const offsets = new Set(tasks.map((task) => task.dueAt - next("*/5 * * * *", task.created)))
       expect(offsets.size).toBeGreaterThan(1)
-      for (const task of tasks) {
-        expect(task.dueAt - next("*/5 * * * *", task.created)).toBe(jitter(task.id))
+      for (const offset of offsets) {
+        expect(offset).toBeGreaterThanOrEqual(0)
+        expect(offset).toBeLessThan(JITTER_MS)
       }
     }),
   )
@@ -293,6 +300,84 @@ describe("Wakeup cron", () => {
     }),
   )
 
+  it.effect("does not fire a task twice when adopt runs during its fire", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
+      const dir = (yield* TestDir).dir
+      const persisted = cronInfo({
+        directory: dir,
+        schedule: "* * * * *",
+        dueAt: Date.now() - 1_000,
+        created: Date.now() - 60_000,
+      })
+
+      // Re-enter the service while the first fire is in flight: the in-flight
+      // guard, not the persisted window, must stop a second fire.
+      recorder.reenter = Effect.suspend(() => wake.adopt(dir))
+      persistCron(dir, persisted)
+
+      yield* wake.adopt(dir)
+
+      expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
+      expect(recorder.modes).toEqual([{ kind: "cron", inPlace: true }])
+    }),
+  )
+
+  it.effect("keeps the schedule alive when a fire outlasts its interval", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
+      const dir = (yield* TestDir).dir
+      const persisted = cronInfo({
+        directory: dir,
+        schedule: "* * * * *",
+        dueAt: Date.now() - 1_000,
+        created: Date.now() - 60_000,
+      })
+      persistCron(dir, persisted)
+
+      // The window re-armed at the start of this fire comes due while the fire
+      // is still in flight. That timer must re-arm instead of dropping.
+      recorder.reenter = Effect.suspend(() => {
+        recorder.reenter = Effect.void
+        return TestClock.adjust("2 minutes")
+      })
+
+      yield* wake.adopt(dir)
+      expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
+
+      // The re-armed window is a live timer. Real ticks let the guard's re-arm
+      // finish writing and arming; advancing the test clock then fires it.
+      // Without the re-arm the schedule stalls and this loop exhausts.
+      for (let index = 0; index < 20 && recorder.calls.length < 2; index++) {
+        yield* Effect.promise(() => new Promise<void>((resolve) => setTimeout(resolve, 5)))
+        yield* TestClock.adjust("2 minutes")
+      }
+      expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id, persisted.id])
+    }),
+  )
+
+  it.effect("rejects a schedule whose first window is past the task expiry", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const dir = (yield* TestDir).dir
+      const sessionID = session()
+
+      // A specific month/day 30 days out is always beyond the seven-day task
+      // lifetime, whatever the run date. A fixed expression like Jan 1 would be
+      // within the window when the test runs in late December.
+      const far = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      const expression = `0 0 ${far.getDate()} ${far.getMonth() + 1} *`
+      const err = yield* Effect.flip(
+        wake.cronCreate({ sessionID, directory: dir, prompt: "yearly", cron: expression }),
+      )
+
+      expect(err).toBeInstanceOf(Wakeup.InvalidSchedule)
+      expect(yield* wake.cronList({ sessionID })).toEqual([])
+    }),
+  )
+
   it.effect("drops a task whose next window is past its expiry", () =>
     Effect.gen(function* () {
       const wake = yield* Wakeup.Service
@@ -393,6 +478,9 @@ describe("Wakeup cron", () => {
               prompt: "resume the loop",
               cron: "*/5 * * * *",
             })
+            // Pin a near window so the assertion covers the adopted timer
+            // instead of a schedule minutes away the test would never reach.
+            persistCron(dir, { ...task, dueAt: Date.now() + 2_000 })
             return task.id
           }),
         )
@@ -405,10 +493,16 @@ describe("Wakeup cron", () => {
             yield* wake.adopt(dir)
             const list = yield* wake.cronList({ sessionID })
             expect(list.map((item) => item.id)).toEqual([id])
+            // Adopt armed the persisted window rather than firing it early.
+            expect(calls).toEqual([])
+            const fired = yield* pollWithTimeout(
+              Effect.sync(() => (calls.length > 0 ? calls : undefined)),
+              "adopted cron never fired",
+              "10 seconds",
+            )
+            expect(fired.map((item) => item.id)).toEqual([id])
           }),
         )
-
-        expect(calls).toEqual([])
       }),
     20_000,
   )

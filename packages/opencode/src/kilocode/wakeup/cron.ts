@@ -96,9 +96,7 @@ function compile(expr: string): Compiled | string {
   return { sets, star }
 }
 
-function matches(cron: Compiled, date: Date): boolean {
-  if (!cron.sets[0].has(date.getMinutes())) return false
-  if (!cron.sets[1].has(date.getHours())) return false
+function matchesDay(cron: Compiled, date: Date): boolean {
   if (!cron.sets[3].has(date.getMonth() + 1)) return false
   const dom = cron.sets[2].has(date.getDate())
   const dow = cron.sets[4].has(date.getDay())
@@ -107,6 +105,12 @@ function matches(cron: Compiled, date: Date): boolean {
   if (cron.star[4]) return dom
   // Vixie cron: two restricted day fields combine with OR.
   return dom || dow
+}
+
+function matches(cron: Compiled, date: Date): boolean {
+  if (!cron.sets[0].has(date.getMinutes())) return false
+  if (!cron.sets[1].has(date.getHours())) return false
+  return matchesDay(cron, date)
 }
 
 /**
@@ -119,20 +123,40 @@ export function validate(expr: string): string | undefined {
 }
 
 /**
+ * How far `next` searches for a match, in days. A leap-day schedule (Feb 29)
+ * can be up to eight years out around a skipped century leap year, so a
+ * 366-day window would reject it as if the expression were invalid.
+ */
+export const HORIZON_DAYS = 8 * 366
+
+/**
  * The next epoch-ms strictly after `from` that the expression matches, at
- * minute granularity. Walks minute by minute in host-local time, so the walk
- * observes local wall-clock dates and DST transitions. Throws on an invalid
- * expression and when nothing matches within 366 days.
+ * minute granularity. Steps host-local time a whole day at a time when the
+ * date fields cannot match and minute by minute within a candidate day, so the
+ * walk observes local wall-clock dates and DST transitions without scanning
+ * every minute of the horizon. Throws on an invalid expression and when nothing
+ * matches within `HORIZON_DAYS`.
  */
 export function next(expr: string, from: number): number {
   const compiled = compile(expr)
   if (typeof compiled === "string") throw new Error(compiled)
   const first = Math.floor(from / MIN_INTERVAL_MS) * MIN_INTERVAL_MS + MIN_INTERVAL_MS
-  const limit = first + 366 * 24 * 60 * MIN_INTERVAL_MS
-  for (let time = first; time <= limit; time += MIN_INTERVAL_MS) {
-    if (matches(compiled, new Date(time))) return time
+  const limit = first + HORIZON_DAYS * 24 * 60 * MIN_INTERVAL_MS
+  let time = first
+  while (time <= limit) {
+    const date = new Date(time)
+    if (!matchesDay(compiled, date)) {
+      // No time on this local date can match, so skip to the start of the next
+      // one rather than testing each of its minutes.
+      const nextDay = new Date(date)
+      nextDay.setHours(24, 0, 0, 0)
+      time = Math.max(nextDay.getTime(), time + MIN_INTERVAL_MS)
+      continue
+    }
+    if (matches(compiled, date)) return time
+    time += MIN_INTERVAL_MS
   }
-  throw new Error(`No match within 366 days for: ${expr}`)
+  throw new Error(`No match within ${HORIZON_DAYS} days for: ${expr}`)
 }
 
 /**

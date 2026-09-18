@@ -15,7 +15,7 @@ Schedule:
 
 Limits and behavior:
 - A session may hold at most 10 scheduled tasks; cancel one with `cron_delete` first when it is full.
-- A task expires seven days after it is created, so a forgotten loop cannot run forever.
+- A task expires seven days after it is created, so a forgotten loop cannot run forever. A schedule whose next fire would fall past that expiry is rejected: pick a schedule that fires within seven days.
 - A due task fires between turns: it waits for the session to be idle. Missed fires are not replayed one-for-one — the next fire is computed from the current time.
 - Fire times carry a small deterministic jitter, so many sessions do not fire at once.
 

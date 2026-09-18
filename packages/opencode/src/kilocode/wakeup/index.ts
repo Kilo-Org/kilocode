@@ -167,30 +167,40 @@ export namespace Wakeup {
           timers.set(info.id, fiber)
         })
 
+      // Compute, persist and arm a task's next occurrence, computed from now so
+      // a missed window is skipped rather than replayed one-for-one. Drop the
+      // record when there is no next occurrence (a one-shot) or the next one is
+      // past expiry, so a finished task never holds a session slot.
+      const rearm = (task: CronInfo): Effect.Effect<CronInfo | undefined> =>
+        Effect.gen(function* () {
+          const due = task.recurring ? schema.next(task.schedule, Date.now()) + schema.jitter(task.id) : undefined
+          if (due === undefined || due > task.expiresAt) {
+            cronEntries.delete(task.id)
+            cronTimers.delete(task.id)
+            yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
+            return undefined
+          }
+          const updated: CronInfo = { ...task, dueAt: due }
+          cronEntries.set(updated.id, updated)
+          yield* storage.write(cronKey(updated), updated).pipe(Effect.orDie)
+          yield* armCron(updated)
+          return updated
+        })
+
       const fireCron = (task: CronInfo, inPlace = false): Effect.Effect<void> =>
         Effect.gen(function* () {
-          if (cronFiring.has(task.id)) return
+          if (cronFiring.has(task.id)) {
+            // A fire outlasted its interval: the occurrence that just came due
+            // is skipped, not replayed, but the schedule must not stall. Arm the
+            // next window and leave the in-flight fire alone.
+            yield* rearm(task)
+            return
+          }
           cronFiring.add(task.id)
           yield* Effect.gen(function* () {
-            // The next occurrence is computed from now, not from the occurrence
-            // that just came due, so a missed window is skipped rather than
-            // replayed one-for-one.
-            const now = Date.now()
-            const due = task.recurring ? schema.next(task.schedule, now) + schema.jitter(task.id) : undefined
-            if (due === undefined || due > task.expiresAt) {
-              // A one-shot, or a recurring task past its TTL: drop it instead of
-              // re-arming. The timer fiber here is normally the caller itself.
-              cronEntries.delete(task.id)
-              cronTimers.delete(task.id)
-              yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
-            } else {
-              // Persist the next occurrence before the fire: a crash mid-turn
-              // must not lose the schedule.
-              const updated: CronInfo = { ...task, dueAt: due }
-              cronEntries.set(updated.id, updated)
-              yield* storage.write(cronKey(updated), updated).pipe(Effect.orDie)
-              yield* armCron(updated)
-            }
+            // Persist the next occurrence before the fire: a crash mid-turn
+            // must not lose the schedule.
+            yield* rearm(task)
             // The fired occurrence carries the due time it was scheduled for.
             yield* fire
               .run(
@@ -316,6 +326,7 @@ export namespace Wakeup {
               })
             }
             const id = ID.ascending()
+            const expiresAt = now + CRON_TTL_MS
             // A one-shot keeps the 10-second `resolve` minimum; a cron schedule
             // is minute-granular through the expression engine.
             const dueAt = recurring
@@ -327,6 +338,13 @@ export namespace Wakeup {
                     }),
                 })
               : yield* schema.resolve({ when, delay }, now)
+            // A first window past the TTL would arm and retain the task without
+            // it ever firing before expiry, holding a session slot. Refuse it.
+            if (dueAt > expiresAt) {
+              return yield* new InvalidSchedule({
+                message: `Next occurrence ${new Date(dueAt).toISOString()} is beyond this task's 7-day expiry`,
+              })
+            }
             const task: CronInfo = {
               id,
               sessionID: input.sessionID,
@@ -336,7 +354,7 @@ export namespace Wakeup {
               schedule: expression,
               recurring,
               dueAt,
-              expiresAt: now + CRON_TTL_MS,
+              expiresAt,
               created: now,
             }
             yield* storage.write(cronKey(task), task).pipe(Effect.orDie)
@@ -403,6 +421,12 @@ export namespace Wakeup {
           const task = yield* readCron(target)
           if (!task || task.directory !== directory) continue
           if (cronEntries.has(task.id) || cronTimers.has(task.id) || cronFiring.has(task.id)) continue
+          // A window past expiry can never fire; drop it rather than arm it and
+          // hold a session slot until the record is noticed.
+          if (task.dueAt > task.expiresAt) {
+            yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
+            continue
+          }
           cronEntries.set(task.id, task)
           if (task.dueAt <= Date.now()) yield* fireCron(task, true)
           else yield* armCron(task)
