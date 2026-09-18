@@ -1,0 +1,235 @@
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { SessionID } from "@/session/schema"
+import { Storage } from "@/storage/storage"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { WakeupEvent } from "@opencode-ai/schema/kilocode/wakeup-event"
+import { Context, Effect, Fiber, Layer, Semaphore } from "effect"
+import { fireLayer, text as wakeupText } from "./resume"
+import * as schema from "./schema"
+
+export namespace Wakeup {
+  export const MIN_DELAY_MS = schema.MIN_DELAY_MS
+  export const MAX_HORIZON_MS = schema.MAX_HORIZON_MS
+  export const MAX_PER_SESSION = schema.MAX_PER_SESSION
+  export const ID = schema.ID
+  export type ID = schema.ID
+  export const Info = schema.Info
+  export type Info = schema.Info
+  export const Input = schema.Input
+  export type Input = schema.Input
+  export const InvalidTime = schema.InvalidTime
+  export type InvalidTime = schema.InvalidTime
+  export const PastTime = schema.PastTime
+  export type PastTime = schema.PastTime
+  export const TooMany = schema.TooMany
+  export type TooMany = schema.TooMany
+  export const Fire = schema.Fire
+  export type Fire = schema.Fire
+  export const resolve = schema.resolve
+  export const clampNotice = schema.clampNotice
+  export const text = wakeupText
+
+  export interface Interface {
+    readonly schedule: (input: Input) => Effect.Effect<Info, InvalidTime | PastTime | TooMany>
+    readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
+    readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
+    readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
+    readonly cancelSession: (sessionID: SessionID) => Effect.Effect<number>
+    readonly adopt: (directory: string) => Effect.Effect<void>
+  }
+
+  export class Service extends Context.Service<Service, Interface>()("@kilocode/Wakeup") {}
+
+  const key = (info: { sessionID: SessionID; id: ID }) => ["wakeup", String(info.sessionID), String(info.id)]
+
+  export const layer = Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const storage = yield* Storage.Service
+      const fire = yield* Fire
+      const events = yield* EventV2Bridge.Service
+      // Timers live in the service scope, so tearing the layer down stops them.
+      const scope = yield* Effect.scope
+      const timers = new Map<ID, Fiber.Fiber<void>>()
+      const entries = new Map<ID, Info>()
+      // Ids whose persistence was already dropped and whose resume is in flight.
+      // `adopt` must not re-fire one of these while the slow turn runs.
+      const firing = new Set<ID>()
+      // Serializes the count-and-write in `schedule` so two concurrent schedulers
+      // cannot both pass the cap.
+      const gate = Semaphore.makeUnsafe(1)
+
+      const stop = () => {
+        for (const fiber of timers.values()) fiber.interruptUnsafe()
+        timers.clear()
+      }
+      const unregister = KiloShutdown.register(stop)
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          unregister()
+          stop()
+        }),
+      )
+
+      const read = (target: string[]) =>
+        storage.read<Info>(target).pipe(Effect.catch(() => Effect.succeed(undefined)))
+
+      // Tell clients how many wakeups a session still holds, so Keep Awake stays
+      // active while one is pending. Best effort: a publish failure must not
+      // fail the scheduling operation.
+      const announce = (sessionID: SessionID) =>
+        Effect.gen(function* () {
+          const count = yield* list({ sessionID }).pipe(Effect.map((items) => items.length))
+          yield* events.publish(WakeupEvent.Pending, { sessionID, pending: count })
+        }).pipe(Effect.catchCause((cause) => Effect.logWarning("wakeup notify failed", { sessionID, cause })))
+
+      const lookup = Effect.fnUntraced(function* (id: ID) {
+        const known = entries.get(id)
+        if (known) return known
+        const keys = yield* storage.list(["wakeup"]).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
+        for (const target of keys) {
+          if (target.at(-1) !== id) continue
+          const info = yield* read(target)
+          if (info) return info
+        }
+        return undefined
+      })
+
+      const fireNow = (info: Info, inPlace = false) =>
+        Effect.gen(function* () {
+          if (firing.has(info.id)) return
+          firing.add(info.id)
+          // The guard release belongs only to the branch that acquired it: an
+          // early return above must not clear an in-flight fire's guard.
+          yield* Effect.gen(function* () {
+            entries.delete(info.id)
+            timers.delete(info.id)
+            // Drop the persistence before the resume: the model turn can be slow,
+            // and a concurrent `adopt` that still sees the file would fire twice.
+            yield* storage.remove(key(info)).pipe(Effect.ignore)
+            // Announce after persistence clears so a concurrent snapshot cannot
+            // report the fired wakeup as still pending.
+            yield* announce(info.sessionID)
+            yield* fire
+              .run(info, { inPlace })
+              .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
+          }).pipe(Effect.ensuring(Effect.sync(() => firing.delete(info.id))))
+        })
+
+      const arm = (info: Info) =>
+        Effect.gen(function* () {
+          const delay = Math.max(0, info.dueAt - Date.now())
+          const fiber = yield* Effect.forkIn(
+            Effect.sleep(`${delay} millis`).pipe(Effect.andThen(fireNow(info))),
+            scope,
+          )
+          timers.set(info.id, fiber)
+        })
+
+      const list = Effect.fn("Wakeup.list")(function* (input?: { sessionID?: SessionID }) {
+        const found = new Map<ID, Info>(entries)
+        const prefix = input?.sessionID ? ["wakeup", String(input.sessionID)] : ["wakeup"]
+        const keys = yield* storage.list(prefix).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
+        for (const target of keys) {
+          const info = yield* read(target)
+          if (info && !found.has(info.id)) found.set(info.id, info)
+        }
+        return Array.from(found.values())
+          .filter((info) => !input?.sessionID || info.sessionID === input.sessionID)
+          .toSorted((a, b) => a.dueAt - b.dueAt || a.id.localeCompare(b.id))
+      })
+
+      // Per-session pending counts for one directory, read from memory only.
+      // An instance bootstraps (and adopts) before its routes run, so `entries`
+      // is authoritative here and a per-request storage scan is unnecessary.
+      const pending = Effect.fn("Wakeup.pending")(function* (directory: string) {
+        const counts = new Map<SessionID, number>()
+        for (const info of entries.values()) {
+          if (info.directory !== directory) continue
+          counts.set(info.sessionID, (counts.get(info.sessionID) ?? 0) + 1)
+        }
+        return Array.from(counts, ([sessionID, count]) => ({ sessionID, pending: count }))
+      })
+
+      const schedule = Effect.fn("Wakeup.schedule")(function* (input: Input) {
+        return yield* gate.withPermits(1)(
+          Effect.gen(function* () {
+            const now = Date.now()
+            const dueAt = yield* schema.resolve(input, now)
+            // Count only wakeups that still parse: an unreadable file must not
+            // hold a slot, and the count and the write must be one critical section.
+            const pending = yield* list({ sessionID: input.sessionID })
+            if (pending.length >= MAX_PER_SESSION) {
+              return yield* new TooMany({ message: `A session can hold at most ${MAX_PER_SESSION} pending wakeups` })
+            }
+            const info: Info = {
+              id: ID.ascending(),
+              sessionID: input.sessionID,
+              directory: input.directory,
+              prompt: input.prompt,
+              reason: input.reason,
+              agent: input.agent,
+              dueAt,
+              created: now,
+            }
+            yield* storage.write(key(info), info).pipe(Effect.orDie)
+            entries.set(info.id, info)
+            yield* arm(info)
+            yield* announce(info.sessionID)
+            return info
+          }),
+        )
+      })
+
+      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID) {
+        const info = yield* lookup(id)
+        if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
+        const fiber = timers.get(id)
+        if (fiber) {
+          timers.delete(id)
+          yield* Fiber.interrupt(fiber)
+        }
+        entries.delete(id)
+        yield* storage.remove(key(info)).pipe(Effect.ignore)
+        yield* announce(info.sessionID)
+        return info
+      })
+
+      // Called when a session is removed so its wakeups stop holding Keep Awake
+      // and can never resume a session that no longer exists.
+      const cancelSession = Effect.fn("Wakeup.cancelSession")(function* (sessionID: SessionID) {
+        const held = yield* list({ sessionID })
+        for (const info of held) yield* cancel(info.id)
+        return held.length
+      })
+
+      const adopt = Effect.fn("Wakeup.adopt")(function* (directory: string) {
+        const keys = yield* storage.list(["wakeup"]).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
+        for (const target of keys) {
+          const info = yield* read(target)
+          if (!info || info.directory !== directory) continue
+          if (entries.has(info.id) || timers.has(info.id) || firing.has(info.id)) continue
+          entries.set(info.id, info)
+          // Adopt runs inside the directory's bootstrap, so it must resume in
+          // place; `provide` would await the in-flight load and deadlock.
+          if (info.dueAt <= Date.now()) yield* fireNow(info, true)
+          else yield* arm(info)
+          yield* announce(info.sessionID)
+        }
+      })
+
+      return Service.of({ schedule, list, pending, cancel, cancelSession, adopt })
+    }),
+  )
+
+  export const defaultLayer = layer.pipe(Layer.provide(fireLayer))
+
+  export const node = LayerNode.make({
+    service: Service,
+    layer: defaultLayer,
+    deps: [Storage.node, EventV2Bridge.node],
+  })
+}
+
+export * from "./schema"

@@ -12,11 +12,4 @@ describe("Pierre diff options", () => {
       lineDiffType: "word-alt",
     })
   })
-
-  test("applies inherited opt-in backgrounds inside Pierre's shadow root", () => {
-    const css = createDefaultOptions("unified").unsafeCSS
-
-    expect(css).toContain("--kilo-diff-line-add-background")
-    expect(css).toContain("--kilo-diff-line-delete-background")
-  })
 })

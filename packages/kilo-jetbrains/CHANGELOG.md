@@ -1,5 +1,25 @@
 # Changelog
 
+## 7.8.0
+
+### Minor Changes
+
+- [#14137](https://github.com/Kilo-Org/kilocode/pull/14137) [`91040bc`](https://github.com/Kilo-Org/kilocode/commit/91040bcff4995784ad36ad9dcaa6f8d1bbb2b652) - Report worktree problems accurately and repair them: stale entries are cleaned up on their own, a deleted worktree can be restored from its branch or removed while keeping its sessions, leftover folders are listed with a cleanup action, and a failed status check now says so instead of showing a worktree as unchanged. Pull request lookups no longer stall on an unresponsive GitHub CLI, a single broken worktree no longer slows down the others, and deleting a worktree while its status is being checked no longer hides review and CI badges on every other worktree until the IDE restarts. The cleanup notice now marks leftover folders that still contain a git checkout and warns that they may hold uncommitted work, and removing a stale worktree entry no longer fails when its terminals cannot be stopped. New "Show Worktree Diagnostics" command in VS Code and "Copy report" action in JetBrains settings.
+
+### Patch Changes
+
+- [#14205](https://github.com/Kilo-Org/kilocode/pull/14205) [`42dddd0`](https://github.com/Kilo-Org/kilocode/commit/42dddd0ae3650cf117adad0b93646f0a3d65234c) - Collapse a pasted block into a `[Pasted ~N lines]` placeholder at 15 lines or 4000 characters instead of 5 lines or 800 characters, matching the VS Code composer so ordinary snippets are no longer folded too early.
+
+- [#14137](https://github.com/Kilo-Org/kilocode/pull/14137) [`dead6df`](https://github.com/Kilo-Org/kilocode/commit/dead6df706f6a7817e8783045ad1417cbe0194c3) - Explain why a pull request import failed instead of showing raw git output, recover automatically from stale remote branch refs, and refuse pull request URLs that belong to a different repository.
+
+- [#14137](https://github.com/Kilo-Org/kilocode/pull/14137) [`664be7d`](https://github.com/Kilo-Org/kilocode/commit/664be7d755a5f130280a21fea4972297464c2634) - Reorganize the worktree row context menu into clearer groups (rename; open in browser; diff actions; copy actions; setup script actions; delete) and shorten several action labels.
+
+## 7.6.3
+
+### Patch Changes
+
+- [#13889](https://github.com/Kilo-Org/kilocode/pull/13889) [`a30a196`](https://github.com/Kilo-Org/kilocode/commit/a30a1962db25356fdffbdef6e77793dcf69af4be) - Fold large pasted text into a `[Pasted ~N lines]` placeholder you can click to unfold and fold back from the gutter. Each paste folds independently, and sent messages fold the same way in the transcript.
+
 ## 7.6.0
 
 ### Minor Changes
@@ -447,6 +467,50 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.7-rc.2] - 2026-09-17
+
+### Added
+
+- Add a Marketplace page to JetBrains settings for browsing, installing, and removing marketplace agents, MCP servers, and skills without leaving the IDE.
+- Add Kilo Swarm support to JetBrains, including an Agent Behavior toggle, readable board tool cards, and a board viewer for session collaboration.
+- Add a cleanup flow for leftover Agent Manager worktree folders, with size reporting, git-checkout warnings, and safe removal from JetBrains.
+
+### Fixed
+
+- Collapse pasted text in JetBrains only after larger 15-line or 4000-character blocks, matching VS Code and avoiding over-folding ordinary snippets.
+- Recover shared agent board reads when a stale or foreign cursor appears, instead of leaving a sub-agent stuck on repeated tool errors.
+- Clear stopped session status before publishing status events, so reload no longer stays blocked by a session that already finished.
+- Reduce unnecessary sandbox escalation prompts for read-only `git` and `gh` commands while keeping mutating commands protected.
+
+### Changed
+
+## [7.1.7-rc.1] - 2026-09-15
+
+### Added
+
+- Fold and unfold large pasted text blocks directly from the prompt input and transcript.
+
+### Fixed
+
+- Pause the working timer while waiting on a permission prompt or a question.
+- Prevent snapshot progress from hanging a session.
+- Keep diagnostics edits responsive during large edits.
+- Warn when posting to the shared board targets a stopped subagent.
+- Keep a session goal running when a new message arrives instead of dropping it.
+- Only route auxiliary tasks to `kilo-auto/small` when using Kilo credentials.
+- Stop looping on repeated malformed tool calls.
+- Keep Keep Awake active while a wakeup is scheduled, and clear it when a session with pending wakeups is deleted.
+- Speed up local recall searches and improve match ranking.
+- Link sessions to their pull requests without a slow, timed `gh pr view` probe.
+- Submit and cancel custom answers correctly in the question dialog.
+- Format detailed code review findings as distinct sections.
+
+### Changed
+
+- Speed up the first worktree snapshot by skipping unnecessary re-hashing of the checkout.
+- Skip resolving the source project when moving sessions without changes, for faster session moves.
+- Bump the bundled CLI to v7.7.2.
 
 ## [7.1.6] - 2026-09-08
 

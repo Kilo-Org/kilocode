@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "ブランチのプレフィックス",
   "agentManager.settings.branchPrefix.description":
     "すべてのプロジェクトで自動命名されるブランチのプレフィックスです（例：feature/）。明示的なブランチ名には適用されません。プレフィックスを使わない場合は空欄にしてください。",
+  "agentManager.settings.worktreePool.title": "Worktreeの事前準備",
+  "agentManager.settings.worktreePool.description":
+    "バックグラウンドで準備済みの worktree を用意し、新しい Agent Manager セッションがより速く開始できるようにします。開いているプロジェクトごとに 1 つの checkout 分の追加ディスク容量を使用します。",
   "agentManager.settings.project.title": "プロジェクト",
   "agentManager.settings.project.description": "編集する worktree 設定の repository を選択してください。",
   "agentManager.settings.project.empty": "利用可能な Agent Manager プロジェクトはありません。",
@@ -48,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "新しい worktree で agent が開始する前に実行します。",
   "agentManager.settings.setupScript.create": "script を作成",
   "agentManager.settings.setupScript.edit": "script を編集",
-  "agentManager.project.add": "プロジェクトを追加",
+  "agentManager.project.add": "プロジェクトを追加...",
   "agentManager.project.remove": "Agent Managerから削除",
   "agentManager.project.missing": "リポジトリが見つかりません",
+  "agentManager.project.settings": "プロジェクト設定",
   "agentManager.project.restricted":
     "現在の VS Code ワークスペースはホームフォルダーまたはファイルシステムのルートです。Agent Manager を使用するには、VS Code で特定のプロジェクトフォルダーを開いてください。",
   "agentManager.notGitRepo": "gitリポジトリではありません",
@@ -134,6 +138,12 @@ export const dict = {
     "このリポジトリはGit LFSを使用していますが、git-lfsが見つかりませんでした。Git LFSをインストールしてください。",
   "agentManager.setup.error.no_commits":
     "このリポジトリにはまだコミットがありません。worktreesを使用する前に最初のコミットを作成してください。",
+  "agentManager.setup.error.worktree_missing":
+    "この worktree のフォルダーは存在しません。ブランチから復元するか、worktree を削除してください。",
+  "agentManager.setup.error.worktree_unregistered":
+    "git はこのフォルダーを worktree として追跡していません。削除して新しい worktree を作成してください。",
+  "agentManager.setup.error.git_timeout":
+    "Git が時間内に応答しませんでした。リポジトリに接続できるか確認して、もう一度お試しください。",
   "agentManager.shortcuts.title": "キーボードショートカット",
   "agentManager.shortcuts.category.sidebar": "サイドバー",
   "agentManager.shortcuts.category.tabs": "タブ",
@@ -232,6 +242,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "すべてをチャットに送信 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "{{count}}件をGitHub #{{number}}に送信",
+  "agentManager.review.sendAllToGithubFailed": "GitHubのエラーにより送信を停止しました: {{error}}",
   "agentManager.review.inlineCount": "ローカルコメント ({{count}})",
   "agentManager.review.prCount": "PRコメント ({{count}})",
   "agentManager.review.fileCount": "{{count}} ファイル",
@@ -306,6 +318,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "古い",
   "agentManager.pr.comment.sent": "送信済み",
   "agentManager.pr.comment.copy": "コメントをコピー",
+  "agentManager.pr.comment.copyLink": "コメントのリンクをコピー",
   "agentManager.pr.comment.openOnGitHub": "GitHubで開く",
   "agentManager.pr.comment.showInDiff": "差分で表示",
   "agentManager.pr.comment.unplaced": "現在の差分にないコメント",
@@ -414,7 +427,7 @@ export const dict = {
   "agentManager.caffeination.armed": "Kilo エージェント用のスリープ防止モードが有効です。クリックして無効にします",
   "agentManager.caffeination.active": "Kilo エージェントの作業中もコンピューターをスリープさせません",
   "agentManager.caffeination.unavailable": "このプラットフォームではスリープ防止モードを利用できません",
-  "agentManager.browser.title": "ブラウザー",
+  "agentManager.browser.title": "統合ブラウザー",
   "agentManager.browser.url": "ローカルアプリケーション URL",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "開く",
@@ -423,7 +436,8 @@ export const dict = {
   "agentManager.browser.inspect": "要素を選択",
   "agentManager.browser.devtoolsTitle": "開発者ツール",
   "agentManager.browser.empty": "ローカルアプリケーションを開くと、ここでプレビューできます。",
-  "agentManager.browser.noSession": "先に Agent Manager セッションを選択してください。",
+  "agentManager.browser.noSession":
+    "ローカルアプリケーションを表示するには、Agent Manager でセッションを開始または選択してください。",
   "agentManager.browser.screenshotAlt": "現在のブラウザーページ",
   "agentManager.browser.errors": "ブラウザーの問題: {{count}} 件",
   "agentManager.browser.diagnostics": "ブラウザー診断",
@@ -462,4 +476,47 @@ export const dict = {
   "agentManager.intro.guide": "ガイドを読む",
   "agentManager.intro.dismiss": "イントロダクションをスキップ",
   "agentManager.intro.reopen": "Agent Manager の仕組み",
+  "agentManager.worktree.health.absent-restorable": "フォルダーが削除されています",
+  "agentManager.worktree.health.absent-restorableNote":
+    "フォルダーはありませんが、ブランチ {{branch}} は残っています。復元すればここで作業を続けられます。",
+  "agentManager.worktree.health.absent-gone": "フォルダーとブランチが削除されています",
+  "agentManager.worktree.health.absent-goneNote":
+    "フォルダーもブランチも存在しません。エントリを削除して整理できます。セッションは「ローカル」に保持されます。",
+  "agentManager.worktree.health.unregistered": "git worktree ではありません",
+  "agentManager.worktree.health.unregisteredNote":
+    "フォルダーは存在しますが、git が worktree として追跡していないため状態を読み取れません。",
+  "agentManager.worktree.health.unavailable": "状態を取得できません",
+  "agentManager.worktree.health.unavailableNote":
+    "Git または GitHub CLI が時間内に応答しませんでした。この worktree のポーリングを一時停止し、後で再試行します。",
+  "agentManager.worktree.restore": "worktree を復元",
+  "agentManager.worktree.removeKeepSessions": "削除してセッションを保持",
+  "agentManager.orphans.resolve": "解決…",
+  "agentManager.orphans.summaryCount": "{{count}} 件の残された worktree フォルダー",
+  "agentManager.orphans.summarySize": "{{count}} 件の残された worktree フォルダー · {{size}}",
+  "agentManager.orphans.calculating": "サイズを計算中…",
+  "agentManager.orphans.sizeUnknown": "不明",
+  "agentManager.orphans.dialogTitle": "残された worktree フォルダー",
+  "agentManager.orphans.helpIntro":
+    "Kilo は作成した worktree をすべて、このリポジトリの .kilo/worktrees フォルダー内に保存します。以下のフォルダーはそのフォルダー内にありますが、git はいずれも worktree として認識していないため、どこからも使用されていません。",
+  "agentManager.orphans.helpCheckout":
+    "git チェックアウトが残っていると表示されているフォルダーには、まだ .git エントリがあり、コミットされていない作業が含まれている可能性があります。これらは選択されていないため、削除する前に開いて内容を確認してください。",
+  "agentManager.orphans.helpCauses":
+    "残されたフォルダーは通常、中断された削除、Kilo の外で削除された worktree、または削除後にフォルダーへ書き込んだツールが原因で発生します。実行中の削除はここには表示されません。",
+  "agentManager.orphans.helpDelete":
+    "削除すると、選択したフォルダーはゴミ箱を経由せずにディスクから完全に削除されます。ブランチや使用中の worktree には影響しません。サイズは各フォルダーが現在ディスク上で占めている容量です。",
+  "agentManager.orphans.helpMore": "さらに表示",
+  "agentManager.orphans.helpLess": "表示を減らす",
+  "agentManager.orphans.columnPath": "パス",
+  "agentManager.orphans.columnSize": "サイズ",
+  "agentManager.orphans.columnContents": "内容",
+  "agentManager.orphans.checkoutWarning": "git チェックアウトが残っています",
+  "agentManager.orphans.footerSelected": "{{count}} 件選択 · {{size}}",
+  "agentManager.orphans.footerCheckouts": "{{count}} 件はまだ git チェックアウトを含んでいます",
+  "agentManager.orphans.reveal": "OSで表示",
+  "agentManager.orphans.revealMac": "Finderで表示",
+  "agentManager.orphans.revealWindows": "エクスプローラーで表示",
+  "agentManager.orphans.revealLinux": "ファイルで表示",
+  "agentManager.orphans.deleteButton": "{{count}} 個のフォルダーを削除 ({{size}})",
+  "agentManager.orphans.cancel": "キャンセル",
+  "agentManager.error.title": "Agent Manager エラー",
 }

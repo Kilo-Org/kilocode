@@ -67,6 +67,22 @@ When the Kilo provider is enabled and you are signed in, choose the transcriptio
 }
 ```
 
+### Voice Transcription Source
+
+By default both the model list and the audio go to Kilo Gateway. Set **Models** > **Speech to Text Base URL** to send them to any OpenAI-compatible transcription API instead, with an optional bearer token:
+
+```json
+{
+  "experimental": {
+    "speech_to_text_base_url": "https://api.openai.com/v1",
+    "speech_to_text_api_key": "sk-...",
+    "speech_to_text_model": "whisper-1"
+  }
+}
+```
+
+Models are read from `{base_url}/models` and audio is posted to `{base_url}/audio/transcriptions`. Leave the base URL empty to use Kilo Gateway. See [Voice Transcription](/docs/code-with-ai/features/speech-to-text) for details.
+
 ### Prompt-Training Model Visibility
 
 Enable **Hide Prompt-Training Models** under **Models** to remove Kilo Gateway models whose providers may use your prompts for training from model lists. Models from other providers and models without explicit prompt-training metadata remain visible. The setting is disabled by default.
@@ -79,21 +95,51 @@ You can also enable it in `kilo.jsonc`:
 }
 ```
 
-### Reasoning Blocks
+### Compaction Model
 
-Reasoning blocks show their full text while the agent is thinking and stay open by default in the VS Code chat UI. Choose how they display with **Reasoning Display** in the Display tab, or set `reasoning_display` in `kilo.jsonc`:
+Choose the model used for automatic and manual compaction under **Models** > **Compaction Model**. Leave it unset to use the chat model. The Compaction section in **Settings → Context** links to this selector.
+
+This stores `agent.compaction.model` in `kilo.jsonc`:
 
 ```json
 {
-  "reasoning_display": "shortened"
+  "agent": {
+    "compaction": {
+      "model": "anthropic/claude-haiku-4-5"
+    }
+  }
 }
 ```
 
-- `collapsed` — hidden until you click to expand
-- `shortened` — scrolling preview while streaming, then collapse when finished
-- `shortened_persist` — scrolling preview while streaming, stays open when finished
-- `full` — full text while streaming, then collapse when finished
-- `full_persist` — full text, stays open (default)
+### Reasoning Blocks
+
+Reasoning blocks show the agent's thinking. Choose a mode for **Reasoning Blocks** in the Display tab, or set `reasoning_display` in `kilo.jsonc`:
+
+```json
+{
+  "reasoning_display": "preview"
+}
+```
+
+- `expanded`: The full reasoning text stays open.
+- `preview`: A short scrolling preview shows while the agent is writing and stays compact after it finishes. Blocks from earlier sessions start collapsed.
+- `headline`: Only the header and streaming indicator show until you open the block.
+
+Valid values are `expanded`, `preview`, and `headline`. The default is `expanded`.
+
+Older configs that set `auto_collapse_reasoning: true` map to `preview`. That boolean is deprecated, so use `reasoning_display` instead.
+
+### Terminal Command Blocks
+
+Terminal command blocks stay expanded by default in the VS Code chat UI. Choose **Collapsed** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to start them collapsed:
+
+```json
+{
+  "terminal_command_display": "collapsed"
+}
+```
+
+Valid values are `expanded` and `collapsed`.
 
 ### Inline Code
 
@@ -107,30 +153,6 @@ Inline code keeps its current text-only appearance by default. Enable **Highligh
 ```
 
 Omit either setting to keep its current theme-controlled behavior.
-
-### Diff Line Backgrounds
-
-Diffs in the VS Code chat UI tint only the line numbers by default. Enable **Diff Line Backgrounds** in the Display tab, or set `diff_line_backgrounds` to `true`, to fill added and removed lines with a background color that matches the editor diff view:
-
-```json
-{
-  "diff_line_backgrounds": true
-}
-```
-
-Omit the setting to keep only the line numbers tinted.
-
-### Terminal Command Blocks
-
-Terminal command blocks stay expanded by default in the VS Code chat UI. Choose **Collapsed** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to start them collapsed:
-
-```json
-{
-  "terminal_command_display": "collapsed"
-}
-```
-
-Valid values are `expanded` and `collapsed`.
 
 ### Markdown Diff Rendering
 
@@ -204,6 +226,25 @@ On macOS and Linux, the VS Code extension includes a dedicated **Sandboxing** se
 
 See [Sandboxing](/docs/getting-started/settings/sandboxing) for setup instructions, the exact filesystem and network boundaries, and platform limitations.
 
+## Kilo Swarm
+
+Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
+
+Kilo Swarm is on by default. Turn it off in the VS Code or JetBrains **Agent Behaviour** settings, or set `shared_agent_board` to `false` in `kilo.jsonc`.
+
+Use it when agents can benefit from discoveries during work:
+
+- **Search races:** agents try independent approaches to the same problem and share useful findings.
+- **Complementary teams:** agents work on different parts of a feature and share constraints or results.
+
+Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
+
+**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+
+All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
+
+When a main session has board messages, open the **Board** icon in its task header (VS Code) or session header (JetBrains, which also offers a **View Kilo Swarm** session menu action) to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+
 ## Experimental Features
 
 {% tabs %}
@@ -217,7 +258,8 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
-- **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
+- **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
+- **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -245,21 +287,20 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 {% /tab %}
 {% /tabs %}
 
-### Kilo Swarm
+### Task subagent model selection
 
-Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
+Enable **Task Subagent Model Selection** in **Settings → Experimental**, or set `experimental.task_model_selection` to `true` in `kilo.jsonc`. It is off by default.
 
-Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
+This lets you explicitly request a different model, provider, or reasoning effort for an individual subagent task. The agent keeps normal defaults unless you request an override; it does not select models autonomously for cost or complexity. See [Per-task model selection](/docs/code-with-ai/agents/model-selection#per-task-model-selection-experimental).
 
-Use it when agents can benefit from discoveries during work:
+### Claude Code migration
 
-- **Search races:** agents try independent approaches to the same problem and share useful findings.
-- **Complementary teams:** agents work on different parts of a feature and share constraints or results.
+Enable **Claude Code Migration** in **Settings → Experimental** to import supported global Claude Code configuration on the next backend start. It is off by default and runs once, with no automatic retry.
 
-Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
+The migration imports:
 
-**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+- Global instructions from `~/.claude/CLAUDE.md` into Kilo's global `AGENTS.md`.
+- Standalone skills from `~/.claude/skills/` that contain only a `SKILL.md`.
+- Top-level MCP server definitions from `~/.claude.json`, disabled until you enable them.
 
-All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
-
-When a main session has board messages, open the **Board** icon in its task header to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+Existing Kilo content takes precedence; conflicts and unsupported items are skipped. Your original Claude files are not changed or deleted. After the attempt, Kilo stops loading global Claude instructions and skills as a fallback, but project-level compatibility such as a repository's `CLAUDE.md` is unaffected. A notification reports the outcome and points to a receipt with imported, skipped, and failed items.

@@ -1,4 +1,4 @@
-import { type Component, Show } from "solid-js"
+import { Show, type Component } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -29,16 +29,14 @@ const MCP_OPTIONS: LayoutOption[] = [
   { value: "collapsed", labelKey: "settings.display.mcpTool.collapsed" },
 ]
 
-const REASONING_OPTIONS: LayoutOption[] = [
-  { value: "collapsed", labelKey: "settings.display.reasoning.collapsed" },
-  { value: "shortened", labelKey: "settings.display.reasoning.shortened" },
-  { value: "shortened_persist", labelKey: "settings.display.reasoning.shortenedPersist" },
-  { value: "full", labelKey: "settings.display.reasoning.full" },
-  { value: "full_persist", labelKey: "settings.display.reasoning.fullPersist" },
-]
-
 // Seeds the color picker when the user switches off "match theme"; also the input's fallback value.
 const DEFAULT_INLINE_CODE_COLOR = "#00ceb9"
+
+const REASONING_OPTIONS: LayoutOption[] = [
+  { value: "expanded", labelKey: "settings.display.reasoningDisplay.expanded" },
+  { value: "preview", labelKey: "settings.display.reasoningDisplay.preview" },
+  { value: "headline", labelKey: "settings.display.reasoningDisplay.headline" },
+]
 
 const DisplayTab: Component = () => {
   const { config, updateConfig, settings, updateSetting } = useConfig()
@@ -80,27 +78,6 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.display.reasoning.title")}
-          description={language.t("settings.display.reasoning.description")}
-        >
-          <Select
-            options={REASONING_OPTIONS}
-            current={REASONING_OPTIONS.find((o) => o.value === display.reasoningDisplay())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (!o) return
-              const next = o.value as ReasoningDisplay
-              if (next === display.reasoningDisplay()) return
-              display.setReasoningDisplay(next)
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.display.inlineCodeBackground.title")}
           description={language.t("settings.display.inlineCodeBackground.description")}
         >
@@ -135,19 +112,6 @@ const DisplayTab: Component = () => {
               />
             </Show>
           </div>
-        </SettingsRow>
-
-        <SettingsRow
-          title={language.t("settings.display.diffLineBackgrounds.title")}
-          description={language.t("settings.display.diffLineBackgrounds.description")}
-        >
-          <Switch
-            checked={Boolean(config().diff_line_backgrounds)}
-            onChange={(checked: boolean) => updateConfig({ diff_line_backgrounds: checked || undefined })}
-            hideLabel
-          >
-            {language.t("settings.display.diffLineBackgrounds.title")}
-          </Switch>
         </SettingsRow>
 
         <SettingsRow
@@ -187,6 +151,27 @@ const DisplayTab: Component = () => {
           >
             {language.t("settings.display.autoApprovalReason.title")}
           </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.reasoningDisplay.title")}
+          description={language.t("settings.display.reasoningDisplay.description")}
+        >
+          <Select
+            options={REASONING_OPTIONS}
+            current={REASONING_OPTIONS.find((o) => o.value === display.reasoningDisplay())}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as ReasoningDisplay
+              if (next === display.reasoningDisplay()) return
+              display.setReasoningDisplay(next)
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
         </SettingsRow>
 
         <SettingsRow

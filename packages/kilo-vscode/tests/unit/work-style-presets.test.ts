@@ -14,7 +14,7 @@ describe("work style presets", () => {
     const cfg = WORK_STYLE_PRESETS["human-in-the-loop"].config
     const bash = cfg.permission?.bash as Record<string, string>
     expect(cfg.terminal_command_display).toBe("expanded")
-    expect(cfg.reasoning_display).toBe("full_persist")
+    expect(cfg.reasoning_display).toBe("expanded")
     expect(cfg.permission?.["*"]).toBeUndefined()
     expect(cfg.permission?.edit).toBe("ask")
     expect(bash).toMatchObject({ "*": "ask", "rg *": "allow", "*>*": "ask" })
@@ -43,7 +43,7 @@ describe("work style presets", () => {
   it("does not loosen permissions for high autonomy", () => {
     const cfg = WORK_STYLE_PRESETS.autonomous.config
     expect(cfg.terminal_command_display).toBe("collapsed")
-    expect(cfg.reasoning_display).toBe("shortened_persist")
+    expect(cfg.reasoning_display).toBe("preview")
     expect(cfg.permission).toBeUndefined()
     expect(WORK_STYLE_PRESETS.autonomous.settings).toEqual({
       showTaskTimeline: false,
@@ -59,9 +59,18 @@ describe("work style presets", () => {
   it("does not overwrite existing new-user settings", () => {
     const plan = buildWorkStyleApplyPlan({
       style: "human-in-the-loop",
-      config: { permission: { edit: "allow" }, terminal_command_display: "collapsed", reasoning_display: "shortened" },
+      config: { permission: { edit: "allow" }, terminal_command_display: "collapsed", reasoning_display: "headline" },
       settingDefault: () => false,
     })
     expect(plan).toEqual({ config: {}, settings: {} })
+  })
+
+  it("respects a legacy auto_collapse_reasoning choice", () => {
+    const plan = buildWorkStyleApplyPlan({
+      style: "autonomous",
+      config: { auto_collapse_reasoning: false },
+      settingDefault: () => false,
+    })
+    expect(plan.config.reasoning_display).toBeUndefined()
   })
 })

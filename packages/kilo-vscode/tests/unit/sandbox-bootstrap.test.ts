@@ -105,7 +105,7 @@ describe("Agent Manager sandbox startup", () => {
     const gate = version.indexOf("await reconcileSandbox")
     const register = version.indexOf("host.register", gate)
     const ready = version.indexOf("host.notifyReady", register)
-    const created = version.indexOf("return {", ready)
+    const created = version.indexOf("const result: CreatedVersion = {", ready)
     expect(gate).toBeGreaterThan(-1)
     expect(register).toBeGreaterThan(gate)
     expect(ready).toBeGreaterThan(register)

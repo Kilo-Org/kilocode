@@ -3,8 +3,7 @@
  *
  * 1. Ensures every string-literal translation key passed to a t() function
  *    actually exists in the corresponding English dictionary.
- * 2. Ensures complete dictionaries have every English key and partial sidebar
- *    dictionaries are completed by the runtime English fallback.
+ * 2. Ensures every English key has a translation in all other locale files.
  *
  * Three independent key pools are checked:
  *   - Webview (sidebar + agent manager): merged from app, ui, kilo-i18n, agent-manager dicts
@@ -444,7 +443,19 @@ describe("i18n key validation — no missing translation keys", () => {
   })
 })
 
-describe("i18n locale coverage", () => {
+// Keys that ship English-only for now and rely on the per-key English fallback in
+// webview-ui/src/context/language.tsx, which resolves a missing key to the English
+// string rather than rendering the raw key. Every other key must be translated in
+// every locale, so this list is deliberately explicit rather than a relaxed assertion.
+const PENDING_TRANSLATION = new Set<string>([
+  "settings.display.inlineCodeBackground.title",
+  "settings.display.inlineCodeBackground.description",
+  "settings.display.inlineCodeColor.title",
+  "settings.display.inlineCodeColor.description",
+  "settings.display.inlineCodeColor.matchTheme",
+])
+
+describe("i18n locale completeness — every English key exists in all locales", () => {
   it("shared UI: every English key has a translation in all locales", () => {
     const missing = findMissingLocaleKeys(uiEn, uiLocales)
     if (missing.length > 0) {
@@ -456,15 +467,12 @@ describe("i18n locale coverage", () => {
     expect(missing).toEqual([])
   })
 
-  it("sidebar app: English fallback covers partial locale dictionaries", () => {
-    const resolved = Object.fromEntries(
-      Object.entries(appLocales).map(([locale, dict]) => [locale, { ...appEn, ...dict }]),
-    )
-    const missing = findMissingLocaleKeys(appEn, resolved)
+  it("sidebar app: every English key has a translation in all locales", () => {
+    const missing = findMissingLocaleKeys(appEn, appLocales).filter((entry) => !PENDING_TRANSLATION.has(entry.key))
     if (missing.length > 0) {
       expect(
         missing,
-        `Found ${missing.length} missing sidebar fallback translation(s):\n${formatLocaleReport(missing)}`,
+        `Found ${missing.length} missing sidebar translation(s):\n${formatLocaleReport(missing)}`,
       ).toEqual([])
     }
     expect(missing).toEqual([])

@@ -2,12 +2,18 @@ export namespace BoardEnabled {
   /**
    * Resolve the effective shared agent board state.
    *
-   * The `experimental.shared_agent_board` config key is the source of truth for
-   * an explicit enable. The experimental environment flag is an additional
-   * enable path, so an explicit config `false` does not turn the board off when
-   * the flag is set.
+   * The board is enabled by default. It is disabled only by an explicit opt-out:
+   * `shared_agent_board` set to `false` in config, or the
+   * `KILO_EXPERIMENTAL_SHARED_AGENT_BOARD` flag set to a falsy boolean. Either
+   * explicit disable wins over an explicit enable.
    */
   export function resolve(input: { config?: boolean; flag?: boolean }) {
-    return input.config === true || input.flag === true
+    if (input.config === false) return false
+    if (input.flag === false) return false
+    return true
+  }
+
+  export function on(cfg: { shared_agent_board?: boolean }, flags: { experimentalSharedAgentBoard?: boolean }) {
+    return resolve({ config: cfg.shared_agent_board, flag: flags.experimentalSharedAgentBoard })
   }
 }

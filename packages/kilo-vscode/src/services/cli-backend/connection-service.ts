@@ -149,7 +149,11 @@ export class KiloConnectionService {
   private viewedDirty = false
   private unsubRemote: (() => void) | null = null
 
-  constructor(context: vscode.ExtensionContext, env?: () => Promise<Record<string, string>>) {
+  constructor(
+    context: vscode.ExtensionContext,
+    env?: () => Promise<Record<string, string>>,
+    private readonly prepare?: (directory: string) => Promise<void>,
+  ) {
     const state =
       context.workspaceState ??
       ({
@@ -200,6 +204,10 @@ export class KiloConnectionService {
       throw new Error("Not connected — call connect() first")
     }
     return this.client
+  }
+
+  async prepareTools(directory: string): Promise<void> {
+    await this.prepare?.(directory)
   }
 
   /**

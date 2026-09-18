@@ -1,8 +1,12 @@
+import type { PRMergeMethod } from "../../webview-ui/agent-manager/pr/pr-types"
+
 export interface PRTarget {
   projectId?: string
   worktreeId: string
   prNumber: number
   prUrl: string
+  baseRefOid?: string
+  headRefOid?: string
 }
 
 export interface PRFile {
@@ -59,7 +63,7 @@ export type PRMergeRequest =
   | (Request & { type: "agentManager.updatePRBranch"; head: string })
   | (Request & {
       type: "agentManager.mergePR"
-      method: "merge" | "squash" | "rebase"
+      method: PRMergeMethod
       auto: boolean
       head: string
     })

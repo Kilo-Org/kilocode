@@ -200,10 +200,12 @@ export const dict = {
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
+  "prompt.paste.expand": "คลิกเพื่อขยายข้อความที่วาง",
   "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.disable": "ปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
   "prompt.action.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว คลิกเพื่ออนุมัติคำขอสิทธิ์โดยอัตโนมัติ",
+  "prompt.action.autoApprove.sandboxExcluded": "พร้อมท์การออกจากแซนด์บ็อกซ์จะถูกยกเว้นเสมอ",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
@@ -222,11 +224,13 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "อนุญาต",
   "prompt.action.sandbox.unrestricted": "ไม่จำกัด",
   "prompt.action.sandbox.description.enabled": "เขียนได้เฉพาะในโฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.description.escalation":
+    "กฎสิทธิ์และการอนุมัติอัตโนมัติมีผลภายในแซนด์บ็อกซ์ คำสั่งที่ต้องออกจากแซนด์บ็อกซ์จะถามเสมอ",
   "prompt.action.sandbox.description.disabled": "คลิกเพื่อจำกัดการเขียนในระบบไฟล์และการเข้าถึงเครือข่าย",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
-  "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
+  "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียง",
   "speechToText.tooltip.shortcut":
     "แตะหรือกด Cmd/Ctrl+K เพื่อเริ่มหรือหยุดบันทึก จากนั้นกดค้างไว้ขณะพูด แล้วปล่อยเพื่อถอดเสียงและส่ง",
   "speechToText.tooltip.starting": "กำลังเริ่มไมโครโฟน... โปรดรอก่อนพูด",
@@ -266,8 +270,13 @@ export const dict = {
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
-  "notification.permission.titleSandboxEscalation": "อนุญาตการดำเนินการ Git นอกแซนด์บ็อกซ์หรือไม่?",
+  "notification.permission.titleSandboxEscalation": "เรียกใช้ภายนอกแซนด์บ็อกซ์หรือไม่?",
+  "notification.permission.descriptionSandboxEscalation":
+    "การดำเนินการนี้จะรันคำสั่งทั้งหมดโดยไม่มีการจำกัดระบบไฟล์และเครือข่าย สำหรับคำสั่งนี้เท่านั้น Git ต้องเขียนลงใน .git ซึ่งเป็นแบบอ่านอย่างเดียวในแซนด์บ็อกซ์ และอยู่นอก worktree สำหรับ worktree ที่เชื่อมโยง กฎอนุญาตของ Bash และการอนุมัติอัตโนมัติจะไม่อนุมัติพร้อมท์นี้โดยอัตโนมัติ",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
+  "ui.permission.reject": "ปฏิเสธ",
+  "ui.permission.feedbackPlaceholder": "บอก Kilo ว่าควรทำต่างออกไปอย่างไร",
+  "ui.permission.feedbackHint": "Enter เพื่อปฏิเสธ, Esc เพื่อยกเลิก",
   "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
   "ui.permission.doomLoop.rule": "เรียกใช้ {{tool}} ต่อไป",
   "ui.permission.rule.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",
@@ -317,7 +326,6 @@ export const dict = {
   "sidebar.topBar.newTask": "งานใหม่",
   "sidebar.topBar.history": "ประวัติ",
   "sidebar.topBar.agentManager": "ตัวจัดการเอเจนต์",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "มาร์เก็ตเพลส",
   "sidebar.topBar.profile": "โปรไฟล์",
   "sidebar.topBar.settings": "การตั้งค่า",
@@ -457,6 +465,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "ผู้ให้บริการที่กำหนดเอง",
   "settings.providers.connected.environmentDescription": "เชื่อมต่อจากตัวแปรสภาพแวดล้อมของคุณ",
   "settings.providers.action.signInChatGPT": "ลงชื่อเข้าใช้ด้วย ChatGPT",
+  "settings.providers.action.changeApiKey": "เปลี่ยนคีย์ API",
   "settings.providers.custom.description": "เพิ่มผู้ให้บริการแบบกำหนดเองด้วย URL พื้นฐาน",
   "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
   "settings.providers.subagentModel.description":
@@ -547,37 +556,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "ไม่สามารถอัปเดตสิทธิ์",
 
-  "settings.permissions.tool.read.title": "อ่าน",
   "settings.permissions.tool.read.description": "อ่านไฟล์ (ตรงกับเส้นทางไฟล์)",
-  "settings.permissions.tool.edit.title": "แก้ไข",
   "settings.permissions.tool.edit.description": "แก้ไขไฟล์ รวมถึงการแก้ไข เขียน แพตช์ และแก้ไขหลายรายการ",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "จับคู่ไฟล์โดยใช้รูปแบบ glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "ค้นหาเนื้อหาไฟล์โดยใช้นิพจน์ทั่วไป",
-  "settings.permissions.tool.list.title": "รายการ",
   "settings.permissions.tool.list.description": "แสดงรายการไฟล์ภายในไดเรกทอรี",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "เรียกใช้คำสั่งเชลล์",
-  "settings.permissions.tool.task.title": "งาน",
   "settings.permissions.tool.task.description": "เปิดเอเจนต์ย่อย",
-  "settings.permissions.tool.skill.title": "ทักษะ",
   "settings.permissions.tool.skill.description": "โหลดทักษะตามชื่อ",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "เรียกใช้การสืบค้นเซิร์ฟเวอร์ภาษา",
-  "settings.permissions.tool.todoread.title": "อ่านรายการงาน",
   "settings.permissions.tool.todoread.description": "อ่านรายการงาน",
-  "settings.permissions.tool.todowrite.title": "เขียนรายการงาน",
   "settings.permissions.tool.todowrite.description": "อัปเดตรายการงาน",
-  "settings.permissions.tool.webfetch.title": "ดึงข้อมูลจากเว็บ",
   "settings.permissions.tool.webfetch.description": "ดึงเนื้อหาจาก URL",
-  "settings.permissions.tool.websearch.title": "ค้นหาเว็บ",
   "settings.permissions.tool.websearch.description": "ค้นหาบนเว็บ",
-  "settings.permissions.tool.codesearch.title": "ค้นหาโค้ด",
   "settings.permissions.tool.codesearch.description": "ค้นหาโค้ดบนเว็บ",
-  "settings.permissions.tool.external_directory.title": "ไดเรกทอรีภายนอก",
   "settings.permissions.tool.external_directory.description": "เข้าถึงไฟล์นอกไดเรกทอรีโปรเจกต์",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "ตรวจจับการเรียกเครื่องมือซ้ำด้วยข้อมูลนำเข้าเหมือนกัน",
 
   "session.delete.title": "ลบเซสชัน",
@@ -669,6 +662,7 @@ export const dict = {
   "profile.usage.source.direct": "โดยตรง",
   "profile.usage.state.stale": "กำลังแสดงข้อมูลการใช้งานที่อัปเดตล่าสุด",
   "profile.usage.state.unavailable": "ไม่มีข้อมูลการใช้งาน",
+  "profile.usage.state.empty": "ไม่มีการรายงานขีดจำกัดการใช้งาน",
   "profile.usage.plan.pastDue": "แผน: ค้างชำระ",
   "profile.usage.plan.canceling": "แผน: ยกเลิกเมื่อสิ้นสุดรอบ",
   "profile.usage.plan.unknown": "แผน: ไม่ทราบสถานะ",
@@ -828,7 +822,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "ทักษะ",
 
   "settings.browser.description":
-    "เมื่อเปิดใช้งาน ตัวแทน AI สามารถโต้ตอบกับหน้าเว็บได้ — นำทาง คลิก พิมพ์ และจับภาพหน้าจอ หน้าต่าง Chrome จะเปิดขึ้นเพื่อให้คุณดูการทำงานของตัวแทน",
+    "กำหนดค่าการทำงานอัตโนมัติของเบราว์เซอร์ในตัวที่ขับเคลื่อนโดย Playwright Kilo สามารถนำทาง โต้ตอบ และจับภาพหน้าจอของหน้าเว็บในเซสชันของคุณได้",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
   "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
@@ -881,15 +875,28 @@ export const dict = {
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
   "settings.experimental.imageGeneration.title": "การสร้างภาพ",
   "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "แชร์กระดานระหว่างเซสชันหลักกับเอเจนต์ย่อยที่รับมอบหมายงานจากเซสชันนั้น รวมถึงเอเจนต์ย่อยที่ซ้อนกัน ใช้สำหรับการลองแก้ปัญหาแบบขนานหรืองานที่เสริมกัน ไม่ใช่สำหรับทุกงาน",
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
   "settings.experimental.imageGenerationModel.description": "โมเดลการสร้างภาพ",
   "settings.experimental.imageGenerationModel.placeholder": "ค่าเริ่มต้น (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "รหัสโมเดลที่ส่งไปยังปลายทางการถอดเสียงของคุณเอง เช่น whisper-1",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "URL พื้นฐานสำหรับแปลงเสียงเป็นข้อความ",
+  "settings.models.speechToTextBaseUrl.description":
+    "ใช้ API การถอดเสียงที่เข้ากันได้กับ OpenAI แทน Kilo Gateway โมเดลจะอ่านจาก /models และเสียงจะถูกส่งไปยัง /audio/transcriptions เว้นว่างไว้เพื่อใช้ Kilo Gateway",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "คีย์ API สำหรับแปลงเสียงเป็นข้อความ",
+  "settings.models.speechToTextApiKey.description":
+    "โทเค็น Bearer ที่ส่งไปยัง URL พื้นฐานการถอดเสียงของคุณเอง จัดเก็บอยู่ในไฟล์ตั้งค่า Kilo ของคุณ",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text ปัจจุบัน Speech to Text รองรับเฉพาะกับ Kilo Gateway เท่านั้น",
+    "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text หรือกำหนด URL พื้นฐานสำหรับการถอดเสียงเองด้านล่าง",
+  "settings.models.speechToText.remoteDescription":
+    "การป้อนด้วยเสียงไม่พร้อมใช้งานในหน้าต่างระยะไกล เปิด Kilo ในหน้าต่างภายในเครื่องเพื่อใช้ไมโครโฟน",
   "settings.models.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
   "settings.models.speechToTextModel.description": "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
   "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
@@ -1048,6 +1055,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "โมเดล",
   "settings.agentBehaviour.workflows.variant": "รูปแบบ",
   "settings.agentBehaviour.workflows.modelDescription": "การแทนที่โมเดลส่วนกลาง",
+  "settings.experimental.codeMode.title": "การเรียกใช้เครื่องมือแบบโปรแกรม",
+  "settings.experimental.codeMode.description":
+    "กำหนดเส้นทางการเรียกใช้เครื่องมือ MCP ผ่านรันไทม์ JavaScript ที่จำกัดขอบเขตพร้อมการค้นหาเครื่องมือตามต้องการ แทนการเปิดเผยเครื่องมือ MCP แต่ละรายการโดยตรง ช่วยประหยัดบริบทเมื่อมีเครื่องมือ MCP เชื่อมต่ออยู่เป็นจำนวนมาก",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
@@ -1094,6 +1104,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "โมเดลที่ใช้สำหรับการบีบอัดอัตโนมัติและด้วยตนเอง เว้นว่างไว้เพื่อใช้โมเดลแชท ค่าใช้จ่าย ความเร็ว และคุณภาพของสรุปขึ้นอยู่กับโมเดล",
   "settings.context.compactionModel.useChatModel": "ใช้โมเดลแชท",
+  "settings.context.compactionModel.hint": "เลือกโมเดลที่ใช้สำหรับการบีบอัดได้ที่การตั้งค่าโมเดล",
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
@@ -1137,6 +1148,12 @@ export const dict = {
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
   "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
+  "settings.display.reasoningDisplay.title": "บล็อกเหตุผล",
+  "settings.display.reasoningDisplay.description":
+    "เลือกวิธีที่บล็อกเหตุผลเริ่มต้น ขยายจะแสดงข้อความเต็ม ตัวอย่างจะจำกัดให้เป็นตัวอย่างสั้นที่เลื่อนได้ และหัวข้อจะแสดงเฉพาะชื่อเรื่องและตัวบ่งชี้การสตรีมจนกว่าคุณจะเปิดมัน",
+  "settings.display.reasoningDisplay.expanded": "ขยาย",
+  "settings.display.reasoningDisplay.preview": "ตัวอย่าง",
+  "settings.display.reasoningDisplay.headline": "หัวข้อ",
   "settings.display.shiftTabCycle.title": "สลับระดับความพยายามในการให้เหตุผลด้วย Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "กด Shift+Tab ในช่องป้อนพรอมต์เพื่อสลับไปยังระดับความพยายามในการให้เหตุผลถัดไป ปิดใช้งานเพื่อคง Shift+Tab ไว้สำหรับการนำทางโฟกัสด้วยแป้นพิมพ์",
@@ -1274,6 +1291,18 @@ export const dict = {
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
   "diffViewer.group.session": "เซสชัน",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "บันทึกในเครื่อง",
+  "diffViewer.comment.sendToAgent": "ส่งไปยังเอเจนต์",
+  "diffViewer.comment.postToGithub": "โพสต์ไปยัง GitHub",
+  "diffViewer.comment.loadFailed": "ไม่สามารถโหลดการเปลี่ยนแปลงของคำขอรวมโค้ดได้",
+  "diffViewer.comment.unavailable": "บรรทัดนี้ไม่มีอยู่ในสแนปช็อตปัจจุบันของคำขอรวมโค้ด",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "เปิด Pull Request",
+  "diffViewer.comment.localChanges": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.comment.prChanges": "การเปลี่ยนแปลงของ PR",
+  "diffViewer.comment.sendToKilo": "ส่งไปยัง Kilo",
+  "diffViewer.comment.sendToGithub": "ส่งไปยัง GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "เลือกปลายทาง",
   "diffViewer.notice.snapshotsDisabled":
     "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
 
@@ -1295,5 +1324,11 @@ export const dict = {
   "chat.search.close": "ปิดการค้นหา",
   "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "chat.search.noResults": "ไม่มีผลลัพธ์",
+  "settings.experimental.browserAutomation.title": "เบราว์เซอร์ในตัว",
+  "settings.experimental.browserAutomation.description":
+    "แสดงตัวอย่างแอปพลิเคชันในเครื่องใน Agent Manager และเปิดเผยเครื่องมือ browser_open ให้กับเซสชัน Agent Manager",
+  "settings.experimental.browserAutomation.systemChrome.title": "ใช้ Chrome ของระบบ",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
 }

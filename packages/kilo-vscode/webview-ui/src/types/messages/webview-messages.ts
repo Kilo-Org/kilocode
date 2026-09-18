@@ -97,6 +97,7 @@ export interface PermissionResponseRequest {
   response: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  feedback?: string
 }
 
 export interface CreateSessionRequest {
@@ -320,10 +321,6 @@ export interface OpenAgentManagerRequest {
 
 export interface OpenAdvancedWorktreeRequest {
   type: "openAdvancedWorktree"
-}
-
-export interface OpenKiloClawRequest {
-  type: "openKiloClaw"
 }
 
 export interface RequestAgentsMessage {
@@ -696,6 +693,29 @@ export interface RemoveStaleWorktreeRequest {
   type: "agentManager.removeStaleWorktree"
   projectId?: string
   worktreeId: string
+  /** Move the worktree's sessions to Local instead of dropping them with the entry. */
+  keepSessions?: boolean
+}
+
+// Re-create a worktree folder that was deleted outside Agent Manager, from its branch
+export interface RestoreWorktreeRequest {
+  type: "agentManager.restoreWorktree"
+  projectId?: string
+  worktreeId: string
+}
+
+// Delete folders under .kilo/worktrees that no worktree claims
+export interface CleanOrphanDirectoriesRequest {
+  type: "agentManager.cleanOrphanDirectories"
+  projectId?: string
+  paths: string[]
+}
+
+// Reveal an orphaned directory in the OS file manager
+export interface RevealPathRequest {
+  type: "agentManager.revealPath"
+  projectId?: string
+  path: string
 }
 
 // Promote a session: create a worktree and move the session into it
@@ -1467,12 +1487,13 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Per-mode model selection persistence (webview → extension)
+// Explicit preferred and per-mode model selection persistence (webview → extension)
 export interface PersistModelSelectionRequest {
   type: "persistModelSelection"
   agent: string
   providerID: string
   modelID: string
+  variant?: string
 }
 
 export interface RequestModelSelectionsMessage {
@@ -1604,7 +1625,6 @@ export type WebviewMessage =
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
-  | OpenKiloClawRequest
   | OpenFileRequest
   | ValidateFilesRequest
   | CancelLoginRequest
@@ -1680,6 +1700,9 @@ export type WebviewMessage =
   | CreateWorktreeRequest
   | DeleteWorktreeRequest
   | RemoveStaleWorktreeRequest
+  | RestoreWorktreeRequest
+  | CleanOrphanDirectoriesRequest
+  | RevealPathRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
   | OpenSessionLocallyRequest

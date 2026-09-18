@@ -1912,82 +1912,110 @@ const storyLocal = (branch: string, additions: number, deletions: number, ahead 
   behind,
 })
 
+const renderProjectSidebar = (width: number) => (
+  <StoryProviders noPadding>
+    <div class="am-sidebar" style={{ width: `${width}px`, height: "720px", "box-sizing": "border-box" }}>
+      <ProjectList
+        mode={createModeRouter()}
+        projects={[projectA, projectB]}
+        states={{
+          [projectA.id]: projectState(
+            projectA.id,
+            [
+              wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
+              wt("wt-a2", "fix/session-routing"),
+              wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
+              wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
+              wt("wt-a5", "feat/sticky-project-row", "Sticky project row"),
+              wt("wt-a6", "fix/overflow-menu", "Project overflow menu"),
+              wt("wt-a7", "chore/storybook-scroll"),
+              wt("wt-a8", "docs/agent-manager-projects"),
+              wt("wt-a9", "refactor/project-row-actions"),
+              wt("wt-a10", "test/project-row-sticky"),
+              wt("wt-a11", "feat/project-menu-i18n"),
+              wt("wt-a12", "fix/collapsed-project-plus"),
+            ],
+            [
+              { id: "ses-a1", worktreeId: null },
+              { id: "ses-a2", worktreeId: "wt-a1" },
+            ],
+            [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
+            "main",
+            [
+              "wt-a2",
+              "sec-a1",
+              "wt-a1",
+              "wt-a3",
+              "wt-a4",
+              "wt-a5",
+              "wt-a6",
+              "wt-a7",
+              "wt-a8",
+              "wt-a9",
+              "wt-a10",
+              "wt-a11",
+              "wt-a12",
+            ],
+          ),
+          [projectB.id]: projectState(
+            projectB.id,
+            [wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }), wt("wt-b2", "fix/api")],
+            [{ id: "ses-b1", worktreeId: null }],
+            [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
+            "master",
+            ["wt-b2", "sec-b1", "wt-b1"],
+          ),
+        }}
+        stats={{
+          [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
+          [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
+        }}
+        local={{
+          [projectA.id]: storyLocal("main", 124, 33, 1),
+          [projectB.id]: storyLocal("master", 0, 0, 0, 2),
+        }}
+        prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+        busy={() => false}
+        blocked={() => false}
+        sessions={{
+          [projectA.id]: [
+            projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
+            projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
+          ],
+          [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
+        }}
+        selectedProject={projectA.id}
+        selection="local"
+        activityFor={() => "idle"}
+        sessionActivity={() => "idle"}
+        bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
+        t={t}
+        onSearchRef={() => {}}
+        onShortcuts={() => {}}
+        onHistory={() => {}}
+      />
+    </div>
+  </StoryProviders>
+)
+
 export const MultiProjectSidebar: Story = {
   name: "Project List — two expanded projects with restored controls",
-  render: () => {
-    return (
-      <StoryProviders noPadding>
-        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
-          <ProjectList
-            mode={createModeRouter()}
-            projects={[projectA, projectB]}
-            states={{
-              [projectA.id]: projectState(
-                projectA.id,
-                [
-                  wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
-                  wt("wt-a2", "fix/session-routing"),
-                  wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
-                  wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
-                ],
-                [
-                  { id: "ses-a1", worktreeId: null },
-                  { id: "ses-a2", worktreeId: "wt-a1" },
-                ],
-                [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
-                "main",
-                ["wt-a2", "sec-a1", "wt-a1", "wt-a3", "wt-a4"],
-              ),
-              [projectB.id]: projectState(
-                projectB.id,
-                [
-                  wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }),
-                  wt("wt-b2", "fix/api"),
-                ],
-                [{ id: "ses-b1", worktreeId: null }],
-                [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
-                "master",
-                ["wt-b2", "sec-b1", "wt-b1"],
-              ),
-            }}
-            stats={{
-              [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
-              [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
-            }}
-            local={{
-              [projectA.id]: storyLocal("main", 124, 33, 1),
-              [projectB.id]: storyLocal("master", 0, 0, 0, 2),
-            }}
-            prs={{ [projectA.id]: {}, [projectB.id]: {} }}
-            busy={() => false}
-            blocked={() => false}
-            sessions={{
-              [projectA.id]: [
-                projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
-                projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
-              ],
-              [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
-            }}
-            selectedProject={projectA.id}
-            selection="local"
-            activityFor={() => "idle"}
-            sessionActivity={() => "idle"}
-            bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
-            t={t}
-            onSearchRef={() => {}}
-            onShortcuts={() => {}}
-            onHistory={() => {}}
-          />
-        </div>
-      </StoryProviders>
-    )
-  },
+  render: () => renderProjectSidebar(280),
 }
 
 export const MultiProjectSidebar200: Story = {
-  ...MultiProjectSidebar,
   name: "Project List - minimum sidebar width",
   parameters: { layout: "fullscreen" },
+  render: () => renderProjectSidebar(200),
+}
+
+export const MultiProjectSidebarScrolled: Story = {
+  ...MultiProjectSidebar,
+  name: "Project List — scrolled with pinned project row",
+  play: (context: { canvasElement: HTMLElement }) => {
+    const list = context.canvasElement.querySelector<HTMLElement>(".am-projects-list")
+    if (list) list.scrollTop = 360
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -2352,7 +2380,7 @@ function RemoteReviewStory(props: { full?: boolean }) {
   const [style, setStyle] = createSignal<"unified" | "split">("unified")
   const [comments, setComments] = createSignal<ReviewComment[]>([
     {
-      id: "local-review",
+      id: "review-note",
       file: tail.file,
       side: "additions",
       line: 1,

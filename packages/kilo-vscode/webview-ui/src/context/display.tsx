@@ -11,8 +11,10 @@ import {
 } from "solid-js"
 import { useConfig } from "./config"
 import { useVSCode } from "./vscode"
-import type { ExtensionMessage, ReasoningDisplay } from "../types/messages"
+import type { ExtensionMessage } from "../types/messages"
 import { applyFontSize, clampFontSize, readFontSize } from "../font-size"
+import { resolveReasoningDisplay } from "../utils/reasoning-display"
+import type { ReasoningDisplay } from "../types/messages"
 import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/message-part"
 
 interface DisplayContextValue {
@@ -37,11 +39,7 @@ export const DisplayContext = createContext<DisplayContextValue>()
 export const DisplayProvider: ParentComponent = (props) => {
   const { config, updateConfig } = useConfig()
   const vscode = useVSCode()
-  const reasoningDisplay = createMemo<ReasoningDisplay>(
-    () =>
-      config().reasoning_display ??
-      (config().auto_collapse_reasoning === true ? "shortened_persist" : "full_persist"),
-  )
+  const reasoningDisplay = createMemo(() => resolveReasoningDisplay(config()))
   const inlineCodeBackground = createMemo(() => config().inline_code_background === true)
   const inlineCodeColor = createMemo(() => config().inline_code_color)
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
@@ -88,27 +86,6 @@ export const DisplayProvider: ParentComponent = (props) => {
       root.style.removeProperty(property)
     }
     onCleanup(() => root.style.removeProperty(property))
-  })
-
-  // Pierre renders diff rows inside a shadow root. Publish inherited colors here;
-  // kilo-ui's renderer-owned unsafeCSS applies them inside that shadow root.
-  createEffect(() => {
-    const root = document.documentElement
-    const addition = "--kilo-diff-line-add-background"
-    const deletion = "--kilo-diff-line-delete-background"
-
-    if (config().diff_line_backgrounds === true) {
-      root.style.setProperty(addition, "var(--vscode-diffEditor-insertedLineBackground, rgba(46, 160, 67, 0.18))")
-      root.style.setProperty(deletion, "var(--vscode-diffEditor-removedLineBackground, rgba(248, 81, 73, 0.18))")
-    } else {
-      root.style.removeProperty(addition)
-      root.style.removeProperty(deletion)
-    }
-
-    onCleanup(() => {
-      root.style.removeProperty(addition)
-      root.style.removeProperty(deletion)
-    })
   })
 
   onCleanup(unsubscribe)

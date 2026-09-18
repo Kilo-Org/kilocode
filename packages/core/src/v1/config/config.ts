@@ -108,25 +108,13 @@ export const Info = Schema.Struct({
   }),
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
     description:
-      "@deprecated Use 'reasoning_display' instead. Still recognized for backward compatibility with existing configs: true maps to 'shortened_persist' (the behavior this boolean actually produced), false or unset to 'full_persist'.",
+      "@deprecated Use 'reasoning_display' field instead. Automatically collapse reasoning blocks after the agent finishes writing them",
   }),
-  reasoning_display: Schema.optional(
-    Schema.Literals(["collapsed", "shortened", "shortened_persist", "full", "full_persist"]),
-  ).annotate({
-    description:
-      "How reasoning blocks display in the VS Code chat UI: 'collapsed' (hidden until clicked to expand live), 'shortened' (scrolling preview while streaming, then collapse when finished), 'shortened_persist' (scrolling preview while streaming, stays open when finished), 'full' (full text while streaming, then collapse when finished), 'full_persist' (full text, stays open). Defaults to 'full_persist'; when set, overrides the deprecated auto_collapse_reasoning boolean.",
+  reasoning_display: Schema.optional(Schema.Literals(["expanded", "preview", "headline"])).annotate({
+    description: "Controls how reasoning blocks are displayed in the VS Code chat UI",
   }),
-  inline_code_background: Schema.optional(Schema.Boolean).annotate({
-    description:
-      "Add a theme-aware background and spacing to inline code spans in the VS Code chat UI. When unset/false, inline code keeps the current text-only styling.",
-  }),
-  inline_code_color: Schema.optional(Schema.String).annotate({
-    description:
-      "Hex color (e.g. '#9dbefe') for inline code spans in the VS Code chat UI. When unset, inline code matches the editor theme.",
-  }),
-  diff_line_backgrounds: Schema.optional(Schema.Boolean).annotate({
-    description:
-      "Fill added/removed lines in VS Code chat diffs with a background color, matching the editor diff view. When unset/false, only the line numbers are tinted.",
+  shared_agent_board: Schema.optional(Schema.Boolean).annotate({
+    description: "Share a board between a main session and its task subagents, including nested subagents",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
   console: Schema.optional(
@@ -151,6 +139,14 @@ export const Info = Schema.Struct({
   mcp_tool_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
+  inline_code_background: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Add a theme-aware background and spacing to inline code spans in the VS Code chat UI. When unset/false, inline code keeps the current text-only styling.",
+  }),
+  inline_code_color: Schema.optional(Schema.String).annotate({
+    description:
+      "Hex color (e.g. '#9dbefe') for inline code spans in the VS Code chat UI. When unset, inline code matches the editor theme.",
   }),
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
@@ -326,14 +322,22 @@ export const Info = Schema.Struct({
       task_model_selection: Schema.optional(Schema.Boolean).annotate({
         description: "Allow task subagents to select a model, provider, and reasoning effort",
       }),
+      code_mode: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Route MCP tool calls through a confined JavaScript runtime with on-demand tool discovery instead of exposing every MCP tool directly",
+      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
+      speech_to_text_base_url: Schema.optional(Schema.String).annotate({
+        description:
+          "Base URL of an OpenAI-compatible transcription API to use instead of the Kilo Gateway, for example https://api.openai.com/v1",
+      }),
+      speech_to_text_api_key: Schema.optional(Schema.String).annotate({
+        description: "API key sent as a bearer token to the custom speech-to-text base URL",
+      }),
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({
         description: "Enable telemetry. Set to false to opt-out.",
-      }),
-      shared_agent_board: Schema.optional(Schema.Boolean).annotate({
-        description: "Share discoveries between the main agent and subagents within one session",
       }),
       // kilocode_change end
       primary_tools: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
