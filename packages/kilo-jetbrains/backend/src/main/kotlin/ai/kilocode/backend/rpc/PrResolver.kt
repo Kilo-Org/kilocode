@@ -199,12 +199,14 @@ internal class PrResolver(
      * have no pull request without running the ladder at all. [search] is then handed the same commit
      * rather than reading it again.
      *
-     * Every strategy still runs for every checkout. Skipping the selector-less form for the working tree
-     * whose branch *is* [base] looks free — that row reliably has no pull request — but [base] is simply
+     * [search] is the one strategy that does not run for every checkout: a pull request headed by [base]
+     * is not worth a search query, so the row whose branch is [base] skips it. Both `view` forms do run
+     * everywhere, including there. Skipping the selector-less one for that row looks free too — it
+     * reliably has no pull request, so it always falls through the whole ladder — but [base] is simply
      * whatever branch the main working tree happens to be on, not the repository's default branch. After
      * a `gh pr checkout` in the primary checkout it is the PR branch, and the selector-less form is the
      * only strategy that can resolve a fork PR or a `refs/pull/N/head` head. [absent] already removes the
-     * repeated cost this would have saved, without being able to hide a badge.
+     * repeated cost skipping it would have saved, without being able to hide a badge.
      */
     private fun find(dir: Path, path: String, branch: String, base: String?, maxAge: Long?): PrLookup {
         val head = git(dir, listOf("rev-parse", "HEAD")).stdout.trim()
