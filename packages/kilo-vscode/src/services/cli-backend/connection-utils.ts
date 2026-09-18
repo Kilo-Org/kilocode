@@ -61,29 +61,31 @@ function resolveSyncSessionId(
   return event.data.sessionID
 }
 
+const sessionScopedTransientEvents = new Set<string>([
+  "session.status",
+  "session.turn.open",
+  "session.turn.close",
+  "session.idle",
+  "session.error",
+  "session.wakeup",
+  "todo.updated",
+  "message.part.delta",
+  "permission.asked",
+  "permission.replied",
+  "question.asked",
+  "question.replied",
+  "question.rejected",
+  "suggestion.shown",
+  "suggestion.accepted",
+  "suggestion.dismissed",
+  "session.network.asked",
+  "session.network.replied",
+  "session.network.rejected",
+  "session.network.restored",
+])
+
 function resolveTransientSessionId(event: TransientPayload): string | undefined {
-  switch (event.type) {
-    case "session.status":
-    case "session.turn.open":
-    case "session.turn.close":
-    case "session.idle":
-    case "session.error":
-    case "todo.updated":
-    case "message.part.delta":
-    case "permission.asked":
-    case "permission.replied":
-    case "question.asked":
-    case "question.replied":
-    case "question.rejected":
-    case "suggestion.shown":
-    case "suggestion.accepted":
-    case "suggestion.dismissed":
-    case "session.network.asked":
-    case "session.network.replied":
-    case "session.network.rejected":
-    case "session.network.restored":
-      return event.properties.sessionID
-    default:
-      return undefined
-  }
+  if (!sessionScopedTransientEvents.has(event.type)) return undefined
+  const properties = (event as { properties?: { sessionID?: string } }).properties
+  return properties?.sessionID
 }

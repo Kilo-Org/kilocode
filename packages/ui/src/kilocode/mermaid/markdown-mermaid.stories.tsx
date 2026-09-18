@@ -17,10 +17,6 @@ export default {
   id: "kilocode-markdown-mermaid",
 }
 
-export const Mermaid = {
-  render: () => <Markdown text={text} />,
-}
-
 export const MermaidError = {
   render: () => (
     <Markdown

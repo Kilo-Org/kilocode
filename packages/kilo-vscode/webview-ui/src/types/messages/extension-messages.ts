@@ -181,6 +181,12 @@ export interface SessionStatusMessage {
   next?: number
 }
 
+export interface SessionWakeupMessage {
+  type: "sessionWakeup"
+  sessionID: string
+  pending: number
+}
+
 export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
@@ -421,6 +427,8 @@ export interface AppendReviewCommentsToTerminalMessage {
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ProfileDataMessage {
@@ -1293,6 +1301,9 @@ export interface AgentManagerSendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -1614,6 +1625,7 @@ export type ExtensionMessage =
   | PartsUpdatedMessage
   | PartRemovedMessage
   | SessionStatusMessage
+  | SessionWakeupMessage
   | SessionTurnClosedMessage
   | SessionErrorMessage
   | PermissionRequestMessage
