@@ -2425,7 +2425,10 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       const templateParts = yield* resolvePromptParts(template)
-      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry
+      // kilocode_change start - mark review commands for completion telemetry and label the expanded template for clients
+      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command)
+      KiloSessionProcessor.markCommand(templateParts, input.command, input.arguments)
+      // kilocode_change end
       const inputFiles = new Set(
         input.parts?.filter((part) => new URL(part.url).protocol === "file:").map((part) => fileURLToPath(part.url)),
       )

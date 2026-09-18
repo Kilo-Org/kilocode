@@ -8,6 +8,7 @@ import {
   type BrowserReference,
 } from "../../../src/shared/browser-feedback"
 import type { ReviewCommentEntry, ReviewMessageData } from "../../../src/shared/review-comments"
+import { partInjected } from "../../../src/shared/injected-prompt"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -99,6 +100,8 @@ export function revertPromptState(parts: readonly Part[]): RevertPromptState {
       .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
       .map((p) => {
         if (p.type !== "text") return ""
+        const injected = partInjected(p.metadata)
+        if (injected) return injected.title.startsWith("/") ? injected.title : ""
         return partFeedback(p.metadata, p.text)?.body ?? p.text
       })
       .join(""),
