@@ -6,7 +6,7 @@
  */
 
 import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
-import { respondToPermission } from "@kilocode/sdk/permission"
+import { permissionSettled, respondToPermission } from "@kilocode/sdk/permission"
 import { isNotFoundError } from "./not-found"
 
 export type RecoverablePermission = PermissionRequest
@@ -91,7 +91,7 @@ export async function handlePermissionResponse(
   const action = async (): Promise<PermissionResponseResult> => {
     if (!dir) return { kind: "error" }
 
-    const { error } = await respondToPermission(client, {
+    const { error, saved } = await respondToPermission(client, {
       requestID: permissionId,
       directory: dir,
       reply: response,
@@ -101,6 +101,14 @@ export async function handlePermissionResponse(
     })
     if (error) {
       if (isNotFoundError(error)) {
+        ctx.clearPermissionDirectory(permissionId)
+        void fetchAndSendPendingPermissions(ctx)
+        return { kind: "stale" }
+      }
+      // An aborted rule save may still complete on the server. If the request
+      // is no longer pending it was applied, so report stale instead of
+      // letting the user retry with a decision that could conflict with it.
+      if (saved && (await permissionSettled(client, dir, permissionId))) {
         ctx.clearPermissionDirectory(permissionId)
         void fetchAndSendPendingPermissions(ctx)
         return { kind: "stale" }

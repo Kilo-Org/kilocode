@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createKiloClient } from "../../src/v2/client"
-import { respondToPermission } from "../../src/kilocode/permission"
+import { permissionSettled, respondToPermission } from "../../src/kilocode/permission"
 
 const route = { requestID: "p1", directory: "/worktree" }
 
@@ -82,6 +82,71 @@ describe("respondToPermission", () => {
         deniedAlways: [],
       })
       expect(result.error).toBeDefined()
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  it("reports that rules were attempted so the caller can reconcile", async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch: () => Response.json({ name: "NotFoundError" }, { status: 404 }),
+    })
+    try {
+      const result = await respondToPermission(createKiloClient({ baseUrl: server.url.href }), {
+        ...route,
+        reply: "always",
+        approvedAlways: ["bun *"],
+        deniedAlways: [],
+      })
+      expect(result.saved).toBe(true)
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  it("shares one deadline across the save and the reply", async () => {
+    const gate = Promise.withResolvers<Response>()
+    const server = Bun.serve({ port: 0, fetch: () => gate.promise })
+    try {
+      const started = Date.now()
+      const result = await respondToPermission(
+        createKiloClient({ baseUrl: server.url.href }),
+        { ...route, reply: "once", approvedAlways: ["bun *"], deniedAlways: [] },
+        300,
+      )
+      expect(result.error).toBeDefined()
+      expect(Date.now() - started).toBeLessThan(500)
+    } finally {
+      gate.resolve(Response.json(true))
+      await server.stop(true)
+    }
+  })
+})
+
+describe("permissionSettled", () => {
+  it("reports settled when the request is no longer pending", async () => {
+    const server = Bun.serve({ port: 0, fetch: () => Response.json([]) })
+    try {
+      expect(await permissionSettled(createKiloClient({ baseUrl: server.url.href }), route.directory, "p1")).toBe(true)
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  it("reports pending when the request is still listed", async () => {
+    const server = Bun.serve({ port: 0, fetch: () => Response.json([{ id: "p1" }]) })
+    try {
+      expect(await permissionSettled(createKiloClient({ baseUrl: server.url.href }), route.directory, "p1")).toBe(false)
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  it("reports unknown when the list fails", async () => {
+    const server = Bun.serve({ port: 0, fetch: () => Response.json({ message: "boom" }, { status: 500 }) })
+    try {
+      expect(await permissionSettled(createKiloClient({ baseUrl: server.url.href }), route.directory, "p1")).toBe(false)
     } finally {
       await server.stop(true)
     }
