@@ -32,6 +32,7 @@ import {
   type BranchListItem,
 } from "./git-import"
 import { pathKey } from "./project/paths"
+import { MISSING_GIT } from "./git-errors"
 import { Semaphore } from "./semaphore"
 
 const TEMP_PREFIX = ".kilo-delete-"
@@ -391,9 +392,7 @@ export class WorktreeManager {
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
         // The probe runs without a cwd, so ENOENT here can only mean the binary is missing.
         this.probeFailed = true
-        throw new Error(
-          "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
-        )
+        throw new Error(MISSING_GIT)
       }
       throw error
     }

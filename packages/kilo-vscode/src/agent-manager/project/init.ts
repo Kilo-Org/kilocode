@@ -68,6 +68,7 @@ export function unregisterProjectRoutes(ctx: ProjectContext, sessions: ProjectSe
 export async function initContextState(
   ctx: ProjectContext,
   log: (...args: unknown[]) => void,
+  opts?: { warm?: boolean },
 ): Promise<ProjectInitResult> {
   return ctx.ensureReady(async (generation) => {
     const manager = ctx.worktreeManager()
@@ -101,11 +102,13 @@ export async function initContextState(
     const health = await reconcileProject(ctx, log)
     if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
     if (health && health.dropped.length > 0) await state.flush()
-    // Adopt or clean leftover pooled slots, then pre-warm one off the click path.
-    void manager
-      .reconcilePool()
-      .then(() => manager.warmPool())
-      .catch((err) => log("Failed to reconcile worktree pool:", err))
+    // Attaching a project must not create a worktree as a side effect.
+    if (opts?.warm !== false) {
+      void manager
+        .reconcilePool()
+        .then(() => manager.warmPool())
+        .catch((err) => log("Failed to reconcile worktree pool:", err))
+    }
     return { ok: true, refsFixed: loaded.refsFixed, health }
   })
 }

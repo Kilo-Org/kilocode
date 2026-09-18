@@ -946,6 +946,13 @@ export interface AgentManagerProjectsMessage {
   projects: AgentProjectSnapshot[]
 }
 
+// Default (or picked) parent folder for the new-project dialog
+export interface AgentManagerProjectParentMessage {
+  type: "agentManager.projectParent"
+  /** Omitted when the user cancelled the native folder picker. */
+  parent?: string
+}
+
 export interface AgentManagerSelectionActivatedMessage {
   type: "agentManager.selectionActivated"
   target: AgentManagerSidebarTarget
@@ -1702,6 +1709,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
+  | AgentManagerProjectParentMessage
   | AgentManagerSelectionActivatedMessage
   | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage
