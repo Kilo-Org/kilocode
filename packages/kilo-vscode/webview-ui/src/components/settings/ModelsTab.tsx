@@ -24,7 +24,7 @@ import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autoco
 import { preserveVariant } from "../../context/session-variant-store"
 
 const ModelsTab: Component = () => {
-  const { config, settings, updateConfig, updateSetting } = useConfig()
+  const { config, settings, updateConfig, updateSetting, features } = useConfig()
   const language = useLanguage()
   const provider = useProvider()
   const session = useSession()
@@ -246,11 +246,13 @@ const ModelsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.models.speechToTextModel.title")}
           description={
-            customSpeech()
-              ? language.t("settings.models.speechToTextModel.customDescription")
-              : kiloReady()
-                ? language.t("settings.models.speechToTextModel.description")
-                : language.t("settings.models.speechToText.disabledDescription")
+            !features().speechToText
+              ? language.t("settings.models.speechToText.remoteDescription")
+              : customSpeech()
+                ? language.t("settings.models.speechToTextModel.customDescription")
+                : kiloReady()
+                  ? language.t("settings.models.speechToTextModel.description")
+                  : language.t("settings.models.speechToText.disabledDescription")
           }
         >
           <Show
