@@ -181,6 +181,17 @@ html[data-theme="kilo-vscode"]
   color: var(--am-activity-color);
 }
 
+:is(
+  .am-tab-icon,
+  .am-wt-icon,
+  .am-local-status,
+  .am-sidebar-search-icon,
+  .am-sidebar-search-status
+)[data-activity="scheduled"] {
+  --am-activity-color: currentColor;
+  color: var(--am-activity-color);
+}
+
 :is(.am-tab-icon, .am-wt-icon, .am-local-status, .am-sidebar-search-icon)[data-activity]:not([data-activity="idle"])
   [data-component="icon"] {
   color: var(--am-activity-color);
