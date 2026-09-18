@@ -1,0 +1,22 @@
+Schedule a recurring task for yourself: the harness resumes this session with the prompt you give it each time the schedule comes due.
+
+Use this tool when work should repeat on a wall-clock schedule rather than happen at a single future point:
+- A periodic check on a deploy, a feed, or an external state.
+- A recurring reminder to poll a long-running task.
+- A loop you would otherwise chain with repeated `schedule_wakeup` calls.
+
+Prefer `schedule_wakeup` for a single future point: it has the same resume semantics with one relative or absolute time. Use `cron_create` only when the task must recur.
+
+Schedule:
+- `cron` is a standard 5-field expression, `minute hour day-of-month month day-of-week`, e.g. `*/5 * * * *` (every five minutes) or `0 9 * * 1-5` (weekdays at 09:00). Cron is minute-granular, so the smallest interval it can express is one minute. To watch something faster, use the `background_process` `monitor` action instead of a tighter schedule.
+- `when` fires once at an absolute ISO-8601 date-time, e.g. `2026-09-13T14:30:00Z`. With an explicit offset (`Z` or `+02:00`) it is absolute; without one, the host's local timezone applies.
+- `delay` fires once after a relative span, e.g. `30s`, `5m`, `2h`, `1d`; a bare number is seconds. A delay under 10 seconds is raised to the 10-second minimum.
+- Give exactly one of `cron`, `when`, or `delay`.
+
+Limits and behavior:
+- A session may hold at most 10 scheduled tasks; cancel one with `cron_delete` first when it is full.
+- A task expires seven days after it is created, so a forgotten loop cannot run forever.
+- A due task fires between turns: it waits for the session to be idle. Missed fires are not replayed one-for-one — the next fire is computed from the current time.
+- Fire times carry a small deterministic jitter, so many sessions do not fire at once.
+
+After a successful call, the tool reports the task `id`, its schedule, the next fire time, and the relative countdown. Keep that id to list or delete the task later.
