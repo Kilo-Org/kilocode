@@ -29,7 +29,7 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
-import { detectPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
+import { detectPrLink, persistRecordedPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
 import type { PrLink } from "@/kilo-sessions/pr-link"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import {
@@ -625,8 +625,14 @@ export namespace KiloSessions {
                   ? part.state.output
                   : undefined
             if (!text || !/\/pull\/|\/pull-requests\/|\/merge_requests\//.test(text)) return
-            if (!recordPrLinkText(Instance.worktree, text)) return
-            await syncPrLinkForSession(part.sessionID)
+            const link = recordPrLinkText(Instance.worktree, text)
+            // kilocode_change - keep the link for the next process: a GitLab/
+            // Bitbucket link has no REST lookup to recover it after this
+            // process exits, so the CLI would print `no PR linked`. Persist for
+            // every part that carries a PR URL — an already-stored record is a
+            // no-op — so a failed write is retried instead of being lost.
+            await persistRecordedPrLink(Instance.worktree)
+            if (link) await syncPrLinkForSession(part.sessionID)
           })
           watch(Session.Event.Diff, (evt) =>
             cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
