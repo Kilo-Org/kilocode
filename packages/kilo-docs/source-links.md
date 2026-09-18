@@ -100,8 +100,6 @@
   <!-- packages/opencode/src/server/server.ts -->
 - <https://gitlab.com>
   <!-- packages/opencode/src/provider/provider.ts -->
-- <https://host/org/repo.git>
-  <!-- packages/kilo-vscode/webview-ui/agent-manager/i18n/en.ts -->
 - <https://inference.do-ai.run/v1>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://kilo.ai>

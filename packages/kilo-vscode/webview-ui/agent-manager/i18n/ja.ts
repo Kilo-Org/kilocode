@@ -57,7 +57,7 @@ export const dict = {
   "agentManager.project.clone": "リポジトリをクローン...",
   "agentManager.project.cloneTitle": "リポジトリをクローン",
   "agentManager.project.urlLabel": "リポジトリ URL",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git または git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git または git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "このリポジトリはすでに追加されています。既存のプロジェクトを開きます。",
   "agentManager.project.newTitle": "新しいプロジェクト",
   "agentManager.project.nameLabel": "プロジェクト名",

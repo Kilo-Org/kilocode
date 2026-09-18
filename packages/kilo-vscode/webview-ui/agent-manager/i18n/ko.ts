@@ -57,7 +57,7 @@ export const dict = {
   "agentManager.project.clone": "리포지토리 복제...",
   "agentManager.project.cloneTitle": "저장소 복제",
   "agentManager.project.urlLabel": "저장소 URL",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git 또는 git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git 또는 git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "이 저장소는 이미 추가되었습니다. 기존 프로젝트를 엽니다.",
   "agentManager.project.newTitle": "새 프로젝트",
   "agentManager.project.nameLabel": "프로젝트 이름",

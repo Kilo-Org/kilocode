@@ -55,7 +55,7 @@ export const dict = {
   "agentManager.project.clone": "複製存放庫...",
   "agentManager.project.cloneTitle": "複製儲存庫",
   "agentManager.project.urlLabel": "儲存庫 URL",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git 或 git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git 或 git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "此儲存庫已新增。將開啟現有專案。",
   "agentManager.project.newTitle": "新增專案",
   "agentManager.project.nameLabel": "專案名稱",

@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.project.clone": "Klonuj repozytorium...",
   "agentManager.project.cloneTitle": "Klonuj repozytorium",
   "agentManager.project.urlLabel": "Adres URL repozytorium",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git lub git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git lub git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "To repozytorium jest już dodane. Zostanie otwarty istniejący projekt.",
   "agentManager.project.newTitle": "Nowy projekt",
   "agentManager.project.nameLabel": "Nazwa projektu",

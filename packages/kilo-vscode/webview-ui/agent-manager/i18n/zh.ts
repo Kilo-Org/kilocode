@@ -55,7 +55,7 @@ export const dict = {
   "agentManager.project.clone": "克隆仓库...",
   "agentManager.project.cloneTitle": "克隆仓库",
   "agentManager.project.urlLabel": "仓库 URL",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git 或 git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git 或 git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "该仓库已添加。将打开现有项目。",
   "agentManager.project.newTitle": "新建项目",
   "agentManager.project.nameLabel": "项目名称",

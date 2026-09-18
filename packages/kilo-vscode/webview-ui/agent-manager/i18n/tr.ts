@@ -59,7 +59,7 @@ export const dict = {
   "agentManager.project.clone": "Depoyu klonla...",
   "agentManager.project.cloneTitle": "Depoyu klonla",
   "agentManager.project.urlLabel": "Depo URL'si",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git veya git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git veya git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "Bu depo zaten eklendi. Mevcut proje açılacak.",
   "agentManager.project.newTitle": "Yeni proje",
   "agentManager.project.nameLabel": "Proje adı",

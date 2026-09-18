@@ -57,7 +57,7 @@ export const dict = {
   "agentManager.project.clone": "โคลนที่เก็บ...",
   "agentManager.project.cloneTitle": "โคลนที่เก็บ",
   "agentManager.project.urlLabel": "URL ที่เก็บ",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git หรือ git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git หรือ git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "ที่เก็บนี้ถูกเพิ่มแล้ว ระบบจะเปิดโปรเจกต์ที่มีอยู่",
   "agentManager.project.newTitle": "โปรเจกต์ใหม่",
   "agentManager.project.nameLabel": "ชื่อโปรเจกต์",

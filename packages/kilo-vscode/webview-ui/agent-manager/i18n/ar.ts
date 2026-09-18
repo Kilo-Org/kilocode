@@ -56,7 +56,7 @@ export const dict = {
   "agentManager.project.clone": "استنساخ مستودع...",
   "agentManager.project.cloneTitle": "استنساخ مستودع",
   "agentManager.project.urlLabel": "رابط المستودع",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git أو git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git أو git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "تمت إضافة هذا المستودع بالفعل. سيتم فتح المشروع الحالي.",
   "agentManager.project.newTitle": "مشروع جديد",
   "agentManager.project.nameLabel": "اسم المشروع",

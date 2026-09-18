@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.project.clone": "کلون کردن مخزن...",
   "agentManager.project.cloneTitle": "کلون کردن مخزن",
   "agentManager.project.urlLabel": "نشانی مخزن",
-  "agentManager.project.urlPlaceholder": "https://host/org/repo.git یا git@host:org/repo.git",
+  "agentManager.project.urlPlaceholder": "https://example.com/org/repo.git یا git@example.com:org/repo.git",
   "agentManager.project.alreadyAdded": "این مخزن قبلاً اضافه شده است. پروژه موجود باز می‌شود.",
   "agentManager.project.newTitle": "پروژه جدید",
   "agentManager.project.nameLabel": "نام پروژه",
