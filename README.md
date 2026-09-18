@@ -117,7 +117,6 @@ Kilo ships with specialized agents you switch between depending on the task. You
 - **Plan** - Designs architecture and writes implementation plans before any code gets written.
 - **Ask** - Answers questions about your codebase without touching any files.
 - **Debug** - Troubleshoots and traces issues.
-- **Review** - Reviews your changes and surfaces issues across performance, security, style, and test coverage.
 
 Learn more about [agents and custom agents](https://kilo.ai/docs/code-with-ai/agents/using-agents).
 
@@ -138,7 +137,7 @@ Run `kilo run` with `--auto` for fully autonomous operation with no prompts, bui
 kilo run --auto "run tests and fix any failures"
 ```
 
-`--auto` disables all permission prompts and lets the agent execute any action without confirmation. Only use it in trusted environments.
+`--auto` auto-approves permission prompts unless a rule explicitly denies the action. Only use it in trusted environments.
 
 ### Documentation
 
