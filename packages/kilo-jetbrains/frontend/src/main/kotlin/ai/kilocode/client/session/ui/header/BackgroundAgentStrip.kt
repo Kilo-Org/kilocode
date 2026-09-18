@@ -88,6 +88,10 @@ class BackgroundAgentStrip(
 
     @RequiresEdt
     fun update(agents: List<BackgroundAgent>) {
+        // SessionHeaderPanel re-syncs this strip on every HeaderUpdated, which streams as tokens and
+        // cost arrive, so bail out unless the agents actually changed — otherwise the retained strip
+        // would revalidate and repaint on every event in the streaming hot path.
+        if (agents == this.agents) return
         this.agents = agents
         val running = agents.count { it.status == BackgroundAgentStatus.RUNNING }
         set(label, caption(agents))
@@ -167,6 +171,13 @@ class BackgroundAgentStrip(
                 }
                 row.update(agent)
             }
+            // Rows that already exist are updated in place, so without this an agent that finishes
+            // would keep its old slot above still-active ones. Stack lays children out in component
+            // order, so restate that order to match BackgroundAgents.order's active-first intent.
+            agents.forEachIndexed { index, agent ->
+                val row = rows[agent.job] ?: return@forEachIndexed
+                if (getComponentZOrder(row.panel) != index) setComponentZOrder(row.panel, index)
+            }
             revalidate()
             repaint()
         }
@@ -186,6 +197,11 @@ class BackgroundAgentStrip(
     internal fun clearFinishedButton(): HoverIcon = clearFinished
     internal fun openAllButton(): HoverIcon = openAll
     internal fun rowCount(): Int = rows.size
+
+    /** Job ids in the order their rows are laid out, for asserting active-first ordering. */
+    internal fun rowOrder(): List<String> = body.components.mapNotNull { component ->
+        rows.entries.firstOrNull { it.value.panel === component }?.key
+    }
     internal fun agentRowPanel(job: String): JComponent? = rows[job]?.panel
     internal fun rowTitleText(job: String): String? = rows[job]?.title?.text
     internal fun rowStatusText(job: String): String? = rows[job]?.status?.text

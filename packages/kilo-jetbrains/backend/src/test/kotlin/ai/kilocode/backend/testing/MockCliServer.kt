@@ -193,6 +193,9 @@ class MockCliServer : AutoCloseable {
     /** Optional gate for config warnings only. */
     @Volatile var warningsGate: CountDownLatch? = null
 
+    /** Holds `/experimental/capabilities` so a test can simulate a hung optional probe. */
+    @Volatile var capabilitiesGate: CountDownLatch? = null
+
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
     private val requests = Object()
@@ -364,6 +367,7 @@ class MockCliServer : AutoCloseable {
             if (delay > 0) Thread.sleep(delay)
             if (bare != "/global/event") responseGate?.await()
             if (bare.startsWith("/config/warnings")) warningsGate?.await()
+            if (bare == "/experimental/capabilities") capabilitiesGate?.await()
 
             when {
                 path == "/global/health" -> respond(output, 200, health)

@@ -89,6 +89,24 @@ class KiloBackendSessionManagerBackgroundJobsTest {
     }
 
     @Test
+    fun `backgroundJobs still serves and shares after the last collector left`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        // Guards the cache-eviction path: the entry is dropped when sharing stops, so a later
+        // subscriber must still get a working flow, and concurrent subscribers must still share one
+        // poller rather than each starting their own.
+        withTimeout(10_000) { app.sessions.backgroundJobs("ses_root", "/repo").first() }
+        val before = mock.backgroundJobsRequests.size
+
+        val a = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
+        val b = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
+        withTimeout(10_000) { awaitAll(a, b) }
+
+        assertEquals(1, mock.backgroundJobsRequests.size - before)
+    }
+
+    @Test
     fun `cancelBackgroundJob posts to the cancel route and parses the boolean body`() = runBlocking {
         mock.backgroundJobCancelResult = "true"
         val app = setup()

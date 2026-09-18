@@ -10,6 +10,7 @@ import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.RepaintManager
 import javax.swing.ScrollPaneConstants
 
 class BackgroundAgentStripTest : BasePlatformTestCase() {
@@ -317,6 +318,83 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         assertTrue(scroll.preferredSize.height > 0)
         // The content itself stays at its full width inside the viewport, so it can be scrolled to.
         assertTrue(scroll.viewport.view.preferredSize.width > JBUI.scale(400))
+    }
+
+    fun `test repeated identical updates do not repaint the strip`() {
+        val strip = strip()
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        click(strip.rowPanel())
+        val row = strip.agentRowPanel("job1")
+        val body = strip.bodyComponent() as JComponent
+        val repaint = TrackingRepaintManager(setOf(strip, body))
+        val old = RepaintManager.currentManager(strip)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            // SessionHeaderPanel re-syncs on every HeaderUpdated while tokens stream, so an
+            // unchanged list must be a no-op rather than a revalidate/repaint of the whole strip.
+            strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+
+            assertTrue(repaint.dirty.isEmpty())
+            assertTrue(repaint.invalid.isEmpty())
+            assertSame(row, strip.agentRowPanel("job1"))
+            assertEquals(1, strip.rowCount())
+            assertTrue(strip.expanded())
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
+    private class TrackingRepaintManager(private val watched: Set<JComponent>) : RepaintManager() {
+        val dirty = mutableListOf<JComponent>()
+        val invalid = mutableListOf<JComponent>()
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c in watched) dirty.add(c)
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent in watched) invalid.add(invalidComponent)
+            super.addInvalidComponent(invalidComponent)
+        }
+    }
+
+    fun `test a status change is still applied after an identical update`() {
+        val strip = strip()
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        click(strip.rowPanel())
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
+
+        assertEquals("Done", strip.rowStatusText("job1"))
+    }
+
+    fun `test finished agents drop below still-active ones`() {
+        val strip = strip()
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.RUNNING),
+                agent("job2", BackgroundAgentStatus.RUNNING),
+            ),
+        )
+        click(strip.rowPanel())
+        assertEquals(listOf("job1", "job2"), strip.rowOrder())
+
+        // job1 finished, so BackgroundAgents.order puts the still-running job2 first; the existing
+        // rows must be reordered, not left in their original slots.
+        strip.update(
+            ai.kilocode.client.session.background.BackgroundAgents.order(
+                listOf(
+                    agent("job1", BackgroundAgentStatus.COMPLETED),
+                    agent("job2", BackgroundAgentStatus.RUNNING),
+                ),
+            ),
+        )
+
+        assertEquals(listOf("job2", "job1"), strip.rowOrder())
     }
 
     fun `test auto collapses once when the last active agent finishes`() {

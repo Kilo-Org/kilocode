@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -127,6 +128,7 @@ class KiloBackendSessionManager(
         http = null
         base = null
         owned.clear()
+        jobFlows.clear()
         _statuses.value = emptyMap()
         log.info("Session manager stopped")
     }
@@ -357,8 +359,20 @@ class KiloBackendSessionManager(
      * needing to be recreated. Cadence adapts: 1 s while any job is running, 5 s once the list is
      * empty or every job is terminal, matching the VS Code webview's poll rate for the fast case.
      */
-    fun backgroundJobs(id: String, dir: String): Flow<List<BackgroundJobDto>> =
-        jobFlows.getOrPut(jobKey(dir, id)) { pollBackgroundJobs(id, dir) }
+    fun backgroundJobs(id: String, dir: String): Flow<List<BackgroundJobDto>> {
+        val key = jobKey(dir, id)
+        return jobFlows.getOrPut(key) {
+            pollBackgroundJobs(id, dir)
+                // [SharingStarted.WhileSubscribed] stops the poll loop when the last collector
+                // leaves, which cancels this upstream and runs onCompletion — the point to drop the
+                // cache entry. Without it the SharedFlow and its replayed jobs list would be retained
+                // for every session opened during a long IDE run. A collector arriving in the same
+                // instant keeps working (sharing simply restarts); the next caller shares a fresh
+                // flow, so the race costs at most one extra poller, never correctness.
+                .onCompletion { jobFlows.remove(key) }
+                .shareIn(cs, SharingStarted.WhileSubscribed(), replay = 1)
+        }
+    }
 
     private fun jobKey(dir: String, id: String) = "$dir\u0000$id"
 
@@ -380,7 +394,7 @@ class KiloBackendSessionManager(
             }
             delay(cadence)
         }
-    }.distinctUntilChanged().shareIn(cs, SharingStarted.WhileSubscribed(), replay = 1)
+    }.distinctUntilChanged()
 
     private fun fetchBackgroundJobs(h: OkHttpClient, url: String, id: String, dir: String): List<BackgroundJobDto> {
         val target = url.toHttpUrl().newBuilder()

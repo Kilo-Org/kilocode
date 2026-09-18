@@ -119,7 +119,9 @@ class KiloBackendAppServiceTest {
 
         ready(svc)
 
-        assertTrue((svc.appState.value as KiloAppState.Ready).data.backgroundSubagents)
+        // The probe runs off the load's critical path, so Ready starts with it off and flips once
+        // the answer lands.
+        withTimeout(10_000) { svc.capabilities.first { it } }
         assertNotNull(mock.lastCapabilitiesPath)
     }
 
@@ -130,8 +132,27 @@ class KiloBackendAppServiceTest {
         svc.connect()
 
         ready(svc)
+        awaitCapabilityProbe()
 
-        assertFalse((svc.appState.value as KiloAppState.Ready).data.backgroundSubagents)
+        assertFalse(svc.capabilities.value)
+    }
+
+    @Test
+    fun `a hung capability probe still reaches Ready`() = runBlocking {
+        // The probe's client call is blocking, so it cannot live inside the load's coroutineScope:
+        // structured concurrency would wait on the socket and time the whole load out.
+        val gate = java.util.concurrent.CountDownLatch(1)
+        mock.capabilitiesGate = gate
+        val svc = create()
+        try {
+            svc.connect()
+
+            ready(svc)
+
+            assertFalse(svc.capabilities.value)
+        } finally {
+            gate.countDown()
+        }
     }
 
     @Test
@@ -142,8 +163,15 @@ class KiloBackendAppServiceTest {
         svc.connect()
 
         ready(svc)
+        awaitCapabilityProbe()
 
-        assertFalse((svc.appState.value as KiloAppState.Ready).data.backgroundSubagents)
+        assertFalse(svc.capabilities.value)
+    }
+
+    private suspend fun awaitCapabilityProbe() {
+        withTimeout(10_000) {
+            while (mock.lastCapabilitiesPath == null) delay(20)
+        }
     }
 
     @Test
