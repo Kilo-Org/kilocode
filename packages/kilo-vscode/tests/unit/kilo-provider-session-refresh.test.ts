@@ -17,6 +17,7 @@ type ProviderInternals = {
   syncWebviewState: (reason: string) => Promise<void>
   handleMigrationMessage: (message: { type: string }) => boolean
   seedSessionWakeups: () => Promise<void>
+  handleEvent: (event: unknown, directory?: string) => void
   wakeupSessions: Set<string>
 }
 
@@ -440,5 +441,27 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionWakeup", sessionID: "s1", pending: 0 }))
     expect(internal.wakeupSessions.has("s1")).toBe(true)
+  })
+
+  it("keeps a wakeup scheduled while a complete seed is in flight", async () => {
+    const client = createClient()
+    const pending = deferred<{ data: Array<{ sessionID: string; pending: number }> }>()
+    client.kilocode.wakeups = () => pending.promise
+    const connection = createConnection(client)
+    await connection.connect()
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.webview = { postMessage: async (message: unknown) => void sent.push(message) }
+
+    const seeding = internal.seedSessionWakeups()
+    internal.handleEvent({ type: "session.wakeup", properties: { sessionID: "live", pending: 1 } })
+    pending.resolve({ data: [] })
+    await seeding
+
+    expect(sent).not.toContainEqual({ type: "sessionWakeup", sessionID: "live", pending: 0 })
+    expect(sent).toContainEqual({ type: "sessionWakeup", sessionID: "live", pending: 1 })
+    expect(internal.wakeupSessions.has("live")).toBe(true)
   })
 })

@@ -444,6 +444,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
   private wakeupSessions = new Set<string>() // Sessions with a pending wakeup at the last seed.
   private wakeupSeeding = false // In-flight guard so concurrent transitions share one seed.
+  private wakeupLive = new Map<string, number>() // Live pending counts seen during an in-flight seed.
   private activity: Activity = "idle"
   private active = false
   private caption: string | undefined
@@ -3297,6 +3298,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!this.client || this.connectionState !== "connected") return
     if (this.wakeupSeeding) return
     this.wakeupSeeding = true
+    // Snapshot before the awaits and record live events that arrive while the
+    // seed requests are in flight: they are newer than the responses, so they
+    // override both the snapshot and `seen` below.
+    const before = new Set(this.wakeupSessions)
+    this.wakeupLive = new Map()
     try {
       const { seen, complete } = await seedSessionWakeups(
         this.client,
@@ -3308,12 +3314,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // absent from `seen`, so clearing on a partial result would drop valid
       // wakeups for that directory's sessions.
       if (complete) {
-        // A wakeup that fired or was cancelled while disconnected is absent
-        // from the seed response, so clear any session the previous seed saw.
-        for (const sessionID of this.wakeupSessions) {
-          if (!seen.has(sessionID)) this.postMessage({ type: "sessionWakeup", sessionID, pending: 0 })
+        const live = this.wakeupLive
+        const next = new Set(seen)
+        for (const [sessionID, pending] of live) {
+          if (pending > 0) next.add(sessionID)
+          else next.delete(sessionID)
         }
-        this.wakeupSessions = seen
+        // A wakeup that fired or was cancelled while disconnected is absent
+        // from the seed response, so clear any session the previous seed saw
+        // that no live event has since updated. A session scheduled during the
+        // seed is absent from `seen` but present in `live`, so it survives.
+        for (const sessionID of before) {
+          if (!seen.has(sessionID) && !live.has(sessionID))
+            this.postMessage({ type: "sessionWakeup", sessionID, pending: 0 })
+        }
+        this.wakeupSessions = next
       } else {
         // Keep tracking sessions from failed directories so a later complete
         // seed can still reconcile them.
@@ -5182,6 +5197,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // still reconciled to zero by the next complete seed.
       if (event.properties.pending > 0) this.wakeupSessions.add(sid)
       else this.wakeupSessions.delete(sid)
+      // While a seed is in flight, remember the live pending count. It is newer
+      // than the seed response and must win over the seed's reconcile step.
+      if (this.wakeupSeeding) this.wakeupLive.set(sid, event.properties.pending)
       this.postMessage({ type: "sessionWakeup", sessionID: sid, pending: event.properties.pending })
       return
     }
