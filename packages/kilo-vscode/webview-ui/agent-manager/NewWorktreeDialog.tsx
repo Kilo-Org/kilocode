@@ -476,6 +476,18 @@ export const NewWorktreeDialog: Component<{
       return
     }
 
+    // The chat composer submits on Enter, so mirror that for the two-step goal
+    // flow. Plain prompts keep Enter as a newline and still create with
+    // Cmd/Ctrl+Enter.
+    if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (goalMode() || prompt().trim() === "/goal") {
+        e.preventDefault()
+        e.stopPropagation()
+        handleSubmit()
+        return
+      }
+    }
+
     // Shift+Tab cycles reasoning effort variants (setting: chat.shiftTabCyclesVariant).
     // When disabled or no variants exist, fall through to default focus navigation.
     if (e.key === "Tab" && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
