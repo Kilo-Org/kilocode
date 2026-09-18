@@ -387,6 +387,94 @@ class PrResolverTest {
     }
 
     @Test
+    fun `does not remember an absence when a clean gh pr view could not be read`() {
+        // gh's real "there is no pull request" arrives as a *failure* with that wording. A clean exit
+        // whose body does not decode is an unexplained answer, not a negative one, so the ladder must not
+        // fall through it into a ten-minute cached absence.
+        for (body in listOf("", "   ", "not json at all", "{}", """{"number":"not-a-number"}""")) {
+            calls.clear()
+            val resolver = resolver(view = { ok(body) })
+
+            assertNull(resolver.resolve(path, "feature/x", base = "main").pr, "for: [$body]")
+            calls.clear()
+
+            assertNull(resolver.resolve(path, "feature/x", base = "main").pr, "for: [$body]")
+            assertTrue(calls.isNotEmpty(), "an unreadable success must not be remembered: [$body]")
+        }
+    }
+
+    @Test
+    fun `does not remember an absence when the head search matched but could not be read`() {
+        // The head matched, so this *is* the checkout's pull request — GitHub just said it exists. Caching
+        // an absence here hides a badge for something demonstrably present.
+        val resolver = resolver(
+            view = { missing() },
+            list = { ok("""[{"headRefOid":"$SHA","number":"not-a-number"}]""") },
+        )
+
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        calls.clear()
+
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        assertTrue(calls.isNotEmpty(), "an undecodable head match must not be remembered as an absence")
+    }
+
+    @Test
+    fun `does not remember an absence when the head search returned a record it could not inspect`() {
+        val resolver = resolver(view = { missing() }, list = { ok("""["not-an-object"]""") })
+
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        calls.clear()
+
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        assertTrue(calls.isNotEmpty(), "a record that could not be inspected might have been this head's")
+    }
+
+    @Test
+    fun `still remembers an absence when the head search only matched other commits`() {
+        // The counterpart: a search hit for a different head is a definite "not this one", so it must not
+        // spoil the run's confidence or the cache stops working for the rows it exists for.
+        val resolver = resolver(
+            view = { missing() },
+            list = { ok("""[{"headRefOid":"deadbeef","number":9,"state":"OPEN","isDraft":false,"url":"https://pr/9"}]""") },
+        )
+
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        calls.clear()
+
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        assertEquals(emptyList(), calls, "a hit on another head is a definite answer about this one")
+    }
+
+    @Test
+    fun `does not serve an absence stamped with an epoch a mutation has spent`() {
+        // The invariant that makes the write/clear race unreachable: an entry is validated against the
+        // epoch on the way *out*, so it does not matter whether a mutation landed before, during, or
+        // after the write. This asserts that invariant end to end, with clear() landing after the
+        // ladder's last gh call. It is not by itself a discriminating regression test for the race — a
+        // check-then-write also passes this ordering, and the few instructions between such a check and
+        // its write cannot be interleaved from a test. The guarantee here is structural: there is no
+        // longer a check-then-write pair to lose.
+        lateinit var resolver: PrResolver
+        var armed = false
+        resolver = resolver(
+            view = { missing() },
+            list = {
+                if (armed) resolver.clear()
+                ok("[]")
+            },
+        )
+
+        armed = true
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        armed = false
+        calls.clear()
+
+        assertNull(resolver.resolve(path, "renamed-locally", base = "main").pr)
+        assertTrue(calls.isNotEmpty(), "an entry stamped with a spent epoch must never be served")
+    }
+
+    @Test
     fun `does not remember an absence proven against a repository a mutation has since changed`() {
         // clear() cannot cancel a ladder already in flight, so a resolve that began before a PR import
         // can finish after it and re-insert the absence the import just dropped. When the import leaves

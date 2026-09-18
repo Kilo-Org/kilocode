@@ -157,8 +157,16 @@ internal class PrResolver(
      */
     private val absent = ConcurrentHashMap<String, Absent>()
 
-    /** A proven-absent pull request for one checkout on one branch at one commit. */
-    private data class Absent(val branch: String, val head: String, val time: Long)
+    /**
+     * A proven-absent pull request for one checkout on one branch at one commit, as of one [epoch].
+     *
+     * The epoch travels with the entry rather than being checked before writing it. A ladder runs for
+     * seconds, so a mutation can land between any check and any write; validating on the way *out*
+     * instead means a write that lost that race stores an entry stamped with the epoch it was actually
+     * proven under, which [spent] then declines to serve. There is no interleaving left to get wrong,
+     * and the read path stays lock-free.
+     */
+    private data class Absent(val branch: String, val head: String, val epoch: Long, val time: Long)
 
     /**
      * Bumped by [clear]. A ladder that started before a mutation can finish after it, so the epoch it
@@ -180,7 +188,13 @@ internal class PrResolver(
         return comments(dir, find(dir, path, branch, base, maxAge))
     }
 
-    /** Drops every proven-absent entry, for a mutation that can have created a pull request. */
+    /**
+     * Drops every proven-absent entry, for a mutation that can have created a pull request.
+     *
+     * Bumping the epoch is what actually invalidates them, since that also disqualifies entries still
+     * to be written by ladders already in flight. Emptying the map is just reclaiming the memory those
+     * now-unservable entries occupy.
+     */
     fun clear() {
         epoch.incrementAndGet()
         absent.clear()
@@ -234,16 +248,17 @@ internal class PrResolver(
         if (head.isEmpty()) return false
         val entry = absent[path] ?: return false
         if (entry.head != head || entry.branch != branch) return false
+        // Proven against a repository a mutation has since changed. See [Absent].
+        if (entry.epoch != epoch.get()) return false
         if (!usable(entry.time, System.currentTimeMillis(), PR_ABSENT_TTL, maxAge)) return false
         LOG.debug { "pr lookup skipped, no pull request known here: path=$path branch=$branch head=$head" }
         return true
     }
 
-    /** Records a proven absence, unless [clear] ran while the ladder that proved it was still going. */
+    /** Records a proven absence, stamped with the [epoch] the ladder that proved it began under. */
     private fun remember(path: String, branch: String, head: String, epoch: Long) {
         if (head.isEmpty()) return
-        if (this.epoch.get() != epoch) return
-        absent[path] = Absent(branch, head, System.currentTimeMillis())
+        absent[path] = Absent(branch, head, epoch, System.currentTimeMillis())
     }
 
     /** What one ladder run learned about its own reliability. */
@@ -314,7 +329,16 @@ internal class PrResolver(
             }
         }
         if (!out.ok) return unusable(out, run)
-        return parsePr(path, out.stdout)?.let { PrLookup(it, node = parsePrNodeId(out.stdout)) }
+        val pr = parsePr(path, out.stdout)
+        if (pr == null) {
+            // gh exited cleanly but said nothing this could read. An absence is only ever recorded from
+            // gh's own "no pull request" wording, which arrives as a *failure*, so a successful call that
+            // does not decode is an unexplained answer rather than a negative one.
+            LOG.info("gh pr view succeeded but could not be read, not treating as an absence: dir=$dir")
+            run.sure = false
+            return null
+        }
+        return PrLookup(pr, node = parsePrNodeId(out.stdout))
     }
 
     /**
@@ -359,11 +383,26 @@ internal class PrResolver(
             return null
         }
         for (item in items) {
-            val obj = item as? JsonObject ?: continue
-            // The search matches commit mentions too, so only an exact head match is our PR.
+            val obj = item as? JsonObject
+            if (obj == null) {
+                // A record this cannot even inspect might have been the one for this head.
+                run.sure = false
+                continue
+            }
+            // The search matches commit mentions too, so only an exact head match is our PR. A record for
+            // some other head is a definite "not this one" and leaves the run's confidence intact.
             if (obj["headRefOid"]?.jsonPrimitive?.content != head) continue
             val raw = obj.toString()
-            parsePr(path, raw)?.let { return PrLookup(it, node = parsePrNodeId(raw)) }
+            val pr = parsePr(path, raw)
+            if (pr == null) {
+                // The head matched, so this *is* this checkout's pull request and it simply could not be
+                // decoded. Recording an absence here would cache away a badge for something GitHub just
+                // said exists — the worst of the three cases, and the reason none of them may be silent.
+                LOG.info("gh pr list matched this head but could not be read: dir=$dir head=$head")
+                run.sure = false
+                continue
+            }
+            return PrLookup(pr, node = parsePrNodeId(raw))
         }
         return null
     }
