@@ -47,9 +47,19 @@ export function fallbackSanitization(content: string): string {
     const key = kvMatch[1]
     const value = kvMatch[2].trim()
 
-    // skip if value is empty, already quoted, or uses block scalar
-    if (value === "" || value === ">" || value === "|" || value.startsWith('"') || value.startsWith("'")) {
-      result.push(line)
+    // preserve empty keys or block scalar indicators
+    if (value === "") {
+      result.push(`${key}:`)
+      continue
+    }
+    if (value === ">" || value === "|") {
+      result.push(`${key}: ${value}`)
+      continue
+    }
+
+    // preserve already-quoted values with standard spacing
+    if (value.startsWith('"') || value.startsWith("'")) {
+      result.push(`${key}: ${value}`)
       continue
     }
 
@@ -60,7 +70,9 @@ export function fallbackSanitization(content: string): string {
       continue
     }
 
-    result.push(line)
+    // kilocode_change start - format with standard YAML spacing when missing after colon
+    result.push(`${key}: ${value}`)
+    // kilocode_change end
   }
 
   const processed = result.join("\n")
@@ -77,6 +89,21 @@ export async function parse(filePath: string, options: KilocodeMarkdown.Options)
   // kilocode_change start - substitute content and retry invalid frontmatter with permissive sanitization
   try {
     const md = matter(template)
+    const isRecord =
+      typeof md.data === "object" && md.data !== null && !Array.isArray(md.data) && Object.keys(md.data).length > 0
+    const match = template.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+    if (!isRecord && match && match[1].trim().length > 0) {
+      const sanitized = matter(fallbackSanitization(template))
+      if (
+        typeof sanitized.data === "object" &&
+        sanitized.data !== null &&
+        !Array.isArray(sanitized.data) &&
+        Object.keys(sanitized.data).length > 0
+      ) {
+        sanitized.content = await KilocodeMarkdown.substitute(sanitized.content, filePath, options)
+        return sanitized
+      }
+    }
     md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
     return md
   } catch {
