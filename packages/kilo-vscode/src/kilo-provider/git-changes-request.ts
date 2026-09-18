@@ -17,7 +17,19 @@ export async function interceptMessage(
   const next = ctx.before
     ? await ctx.before(msg).catch((e) => (console.error("[Kilo New] interceptor error:", e), null))
     : msg
-  if (next === null || next.type !== "requestGitChangesContext") return next
+  if (next === null) {
+    // Permission messages are handled by KiloProvider, never by an interceptor.
+    // A failed project route must release the webview's submitting state.
+    if ((msg.type === "permissionResponse" || msg.type === "permissionStatus") && typeof msg.permissionId === "string") {
+      ctx.post({
+        type: "permissionError",
+        permissionID: msg.permissionId,
+        ...(msg.type === "permissionStatus" ? { retryable: false } : {}),
+      })
+    }
+    return null
+  }
+  if (next.type !== "requestGitChangesContext") return next
   const sid = typeof next.sessionID === "string" ? next.sessionID : undefined
   const dir = ctx.workspaceDir(sid)
   const resolved = await resolveGitChangesTarget(next, dir)

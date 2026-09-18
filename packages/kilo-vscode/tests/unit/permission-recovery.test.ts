@@ -2,12 +2,14 @@ import { describe, it, expect, spyOn } from "bun:test"
 import {
   fetchAndSendPendingPermissions,
   handlePermissionResponse,
+  handlePermissionStatus,
   recoverablePermissions,
   recoveryDirs,
   type RecoverablePermission,
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
+import { respondToPermission } from "@kilocode/sdk/permission"
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
 function pending(id: string, sessionID: string, permission = "bash"): RecoverablePermission {
@@ -23,7 +25,7 @@ function pending(id: string, sessionID: string, permission = "bash"): Recoverabl
 }
 
 function permissionClient(
-  permsPerDir: Record<string, ReturnType<typeof pending>[]>,
+  permsPerDir: () => Record<string, ReturnType<typeof pending>[]>,
   queries: string[],
   saves: unknown[] = [],
   replies: unknown[] = [],
@@ -36,7 +38,7 @@ function permissionClient(
         queries.push(dir)
         const error = errors?.list?.[dir]
         if (error) return { data: undefined, error }
-        return { data: permsPerDir[dir] ?? [] }
+        return { data: permsPerDir()[dir] ?? [] }
       },
       saveAlwaysRules: async (args: unknown) => {
         saves.push(args)
@@ -59,16 +61,31 @@ function ctx(opts: {
   workspace?: string
   errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown }
   extra?: string[]
+  session?: string
 }) {
   const messages: unknown[] = []
   const queries: string[] = []
   const saves: unknown[] = []
   const replies: unknown[] = []
-  const perms = opts.permsPerDir ?? {}
-  const sdk = permissionClient(perms, queries, saves, replies, opts.errors)
+  const permDirs = new Map<string, string>()
+  const sdk = permissionClient(
+    () =>
+      opts.permsPerDir ??
+      Object.fromEntries(
+        [...new Set(permDirs.values())].map((dir) => [
+          dir,
+          [...permDirs]
+            .filter(([, value]) => value === dir)
+            .map(([id]) => pending(id, opts.session ?? opts.tracked.at(0) ?? "s1")),
+        ]),
+      ),
+    queries,
+    saves,
+    replies,
+    opts.errors,
+  )
   let revision = 0
 
-  const permDirs = new Map<string, string>()
   const fake: PermissionContext = {
     client: sdk as unknown as PermissionContext["client"],
     currentSessionId: undefined,
@@ -129,6 +146,124 @@ describe("recoveryDirs", () => {
 })
 
 describe("handlePermissionResponse", () => {
+  it.each(["timeout", "failure"])("retains an uncertain route after %s and reconnect pruning", async (mode) => {
+    const { fake, sdk, messages, queries } = ctx({ tracked: ["s1"], permsPerDir: {} })
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const routed: PermissionContext = {
+      ...fake,
+      extraDirectories: () => ["/original"],
+      recordPermissionDirectory: (id, dir, session) => service.recordPermissionDirectory(id, dir, session),
+      getPermissionDirectory: (id) => service.getPermissionDirectory(id),
+      getPermissionSession: (id) => service.getPermissionSession(id),
+      clearPermissionDirectory: (id) => service.clearPermissionDirectory(id),
+      getPermissionRevision: () => service.getPermissionRevision(),
+      prunePermissionDirectories: (active, dirs) => service.prunePermissionDirectories(active, dirs),
+      runPermissionResponse: (id, session, action) => service.runPermissionResponse(id, session, action),
+      isPermissionResponseClaimed: (id) => service.isPermissionResponseClaimed(id),
+      clearPermissionResponse: (id) => service.clearPermissionResponse(id),
+    }
+    service.recordPermissionDirectory("p1", "/original", "s1")
+    const gate = Promise.withResolvers<{ data: true }>()
+    spyOn(sdk.permission, "reply").mockImplementation(() =>
+      mode === "timeout" ? gate.promise : Promise.reject(new Error("connection lost")),
+    )
+    spyOn(sdk.permission, "list")
+      .mockResolvedValueOnce({ data: [pending("p1", "s1")] })
+      .mockRejectedValueOnce(new Error("reconciliation unavailable"))
+    try {
+      if (mode === "failure") {
+        await handlePermissionResponse(routed, "p1", "s1", "once", [], [])
+        expect(messages.at(-1)).toEqual({ type: "permissionError", permissionID: "p1", retryable: false })
+      }
+      if (mode === "timeout") {
+        await service.runPermissionResponse("p1", "s1", async () => {
+          const result = await respondToPermission(
+            fake.client!,
+            {
+              requestID: "p1",
+              sessionID: "s1",
+              directory: "/original",
+              reply: "once",
+              approvedAlways: [],
+              deniedAlways: [],
+            },
+            10,
+          )
+          expect(result.status).toBe("unknown")
+          return { kind: "error", retryable: false }
+        })
+        service.clearPermissionResponse("p1")
+      }
+      expect(service.isPermissionResponseClaimed("p1")).toBe(false)
+      await fetchAndSendPendingPermissions(routed)
+      expect(service.getPermissionDirectory("p1")).toBe("/original")
+      await handlePermissionStatus(routed, "p1", "s1")
+      expect(queries.at(-1)).toBe("/original")
+      expect(messages.at(-1)).toEqual({ type: "permissionError", permissionID: "p1", stale: true })
+    } finally {
+      gate.resolve({ data: true })
+      service.dispose()
+    }
+  })
+
+  it("keeps an unknown result blocked when reconciliation fails", async () => {
+    const { fake, sdk, messages, permDirs, replies } = ctx({ tracked: ["s1"] })
+    permDirs.set("p1", "/worktree")
+    spyOn(sdk.permission, "reply").mockImplementation(async () => {
+      replies.push("reply")
+      throw new Error("connection lost")
+    })
+    const list = sdk.permission.list
+    spyOn(sdk.permission, "list")
+      .mockImplementationOnce(list)
+      .mockImplementation(async () => {
+        throw new Error("offline")
+      })
+    await handlePermissionResponse(fake, "p1", "s1", "once", [], [])
+    expect(replies).toEqual(["reply"])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", retryable: false }])
+    expect(permDirs.get("p1")).toBe("/worktree")
+  })
+
+  it.each([true, false])("checks status without saving or replying (pending=%s)", async (exists) => {
+    const { fake, messages, queries, saves, replies, permDirs } = ctx({
+      tracked: ["s1"],
+      permsPerDir: { "/original": exists ? [pending("p1", "s1")] : [] },
+    })
+    permDirs.set("p1", "/original")
+    await handlePermissionStatus(fake, "p1", "s1")
+    expect(queries).toEqual(["/original"])
+    expect(saves).toEqual([])
+    expect(replies).toEqual([])
+    expect(messages).toEqual([
+      { type: "permissionError", permissionID: "p1", ...(exists ? { retryable: true } : { stale: true }) },
+    ])
+  })
+
+  it("retains the original route after the completed claim expires", async () => {
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const now = Date.now()
+    const clock = spyOn(Date, "now")
+    try {
+      service.recordPermissionDirectory("p1", "/original", "s1")
+      await service.runPermissionResponse("p1", "s1", async () => ({
+        kind: "resolved",
+        sessionID: "s1",
+        response: "once",
+      }))
+      service.clearPermissionDirectory("p1")
+      clock.mockReturnValue(now + 120_000)
+      expect(service.isPermissionResponseClaimed("p1")).toBe(false)
+      expect(service.getPermissionDirectory("p1")).toBe("/original")
+      expect(service.getPermissionSession("p1")).toBe("s1")
+      service.clearPermissionSession("s1")
+      expect(service.getPermissionDirectory("p1")).toBeUndefined()
+    } finally {
+      clock.mockRestore()
+      service.dispose()
+    }
+  })
+
   it("rejects an unknown route without using a workspace fallback", async () => {
     const { fake, messages, replies } = ctx({ tracked: ["s1"] })
     const log = spyOn(console, "error").mockImplementation(() => {})
@@ -141,7 +276,10 @@ describe("handlePermissionResponse", () => {
   })
 
   it("shares one save/reply sequence across concurrent callers", async () => {
-    const { fake, sdk, messages, replies, saves } = ctx({ tracked: ["s1"] })
+    const { fake, sdk, messages, replies, saves } = ctx({
+      tracked: ["s1"],
+      permsPerDir: { "/workspace": [pending("p1", "s1")] },
+    })
     const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
     const routed: PermissionContext = {
       ...fake,
@@ -182,7 +320,7 @@ describe("handlePermissionResponse", () => {
   it.each(["once", "always", "reject"] as const)(
     "acknowledges %s for an untracked child without an SSE event",
     async (response) => {
-      const { fake, messages, replies, permDirs } = ctx({ tracked: ["parent"] })
+      const { fake, messages, replies, permDirs } = ctx({ tracked: ["parent"], session: "child" })
       permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
 
       await handlePermissionResponse(fake, "p1", "child", response, [], [])
@@ -331,8 +469,8 @@ describe("fetchAndSendPendingPermissions", () => {
     snapshot.resolve({ data: [pending("p1", "child")] })
     await recovery
 
-    expect(list).toHaveBeenCalledTimes(2)
-    expect(queries).toEqual(["/workspace"])
+    expect(list).toHaveBeenCalledTimes(3)
+    expect(queries).toEqual(["/workspace", "/workspace"])
     expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "child", response: "once" }])
     expect(permDirs.has("p1")).toBe(false)
     list.mockRestore()
@@ -374,6 +512,7 @@ describe("fetchAndSendPendingPermissions", () => {
     const { fake, permDirs } = ctx({
       tracked: ["s1"],
       dirs,
+      permsPerDir: {},
       errors: { list: { "/workspace/.kilo/worktrees/failing": error } },
     })
     const spy = spyOn(console, "error").mockImplementation(() => {})

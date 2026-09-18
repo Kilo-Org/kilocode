@@ -129,6 +129,7 @@ import {
 } from "./kilo-provider/handlers/cloud-session"
 import {
   handlePermissionResponse,
+  handlePermissionStatus,
   fetchAndSendPendingPermissions,
   type PermissionContext,
 } from "./kilo-provider/handlers/permission-handler"
@@ -1249,6 +1250,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "deleteMessage":
           await this.handleDeleteMessage(message.sessionID, message.messageID, message.requestID)
+          break
+        case "permissionStatus":
+          await handlePermissionStatus(this.permissionCtx, message.permissionId, message.sessionID)
           break
         case "permissionResponse":
           await handlePermissionResponse(

@@ -55,6 +55,7 @@ import type {
 } from "../types/messages"
 import { agentProject, isStaleAgentSession } from "./session-project"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
+import { createPermissionResponses } from "./permission-response"
 import {
   computeStatus,
   calcContextUsage,
@@ -237,6 +238,15 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Permission IDs that have been responded to but not yet confirmed by the server
   const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
+  const responses = createPermissionResponses({
+    permissions,
+    setPermissions,
+    responding: respondingPermissions,
+    setResponding: setRespondingPermissions,
+    terminal: isTerminalPermission,
+    post: (message) => vscode.postMessage(message),
+    expired: (id) => handlePermissionError(id, false, false),
+  })
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
@@ -722,7 +732,7 @@ export const SessionProvider: ParentComponent = (props) => {
         handlePermissionResolved(message.permissionID)
         break
       case "permissionError":
-        handlePermissionError(message.permissionID, message.stale)
+        handlePermissionError(message.permissionID, message.stale, message.retryable)
         break
     }
   })
@@ -1581,6 +1591,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePermissionResolved(permissionID: string) {
+    responses.clear(permissionID)
     markTerminalPermission(permissionID, permissions().find((p) => p.id === permissionID)?.sessionID)
     setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
     setRespondingPermissions((prev) => {
@@ -1591,7 +1602,8 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function handlePermissionError(permissionID: string, stale?: boolean) {
+  function handlePermissionError(permissionID: string, stale?: boolean, retryable = true) {
+    responses.clear(permissionID)
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
       const next = new Set(prev)
@@ -1603,6 +1615,13 @@ export const SessionProvider: ParentComponent = (props) => {
       setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
       return
     }
+    setPermissions((prev) =>
+      prev.map((permission) =>
+        permission.id === permissionID
+          ? { ...permission, responseError: retryable ? "failed" : "unknown" }
+          : permission,
+      ),
+    )
     showToast({
       variant: "error",
       title: language.t("settings.permissions.toast.updateFailed.title"),
@@ -2440,37 +2459,6 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function respondToPermission(
-    permissionId: string,
-    response: "once" | "always" | "reject",
-    approvedAlways: string[],
-    deniedAlways: string[],
-    feedback?: string,
-  ): boolean {
-    // The rendered request must still exist in this provider. Never fall back to
-    // the currently selected session for a stale callback.
-    const permission = permissions().find((p) => p.id === permissionId)
-    if (!permission) return false
-    if (isTerminalPermission(permissionId, permission.sessionID)) return false
-    if (respondingPermissions().has(permissionId)) return false
-
-    // Mark as responding so the UI disables the buttons.
-    // The permission is removed when the server confirms via permission.replied SSE.
-    setRespondingPermissions((prev) => new Set(prev).add(permissionId))
-
-    const message = feedback?.trim()
-    vscode.postMessage({
-      type: "permissionResponse",
-      permissionId,
-      sessionID: permission.sessionID,
-      response,
-      approvedAlways,
-      deniedAlways,
-      ...(message ? { feedback: message } : {}),
-    })
-    return true
-  }
-
   function clearQuestionError(requestID: string) {
     setQuestionErrors((prev) => {
       if (!prev.has(requestID)) return prev
@@ -3040,7 +3028,8 @@ export const SessionProvider: ParentComponent = (props) => {
     sendCommand,
     abort,
     compact,
-    respondToPermission,
+    respondToPermission: responses.respond,
+    checkPermissionStatus: responses.check,
     replyToQuestion,
     rejectQuestion,
     closeQuestion,

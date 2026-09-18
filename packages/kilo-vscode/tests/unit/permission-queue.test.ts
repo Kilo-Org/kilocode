@@ -7,6 +7,10 @@ function perm(id: string, sessionID: string): PermissionRequest {
 }
 
 describe("upsertPermission", () => {
+  it("does not unlock an uncertain response when recovery replays its request", () => {
+    const list = [{ ...perm("p1", "s1"), responseError: "unknown" as const }]
+    expect(upsertPermission(list, perm("p1", "s1")).at(0)?.responseError).toBe("unknown")
+  })
   it("appends new permission to empty list", () => {
     const result = upsertPermission([], perm("p1", "s1"))
     expect(result).toHaveLength(1)

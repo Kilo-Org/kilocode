@@ -210,6 +210,7 @@ export interface PermissionErrorMessage {
   type: "permissionError"
   permissionID: string
   stale?: boolean
+  retryable?: boolean
 }
 
 export interface TodoUpdatedMessage {

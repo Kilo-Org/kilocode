@@ -6,6 +6,7 @@
  */
 
 import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+import { permissionStatus, respondToPermission } from "@kilocode/sdk/permission"
 import { isNotFoundError } from "./not-found"
 
 export type RecoverablePermission = PermissionRequest
@@ -13,7 +14,7 @@ export type PermissionResponse = "once" | "always" | "reject"
 export type PermissionResponseResult =
   | { kind: "resolved"; sessionID: string; response: PermissionResponse }
   | { kind: "stale" }
-  | { kind: "error" }
+  | { kind: "error"; retryable?: boolean }
 
 export interface PermissionContext {
   readonly client: KiloClient | null
@@ -89,66 +90,39 @@ export async function handlePermissionResponse(
     ((_requestID: string, _sessionID: string, action: () => Promise<PermissionResponseResult>) => action())
   const action = async (): Promise<PermissionResponseResult> => {
     if (!dir) return { kind: "error" }
+    ctx.recordPermissionDirectory(permissionId, dir, target)
 
-    if (approvedAlways.length > 0 || deniedAlways.length > 0) {
-      const saveResult = await client.permission
-        .saveAlwaysRules(
-          {
-            requestID: permissionId,
-            directory: dir,
-            approvedAlways,
-            deniedAlways,
-          },
-          { throwOnError: true },
-        )
-        .then(() => "ok" as const)
-        .catch((error: unknown) => {
-          if (isNotFoundError(error)) return "stale" as const
-          console.error("[Kilo New] KiloProvider: Failed to save always-rules:", error)
-          return "error" as const
-        })
-      if (saveResult === "stale") {
-        ctx.clearPermissionDirectory(permissionId)
-        void fetchAndSendPendingPermissions(ctx)
-        return { kind: "stale" }
-      }
-      if (saveResult === "error") return { kind: "error" }
-    }
-
-    const replyResult = await client.permission
-      .reply(
-        {
-          requestID: permissionId,
-          reply: response,
-          directory: dir,
-          interactive: true,
-          ...(feedback ? { message: feedback } : {}),
-        },
-        { throwOnError: true },
-      )
-      .then(() => "ok" as const)
-      .catch((error: unknown) => {
-        if (isNotFoundError(error)) return "stale" as const
-        console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
-        return "error" as const
-      })
-    if (replyResult === "stale") {
+    const result = await respondToPermission(client, {
+      requestID: permissionId,
+      sessionID: target,
+      directory: dir,
+      reply: response,
+      approvedAlways,
+      deniedAlways,
+      message: feedback,
+    })
+    if (result.status === "missing" || isNotFoundError(result.error)) {
       ctx.clearPermissionDirectory(permissionId)
       void fetchAndSendPendingPermissions(ctx)
       return { kind: "stale" }
     }
-    if (replyResult !== "ok") return { kind: "error" }
+    if (result.status === "unknown") return { kind: "error", retryable: false }
+    if (result.status === "pending") return { kind: "error" }
     ctx.clearPermissionDirectory(permissionId)
     return { kind: "resolved", sessionID: target, response }
   }
 
-  const result = await run(permissionId, target, action).catch((error: unknown) => {
+  const result = await run(permissionId, target, action).catch((error: unknown): PermissionResponseResult => {
     console.error("[Kilo New] KiloProvider: Failed to process permission response:", error)
-    return { kind: "error" } as const
+    return { kind: "error", retryable: false }
   })
   if (result.kind === "error") {
     ctx.clearPermissionResponse?.(permissionId)
-    ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+    ctx.postMessage({
+      type: "permissionError",
+      permissionID: permissionId,
+      ...(result.retryable === false ? { retryable: false } : {}),
+    })
     return
   }
   if (result.kind === "stale") {
@@ -160,6 +134,46 @@ export async function handlePermissionResponse(
     permissionID: permissionId,
     sessionID: result.sessionID,
     response: result.response,
+  })
+}
+
+/** Reuse an in-flight response claim, but never submit a new decision to check status. */
+export async function handlePermissionStatus(
+  ctx: PermissionContext,
+  permissionId: string,
+  sessionID: string,
+): Promise<void> {
+  const dir = ctx.getPermissionDirectory(permissionId)
+  const target = ctx.getPermissionSession?.(permissionId) ?? sessionID
+  if (!ctx.client || (!dir && !ctx.isPermissionResponseClaimed?.(permissionId)) || target !== sessionID) {
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId, retryable: false })
+    return
+  }
+  const client = ctx.client
+  const action = async (): Promise<PermissionResponseResult> => {
+    if (!dir) return { kind: "error", retryable: false }
+    ctx.recordPermissionDirectory(permissionId, dir, target)
+    const status = await permissionStatus(client, { requestID: permissionId, sessionID: target, directory: dir })
+    if (status === "missing") {
+      ctx.clearPermissionDirectory(permissionId)
+      return { kind: "stale" }
+    }
+    return { kind: "error", retryable: status === "pending" }
+  }
+  const result = await (ctx.runPermissionResponse?.(permissionId, target, action) ?? action())
+  if (result.kind === "resolved") {
+    ctx.postMessage({
+      type: "permissionResolved",
+      permissionID: permissionId,
+      sessionID: result.sessionID,
+      response: result.response,
+    })
+    return
+  }
+  ctx.postMessage({
+    type: "permissionError",
+    permissionID: permissionId,
+    ...(result.kind === "stale" ? { stale: true } : { retryable: result.retryable !== false }),
   })
 }
 
