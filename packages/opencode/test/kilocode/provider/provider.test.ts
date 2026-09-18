@@ -108,7 +108,7 @@ it.instance(
 )
 
 it.instance(
-  "getSmallModel falls back to Kilo auto when the provider has no chat-capable model",
+  "getSmallModel falls back to Kilo auto when the provider has no text-output model",
   Effect.gen(function* () {
     const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
     expect(model).toMatchObject({ providerID: "kilo", id: "kilo-auto/small" })
@@ -120,12 +120,74 @@ it.instance(
           name: "Test Provider",
           npm: "@ai-sdk/openai-compatible",
           models: {
-            "embed-only": { release_date: "2026-01-01", tool_call: false },
+            "image-only": {
+              release_date: "2026-01-01",
+              modalities: { input: ["text"], output: ["image"] },
+            },
           },
           options: { apiKey: "test-key" },
         },
         kilo: {
           options: { apiKey: "kilo-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "getSmallModel uses a chat model without tool calling over the Kilo fallback",
+  Effect.gen(function* () {
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
+    expect(model).toMatchObject({ providerID: "test-provider", id: "sonar-like" })
+  }),
+  {
+    config: {
+      provider: {
+        "test-provider": {
+          name: "Test Provider",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "sonar-like": {
+              release_date: "2026-01-01",
+              tool_call: false,
+              cost: { input: 1, output: 1 },
+            },
+          },
+          options: { apiKey: "test-key" },
+        },
+        kilo: {
+          options: { apiKey: "kilo-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "getSmallModel skips non-text models when a chat model is present",
+  Effect.gen(function* () {
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
+    expect(model).toMatchObject({ providerID: "test-provider", id: "chat-model" })
+  }),
+  {
+    config: {
+      provider: {
+        "test-provider": {
+          name: "Test Provider",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "image-only": {
+              release_date: "2026-01-01",
+              modalities: { input: ["text"], output: ["image"] },
+              cost: { input: 0, output: 0 },
+            },
+            "chat-model": {
+              release_date: "2025-01-01",
+              cost: { input: 1, output: 1 },
+            },
+          },
+          options: { apiKey: "test-key" },
         },
       },
     },

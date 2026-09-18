@@ -322,12 +322,15 @@ export function hasKiloCredentials(
  * small model for auxiliary tasks (session titles, prompt enhance, commit
  * messages, branch names). Keeps those calls on the provider the user
  * configured instead of falling through to Kilo's auto small model, which
- * draws Kilo credits in BYOK setups. Missing cost data sorts as free; ties
- * break by release date and id, matching the catalog ordering in getSmallModel.
+ * draws Kilo credits in BYOK setups. Chat-capable means text in and text out;
+ * tool calling is not required (e.g. Perplexity sonar and morph chat models
+ * advertise tool_call false). Models with no text output (image, audio, video)
+ * are skipped. Missing cost data sorts as free; ties break by release date
+ * and id, matching the catalog ordering in getSmallModel.
  */
 export function cheapestSmallModel(models: Provider.Model[]) {
   return sortBy(
-    models.filter((model) => model.capabilities.toolcall),
+    models.filter((model) => model.capabilities.input.text && model.capabilities.output.text),
     [(model) => model.cost.input + model.cost.output, "asc"],
     [(model) => model.release_date, "desc"],
     [(model) => model.id, "desc"],
