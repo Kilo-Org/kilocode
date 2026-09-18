@@ -86,6 +86,7 @@ import { PartStash } from "./part-stash"
 import { isolate, mergeOptimisticPart, mergeOptimisticParts, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { createFrameQueue, streamMessage } from "./frame-queue"
+import { handleWakeupMessage, wakeups } from "./session-wakeup"
 import { state as todoState } from "./todo-revert"
 import { preserveVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
@@ -103,13 +104,12 @@ import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { createPreferenceLoader } from "./session-preference-loader"
-import { activities, type Activity } from "../utils/session-activity"
+import { activities, blockedSessionIds, type Activity } from "../utils/session-activity"
 import { hold, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
-
 // Store structure for messages and parts
 interface SessionStore {
   sessions: Record<string, SessionInfo>
@@ -855,6 +855,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleStreamMessage(message: ExtensionMessage): boolean {
+    if (handleWakeupMessage(message)) return true
     if (!streamMessage(message)) return false
     if (message.type === "partUpdated") {
       handlePartUpdated(message.sessionID, message.messageID, message.part, message.delta)
@@ -1856,11 +1857,10 @@ export const SessionProvider: ParentComponent = (props) => {
           parents: lineage().parents,
           statuses: statusMap,
           outcomes: closeMap,
-          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false)].map(
-            (item) => item.sessionID,
-          ),
+          blocked: blockedSessionIds(permissions(), questions()),
           submitting: Object.keys(submissionMap),
           suggested: suggestions().map((item) => item.sessionID),
+          scheduled: Object.keys(wakeups()),
           disconnected: disconnected(),
         }),
       ),

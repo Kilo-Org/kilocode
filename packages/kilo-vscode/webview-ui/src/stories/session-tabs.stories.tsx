@@ -70,6 +70,7 @@ type Story = StoryObj
 
 const states: { state: Activity; title: string }[] = [
   { state: "busy", title: "Running" },
+  { state: "scheduled", title: "Scheduled" },
   { state: "waiting", title: "Needs input" },
   { state: "done", title: "Completed" },
   { state: "retry", title: "Retrying" },
