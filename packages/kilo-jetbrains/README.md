@@ -183,6 +183,28 @@ The checked-in IDE run configurations attach both files as `<log_file>` tabs ("B
 
 Runs started from the Agent Manager against a git worktree get their log paths rebased onto that worktree, because `$PROJECT_DIR$` was already expanded against the main checkout when the configuration was read (`WorktreeRunAdapter.rebaseLogs`).
 
+### Which run configurations a worktree can run
+
+The Agent Manager Run popup only lists configurations whose location it can repoint at the worktree, so it never silently runs the main checkout instead. `WorktreeRunAdapter.supports` accepts three kinds:
+
+| Kind | Location that gets rebased |
+|---|---|
+| External-system (Gradle, Maven) | `ExternalSystemRunConfiguration.settings.externalProjectPath` |
+| `CommonProgramRunConfigurationParameters` (CLI-style) | `workingDirectory`, plus `WORKTREE_PATH`/`REPO_PATH` env vars |
+| Types listed in `WorktreeRunAdapter.PATHS` | a path in the configuration's serialized state |
+
+The third kind exists for types that keep their working directory out of any callable API. npm/yarn/pnpm/bun script configurations (`js.build_tools.npm`) are the current entry: their `<package-json>` path *is* the working directory — `NpmRunProfileState` takes its parent and hands it to `GeneralCommandLine.withWorkingDirectory` — and the typed setter lives in the Ultimate-only JavaScript plugin, so the rebase goes through `writeExternal` → rewrite → `readExternal` instead. That matches the VS Code Agent Manager contract of cwd = worktree.
+
+Adding a type means one `PATHS` entry, not a generic rewrite: blanket-rebasing every repo-absolute path in an arbitrary configuration's serialized state would reach into types from any installed plugin, where a path may need to keep pointing at the main checkout.
+
+Module-classpath configurations (Application, Spring Boot, tests) are not transplanted — their classpath comes from the main checkout's module — and go through the platform's own build-system delegation instead (`WorktreeRunDelegate`). Anything neither path can run is listed in a collapsed **Not Supported** submenu with the reason, and logged by `WorktreeRunManager.configs`:
+
+```bash
+grep "worktree run: configs listed" packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains/kilo-backend/kilo.log
+```
+
+Worktree npm runs need the worktree's own `node_modules`; that is what the Agent Manager setup script is for.
+
 Recommended combinations:
 
 ```text

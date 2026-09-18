@@ -4,6 +4,7 @@ import ai.kilocode.log.KiloLog
 import com.intellij.execution.CommonProgramRunConfigurationParameters
 import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
+import com.intellij.execution.configuration.EnvironmentVariablesComponent
 import com.intellij.execution.configurations.LogFileOptions
 import com.intellij.execution.configurations.ModuleBasedConfiguration
 import com.intellij.execution.configurations.RunConfiguration
@@ -11,6 +12,7 @@ import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.openapi.externalSystem.model.ProjectSystemId
 import com.intellij.openapi.externalSystem.model.execution.ExternalSystemTaskExecutionSettings
 import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunConfiguration
+import org.jdom.Element
 import java.nio.file.Path
 
 /**
@@ -24,8 +26,10 @@ import java.nio.file.Path
  * - Command-line style configurations implementing [CommonProgramRunConfigurationParameters]:
  *   the clone's working directory is mapped onto the worktree and WORKTREE_PATH/REPO_PATH env
  *   vars are injected (same contract as the VS Code Agent Manager run scripts).
+ * - Types listed in [PATHS], whose location is reachable only through serialized state; see
+ *   [relocate].
  *
- * Both kinds additionally get their `<log_file>` tabs mapped onto the worktree; see [rebaseLogs].
+ * All kinds additionally get their `<log_file>` tabs mapped onto the worktree; see [rebaseLogs].
  *
  * Paths are rebased rather than replaced, because both fields commonly point at a subproject
  * (`<repo>/packages/kilo-jetbrains`) rather than the repository root; see [rebase].
@@ -61,6 +65,31 @@ internal object WorktreeRunAdapter {
 
     private const val CLEAN_TASK = "clean"
 
+    /**
+     * Location elements per configuration type id, as `tag to attribute`, for types that keep their
+     * working directory out of any platform API this adapter can call. Rebasing these is the same
+     * one-field move as [ExternalSystemRunConfiguration.settings]'s external project path — it just
+     * has to go through serialized state; see [relocate].
+     *
+     * `js.build_tools.npm` (npm/yarn/pnpm/bun scripts) stores only `<package-json>`, and that path
+     * *is* its working directory: `NpmRunProfileState` takes `Path.of(packageJsonPath).parent` and
+     * hands it to `NpmUtil.configureNpmCommand`, which calls `GeneralCommandLine.withWorkingDirectory`.
+     * `NpmRunSettings` has no working-directory field and its builder no setter for one, so pointing
+     * `<package-json>` at the worktree is the only way to move the run — and produces exactly the
+     * VS Code Agent Manager contract of cwd = worktree.
+     *
+     * Keep this an explicit per-type list. Rewriting every repo-absolute path in an arbitrary
+     * configuration's serialized state would reach into types from any installed plugin, where a
+     * `value` attribute may be something that must keep pointing at the main checkout.
+     */
+    private val PATHS = mapOf("js.build_tools.npm" to listOf("package-json" to "value"))
+
+    /**
+     * Wrapper tag of a serialized environment block. `EnvironmentVariablesComponent` keeps this one
+     * private while exposing `ENV`/`NAME`/`VALUE`, so it has to be repeated here.
+     */
+    private const val ENVS = "envs"
+
     private val LOG = KiloLog.create(WorktreeRunAdapter::class.java)
 
     /**
@@ -72,6 +101,7 @@ internal object WorktreeRunAdapter {
 
     fun supports(config: RunConfiguration): Boolean {
         if (config is ExternalSystemRunConfiguration) return true
+        if (config.type.id in PATHS) return true
         if (config !is CommonProgramRunConfigurationParameters) return false
         return config !is ModuleBasedConfiguration<*, *>
     }
@@ -91,9 +121,10 @@ internal object WorktreeRunAdapter {
     ): RunnerAndConfigurationSettings? {
         val source = settings.configuration
         if (!supports(source)) return null
+        val spots = PATHS[source.type.id]
         // ExternalSystemRunConfiguration.clone() returns null when its factory is missing or the
         // serialization round trip fails; treat that as unsupported instead of crashing the run.
-        val clone = source.clone() ?: run {
+        val clone = (if (spots == null) source.clone() else relocate(settings, spots, repo, worktree)) ?: run {
             LOG.warn("worktree run: clone failed for ${source.name}")
             return null
         }
@@ -117,6 +148,82 @@ internal object WorktreeRunAdapter {
         val result = manager.createConfiguration(clone, settings.factory)
         result.isActivateToolWindowBeforeRun = true
         return result
+    }
+
+    /**
+     * Clones [settings] through its own serialized state, rebasing the location elements in [spots]
+     * and injecting the worktree env vars, for types whose location no callable API exposes.
+     *
+     * The round trip is what [ExternalSystemRunConfiguration.clone] already does — write to a JDOM
+     * element, create a fresh template configuration from the same factory, read it back — so the
+     * clone is built the way the platform builds its own. Rewriting the element in between is the
+     * only place a type like npm can be repointed.
+     *
+     * `RunConfiguration.writeExternal` emits the expanded absolute path: `$PROJECT_DIR$` collapsing
+     * happens a level up in `RunnerAndConfigurationSettingsImpl`, not here. [rebase] therefore sees a
+     * real path, and leaves anything outside [repo] alone.
+     *
+     * Returns null when the state cannot be read or restored, which [transplant] reports as an
+     * unsupported configuration rather than a failed run.
+     */
+    private fun relocate(
+        settings: RunnerAndConfigurationSettings,
+        spots: List<Pair<String, String>>,
+        repo: String,
+        worktree: String,
+    ): RunConfiguration? {
+        val source = settings.configuration
+        val element = Element("configuration")
+        try {
+            source.writeExternal(element)
+        } catch (e: Exception) {
+            LOG.warn("worktree run: cannot read ${source.name}'s state", e)
+            return null
+        }
+        val moved = spots.count { (tag, attr) ->
+            val child = element.getChild(tag) ?: return@count false
+            val raw = child.getAttributeValue(attr)?.takeIf { it.isNotBlank() } ?: return@count false
+            child.setAttribute(attr, rebase(raw, repo, worktree))
+            true
+        }
+        inject(element, worktree, repo)
+        val clone = settings.factory.createTemplateConfiguration(source.project)
+        try {
+            clone.readExternal(element)
+        } catch (e: Exception) {
+            LOG.warn("worktree run: cannot restore ${source.name}'s state", e)
+            return null
+        }
+        LOG.info("worktree run: relocated ${source.name} [${source.type.id}] via $moved serialized path(s)")
+        return clone
+    }
+
+    /**
+     * Adds the worktree env vars to [element]'s `<envs>` block, the shape
+     * [com.intellij.execution.configuration.EnvironmentVariablesData] reads and every configuration
+     * with user-editable environment variables stores.
+     *
+     * Existing entries for the same names are dropped first so ours win, and the block is reused
+     * rather than appended to: `EnvironmentVariablesData.readExternal` only looks at the first
+     * `<envs>` child. A block created here carries no `pass-parent-envs` attribute, which that
+     * reader treats as true, so inheriting the IDE environment is unchanged.
+     */
+    private fun inject(element: Element, worktree: String, repo: String) {
+        val vars = env(worktree, repo)
+        val envs = element.getChild(ENVS) ?: Element(ENVS).also { element.addContent(it) }
+        // Filtered into a new list first: removing from the live children list while iterating it
+        // would skip entries.
+        envs.getChildren(EnvironmentVariablesComponent.ENV)
+            .filter { it.getAttributeValue(EnvironmentVariablesComponent.NAME) in vars }
+            .toList()
+            .forEach { envs.removeContent(it) }
+        for ((name, value) in vars) {
+            envs.addContent(
+                Element(EnvironmentVariablesComponent.ENV)
+                    .setAttribute(EnvironmentVariablesComponent.NAME, name)
+                    .setAttribute(EnvironmentVariablesComponent.VALUE, value),
+            )
+        }
     }
 
     /**
