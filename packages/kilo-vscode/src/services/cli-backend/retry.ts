@@ -13,9 +13,17 @@ const TRANSIENT = [
   "socket hang up",
 ]
 
+// Undici raises `TypeError: terminated` when a pooled connection is closed
+// before the response completes. Match it exactly so unrelated messages that
+// merely contain the word stay fatal.
+const TRANSIENT_EXACT = ["terminated"]
+
 function transient(error: unknown): boolean {
   if (!error) return false
-  const msg = String(error instanceof Error ? error.message : error).toLowerCase()
+  const msg = String(error instanceof Error ? error.message : error)
+    .toLowerCase()
+    .trim()
+  if (TRANSIENT_EXACT.includes(msg)) return true
   return TRANSIENT.some((m) => msg.includes(m))
 }
 
