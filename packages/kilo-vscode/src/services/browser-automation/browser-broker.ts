@@ -118,9 +118,9 @@ export class BrowserLaunchError extends Error {
     const detail = cause instanceof Error ? cause.message : String(cause)
     super(
       missing === "chrome"
-        ? "Google Chrome was not found. Install Chrome and try again."
+        ? "Google Chrome was not found. Install Chrome or disable Use System Chrome in Kilo Settings > Experimental for the Integrated Browser to use an installed Playwright Chromium browser."
         : missing === "chromium"
-          ? "A compatible Playwright Chromium browser was not found. Install one or enable Use System Chrome in Kilo Settings > Web Tools."
+          ? "A compatible Playwright Chromium browser was not found. Install one or enable Use System Chrome in Kilo Settings > Experimental for the Integrated Browser."
           : `The browser could not start. ${detail}`,
       { cause },
     )

@@ -23,12 +23,24 @@ import { WorktreeStateManager } from "../WorktreeStateManager"
 import { WorktreeManager } from "../WorktreeManager"
 import { SetupScriptService } from "../SetupScriptService"
 import type { GitOps } from "../GitOps"
+import type { WorktreeHealthReport } from "../worktree-reconcile"
+import { disposeOrphanSizes } from "../orphans/sizing"
 import type { ProjectSessionView } from "./session-view"
 
 export interface ProjectContextDeps {
   log: (msg: string) => void
   git?: GitOps
   exists?: (dir: string) => boolean
+  /**
+   * Orphan directory sizes landed for this project and the webview needs the new numbers.
+   *
+   * Wired once here rather than threaded through every reconcile call site: sizing is started by
+   * whichever reconcile happens to run first — startup, an explicit repair, the diagnostics report —
+   * and a pass whose results are never pushed leaves the banner calculating forever.
+   */
+  sized?: (ctx: ProjectContext) => void
+  /** Whether background worktree pre-warming is enabled for this project. */
+  worktreePool?: () => boolean
   /** Factory overrides for tests. */
   state?: (root: string, log: (msg: string) => void) => WorktreeStateManager
   worktrees?: (root: string, log: (msg: string) => void, git?: GitOps) => WorktreeManager
@@ -41,6 +53,8 @@ export interface ProjectInitResult {
   ok: boolean
   refsFixed: number
   current: boolean
+  /** Worktree health from the startup reconcile, when it ran. */
+  health?: WorktreeHealthReport
 }
 
 export class ProjectContext {
@@ -56,6 +70,11 @@ export class ProjectContext {
   private listed = 0
   private views: readonly ProjectSessionView[] = []
   readonly stale = new Set<string>()
+  /**
+   * Latest worktree-health reconcile. Read by the pollers to skip worktrees that cannot answer and
+   * by the diagnostics report; refreshed by {@link initContextState} and by an explicit repair.
+   */
+  report: WorktreeHealthReport | undefined
 
   constructor(
     readonly id: string,
@@ -74,6 +93,12 @@ export class ProjectContext {
 
   isCurrent(generation: number): boolean {
     return this.version === generation && this.phase !== "disposing" && this.phase !== "disposed"
+  }
+
+  /** Orphan sizes landed on {@link report}; ask the host to push them. Silent for a dead context. */
+  notifySized(): void {
+    if (this.phase === "disposing" || this.phase === "disposed") return
+    this.deps.sized?.(this)
   }
 
   /** Initialize repository state exactly once per context lifetime. */
@@ -134,11 +159,11 @@ export class ProjectContext {
   }
 
   worktreeManager(): WorktreeManager {
-    this.worktrees ??= (this.deps.worktrees ?? ((root, log, git) => new WorktreeManager(root, log, git)))(
-      this.root,
-      (msg) => this.deps.log(`[WorktreeManager] ${msg}`),
-      this.deps.git,
-    )
+    this.worktrees ??= (
+      this.deps.worktrees ??
+      ((root, log, git) =>
+        new WorktreeManager(root, log, git, undefined, () => (this.deps.worktreePool?.() === false ? 0 : 1)))
+    )(this.root, (msg) => this.deps.log(`[WorktreeManager] ${msg}`), this.deps.git)
     return this.worktrees
   }
 
@@ -220,8 +245,10 @@ export class ProjectContext {
     if (this.phase === "disposed") return
     this.version++
     this.phase = "disposing"
+    disposeOrphanSizes(this)
     await this.init?.catch((err) => this.deps.log(`dispose: initialization failed: ${err}`))
     await this.mutation.catch((err) => this.deps.log(`dispose: mutation failed: ${err}`))
+    await this.worktrees?.settle().catch((err) => this.deps.log(`dispose: worktree bookkeeping failed: ${err}`))
     await this.state?.flush().catch((err) => this.deps.log(`dispose: state flush failed: ${err}`))
     this.live.clear()
     this.phase = "disposed"

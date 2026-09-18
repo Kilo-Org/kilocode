@@ -1,8 +1,12 @@
+import type { PRMergeMethod } from "../../webview-ui/agent-manager/pr/pr-types"
+
 export interface PRTarget {
   projectId?: string
   worktreeId: string
   prNumber: number
   prUrl: string
+  baseRefOid?: string
+  headRefOid?: string
 }
 
 export interface PRFile {
@@ -55,11 +59,29 @@ export type PRReviewResult =
   | (Result & { type: "agentManager.previewPRSuggestionResult"; preview?: PRSuggestionPreview })
   | (Result & { type: "agentManager.applyPRSuggestionResult" })
 
+export type PRMergeRequest =
+  | (Request & { type: "agentManager.updatePRBranch"; head: string })
+  | (Request & {
+      type: "agentManager.mergePR"
+      method: PRMergeMethod
+      auto: boolean
+      head: string
+    })
+  | (Request & { type: "agentManager.disablePRAutoMerge" })
+  | (Request & { type: "agentManager.loadPRConflicts"; base: string; head: string })
+
+export type PRMergeResult =
+  | (Result & { type: "agentManager.updatePRBranchResult" })
+  | (Result & { type: "agentManager.mergePRResult" })
+  | (Result & { type: "agentManager.disablePRAutoMergeResult" })
+  | (Result & { type: "agentManager.loadPRConflictsResult"; files?: string[] })
+
 type Route = { projectId?: string; worktreeId: string; requestId: string }
 type Outcome = Route & { success: boolean; error?: string }
 
 export type PRCommentRequest =
   | PRReviewRequest
+  | PRMergeRequest
   | (Route & { type: "agentManager.replyComment"; threadId: string; body: string })
   | (Request & {
       type: "agentManager.mutateComment"
@@ -70,5 +92,6 @@ export type PRCommentRequest =
 
 export type PRCommentResult =
   | PRReviewResult
+  | PRMergeResult
   | (Outcome & { type: "agentManager.replyCommentResult"; threadId: string })
   | (Outcome & { type: "agentManager.mutateCommentResult" })

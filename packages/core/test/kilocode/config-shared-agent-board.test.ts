@@ -9,14 +9,14 @@ describe("shared agent board configuration", () => {
   test("is absent by default", () => {
     const config = decode({})
 
-    expect(config.experimental?.shared_agent_board).toBeUndefined()
-    expect(encode(config).experimental?.shared_agent_board).toBeUndefined()
+    expect(config.shared_agent_board).toBeUndefined()
+    expect(encode(config).shared_agent_board).toBeUndefined()
   })
 
   test.each([false, true])("parses and round-trips %s", (value) => {
-    const config = decode({ experimental: { shared_agent_board: value } })
+    const config = decode({ shared_agent_board: value })
 
-    expect(config.experimental?.shared_agent_board).toBe(value)
-    expect(encode(config).experimental?.shared_agent_board).toBe(value)
+    expect(config.shared_agent_board).toBe(value)
+    expect(encode(config).shared_agent_board).toBe(value)
   })
 })

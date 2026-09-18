@@ -1,4 +1,4 @@
-Open a local application or public HTTPS page in the Browser panel for the current Agent Manager session.
+Open a local application or public HTTPS page in the Integrated Browser panel for the current Agent Manager session.
 
 Use this tool when the user asks you to inspect or verify a web page.
 The user sees a live view of this same browser page in Agent Manager. Reuse this

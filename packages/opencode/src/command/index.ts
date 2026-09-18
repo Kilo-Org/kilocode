@@ -7,7 +7,7 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
-import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
+import { reviewCommand } from "@/kilocode/review/command" // kilocode_change
 import { apply as applyOverride, type Override } from "@/kilocode/command/override" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import { LegacyEvent } from "@opencode-ai/schema/legacy-event"
@@ -115,6 +115,13 @@ const layer = Layer.effect(
       }
       // kilocode_change start
       commands[Default.REVIEW] = reviewCommand()
+      commands.goal = {
+        name: "goal",
+        description: "Keep working toward a session goal. /goal <objective> or pause, resume, clear",
+        source: "command",
+        template: "$ARGUMENTS",
+        hints: ["<objective | pause | resume | clear>"],
+      }
       commands["resume-claude"] = SessionResume.resumeClaude
       commands["resume-codex"] = SessionResume.resumeCodex
       // kilocode_change end
@@ -122,11 +129,14 @@ const layer = Layer.effect(
       // kilocode_change start - defer partial overrides until all command sources are registered
       const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
+        if (name === "goal")
+          throw new Error("The /goal command is reserved for session goals. Rename the custom command.")
         if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change
       }
       // kilocode_change end
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
+        if (name === "goal") throw new Error("The /goal command is reserved for session goals. Rename the MCP prompt.") // kilocode_change
         commands[name] = {
           name,
           source: "mcp",
@@ -196,8 +206,6 @@ const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const exact = s.commands[name] // kilocode_change
       if (exact) return exact // kilocode_change
-      const alias = legacyReviewCommand(name) // kilocode_change
-      if (alias) return alias // kilocode_change
 
       // kilocode_change start
       const target = skillName(name)

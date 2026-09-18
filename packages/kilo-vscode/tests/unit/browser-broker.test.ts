@@ -609,7 +609,14 @@ describe("BrowserBroker", () => {
     brokers.push(broker)
     const open = () =>
       broker.open({ sessionId: "missing-runtime", directory: "/tmp/project" }, "http://localhost:3000/")
-    await expect(open()).rejects.toMatchObject({ name: "BrowserLaunchError", missing, cause })
+    await expect(open()).rejects.toMatchObject({
+      name: "BrowserLaunchError",
+      missing,
+      cause,
+      message: expect.stringContaining(
+        `${system ? "disable" : "enable"} Use System Chrome in Kilo Settings > Experimental for the Integrated Browser`,
+      ),
+    })
     await expect(open()).rejects.toThrow(system ? "Install Chrome" : "enable Use System Chrome")
     expect(attempts).toBe(2)
     expect(broker.sessions()).toEqual([])

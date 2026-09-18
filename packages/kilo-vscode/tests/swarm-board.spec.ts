@@ -106,7 +106,9 @@ test("uses a distinct icon and fills short histories without manual paging", asy
   const rows = page.locator('.task-board-list [data-slot="board-message"]')
   await expect(rows.last().getByRole("group", { name: "Agent to All agents" })).toBeVisible()
   await expect(rows.last().locator('[data-slot="board-route-recipient-icon"] [data-component="icon"]')).toHaveCount(2)
-  await expect(rows.first().locator('[data-slot="board-route-recipient-icon"] [data-component="icon"]')).toHaveCount(1)
+  await expect(
+    rows.first().locator('[data-slot="board-route-recipient-icon"] [data-component="agent-avatar"]'),
+  ).toHaveCount(1)
   await expect(rows.last().locator("strong")).toHaveText("formatted")
   await expect(rows.last().locator("code")).toHaveText("code")
   expect(icon).not.toBe(await rows.first().locator('[data-component="board-route"] svg').first().innerHTML())
@@ -188,10 +190,16 @@ for (const width of [420, 200]) {
     await expect(routes).toHaveCount(2)
     await expect(routes.first()).toHaveCSS("display", width === 200 ? "grid" : "flex")
     await expect(
-      routes.first().locator('[data-slot="board-route-recipient-icon"] [data-component="icon"]'),
+      routes.first().locator('[data-slot="board-route-recipient-icon"] [data-component="agent-avatar"]'),
+    ).toHaveCount(1)
+    await expect(
+      routes.last().locator('[data-slot="board-route-recipient-icon"] [data-component="board-participant-stack"]'),
+    ).toHaveCount(1)
+    await expect(
+      routes.last().locator('[data-slot="board-route-recipient-icon"] [data-component="agent-avatar"]'),
     ).toHaveCount(1)
     await expect(routes.last().locator('[data-slot="board-route-recipient-icon"] [data-component="icon"]')).toHaveCount(
-      2,
+      1,
     )
   })
 }

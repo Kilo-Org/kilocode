@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
-import { Effect, Exit, Fiber } from "effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import { sql } from "drizzle-orm"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
@@ -8,6 +8,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Agent } from "../../src/agent/agent"
 import { Session } from "../../src/session/session"
 import { SessionStatus } from "../../src/session/status"
@@ -33,6 +34,7 @@ const it = testEffect(
       BackgroundJob.node,
       SessionProjector.node,
       Config.node,
+      RuntimeFlags.node,
       Database.node,
       Agent.node,
       Truncate.node,
@@ -40,7 +42,7 @@ const it = testEffect(
     ]),
   ),
 )
-const options = { config: { experimental: { shared_agent_board: true }, snapshot: false } }
+const options = { config: { shared_agent_board: true, snapshot: false } }
 const agent = { name: "code", permission: Permission.fromConfig({ board_read: "allow" }) }
 const output = { title: "Read file", output: "Original tool output", metadata: { original: true } }
 const model: Provider.Model = {
@@ -276,7 +278,7 @@ describe("shared board notifications", () => {
     ),
   )
 
-  it.live("does not consume failed reads or reads cancelled during the activity check", () =>
+  it.live("recovers stale cursors and does not consume reads cancelled during the activity check", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -287,17 +289,21 @@ describe("shared board notifications", () => {
           const cache = BoardContext.cache()
           const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
           yield* post(child.id, "pending")
-          const failed = yield* read(root.id, { since: "board_missing" }).pipe(
+          const replayed = yield* read(root.id, { since: "board_missing" }).pipe(
             Effect.flatMap((page) => notify("board_read", page)),
             Effect.exit,
           )
-          expect(Exit.isFailure(failed)).toBe(true)
-          expect(cache.cursor).toBe(0)
+          expect(Exit.isFailure(replayed)).toBe(false)
+          if (Exit.isFailure(replayed))
+            throw new Error(`board_read must replay stale cursors: ${Cause.pretty(replayed.cause)}`)
+          expect(cache.cursor).toBeGreaterThan(0)
+          const cursor = cache.cursor
+          yield* post(child.id, "after-recovery")
           const page = yield* read(root.id)
           const controller = new AbortController()
           controller.abort()
           expect(yield* notify("board_read", page, controller.signal)).toBe(page)
-          expect(cache.cursor).toBe(0)
+          expect(cache.cursor).toBe(cursor)
           const entered = Promise.withResolvers<void>()
           const release = Promise.withResolvers<void>()
           const activity = BoardStore.activity
@@ -318,9 +324,9 @@ describe("shared board notifications", () => {
           const run = yield* notify("board_read", page).pipe(Effect.forkChild)
           yield* Effect.promise(() => entered.promise)
           yield* Fiber.interrupt(run)
-          expect(cache.cursor).toBe(0)
+          expect(cache.cursor).toBe(cursor)
           probe.mockRestore()
-          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 1)
+          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 2)
         }),
       options,
     ),
@@ -370,18 +376,20 @@ describe("shared board notifications", () => {
   )
 
   it.live("keeps notifications disabled with the experiment", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const root = yield* sessions.create({ title: "Disabled" })
-        const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
-        const message = yield* seed(root.id, "Work independently")
-        yield* post(child.id, "disabled")
-        const cache = BoardContext.cache()
-        const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
-        expect(yield* notify("read", output)).toBe(output)
-        expect(cache.cursor).toBe(0)
-      }),
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* sessions.create({ title: "Disabled" })
+          const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+          const message = yield* seed(root.id, "Work independently")
+          yield* post(child.id, "disabled")
+          const cache = BoardContext.cache()
+          const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
+          expect(yield* notify("read", output)).toBe(output)
+          expect(cache.cursor).toBe(0)
+        }),
+      { config: { shared_agent_board: false } },
     ),
   )
 

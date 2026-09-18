@@ -440,18 +440,23 @@ export const RunCommand = effectCmd({
       const input = { initial: undefined as string | undefined, loaded: false }
       async function loadInput() {
         if (input.loaded) return
-        // kilocode_change start - bound the stdin wait when argv already carries a
+        // Bound the stdin wait when argv already carries a
         // message or command; a launcher-held-open pipe never EOFs (see run-stdin.ts)
         const piped = process.stdin.isTTY
           ? undefined
           : await readPipedStdin({ bound: rawMessage.trim().length > 0 || args.command !== undefined })
-        // kilocode_change end
+
         message = resolveRunInput(message, piped) ?? ""
         input.initial = resolveRunInput(rawMessage, piped)
         input.loaded = true
         if (message.trim().length > 0 || args.command || interactive) return
         UI.error("You must provide a message or a command")
         process.exit(1)
+      }
+      if (args.command === "goal") {
+        await loadInput()
+        const error = KiloRun.validateGoal(message)
+        if (error) die(error)
       }
       // kilocode_change end
 
@@ -1037,6 +1042,13 @@ export const RunCommand = effectCmd({
         if (deferred) {
           KiloRun.validateBuiltin({ command: builtin, continue: args.continue, session: args.session })
           if (!builtin) await loadInput()
+        }
+        // kilocode_change end
+
+        // kilocode_change start
+        if (args.command === "goal") {
+          await KiloRun.goal(client, sessionID, message, emit)
+          return
         }
         // kilocode_change end
 

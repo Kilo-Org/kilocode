@@ -4,7 +4,6 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
 import type { LanguageContextValue } from "../src/context/language"
 import type { CaffeinationState } from "../src/types/messages"
-import "./CaffeinationButton.css"
 
 export const CaffeinationButton: Component<{ t: LanguageContextValue["t"] }> = (props) => {
   const vscode = useVSCode()
@@ -26,12 +25,12 @@ export const CaffeinationButton: Component<{ t: LanguageContextValue["t"] }> = (
   return (
     <Tooltip value={label()} placement="bottom">
       <IconButton
-        icon={state().enabled || state().active ? "coffee-filled" : "coffee"}
+        icon="coffee"
         size="small"
         variant="ghost"
-        classList={{ "am-caffeination-active": state().active }}
         aria-label={label()}
         aria-pressed={state().enabled || state().active}
+        data-active={state().active ? "" : undefined}
         disabled={!state().available && !state().enabled && !state().active}
         onClick={() =>
           vscode.postMessage({ type: "agentManager.setCaffeination", enabled: !(state().enabled || state().active) })

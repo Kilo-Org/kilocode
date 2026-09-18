@@ -1,3 +1,6 @@
+import { existsSync } from "fs"
+import { isTimeout } from "./command-budget"
+
 export interface BranchListItem {
   name: string
   isLocal: boolean
@@ -28,9 +31,44 @@ interface WorktreeEntry {
   detached: boolean
 }
 
-type PRErrorKind = "not_found" | "gh_missing" | "gh_auth" | "unknown"
+/**
+ * Why a PR lookup failed. `gh_timeout` is never returned by {@link classifyPRError} — a timeout has
+ * no stderr to classify, so only the caller knows — but it belongs in the same union so the poller's
+ * handling stays exhaustive.
+ */
+export type PRErrorKind = "not_found" | "gh_missing" | "gh_auth" | "gh_timeout" | "unknown"
 
-export type WorktreeSetupErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing" | "no_commits"
+export type WorktreeSetupErrorCode =
+  | "git_not_found"
+  | "not_git_repo"
+  | "lfs_missing"
+  | "no_commits"
+  | "worktree_missing"
+  | "worktree_unregistered"
+  | "git_timeout"
+
+/**
+ * Extra facts a caller knows that the error text alone cannot prove.
+ *
+ * A failed `spawn` reports `ENOENT` both when the binary is missing and when the working directory
+ * is gone, so the message can never distinguish "git is not installed" from "this worktree was
+ * deleted". Everything here exists to keep the classifier from guessing.
+ */
+export type WorktreeErrorContext = {
+  /** Directory the failing command ran in. */
+  cwd?: string
+  /** True only when a `git --version` probe itself failed to spawn. */
+  probeFailed?: boolean
+  /** Existence check, injectable for tests. */
+  exists?: (dir: string) => boolean
+  /**
+   * The original error, when the caller still has it.
+   *
+   * A command killed for exceeding its budget carries `killed`/`signal` and a generic
+   * "Command failed" message, so the text alone cannot prove a timeout — see {@link isTimeout}.
+   */
+  err?: unknown
+}
 
 export function parsePRUrl(url: string): PRUrlParts | null {
   let normalized = url.trim()
@@ -155,10 +193,43 @@ export function classifyPRError(msg: string): PRErrorKind {
   return "unknown"
 }
 
-export function classifyWorktreeError(msg: string): WorktreeSetupErrorCode | undefined {
-  if (msg.includes("ENOENT") || msg.includes("not found in PATH")) return "git_not_found"
+/** True when the text is a failed process spawn rather than a filesystem or git-reported error. */
+function spawnFailure(msg: string): boolean {
+  return /spawn\b/.test(msg) && msg.includes("ENOENT")
+}
+
+/**
+ * Map a worktree setup/import failure to a user-facing code.
+ *
+ * `git_not_found` is only ever returned when git itself is provably the problem: a failed
+ * `git --version` probe, or a spawn failure in a working directory that still exists. A spawn
+ * failure in a directory that is gone is reported as `worktree_missing`, because telling the user
+ * to install git when git works is worse than showing the raw message.
+ */
+export function classifyWorktreeError(msg: string, ctx?: WorktreeErrorContext): WorktreeSetupErrorCode | undefined {
+  // Not a text match: `execWithShellEnv` watchdogs surface as `killed`/`SIGTERM` with a generic
+  // "Command failed" message, which `isTimeout` recognizes and `msg.includes("timed out")` misses.
+  if (isTimeout(ctx?.err ?? msg)) return "git_timeout"
+  if (ctx?.probeFailed) return "git_not_found"
+  if (msg.includes("not found in PATH")) return "git_not_found"
+
+  const cwd = ctx?.cwd
+  const exists = ctx?.exists ?? existsSync
+  const cwdGone = cwd !== undefined && !exists(cwd)
+  if (cwdGone) return "worktree_missing"
+
+  if (unregisteredWorktree(msg)) return "worktree_unregistered"
   if (msg.includes("not a git repository")) return "not_git_repo"
   if (msg.includes("Git LFS") && msg.includes("not found")) return "lfs_missing"
   if (msg.includes("no commits yet")) return "no_commits"
+  if (spawnFailure(msg)) return "git_not_found"
   return undefined
+}
+
+/**
+ * `fatal: not a git repository: /repo/.git/worktrees/<name>` — the directory is still on disk but
+ * git no longer knows about it, which is a broken worktree rather than a non-repo folder.
+ */
+export function unregisteredWorktree(msg: string): boolean {
+  return /not a git repository:.*[/\\]worktrees[/\\]/.test(msg)
 }

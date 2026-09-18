@@ -70,6 +70,16 @@ describe("routeEarlyMessage activity", () => {
   })
 })
 
+describe("routeEarlyMessage caffeination", () => {
+  it("delegates keep-awake toggles to the host", async () => {
+    const calls: string[] = []
+    const ctx = { caffeination: () => calls.push("toggle") } as Ctx
+
+    expect(await routeEarlyMessage({ type: "toggleCaffeination" }, ctx)).toBe(true)
+    expect(calls).toEqual(["toggle"])
+  })
+})
+
 describe("routeEarlyMessage background jobs", () => {
   it("forwards board requests without losing owner, project, or revision", async () => {
     const calls: unknown[] = []

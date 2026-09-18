@@ -165,11 +165,21 @@ export function restoreTrackedTabs(
   order: string[] | undefined,
   check: PendingTabCheck,
   apply: ApplyLocalTabOrder,
+  closed: ReadonlySet<string> = new Set(),
 ): string[] | undefined {
-  const locals = [...inventory.local]
+  // A close is optimistic in the webview: the host can still list the session
+  // in an intermediate state push. Never resurrect an id the user just closed,
+  // including through `current`, `base`, `merged`, or the `order` path.
+  const locals = inventory.local.filter((id) => !closed.has(id))
   const evict = (ids: string[]) =>
-    ids.filter((id) => !inventory.external?.has(id) && !inventory.unresolved?.has(id) && !inventory.rejected?.has(id))
-  const real = current.filter((id) => !check(id))
+    ids.filter(
+      (id) =>
+        !closed.has(id) &&
+        !inventory.external?.has(id) &&
+        !inventory.unresolved?.has(id) &&
+        !inventory.rejected?.has(id),
+    )
+  const real = current.filter((id) => !check(id) && !closed.has(id))
 
   if (locals.length > 0 && real.length === 0) {
     if (!order) return locals
@@ -192,6 +202,14 @@ export function restoreTrackedTabs(
   }
 
   return changed ? merged : undefined
+}
+
+/** Drop suppressed ids the host no longer tracks, so a later restore can re-add them. */
+export function pruneClosed(closed: Set<string>, sessions: readonly { id: string }[]): void {
+  const live = new Set(sessions.map((entry) => entry.id))
+  for (const id of closed) {
+    if (!live.has(id)) closed.delete(id)
+  }
 }
 
 export function reconcileTrackedTabs(

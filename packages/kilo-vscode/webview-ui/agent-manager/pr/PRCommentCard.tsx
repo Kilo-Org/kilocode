@@ -10,7 +10,7 @@ import { useLanguage } from "../../src/context/language"
 import { PRCommentDiff } from "../../diff-viewer/PRCommentDiff"
 import { CopyButton } from "./CopyButton"
 import { PRAvatar } from "./PRAvatar"
-import { prMarkdown, preview } from "./pr-comment-payload"
+import { prMarkdown, preview, githubUrl } from "./pr-comment-payload"
 import { PRCommentTime } from "./PRCommentTime"
 import type { PRComment, PRReaction, PRReactionContent } from "./pr-types"
 import { PRReactions } from "./PRReactions"
@@ -128,7 +128,7 @@ export function PRCommentCard(props: Props) {
             {t("agentManager.import.pullRequest")}
           </span>
         </Show>
-        <Show when={!props.inline || !props.open}>
+        <Show when={!props.open}>
           <span class="am-pr-comment-preview">{preview(props.comment.body)}</span>
         </Show>
         <div class="am-pr-comment-tags">
@@ -210,6 +210,13 @@ export function PRCommentCard(props: Props) {
             </Show>
             <span class="am-pr-comment-actions-gap" />
             <CopyButton text={prMarkdown(props.comment)} label={t("agentManager.pr.comment.copy")} />
+            <Show when={githubUrl(props.comment.url)}>
+              {(url) => (
+                <Tooltip value={t("agentManager.pr.comment.copyLink")} placement="top">
+                  <CopyButton text={url()} icon="link" label={t("agentManager.pr.comment.copyLink")} />
+                </Tooltip>
+              )}
+            </Show>
             <Show when={props.onOpenDiff}>
               <Tooltip value={t("agentManager.pr.comment.showInDiff")} placement="top">
                 <IconButton

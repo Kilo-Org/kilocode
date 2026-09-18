@@ -1,4 +1,14 @@
-import { createEffect, createMemo, createRenderEffect, createSignal, on, untrack, type Accessor } from "solid-js"
+import {
+  createEffect,
+  createMemo,
+  createRenderEffect,
+  createSignal,
+  on,
+  onCleanup,
+  untrack,
+  type Accessor,
+} from "solid-js"
+import { createAnnotationLifecycle } from "./annotation-lifecycle"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { UiI18nParams } from "@kilocode/kilo-ui/context"
 import type { DiffHandle } from "@kilocode/kilo-ui/pierre"
@@ -20,6 +30,7 @@ import {
   sendReviewComments,
   labels,
   type AnnotationMeta,
+  type CommentFormMount,
   type ReviewComposer,
 } from "./review-annotations"
 import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech"
@@ -29,6 +40,7 @@ import { createReviewOpenState } from "./review-state"
 import { createReviewScrollPreserver } from "./review-scroll"
 import { createDiffRows } from "./diff-state"
 import { createDiffRequests } from "./diff-requests"
+import { postAllGithub, type CommentsGithub } from "./comments-github"
 import { treeOrder } from "./file-tree-utils"
 import { isDiffExpandable, shouldVirtualizeDiff } from "./diff-open-policy"
 import { isMarkdownFile } from "./MarkdownDiffView"
@@ -49,9 +61,14 @@ type Props = {
   canComment?: Accessor<boolean>
   onSendClick?: () => void
   onSendAll?: () => void
+  commentForm?: Accessor<CommentFormMount | undefined>
+  commentsGithub?: CommentsGithub
 }
 
 export function createReviewController(props: Props) {
+  const lifecycle = createAnnotationLifecycle()
+  onCleanup(lifecycle.clear)
+  const [preferredDestination, setPreferredDestination] = createSignal<"local" | "github">("local")
   const active = props.active ?? (() => true)
   const canComment = props.canComment ?? (() => true)
   const [draft, setDraft] = createSignal(reviewComposerDraft(props.composer()))
@@ -98,6 +115,7 @@ export function createReviewController(props: Props) {
       props.key,
       () => {
         if (!active()) return
+        lifecycle.clear()
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -226,6 +244,11 @@ export function createReviewController(props: Props) {
     if (id === null) props.focus()
   }
 
+  const completeRemoteDraft = (meta: AnnotationMeta) => {
+    if (draftMeta !== meta) return
+    cancelDraft()
+  }
+
   const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
@@ -239,6 +262,7 @@ export function createReviewController(props: Props) {
 
   const buildAnnotation = (annotation: DiffLineAnnotation<AnnotationMeta>): HTMLElement | undefined =>
     buildReviewAnnotation(annotation, {
+      track: lifecycle.track,
       diffs: props.diffs(),
       editing: editing(),
       setEditing: setEditState,
@@ -247,6 +271,9 @@ export function createReviewController(props: Props) {
       updateComment,
       deleteComment,
       cancelDraft,
+      completeRemoteDraft,
+      onDestination: setPreferredDestination,
+      mount: props.commentForm?.(),
       labels: labels(props.label),
       activeTerminalId: props.activeTerminalId,
       speech,
@@ -255,9 +282,10 @@ export function createReviewController(props: Props) {
   const handleGutterClick = (file: string, range: SelectedLineRange) => {
     if (!canComment() || draft()) return
     const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
+    const destination = preferredDestination()
     props.preserveScroll(() => {
       const next = { file, side, line: range.start, endLine: range.end }
-      draftMeta = { type: "draft", comment: null, ...next }
+      draftMeta = { type: "draft", comment: null, ...next, destination }
       props.composer().draft = draftMeta
       setDraft(next)
     })
@@ -269,6 +297,44 @@ export function createReviewController(props: Props) {
     sendReviewComments(comments, props.activeTerminalId())
     props.preserveScroll(() => props.setComments([]))
     props.onSendAll?.()
+  }
+
+  const [sendAllPending, setSendAllPending] = createSignal(false)
+  const [sendAllError, setSendAllError] = createSignal<string>()
+
+  const githubComments = () => {
+    const github = props.commentsGithub
+    if (!github) return []
+    return props.comments().filter((comment) => {
+      const context = github.resolve(comment)
+      return !!context && !context.closed
+    })
+  }
+
+  const sendAllGithubCount = () => githubComments().length
+  const sendAllGithubAvailable = () => sendAllGithubCount() > 0
+
+  const sendAllToGithub = async () => {
+    const github = props.commentsGithub
+    if (!github || sendAllPending()) return
+    const pending = githubComments()
+    if (pending.length === 0) return
+    props.onSendClick?.()
+    setSendAllPending(true)
+    setSendAllError(undefined)
+    const { posted, failure } = await postAllGithub(pending, github)
+    if (posted.length > 0) {
+      const ids = new Set(posted.map((comment) => comment.id))
+      props.preserveScroll(() => props.setComments(props.comments().filter((comment) => !ids.has(comment.id))))
+    }
+    setSendAllPending(false)
+    if (failure !== undefined || posted.length < pending.length) {
+      setSendAllError(
+        props.label("agentManager.review.sendAllToGithubFailed", {
+          error: failure || props.label("common.requestFailed"),
+        }),
+      )
+    }
   }
 
   const sendAllClick = () => {
@@ -289,7 +355,12 @@ export function createReviewController(props: Props) {
     setEditState,
     handleGutterClick,
     sendAllToChat,
+    sendAllToGithub,
     sendAllClick,
+    sendAllGithubCount,
+    sendAllGithubAvailable,
+    sendAllPending,
+    sendAllError,
   }
 }
 
@@ -314,9 +385,20 @@ export interface ReviewViewProps {
   onRequestDiff?: (file: string) => void
   onOpenFile?: (file: string, line?: number) => void
   canComment?: boolean
+  commentForm?: CommentFormMount
+  commentsGithub?: CommentsGithub
 }
 
-export function createReviewView(props: ReviewViewProps, root: Accessor<HTMLDivElement | undefined>) {
+interface ReviewViewOverrides {
+  commentForm?: CommentFormMount
+  commentsGithub?: CommentsGithub
+}
+
+export function createReviewView(
+  props: ReviewViewProps,
+  root: Accessor<HTMLDivElement | undefined>,
+  overrides?: ReviewViewOverrides,
+) {
   const { t } = useLanguage()
   const vscode = useVSCode()
   const local = createReviewComposer()
@@ -384,6 +466,8 @@ export function createReviewView(props: ReviewViewProps, root: Accessor<HTMLDivE
     canComment: () => props.canComment !== false,
     onSendClick: props.onSendClick,
     onSendAll: props.onSendAll,
+    commentForm: () => overrides?.commentForm ?? props.commentForm,
+    commentsGithub: overrides?.commentsGithub ?? props.commentsGithub,
   })
   const pinned = createMemo(() => {
     const keep = new Set(review.pinned())
@@ -455,5 +539,10 @@ export function createReviewView(props: ReviewViewProps, root: Accessor<HTMLDivE
     commentsByFile: review.commentsByFile,
     handleGutterClick: review.handleGutterClick,
     sendAllClick: review.sendAllClick,
+    sendAllToGithub: review.sendAllToGithub,
+    sendAllGithubCount: review.sendAllGithubCount,
+    sendAllGithubAvailable: review.sendAllGithubAvailable,
+    sendAllPending: review.sendAllPending,
+    sendAllError: review.sendAllError,
   }
 }

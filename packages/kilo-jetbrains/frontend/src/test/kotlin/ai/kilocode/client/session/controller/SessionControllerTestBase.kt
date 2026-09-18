@@ -20,6 +20,7 @@ import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -412,9 +413,11 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         ),
         connected: List<String> = listOf("kilo"),
         defaults: Map<String, String> = emptyMap(),
+        warnings: List<ConfigWarningDto> = emptyList(),
     ) = KiloWorkspaceStateDto(
         status = KiloWorkspaceStatusDto.READY,
         agents = AgentsDto(agents = agents, all = agents, default = default),
         providers = ProvidersDto(providers = providers, connected = connected, defaults = defaults),
+        warnings = warnings,
     )
 }

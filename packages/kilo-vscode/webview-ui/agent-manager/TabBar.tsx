@@ -1,7 +1,6 @@
 import { For, Show, type Component, type JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import {
@@ -151,7 +150,8 @@ export const TabBar: Component<TabBarProps> = (props) => (
                           size="small"
                           variant="ghost"
                           aria-label={props.t("agentManager.documents.toggle")}
-                          class={props.documentsOpen() ? "am-tab-diff-btn-active" : ""}
+                          aria-pressed={props.documentsOpen()}
+                          data-active={props.documentsOpen() ? "" : undefined}
                           onClick={props.onToggleDocuments}
                         />
                       </Tooltip>
@@ -163,7 +163,8 @@ export const TabBar: Component<TabBarProps> = (props) => (
                           size="small"
                           variant="ghost"
                           aria-label="Subagents"
-                          class={props.subagentsOpen() ? "am-tab-diff-btn-active" : ""}
+                          aria-pressed={props.subagentsOpen()}
+                          data-active={props.subagentsOpen() ? "" : undefined}
                           onClick={props.onToggleSubagents}
                         />
                       </Tooltip>
@@ -179,12 +180,16 @@ export const TabBar: Component<TabBarProps> = (props) => (
                   placement="bottom"
                   openDelay={0}
                 >
-                  <button
-                    class={`am-diff-toggle-btn ${props.diffOpen() && !props.reviewActive() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
+                  <IconButton
+                    icon="layers"
+                    size="small"
+                    variant="ghost"
+                    class="am-diff-toggle-btn"
                     onClick={props.onToggleDiff}
                     aria-label={props.t("agentManager.diff.toggle")}
+                    aria-pressed={props.diffOpen() && !props.reviewActive()}
+                    data-active={props.diffOpen() && !props.reviewActive() ? "" : undefined}
                   >
-                    <Icon name="layers" size="small" />
                     <Show when={hasChanges()}>
                       <span class="am-diff-toggle-stats">
                         <Show when={stats()!.files > 0}>
@@ -194,7 +199,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                         <span class="am-stat-deletions">−{stats()!.deletions}</span>
                       </span>
                     </Show>
-                  </button>
+                  </IconButton>
                 </TooltipKeybind>
                 <Show when={props.prStatus()}>
                   {(pr) => (
@@ -204,7 +209,8 @@ export const TabBar: Component<TabBarProps> = (props) => (
                         size="small"
                         variant="ghost"
                         aria-label={`PR #${pr().number}`}
-                        class={props.prOpen() ? "am-tab-diff-btn-active" : ""}
+                        aria-pressed={props.prOpen()}
+                        data-active={props.prOpen() ? "" : undefined}
                         onClick={props.onTogglePR}
                       />
                     </Tooltip>
@@ -227,12 +233,10 @@ export const TabBar: Component<TabBarProps> = (props) => (
                         icon="check"
                         aria-label={props.t("agentManager.apply.globalButton")}
                         aria-busy={applyBusy()}
+                        loading={applyBusy()}
                         onClick={props.onApply}
                         disabled={!hasChanges() || applyBusy() || props.reviewScope() !== "branch"}
                       />
-                      <Show when={applyBusy()}>
-                        <Spinner class="am-apply-spinner" />
-                      </Show>
                     </span>
                   </Tooltip>
                   <Tooltip value={props.t("agentManager.open.tooltip")} placement="bottom" openDelay={0}>
@@ -252,7 +256,8 @@ export const TabBar: Component<TabBarProps> = (props) => (
                       size="small"
                       variant="ghost"
                       aria-label={props.t("agentManager.browser.title")}
-                      class={props.browserOpen() ? "am-tab-diff-btn-active" : ""}
+                      aria-pressed={props.browserOpen()}
+                      data-active={props.browserOpen() ? "" : undefined}
                       onClick={props.onToggleBrowser}
                     />
                   </Tooltip>
@@ -293,11 +298,13 @@ export const TabBar: Component<TabBarProps> = (props) => (
                         <DropdownMenu gutter={4} placement="bottom-end">
                           <Tooltip value={props.t("agentManager.run.options")} placement="bottom" openDelay={0}>
                             <DropdownMenu.Trigger
+                              as={IconButton}
+                              icon="chevron-down"
+                              size="small"
+                              variant="ghost"
                               class="am-split-arrow"
                               aria-label={props.t("agentManager.run.options")}
-                            >
-                              <Icon name="chevron-down" size="small" />
-                            </DropdownMenu.Trigger>
+                            />
                           </Tooltip>
                           <DropdownMenu.Portal>
                             <DropdownMenu.Content class="am-split-menu">

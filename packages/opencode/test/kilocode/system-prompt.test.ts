@@ -150,7 +150,7 @@ describe("Ask diagram guidance", () => {
       if (client === undefined) delete process.env.KILO_CLIENT
       if (client !== undefined) process.env.KILO_CLIENT = client
       const agents: Parameters<typeof patchAgents>[0] = {}
-      patchAgents(agents, [], [], {}, { mcpRules: {}, defaultsPatch: [] }, "/repo", [])
+      patchAgents(agents, [], [], { mcpRules: {}, defaultsPatch: [], board: false }, "/repo", [])
       const prompt = agents.ask.prompt
       expect(prompt).toContain("You are in Ask mode")
       expect(prompt).toContain("You must NOT modify files")

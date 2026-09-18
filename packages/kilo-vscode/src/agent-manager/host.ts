@@ -10,6 +10,7 @@
 
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
+import type { PRMergeMethod } from "./types"
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -25,6 +26,8 @@ export interface Disposable {
 
 export interface OutputHandle {
   appendLine(msg: string): void
+  /** Reveal the channel, e.g. after writing a report the user asked for. */
+  show?(): void
   dispose(): void
 }
 
@@ -137,11 +140,21 @@ export interface Host {
   browserAutomation(): boolean
   approveBrowserNavigation?(origin: string): Promise<boolean>
 
+  /** Whether background worktree pre-warming is enabled. */
+  worktreePool(): boolean
+
+  /** Listen for changes to the worktree pre-warming setting. */
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable
+
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown
 
   /** Persist the additional-project registry payload. */
   writeProjects(value: unknown): Promise<void>
+
+  /** Read and persist the user's last PR merge method per repository. */
+  getPRMergeMethod?(repo: string): PRMergeMethod | undefined
+  savePRMergeMethod?(repo: string, method: PRMergeMethod): Promise<void>
 
   unregisterProjectRoutes(projectId: string): void
 
@@ -158,6 +171,15 @@ export interface Host {
 
   /** Show an error notification. */
   showError(msg: string): void
+
+  /** Show an info, warning, or error notification. */
+  notify(kind: "info" | "warning" | "error", msg: string): void
+
+  /** Reveal a path in the OS file manager. A no-op (logged) on a remote workspace. */
+  revealInOS(path: string): void
+
+  /** Run a cancellable background task behind a progress notification. */
+  withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T>
 
   /** Open a text document in an editor (e.g. setup script). */
   openDocument(path: string): Promise<void>

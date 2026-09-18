@@ -1,4 +1,8 @@
 import { describe, expect, it } from "bun:test"
+import { execFileSync } from "node:child_process"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import {
   parsePRResult,
   checkStatus,
@@ -6,19 +10,15 @@ import {
   formatCheckDuration,
   ghErrorReason,
   parseComments,
-  parseConversation,
   parseReactions,
   parseReviewers,
+  related,
   signature,
   summarize,
 } from "../../src/agent-manager/pr/am-pr-utils"
-import type {
-  GhThread,
-  GhReviewRequest,
-  GhReview,
-  GhConversationComment,
-  GhReviewWithBody,
-} from "../../src/agent-manager/pr/am-pr-types"
+import { parseTimeline } from "../../src/agent-manager/pr/timeline"
+import { isConversationComment } from "../../webview-ui/agent-manager/pr/pr-types"
+import type { GhThread, GhReviewRequest, GhReview, GhTimelineItem } from "../../src/agent-manager/pr/am-pr-types"
 import type { PRComment, PRConversationComment, PRStatus } from "../../src/agent-manager/types"
 
 // --- parsePRResult ---
@@ -43,14 +43,24 @@ describe("comment permissions", () => {
     const thread = parseComments([{ comments: { nodes: [node] }, latest: { nodes: [{ ...node, id: "reply" }] } }]).at(0)
     expect(thread).toMatchObject(expected)
     expect(thread?.replies?.at(0)).toMatchObject({ ...expected, id: "reply" })
-    expect(parseConversation([node], []).at(0)).toMatchObject({ ...expected, kind: "issue" })
-    expect(parseConversation([], [node]).at(0)).toMatchObject({ kind: "review", canEdit: false, canDelete: false })
+    expect(parseTimeline([{ ...node, __typename: "IssueComment" }]).at(0)).toMatchObject({ ...expected, kind: "issue" })
+    expect(parseTimeline([{ ...node, __typename: "PullRequestReview" }]).at(0)).toMatchObject({
+      kind: "review",
+      canEdit: false,
+      canDelete: false,
+    })
   })
 })
 
 describe("parsePRResult", () => {
   it("retains the pull request node ID", () => {
     expect(parsePRResult(JSON.stringify({ number: 1, id: "PR_1" }))?.id).toBe("PR_1")
+  })
+  it("parses the merge commit of a merged PR", () => {
+    expect(parsePRResult(JSON.stringify({ number: 1, mergeCommit: { oid: "c".repeat(40) } }))?.mergeCommit).toBe(
+      "c".repeat(40),
+    )
+    expect(parsePRResult(JSON.stringify({ number: 1, mergeCommit: null }))?.mergeCommit).toBeUndefined()
   })
   it("returns null when number is missing", () => {
     expect(parsePRResult(JSON.stringify({ title: "foo" }))).toBeNull()
@@ -181,6 +191,19 @@ describe("parsePRResult", () => {
       changedFiles: 0,
     }
     expect(parsePRResult(JSON.stringify(raw))?.review).toBe("pending")
+  })
+
+  it("parses GitHub mergeability and auto-merge state", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 1,
+        state: "OPEN",
+        mergeable: "CONFLICTING",
+        mergeStateStatus: "DIRTY",
+        autoMergeRequest: { mergeMethod: "SQUASH" },
+      }),
+    )
+    expect(result?.merge).toEqual({ mergeable: "conflicting", state: "dirty", auto: "squash" })
   })
 
   it("returns null review for unknown decision", () => {
@@ -316,6 +339,91 @@ describe("parsePRResult", () => {
 
     expect(result?.checks).toEqual({ status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] })
     expect(result?.reviewers).toEqual([])
+  })
+})
+
+// --- related ---
+
+describe("related", () => {
+  const head = "b".repeat(40)
+  const merge = "c".repeat(40)
+  const base = { number: 1, title: "", body: "", url: "", review: null, additions: 0, deletions: 0, files: 0 } as const
+
+  /** A git stub whose HEAD history contains exactly `ancestors`. */
+  function repo(ancestors: string[]) {
+    const calls: string[][] = []
+    const git = async (args: string[]) => {
+      calls.push(args)
+      if (ancestors.includes(args[2]!)) return ""
+      throw new Error("not an ancestor")
+    }
+    return { git, calls }
+  }
+
+  it("keeps open and draft PRs without touching git", async () => {
+    const { git, calls } = repo([])
+    expect(await related({ ...base, state: "open", headRefOid: head }, git)).toBe(true)
+    expect(await related({ ...base, state: "draft", headRefOid: head }, git)).toBe(true)
+    expect(calls).toEqual([])
+  })
+
+  it("keeps a merged PR whose head is in the local history", async () => {
+    // `merge-base --is-ancestor` is reflexive, so one case covers a worktree on the
+    // PR head and local commits on top of it. The reverse check decides the merge case.
+    const { git, calls } = repo([head])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(true)
+    expect(calls).toEqual([
+      ["merge-base", "--is-ancestor", head, "HEAD"],
+      ["merge-base", "--is-ancestor", merge, "HEAD"],
+    ])
+  })
+
+  it("drops a squash-merged PR that a recreated branch name inherited", async () => {
+    // The old PR head is not in the new branch's history, only the base merge is.
+    const { git } = repo([merge])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
+  })
+
+  it("drops a merge-commit PR that a branch created from the base after the merge inherited", async () => {
+    const { git } = repo([head, merge])
+    expect(await related({ ...base, state: "merged", headRefOid: head, mergeCommit: merge }, git)).toBe(false)
+  })
+
+  it("keeps a closed PR only when its head is in the local history", async () => {
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo([head]).git)).toBe(true)
+    expect(await related({ ...base, state: "closed", headRefOid: head }, repo([]).git)).toBe(false)
+  })
+
+  it("keeps a merged PR without a head SHA", async () => {
+    expect(await related({ ...base, state: "merged" }, repo([]).git)).toBe(true)
+  })
+
+  it("matches a real repository for the reflexive, ancestor, and merge cases", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kilo-related-"))
+    const run = (args: string[]) =>
+      execFileSync("git", args, { cwd: dir, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"] })
+    try {
+      run(["init", "-q"])
+      run(["config", "user.email", "test@example.com"])
+      run(["config", "user.name", "Test"])
+      run(["config", "commit.gpgsign", "false"])
+      run(["commit", "-q", "--allow-empty", "-m", "base"])
+      const pr = run(["rev-parse", "HEAD"]).trim()
+      run(["commit", "-q", "--allow-empty", "-m", "tip"])
+      const tip = run(["rev-parse", "HEAD"]).trim()
+      const git = async (args: string[]) => run(args)
+
+      // HEAD is the PR head, which holds only if the ancestor check matches itself.
+      expect(await related({ ...base, state: "merged", headRefOid: tip }, git)).toBe(true)
+      // The PR head is below HEAD with no merge commit, so it is this checkout's PR.
+      expect(await related({ ...base, state: "merged", headRefOid: pr }, git)).toBe(true)
+      // The PR head and its merge are both in the history: this branch came after the merge.
+      expect(await related({ ...base, state: "merged", headRefOid: pr, mergeCommit: tip }, git)).toBe(false)
+      // An object absent from the repository cannot be in HEAD's history either.
+      expect(await related({ ...base, state: "merged", headRefOid: "f".repeat(40) }, git)).toBe(false)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 
@@ -641,6 +749,13 @@ describe("PR signature", () => {
     expect(signature({ ...pr, title: "A:B", body: "C" })).not.toBe(signature({ ...pr, title: "A", body: "B:C" }))
   })
 
+  it("changes when a reviewer avatar becomes available", () => {
+    const before = signature(pr)
+    expect(signature({ ...pr, reviewers: [{ login: "alice", state: "pending", avatar: "https://avatar" }] })).not.toBe(
+      before,
+    )
+  })
+
   it("changes when either captured PR ref changes", () => {
     const refs = { baseRefOid: "a".repeat(40), headRefOid: "b".repeat(40) }
     const before = signature({ ...pr, ...refs })
@@ -760,16 +875,21 @@ describe("parseReviewers", () => {
   })
 })
 
-// --- parseConversation ---
+// --- parseTimeline ---
 
-describe("parseConversation", () => {
-  it("parses empty lists to an empty array", () => {
-    expect(parseConversation([], [])).toEqual([])
+describe("parseTimeline", () => {
+  const comment = (item: ReturnType<typeof parseTimeline>[number] | undefined) =>
+    item && isConversationComment(item) ? item : undefined
+
+  it("parses an empty timeline to an empty array", () => {
+    expect(parseTimeline([])).toEqual([])
+    expect(parseTimeline([null])).toEqual([])
   })
 
-  it("extracts comments and reviews with non-empty bodies", () => {
-    const comments: GhConversationComment[] = [
+  it("extracts comments and reviews", () => {
+    const nodes: GhTimelineItem[] = [
       {
+        __typename: "IssueComment",
         id: "IC_1",
         author: { login: "alice", avatarUrl: "https://avatar/alice" },
         body: "First comment",
@@ -777,13 +897,13 @@ describe("parseConversation", () => {
         url: "https://github.com/org/repo/pull/1#issuecomment-1",
       },
       {
+        __typename: "IssueComment",
         id: "IC_empty",
         author: { login: "bob" },
         body: "   ",
       },
-    ]
-    const reviews: GhReviewWithBody[] = [
       {
+        __typename: "PullRequestReview",
         id: "PRR_1",
         author: { login: "bob", avatarUrl: "https://avatar/bob" },
         body: "Consider using rawJSON",
@@ -791,15 +911,9 @@ describe("parseConversation", () => {
         submittedAt: "2026-09-01T11:00:00Z",
         url: "https://github.com/org/repo/pull/1#pullrequestreview-1",
       },
-      {
-        id: "PRR_empty",
-        author: { login: "charlie" },
-        body: "",
-        state: "APPROVED",
-      },
     ]
 
-    const result = parseConversation(comments, reviews)
+    const result = parseTimeline(nodes)
     expect(result).toHaveLength(2)
     expect(result[0]).toEqual({
       id: "IC_1",
@@ -828,52 +942,138 @@ describe("parseConversation", () => {
     })
   })
 
-  it("sorts comments and reviews chronologically", () => {
-    const comments: GhConversationComment[] = [
+  it("keeps a review without text so an approval is still visible", () => {
+    const result = parseTimeline([
       {
-        id: "IC_late",
+        __typename: "PullRequestReview",
+        id: "PRR_approve",
         author: { login: "alice" },
-        body: "Later comment",
-        createdAt: "2026-09-01T12:00:00Z",
+        state: "APPROVED",
+        submittedAt: "2026-09-01T11:00:00Z",
       },
-    ]
-    const reviews: GhReviewWithBody[] = [
-      {
-        id: "PRR_early",
-        author: { login: "bob" },
-        body: "Earlier review",
-        state: "CHANGES_REQUESTED",
-        submittedAt: "2026-09-01T08:00:00Z",
-      },
-    ]
+    ])
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ kind: "review", body: "", state: "approved", author: "alice" })
+  })
 
-    const result = parseConversation(comments, reviews)
-    expect(result.map((c) => c.id)).toEqual(["PRR_early", "IC_late"])
+  it("drops a review without text or a known state", () => {
+    expect(parseTimeline([{ __typename: "PullRequestReview", id: "PRR_x", author: { login: "alice" } }])).toEqual([])
+  })
+
+  it("parses commits with author, short SHA, and message", () => {
+    const result = parseTimeline([
+      {
+        __typename: "PullRequestCommit",
+        id: "PRC_1",
+        commit: {
+          oid: "a".repeat(40),
+          abbreviatedOid: "aaaaaaa",
+          messageHeadline: "Handle reconnect",
+          committedDate: "2026-09-01T12:00:00Z",
+          url: "https://github.com/org/repo/commit/aaaaaaa",
+          author: { user: { login: "marius", avatarUrl: "https://avatar/marius" }, name: "Marius" },
+        },
+      },
+    ])
+    expect(result).toEqual([
+      {
+        kind: "commit",
+        id: "PRC_1",
+        sha: "a".repeat(40),
+        short: "aaaaaaa",
+        message: "Handle reconnect",
+        author: "marius",
+        avatar: "https://avatar/marius",
+        createdAt: new Date("2026-09-01T12:00:00Z").getTime(),
+        url: "https://github.com/org/repo/commit/aaaaaaa",
+      },
+    ])
+  })
+
+  it("falls back to the git author name when no user is linked", () => {
+    const result = parseTimeline([
+      { __typename: "PullRequestCommit", id: "PRC_2", commit: { oid: "b".repeat(40), author: { name: "CI Bot" } } },
+    ])
+    expect(result[0]).toMatchObject({ kind: "commit", author: "CI Bot", short: "bbbbbbb" })
+  })
+
+  it("parses lifecycle events with actor and detail", () => {
+    const result = parseTimeline([
+      {
+        __typename: "MergedEvent",
+        id: "ME_1",
+        actor: { login: "alice" },
+        createdAt: "2026-09-01T13:00:00Z",
+        mergeRefName: "main",
+      },
+      {
+        __typename: "HeadRefForcePushedEvent",
+        id: "FP_1",
+        actor: { login: "marius" },
+        createdAt: "2026-09-01T14:00:00Z",
+        beforeCommit: { abbreviatedOid: "aaaaaaa" },
+        afterCommit: { abbreviatedOid: "bbbbbbb" },
+      },
+      { __typename: "ClosedEvent", id: "CE_1", actor: { login: "bob" }, createdAt: "2026-09-01T15:00:00Z" },
+      { __typename: "ReopenedEvent", id: "RE_1", actor: { login: "bob" }, createdAt: "2026-09-01T16:00:00Z" },
+    ])
+    expect(result.map((item) => (item.kind === "event" ? [item.event, item.detail] : []))).toEqual([
+      ["merged", "main"],
+      ["force_pushed", "aaaaaaa to bbbbbbb"],
+      ["closed", undefined],
+      ["reopened", undefined],
+    ])
+  })
+
+  it("sorts comments, reviews, commits, and events chronologically", () => {
+    const result = parseTimeline([
+      {
+        __typename: "PullRequestCommit",
+        id: "PRC_late",
+        commit: { oid: "c".repeat(40), committedDate: "2026-09-01T12:00:00Z" },
+      },
+      {
+        __typename: "IssueComment",
+        id: "IC_early",
+        author: { login: "alice" },
+        body: "First",
+        createdAt: "2026-09-01T08:00:00Z",
+      },
+      {
+        __typename: "PullRequestReview",
+        id: "PRR_mid",
+        author: { login: "bob" },
+        body: "Review",
+        state: "CHANGES_REQUESTED",
+        submittedAt: "2026-09-01T10:00:00Z",
+      },
+    ])
+    expect(result.map((item) => item.id)).toEqual(["IC_early", "PRR_mid", "PRC_late"])
   })
 
   it("identifies bot accounts", () => {
-    const comments: GhConversationComment[] = [
+    const result = parseTimeline([
       {
+        __typename: "IssueComment",
         id: "IC_bot1",
         author: { login: "kilo-code-bot", __typename: "Bot" },
         body: "Review summary",
       },
+      { __typename: "IssueComment", id: "IC_bot2", author: { login: "dependabot[bot]" }, body: "Bump dependency" },
       {
-        id: "IC_bot2",
-        author: { login: "dependabot[bot]" },
-        body: "Bump dependency",
-      },
-      {
+        __typename: "IssueComment",
         id: "IC_user",
         author: { login: "alice", __typename: "User" },
         body: "User comment",
       },
-    ]
+    ])
+    expect(comment(result.find((item) => item.id === "IC_bot1"))?.isBot).toBe(true)
+    expect(comment(result.find((item) => item.id === "IC_bot2"))?.isBot).toBe(true)
+    expect(comment(result.find((item) => item.id === "IC_user"))?.isBot).toBeUndefined()
+  })
 
-    const result = parseConversation(comments, [])
-    expect(result.find((c) => c.id === "IC_bot1")?.isBot).toBe(true)
-    expect(result.find((c) => c.id === "IC_bot2")?.isBot).toBe(true)
-    expect(result.find((c) => c.id === "IC_user")?.isBot).toBeUndefined()
+  it("ignores timeline item types the conversation does not render", () => {
+    expect(parseTimeline([{ __typename: "LabeledEvent", id: "LE_1" }])).toEqual([])
   })
 })
 

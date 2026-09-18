@@ -39,6 +39,7 @@ import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kiloco
 import { at, recent, slot } from "../kilocode/message-order" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
 import { usePermission } from "./permission"
+import { GoalSync } from "@/kilocode/cli/cmd/tui/goal-sync" // kilocode_change
 
 const emptyConsoleState: ConsoleState = {
   consoleManagedProviders: [],
@@ -161,6 +162,7 @@ export const {
     const project = useProject()
     const sdk = useSDK()
     const toast = useToast() // kilocode_change
+    GoalSync.watch(sdk, project.workspace.current, store, (fn) => setStore(produce(fn))) // kilocode_change
 
     // kilocode_change start
     function evict(sessionID: string) {

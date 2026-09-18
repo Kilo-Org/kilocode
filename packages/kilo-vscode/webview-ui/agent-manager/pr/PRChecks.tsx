@@ -9,19 +9,12 @@ import type { PRCheck, CheckStatus } from "./pr-types"
 import type { CheckBucket } from "./pr-check-groups"
 import { counts, expands, groups } from "./pr-check-groups"
 import { SectionHeading } from "./SectionHeading"
+import { useConfig } from "../../src/context/config"
 import { useVSCode } from "../../src/context/vscode"
 import { useLanguage } from "../../src/context/language"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { checkFeedback } from "./pr-check-feedback"
 import { commentState, patchCommentState } from "./pr-comment-state"
-
-const CHECK: Record<CheckStatus, string> = {
-  success: "success",
-  failure: "failure",
-  cancelled: "cancelled",
-  skipped: "skipped",
-  pending: "pending",
-}
 
 const CHECK_ICON: Record<Exclude<CheckStatus, "pending">, string> = {
   success: "circle-check",
@@ -35,65 +28,20 @@ function CheckIcon(props: { status: CheckStatus }) {
   return <Icon name={CHECK_ICON[props.status]} size="small" class="am-pr-check-icon" aria-hidden="true" />
 }
 
-const GROUP_KEYS: Record<CheckBucket, { one: string; other: string }> = {
-  failure: {
-    one: "agentManager.pr.checks.group.failure.one",
-    other: "agentManager.pr.checks.group.failure.other",
-  },
-  pending: {
-    one: "agentManager.pr.checks.group.pending.one",
-    other: "agentManager.pr.checks.group.pending.other",
-  },
-  cancelled: {
-    one: "agentManager.pr.checks.group.cancelled.one",
-    other: "agentManager.pr.checks.group.cancelled.other",
-  },
-  skipped: {
-    one: "agentManager.pr.checks.group.skipped.one",
-    other: "agentManager.pr.checks.group.skipped.other",
-  },
-  success: {
-    one: "agentManager.pr.checks.group.success.one",
-    other: "agentManager.pr.checks.group.success.other",
-  },
-}
-
-const TALLY_KEYS: Record<CheckBucket, { one: string; other: string }> = {
-  failure: {
-    one: "agentManager.pr.checks.tally.failure.one",
-    other: "agentManager.pr.checks.tally.failure.other",
-  },
-  pending: {
-    one: "agentManager.pr.checks.tally.pending.one",
-    other: "agentManager.pr.checks.tally.pending.other",
-  },
-  cancelled: {
-    one: "agentManager.pr.checks.tally.cancelled.one",
-    other: "agentManager.pr.checks.tally.cancelled.other",
-  },
-  skipped: {
-    one: "agentManager.pr.checks.tally.skipped.one",
-    other: "agentManager.pr.checks.tally.skipped.other",
-  },
-  success: {
-    one: "agentManager.pr.checks.tally.success.one",
-    other: "agentManager.pr.checks.tally.success.other",
-  },
-}
-
 export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTerminalId?: string }) {
   const vscode = useVSCode()
   const { t } = useLanguage()
+  const { settings } = useConfig()
   const [localOpen, setLocalOpen] = createSignal(true)
   const [localGroups, setLocalGroups] = createSignal<Partial<Record<CheckBucket, boolean>>>({})
   const state = () => (props.worktreeId ? commentState(props.worktreeId) : undefined)
   const open = () => state()?.checksOpen ?? localOpen()
   const grouped = createMemo(() => groups(props.pr.checks.checks))
   function groupLabel(bucket: CheckBucket, count: number) {
-    return t(GROUP_KEYS[bucket][count === 1 ? "one" : "other"], { count })
+    return t(`agentManager.pr.checks.group.${bucket}.${count === 1 ? "one" : "other"}`, { count })
   }
   function tallyLabel(bucket: CheckBucket, count: number) {
-    return t(TALLY_KEYS[bucket][count === 1 ? "one" : "other"], { count })
+    return t(`agentManager.pr.checks.tally.${bucket}.${count === 1 ? "one" : "other"}`, { count })
   }
   const count = createMemo(() => {
     const all = counts(props.pr.checks.checks)
@@ -102,9 +50,15 @@ export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTermi
       .map((item) => tallyLabel(item.bucket, item.count))
       .join(` ${t("agentManager.pr.checks.separator")} `)
   })
-  const feedback = createMemo(() => checkFeedback(props.pr, t("agentManager.pr.checks.feedback")))
+  const feedback = createMemo(() =>
+    checkFeedback(
+      props.pr,
+      t("agentManager.pr.checks.feedback"),
+      !props.activeTerminalId && settings()["agentManager.pushFixes"] !== false,
+    ),
+  )
   const groupOpen = (bucket: CheckBucket) => state()?.checkGroups[bucket] ?? localGroups()[bucket] ?? expands(bucket)
-  const statusLabel = (status: CheckStatus) => t(`agentManager.pr.checks.status.${CHECK[status]}`)
+  const statusLabel = (status: CheckStatus) => t(`agentManager.pr.checks.status.${status}`)
   const send = () => {
     const item = feedback()
     if (!item) return
@@ -153,12 +107,12 @@ export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTermi
                     aria-expanded={groupOpen(group.bucket)}
                     onClick={() => toggleGroup(group.bucket)}
                   >
+                    <span>{groupLabel(group.bucket, group.checks.length)}</span>
                     <Icon
                       name={groupOpen(group.bucket) ? "chevron-down" : "chevron-right"}
                       size="small"
                       class="am-pr-section-chevron"
                     />
-                    <span>{groupLabel(group.bucket, group.checks.length)}</span>
                   </button>
                   <Show when={groupOpen(group.bucket)}>
                     <div class="am-pr-check-group-items am-pr-col">

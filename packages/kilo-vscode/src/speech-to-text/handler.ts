@@ -2,6 +2,7 @@ import { getErrorMessage } from "../kilo-provider-utils"
 import { transcribeSpeech } from "./transcribe"
 import { cancelSpeechCapture, startSpeechCapture, stopSpeechCapture } from "./capture"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
+import type { SpeechToTextSource } from "./source"
 
 type Msg = {
   requestId: string
@@ -44,7 +45,13 @@ export function handleSpeechToTextStart(message: Msg, post: Post): void {
     })
 }
 
-export function handleSpeechToTextStop(connection: KiloConnectionService, message: Msg, dir: string, post: Post): void {
+export function handleSpeechToTextStop(
+  connection: KiloConnectionService,
+  message: Msg,
+  dir: string,
+  post: Post,
+  source?: SpeechToTextSource,
+): void {
   const ctrl = new AbortController()
   const ready = starts.get(message.requestId)?.catch(() => false) ?? Promise.resolve(true)
   aborts.set(message.requestId, ctrl)
@@ -53,7 +60,9 @@ export function handleSpeechToTextStop(connection: KiloConnectionService, messag
   void ready
     .then((started) => {
       if (!started) return undefined
-      return stopSpeechCapture(message.requestId).then((audio) => transcribeSpeech(connection, audio, dir, ctrl.signal))
+      return stopSpeechCapture(message.requestId).then((audio) =>
+        transcribeSpeech(connection, audio, dir, ctrl.signal, source),
+      )
     })
     .then((result) => {
       aborts.delete(message.requestId)

@@ -4,11 +4,11 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { WorktreeState } from "../../src/types/messages"
 import type { PRStatus } from "../../src/types/messages"
+import { useConfig } from "../../src/context/config"
 import { useLanguage } from "../../src/context/language"
 import { PRBadge } from "./PRBadge"
 import { PROverview } from "./PROverview"
 import { PRReviewers } from "./PRReviewers"
-import { PRDescription } from "./PRDescription"
 import { PRChecks } from "./PRChecks"
 import { PRComments } from "./PRComments"
 import { PRConversation } from "./PRConversation"
@@ -26,6 +26,7 @@ interface PRPanelProps {
   projectId?: string
   worktreeId: string
   activeTerminalId?: string
+  sessionId?: string
   jump?: number
   onJump?: (id: number) => void
   onClose: () => void
@@ -38,6 +39,8 @@ interface PRPanelProps {
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
   const { t } = useLanguage()
+  const { settings, applySetting } = useConfig()
+  const push = () => settings()["agentManager.pushFixes"] !== false
   let checksRef: HTMLDivElement | undefined
   let commentsRef: HTMLDivElement | undefined
   let conversationRef: HTMLDivElement | undefined
@@ -182,7 +185,14 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
   })
 
   const conversation = createMemo<
-    | { project?: string; worktree: string; number: number; url: string; value: NonNullable<PRStatus["conversation"]> }
+    | {
+        project?: string
+        worktree: string
+        number: number
+        url: string
+        value: NonNullable<PRStatus["conversation"]>
+        hasEarlier?: boolean
+      }
     | undefined
   >((prev) => {
     const next = props.pr.conversation
@@ -193,6 +203,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
         number: props.pr.number,
         url: props.pr.url,
         value: next,
+        hasEarlier: props.pr.conversationHasEarlier,
       }
     if (
       prev &&
@@ -212,6 +223,13 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
     later()
   })
 
+  const created = createMemo(() => {
+    const value = props.pr.createdAt
+    if (!value) return undefined
+    const time = Date.parse(value)
+    return Number.isFinite(time) ? time : undefined
+  })
+
   return (
     <div class="am-pr-panel am-pr-col">
       <div class="am-pr-panel-header am-pr-row">
@@ -221,6 +239,20 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <span class="am-pr-panel-number">#{props.pr.number}</span>
         </div>
         <div class="am-pr-panel-actions am-pr-row">
+          {/* Fix mode: whether "Fix with Kilo" also commits and pushes so the PR updates. */}
+          <Tooltip value={t("settings.agentBehaviour.pushFixes.description")} placement="bottom">
+            <IconButton
+              icon="cloud-upload"
+              size="small"
+              variant="ghost"
+              class="am-pr-panel-mode"
+              aria-label={t("settings.agentBehaviour.pushFixes.title")}
+              aria-pressed={push()}
+              data-active={push() ? "" : undefined}
+              onClick={() => applySetting("agentManager.pushFixes", !push())}
+            />
+          </Tooltip>
+          <span class="am-pr-panel-actions-sep" />
           <Tooltip value={t("common.refresh")} placement="bottom">
             <IconButton
               icon="refresh"
@@ -252,10 +284,13 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <PRSummary
             pr={props.pr}
             worktreeId={props.worktreeId}
+            projectId={props.projectId}
+            sessionId={props.sessionId}
             activeTerminalId={props.activeTerminalId}
             onJump={jumpTo}
           />
           <PROverview pr={props.pr} worktree={props.worktree} />
+          <div class="am-pr-panel-divider" />
           <PRFiles
             projectId={props.projectId}
             worktreeId={props.worktreeId}
@@ -268,7 +303,6 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <Show when={(props.pr.reviewers ?? []).length > 0}>
             <PRReviewers reviewers={props.pr.reviewers ?? []} />
           </Show>
-          <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
           <Show when={props.pr.checks.checks.length > 0}>
             <div ref={checksRef}>
               <PRChecks pr={props.pr} worktreeId={props.worktreeId} activeTerminalId={props.activeTerminalId} />
@@ -293,7 +327,11 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           </Show>
           <div ref={conversationRef}>
             <PRConversation
-              comments={conversation()?.value ?? []}
+              items={conversation()?.value ?? []}
+              hasEarlier={conversation()?.hasEarlier}
+              description={props.pr.body}
+              author={props.pr.author}
+              createdAt={created()}
               prNumber={props.pr.number}
               prUrl={props.pr.url}
               projectId={props.projectId}
