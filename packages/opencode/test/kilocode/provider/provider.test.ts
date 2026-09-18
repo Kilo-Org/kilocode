@@ -108,6 +108,33 @@ it.instance(
 )
 
 it.instance(
+  "getSmallModel prefers a family match over a cheaper non-family model",
+  Effect.gen(function* () {
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
+    expect(model?.id).toBe(ModelV2.ID.make("family-model"))
+  }),
+  {
+    config: {
+      provider: {
+        "test-provider": {
+          name: "Test Provider",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "family-model": {
+              release_date: "2025-01-01",
+              family: "claude-haiku",
+              cost: { input: 5, output: 15 },
+            },
+            "cheap-model": { release_date: "2025-01-01", cost: { input: 0.3, output: 1.2 } },
+          },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
   "getSmallModel falls back to Kilo auto when the provider has no text-output model",
   Effect.gen(function* () {
     const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
