@@ -66,6 +66,8 @@ export interface WorktreeMention {
   mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
   showMention: Accessor<boolean>
+  /** Tokens already inserted in the text, for the prompt highlight overlay. */
+  highlightTokens: Accessor<Set<string>>
   onInput: (text: string, cursor: number) => void
   onKeyDown: (
     e: KeyboardEvent,
@@ -402,6 +404,7 @@ export function useWorktreeMention(vscode: VSCodeContext, worktrees: Accessor<Wo
     mentionResults: results,
     mentionIndex: index,
     showMention,
+    highlightTokens: tokens,
     onInput,
     onKeyDown,
     selectMention,

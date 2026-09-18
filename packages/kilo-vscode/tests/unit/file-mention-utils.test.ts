@@ -12,6 +12,7 @@ import {
   isCursorAtMentionEnd,
   findMentionRange,
   mentionSettled,
+  segmentMentionText,
   sessionMentionFilename,
   sessionMentionText,
   sessionMentionToken,
@@ -919,5 +920,39 @@ describe("modelReferenceToken", () => {
     const token = modelReferenceToken("anthropic", "claude-sonnet-4")
     const kept = syncMentionedPaths(new Set([token]), `use @${token} for the subagent`)
     expect(kept.has(token)).toBe(true)
+  })
+})
+
+describe("segmentMentionText", () => {
+  it("marks inserted mention tokens and keeps plain text as-is", () => {
+    const tokens = new Set(["kilo/kilo-auto/free", "Fix auth bug", "/repo/.kilo/worktrees/feature"])
+    const segments = segmentMentionText(
+      "see @Fix auth bug then @/repo/.kilo/worktrees/feature use @kilo/kilo-auto/free",
+      tokens,
+    )
+    expect(segments.map((segment) => [segment.mention, segment.text])).toEqual([
+      [false, "see "],
+      [true, "@Fix auth bug"],
+      [false, " then "],
+      [true, "@/repo/.kilo/worktrees/feature"],
+      [false, " use "],
+      [true, "@kilo/kilo-auto/free"],
+    ])
+  })
+
+  it("keeps multiple spaces and newlines intact", () => {
+    const segments = segmentMentionText("a  b\n @Fix auth bug", new Set(["Fix auth bug"]))
+    expect(segments.map((segment) => segment.text).join("")).toBe("a  b\n @Fix auth bug")
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual(["@Fix auth bug"])
+  })
+
+  it("matches the longest token first", () => {
+    const segments = segmentMentionText("@Fix auth bug", new Set(["Fix", "Fix auth bug"]))
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual(["@Fix auth bug"])
+  })
+
+  it("returns one plain segment when there are no tokens or no text", () => {
+    expect(segmentMentionText("plain", new Set())).toEqual([{ text: "plain", mention: false }])
+    expect(segmentMentionText("", new Set(["model"]))).toEqual([])
   })
 })

@@ -140,6 +140,7 @@ describe("useWorktreeMention", () => {
 
     expect(input.value).toBe("@Fix auth bug ")
     expect(mention.mentionedSessions().get("Fix auth bug")?.id).toBe("ses_chat")
+    expect(mention.highlightTokens().has("Fix auth bug")).toBe(true)
     expect(mention.parseAttachments(input.value).map((file) => file.url)).toEqual(["session:ses_chat"])
     dispose.fn?.()
   })
@@ -151,6 +152,7 @@ describe("useWorktreeMention", () => {
     mention.selectWorktree(WORKTREE, input, () => {})
 
     expect(input.value).toBe(`@${WORKTREE.path} `)
+    expect(mention.highlightTokens().has(WORKTREE.path)).toBe(true)
     const files = mention.parseAttachments(input.value)
     expect(files).toHaveLength(1)
     expect(files[0]!.url.startsWith("data:text/plain")).toBe(true)
@@ -186,6 +188,7 @@ describe("useWorktreeMention", () => {
 
     mention.selectModelReference("provider", "model-x")
     expect(input.value).toBe("@provider/model-x ")
+    expect(mention.highlightTokens().has("provider/model-x")).toBe(true)
     expect(mention.parseAttachments(input.value)).toEqual([])
     dispose.fn?.()
   })

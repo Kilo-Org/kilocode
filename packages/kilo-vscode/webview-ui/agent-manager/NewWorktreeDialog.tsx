@@ -47,6 +47,7 @@ import { convertToMentionPath, insertPathMentions } from "../src/utils/path-ment
 import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import type { MentionResult, WorktreeReference } from "../src/hooks/file-mention-utils"
+import { segmentMentionText } from "../src/hooks/file-mention-utils"
 import { SessionMentionPicker } from "../src/components/chat/SessionMentionPicker"
 import { WorktreeMentionPicker } from "../src/components/chat/WorktreeMentionPicker"
 import { formatRelativeDate } from "../src/utils/date"
@@ -372,6 +373,13 @@ export const NewWorktreeDialog: Component<{
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
   const mention = useWorktreeMention(vscode, () => props.worktrees?.() ?? [])
+  let highlightRef: HTMLDivElement | undefined
+  const mentionSegments = createMemo(() => segmentMentionText(prompt(), mention.highlightTokens()))
+  const syncHighlight = () => {
+    if (!highlightRef || !textareaRef) return
+    highlightRef.scrollTop = textareaRef.scrollTop
+    highlightRef.scrollLeft = textareaRef.scrollLeft
+  }
   // Picking the `@` model entry opens the shared model selector, mounted hidden
   // and keyed to its own trigger. The mention latch resets first because the
   // selector owns its open state afterwards.
@@ -554,6 +562,7 @@ export const NewWorktreeDialog: Component<{
     box.style.height = "auto"
     const chrome = box.offsetHeight - area.offsetHeight
     box.style.height = `${Math.min(area.scrollHeight, 200) + chrome}px`
+    syncHighlight()
   }
 
   const insertSpeechText = (value: string) => {
@@ -912,6 +921,18 @@ export const NewWorktreeDialog: Component<{
               </Show>
               <div class="prompt-input-wrapper am-prompt-input-wrapper">
                 <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
+                  <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
+                    <For each={mentionSegments()}>
+                      {(seg) => (
+                        <Show when={seg.mention} fallback={<span>{seg.text}</span>}>
+                          <span class="prompt-input-file-mention">{seg.text}</span>
+                        </Show>
+                      )}
+                    </For>
+                    <Show when={prompt().endsWith("\n")}>
+                      <br />
+                    </Show>
+                  </div>
                   <textarea
                     ref={textareaRef}
                     class="prompt-input am-prompt-input"
@@ -933,6 +954,7 @@ export const NewWorktreeDialog: Component<{
                     onKeyDown={onKey}
                     onKeyUp={speechUp}
                     onPaste={(e) => imageAttach.handlePaste(e)}
+                    onScroll={syncHighlight}
                     rows={3}
                     dir="auto"
                   />
