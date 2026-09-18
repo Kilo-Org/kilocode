@@ -7,6 +7,7 @@ import ai.kilocode.rpc.KiloAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
@@ -39,6 +40,11 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun commands(directory: String): List<CommandDto> = safe(emptyList()) { call { commands(directory) } }
 
+    suspend fun loadCommandFiles(directory: String): List<CommandFileDto> = call { commandFiles(directory) }
+
+    suspend fun refreshCommandFiles(directory: String, fallback: List<CommandFileDto>): List<CommandFileDto> =
+        safe(fallback) { call { commandFiles(directory) } }
+
     suspend fun mcpStatus(directory: String): List<McpStatusDto> = try {
         LOG.info("mcp status: requesting dir=$directory")
         call { mcpStatus(directory) }.also { LOG.info("mcp status: received dir=$directory count=${it.size}") }
@@ -58,6 +64,13 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun saveSkills(directory: String, edits: Map<String, String>): Boolean =
         safe(false) { call { saveSkills(directory, edits) } }
+
+    suspend fun removeCommand(directory: String, location: String): Boolean = safe(false) { call { removeCommand(directory, location) } }
+
+    suspend fun reloadCommands(directory: String): Boolean = safe(false) { call { reloadCommands(directory) } }
+
+    suspend fun saveCommands(directory: String, edits: Map<String, String>): Boolean =
+        safe(false) { call { saveCommands(directory, edits) } }
 
     suspend fun removeAgent(directory: String, name: String): Boolean = safe(false) { call { removeAgent(directory, name) } }
 

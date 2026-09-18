@@ -53,6 +53,10 @@ export const CollaborateNav: NavSection[] = [
   {
     title: "Enterprise",
     links: [
+      {
+        href: "/collaborate/enterprise/sub-organizations",
+        children: "Sub-organizations",
+      },
       { href: "/collaborate/enterprise/sso", children: "SSO" },
       {
         href: "/collaborate/enterprise/model-access-controls",

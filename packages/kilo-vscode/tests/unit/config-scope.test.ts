@@ -39,4 +39,15 @@ describe("splitConfigByScope", () => {
     })
     expect(split.project).toEqual({})
   })
+
+  it("writes the shared agent board setting to global config", () => {
+    const split = splitConfigByScope({
+      shared_agent_board: true,
+    })
+
+    expect(split.global).toEqual({
+      shared_agent_board: true,
+    })
+    expect(split.project).toEqual({})
+  })
 })

@@ -24,7 +24,10 @@ fun port(value: String): Int {
 
 fun checked(value: String): String {
     if (value == "0.0.0-dev") return value
-    require(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-rc\\.[0-9]+)?$").matches(value)) {
+    // The optional +<sha> is SemVer build metadata: it never affects release ordering (Release below
+    // parses only the part before it) and only ever comes from a local override, never from a release
+    // tag, so it cannot leak into a published version.
+    require(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-rc\\.[0-9]+)?(\\+[0-9a-f]+)?$").matches(value)) {
         "Invalid JetBrains plugin version: $value"
     }
     return value
@@ -102,6 +105,29 @@ val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
     providers.provider { rootProject.layout.projectDirectory.asFile.parentFile.parentFile.canonicalPath }
 )
 
+val ides = file(".intellijPlatform/ides")
+val corrupt = ides.listFiles()
+    ?.filter { ide ->
+        ide.isDirectory && (
+            ide.walkTopDown().none { it.name == "product-info.json" } ||
+                ide.resolve("lib").listFiles()?.any { jar -> jar.isFile && jar.extension == "jar" } != true
+        )
+    }
+    .orEmpty()
+
+if (corrupt.isNotEmpty()) {
+    val paths = corrupt.joinToString("\n") { ide -> "- ${ide.absolutePath}" }
+    error(
+        """
+        Incomplete IntelliJ Platform extraction detected:
+        $paths
+
+        Remove .intellijPlatform/ides, .intellijPlatform/localPlatformArtifacts, .intellijPlatform/layoutIndex,
+        and .intellijPlatform/coroutines-javaagent.jar, then rerun the Gradle task.
+        """.trimIndent(),
+    )
+}
+
 version = ver
 
 plugins {
@@ -113,7 +139,6 @@ plugins {
 
     alias(libs.plugins.kotlin) apply false
     alias(libs.plugins.kotlin.serialization) apply false
-    alias(libs.plugins.compose.compiler) apply false
 }
 
 changelog {
@@ -276,6 +301,15 @@ tasks.withType<RunIdeTask> {
     systemProperty("kilo.dev.log.chat.preview.max", preview)
     systemProperty("kilo.dev.storage.isolated", isolated.get().toString())
     systemProperty("kilo.dev.worktree.root", worktreeRoot.get())
+    // Suppress IntelliJ feedback surveys ("Share Your Experience" / "Take Survey" popups) in dev runs.
+    // These are registry keys from platform/feedback; registry values can be overridden with -D<key>=<value>.
+    systemProperty("platform.feedback", "false")
+    systemProperty("csat.survey.enabled", "false")
+    systemProperty("editor.ux.survey.enabled", "false")
+    // Internal mode: enables the Split Mode latency widget and the Internal Actions menu.
+    // Property name is ApplicationManagerEx.IS_INTERNAL_PROPERTY; the embedded JetBrains Client
+    // inherits it from the backend (EmbeddedClientLauncher.passProperties).
+    systemProperty("idea.is.internal", "true")
 }
 
 tasks.named<Delete>("clean") {

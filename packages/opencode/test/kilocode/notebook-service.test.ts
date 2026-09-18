@@ -8,6 +8,7 @@ import { Effect, Fiber, Layer, Queue, Schema } from "effect"
 import { TestInstance } from "../fixture/fixture"
 import { disposeInstance } from "@/effect/instance-registry"
 import { testEffect } from "../lib/effect"
+import { InstanceRef } from "@/effect/instance-ref"
 
 const it = testEffect(Notebook.layer("20 millis").pipe(Layer.provideMerge(Bus.layer)))
 const sessionID = SessionID.make("ses_notebook_test")
@@ -199,11 +200,58 @@ it.instance(
     Effect.gen(function* () {
       const notebook = yield* Notebook.Service
       const instance = yield* TestInstance
+      const cancelled = yield* Queue.unbounded<GlobalEvent>()
+      const handler = (event: GlobalEvent) => {
+        if (event.directory === instance.directory && event.payload?.type === Event.Cancelled.type)
+          Queue.offerUnsafe(cancelled, event)
+      }
+      GlobalBus.on("event", handler)
+      yield* Effect.addFinalizer(() => Effect.sync(() => GlobalBus.off("event", handler)))
       const fiber = yield* request(notebook).pipe(Effect.forkChild)
       yield* notebook.list().pipe(Effect.repeat({ until: (items) => items.length === 1 }))
       yield* Effect.promise(() => disposeInstance(instance.directory))
+      const event = yield* Queue.take(cancelled).pipe(Effect.timeout("2 seconds"))
+      expect(event.payload?.properties).toMatchObject({ reason: "disposed" })
       const err = yield* Fiber.join(fiber).pipe(Effect.flip)
       expect(err.code).toBe("disconnected")
+      expect(yield* notebook.list()).toEqual([])
+    }),
+  { git: true },
+)
+
+it.instance(
+  "isolates pending requests by directory and recreates disposed state",
+  () =>
+    Effect.gen(function* () {
+      const notebook = yield* Notebook.Service
+      const first = yield* TestInstance
+      const current = yield* InstanceRef
+      const second = current
+        ? { ...current, directory: `${current.directory}-second` }
+        : yield* Effect.die(new Error("missing instance context"))
+      const firstFiber = yield* request(notebook).pipe(Effect.forkChild)
+      const firstPending = yield* notebook.list().pipe(Effect.repeat({ until: (items) => items.length === 1 }))
+
+      const secondResult = yield* Effect.gen(function* () {
+        expect(yield* notebook.list()).toEqual([])
+        const fiber = yield* request(notebook).pipe(Effect.forkChild)
+        const pending = yield* notebook.list().pipe(Effect.repeat({ until: (items) => items.length === 1 }))
+        yield* notebook.reply({
+          requestID: pending[0].id,
+          result: { operation: "read", path: "analysis.ipynb", requestPath: "analysis.ipynb", revision: "content:second", cells: [] },
+        })
+        return yield* Fiber.join(fiber)
+      }).pipe(Effect.provideService(InstanceRef, second))
+      expect(secondResult).toMatchObject({ revision: "content:second" })
+      expect(yield* notebook.list()).toEqual([firstPending[0]])
+
+      yield* Effect.promise(() => disposeInstance(first.directory))
+      expect((yield* Fiber.join(firstFiber).pipe(Effect.flip)).code).toBe("disconnected")
+
+      const replacement = yield* request(notebook).pipe(Effect.forkChild)
+      const replacementPending = yield* notebook.list().pipe(Effect.repeat({ until: (items) => items.length === 1 }))
+      expect(replacementPending[0].id).not.toBe(firstPending[0].id)
+      yield* Fiber.interrupt(replacement)
     }),
   { git: true },
 )

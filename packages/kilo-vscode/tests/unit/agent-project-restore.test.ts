@@ -22,7 +22,7 @@ function deps() {
   const impl: RestoreDeps = {
     selectLocal: () => record("local")(),
     selectWorktree: (id) => record("worktree")(id),
-    selectSession: (id) => record("session")(id),
+    focusLocal: (id) => record("focusLocal")(id),
     focusManaged: (wt, sid) => record("managed")(wt, sid),
     setSelection: (id) => record("selection")(id),
     setActivePendingId: (id) => record("pending")(id),
@@ -57,11 +57,10 @@ describe("restoreProjectTarget", () => {
     expect(calls.managed).toEqual(["0", "ses-1"])
   })
 
-  it("restores a local session target via Local + select", () => {
+  it("restores a local session target through the local focus path", () => {
     const { calls, impl } = deps()
     restoreProjectTarget(state({ activeTarget: { projectId: "prj-a", kind: "session", sessionId: "ses-x" } }), impl)
-    expect(calls.selection).toEqual(["local"])
-    expect(calls.session).toEqual(["ses-x"])
+    expect(calls.focusLocal).toEqual(["ses-x"])
   })
 
   it("falls back to Local when the target no longer exists", () => {

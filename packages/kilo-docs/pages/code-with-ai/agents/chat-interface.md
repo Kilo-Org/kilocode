@@ -67,7 +67,7 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 
 **Providing context:**
 
-The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions — use `@filename` to attach a file or `@terminal` to include your active terminal output. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
+The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions. Use `@filename` to attach a file. In the sidebar, `@terminal` includes the active VS Code terminal output. In Agent Manager, it includes the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
 **Exporting local transcripts:**
 
@@ -109,7 +109,7 @@ Type `@` in the TUI to get file autocomplete suggestions, or mention file paths 
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
-- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state.
+- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, invalid Mermaid syntax stays visible in a contained error state, and the Zoom action opens a fullscreen viewer with zoom and pan controls.
 - Charts → In VS Code, asking for a chart, graph, or plot renders an inline chart in the conversation. Supported types include bar, line, scatter, pie, doughnut, radar, bubble, and polar area. Diagrams and flowcharts still render as Mermaid.
 
 **Status signals:**

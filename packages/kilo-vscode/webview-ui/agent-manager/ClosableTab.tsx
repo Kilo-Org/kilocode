@@ -7,6 +7,7 @@ import { Show, type Component, type JSX } from "solid-js"
 import { SessionTabMenu } from "../src/components/chat/SessionTabMenu"
 import { SortableTabContainer } from "../src/components/chat/TabDnd"
 import { useLanguage } from "../src/context/language"
+import type { Activity } from "../src/utils/session-activity"
 import { parseBindingTokens } from "./keybind-tokens"
 
 type TabIcon = IconProps["name"] | "spinner"
@@ -21,7 +22,11 @@ export interface ClosableTabProps {
   label: Value<string>
   tooltip: Value<string>
   icon: Value<TabIcon>
+  /** Renders instead of `icon`, for tabs that need a per-filetype glyph. */
+  iconNode?: Value<JSX.Element>
   iconStatus?: Value<"success" | "failure" | undefined>
+  state?: Activity
+  stateLabel?: string
   class?: string
   focused?: boolean
   active: boolean
@@ -50,6 +55,7 @@ export const ClosableTabChrome: Component<ClosableTabProps> = (props) => {
   return (
     <div
       class={`am-tab am-tab-closable ${props.active ? "am-tab-active" : ""} ${props.focused ? "am-tab-focused" : ""} ${props.class ?? ""}`}
+      data-activity={props.state}
     >
       <div
         class="am-tab-target"
@@ -70,9 +76,21 @@ export const ClosableTabChrome: Component<ClosableTabProps> = (props) => {
           openDelay={0}
         >
           <span class="am-tab-title">
-            <span class="am-tab-icon" data-run-status={status()}>
-              <Show when={icon() === "spinner"} fallback={<Icon name={icon() as IconProps["name"]} size="small" />}>
-                <Spinner class="am-tab-spinner" />
+            <span
+              class="am-tab-icon"
+              data-run-status={status()}
+              data-activity={props.state}
+              aria-label={props.stateLabel}
+            >
+              <Show
+                when={props.iconNode}
+                fallback={
+                  <Show when={icon() === "spinner"} fallback={<Icon name={icon() as IconProps["name"]} size="small" />}>
+                    <Spinner class="am-tab-spinner" />
+                  </Show>
+                }
+              >
+                {value(props.iconNode!)}
               </Show>
             </span>
             <span class="am-tab-label">{label()}</span>
@@ -133,7 +151,10 @@ export const SortableClosableTab: Component<
         label={props.label}
         tooltip={props.tooltip}
         icon={props.icon}
+        iconNode={props.iconNode}
         iconStatus={props.iconStatus}
+        state={props.state}
+        stateLabel={props.stateLabel}
         class={props.class}
         focused={props.focused}
         active={props.active}

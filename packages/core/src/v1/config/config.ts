@@ -107,7 +107,14 @@ export const Info = Schema.Struct({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
-    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
+    description:
+      "@deprecated Use 'reasoning_display' field instead. Automatically collapse reasoning blocks after the agent finishes writing them",
+  }),
+  reasoning_display: Schema.optional(Schema.Literals(["expanded", "preview", "headline"])).annotate({
+    description: "Controls how reasoning blocks are displayed in the VS Code chat UI",
+  }),
+  shared_agent_board: Schema.optional(Schema.Boolean).annotate({
+    description: "Share a board between a main session and its task subagents, including nested subagents",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
   console: Schema.optional(
@@ -301,14 +308,25 @@ export const Info = Schema.Struct({
       image_generation_model: Schema.optional(Schema.String).annotate({
         description: "Model ID to use for image generation (default: openrouter/auto)",
       }),
-      agent_requirements: Schema.optional(Schema.Boolean).annotate({
-        description: "Require declared agent skills, MCPs, and VS Code extensions before VS Code prompts can run",
-      }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),
+      task_model_selection: Schema.optional(Schema.Boolean).annotate({
+        description: "Allow task subagents to select a model, provider, and reasoning effort",
+      }),
+      code_mode: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Route MCP tool calls through a confined JavaScript runtime with on-demand tool discovery instead of exposing every MCP tool directly",
+      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
+      }),
+      speech_to_text_base_url: Schema.optional(Schema.String).annotate({
+        description:
+          "Base URL of an OpenAI-compatible transcription API to use instead of the Kilo Gateway, for example https://api.openai.com/v1",
+      }),
+      speech_to_text_api_key: Schema.optional(Schema.String).annotate({
+        description: "API key sent as a bearer token to the custom speech-to-text base URL",
       }),
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({
         description: "Enable telemetry. Set to false to opt-out.",
@@ -332,14 +350,6 @@ export const Info = Schema.Struct({
       sandbox_writable_paths: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
         description:
           "Additional filesystem paths the sandbox allows writes to (e.g. ['/tmp', '/var/log']). These are merged with the default writable paths when the sandbox is active.",
-      }),
-      swe_pruner: Schema.optional(Schema.Boolean).annotate({
-        description:
-          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: false)",
-      }),
-      swe_pruner_model: Schema.optional(Schema.String).annotate({
-        description:
-          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: the configured small model)',
       }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({

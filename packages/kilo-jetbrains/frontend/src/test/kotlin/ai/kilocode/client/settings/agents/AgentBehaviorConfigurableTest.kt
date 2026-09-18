@@ -1,12 +1,8 @@
 package ai.kilocode.client.settings.agents
 
-import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.settings.rules.RulesConfigurable
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.components.ActionLink
-import java.awt.Container
 
 @Suppress("UnstableApiUsage")
 class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
@@ -21,34 +17,21 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.agents", AgentsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.mcp", McpConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.skills", SkillsConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.workflows", WorkflowsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.rules", RulesConfigurable.ID)
     }
 
-    fun `test createComponent contains child links in order`() {
-        val cfg = AgentBehaviorConfigurable()
-
-        edt {
-            val panel = cfg.createComponent()
-            val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Rules"), labels)
-        }
-    }
-
-    fun `test navigation page is inert`() {
+    /**
+     * The page now hosts the Kilo Swarm toggle, so it is a draft page rather than an inert
+     * navigation stub. Child links and toggle behavior are covered by AgentBehaviorSettingsUiTest,
+     * which can drive a ready app state; before the app is ready this page has no draft to modify.
+     */
+    fun `test page is a searchable draft page that is unmodified before app state arrives`() {
         val cfg = AgentBehaviorConfigurable()
 
         assertTrue(cfg is SearchableConfigurable)
         assertFalse(cfg.isModified)
         cfg.apply()
         assertFalse(cfg.isModified)
-    }
-
-    private fun <T> edt(block: () -> T): T = edtWait(block)
-
-    private fun links(root: Container): List<ActionLink> = buildList {
-        for (comp in root.components) {
-            if (comp is ActionLink) add(comp)
-            if (comp is Container) addAll(links(comp))
-        }
     }
 }

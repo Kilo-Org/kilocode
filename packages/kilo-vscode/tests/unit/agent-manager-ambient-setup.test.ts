@@ -1,7 +1,14 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { LOCAL } from "../../webview-ui/agent-manager/navigate"
-import { ambientDecision, createAmbientSetup, showTerminalStack } from "../../webview-ui/agent-manager/terminal/ambient"
+import { SidePanel } from "../../webview-ui/agent-manager/side-panel-layout"
+import { createSidePanel } from "../../webview-ui/agent-manager/side-panel-state"
+import {
+  ambientDecision,
+  createAmbientSetup,
+  keepTerminalStack,
+  showTerminalStack,
+} from "../../webview-ui/agent-manager/terminal/ambient"
 import { createTerminalState } from "../../webview-ui/agent-manager/terminal/state"
 
 describe("showTerminalStack", () => {
@@ -33,6 +40,14 @@ describe("showTerminalStack", () => {
   })
 })
 
+describe("keepTerminalStack", () => {
+  it("keeps live terminals mounted under history", () => {
+    expect(keepTerminalStack(true, "wt-1", false, 1)).toBe(true)
+    expect(keepTerminalStack(true, null, true, 1)).toBe(true)
+    expect(keepTerminalStack(true, "wt-1", false, 0)).toBe(false)
+  })
+})
+
 describe("ambientDecision", () => {
   it("waits while setup is still running", () => {
     expect(ambientDecision(undefined, "wt-1", "wt-1")).toBe("wait")
@@ -55,11 +70,35 @@ describe("ambientDecision", () => {
 })
 
 describe("createAmbientSetup tracking", () => {
+  it("does not auto-close a selected terminal concealed by History or Review", () => {
+    createRoot((dispose) => {
+      const selection = () => "worktree"
+      const panels = createSidePanel({
+        project: () => "project",
+        selection,
+        current: () => "parent",
+        visible: () => false,
+      })
+      panels.open(SidePanel.Terminal)
+      const ambient = createAmbientSetup({
+        terms: createTerminalState(selection),
+        selection,
+        sidePanel: panels.selected,
+        close: () => panels.close(SidePanel.Terminal),
+      })
+      expect(panels.panel()).toBeNull()
+      ambient.reveal("worktree", "script:setup")
+      expect(ambient.pending()).toBeUndefined()
+      expect(panels.selected()).toBe(SidePanel.Terminal)
+      dispose()
+    })
+  })
+
   function scene(panelOpen: boolean) {
     const [selection] = createSignal<string | null>("wt-1")
-    const [panel] = createSignal<"diff" | "terminal" | null>(panelOpen ? "terminal" : null)
+    const [panel] = createSignal<SidePanel | null>(panelOpen ? SidePanel.Terminal : null)
     const terms = createTerminalState(selection)
-    const ambient = createAmbientSetup({ terms, selection, sidePanel: panel, setSidePanel: () => undefined })
+    const ambient = createAmbientSetup({ terms, selection, sidePanel: panel, close: () => undefined })
     return ambient
   }
 

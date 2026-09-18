@@ -23,6 +23,8 @@ Key characteristics of subagents:
 - **Invocable by agents or users**: Primary agents invoke subagents via the Task tool, or you can invoke them manually with `@agent-name`
 - **Results flow back**: When a subagent completes, its result summary is returned to the parent agent
 
+When a primary agent invokes a subagent with `task`, the child is non-interactive: it cannot ask the end user a question directly. The child can still use its permitted tools and communicate through its result, shared files, or the [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) board. Foreground tasks return before the parent continues. Background tasks use `background: true`, return immediately, and deliver their result to the parent when they finish.
+
 ### Built-in Subagents
 
 Kilo Code includes two built-in subagents:
@@ -232,7 +234,7 @@ Once configured, subagents can be used in two ways:
 
 ### Automatic Invocation
 
-Primary agents (especially the Orchestrator) can automatically invoke subagents via the Task tool when the subagent's `description` matches the task at hand. Write clear, descriptive `description` values to help primary agents select the right subagent.
+Primary agents with full tool access can automatically invoke subagents via the Task tool when the subagent's `description` matches the task at hand. Write clear, descriptive `description` values to help primary agents select the right subagent. The deprecated Orchestrator agent is not required.
 
 ### Manual Invocation via @ Mentions
 
@@ -253,6 +255,14 @@ kilo agent list
 ```
 
 This displays each agent's name, mode, and permission configuration.
+
+## Inspecting delegated sessions in VS Code
+
+When a subagent is delegated from a session in the VS Code extension, open its transcript from the task card or background-agent row. In Agent Manager, the transcript opens in the **Subagents** inspector as a read-only tab. Use the inspector tab strip to switch between multiple child sessions, reorder tabs, or close tabs.
+
+Inspector tabs are scoped to the current project and parent session. When you switch worktrees or sessions, Agent Manager shows the tabs for that project and parent only, so child transcripts from another session are not mixed into the current view.
+
+This differs from the sidebar and Kilo editor subagent tabs. In those surfaces, **Open in Tab** opens the child transcript as a separate read-only VS Code editor tab. Agent Manager keeps the transcript inside its right-hand inspector alongside the session's other panels. In both surfaces, the child session is a delegated transcript, not a new prompt you can send messages to directly.
 
 ## Configuration Precedence
 
@@ -388,5 +398,5 @@ To disable a built-in agent entirely:
 
 - [Custom Modes](/docs/customize/custom-modes) — Create specialized primary agents with tool restrictions
 - [Custom Rules](/docs/customize/custom-rules) — Define rules that apply to specific file types or situations
-- [Orchestrator Mode](/docs/code-with-ai/agents/orchestrator-mode) — Legacy mode for task delegation (now built into all agents)
-- [Task tool](/docs/automate/tools) — The tool used to invoke subagents
+- [Orchestrator Mode](/docs/code-with-ai/agents/orchestrator-mode) — Legacy mode for task delegation (now built into full-tool agents)
+- [Task tool](/docs/automate/tools#task-tool) — The tool used to invoke subagents

@@ -64,7 +64,11 @@ export function defaultOrganizationId(profile: KilocodeProfile): string | undefi
  * @param token - Authentication token
  * @param organizationId - Optional organization ID for team balance
  */
-export async function fetchBalance(token: string, organizationId?: string): Promise<KilocodeBalance | null> {
+export async function fetchBalance(
+  token: string,
+  organizationId?: string,
+  log: { warn(message: string, extra?: Record<string, unknown>): void } = console,
+): Promise<KilocodeBalance | null> {
   try {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
@@ -77,14 +81,14 @@ export async function fetchBalance(token: string, organizationId?: string): Prom
     const response = await fetch(`${KILO_API_BASE}/api/profile/balance`, { headers })
 
     if (!response.ok) {
-      console.warn(`Failed to fetch balance: ${response.status}`)
+      log.warn("Failed to fetch balance", { status: response.status })
       return null
     }
 
     const data = (await response.json()) as { balance?: number }
     return { balance: data.balance ?? 0 }
   } catch (error) {
-    console.warn("Error fetching balance:", error)
+    log.warn("Error fetching balance", { error })
     return null
   }
 }
@@ -99,7 +103,11 @@ export const getKiloBalance = fetchBalance
  * When token is provided, returns the authenticated user's default model
  * When no token is provided, returns the default free model for anonymous usage
  */
-export async function fetchDefaultModel(token?: string, organizationId?: string): Promise<string> {
+export async function fetchDefaultModel(
+  token?: string,
+  organizationId?: string,
+  fallback = token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL,
+): Promise<string> {
   const path = organizationId ? `/api/organizations/${organizationId}/defaults` : `/api/defaults`
   const url = `${KILO_API_BASE}${path}`
 
@@ -114,16 +122,16 @@ export async function fetchDefaultModel(token?: string, organizationId?: string)
     const response = await fetch(url, { headers })
 
     if (!response.ok) {
-      return token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
+      return fallback
     }
 
     const data = (await response.json()) as { defaultModel?: string; defaultFreeModel?: string }
     if (token) {
-      return data.defaultModel || DEFAULT_MODEL
+      return data.defaultModel || fallback
     }
-    return data.defaultFreeModel || DEFAULT_FREE_MODEL
+    return data.defaultFreeModel || fallback
   } catch {
-    return token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
+    return fallback
   }
 }
 

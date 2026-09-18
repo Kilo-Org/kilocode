@@ -62,15 +62,23 @@ describe("DataBridge shape (perf regression guard)", () => {
 
 describe("DataBridge openDiff wiring (regression guard)", () => {
   const openDiffBlock = () => {
-    const match = src.match(/const\s+openDiff\s*=\s*\(diff:\s*\{[\s\S]*?\n\s*\}\n\n\s*const\s+openUrl/)
+    const match = src.match(
+      /const\s+openDiff\s*=\s*\(diff:\s*PermissionFileDiff\)[\s\S]*?\n\s*\}\n\n\s*const\s+openUrl/,
+    )
     expect(match).toBeTruthy()
     return match![0]
   }
 
   it("wires openDiff to the openDiffVirtual webview message", () => {
     expect(openDiffBlock()).toMatch(
-      /postMessage\(\{\s*type:\s*["']openDiffVirtual["']\s*,\s*diff\s*,\s*initialDiffStyle:\s*["']split["']\s*\}\)/,
+      /postMessage\(\{\s*type:\s*["']openDiffVirtual["']\s*,\s*diff\s*,\s*initialDiffStyle:\s*diffStyle\?\.style\(\)\s*\?\?\s*["']unified["']\s*\}\)/,
     )
     expect(src).toContain("onOpenDiff={openDiff}")
+  })
+
+  it("routes Agent Manager diffs to the inspector event", () => {
+    expect(src).toContain("dispatchAgentManagerEditPreview")
+    expect(src).toContain('initialDiffStyle: diffStyle?.style() ?? "unified"')
+    expect(src).toContain("useWorktreeMode")
   })
 })

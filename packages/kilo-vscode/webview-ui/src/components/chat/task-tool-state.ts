@@ -1,5 +1,82 @@
+import type { SessionStatusInfo } from "../../types/messages"
+
 export function taskRunning(status: string | undefined) {
   return status === "pending" || status === "running"
+}
+
+/**
+ * Auto-open a task card only once it is running and not a background task.
+ * While the call is pending the streamed input cannot yet tell a background
+ * task from a foreground one, and a background card must never open on its own.
+ */
+export function taskAutoOpen(status: string | undefined, background: boolean) {
+  return status === "running" && !background
+}
+
+/**
+ * The open state to persist for a card the user has not controlled, or
+ * undefined to leave the stored value alone. A running foreground card opens
+ * and stays open when the virtualizer remounts it after completion. A
+ * promoted background card collapses and must stay collapsed, so that
+ * collapse is stored too instead of leaving the earlier open value behind.
+ */
+export function taskStoredOpen(auto: boolean, background: boolean, touched: boolean) {
+  if (touched) return undefined
+  if (auto) return true
+  if (background) return false
+  return undefined
+}
+
+/**
+ * Avatar state for a Task card. The child session's live status wins, because
+ * a background Task tool part completes as soon as the child is started while
+ * the child keeps working. Finished and waiting children keep a static glyph.
+ */
+export function taskAvatarStatus(
+  id: string | undefined,
+  tool: string | undefined,
+  status: Record<string, SessionStatusInfo>,
+) {
+  if (id && (status[id]?.type === "busy" || status[id]?.type === "retry")) return "running" as const
+  if (taskRunning(tool)) return "running" as const
+  return undefined
+}
+
+/**
+ * True when a Task part is a background child. The streamed input carries the
+ * flag from the first part update; part metadata wins over state metadata.
+ */
+export function taskBackground(
+  input: Record<string, unknown> | undefined,
+  part: Record<string, unknown> | undefined,
+  state: Record<string, unknown> | undefined,
+) {
+  if (input?.background === true) return true
+  return (part?.background ?? state?.background) === true
+}
+
+export function childForeground(
+  id: string | undefined,
+  part: Record<string, unknown> | undefined,
+  state: Record<string, unknown> | undefined,
+  status: Record<string, SessionStatusInfo>,
+  latest: boolean,
+) {
+  if (!id || !latest) return false
+  if (part?.background === true || state?.background === true) return false
+  return status[id]?.type === "busy" || status[id]?.type === "retry"
+}
+
+export function showChildPromotion(
+  id: string | undefined,
+  part: Record<string, unknown> | undefined,
+  state: Record<string, unknown> | undefined,
+  status: Record<string, SessionStatusInfo>,
+  enabled: boolean | undefined,
+  readonly: boolean | undefined,
+  latest: boolean,
+) {
+  return enabled === true && !readonly && childForeground(id, part, state, status, latest)
 }
 
 export function taskVisible(open: boolean | undefined, id: string | undefined) {

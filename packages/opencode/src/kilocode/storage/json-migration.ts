@@ -73,7 +73,10 @@ export async function bootstrap() {
   const marker = Database.path()
   if (marker === ":memory:") return
   const pending = marker + ".json-migration"
-  if ((await Filesystem.exists(marker)) && !(await Filesystem.exists(pending))) return
+  const [database, retry] = await Promise.all([Filesystem.exists(marker), Filesystem.exists(pending)])
+  if (database && !retry) return
+  const storage = path.join(Global.Path.data, "storage")
+  if (!database && !retry && !(await Filesystem.exists(storage))) return
   await Filesystem.write(pending, "1")
 
   const tty = process.stderr.isTTY

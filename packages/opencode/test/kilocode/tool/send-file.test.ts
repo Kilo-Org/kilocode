@@ -26,17 +26,6 @@ const agents = Agent.Service.of({
   list: () => Effect.succeed([agentInfo]),
   defaultInfo: () => Effect.succeed(agentInfo),
   defaultAgent: () => Effect.succeed("code"),
-  requirementStatus: () =>
-    Effect.succeed({
-      agent: "code",
-      directory: "",
-      enabled: false,
-      state: "ready",
-      skills: [],
-      mcps: [],
-      vscode_extensions: [],
-    }),
-  guardRequirements: () => Effect.void,
   generate: () => Effect.succeed({ identifier: "code", whenToUse: "", systemPrompt: "" }),
 })
 
@@ -94,13 +83,13 @@ describe("send_file tool", () => {
     const tool = { id: "send_file" } as Tool.Def
 
     status.mockReturnValue({ enabled: false, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(false)
+    expect(KiloToolRegistry.available(tool)).toBe(false)
 
     status.mockReturnValue({ enabled: true, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(false)
+    expect(KiloToolRegistry.available(tool)).toBe(false)
 
     status.mockReturnValue({ enabled: true, connected: true })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(true)
+    expect(KiloToolRegistry.available(tool)).toBe(true)
   })
 
   test("returns unavailable when not connected", async () => {
@@ -459,12 +448,14 @@ describe("send_file tool", () => {
         save: tool,
         manager: tool,
         process: tool,
+        browser: tool,
         chart: tool,
         image: tool,
         notify: { id: "notify_user" } as Tool.Def,
         send: tool,
       },
       {},
+      { experimentalSharedAgentBoard: false },
     )
 
     const ids = extra.map((t) => t.id)

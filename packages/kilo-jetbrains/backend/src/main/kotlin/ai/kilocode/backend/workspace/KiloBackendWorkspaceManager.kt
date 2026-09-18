@@ -8,6 +8,8 @@ import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import okhttp3.OkHttpClient
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -74,8 +76,26 @@ class KiloBackendWorkspaceManager(
         }
     }
 
-    /** Remove a workspace (e.g. when a worktree is deleted). */
+    /**
+     * Remove any cached workspace whose directory resolves to the same real path as [dir].
+     * Callers pass git porcelain paths, while workspaces are often keyed by the resolved
+     * (`toRealPath`) path or the IDE base path, so an exact-string match would miss the entry
+     * and leave a deleted worktree cached as Ready — still producing backend errors.
+     */
     fun remove(dir: String) {
-        workspaces.remove(dir)?.stop()
+        val target = canonical(dir)
+        workspaces.keys.filter { canonical(it) == target }.forEach { key ->
+            log.info("Removing cached workspace for $key")
+            workspaces.remove(key)?.stop()
+        }
+    }
+
+    /** Resolve symlinks on the parent so `/var/...` and `/private/var/...` compare equal even after the leaf is deleted. */
+    private fun canonical(dir: String): String {
+        val path = Path.of(dir).normalize()
+        val parent = path.parent ?: return path.toString()
+        val name = path.fileName ?: return path.toString()
+        val root = runCatching { if (Files.exists(parent)) parent.toRealPath() else parent }.getOrDefault(parent)
+        return root.resolve(name).toString()
     }
 }

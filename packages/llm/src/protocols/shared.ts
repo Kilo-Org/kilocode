@@ -108,6 +108,25 @@ export const parseJson = (route: string, input: string, message: string) =>
  */
 export const joinText = (parts: ReadonlyArray<{ readonly text: string }>) => parts.map((part) => part.text).join("\n")
 
+// kilocode_change start - preserve provider role alternation when tool results lower to user messages
+export const appendUserMessage = <
+  const Key extends "content" | "parts",
+  Part,
+  Message extends { readonly role: string } & Record<Key, ReadonlyArray<Part>>,
+>(
+  messages: Message[],
+  message: Message,
+  key: Key,
+) => {
+  const previous = messages.at(-1)
+  if (previous?.role !== "user") {
+    messages.push(message)
+    return
+  }
+  messages[messages.length - 1] = { ...message, [key]: [...previous[key], ...message[key]] } as Message
+}
+// kilocode_change end
+
 const escapeSystemUpdateText = (text: string) =>
   text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
 

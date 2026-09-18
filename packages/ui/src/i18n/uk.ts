@@ -218,6 +218,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Створено",
   "ui.patch.action.moved": "Переміщено",
   "ui.patch.action.patched": "Застосовано патч",
+  "ui.patch.action.plan": "План", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} відповідей",
   "ui.question.answer.none": "(немає відповіді)",
@@ -232,6 +233,10 @@ export const dict: Record<string, string> = {
   "ui.mermaid.copySvg": "Копіювати SVG",
   "ui.mermaid.download": "Завантажити",
   "ui.mermaid.downloadPng": "Завантажити PNG",
+  "ui.mermaid.zoom": "Масштаб",
+  "ui.mermaid.zoomIn": "Збільшити",
+  "ui.mermaid.zoomOut": "Зменшити",
+  "ui.mermaid.zoomReset": "Скинути масштаб",
   "ui.mermaid.downloadSvg": "Завантажити SVG",
   "ui.mermaid.errorDefault": "Не вдалося відтворити діаграму Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid відтворив порожню діаграму.",
@@ -240,11 +245,17 @@ export const dict: Record<string, string> = {
   "ui.message.deleteQueued": "Видалити повідомлення з черги",
   "ui.messagePart.mcp.input": "Вхід",
   "ui.messagePart.mcp.output": "Вихід",
+  "ui.messagePart.board.read": "Читання повідомлень агентів",
+  "ui.messagePart.board.all": "Усі агенти",
+  "ui.messagePart.board.primary": "Головний агент",
+  "ui.messagePart.board.agent": "Агент",
+  "ui.messagePart.board.route": "Відправник: {{from}}, одержувач: {{to}}",
+  "ui.messagePart.board.empty": "Немає повідомлень агентів",
+  "ui.messagePart.board.stored": "Лише збережено. Доставлення та прочитання не підтверджено.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.tool.codesearch": "Пошук коду",
-  "ui.tool.swePruned": "SWE-Pruner · збережено {{kept}} з {{total}} рядків",
   // kilocode_change end
 }

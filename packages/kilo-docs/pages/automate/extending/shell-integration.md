@@ -17,6 +17,10 @@ This means:
 - **No shell integration setup or troubleshooting** — it works out of the box
 - **Consistent behavior** across environments — the same shell execution logic runs whether you use the CLI directly or through the VS Code extension
 
+{% callout type="warning" title="Interactive terminal removed" %}
+The `interactive_terminal` tool, the in-session terminal controls, the related API endpoints, and the matching SDK types were removed. Run commands that need keyboard input in your own terminal instead, and use the [`bash` tool](#the-bash-tool) for non-interactive commands.
+{% /callout %}
+
 ## The `bash` Tool
 
 The `bash` tool is the primary way the agent executes shell commands. It spawns a persistent shell session and runs commands within it.
@@ -42,24 +46,24 @@ The CLI automatically detects the appropriate shell for your platform using `She
 
 ## Agent Manager Terminals (VS Code Extension)
 
-When using the Kilo Code VS Code extension with the Agent Manager, each agent session gets its own dedicated VS Code terminal.
+When using the Kilo Code VS Code extension with the Agent Manager, each agent session gets its own terminal. Depending on the terminal destination, this is either a dedicated VS Code integrated terminal or an embedded terminal in the Agent Manager panel.
 
 ### Per-Session Terminals
 
-- Each session creates a terminal named **`Agent: {branch}`**, where `{branch}` is the git branch or worktree the session is working in
+- Each session creates a terminal named **`Agent: {branch}`**, where `{branch}` is the git branch or worktree the session is working in, when you use a VS Code integrated terminal
 - The terminal's working directory is automatically set to the session's worktree directory
-- Terminals are standard VS Code integrated terminals — you can interact with them directly
+- VS Code terminal destinations are standard integrated terminals. The Agent Manager panel destination uses embedded terminals in the Agent Manager layout.
 
 ### Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
 | <kbd>Cmd</kbd>+<kbd>/</kbd> | Focus the session's terminal |
-| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agent mode |
+| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agents |
 
 ### Terminal Context Menu Actions
 
-Right-click in an Agent Manager terminal to access these actions:
+Right-click in a VS Code integrated Agent Manager terminal to access these actions:
 
 - **Add Terminal Content to Context** — sends the terminal's visible output to the agent as context
 - **Fix This Command** — asks the agent to diagnose and fix the last failed command

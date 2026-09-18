@@ -27,22 +27,17 @@ export function staticEnvLines(ctx?: EditorContext): string[] {
  * Build a per-message <environment_details> block from editor context.
  * These change frequently (user switches files/tabs) and belong in the
  * user message so the model always has fresh context.
- * Always includes at least the current timestamp.
+ * Always includes at least the supplied message timestamp.
+ * The leading blank lines separate the block from the user's own text when
+ * the block is appended as an adjacent content part, so models do not treat
+ * it as a continuation of the user's content (kilocode#13110).
  */
-function timestamp(): string {
-  const now = new Date()
-  const offset = -now.getTimezoneOffset()
-  const sign = offset >= 0 ? "+" : "-"
-  const h = Math.floor(Math.abs(offset) / 60)
-    .toString()
-    .padStart(2, "0")
-  const m = (Math.abs(offset) % 60).toString().padStart(2, "0")
-  const pad = (n: number) => n.toString().padStart(2, "0")
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${sign}${h}:${m}`
+function timestamp(now: Date): string {
+  return now.toISOString().replace(/\.\d+Z$/, "Z")
 }
 
-export function environmentDetails(ctx?: EditorContext): string {
-  const lines: string[] = [`Current time: ${timestamp()}`]
+export function environmentDetails(ctx?: EditorContext, now = new Date()): string {
+  const lines: string[] = [`Message time: ${timestamp(now)}`]
   if (ctx?.directory) {
     lines.push(`Working directory: ${ctx.directory}`)
   }
@@ -64,5 +59,5 @@ export function environmentDetails(ctx?: EditorContext): string {
       lines.push(`  ${f}`)
     }
   }
-  return ["<environment_details>", ...lines, "</environment_details>"].join("\n")
+  return ["", "", "<environment_details>", ...lines, "</environment_details>"].join("\n")
 }

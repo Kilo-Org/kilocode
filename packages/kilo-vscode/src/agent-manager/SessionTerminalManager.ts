@@ -1,4 +1,5 @@
 import type { WorktreeStateManager } from "./WorktreeStateManager"
+import { normalizePath } from "./git-import"
 
 // ---------------------------------------------------------------------------
 // TerminalHost — narrow interface for the VS Code capabilities this module
@@ -180,7 +181,7 @@ export class SessionTerminalManager {
   /**
    * Show the terminal for a session if it already exists (used when switching sessions).
    * Returns true if the terminal was shown, false if no terminal exists for the session.
-   * Pass preserveFocus=true to keep focus on the current editor (default for session switching).
+   * Pass preserveFocus=true to keep focus on the current editor (the default).
    */
   showExisting(sessionId: string, preserveFocus = true): boolean {
     return this.showExistingKey(SessionTerminalManager.sessionKey(sessionId), preserveFocus)
@@ -211,10 +212,29 @@ export class SessionTerminalManager {
     return undefined
   }
 
-  prepareContext(sessionId: string): boolean {
-    if (this.showExisting(sessionId)) return true
+  prepareContext(sessionId?: string, context?: string): boolean {
+    const key =
+      context === undefined
+        ? undefined
+        : context === "local"
+          ? SessionTerminalManager.LOCAL_KEY
+          : SessionTerminalManager.worktreeKey(context)
+    if (sessionId && this.showExisting(sessionId, false)) return true
+    if (key && this.showExistingKey(key, false)) return true
     const active = this.activeKey()
-    return !active || active === SessionTerminalManager.sessionKey(sessionId)
+    if (active === undefined) return this.host.activeTerminal() !== undefined
+    return (sessionId !== undefined && active === SessionTerminalManager.sessionKey(sessionId)) || active === key
+  }
+
+  closeDirectory(directory: string): void {
+    const target = normalizePath(directory)
+    for (const [key, entry] of this.terminals) {
+      if (normalizePath(entry.cwd) !== target) continue
+      this.terminals.delete(key)
+      entry.terminal.dispose()
+      this.log(`Removed terminal mapping for ${key} (worktree deleted)`)
+    }
+    this.updateContextKey()
   }
 
   dispose(): void {

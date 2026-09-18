@@ -2,15 +2,26 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.FakeSessionRpcApi.ForkCall
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.SessionChangeDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
 class WorktreeSessionListControllerTest : BasePlatformTestCase() {
+    private companion object {
+        /**
+         * How long to keep pumping while proving a reload never happens. Must comfortably exceed
+         * the controller's change-coalescing window; positive waits use the shared default deadline.
+         */
+        const val QUIET_MS = 1_500L
+    }
+
     private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var sessions: KiloSessionService
@@ -74,6 +85,66 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         assertTrue(controller.sessions().any { it.id == "existing" })
     }
 
+    fun `test fork prepends the forked session and keeps the source row`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+
+        var forked: SessionDto? = null
+        controller.fork("ses_1", null) { session, _ -> forked = session }
+        drain()
+
+        assertEquals(ForkCall("ses_1", dir, null), rpc.forks.single())
+        assertEquals("ses_1_fork", forked?.id)
+        assertEquals("ses_1_fork", controller.model.getElementAt(0).id)
+        assertNotNull(controller.session("ses_1"))
+    }
+
+    fun `test fork does not clobber the shared sessions flow`() {
+        // The shared flow reflects the primary workspace; forking in a worktree must leave it alone.
+        rpc.listed += session("ses_main", "Main")
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Default) { sessions.list("/repo") }
+        assertEquals(listOf("ses_main"), sessions.sessions.value.map { it.id })
+
+        rpc.listed.clear()
+        rpc.listed += session("ses_wt", "Worktree")
+        controller.reload()
+        drain()
+
+        controller.fork("ses_wt", null) { _, _ -> }
+        drain()
+        // The forked row lands in this worktree's own model, and the primary snapshot is untouched.
+        assertTrue(controller.sessions().any { it.id == "ses_wt_fork" })
+        assertEquals(listOf("ses_main"), sessions.sessions.value.map { it.id })
+    }
+
+    fun `test fork forwards the message id for a per-message fork`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+
+        controller.fork("ses_1", "msg_7") { _, _ -> }
+        drain()
+
+        assertEquals(ForkCall("ses_1", dir, "msg_7"), rpc.forks.single())
+    }
+
+    fun `test fork failure reports the error and leaves the model alone`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+        rpc.forkThrows = RuntimeException("fork unavailable")
+
+        var forked: SessionDto? = session("sentinel", "Sentinel")
+        var err: String? = null
+        controller.fork("ses_1", null) { session, message -> forked = session; err = message }
+        drain()
+
+        assertNull(forked)
+        assertEquals("fork unavailable", err)
+        assertEquals(listOf("ses_1"), controller.sessions().map { it.id })
+    }
+
     fun `test delete removes the session and reports success`() {
         rpc.listed += session("ses_1", "One")
         rpc.listed += session("ses_2", "Two")
@@ -133,6 +204,59 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         assertEquals("nope", err)
         assertEquals("Old", controller.session("ses_1")?.title)
     }
+
+    fun `test a session change in this directory brings in the new session`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+        val before = rpc.lists.size
+
+        // A session started elsewhere in this worktree, then two title updates as it streams. The
+        // burst is emitted back to back so the coalescing window sees it as one.
+        rpc.listed += session("ses_from_other_frame", "Elsewhere")
+        emit(
+            change("ses_from_other_frame", dir, SessionChangeKindDto.CREATED),
+            change("ses_from_other_frame", dir, SessionChangeKindDto.UPDATED),
+            change("ses_from_other_frame", dir, SessionChangeKindDto.UPDATED),
+        )
+
+        assertTrue(coroutines.pumpUntil { controller.session("ses_from_other_frame") != null })
+        // Coalesced: a burst costs one reload, not one per event.
+        assertEquals(1, rpc.lists.size - before)
+    }
+
+    fun `test a session change in another directory is ignored`() {
+        controller.reload()
+        drain()
+        val before = rpc.lists.size
+
+        emit(change("ses_main", "/repo", SessionChangeKindDto.CREATED))
+        // Waiting past the coalescing window proves no reload was merely pending.
+        assertFalse(coroutines.pumpUntil(QUIET_MS) { rpc.lists.size > before })
+    }
+
+    fun `test a session change matches a directory with a trailing separator`() {
+        controller.reload()
+        drain()
+        val before = rpc.lists.size
+
+        emit(change("ses_1", "$dir/", SessionChangeKindDto.CREATED))
+
+        assertTrue(coroutines.pumpUntil { rpc.lists.size > before })
+    }
+
+    /**
+     * Emits into the fake's change flow from a background thread. The flow has no replay, so the
+     * controller's collector must already be subscribed — every caller reloads and drains first.
+     */
+    private fun emit(vararg values: SessionChangeDto) {
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Default) {
+            values.forEach { rpc.changes.emit(it) }
+        }
+    }
+
+    private fun change(id: String, directory: String, kind: SessionChangeKindDto) =
+        SessionChangeDto(id, directory, kind)
 
     private fun session(id: String, title: String) = SessionDto(
         id = id,

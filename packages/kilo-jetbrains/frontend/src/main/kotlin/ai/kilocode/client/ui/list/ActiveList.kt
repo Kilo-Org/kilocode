@@ -16,6 +16,7 @@ import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Cursor
+import java.awt.Rectangle
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
@@ -45,8 +46,10 @@ internal class ActiveList(
     onClick: ((ActiveListItem) -> Unit)? = null,
     onSelect: (() -> Unit)? = null,
     menu: ActiveListMenu<*>? = null,
+    reorder: ActiveListReorder? = null,
+    onHover: ((ActiveListItem?) -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick, menu, onCell)
+    private val view = ActiveListView(emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick, menu, reorder, onHover, onCell)
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
     private val scroll = object : JBScrollPane(view) {
         override fun getBackground(): Color {
@@ -59,8 +62,16 @@ internal class ActiveList(
         if (surface == ActiveListSurface.ToolWindow) viewport.background = activeListToolWindowBackground()
     }
 
+    /**
+     * Called when the list scrolls. A popup anchored to a row has to close then: the row moves out from
+     * under it, and the balloon would otherwise sit pointing at whatever slid into its place.
+     */
+    var onScroll: (() -> Unit)? = null
+
     init {
         view.onSelect = onSelect
+        // Any movement, including mid-drag: the row a popup points at has already left that position.
+        scroll.verticalScrollBar.addAdjustmentListener { onScroll?.invoke() }
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
         // search field pinned above it.
         if (surface == ActiveListSurface.ToolWindow) isOpaque = true
@@ -68,7 +79,7 @@ internal class ActiveList(
             it.textEditor.emptyText.text = placeholder
             wireActiveListSearch(it, view)
             addToTop(it)
-            scroll.border = JBUI.Borders.emptyTop(UiStyle.Gap.sm())
+            scroll.border = JBUI.Borders.emptyTop(UiStyle.Gap.SM)
         } ?: run { scroll.border = JBUI.Borders.empty() }
         addToCenter(scroll)
     }
@@ -94,6 +105,10 @@ internal class ActiveList(
     @RequiresEdt
     fun selectIndex(index: Int) = view.selectIndex(index)
 
+    /** Steps the selection by [step] visible rows, clamped to the ends of the list. */
+    @RequiresEdt
+    fun move(step: Int) = view.move(step)
+
     @RequiresEdt
     fun selectedIndex(): Int = view.selectedIndex()
 
@@ -112,6 +127,14 @@ internal class ActiveList(
     @RequiresEdt
     fun point(key: String, cell: String? = null): RelativePoint = view.point(key, cell)
 
+    /** See [ActiveListView.hoveredBounds]. */
+    @RequiresEdt
+    fun hoveredBounds(pane: JComponent): Rectangle? = view.hoveredBounds(pane)
+
+    /** See [ActiveListView.visibleBounds]. */
+    @RequiresEdt
+    fun visibleBounds(pane: JComponent): Rectangle? = view.visibleBounds(pane)
+
     @RequiresEdt
     fun focusList() = view.focusList()
 
@@ -128,7 +151,7 @@ internal class ActiveList(
 
     @RequiresEdt
     fun setSelectionIndices(indices: IntArray) {
-        view.list.selectedIndices = indices
+        view.setSelectionIndices(indices)
     }
 
     @RequiresEdt
@@ -174,6 +197,14 @@ internal class ActiveList(
         search?.isEnabled = !value
         search?.textEditor?.isEnabled = !value
         view.setBusy(value)
+    }
+
+    /** [ActiveListView.setLocked]: blocks input without painting the busy spinner. */
+    @RequiresEdt
+    fun setLocked(value: Boolean) {
+        search?.isEnabled = !value
+        search?.textEditor?.isEnabled = !value
+        view.setLocked(value)
     }
 }
 

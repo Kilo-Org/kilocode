@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { configFeatures } from "../../src/features"
 import { visible } from "../../webview-ui/src/components/settings/sandboxing"
 
-const features = { indexing: false, sandboxControls: false }
+const features = { indexing: false, sandboxControls: false, backgroundSubagents: false }
 const platform = Object.getOwnPropertyDescriptor(process, "platform")
 
 function setPlatform(value: string) {

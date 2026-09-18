@@ -3,6 +3,7 @@ import "./init-projectors"
 import { NodeHttpServer } from "@effect/platform-node"
 import { serverUrls } from "@/kilocode/cli/server-urls" // kilocode_change
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { Pty } from "@opencode-ai/core/pty" // kilocode_change
 import { ConfigProvider, Context, Effect, Exit, Layer, Scope } from "effect"
 import { HttpRouter, HttpServer } from "effect/unstable/http"
 import { OpenApi } from "effect/unstable/httpapi"
@@ -109,7 +110,8 @@ const listenEffect: (opts: ListenOptions) => Effect.Effect<EffectListener, unkno
 )
 
 function listenerLayer(opts: ListenOptions, port: number) {
-  return HttpRouter.serve(HttpApiApp.createListenerRoutes(opts), { // kilocode_change
+  return HttpRouter.serve(HttpApiApp.createListenerRoutes(opts), {
+    // kilocode_change
     middleware: disposeMiddleware,
     disableLogger: true,
     disableListenLog: true,
@@ -134,7 +136,8 @@ function startWithPortFallback(opts: ListenOptions) {
 
 function startListener(opts: ListenOptions, port: number) {
   const scope = Scope.makeUnsafe()
-  return KiloListener.build(listenerLayer(opts, port), scope).pipe( // kilocode_change
+  return KiloListener.build(listenerLayer(opts, port), scope).pipe(
+    // kilocode_change
     Effect.provide(HttpApiApp.context),
     Effect.onError(() => Scope.close(scope, Exit.void).pipe(Effect.ignore)),
     Effect.map(
@@ -198,6 +201,7 @@ function makeStop(state: ListenerState, unpublishMdns: Effect.Effect<void>, list
       Effect.gen(function* () {
         yield* unpublishMdns
         if (close) yield* forceCloseOnce
+        if (close) yield* Effect.promise(() => Pty.shutdown()) // kilocode_change
         yield* closeScopeOnce
       })
   })

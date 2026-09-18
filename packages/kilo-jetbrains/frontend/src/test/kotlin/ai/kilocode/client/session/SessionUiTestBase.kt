@@ -4,8 +4,8 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
-import ai.kilocode.client.migration.MigrationUiController
+import ai.kilocode.client.onboarding.FakeOnboardingController
+import ai.kilocode.client.onboarding.OnboardingController
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.controller.SessionController
@@ -88,9 +88,10 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         id: String? = null,
         displayMs: Long = 0,
         open: ((SessionRef) -> Unit)? = null,
-        migration: MigrationUiController = FakeMigrationUiController(),
+        onboarding: OnboardingController = FakeOnboardingController(),
+        manager: SessionManager? = null,
     ): SessionUi {
-        val manager = open?.let { fn ->
+        val owner = manager ?: open?.let { fn ->
             object : SessionManager {
                 override fun newSession() {}
                 override fun showHistory(back: (() -> Unit)?) {}
@@ -101,9 +102,9 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
             project, workspace, sessions, app, scope,
             ref = SessionRef.from(id),
             displayMs = displayMs,
-            manager = manager,
+            manager = owner,
             workspaces = workspaces,
-            migration = migration,
+            onboarding = onboarding,
         ).apply {
             setSize(800, 600)
         }
@@ -114,6 +115,9 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         val root = find<SessionRootPanel>(ui)
         root.doLayout()
         root.content.doLayout()
+        // The prompt sits inside an Align inside the bottom Stack container (which also holds the
+        // branch dock). Lay out the Stack before the Align so the prompt receives its full width.
+        find<PromptPanel>(ui).parent.parent.doLayout()
         find<PromptPanel>(ui).parent.doLayout()
         scrollComponent().doLayout()
         (scrollView() as? Container)?.doLayout()

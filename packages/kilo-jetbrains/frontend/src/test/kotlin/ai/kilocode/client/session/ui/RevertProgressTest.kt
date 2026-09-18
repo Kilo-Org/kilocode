@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SpinnerIcon
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
@@ -18,6 +19,12 @@ class RevertProgressTest : BasePlatformTestCase() {
         view.setText("Redoing...")
         assertEquals("Redoing...", label.text)
         assertSame(label, label(view))
+    }
+
+    fun `test uses session spinner`() {
+        val view = RevertProgress {}
+
+        assertSame(SpinnerIcon.icon, spinner(view).icon)
     }
 
     fun `test cancel invokes callback`() {
@@ -49,5 +56,16 @@ class RevertProgressTest : BasePlatformTestCase() {
             }
         }
         error("missing cancel")
+    }
+
+    private fun spinner(root: Container): JBLabel {
+        for (child in root.components) {
+            if (child is JBLabel && child.icon != null) return child
+            if (child is Container) {
+                val found = runCatching { spinner(child) }.getOrNull()
+                if (found != null) return found
+            }
+        }
+        error("missing spinner")
     }
 }

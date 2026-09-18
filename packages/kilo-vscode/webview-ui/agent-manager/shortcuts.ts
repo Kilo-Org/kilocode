@@ -53,7 +53,8 @@ export function buildShortcutCategories(
       title: t("agentManager.shortcuts.category.terminal"),
       shortcuts: [
         { label: t("agentManager.shortcuts.toggleTerminal"), binding: bind("showTerminal") },
-        { label: t("agentManager.terminal.add"), binding: bind("newTerminal") },
+        { label: t("agentManager.terminal.addCentral"), binding: bind("newTerminalCenter") },
+        { label: t("agentManager.terminal.addTerminal"), binding: bind("newTerminalTerminal") },
         {
           label: `${t("agentManager.shortcuts.previousTab")} (${t("agentManager.tab.terminal")})`,
           binding: bind("previousTerminal"),

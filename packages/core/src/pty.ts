@@ -1,7 +1,6 @@
 export * as Pty from "./pty"
 
-import { makeLocationNode } from "./effect/app-node"
-import type { Disp, Proc } from "#pty"
+import { makeGlobalNode, makeLocationNode } from "./effect/app-node" // kilocode_change
 import { Context, Effect, Layer, Schema, Types } from "effect"
 import { Pty } from "@opencode-ai/schema/pty"
 import { Config } from "./config"
@@ -12,33 +11,14 @@ import { SessionSchema } from "./session/schema" // kilocode_change
 import { Shell } from "./shell"
 import { lazy } from "./util/lazy"
 import { KiloPtySelfCommand } from "./kilocode/pty-self-command" // kilocode_change
-import { KiloPtyTermination } from "./kilocode/pty/termination" // kilocode_change
+import * as KiloPtyRegistry from "./kilocode/pty/registry" // kilocode_change
+import type { Active, Subscriber } from "./kilocode/pty/registry" // kilocode_change
 
 const BUFFER_LIMIT = 1024 * 1024 * 2
 // Exited sessions stay observable (status, exit code, retained output) until removed explicitly.
 // Cap retention so abandoned terminals do not accumulate unbounded buffers.
 const EXITED_LIMIT = 25
 const pty = lazy(() => import("#pty"))
-
-type Subscriber = {
-  readonly onData: (chunk: string) => void
-  readonly onEnd: (event: { exitCode?: number }) => void
-  active: boolean
-  detached: boolean
-  pending: string[]
-  end?: { exitCode?: number }
-}
-
-type Active = {
-  info: Info
-  process: Proc
-  buffer: string
-  bufferCursor: number
-  cursor: number
-  subscribers: Map<object, Subscriber>
-  listeners: Disp[]
-  stopping: boolean // kilocode_change
-}
 
 // kilocode_change - the Kilo `sessionID` field now lives on the canonical shared schema (see
 // packages/schema/src/pty.ts) so the generated SDK carries it; reuse that schema verbatim here.
@@ -96,6 +76,7 @@ export interface Interface {
   readonly create: (input: CreateInput) => Effect.Effect<Info>
   readonly update: (id: PtyID, input: UpdateInput) => Effect.Effect<Info, NotFoundError>
   readonly remove: (id: PtyID) => Effect.Effect<void, NotFoundError>
+  readonly removeDirectory: (location: Location.Ref) => Effect.Effect<void> // kilocode_change
   readonly write: (id: PtyID, data: string) => Effect.Effect<void, NotFoundError>
   readonly attach: (id: PtyID, input: AttachInput) => Effect.Effect<Attachment, NotFoundError | ExitedError>
 }
@@ -110,8 +91,7 @@ const layer = Layer.effect(
     const config = yield* Config.Service
     const context = yield* Effect.context()
     const runFork = Effect.runForkWith(context)
-    const sessions = new Map<PtyID, Active>()
-    const exitOrder: PtyID[] = []
+    const sessions = KiloPtyRegistry.sessions // kilocode_change
 
     function notifyEnd(session: Active, event: { exitCode?: number }) {
       for (const subscriber of session.subscribers.values()) {
@@ -121,50 +101,36 @@ const layer = Layer.effect(
         }
         try {
           subscriber.onEnd(event)
-        } catch {}
+        } catch (error) {
+          Effect.runSync(Effect.logDebug("PTY subscriber end callback failed", { id: session.info.id, error }))
+        }
       }
       session.subscribers.clear()
     }
 
-    // kilocode_change start - terminate the complete PTY tree before reporting removal.
-    async function teardown(session: Active) {
-      session.stopping = true
-      if (session.info.status === "running") await KiloPtyTermination.terminate(session.process)
-      for (const listener of session.listeners) listener.dispose()
-      session.listeners.length = 0
-      notifyEnd(session, session.info.status === "exited" ? { exitCode: session.info.exitCode } : {})
-    }
-    // kilocode_change end
-
-    yield* Effect.addFinalizer(
-      () =>
-        // kilocode_change start - wait for process-tree termination during async service teardown.
-        Effect.promise(async () => {
-          await Promise.all(Array.from(sessions.values()).map(teardown))
-          sessions.clear()
-          exitOrder.length = 0
-        }),
-      // kilocode_change end
-    )
-
     const requireSession = Effect.fn("Pty.requireSession")(function* (id: PtyID) {
       const session = sessions.get(id)
-      if (!session) return yield* new NotFoundError({ ptyID: id })
+      const owner = Location.Ref.make({ directory: location.directory, workspaceID: location.workspaceID })
+      if (!session || !KiloPtyRegistry.sameLocation(session.location, owner))
+        return yield* new NotFoundError({ ptyID: id })
       return session
     })
 
     const removeSession = Effect.fnUntraced(function* (id: PtyID) {
       // kilocode_change start - removal and its deleted event are one uninterruptible lifecycle transition.
-      yield* Effect.gen(function* () {
-        const session = sessions.get(id)
-        if (!session) return
-        yield* Effect.logInfo("removing session", { id })
-        yield* Effect.promise(() => teardown(session))
-        sessions.delete(id)
-        const index = exitOrder.indexOf(id)
-        if (index !== -1) exitOrder.splice(index, 1)
-        yield* events.publish(Event.Deleted, { id: session.info.id })
-      }).pipe(Effect.uninterruptible)
+      const session = sessions.get(id)
+      if (!session || !KiloPtyRegistry.claimRemoval(id)) return
+      yield* Effect.uninterruptible(
+        Effect.gen(function* () {
+          yield* Effect.logInfo("removing session", { id })
+          yield* Effect.promise(() => KiloPtyRegistry.teardown(session))
+          sessions.delete(id)
+          KiloPtyRegistry.removeExited(session)
+          yield* events
+            .publish(Event.Deleted, { id: session.info.id }, { location: session.location })
+            .pipe(Effect.catch((error) => Effect.logWarning("failed to publish PTY deleted event", { id, error })))
+        }).pipe(Effect.ensuring(Effect.sync(() => KiloPtyRegistry.releaseRemoval(id)))),
+      )
       // kilocode_change end
     })
 
@@ -173,15 +139,27 @@ const layer = Layer.effect(
       yield* removeSession(id)
     })
 
+    const removeDirectory = Effect.fn("Pty.removeDirectory")(function* (target: Location.Ref) {
+      const owned = Array.from(sessions.values()).filter(
+        (session) =>
+          KiloPtyRegistry.sameDirectory(session.location.directory, target.directory) &&
+          session.location.workspaceID === target.workspaceID,
+      )
+      yield* Effect.forEach(owned, (session) => removeSession(session.info.id), { concurrency: 4, discard: true })
+    })
+
     const list = Effect.fn("Pty.list")(function* () {
-      return Array.from(sessions.values()).map((session) => session.info)
+      const owner = Location.Ref.make({ directory: location.directory, workspaceID: location.workspaceID })
+      return Array.from(sessions.values())
+        .filter((session) => KiloPtyRegistry.sameLocation(session.location, owner))
+        .map((session) => session.info)
     })
 
     const get = Effect.fn("Pty.get")(function* (id: PtyID) {
       return (yield* requireSession(id)).info
     })
 
-    const create = Effect.fn("Pty.create")(function* (input: CreateInput) {
+    const createBody = Effect.fn("Pty.createBody")(function* (input: CreateInput, owner: Location.Ref) {
       const id = PtyID.ascending()
       // kilocode_change start - resolve Kilo self-commands to the real binary, arguments, and project cwd
       const resolved = KiloPtySelfCommand.resolve({
@@ -236,6 +214,7 @@ const layer = Layer.effect(
       }
       const session: Active = {
         info,
+        location: owner, // kilocode_change
         process: proc,
         buffer: "",
         bufferCursor: 0,
@@ -243,6 +222,7 @@ const layer = Layer.effect(
         subscribers: new Map(),
         listeners: [],
         stopping: false, // kilocode_change
+        terminated: false,
       }
       sessions.set(id, session)
       session.listeners.push(
@@ -266,26 +246,43 @@ const layer = Layer.effect(
           session.bufferCursor += excess
         }),
         proc.onExit(({ exitCode }) => {
-          if (session.info.status === "exited" || session.stopping) return // kilocode_change
+          if (session.info.status === "exited") return
+          if (session.stopping) {
+            session.info.status = "exited"
+            session.info.exitCode = exitCode
+            return
+          }
           session.info.status = "exited"
           session.info.exitCode = exitCode
           notifyEnd(session, { exitCode })
-          exitOrder.push(id)
+          KiloPtyRegistry.markExited(session)
           runFork(
             Effect.gen(function* () {
               yield* Effect.logInfo("session exited", { id, exitCode })
-              yield* events.publish(Event.Exited, { id, exitCode })
-              while (exitOrder.length > EXITED_LIMIT) {
-                const oldest = exitOrder[0]
+              yield* events
+                .publish(Event.Exited, { id, exitCode }, { location: session.location })
+                .pipe(Effect.catch((error) => Effect.logWarning("failed to publish PTY exited event", { id, error })))
+              while (KiloPtyRegistry.exitedCount(session.location) > EXITED_LIMIT) {
+                const oldest = KiloPtyRegistry.oldestExited(session.location)
                 if (!oldest) break
                 yield* removeSession(oldest)
+                if (sessions.has(oldest)) break
+                KiloPtyRegistry.removeExitedID(session.location, oldest)
               }
             }),
           )
         }),
       )
-      yield* events.publish(Event.Created, { info })
+      yield* events
+        .publish(Event.Created, { info }, { location: session.location })
+        .pipe(Effect.catch((error) => Effect.logWarning("failed to publish PTY created event", { id, error })))
       return info
+    })
+
+    const create = Effect.fn("Pty.create")(function* (input: CreateInput) {
+      const owner = Location.Ref.make({ directory: location.directory, workspaceID: location.workspaceID })
+      const release = KiloPtyRegistry.beginCreate(owner)
+      return yield* createBody(input, owner).pipe(Effect.ensuring(Effect.sync(release)))
     })
 
     const update = Effect.fn("Pty.update")(function* (id: PtyID, input: UpdateInput) {
@@ -295,7 +292,7 @@ const layer = Layer.effect(
       if ("sessionID" in input) session.info.sessionID = input.sessionID ?? undefined
       // kilocode_change end
       if (input.size && session.info.status === "running") session.process.resize(input.size.cols, input.size.rows)
-      yield* events.publish(Event.Updated, { info: session.info })
+      yield* events.publish(Event.Updated, { info: session.info }, { location: session.location })
       return session.info
     })
 
@@ -358,10 +355,26 @@ const layer = Layer.effect(
       }
     })
 
-    return Service.of({ list, get, create, update, remove, write, attach })
+    return Service.of({ list, get, create, update, remove, removeDirectory, write, attach }) // kilocode_change
   }),
 )
 
 export const locationLayer = layer.pipe(Layer.provide(Config.locationLayer))
+
+export const shutdown = KiloPtyRegistry.shutdown // kilocode_change
+export const terminateDirectory = KiloPtyRegistry.terminateDirectory // kilocode_change
+
+export const shutdownNode = makeGlobalNode({
+  name: "pty-shutdown",
+  layer: Layer.effectDiscard(
+    Effect.gen(function* () {
+      const release = yield* Effect.promise(() => KiloPtyRegistry.acquireOwner())
+      yield* Effect.addFinalizer(() =>
+        Effect.promise(release).pipe(Effect.catch((error) => Effect.logError("failed to shut down PTYs", { error }))),
+      )
+    }),
+  ),
+  deps: [],
+}) // kilocode_change
 
 export const node = makeLocationNode({ service: Service, layer, deps: [EventV2.node, Location.node, Config.node] })

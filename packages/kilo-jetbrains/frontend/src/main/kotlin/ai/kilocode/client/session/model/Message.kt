@@ -86,6 +86,7 @@ class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()
+    var approval: ToolApproval? = null
     var childSessionId: String? = null
     var childTools: List<Tool> = emptyList()
     var output: String? = null
@@ -94,6 +95,16 @@ class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var todos: List<TodoDto> = emptyList()
     var todoView: TodoViewDto? = null
 }
+
+data class ToolApproval(
+    val source: String,
+    val agent: String? = null,
+    val rulePermission: String? = null,
+    val rulePattern: String? = null,
+    val ruleAction: String? = null,
+    val outsideWorkspace: Boolean = false,
+    val outsideWorkspacePath: String? = null,
+)
 
 /** Context compaction marker. */
 class Compaction(id: String) : Content(id)

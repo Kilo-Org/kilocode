@@ -132,6 +132,7 @@ for (const [label, config] of [
           expect(Permission.evaluate(permission, "src/index.ts", plan!.permission).action).toBe(expected)
         }
         expect(Permission.evaluate("plan_exit", "*", plan!.permission).action).toBe(expected)
+        expect(Permission.evaluate("open_plan", "*", plan!.permission).action).toBe(expected)
         expect(Permission.disabled(["read", "grep"], ask!.permission)).toEqual(new Set())
       },
     })
@@ -147,7 +148,6 @@ test("read-only agents keep guarded tools denied against colliding MCP server na
         agent: { type: "local", command: ["agent-mcp"] },
         notebook: { type: "local", command: ["notebook-mcp"] },
         repo: { type: "local", command: ["repo-mcp"] },
-        interactive: { type: "local", command: ["interactive-mcp"] },
       },
     },
   })
@@ -157,7 +157,7 @@ test("read-only agents keep guarded tools denied against colliding MCP server na
     fn: async () => {
       const ask = await load(tmp.path, (svc) => svc.get("ask"))
       const plan = await load(tmp.path, (svc) => svc.get("plan"))
-      for (const permission of ["agent_manager", "notebook_edit", "notebook_execute", "interactive_terminal"]) {
+      for (const permission of ["agent_manager", "notebook_edit", "notebook_execute"]) {
         expect(Permission.evaluate(permission, "start", ask!.permission).action).toBe("deny")
         expect(Permission.evaluate(permission, "start", plan!.permission).action).toBe("deny")
       }
@@ -364,7 +364,6 @@ test("read-only agents keep every mutating tool denied under a global allow", as
         "write",
         "agent_manager",
         "repo_clone",
-        "interactive_terminal",
       ]) {
         expect(Permission.evaluate(permission, "start", ask!.permission).action).toBe("deny")
         expect(Permission.evaluate(permission, "start", plan!.permission).action).toBe("deny")
@@ -425,7 +424,7 @@ test("plan carries guarded denies into delegated sessions under a global catch-a
       )
       // A subagent session is evaluated as merge(agent, session), so session rules win.
       const runtime = Permission.merge(explore!.permission, child)
-      for (const permission of ["agent_manager", "repo_clone", "write", "interactive_terminal", "bash", "edit"]) {
+      for (const permission of ["agent_manager", "repo_clone", "write", "bash", "edit"]) {
         expect(Permission.evaluate(permission, "*", runtime).action).toBe("deny")
       }
     },
@@ -640,6 +639,82 @@ test("marketplace architect honors plan allow after wildcard edit deny", async (
   expect(architect!.displayName).toBe("Architect")
   expect(Permission.evaluate("read", "src/output.log", architect!.permission).action).toBe("allow")
   expect(Permission.evaluate("glob", "*", architect!.permission).action).toBe("allow")
+})
+
+// A custom agent whose name collides with `architect` must keep its own edit
+// permission. The previous name check appended the plan-mode edit guard after the
+// agent's rules, so last-match-wins made its `*.md` allows unreachable (#13581).
+test("custom architect agent keeps its own edit rules instead of plan hardening", async () => {
+  const architect = await get(
+    {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            edit: {
+              "*": "ask",
+              "*.md": "allow",
+              "**/*.md": "allow",
+            },
+          },
+        },
+      },
+    },
+    "architect",
+  )
+  expect(architect).toBeDefined()
+  expect(architect!.name).toBe("architect")
+  // No plan guard may be appended after the agent's own rules.
+  expect(
+    architect!.permission.some((rule) => rule.permission === "edit" && rule.pattern === "*" && rule.action === "deny"),
+  ).toBe(false)
+  expect(Permission.evaluate("edit", "src/output.log", architect!.permission).action).toBe("ask")
+  expect(Permission.evaluate("edit", "docs/notes/test.md", architect!.permission).action).toBe("allow")
+})
+
+test("custom architect agent is not plan-hardened by name", async () => {
+  const architect = await get(
+    {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            edit: "allow",
+          },
+        },
+      },
+    },
+    "architect",
+  )
+  expect(architect).toBeDefined()
+  expect(Permission.evaluate("edit", "src/output.log", architect!.permission).action).toBe("allow")
+  expect(Permission.evaluate("edit", ".kilo/plans/fix.md", architect!.permission).action).toBe("allow")
+})
+
+// A custom `agent.plan` config reuses the built-in plan object, so it stays native
+// and the plan-mode ceiling keeps applying instead of being replaced by the user
+// rules. Custom-plan replacement is out of scope for the #13581 fix.
+test("custom agent.plan config stays native and plan-hardened", async () => {
+  const plan = await get(
+    {
+      agent: {
+        plan: {
+          mode: "primary",
+          permission: {
+            edit: {
+              "*": "allow",
+              "**/*.md": "allow",
+            },
+          },
+        },
+      },
+    },
+    "plan",
+  )
+  expect(plan).toBeDefined()
+  expect(plan!.native).toBe(true)
+  expect(Permission.evaluate("edit", "src/output.log", plan!.permission).action).toBe("deny")
+  expect(Permission.evaluate("edit", ".kilo/plans/fix.md", plan!.permission).action).toBe("allow")
 })
 
 test("non-planning agents retain per-agent edit permissions", async () => {

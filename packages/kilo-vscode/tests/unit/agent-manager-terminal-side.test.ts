@@ -151,6 +151,19 @@ describe("Agent Manager side terminal controller", () => {
     expect(item.calls.refocus).toBe(0)
   })
 
+  it.each(["tab_toolbar", "keyboard_shortcut"] as const)(
+    "opens the Agent Manager panel by default from %s without saving a preference",
+    (trigger) => {
+      const item = scene()
+      expect(item.ctl.destination()).toBe("agentManager")
+      item.ctl.openPreferred(trigger)
+      expect(item.calls.requestSide).toBe(1)
+      expect(item.calls.openVscode).toBe(0)
+      expect(item.calls.persisted).toEqual([])
+      expect(item.calls.posted).toEqual([])
+    },
+  )
+
   it("routes the primary action by destination", () => {
     const vscodeFirst = scene({ destination: "vscode" })
     vscodeFirst.ctl.openPreferred("tab_toolbar")
@@ -258,15 +271,16 @@ describe("Agent Manager side terminal controller", () => {
     expect(item.calls.openVscode).toBe(0)
   })
 
-  it("restores a saved panel choice and ignores remote defaults", () => {
-    const item = scene({ saved: "agentManager" })
-    expect(item.ctl.destination()).toBe("agentManager")
-    expect(item.calls.posted).toEqual([
-      { type: "agentManager.terminal.destinationSelected", destination: "agentManager" },
-    ])
-    item.ctl.syncDefault("vscode")
-    expect(item.ctl.destination()).toBe("agentManager")
-  })
+  it.each(["vscode", "agentManager"] as const)(
+    "restores a saved %s choice and ignores remote defaults",
+    (destination) => {
+      const item = scene({ saved: destination })
+      expect(item.ctl.destination()).toBe(destination)
+      expect(item.calls.posted).toEqual([{ type: "agentManager.terminal.destinationSelected", destination }])
+      item.ctl.syncDefault(destination === "vscode" ? "agentManager" : "vscode")
+      expect(item.ctl.destination()).toBe(destination)
+    },
+  )
 })
 
 describe("readSavedDestination", () => {

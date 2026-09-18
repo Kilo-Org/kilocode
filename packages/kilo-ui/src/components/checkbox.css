@@ -1,4 +1,6 @@
-/* Kilo Checkbox overrides – sized to match @vscode/webview-ui-toolkit */
+/* Kilo Checkbox overrides – sized and coloured to match @vscode/webview-ui-toolkit. The
+   --vscode-checkbox-* variables only exist inside the VS Code webview (see vscode-bridge.css);
+   everywhere else (Storybook, kilo-web-ui) the fallbacks reproduce today's look unchanged. */
 
 [data-component="checkbox"] {
   margin: 4px 0;
@@ -8,16 +10,34 @@
     width: 18px;
     height: 18px;
     border-radius: 3px;
-    border-color: var(--text-weak);
+    background-color: var(--vscode-checkbox-background, transparent);
+    border-color: var(--vscode-checkbox-border, var(--text-weak));
   }
 
-  &[data-checked] [data-slot="checkbox-checkbox-control"] {
-    background-color: var(--text-base);
-    border-color: var(--text-base);
+  /* Indeterminate reads the same as checked: a real VS Code checkbox does not have a third
+     visual language for "some selected" — only the glyph differs. */
+  &[data-checked] [data-slot="checkbox-checkbox-control"],
+  &[data-indeterminate] [data-slot="checkbox-checkbox-control"] {
+    background-color: var(--vscode-checkbox-background, var(--text-base));
+    border-color: var(--vscode-checkbox-border, var(--text-base));
   }
 
-  &[data-checked] [data-slot="checkbox-checkbox-indicator"] {
-    color: var(--background-base);
+  &[data-checked] [data-slot="checkbox-checkbox-indicator"],
+  &[data-indeterminate] [data-slot="checkbox-checkbox-indicator"] {
+    color: var(--vscode-checkbox-foreground, var(--background-base));
+  }
+
+  /* Repeats upstream's selector shapes (packages/ui/src/components/checkbox.css) at equal
+     specificity so the box does not change colour under the pointer inside VS Code. */
+  &:hover:not([data-disabled], [data-readonly]) [data-slot="checkbox-checkbox-control"],
+  &[data-checked]:hover:not([data-disabled], [data-readonly]) [data-slot="checkbox-checkbox-control"],
+  &[data-indeterminate]:hover:not([data-disabled]) [data-slot="checkbox-checkbox-control"] {
+    background-color: var(--vscode-checkbox-background, var(--surface-hover));
+    border-color: var(--vscode-checkbox-border, var(--border-hover));
+  }
+
+  &:not([data-readonly]) [data-slot="checkbox-checkbox-input"]:focus-visible + [data-slot="checkbox-checkbox-control"] {
+    border-color: var(--vscode-focusBorder, var(--border-focus));
   }
 
   [data-slot="checkbox-checkbox-label"] {

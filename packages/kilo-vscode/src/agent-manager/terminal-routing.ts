@@ -92,8 +92,16 @@ export class TerminalRouter {
       return true
     }
     if (m.type === "agentManager.terminal.close") {
-      void this.manager.close(m.terminalId).then(() => {
-        this.deps.post({ type: "agentManager.terminal.closed", terminalId: m.terminalId })
+      void this.manager.close(m.terminalId).then((closed) => {
+        this.deps.post(
+          closed
+            ? { type: "agentManager.terminal.closed", terminalId: m.terminalId }
+            : {
+                type: "agentManager.terminal.error",
+                terminalId: m.terminalId,
+                message: "Failed to close terminal; it remains available for retry",
+              },
+        )
       })
       return true
     }
@@ -130,6 +138,14 @@ export class TerminalRouter {
     this.manager = this.createManager()
     this.reserved.clear()
     return manager.dispose()
+  }
+
+  blockDirectory(directory: string): Promise<() => void> {
+    return this.manager.blockDirectory(directory)
+  }
+
+  closeDirectory(directory: string): Promise<void> {
+    return this.manager.closeDirectory(directory)
   }
 
   private async handleCreate(

@@ -10,12 +10,17 @@ function num(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
 }
 
+// Cloud returns the full subscription record even after cancellation; only
+// these statuses represent a pass the user can actually consume.
+const live = new Set(["active", "past_due", "trialing"])
+
 export function parseKiloPassState(value: unknown): KiloPassState | null {
   const item = Array.isArray(value) ? value[0] : value
   const data = record(record(record(item)?.result)?.data)
   const root = record(data?.json) ?? data ?? record(value)
   const sub = record(root?.subscription)
   if (!sub || (sub.currentPeriodBaseCreditsUsd == null && sub.currentPeriodUsageUsd == null)) return null
+  if (typeof sub.status === "string" && !live.has(sub.status)) return null
 
   const next = sub.nextBillingAt ?? sub.nextRenewalAt
   return {

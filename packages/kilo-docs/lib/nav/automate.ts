@@ -19,6 +19,7 @@ export const AutomateNav: NavSection[] = [
         children: "Agent Manager",
         subLinks: [
           { href: "/automate/agent-manager-workflows", children: "Workflows" },
+          { href: "/automate/agent-manager-projects", children: "Multi-project" },
         ],
       },
     ],

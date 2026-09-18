@@ -14,8 +14,8 @@ describe("work style presets", () => {
     const cfg = WORK_STYLE_PRESETS["human-in-the-loop"].config
     const bash = cfg.permission?.bash as Record<string, string>
     expect(cfg.terminal_command_display).toBe("expanded")
-    expect(cfg.auto_collapse_reasoning).toBe(false)
-    expect(cfg.permission?.["*"]).toBe("ask")
+    expect(cfg.reasoning_display).toBe("expanded")
+    expect(cfg.permission?.["*"]).toBeUndefined()
     expect(cfg.permission?.edit).toBe("ask")
     expect(bash).toMatchObject({ "*": "ask", "rg *": "allow", "*>*": "ask" })
     expect(Object.keys(bash).at(-1)).toBe("*>*")
@@ -43,19 +43,34 @@ describe("work style presets", () => {
   it("does not loosen permissions for high autonomy", () => {
     const cfg = WORK_STYLE_PRESETS.autonomous.config
     expect(cfg.terminal_command_display).toBe("collapsed")
-    expect(cfg.auto_collapse_reasoning).toBe(true)
+    expect(cfg.reasoning_display).toBe("preview")
     expect(cfg.permission).toBeUndefined()
     expect(WORK_STYLE_PRESETS.autonomous.settings).toEqual({
       showTaskTimeline: false,
     })
   })
 
+  it("never defines a top-level permission choice in onboarding presets", () => {
+    for (const preset of Object.values(WORK_STYLE_PRESETS)) {
+      expect(["ask", "allow", "deny"]).not.toContain(preset.config.permission?.["*"])
+    }
+  })
+
   it("does not overwrite existing new-user settings", () => {
     const plan = buildWorkStyleApplyPlan({
       style: "human-in-the-loop",
-      config: { permission: { edit: "allow" }, terminal_command_display: "collapsed", auto_collapse_reasoning: true },
+      config: { permission: { edit: "allow" }, terminal_command_display: "collapsed", reasoning_display: "headline" },
       settingDefault: () => false,
     })
     expect(plan).toEqual({ config: {}, settings: {} })
+  })
+
+  it("respects a legacy auto_collapse_reasoning choice", () => {
+    const plan = buildWorkStyleApplyPlan({
+      style: "autonomous",
+      config: { auto_collapse_reasoning: false },
+      settingDefault: () => false,
+    })
+    expect(plan.config.reasoning_display).toBeUndefined()
   })
 })

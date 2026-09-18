@@ -208,10 +208,7 @@ const lowerMessages = Effect.fn("Gemini.lowerMessages")(function* (request: LLMR
   for (const message of request.messages) {
     if (message.role === "system") {
       const part = yield* ProviderShared.wrappedSystemUpdate("Gemini", message)
-      const previous = contents.at(-1)
-      if (previous?.role === "user")
-        contents[contents.length - 1] = { role: "user", parts: [...previous.parts, { text: part.text }] }
-      else contents.push({ role: "user", parts: [{ text: part.text }] })
+      ProviderShared.appendUserMessage(contents, { role: "user", parts: [{ text: part.text }] }, "parts") // kilocode_change
       continue
     }
 
@@ -222,7 +219,7 @@ const lowerMessages = Effect.fn("Gemini.lowerMessages")(function* (request: LLMR
           return yield* ProviderShared.unsupportedContent("Gemini", "user", ["text", "media"])
         parts.push(yield* lowerUserPart(part))
       }
-      contents.push({ role: "user", parts })
+      ProviderShared.appendUserMessage(contents, { role: "user", parts }, "parts") // kilocode_change
       continue
     }
 
@@ -281,7 +278,7 @@ const lowerMessages = Effect.fn("Gemini.lowerMessages")(function* (request: LLMR
         parts.push({ inlineData: { mimeType: media.mime, data: media.base64 } })
       }
     }
-    contents.push({ role: "user", parts })
+    ProviderShared.appendUserMessage(contents, { role: "user", parts }, "parts") // kilocode_change
   }
 
   return contents

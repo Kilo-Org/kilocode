@@ -1,8 +1,14 @@
 export interface PanelContext {
   workspaceRoot: string | undefined
   sessionId?: string
+  comment?: import("../shared/review-comments").PRReviewCommentData
+  beside?: boolean
   /** Overrides the computed default source on open. */
   initialSourceId?: string
+  /** Select a file when the source first loads. */
+  initialFile?: string
+  /** Render Markdown when the viewer was opened from a Markdown file link. */
+  initialMarkdown?: boolean
   /**
    * Hides the source picker header in the diff viewer. Used for panels that
    * open in a fixed view (e.g. a specific turn's diff)

@@ -1,7 +1,12 @@
 package ai.kilocode.client.settings.autoapprove
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.settings.base.BaseContentPanel
+import ai.kilocode.client.settings.base.SettingsRow
+import ai.kilocode.client.settings.base.SettingsToggle
+import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 
 private enum class ExceptionKind { PATH, COMMAND }
@@ -39,6 +44,16 @@ internal class AutoApproveContent(
     init {
         granular.forEach { (_, section) -> next(section) }
         section(KiloBundle.message("settings.autoApprove.title")).row(tools)
+        next(SettingsRow(
+            KiloBundle.message("settings.autoApprove.showReason.title"),
+            KiloBundle.message("settings.autoApprove.showReason.description"),
+            SettingsToggle(KiloPluginSettings.getShowApprovalReason()) { visible ->
+                KiloPluginSettings.setShowApprovalReason(visible)
+                ApplicationManager.getApplication().messageBus
+                    .syncPublisher(ApprovalReasonVisibilityListener.TOPIC)
+                    .changed(visible)
+            },
+        ))
     }
 
     @RequiresEdt

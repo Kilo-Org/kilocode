@@ -10,6 +10,7 @@ function setup(input?: {
 }) {
   const settings = new Map<string, unknown>([["agentWorkStyle", "unset"]])
   const events: string[] = []
+  const patches: WorkStyleConfig[] = []
   const store: WorkStyleStore = {
     read: async () => input?.config ?? {},
     inspect: (key) => ({
@@ -23,10 +24,11 @@ function setup(input?: {
     },
     patch: async (config) => {
       events.push(`patch:${Object.keys(config).sort().join(",")}`)
+      patches.push(config)
       if (input?.failPatch) throw new Error("Failed to patch config")
     },
   }
-  return { store, settings, events }
+  return { store, settings, events, patches }
 }
 
 describe("applyWorkStyle", () => {
@@ -41,8 +43,22 @@ describe("applyWorkStyle", () => {
     expect(state.events).toEqual([
       "write:showTaskTimeline:true",
       "write:agentWorkStyle:human-in-the-loop",
-      "patch:auto_collapse_reasoning,permission,terminal_command_display",
+      "patch:permission,reasoning_display,terminal_command_display",
     ])
+  })
+
+  it("does not write a top-level permission choice when creating global config", async () => {
+    const state = setup({ config: {} })
+
+    expect(await applyWorkStyle("human-in-the-loop", state.store)).toEqual({ ok: true })
+    expect(state.patches).toHaveLength(1)
+    expect(["ask", "allow", "deny"]).not.toContain(state.patches[0].permission?.["*"])
+    expect(state.patches[0].permission).toMatchObject({
+      edit: "ask",
+      glob: "allow",
+      grep: "allow",
+      bash: { "*": "ask" },
+    })
   })
 
   it("rolls extension settings back when the CLI config update fails", async () => {
@@ -56,7 +72,7 @@ describe("applyWorkStyle", () => {
     expect(state.events).toEqual([
       "write:showTaskTimeline:false",
       "write:agentWorkStyle:autonomous",
-      "patch:auto_collapse_reasoning,terminal_command_display",
+      "patch:reasoning_display,terminal_command_display",
       "write:agentWorkStyle:unset",
       "write:showTaskTimeline:undefined",
     ])
@@ -70,7 +86,7 @@ describe("applyWorkStyle", () => {
     expect(result).toEqual({ ok: false, error: "Failed to write agentWorkStyle", rollback: [] })
     expect(state.settings.get("showTaskTimeline")).toBeUndefined()
     expect(state.settings.get("agentWorkStyle")).toBe("unset")
-    expect(state.events).not.toContain("patch:auto_collapse_reasoning,permission,terminal_command_display")
+    expect(state.events).not.toContain("patch:permission,reasoning_display,terminal_command_display")
   })
 
   it("continues rollback and reports settings that could not be restored", async () => {

@@ -1,0 +1,7 @@
+C4Context
+    title System context for an online store
+    Person(customer, "Customer", "A person who buys products.")
+    System(store, "Online store", "Sells products.")
+    System_Ext(payment, "Payment provider", "Processes card payments.")
+    Rel(customer, store, "Uses")
+    Rel(store, payment, "Sends charges to", "HTTPS")

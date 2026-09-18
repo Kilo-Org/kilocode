@@ -3,9 +3,14 @@ package ai.kilocode.client.ui
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.util.text.HtmlChunk
+import com.intellij.ui.ColorUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.JBValue
+import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import javax.swing.AbstractButton
@@ -15,19 +20,39 @@ import javax.swing.UIManager
 /** Shared Swing style tokens that are not tied to one session component. */
 object UiStyle {
 
-    /** DPI-aware spacing primitives used across custom Swing layouts. */
+    /**
+     * DPI-aware spacing primitives used across custom Swing layouts.
+     *
+     * The functions return pixels for the current scale and suit manual layout and painting. The
+     * constants are the raw steps and belong in APIs that scale what they are handed — notably
+     * [JBUI.Borders] and [JBUI.insets], whose `JBInsets` re-applies the user scale on every read.
+     * Passing a function result there scales twice, which stays invisible at 100% and drifts as
+     * soon as the IDE is zoomed.
+     */
     object Gap {
-        fun xs() = JBUI.scale(2)
+        const val XS = 2
 
-        fun sm() = JBUI.scale(4)
+        const val SM = 4
 
-        fun md() = JBUI.scale(6)
+        const val MD = 6
 
-        fun lg() = JBUI.scale(8)
+        const val LG = 8
 
-        fun pad() = JBUI.scale(12)
+        const val PAD = 12
 
-        fun xl() = JBUI.scale(16)
+        const val XL = 16
+
+        fun xs() = JBUI.scale(XS)
+
+        fun sm() = JBUI.scale(SM)
+
+        fun md() = JBUI.scale(MD)
+
+        fun lg() = JBUI.scale(LG)
+
+        fun pad() = JBUI.scale(PAD)
+
+        fun xl() = JBUI.scale(XL)
     }
 
     /** Theme-aware component geometry tokens. */
@@ -36,8 +61,24 @@ object UiStyle {
         fun component() = com.intellij.util.ui.JBValue.UIInteger("Component.arc", 8).get()
     }
 
+    /** Geometry of the trailing band over which clipped single-line text dissolves into its backdrop. */
+    object Fade {
+        /**
+         * Unscaled width of the band, wider than the 10 the platform defaults
+         * `ide.editor.tabs.fadeout.width` to. A tab fades its own trailing padding, where a few pixels
+         * are enough; this band has to cover the glyph the cut runs through, or the cut stays visible at
+         * the point the fade is still opaque.
+         */
+        private const val WIDTH = 16
+
+        fun width() = JBUI.scale(WIDTH)
+    }
+
     /** Platform balloon styling used by lightweight contextual overlays. */
     object Balloon {
+        /** Mirrors the platform default for `ide.balloon.shadow.size`, used only if the key is gone. */
+        private const val SHADOW_SIZE = 24
+
         fun bg(): Color = UIUtil.getPanelBackground()
 
         fun border(): Color = JBUI.CurrentTheme.Popup.borderColor(true)
@@ -48,10 +89,25 @@ object UiStyle {
         fun pointer() = JBUI.size(16, 8)
 
         fun arc() = JBUI.scale(8)
+
+        /**
+         * Drop-shadow inset the platform reserves on every side of a balloon, or 0 when shadows are
+         * off. Read from the same registry keys `BalloonImpl` uses, because callers that size a
+         * balloon to fit an area have to account for it: an overflowing balloon is silently
+         * re-pointed to another side.
+         */
+        fun shadow(): Int =
+            if (Registry.`is`("ide.balloon.shadowEnabled", true)) {
+                JBUI.scale(Registry.intValue("ide.balloon.shadow.size", SHADOW_SIZE))
+            } else {
+                0
+            }
     }
 
     /** Filled badge styles shared across JetBrains UI surfaces. */
     object Badge {
+        private const val PR_SOFT_ALPHA = 0.15
+
         interface Style {
             fun bg(): Color
 
@@ -108,65 +164,134 @@ object UiStyle {
             )
         }
 
-        object SessionRunning : Style {
+        object ActivityRunning : Style {
             override fun bg(): Color = JBColor.namedColor(
-                "Kilo.SessionStatus.runningBadgeBackground",
-                JBColor(Color(0xF9, 0x73, 0x16), Color(0xC2, 0x41, 0x0C)),
+                "Kilo.Activity.runningBackground",
+                JBColor(Color(0x55, 0xA7, 0x6A), Color(0x57, 0x96, 0x5C)),
             )
 
             override fun fg(): Color = JBColor.namedColor(
-                "Kilo.SessionStatus.runningBadgeForeground",
+                "Kilo.Activity.runningForeground",
+                Color.WHITE,
+            )
+        }
+
+        object ActivityAttention : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.Activity.attentionBackground",
+                JBColor(Color(0xE6, 0x6D, 0x17), Color(0xC7, 0x7D, 0x55)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.Activity.attentionForeground",
+                Color.WHITE,
+            )
+        }
+
+        object ActivityError : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.Activity.errorBackground",
+                JBColor(Color(0xE5, 0x57, 0x65), Color(0xDB, 0x5C, 0x5C)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.Activity.errorForeground",
                 Color.WHITE,
             )
         }
 
         object PullRequestOpen : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.openBadgeBackground",
-                JBColor(Color(0x1F, 0x88, 0x3D), Color(0x23, 0x86, 0x36)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.openBadgeForeground",
+                JBColor(Color(0x1A, 0x7F, 0x37), Color(0x3F, 0xB9, 0x50)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.openBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
 
         object PullRequestDraft : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.draftBadgeBackground",
-                JBColor(Color(0x6E, 0x77, 0x81), Color(0x6E, 0x76, 0x81)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.draftBadgeForeground",
+                JBColor(Color(0x59, 0x63, 0x6E), Color(0x91, 0x98, 0xA1)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.draftBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
 
         object PullRequestMerged : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.mergedBadgeBackground",
-                JBColor(Color(0x82, 0x50, 0xDF), Color(0x89, 0x57, 0xE5)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.mergedBadgeForeground",
+                JBColor(Color(0x82, 0x50, 0xDF), Color(0xA3, 0x71, 0xF7)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.mergedBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
 
         object PullRequestClosed : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.closedBadgeBackground",
-                JBColor(Color(0xCF, 0x22, 0x2E), Color(0xDA, 0x36, 0x33)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.closedBadgeForeground",
+                JBColor(Color(0xCF, 0x22, 0x2E), Color(0xF8, 0x51, 0x49)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.closedBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
+
+        /**
+         * A marketplace type accent, used by the marketplace type filters.
+         *
+         * Active pills paint the saturated accent under white text — the filled treatment
+         * [ActivityRunning] and its siblings already use, which carries its own contrast in both light
+         * and dark themes rather than depending on the panel behind it. Inactive pills fade the same
+         * accent back to a tint and drop to the platform's inactive-text color, so a toggled-off filter
+         * keeps its identity while reading as switched off.
+         *
+         * Colors resolve per paint, so a theme switch or an IDE zoom is picked up without rebuilding.
+         *
+         * A data class on purpose: list badge icons are cached by style equality, so a value-equal
+         * style lets a repaint reuse the existing icon instead of allocating one per render.
+         */
+        data class Type(private val accent: Color, private val active: Boolean) : Style {
+            override fun bg(): Color = if (active) accent else ColorUtil.withAlpha(accent, TYPE_FADED_ALPHA)
+
+            override fun fg(): Color = if (active) JBColor.WHITE else NamedColorUtil.getInactiveTextColor()
+        }
+
+        /** Agents — the success accent the VS Code marketplace uses for agents. */
+        fun typeAgent(active: Boolean): Style = Type(AGENT_ACCENT, active)
+
+        /** MCP servers — the info accent the VS Code marketplace uses for MCP servers. */
+        fun typeMcp(active: Boolean): Style = Type(MCP_ACCENT, active)
+
+        /** Skills — the warning accent the VS Code marketplace uses for skills. */
+        fun typeSkill(active: Boolean): Style = Type(SKILL_ACCENT, active)
+
+        private const val TYPE_FADED_ALPHA = 0.18
+
+        private val AGENT_ACCENT = JBColor.namedColor(
+            "Kilo.Marketplace.agentBadgeBackground",
+            JBColor(Color(0x55, 0xA7, 0x6A), Color(0x57, 0x96, 0x5C)),
+        )
+
+        // An explicit pair like its siblings rather than the theme's link foreground: that colour is
+        // tuned to be read as text on the panel, and in dark themes it is light enough that white pill
+        // text on it has visibly less contrast than the agent and skill pills.
+        private val MCP_ACCENT = JBColor.namedColor(
+            "Kilo.Marketplace.mcpBadgeBackground",
+            JBColor(Color(0x35, 0x73, 0xD9), Color(0x3E, 0x6D, 0xA8)),
+        )
+
+        private val SKILL_ACCENT = JBColor.namedColor(
+            "Kilo.Marketplace.skillBadgeBackground",
+            JBColor(Color(0xE6, 0x6D, 0x17), Color(0xC7, 0x7D, 0x55)),
+        )
     }
 
     /** Theme-aware colors and color math used by multiple UI surfaces. */
@@ -176,6 +301,17 @@ object UiStyle {
         fun fg(): Color = UIUtil.getLabelForeground()
 
         fun weak(): Color = UIUtil.getContextHelpForeground()
+
+        // Neutral icon greys from the New UI palette: the same values our svg row icons paint with, so
+        // an animated icon reads at the row's icon weight instead of as a colored status light. Each
+        // variant carries the contrast its own theme needs — mid grey on light, near-white on dark.
+        val runningLight = Color(0x6C, 0x70, 0x7E)
+        val runningDark = Color(0xCE, 0xD0, 0xD6)
+
+        fun running(): Color = JBColor.namedColor(
+            "Kilo.Activity.runningSpinnerForeground",
+            JBColor(runningLight, runningDark),
+        )
 
         /** Uses the editor background so chat cards feel native beside editor content. */
         fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }
@@ -213,6 +349,35 @@ object UiStyle {
         )
 
         fun errorLabelForeground(): Color = JBColor.namedColor("Label.errorForeground", UIUtil.getErrorForeground())
+
+        /**
+         * Per-participant avatar fills for the Kilo Swarm board, keyed by a participant's position in
+         * the board's order. Mirrors `AgentAvatarPalette` in `packages/kilo-ui` so the same subagent
+         * reads the same colour across clients, which is why the fallbacks are exact values; each is
+         * exposed under a semantic key so a theme can still override it.
+         */
+        fun swarmAvatar(index: Int): Color = swarmAvatars[index.mod(swarmAvatars.size)]()
+
+        /** Neutral fill for `main` and for any participant outside the known order. */
+        fun swarmAvatarMain(): Color = JBColor.namedColor(
+            "Kilo.Swarm.avatarMainBackground",
+            JBColor(0x6B7280, 0x9CA3AF),
+        )
+
+        private val swarmAvatars: List<() -> Color> = listOf(
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground1", JBColor(0x3574F0, 0x548AF7)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground2", JBColor(0x1A9E77, 0x2FBE96)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground3", JBColor(0xB5651D, 0xD4813A)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground4", JBColor(0x8957E5, 0xA679F0)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground5", JBColor(0xC74F4F, 0xE06666)) },
+            { JBColor.namedColor("Kilo.Swarm.avatarBackground6", JBColor(0x2E8FB8, 0x4CB4DE)) },
+        )
+
+        /** Initial drawn on top of a swarm avatar fill; the fills are saturated in both themes. */
+        fun swarmAvatarForeground(): Color = JBColor.namedColor(
+            "Kilo.Swarm.avatarForeground",
+            JBColor(Color.WHITE, Color.WHITE),
+        )
 
         fun addedForeground(): Color = JBColor.namedColor(
             "Kilo.DiffStat.addedForeground",
@@ -301,6 +466,52 @@ object UiStyle {
     }
 
     /** Small component helpers that keep repeated Swing setup in one place. */
+    /** Multi-line copy. Long descriptions and tooltips wrap instead of stretching into one strip. */
+    object Text {
+        /**
+         * Width the platform wraps its own help tooltips at, so wrapped copy lines up with IDE
+         * tooltips and follows a theme that overrides the key.
+         */
+        private val TIP = JBValue.UIInteger("HelpTooltip.maxWidth", 250)
+
+        /** Width for wrapped body copy in dialogs — wide enough to read, narrow enough to not stretch one. */
+        private val BODY = JBValue.UIInteger("Kilo.Text.bodyWidth", 420)
+
+        fun tipWidth(): Int = TIP.get()
+
+        fun bodyWidth(): Int = BODY.get()
+
+        /**
+         * Wraps [text] as HTML capped to [width], giving Swing a hard column to break lines at.
+         * [width] is device pixels — pass [tipWidth] or [bodyWidth], which are already scaled.
+         */
+        fun wrap(text: String, width: Int): String = HtmlChunk.div()
+            .attr("width", width)
+            .addText(text)
+            .wrapWith(HtmlChunk.body())
+            .wrapWith("html")
+            .toString()
+
+        /** Tooltip copy that breaks into readable lines rather than one long strip. */
+        fun tip(text: String): String = wrap(text, tipWidth())
+
+        /**
+         * Tooltip copy that keeps [lines] as separate lines and still wraps each one at the tooltip
+         * column, so a single long line cannot stretch the tooltip past the window.
+         */
+        fun tipLines(lines: List<String>): String = HtmlChunk.div()
+            .attr("width", tipWidth())
+            .children(
+                lines.flatMapIndexed { i, line ->
+                    if (i == lines.lastIndex) listOf(HtmlChunk.text(line))
+                    else listOf(HtmlChunk.text(line), HtmlChunk.br())
+                },
+            )
+            .wrapWith(HtmlChunk.body())
+            .wrapWith("html")
+            .toString()
+    }
+
     object Components {
         fun transparent(vararg components: JComponent) {
             components.forEach { it.isOpaque = false }

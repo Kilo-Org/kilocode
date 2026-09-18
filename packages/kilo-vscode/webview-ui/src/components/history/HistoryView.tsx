@@ -4,7 +4,7 @@
  * Contains a source tab bar and an always-visible "Import session" button.
  */
 
-import { Component, Show, createEffect, createSignal, onCleanup, type Accessor } from "solid-js"
+import { Component, Show, createEffect, createSignal, onCleanup, type Accessor, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useLanguage } from "../../context/language"
@@ -13,11 +13,16 @@ import { useLocalTabs } from "../../context/local-tabs"
 import { CloudImportDialog } from "../chat/CloudImportDialog"
 import SessionList from "./SessionList"
 import CloudSessionList from "./CloudSessionList"
+import type { SessionInfo } from "../../types/messages"
 
 interface HistoryViewProps {
   onSelectSession: (id: string) => void
   onBack?: () => void
   worktreeSessionIds?: Accessor<ReadonlySet<string> | undefined>
+  /** Filter the Local tab to these session ids. */
+  sessionIds?: Accessor<ReadonlySet<string> | undefined>
+  /** Extra per-row actions rendered in the Local tab. */
+  rowActions?: (session: SessionInfo) => JSX.Element
 }
 
 type Source = "local" | "cloud" | "worktree"
@@ -159,7 +164,13 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
         aria-labelledby="history-tab-local"
         hidden={tab() !== "local"}
       >
-        {tab() === "local" && <SessionList onSelectSession={props.onSelectSession} />}
+        {tab() === "local" && (
+          <SessionList
+            onSelectSession={props.onSelectSession}
+            sessionIds={props.sessionIds}
+            rowActions={props.rowActions}
+          />
+        )}
       </div>
       <div
         class="history-view-content"

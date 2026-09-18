@@ -8,6 +8,7 @@ describe("Agent Manager side-effect permissions", () => {
     expect(Permission.resolve("agent_manager", "prompt", broad).action).toBe("ask")
     expect(Permission.resolve("agent_manager", "stop", broad).action).toBe("ask")
     expect(Permission.resolve("agent_manager", "move", broad).action).toBe("ask")
+    expect(Permission.resolve("agent_manager", "answer", broad).action).toBe("ask")
     expect(Permission.resolve("agent_manager", "local", broad).action).toBe("allow")
     expect(Permission.resolve("agent_manager", "worktree", broad).action).toBe("allow")
   })
@@ -17,6 +18,7 @@ describe("Agent Manager side-effect permissions", () => {
     expect(Permission.resolve("agent_manager", "prompt", rules).action).toBe("ask")
     expect(Permission.resolve("agent_manager", "stop", rules).action).toBe("ask")
     expect(Permission.resolve("agent_manager", "move", rules).action).toBe("ask")
+    expect(Permission.resolve("agent_manager", "answer", rules).action).toBe("ask")
   })
 
   test("requires consent despite a saved wildcard approval", () => {
@@ -25,12 +27,14 @@ describe("Agent Manager side-effect permissions", () => {
     expect(Permission.resolve("agent_manager", "prompt", rules, saved).action).toBe("ask")
     expect(Permission.resolve("agent_manager", "stop", rules, saved).action).toBe("ask")
     expect(Permission.resolve("agent_manager", "move", rules, saved).action).toBe("ask")
+    expect(Permission.resolve("agent_manager", "answer", rules, saved).action).toBe("ask")
   })
 
   test("allows only explicit side-effect approvals", () => {
-    const rules = Permission.fromConfig({ agent_manager: { prompt: "allow", stop: "allow", move: "allow" } })
+    const rules = Permission.fromConfig({ agent_manager: { prompt: "allow", stop: "allow", move: "allow", answer: "allow" } })
     expect(Permission.resolve("agent_manager", "prompt", rules).action).toBe("allow")
     expect(Permission.resolve("agent_manager", "stop", rules).action).toBe("allow")
     expect(Permission.resolve("agent_manager", "move", rules).action).toBe("allow")
+    expect(Permission.resolve("agent_manager", "answer", rules).action).toBe("allow")
   })
 })

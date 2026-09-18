@@ -20,7 +20,7 @@ export interface TabOrderSyncDeps {
   localSessionIDs: () => string[]
   sessions: () => { id: string; createdAt: string }[]
   managedSessions: () => { id: string; worktreeId?: string | null }[]
-  reviewOpenByContext: () => Record<string, boolean>
+  reviewOpen: (key: string) => boolean
   terminalIdsFor: (key: string) => string[]
 }
 
@@ -34,7 +34,7 @@ export function createTabOrderSync(deps: TabOrderSyncDeps) {
             .filter((s) => deps.managedSessions().some((ms) => ms.id === s.id && ms.worktreeId === key))
             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
             .map((s) => s.id)
-    const withReview = deps.reviewOpenByContext()[key] === true ? [...sids, deps.REVIEW_TAB_ID] : sids
+    const withReview = deps.reviewOpen(key) ? [...sids, deps.REVIEW_TAB_ID] : sids
     return [...withReview, ...deps.terminalIdsFor(key)]
   }
 

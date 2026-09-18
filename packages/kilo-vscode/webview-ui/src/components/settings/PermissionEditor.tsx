@@ -9,12 +9,11 @@ import {
   addExceptionPatch,
   clearGroupedPatch,
   clearWildcardPatch,
-  effectiveRuleLevel,
+  effectiveConfigLevel,
   inheritedWildcard,
   mostRestrictive,
   permissionExceptions,
   removeExceptionPatch,
-  ruleset,
   setExceptionPatch,
   setGroupedPatch,
   setWildcardPatch,
@@ -140,9 +139,8 @@ const PermissionEditor: Component<{
   onChange: (patch: PermissionPatch) => void
 }> = (props) => {
   const perms = createMemo(() => props.permissions ?? {})
-  const rules = createMemo(() => [...(props.rules ?? []), ...ruleset(perms())])
 
-  const levelFor = (tool: string): PermissionLevel => effectiveRuleLevel(rules(), tool)
+  const levelFor = (tool: string): PermissionLevel => effectiveConfigLevel(perms(), tool, props.rules)
 
   const ruleFor = (tool: string): PermissionRule | undefined => perms()[tool]
 

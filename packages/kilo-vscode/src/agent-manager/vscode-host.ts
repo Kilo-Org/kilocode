@@ -8,6 +8,7 @@
 import * as vscode from "vscode"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import type { PRMergeMethod } from "./types"
 import { ProjectRouteService } from "./project/route"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
@@ -18,6 +19,10 @@ import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
+import type { CaffeinationService } from "../services/caffeination"
+
+const INTRO_KEY = "kilo.agentManager.introDismissed"
+const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -34,6 +39,7 @@ export class VscodeHost implements Host {
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
     private readonly remoteService: RemoteStatusService,
+    private readonly caffeination?: Pick<CaffeinationService, "getState" | "onChange" | "setEnabled">,
   ) {}
 
   setDiffVirtualProvider(provider: DiffVirtualProvider): void {
@@ -54,6 +60,7 @@ export class VscodeHost implements Host {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
+        enableForms: true,
         retainContextWhenHidden: true,
         localResourceRoots: [this.extensionUri],
       },
@@ -85,6 +92,7 @@ export class VscodeHost implements Host {
   ): PanelContext {
     panel.webview.options = {
       enableScripts: true,
+      enableForms: true,
       localResourceRoots: [this.extensionUri],
     }
 
@@ -101,15 +109,28 @@ export class VscodeHost implements Host {
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
+      browserAutomation: this.browserAutomation(),
+      introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
+      frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      tabTitle: (title) => {
+        panel.title = title
+      },
+      tabLabel: "Agent Manager",
       platform: PLATFORM,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      disableStatsPolling: true,
+      focusTargetContext: {
+        prompt: "kilo-code.new.agentManagerPromptFocused",
+        mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
+        sideTerminal: "kilo-code.new.agentManagerSideTerminalFocused",
+      },
       routeService: this.routes,
       projectQualifier: () => {
         const projectId = opts.projectId?.()
@@ -120,8 +141,27 @@ export class VscodeHost implements Host {
       provider.setDiffVirtualProvider(this.diffVirtual)
     }
     provider.setRemoteService(this.remoteService)
+    const snapshot = () => {
+      if (this.caffeination) {
+        void panel.webview.postMessage({ type: "agentManager.caffeination", ...this.caffeination.getState() })
+      }
+    }
+    const unsubscribe = this.caffeination?.onChange(snapshot)
+    panel.onDidDispose(() => unsubscribe?.())
     provider.attachToWebview(panel.webview, {
-      onBeforeMessage: opts.onBeforeMessage,
+      onBeforeMessage: async (msg) => {
+        if (msg.type === "agentManager.setCaffeination") {
+          if (typeof msg.enabled === "boolean") await this.caffeination?.setEnabled(msg.enabled)
+          return null
+        }
+        if (msg.type === "agentManager.requestCaffeination") {
+          snapshot()
+          return null
+        }
+        if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
+        if (typeof msg.dismissed === "boolean") await this.context.globalState.update(INTRO_KEY, msg.dismissed)
+        return null
+      },
     })
     provider.setStreamVisibility(panel.active && panel.visible)
     const streams = panel.onDidChangeViewState((event) =>
@@ -219,6 +259,12 @@ export class VscodeHost implements Host {
     return getWorkspaceRoot()
   }
 
+  dirtyFiles(): string[] {
+    return vscode.workspace.textDocuments
+      .filter((doc) => doc.isDirty && doc.uri.scheme === "file")
+      .map((doc) => doc.uri.fsPath)
+  }
+
   async pickFolder(): Promise<string | undefined> {
     const uris = await vscode.window.showOpenDialog({
       canSelectFiles: false,
@@ -234,12 +280,32 @@ export class VscodeHost implements Host {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
   }
 
+  browserAutomation(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
+  }
+
+  worktreePool(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.agentManager").get("worktreePool", true)
+  }
+
   readProjects(): unknown {
     return this.context.globalState.get("agentManager.projects")
   }
 
   async writeProjects(value: unknown): Promise<void> {
     await this.context.globalState.update("agentManager.projects", value)
+  }
+
+  getPRMergeMethod(repo: string): PRMergeMethod | undefined {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY)
+    const value = values?.[repo]
+    if (value === "merge" || value === "squash" || value === "rebase") return value
+    return undefined
+  }
+
+  async savePRMergeMethod(repo: string, method: PRMergeMethod): Promise<void> {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY) ?? {}
+    await this.context.globalState.update(PR_MERGE_METHODS_KEY, { ...values, [repo]: method })
   }
 
   unregisterProjectRoutes(projectId: string): void {
@@ -253,6 +319,12 @@ export class VscodeHost implements Host {
   onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
     return vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
+    })
+  }
+
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable {
+    return vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.agentManager.worktreePool")) cb(this.worktreePool())
     })
   }
 
@@ -270,6 +342,27 @@ export class VscodeHost implements Host {
 
   showError(msg: string): void {
     void vscode.window.showErrorMessage(msg)
+  }
+
+  notify(kind: "info" | "warning" | "error", msg: string): void {
+    if (kind === "info") void vscode.window.showInformationMessage(msg)
+    else if (kind === "warning") void vscode.window.showWarningMessage(msg)
+    else void vscode.window.showErrorMessage(msg)
+  }
+
+  revealInOS(path: string): void {
+    if (vscode.env.remoteName) {
+      console.warn(`[Kilo New] Cannot reveal ${path} in the OS file manager on a remote workspace`)
+      return
+    }
+    void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(path))
+  }
+
+  async withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T> {
+    return await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title, cancellable: true },
+      (_progress, token) => task(() => token.isCancellationRequested),
+    )
   }
 
   async openDocument(path: string): Promise<void> {
@@ -294,11 +387,12 @@ export class VscodeHost implements Host {
     const channel = vscode.window.createOutputChannel(name)
     return {
       appendLine: (msg) => channel.appendLine(msg),
+      show: () => channel.show(true),
       dispose: () => channel.dispose(),
     }
   }
 
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
@@ -313,6 +407,10 @@ export class VscodeHost implements Host {
 
   openExternal(url: string): void {
     void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
   }
 
   refreshGit(): void {

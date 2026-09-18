@@ -42,7 +42,6 @@ class ConnectionPanel(
 
     companion object {
         internal const val CLI_GROUP_ID = "Kilo.CliGroup"
-        private const val DETAILS_LINES = 10
         private const val CHROME = 2
     }
 
@@ -301,8 +300,14 @@ class ConnectionPanel(
     }
 
     private fun scrollHeight(): Int {
-        val rows = details.text.lineSequence().count().coerceIn(1, DETAILS_LINES)
-        return details.getFontMetrics(details.font).height * rows + scrollChrome()
+        val inner = (width - scroll.insets.left - scroll.insets.right).coerceAtLeast(1)
+        // Measure the word-wrapped height at the available width so a single long line that wraps
+        // onto several visual rows still contributes its full height instead of being clipped.
+        details.setSize(inner, Short.MAX_VALUE.toInt())
+        val wrapped = details.preferredSize.height
+        val rows = details.text.lineSequence().count().coerceAtLeast(1)
+        val minimum = details.getFontMetrics(details.font).height * rows
+        return maxOf(wrapped, minimum) + scrollChrome()
     }
 
     private fun scrollChrome() = scroll.insets.top + scroll.insets.bottom + JBUI.scale(CHROME)
@@ -341,7 +346,4 @@ class ConnectionPanel(
     internal fun retryFocusable() = retry.isFocusable
 
     internal fun hasSeparator() = border != null
-
-    internal fun maxExpandedHeight() =
-        header.preferredSize.height + details.getFontMetrics(details.font).height * DETAILS_LINES + scrollChrome()
 }

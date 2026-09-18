@@ -323,7 +323,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
   })
 })
 
-// kilocode_change start - share bash permission scanning with Kilo interactive terminal
+// kilocode_change start
 type PermissionInput = {
   command: string
   cwd: string

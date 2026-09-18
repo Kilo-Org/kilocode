@@ -52,14 +52,16 @@ export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
   image_generation_model?: string
-  agent_requirements?: boolean
+  task_model_selection?: boolean
+  code_mode?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
+  speech_to_text_base_url?: string
+  speech_to_text_api_key?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
-  swe_pruner?: boolean
-  swe_pruner_model?: string
+  disable_paste_summary?: boolean
 }
 
 export interface SandboxConfig {
@@ -135,6 +137,7 @@ export interface BrowserSettings {
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
 export type McpToolDisplay = "expanded" | "collapsed"
+export type ReasoningDisplay = "expanded" | "preview" | "headline"
 
 export interface Config {
   permission?: PermissionConfig
@@ -168,6 +171,8 @@ export interface Config {
   tools?: Record<string, boolean>
   web_search?: boolean
   auto_collapse_reasoning?: boolean
+  reasoning_display?: ReasoningDisplay
+  shared_agent_board?: boolean
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig
   indexing?: IndexingConfig
@@ -176,4 +181,6 @@ export interface Config {
 export interface FeatureFlags {
   indexing: boolean
   sandboxControls: boolean
+  backgroundSubagents: boolean
+  speechToText: boolean
 }

@@ -2,7 +2,7 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
 import { Effect, Schema } from "effect"
-import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import { applyEdits, modify, parse as parseJsonc, type ParseError } from "jsonc-parser"
 import { mergeDeep } from "remeda"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
@@ -214,7 +214,8 @@ export namespace KilocodeConfig {
     if (!isRecord(info.experimental)) return info
     const indexing = "semantic_indexing" in info.experimental
     const codebase = "codebase_search" in info.experimental
-    if (!indexing && !codebase) return info
+    const board = "shared_agent_board" in info.experimental
+    if (!indexing && !codebase && !board) return info
     const experimental = { ...info.experimental }
     if (indexing) {
       delete experimental.semantic_indexing
@@ -223,6 +224,15 @@ export namespace KilocodeConfig {
     if (codebase) {
       delete experimental.codebase_search
       log.warn("ignored retired experimental.codebase_search config", { path: source })
+    }
+    if (board) {
+      delete experimental.shared_agent_board
+      log.warn(
+        "ignored retired experimental.shared_agent_board config; use the top-level shared_agent_board key instead",
+        {
+          path: source,
+        },
+      )
     }
     return { ...info, experimental }
   }
@@ -442,6 +452,7 @@ export namespace KilocodeConfig {
 
   /** Global config file names in read-merge order (lowest-to-highest precedence). */
   export const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+  const BASH_PERMISSION_MIGRATION = ".bash-permission-migrated"
 
   /**
    * Migrate bash permission for existing users before config is consumed.
@@ -449,36 +460,71 @@ export namespace KilocodeConfig {
    * Existing users (those with at least one global config file or the legacy TOML
    * config) who have no explicit `permission.bash` setting get `bash: "allow"`
    * written to their highest-precedence config file. This preserves their current
-   * behavior now that the new default is `bash: "ask"`.
+   * behavior now that the new default is `bash: "ask"`. A completion marker makes
+   * the migration idempotent so subsequent user edits are not migrated again.
    */
   export async function migrateBashPermission() {
+    const marker = path.join(Global.Path.config, BASH_PERMISSION_MIGRATION)
+    if (existsSync(marker)) return
+    const done = () =>
+      Bun.write(marker, "").then(
+        () => undefined,
+        (err) => log.warn("failed to record bash permission migration", { path: marker, err }),
+      )
     const files = GLOBAL_CONFIG_FILES.map((f) => path.join(Global.Path.config, f))
     const legacy = path.join(Global.Path.config, "config")
     const existing = files.filter((f) => existsSync(f))
     const hasLegacy = existsSync(legacy)
 
     // no global config → new user, they'll get the new bash:ask default
-    if (existing.length === 0 && !hasLegacy) return
+    if (existing.length === 0 && !hasLegacy) return done()
 
     const configs: Array<{ file: string; data: Record<string, unknown> }> = []
+    let hasFailure = false
     // check if any config file already has an explicit bash permission
     for (const file of existing) {
-      const text = await Bun.file(file)
-        .text()
-        .catch(() => "")
-      const data = parseJsonc(text) ?? {}
+      let text: string
+      try {
+        text = await Bun.file(file).text()
+      } catch (err) {
+        hasFailure = true
+        log.warn("skipping bash permission migration due to unreadable config", { file, err })
+        continue
+      }
+      if (text.trim() === "") {
+        const data: Record<string, unknown> = {}
+        configs.push({ file, data })
+        continue
+      }
+      const errors: ParseError[] = []
+      const data = (parseJsonc(text, errors, { allowTrailingComma: true }) as Record<string, unknown> | undefined) ?? {}
+      if (errors.length > 0) {
+        hasFailure = true
+        log.warn("skipping bash permission migration due to malformed config", { file, errors })
+        continue
+      }
       configs.push({ file, data })
-      if (typeof data.permission === "string" || (isRecord(data.permission) && data.permission.bash)) return
+      if (typeof data.permission === "string" || (isRecord(data.permission) && data.permission.bash)) return done()
     }
+
+    if (hasFailure) return
 
     // A schema-only file is generated for editor completion. It does not mean
     // the user predates the bash permission default.
-    if (!hasLegacy && configs.every((item) => Object.keys(item.data).every((key) => key === "$schema"))) return
+    if (!hasLegacy && configs.every((item) => Object.keys(item.data).every((key) => key === "$schema"))) return done()
 
     // also check legacy TOML config for bash permission
     if (hasLegacy) {
-      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
-      if (toml?.default?.permission?.bash) return
+      try {
+        const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } })
+        if (toml?.default?.permission?.bash) return done()
+      } catch (err) {
+        log.warn("skipping bash permission migration due to unreadable or malformed legacy config", {
+          path: legacy,
+          err,
+        })
+        return
+      }
     }
 
     // existing user without bash permission → write bash:allow to highest-precedence file
@@ -492,6 +538,7 @@ export namespace KilocodeConfig {
         formattingOptions: { insertSpaces: true, tabSize: 2 },
       })
       await Bun.write(target, applyEdits(text, edits))
+      await done()
       log.info("migrated bash permission to allow for existing user", { path: target })
       return
     }
@@ -499,6 +546,7 @@ export namespace KilocodeConfig {
     const data = parseJsonc(text) ?? {}
     const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
     await Bun.write(target, JSON.stringify(merged, null, 2))
+    await done()
     log.info("migrated bash permission to allow for existing user", { path: target })
   }
 
@@ -579,6 +627,11 @@ export namespace KilocodeConfig {
 
     const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
     for (const [name, src] of Object.entries(srcMcp)) {
+      if (src === null) {
+        delete out[name]
+        continue
+      }
+
       const base = baseMcp[name]
       if (!isRecord(src) || !isRecord(base)) {
         out[name] = src
@@ -633,7 +686,11 @@ export namespace KilocodeConfig {
    * opencode configuration but no longer reads `.opencode` directories.
    * Returns the existing `.opencode` locations (global + project), highest first.
    */
-  export function detectOpencodeConfig(input: { directory: string; worktree?: string; scanProject: boolean }): string[] {
+  export function detectOpencodeConfig(input: {
+    directory: string
+    worktree?: string
+    scanProject: boolean
+  }): string[] {
     const found: string[] = []
 
     // Global opencode config dir (sibling of the kilo global config dir, e.g. ~/.config/opencode).

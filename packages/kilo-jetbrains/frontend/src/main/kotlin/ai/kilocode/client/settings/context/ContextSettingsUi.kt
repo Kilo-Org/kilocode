@@ -254,6 +254,12 @@ private class NumberFilter : DocumentFilter() {
     }
 }
 
+/**
+ * Plain string list with add/edit/remove. Rows carry no keys, cells, badges, or sections and every
+ * mutation happens locally in this component, so it stays on [CollectionListModel] instead of
+ * [ai.kilocode.client.ui.list.ActiveListView], whose value is restoring selection across refreshes
+ * driven from elsewhere.
+ */
 internal class PatternList(
     private val change: (List<String>) -> Unit,
 ) : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()) {

@@ -12,6 +12,7 @@ export interface WorktreeImporterHost {
   setup(path: string, branch?: string, worktreeId?: string): Promise<void>
   session(path: string, branch: string, worktreeId?: string): Promise<Session | null>
   register(sessionId: string, directory: string): void
+  acquirePtyCleanup?(directory: string): Promise<() => void>
   ready(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void
   log(...args: unknown[]): void
 }
@@ -109,9 +110,22 @@ export class WorktreeImporter {
         this.host.post({ type: "agentManager.importResult", projectId, success: true, message: success })
         this.host.log(`${log} as worktree ${worktree.id}`)
       } catch (error) {
-        state.removeWorktree(worktree.id)
-        await manager.removeWorktree(result.path)
-        this.host.push()
+        let releasePtyCleanup: (() => void) | undefined
+        if (this.host.acquirePtyCleanup) {
+          try {
+            releasePtyCleanup = await this.host.acquirePtyCleanup(result.path)
+          } catch (cleanup) {
+            this.host.log("Failed to remove worktree PTYs:", cleanup)
+            throw error
+          }
+        }
+        try {
+          await manager.removeWorktree(result.path)
+          state.removeWorktree(worktree.id)
+          this.host.push()
+        } finally {
+          releasePtyCleanup?.()
+        }
         throw error
       }
     } catch (error) {
@@ -135,7 +149,12 @@ export class WorktreeImporter {
   private importError(error: unknown, duplicate: string, projectId?: string): void {
     const raw = error instanceof Error ? error.message : String(error)
     const message = raw.includes("already used by worktree") || raw.includes("already checked out") ? duplicate : raw
-    const code = classifyWorktreeError(message)
+    const manager = this.host.manager()
+    const code = classifyWorktreeError(message, {
+      cwd: manager?.repo,
+      probeFailed: manager?.gitProbeFailed,
+      err: error,
+    })
     this.host.post({ type: "agentManager.worktreeSetup", projectId, status: "error", message, errorCode: code })
     this.host.post({ type: "agentManager.importResult", projectId, success: false, message, errorCode: code })
   }

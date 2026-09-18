@@ -41,7 +41,6 @@ internal abstract class SettingsInlineListPanel(
     private val search = SearchTextField(false)
     protected val view = ActiveListView(emptyText, cfg) { key, cellId -> onCell(key, cellId) }
     private var toolbar: ActionToolbar? = null
-    private var syncing = false
 
     @RequiresEdt
     protected fun start() {
@@ -51,7 +50,7 @@ internal abstract class SettingsInlineListPanel(
         view.setListMinimumSize(JBUI.size(0, minListHeight()))
         view.onSelect = {
             toolbar?.updateActionsImmediately()
-            if (!syncing) onSelectionChanged(selectedKeys())
+            onSelectionChanged(selectedKeys())
         }
         next(toolbarRow())
         gap(UiStyle.Gap.sm())
@@ -81,12 +80,7 @@ internal abstract class SettingsInlineListPanel(
     fun setItems(items: List<ActiveListItem>, enabled: Boolean) {
         checkEdt()
         setEnabled(enabled)
-        syncing = true
-        try {
-            view.update(items, ActiveListSelection.PreserveNoScroll)
-        } finally {
-            syncing = false
-        }
+        view.update(items, ActiveListSelection.Preserve)
         toolbar?.updateActionsImmediately()
     }
 

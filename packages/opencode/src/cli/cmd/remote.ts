@@ -26,16 +26,27 @@ export const RemoteCommand = cmd({
       // advertised for the explicit `kilo remote` command path.
       // enableRemote() also ensures a default advertisement; this explicit call
       // remains a legitimate replace (or no-op when identical) per the contract.
-      KiloSessions.setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory))
+      KiloSessions.setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory, "remote"))
 
       await KiloSessions.enableRemote()
       console.log("Remote connection enabled.")
 
       const abort = new AbortController()
+      // A process signal listener runs outside the AsyncLocalStorage scope that
+      // bootstrap() opens, so `Instance.current` / `context.use()` called from
+      // the handler would throw NotFound and surface as an unhandled-rejection
+      // trace on Ctrl-C. Capture the live instance context here and restore it
+      // around the teardown.
+      const instance = context.use()
+      const log = (await import("@opencode-ai/core/util/log")).Log.create({ service: "remote" })
       const shutdown = async () => {
         try {
-          KiloSessions.disableRemote()
-          await InstanceRuntime.disposeInstance(context.use())
+          await context.provide(instance, async () => {
+            KiloSessions.disableRemote("shutdown")
+            await InstanceRuntime.disposeInstance(instance)
+          })
+        } catch (err) {
+          log.warn("remote shutdown failed", { err })
         } finally {
           abort.abort()
         }

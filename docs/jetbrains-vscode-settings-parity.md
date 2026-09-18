@@ -52,7 +52,6 @@ No CLI/SDK change and no new runtime feature.
 | Batch tool | `experimental.batch_tool` | bool | Experimental |
 | Native notebook tools | `experimental.native_notebook_tools` | bool | Experimental |
 | Continue loop on deny | `experimental.continue_loop_on_deny` | bool | Experimental |
-| SWE pruner (+ model) | `experimental.swe_pruner`, `..._model` | bool + string | Experimental |
 | MCP timeout | `experimental.mcp_timeout` | number | Experimental |
 | Per-tool toggles | `tools.<name>` | bool | Experimental |
 
@@ -67,7 +66,7 @@ existing RPC, no config plumbing.
 
 | Setting | Config key | Extra work |
 |---|---|---|
-| Auto-collapse reasoning | `auto_collapse_reasoning` | Reasoning-card default collapse |
+| Reasoning blocks | `reasoning_display` (expanded/preview/headline); legacy `auto_collapse_reasoning` maps to preview | Reasoning-card default state per mode |
 | Terminal command display | `terminal_command_display` (expanded/collapsed) | Tool-card default state |
 | Code edit display | `code_edit_display` (expanded/collapsed) | Edit-card default state |
 

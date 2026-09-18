@@ -11,7 +11,7 @@ body.vscode-high-contrast-light {
   .feedback-button,
   .startup-error-retry,
   .image-attachment-remove,
-  .prompt-review-chip-remove,
+  .prompt-review-row-remove,
   .session-tab-bar .am-tab-close,
   [data-slot="question-progress-nav"],
   [data-slot="question-collapse-toggle"] {
@@ -100,8 +100,8 @@ body.vscode-high-contrast-light {
     border-color: var(--vscode-contrastBorder, transparent) !important;
   }
 
-  /* Prompt review chips */
-  .prompt-review-chip {
+  /* Prompt review rows */
+  .prompt-review-row {
     border-color: var(--vscode-contrastBorder, var(--vscode-input-border));
   }
 

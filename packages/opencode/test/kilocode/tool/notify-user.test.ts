@@ -20,17 +20,6 @@ const agents = Agent.Service.of({
   list: () => Effect.succeed([agentInfo]),
   defaultInfo: () => Effect.succeed(agentInfo),
   defaultAgent: () => Effect.succeed("code"),
-  requirementStatus: () =>
-    Effect.succeed({
-      agent: "code",
-      directory: "",
-      enabled: false,
-      state: "ready",
-      skills: [],
-      mcps: [],
-      vscode_extensions: [],
-    }),
-  guardRequirements: () => Effect.void,
   generate: () => Effect.succeed({ identifier: "code", whenToUse: "", systemPrompt: "" }),
 })
 
@@ -81,10 +70,10 @@ describe("notify_user tool", () => {
   test("is only available while remote is enabled", () => {
     const tool = { id: "notify_user" } as Tool.Def
     status.mockReturnValue({ enabled: false, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(false)
+    expect(KiloToolRegistry.available(tool)).toBe(false)
 
     status.mockReturnValue({ enabled: true, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(true)
+    expect(KiloToolRegistry.available(tool)).toBe(true)
   })
 
   test("registers with id and description", async () => {

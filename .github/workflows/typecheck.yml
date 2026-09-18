@@ -11,7 +11,7 @@ jobs:
   # kilocode_change start
   changes:
     name: detect typecheck changes
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     outputs:
       javascript: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.javascript }}
       jetbrains: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.jetbrains }}
@@ -45,7 +45,7 @@ jobs:
     name: typecheck-js
     needs: changes # kilocode_change
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.javascript == 'true' # kilocode_change
-    runs-on: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
@@ -66,7 +66,7 @@ jobs:
     name: typecheck-jetbrains
     needs: changes
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.jetbrains == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -91,7 +91,7 @@ jobs:
 
   required:
     name: typecheck
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     needs:
       - typecheck-js
       - changes

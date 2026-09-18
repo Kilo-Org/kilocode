@@ -4,11 +4,13 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.rowLines
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
@@ -26,7 +28,6 @@ import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -119,6 +120,16 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test toolbar offers marketplace as final button after separator`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            assertMarketplaceToolbarButton(panel)
+            true
+        }
+    }
+
     fun `test sources section has additional sources title`() {
         val panel = panel()
         flushUntil { sourceRows(panel).size == 2 }
@@ -154,11 +165,10 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             val comp = list.cellRenderer.getListCellRendererComponent(list, row, idx, true, true)
             comp.setSize(520, list.fixedCellHeight)
             layout(comp)
-            val title = components(comp).filterIsInstance<SimpleColoredComponent>().single()
-            val labels = components(comp).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text }
+            val (title, desc) = rowLines(comp)
 
             assertEquals("plan  $CUSTOM", title.toString())
-            assertTrue(labels.contains("Plan work"))
+            assertEquals("Plan work", desc.toString())
             true
         }
     }
@@ -272,6 +282,17 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         edt { panel.applyDraft(); true }
         flushUntil { agentRpc.skillRemovals.size == 1 }
         assertEquals(listOf(DIR to CUSTOM), agentRpc.skillRemovals)
+    }
+
+    fun `test delete selects the skill that took the deleted slot`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val next = edt { rows(panel)[1].key }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(skillsList(panel), panel, CUSTOM, "delete")
+
+        assertEquals(next, edt { skillsList(panel).selectedValue?.key })
     }
 
     fun `test delete action requires confirmation`() {

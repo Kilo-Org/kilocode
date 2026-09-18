@@ -50,10 +50,10 @@ describe("Agent Manager terminal routing", () => {
       worktreeId: "wt-1",
       projectId: "prj-1",
     })
-    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "0" })
+    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" })
     router.handle({ type: "agentManager.terminal.restart", terminalId: "side-1" })
     await wait()
-    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "0" })
+    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" })
 
     router.handle({
       type: "agentManager.terminal.create",
@@ -169,6 +169,47 @@ describe("Agent Manager terminal routing", () => {
     create("three")
     await wait()
     expect(titles).toEqual(["Terminal 1", "Terminal 2", "Terminal 1"])
+    await router.dispose()
+  })
+
+  it("keeps a terminal tracked when explicit close fails", async () => {
+    const messages: AgentManagerOutMessage[] = []
+    let attempts = 0
+    const client = {
+      pty: {
+        create: async () => ({ data: { id: "pty-1", title: "Terminal 1" } }),
+        remove: async () => {
+          attempts++
+          return attempts === 1 ? { error: new Error("offline") } : { data: true }
+        },
+        update: async () => ({ data: true }),
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => client,
+      getClientAsync: async () => client,
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
+      log: () => undefined,
+      post: (message) => messages.push(message),
+      getTerminalFont: () => font,
+    })
+
+    router.handle({ type: "agentManager.terminal.create", createId: "one", placement: "side", worktreeId: null })
+    await wait()
+    const created = messages.find((message) => message.type === "agentManager.terminal.created")
+    if (created?.type !== "agentManager.terminal.created") throw new Error("missing created message")
+
+    router.handle({ type: "agentManager.terminal.close", terminalId: created.terminalId })
+    await wait()
+    expect(messages.at(-1)).toMatchObject({ type: "agentManager.terminal.error", terminalId: created.terminalId })
+
+    router.handle({ type: "agentManager.terminal.close", terminalId: created.terminalId })
+    await wait()
+    expect(messages.at(-1)).toMatchObject({ type: "agentManager.terminal.closed", terminalId: created.terminalId })
+    expect(attempts).toBe(2)
     await router.dispose()
   })
 

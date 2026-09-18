@@ -2,6 +2,7 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.model.ToolApproval
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -15,6 +16,7 @@ import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Container
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -142,6 +144,20 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.isExpanded())
         view.toggle()
         assertFalse(view.isExpanded())
+    }
+
+    fun `test expanded tool shows approval footer`() {
+        val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "pwd")
+            it.output = "/tmp"
+            it.approval = ToolApproval(source = "global")
+        }
+        val view = track(ToolView(t))
+
+        view.toggle()
+        view.syncApprovalReason(true)
+
+        assertTrue(texts(view).any { it.contains("Auto-approved by your global config") })
     }
 
     fun `test collapsed bash hides body`() {
@@ -462,6 +478,12 @@ class ToolViewTest : BasePlatformTestCase() {
         val row = view.components.filterIsInstance<JPanel>().single()
         val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
         return (header.layout as BorderLayout).hgap
+    }
+
+    private fun texts(root: Container): List<String> = root.components.flatMap { child ->
+        val own = (child as? javax.swing.JLabel)?.text?.let(::listOf) ?: emptyList()
+        val nested = (child as? Container)?.let(::texts) ?: emptyList()
+        own + nested
     }
 
 }

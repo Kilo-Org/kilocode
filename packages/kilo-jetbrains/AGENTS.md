@@ -157,6 +157,22 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - `kotlinx.coroutines` is the one mandatory exception — it is provided by the platform and must not be bundled (the IntelliJ Platform Gradle plugin enforces this automatically).
 - Pin exact versions in `gradle/libs.versions.toml` and reference them via the version catalog (`libs.*`) in `build.gradle.kts`. Never hardcode version strings in `build.gradle.kts`.
 
+### Never Ask a Shared DTO For Its Serializer From `frontend` or `backend`
+
+`shared/` declares no kotlinx-serialization dependency, so its `@Serializable` DTOs bind to the platform's copy. `frontend/` and `backend/` each bundle their own `kotlinx-serialization-json`. Touching a shared DTO's generated serializer from either module therefore resolves `KSerializer` from two different classloaders and fails at runtime with:
+
+```
+java.lang.LinkageError: loader constraint violation: when resolving method
+'kotlinx.serialization.KSerializer ai.kilocode.rpc.dto.SomeDto$Companion.serializer()'
+```
+
+In `frontend/` and `backend/`, do not call `Json.decodeFromString<SharedDto>(...)`, `Json.encodeToString(dto)`, `decodeFromJsonElement<SharedDto>(...)`, or `SharedDto.serializer()`. Module-local `@Serializable` types (for example `WorktreeNamesFile`) and built-ins like `List<String>` are fine, because the class and the serialization runtime come from the same loader — this is the reason two different patterns are used in `KiloBackendMarketplaceManager`:
+
+- When the wire shape is a 1:1 match for the shared DTO (`MarketplaceResultDto`), decode into a private module-local wire type (e.g. `WireResult`) with `Json.decodeFromString<WireResult>(...)`, then map its fields onto the shared DTO by hand. Prefer this over raw `JsonObject` field extraction — it is real deserialization instead of hand-parsing, and any wire/DTO field mismatch fails at decode time instead of silently reading `null`.
+- When the wire shape doesn't match the DTO at all — a discriminated union, fields nested differently, or DTO fields that are computed rather than present on the wire (`MarketplaceItemDto`'s `installedProject`/`methods`/`relevant`) — there is no serializer to safely call regardless of classloaders, so parse into a `JsonObject` and construct the DTO by hand; see `toDecoded()` in `KiloBackendMarketplaceManager` and `KiloCliDataParser`.
+
+**Tests cannot catch this.** Gradle test runs put `shared`, the module under test, and kotlinx-serialization on one flat classpath, so the split only exists in a real IDE. Verify RPC paths that return shared DTOs in a sandbox run (`runIdeSplitMode`), not only under `./gradlew test`.
+
 ## CLI Integration
 
 - CLI process spawning, download, extraction, and lifecycle belong in `backend`.
@@ -233,9 +249,18 @@ For the full release process (resolve version, pin verification, prepare, change
 - **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/`.
 - **Java checks**: Do not run `java -version` as a routine preflight. Gradle commands already fail clearly when Java is missing or incompatible; check Java only when diagnosing that failure mode.
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
-- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget — internal mode is already on for every dev run (see below).
 - **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
+- **Corrupt IDE extraction**: if `runIdeBackend` or `runIdeSplitMode` fails before startup with `coroutinesJavaAgentFile` / `Collection contains no element matching the predicate`, the extracted IDE under `.intellijPlatform/ides/` is likely incomplete. Health check: `ls .intellijPlatform/ides/*/lib/*.jar | wc -l` should be in the hundreds. Repair by removing `.intellijPlatform/ides`, `.intellijPlatform/localPlatformArtifacts`, `.intellijPlatform/layoutIndex`, and `.intellijPlatform/coroutines-javaagent.jar`, then rerun the Gradle task.
 - **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
+- **Surveys are off in dev runs**: every `runIde*` task sets `platform.feedback=false`, `csat.survey.enabled=false`, and `editor.ux.survey.enabled=false` so IntelliJ feedback surveys ("Share Your Experience" / "Take Survey") never interrupt a sandbox run. These are IntelliJ registry keys overridden as JVM system properties; keep them unconditional.
+- **Internal mode is on in dev runs**: every `runIde*` task sets `idea.is.internal=true` (`ApplicationManagerEx.IS_INTERNAL_PROPERTY`), which enables the Split Mode latency widget and the Internal Actions menu. The embedded JetBrains Client inherits this property from the backend; the survey keys above are not on that inherit list, so a split-mode client may still need them set in its own Registry.
+
+### Stopping a Sandbox Run
+
+Quit the sandbox IDE from inside it (File → Exit) instead of pressing Stop on the Gradle run tab. Stop on an external-system configuration only calls `CancellationTokenSource.cancel()` through the Gradle tooling API — the IDE never learns the forked JVM's pid, sends it no signal, and `ExternalSystemProcessHandler` does not implement `KillableProcess`, so there is no force-kill escalation either. Quitting the sandbox IDE lets it run its real shutdown sequence and the `JavaExec` task then completes on its own. Cancelling the build instead is what leaves the orphaned Java processes noted above.
+
+Do not start a second `runIde*` task for a checkout while a sandbox IDE launched from that same checkout is still running. All `runIde*` tasks share one sandbox container per checkout (`.intellijPlatform/sandbox/kilo.jetbrains/<ide>/plugins_runIde*`), and `prepareSandbox` rewrites the running IDE's own plugin jars. The IDE then attempts a hot reload that cannot succeed and reports `Failed to unload modified plugins: Kilo Code`.
 
 ### CLI/SDK Change Awareness
 
@@ -311,6 +336,7 @@ theme-specific artifacts in transparent/rounded Swing painting.
 - Primary/secondary transcript card bodies are transparent by default. The actual content inside a body (code blocks, todo list, shell/tool output) is the raised surface: make that content component opaque and paint `SessionUiStyle.Colors.codeBlockBackground()` (the editor background), using its own insets so the fill covers the whole content. For `MdView`-backed bodies set `md.opaque = false` so the prose/body stays transparent while the code/output panes remain the opaque editor surface — do not make the whole body opaque.
 - Rounded cards that paint their own surface (for example `RoundedContentPanel`-based question/login cards) should do that in custom painting or a `contentColor()` override, not by making every nested panel opaque.
 - Standard platform buttons placed on custom-painted session cards should not force the card background. If a button sits on a rounded/custom-painted card, make it non-opaque when needed so Swing does not fill its rectangular bounds behind `DarculaButtonUI`'s rounded paint (notably visible in Islands Light).
+- `DialogView` (question, permission, login-required, outcome, revert, onboarding cards) is a fourth documented surface: `contentColor()` paints `SessionUiStyle.View.Dialog.bgColor()` — a `DIALOG_DELTA` contrast shift off the backdrop — while `outlined` is true, so the card reads as its own panel, distinct from both the backdrop and `codeBlockBackground()`. Its border is `Dialog.outlineColor()`, the midpoint between backdrop and card fill, so the edge is a soft transition rather than the hard `Outline.brightColor()` line a fill-less card needs. `setOutlined(false)` drops back to the plain backdrop color with no outline, for chrome-free states like an interrupted-run note.
 
 When adding a new session view, start with transparent containers and add opaque
 painting only for components that are actual visual surfaces. If a component's

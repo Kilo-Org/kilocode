@@ -134,51 +134,103 @@ describe("v2 pty HttpApi", () => {
       await request(`/api/pty/${info.id}`, tmp.path, { method: "DELETE" })
     }
   })
-  ;(process.platform === "win32" ? effectIt.live.skip : effectIt.live)(
-    "serves PTY websocket output and input through the canonical route",
-    () =>
-      Effect.gen(function* () {
-        const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
-        const created = yield* HttpClientRequest.post("/api/pty").pipe(
-          directoryHeader(dir),
-          HttpClientRequest.bodyJson({ command: "/bin/cat", title: "v2-websocket" }),
-          Effect.flatMap(HttpClient.execute),
-        )
-        expect(created.status).toBe(200)
-        const body = yield* Schema.decodeUnknownEffect(Location.response(Pty.Info))(yield* created.json)
-        const info = body.data
+  // kilocode_change start - portable live PTY coverage on Linux, macOS, and Windows CI
+  effectIt.live("serves Agent Manager script terminal create, resize, input, output, exit, and remove routes", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
+      const child = [
+        'const state = { input: "", pong: false }',
+        "process.stdout.write(`READY:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}\\n`)",
+        'process.stdin.setEncoding("utf8")',
+        'process.stdin.on("data", (chunk) => {',
+        "  state.input += chunk",
+        '  if (!state.pong && state.input.includes("PING")) {',
+        "    state.pong = true",
+        '    process.stdout.write("PONG\\n")',
+        "  }",
+        '  if (state.input.includes("EXIT")) process.exit(7)',
+        "})",
+      ].join("\n")
+      const created = yield* HttpClientRequest.post("/api/pty").pipe(
+        directoryHeader(dir),
+        HttpClientRequest.bodyJson({
+          command: process.execPath,
+          args: ["-e", child],
+          title: "v2-websocket",
+          size: { cols: 80, rows: 24 },
+        }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(created.status).toBe(200)
+      const body = yield* Schema.decodeUnknownEffect(Location.response(Pty.Info))(yield* created.json)
+      const info = body.data
 
-        const socket = yield* Socket.makeWebSocket(
-          `${(yield* serverUrl()).replace(/^http/, "ws")}/api/pty/${info.id}/connect?cursor=-1&location[directory]=${encodeURIComponent(dir)}`,
-          { closeCodeIsError: () => false },
+      const socket = yield* Socket.makeWebSocket(
+        `${(yield* serverUrl()).replace(/^http/, "ws")}/api/pty/${info.id}/connect?cursor=0&location[directory]=${encodeURIComponent(dir)}`,
+        { closeCodeIsError: () => false },
+      )
+      const messages = yield* Queue.unbounded<string>()
+      yield* socket
+        .runRaw((message) =>
+          Queue.offer(messages, typeof message === "string" ? message : new TextDecoder().decode(message)),
         )
-        const messages = yield* Queue.unbounded<string>()
-        yield* socket
-          .runRaw((message) =>
-            Queue.offer(messages, typeof message === "string" ? message : new TextDecoder().decode(message)),
+        .pipe(Effect.catch(() => Effect.void))
+        .pipe(Effect.forkScoped)
+      const write = yield* socket.writer
+
+      const takeUntil = (expected: string, seen = ""): Effect.Effect<string, unknown> =>
+        Effect.gen(function* () {
+          const next =
+            seen +
+            (yield* Queue.take(messages).pipe(
+              Effect.timeoutOrElse({
+                duration: "5 seconds",
+                orElse: () =>
+                  Effect.fail(
+                    new Error(
+                      `PTY output did not contain ${JSON.stringify(expected)}, received ${JSON.stringify(seen)}`,
+                    ),
+                  ),
+              }),
+            ))
+          if (next.includes(expected)) return next
+          return yield* takeUntil(expected, next)
+        })
+
+      expect(yield* takeUntil("READY:")).toContain("READY:true:80x24")
+      const resized = yield* HttpClientRequest.put(`/api/pty/${info.id}`).pipe(
+        directoryHeader(dir),
+        HttpClientRequest.bodyJson({ size: { cols: 100, rows: 40 } }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(resized.status).toBe(200)
+
+      yield* write("PING\r")
+      expect(yield* takeUntil("PONG")).toContain("PONG")
+      yield* write("EXIT\r")
+      yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
+      const exit = yield* Effect.gen(function* () {
+        while (true) {
+          const response = yield* HttpClientRequest.get(`/api/pty/${info.id}`).pipe(
+            directoryHeader(dir),
+            HttpClient.execute,
           )
-          .pipe(Effect.catch(() => Effect.void))
-          .pipe(Effect.forkScoped)
-        const write = yield* socket.writer
+          expect(response.status).toBe(200)
+          const data = (yield* Schema.decodeUnknownEffect(Location.response(Pty.Info))(yield* response.json)).data
+          if (data.status === "exited") return data
+          yield* Effect.sleep("20 millis")
+        }
+      }).pipe(Effect.timeout("5 seconds"))
+      expect(exit).toMatchObject({ status: "exited", exitCode: 7 })
 
-        const takeUntil = (expected: string, seen = ""): Effect.Effect<string, unknown> =>
-          Effect.gen(function* () {
-            const next = seen + (yield* Queue.take(messages).pipe(Effect.timeout("5 seconds")))
-            if (next.includes(expected)) return next
-            return yield* takeUntil(expected, next)
-          })
-
-        yield* write("ping-v2\n")
-        expect(yield* takeUntil("ping-v2")).toContain("ping-v2")
-        yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
-
-        const removed = yield* HttpClientRequest.delete(`/api/pty/${info.id}`).pipe(
-          directoryHeader(dir),
-          HttpClient.execute,
-        )
-        expect(removed.status).toBe(204)
-      }),
+      const removed = yield* HttpClientRequest.delete(`/api/pty/${info.id}`).pipe(
+        directoryHeader(dir),
+        HttpClient.execute,
+      )
+      expect(removed.status).toBe(204)
+    }),
   )
+  // kilocode_change end
   ;(process.platform === "win32" ? effectIt.live.skip : effectIt.live)(
     "applies plugin shell environment before forced PTY values",
     () =>

@@ -40,11 +40,11 @@ Choose your current tool:
 
 | Cursor | Kilo Code | Key Difference |
 |---|---|---|
-| `.cursor/rules/*.mdc` with YAML frontmatter | `.kilocode/rules/*.md` plain Markdown | No YAML metadata required |
+| `.cursor/rules/*.mdc` with YAML frontmatter | `.kilo/rules/*.md` plain Markdown | No YAML metadata required |
 | `alwaysApply: true/false` metadata | File location determines scope | Scope controlled by directory structure |
 | `globs: ["*.ts"]` for file patterns | Mode-specific directories or custom modes | File patterns handled via custom modes |
 | `description` for AI activation | Clear file names and organization | Relies on explicit file organization |
-| Global rules in UI settings | `~/.kilocode/rules/*.md` files | Global rules stored as files in home folder |
+| Global rules in UI settings | `~/.kilo/rules/*.md` files | Global rules stored as files in home folder |
 
 ### Migration Steps
 
@@ -58,7 +58,7 @@ ls -la .cursorrules          # Legacy file (if present)
 **2. Create Kilo Code directory:**
 
 ```bash
-mkdir -p .kilocode/rules
+mkdir -p .kilo/rules
 ```
 
 **3. Convert `.mdc` files to `.md`:**
@@ -94,7 +94,7 @@ alwaysApply: false
 # Copy all files
 for file in .cursor/rules/*.mdc; do
   basename="${file##*/}"
-  cp "$file" ".kilocode/rules/${basename%.mdc}.md"
+  cp "$file" ".kilo/rules/${basename%.mdc}.md"
 done
 
 # Then manually edit each file to remove YAML frontmatter (the --- section at the top)
@@ -104,12 +104,12 @@ done
 
 - Open `Cursor Settings → General → Rules for AI`
 - Copy the text content
-- Save to `~/.kilocode/rules/cursor-global.md`
+- Save to `~/.kilo/rules/cursor-global.md`
 
 **6. Handle legacy `.cursorrules`:**
 
 ```bash
-cp .cursorrules .kilocode/rules/legacy-rules.md
+cp .cursorrules .kilo/rules/legacy-rules.md
 ```
 
 ### Converting Cursor's `globs` Patterns
@@ -128,7 +128,7 @@ Rules for TypeScript files...
 **Kilo Code approach (Option 1 - Mode-specific directory):**
 
 ```bash
-mkdir -p .kilocode/rules-code
+mkdir -p .kilo/rules-code
 # Save TypeScript-specific rules here
 ```
 
@@ -145,7 +145,7 @@ mkdir -p .kilocode/rules-code
     - ask
 ```
 
-Then place rules in `.kilocode/rules-typescript/`
+Then place rules in `.kilo/rules-typescript/`
 
 ### Flattening Nested Cursor Rules
 
@@ -153,7 +153,7 @@ Cursor supports nested `.cursor/rules/` directories. Kilo Code uses flat structu
 
 ```bash
 # Cursor: .cursor/rules/backend/server/api-rules.mdc
-# Kilo Code: .kilocode/rules/backend-server-api-rules.md
+# Kilo Code: .kilo/rules/backend-server-api-rules.md
 ```
 
 ## Migrating from Windsurf
@@ -162,12 +162,12 @@ Cursor supports nested `.cursor/rules/` directories. Kilo Code uses flat structu
 
 | Windsurf | Kilo Code | Key Difference |
 |---|---|---|
-| `.windsurf/rules/*.md` | `.kilocode/rules/*.md` | Same Markdown format |
+| `.windsurf/rules/*.md` | `.kilo/rules/*.md` | Same Markdown format |
 | GUI configuration for activation modes | File location determines scope | Scope controlled by directory structure |
-| "Always On" mode (GUI) | Place in `.kilocode/rules/` | Rules stored as files, not GUI settings |
+| "Always On" mode (GUI) | Place in `.kilo/rules/` | Rules stored as files, not GUI settings |
 | "Glob" mode (GUI) | Mode-specific directories | File patterns handled via mode directories |
 | 12,000 character limit per rule | No hard limit | No character limit on rule files |
-| Global rules in `~/.codeium/windsurf/memories/global_rules.md` | `~/.kilocode/rules/*.md` | Global rules in home folder, multiple files |
+| Global rules in `~/.codeium/windsurf/memories/global_rules.md` | `~/.kilo/rules/*.md` | Global rules in home folder, multiple files |
 
 ### Migration Steps
 
@@ -181,25 +181,25 @@ ls -la .windsurfrules        # Legacy file (if present)
 **2. Create Kilo Code directory:**
 
 ```bash
-mkdir -p .kilocode/rules
+mkdir -p .kilo/rules
 ```
 
 **3. Copy files directly** (already Markdown):
 
 ```bash
-cp .windsurf/rules/*.md .kilocode/rules/
+cp .windsurf/rules/*.md .kilo/rules/
 ```
 
 **4. Migrate global rules:**
 
 ```bash
-cp ~/.codeium/windsurf/memories/global_rules.md ~/.kilocode/rules/global-rules.md
+cp ~/.codeium/windsurf/memories/global_rules.md ~/.kilo/rules/global-rules.md
 ```
 
 **5. Handle legacy `.windsurfrules`:**
 
 ```bash
-cp .windsurfrules .kilocode/rules/legacy-rules.md
+cp .windsurfrules .kilo/rules/legacy-rules.md
 ```
 
 **6. Split large rules if needed:**
@@ -211,9 +211,9 @@ If you had rules approaching the 12,000 character limit, split them:
 # .windsurf/rules/all-conventions.md (11,500 chars)
 
 # Split into focused files:
-# .kilocode/rules/api-conventions.md
-# .kilocode/rules/testing-standards.md
-# .kilocode/rules/code-style.md
+# .kilo/rules/api-conventions.md
+# .kilo/rules/testing-standards.md
+# .kilo/rules/code-style.md
 ```
 
 ### Converting Windsurf's Activation Modes
@@ -222,7 +222,7 @@ Windsurf configures activation through the GUI. In Kilo Code, file organization 
 
 | Windsurf GUI Mode | Kilo Code Equivalent |
 |---|---|
-| **Always On** | Place in `.kilocode/rules/` (default) |
+| **Always On** | Place in `.kilo/rules/` (default) |
 | **Glob** (file patterns) | Mode-specific directory or custom mode |
 | **Model Decision** | Clear file names by concern (e.g., `testing-guidelines.md`) |
 | **Manual** | Organize with descriptive names |
@@ -242,7 +242,7 @@ If you had a rule in Windsurf with Glob mode set to `*.test.ts`, create a custom
     - ask
 ```
 
-Then place the rule in `.kilocode/rules-test/`
+Then place the rule in `.kilo/rules-test/`
 
 ## AGENTS.md Support
 
@@ -266,11 +266,11 @@ This is Kilo Code's unique feature that replaces both Cursor's `globs` and Winds
 ### Directory Structure
 
 ```bash
-.kilocode/rules/              # Apply to ALL modes
-.kilocode/rules-code/         # Only in Code mode
-.kilocode/rules-debug/        # Only in Debug mode
-.kilocode/rules-ask/          # Only in Ask mode
-.kilocode/rules-{custom}/     # Only in your custom mode
+.kilo/rules/              # Apply to ALL modes
+.kilo/rules-code/         # Only in Code mode
+.kilo/rules-debug/        # Only in Debug mode
+.kilo/rules-ask/          # Only in Ask mode
+.kilo/rules-{custom}/     # Only in your custom mode
 ```
 
 ### Real-World Example
@@ -291,17 +291,17 @@ globs: ["**/*.test.ts", "**/*.spec.ts"]
 
 ```bash
 # 1. Create test mode directory
-mkdir -p .kilocode/rules-test
+mkdir -p .kilo/rules-test
 
 # 2. Save rule as plain Markdown
-cat > .kilocode/rules-test/testing-standards.md << 'EOF'
+cat > .kilo/rules-test/testing-standards.md << 'EOF'
 # Testing Rules
 - Write tests for all features
 - Maintain >80% coverage
 EOF
 
 # 3. Define the mode (optional - creates a custom mode)
-# Add to .kilocode/config.yaml:
+# Add to .kilocodemodes:
 # modes:
 #   - slug: test
 #     name: Test Mode
@@ -316,8 +316,8 @@ After migration:
 - [ ] **Test rule application:** Ask Kilo Code to perform tasks following your rules
 - [ ] **Organize rules:** Split large files, use clear names
 - [ ] **Set up mode-specific rules:** Create directories for specialized workflows
-- [ ] **Update team docs:** Document new `.kilocode/rules/` location
-- [ ] **Commit to version control:** `git add .kilocode/`
+- [ ] **Update team docs:** Document new `.kilo/rules/` location
+- [ ] **Commit to version control:** `git add .kilo/`
 - [ ] **Remove old directories:** Delete `.cursor/` or `.windsurf/` folders once verified
 - [ ] **Set up autocomplete:** If you used Cursor/Windsurf autocomplete, enable Ghost (Settings → Ghost) for the same Tab-to-accept experience
 
@@ -328,8 +328,8 @@ After migration:
 **Check file location:**
 
 ```bash
-ls -la .kilocode/rules/      # Project rules
-ls -la ~/.kilocode/rules/    # Global rules
+ls -la .kilo/rules/      # Project rules
+ls -la ~/.kilo/rules/    # Global rules
 ```
 
 **Verify file format:**
@@ -348,7 +348,7 @@ ls -la ~/.kilocode/rules/    # Global rules
 Cursor's `globs`, `alwaysApply`, and `description` don't transfer automatically. Solutions:
 
 - **For file patterns:** Use mode-specific directories or custom modes
-- **For always-on rules:** Place in `.kilocode/rules/`
+- **For always-on rules:** Place in `.kilo/rules/`
 - **For context-specific rules:** Use clear file names and organization
 
 ### Windsurf Activation Modes Lost
@@ -364,7 +364,7 @@ Cursor's nested directories don't map to Kilo Code. Flatten with descriptive nam
 
 ```bash
 # Bad: .cursor/rules/backend/api/rules.mdc
-# Good: .kilocode/rules/backend-api-rules.md
+# Good: .kilo/rules/backend-api-rules.md
 ```
 
 ### AGENTS.md Not Loading
@@ -428,8 +428,8 @@ For complex workflows, define custom modes with their own rules and permissions:
 Then create corresponding rule directories:
 
 ```bash
-mkdir -p .kilocode/rules-review
-mkdir -p .kilocode/rules-docs
+mkdir -p .kilo/rules-review
+mkdir -p .kilo/rules-docs
 ```
 
 **Note:** `.kilocodemodes` can be in YAML (preferred) or JSON format. For global modes, edit the `custom_modes.yaml` file via Settings > Edit Global Modes.

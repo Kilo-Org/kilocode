@@ -5,6 +5,21 @@ interface ReplayGateDeps {
   flush(): void
 }
 
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
+
+export function byteLength(data: string | Uint8Array) {
+  return typeof data === "string" ? encoder.encode(data).byteLength : data.byteLength
+}
+
+function tail(data: string, limit: number) {
+  const bytes = encoder.encode(data)
+  if (bytes.byteLength <= limit) return data
+  let start = bytes.byteLength - limit
+  while (start < bytes.byteLength && (bytes[start]! & 0xc0) === 0x80) start++
+  return decoder.decode(bytes.subarray(start))
+}
+
 /** Keep terminal protocol replies ahead of user input without reordering the
  * user's bytes when both arrive while initial replay is being parsed. */
 export function createInputBuffer(limit = 256 * 1024) {
@@ -14,11 +29,11 @@ export function createInputBuffer(limit = 256 * 1024) {
   const add = (data: string, reply = false) => {
     if (reply) {
       replies += data
-      if (replies.length > limit) replies = replies.slice(-limit)
+      replies = tail(replies, limit)
       return
     }
     input += data
-    if (input.length > limit) input = input.slice(-limit)
+    input = tail(input, limit)
   }
 
   const take = () => {
@@ -28,7 +43,116 @@ export function createInputBuffer(limit = 256 * 1024) {
     return data
   }
 
-  return { add, take }
+  const clear = () => {
+    replies = ""
+    input = ""
+  }
+
+  return { add, clear, take }
+}
+
+/**
+ * Coalesce per-message PTY chunks into one xterm write per animation
+ * frame. xterm parses every `write()` call with its own scope and
+ * schedules a render cycle per dirty buffer; at sustained streaming
+ * rates (one WebSocket message per line of output) that multiplies
+ * parse runs and render schedules. One write per frame keeps the parser
+ * busy once instead of once per message; output latency stays under one
+ * frame. Callbacks attached to individual chunks fire after the batch
+ * that contained them finishes parsing, preserving replay-gate ordering.
+ *
+ * Two safety valves keep the batch bounded: a watchdog flushes via a
+ * timer when animation frames stop (background or minimized windows
+ * throttle rAF), and a byte cap flushes immediately so a burst never
+ * accumulates anywhere near xterm's discard watermark.
+ */
+export function createWriteBatcher(
+  write: (data: string | Uint8Array, callback?: () => void) => void,
+  schedule: (callback: () => void) => number = (callback) => requestAnimationFrame(callback),
+  unschedule: (handle: number) => void = (handle) => cancelAnimationFrame(handle),
+  delay: (callback: () => void, ms: number) => ReturnType<typeof setTimeout> = (callback, ms) =>
+    setTimeout(callback, ms),
+  clearDelay: (handle: ReturnType<typeof setTimeout>) => void = (handle) => clearTimeout(handle),
+  maxBytes: number = 512 * 1024,
+) {
+  let chunks: Array<string | Uint8Array> = []
+  let callbacks: Array<() => void> = []
+  let pendingBytes = 0
+  let scheduled = false
+  let raf: number | undefined
+  let watchdog: ReturnType<typeof setTimeout> | undefined
+
+  const drain = () => {
+    if (raf !== undefined) unschedule(raf)
+    if (watchdog !== undefined) clearDelay(watchdog)
+    raf = undefined
+    watchdog = undefined
+    scheduled = false
+    const data = chunks
+    const cbs = callbacks
+    chunks = []
+    callbacks = []
+    pendingBytes = 0
+    if (data.length === 0 && cbs.length === 0) return
+    const groups: Array<string | Uint8Array> = []
+    for (const chunk of data) {
+      const prior = groups.at(-1)
+      if (typeof chunk === "string") {
+        if (typeof prior === "string") groups[groups.length - 1] = prior + chunk
+        else groups.push(chunk)
+        continue
+      }
+      if (!(prior instanceof Uint8Array)) {
+        groups.push(chunk)
+        continue
+      }
+      const merged = new Uint8Array(prior.byteLength + chunk.byteLength)
+      merged.set(prior)
+      merged.set(chunk, prior.byteLength)
+      groups[groups.length - 1] = merged
+    }
+    if (groups.length === 0) groups.push("")
+    const complete = () => {
+      for (const cb of cbs) cb()
+    }
+    for (let index = 0; index < groups.length; index++) {
+      write(groups[index]!, index === groups.length - 1 ? complete : undefined)
+    }
+  }
+
+  const kick = () => {
+    if (scheduled) return
+    scheduled = true
+    raf = schedule(drain)
+    watchdog = delay(drain, 250)
+  }
+
+  const writeChunk = (data: string | Uint8Array, callback?: () => void) => {
+    if ((typeof data === "string" ? data.length : data.byteLength) === 0 && !callback) return
+    const bytes = byteLength(data)
+    if (pendingBytes > 0 && pendingBytes + bytes > maxBytes) drain()
+    chunks.push(data)
+    pendingBytes += bytes
+    if (callback) callbacks.push(callback)
+    if (pendingBytes >= maxBytes) {
+      drain()
+      return
+    }
+    kick()
+  }
+
+  const cancel = () => {
+    if (raf !== undefined) unschedule(raf)
+    if (watchdog !== undefined) clearDelay(watchdog)
+    raf = undefined
+    watchdog = undefined
+    scheduled = false
+    chunks = []
+    callbacks = []
+    pendingBytes = 0
+  }
+
+  return { write: writeChunk, cancel }
 }
 
 /**
@@ -45,7 +169,12 @@ export function createReplayGate(deps: ReplayGateDeps) {
   let boundary = false
   let draining = false
   let serial = 0
-  let pending: Array<string | Uint8Array> = []
+  let pending: Array<{ data: string | Uint8Array; callback?: () => void }> = []
+  let bytes = 0
+  // The server retains at most 2 Mi UTF-16 code units. Eight MiB covers
+  // their maximum UTF-8 expansion while still staying far below xterm's
+  // 50 MiB discard watermark if a boundary frame never arrives.
+  const limit = 8 * 1024 * 1024
 
   const attach = (reconnecting: boolean) => {
     serial++
@@ -53,14 +182,24 @@ export function createReplayGate(deps: ReplayGateDeps) {
     boundary = false
     draining = false
     pending = []
+    bytes = 0
   }
 
-  const output = (data: string | Uint8Array) => {
+  const output = (data: string | Uint8Array, callback?: () => void) => {
     if (blocked && !boundary) {
-      pending.push(data)
-      return
+      bytes += byteLength(data)
+      if (bytes > limit) {
+        serial++
+        blocked = false
+        pending = []
+        bytes = 0
+        return false
+      }
+      pending.push({ data, callback })
+      return true
     }
-    deps.write(data)
+    deps.write(data, callback)
+    return true
   }
 
   const frame = (data: Uint8Array) => {
@@ -74,8 +213,9 @@ export function createReplayGate(deps: ReplayGateDeps) {
       // parser-generated replies in its separate priority buffer meanwhile.
       draining = true
       const current = serial
-      for (const chunk of pending) deps.write(chunk)
+      for (const chunk of pending) deps.write(chunk.data, chunk.callback)
       pending = []
+      bytes = 0
       deps.write("", () => {
         if (serial !== current) return
         draining = false
@@ -86,5 +226,14 @@ export function createReplayGate(deps: ReplayGateDeps) {
     return true
   }
 
-  return { attach, blocked: () => blocked, draining: () => draining, frame, output }
+  const cancel = () => {
+    serial++
+    blocked = false
+    boundary = false
+    draining = false
+    pending = []
+    bytes = 0
+  }
+
+  return { attach, blocked: () => blocked, cancel, draining: () => draining, frame, output }
 }

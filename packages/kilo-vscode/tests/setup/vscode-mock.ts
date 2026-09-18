@@ -40,6 +40,7 @@ const mockVscode = {
     language: "en",
     machineId: "test-machine",
     isTelemetryEnabled: false,
+    onDidChangeTelemetryEnabled: () => ({ dispose: noop }),
     shell: "/bin/bash",
     openExternal: noop,
   },
@@ -59,6 +60,7 @@ const mockVscode = {
     }),
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,
+      inspect: () => ({}),
       update: async () => {},
     }),
     asRelativePath: (pathOrUri: string | { fsPath?: string }) => {
@@ -171,6 +173,9 @@ const mockVscode = {
   },
   Disposable: class {
     constructor(private callback: () => void = noop) {}
+    static from(...items: { dispose: () => void }[]) {
+      return { dispose: () => items.forEach((item) => item.dispose()) }
+    }
     dispose() {
       this.callback()
     }

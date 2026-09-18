@@ -97,6 +97,22 @@ async function createTestDb() {
   return [sqlite, db, filename] as const
 }
 
+test("bootstrap leaves fresh installs for the normal database initializer", async () => {
+  const marker = path.join(Global.Path.data, "json-migration-fresh.db")
+  const storage = path.join(Global.Path.data, "storage")
+  const previous = Flag.KILO_DB
+  Flag.KILO_DB = marker
+  await fs.rm(storage, { recursive: true, force: true })
+  try {
+    await JsonMigration.bootstrap()
+    expect(await Bun.file(marker).exists()).toBe(false)
+    expect(await Bun.file(marker + ".json-migration").exists()).toBe(false)
+  } finally {
+    Flag.KILO_DB = previous
+    await Promise.all([marker, `${marker}-wal`, `${marker}-shm`].map(cleanup))
+  }
+})
+
 describe("JSON to SQLite migration", () => {
   let storageDir: string
   let sqlite: Database

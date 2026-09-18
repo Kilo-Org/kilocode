@@ -8,8 +8,6 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
-import { parseModelString } from "../../../../src/shared/provider-model"
-import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
 interface ShareOption {
@@ -207,36 +205,17 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.swePruner.title")}
-          description={language.t("settings.experimental.swePruner.description")}
+          title={language.t("settings.experimental.codeMode.title")}
+          description={language.t("settings.experimental.codeMode.description")}
         >
           <Switch
-            checked={experimental().swe_pruner ?? false}
-            onChange={(checked) => updateExperimental("swe_pruner", checked)}
+            checked={experimental().code_mode ?? false}
+            onChange={(checked) => updateExperimental("code_mode", checked)}
             hideLabel
           >
-            {language.t("settings.experimental.swePruner.title")}
+            {language.t("settings.experimental.codeMode.title")}
           </Switch>
         </SettingsRow>
-
-        <Show when={experimental().swe_pruner}>
-          <SettingsRow
-            title={language.t("settings.experimental.swePrunerModel.title")}
-            description={language.t("settings.experimental.swePrunerModel.description")}
-          >
-            <ModelSelectorBase
-              value={parseModelString(experimental().swe_pruner_model ?? undefined)}
-              onSelect={(providerID, modelID) =>
-                updateExperimental("swe_pruner_model", providerID && modelID ? `${providerID}/${modelID}` : null)
-              }
-              placement="bottom-start"
-              allowClear
-              clearLabel={language.t("settings.providers.notSet")}
-              label={language.t("settings.experimental.swePrunerModel.title")}
-              description={language.t("settings.experimental.swePrunerModel.description")}
-            />
-          </SettingsRow>
-        </Show>
 
         <SettingsRow
           title={language.t("settings.experimental.multiProject.title")}
@@ -248,6 +227,60 @@ const ExperimentalTab: Component = () => {
             hideLabel
           >
             {language.t("settings.experimental.multiProject.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.claudeMigration.title")}
+          description={language.t("settings.experimental.claudeMigration.description")}
+        >
+          <Switch
+            checked={settings().claudeMigration === true}
+            onChange={(checked) => applySetting("claudeMigration", checked, "experimental.claudeMigration")}
+            hideLabel
+          >
+            {language.t("settings.experimental.claudeMigration.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.title")}
+          description={language.t("settings.experimental.browserAutomation.description")}
+        >
+          <Switch
+            checked={settings().browserAutomation === true}
+            onChange={(checked) => applySetting("browserAutomation", checked, "experimental.browserAutomation")}
+            hideLabel
+          >
+            {language.t("settings.experimental.browserAutomation.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.systemChrome.title")}
+          description={language.t("settings.experimental.browserAutomation.systemChrome.description")}
+        >
+          <Switch
+            checked={settings().agentManagerBrowserUseSystemChrome !== false}
+            onChange={(checked) =>
+              applySetting("agentManagerBrowserUseSystemChrome", checked, "agentManager.browser.useSystemChrome")
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.browserAutomation.systemChrome.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.taskModelSelection.title")}
+          description={language.t("settings.experimental.taskModelSelection.description")}
+        >
+          <Switch
+            checked={experimental().task_model_selection ?? false}
+            onChange={(checked) => updateExperimental("task_model_selection", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.taskModelSelection.title")}
           </Switch>
         </SettingsRow>
 

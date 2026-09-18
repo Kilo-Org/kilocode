@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.history
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
@@ -12,22 +13,17 @@ internal data class LocalHistoryRow(
     private val text: String,
     private val kind: SessionActivityKind?,
     override val section: String?,
-    override val deleting: Boolean,
+    private val deleting: Boolean,
 ) : ActiveListItem {
     override val key: String get() = item.id
     override val title: String get() = text
     override val trailing: String get() = HistoryTime.relative(item)
     override val search: String get() = listOfNotNull(text, item.id, item.directory).joinToString(" ")
+    override val progress: String? get() = if (deleting) KiloBundle.message("common.deleting") else null
     override val badges: List<ActiveListBadge>
-        get() {
-            if (deleting) return emptyList()
-            return listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
-        }
+        get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
     override val cells: List<ActiveListCell>
-        get() {
-            if (deleting) return emptyList()
-            return listOf(activeListRenameCell(), activeListDeleteCell())
-        }
+        get() = listOf(activeListRenameCell(), activeListDeleteCell())
 }
 
 internal data class CloudHistoryRow(

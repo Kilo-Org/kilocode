@@ -163,6 +163,53 @@ describe("Kilo request estimation", () => {
     expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000, usage })).toBe(32_000)
   })
 
+  test.each(["providerMetadata", "providerOptions"] as const)(
+    "does not reduce output for encrypted reasoning in %s",
+    (field) => {
+      const mdl = model({ context: 1_050_000, output: 128_000 })
+      const reasoning = {
+        type: "reasoning" as const,
+        text: "Checked the previous tool results.",
+        [field]: {
+          openai: {
+            itemId: "rs_1",
+            reasoningEncryptedContent: "x".repeat(3_200_000),
+          },
+        },
+      }
+      const messages = [
+        { role: "assistant", content: [reasoning] },
+        { role: "user", content: "Continue." },
+      ] satisfies ModelMessage[]
+      const usage = KiloSessionOverflow.measure({ messages, tools: {} })
+
+      expect(usage.raw).toBeGreaterThan(1_000_000)
+      expect(usage.normalized).toBeLessThan(1_000)
+      expect(
+        KiloLLM.capOutputTokens({
+          model: mdl,
+          messages,
+          tools: {},
+          configured: 32_000,
+          usage,
+          reported: 624_205,
+        }),
+      ).toBe(32_000)
+    },
+  )
+
+  test("still counts visible reasoning text", () => {
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const messages = [
+      {
+        role: "assistant",
+        content: [{ type: "reasoning", text: "x".repeat(600_000) }],
+      },
+    ] satisfies ModelMessage[]
+
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000 })).toBeLessThan(32_000)
+  })
+
   test("still reduces output for oversized text", () => {
     const mdl = model({ context: 200_000, output: 32_000 })
     const messages = [{ role: "user" as const, content: "x".repeat(600_000) }]

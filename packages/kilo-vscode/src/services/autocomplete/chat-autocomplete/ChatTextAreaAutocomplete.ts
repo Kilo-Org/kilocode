@@ -6,8 +6,7 @@ import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/usel
 import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import type { KiloConnectionService } from "../../cli-backend"
-import { generateFim, hasValidCredentials } from "../fim"
-import { getAutocompleteModel, getAutocompleteModelById } from "../../../shared/autocomplete-models"
+import { generateFim, hasValidCredentials, fimModel as getChatAutocompleteModel } from "../fim"
 import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
 
 interface ChatCompletionRequestMessage {
@@ -20,11 +19,7 @@ interface ChatCompletionResponseSender {
   postMessage(message: { type: "chatCompletionResult"; text: string; requestId: string }): void
 }
 
-export function getChatAutocompleteModel(provider?: string, model?: string) {
-  const info = getAutocompleteModel(provider, model)
-  if (info.kind !== "edit") return info
-  return getAutocompleteModelById(info.fimModelID)
-}
+export { getChatAutocompleteModel }
 
 /**
  * Chat textarea autocomplete with cached per-request objects.

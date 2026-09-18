@@ -4,6 +4,7 @@ import { ConfigRow, SectionTitle } from "@kilocode/kilo-web-ui/console"
 import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
 import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { useFormatterSettings, type ToolRow } from "./state/formatters"
+import "../../styles/formatters.css"
 
 type Kind = "formatter" | "lsp"
 type Settings = ReturnType<typeof useFormatterSettings>

@@ -1,5 +1,7 @@
 /** Strict project/resource ownership for Agent Manager multi-project routing. */
 
+import { zeroID as key } from "@opencode-ai/core/kilocode/zero-id"
+
 export interface ProjectRef {
   projectId: string
 }
@@ -44,8 +46,6 @@ interface SessionRoute {
   directory: string
   generation: number
 }
-
-const key = (projectId: string, id: string) => `${projectId}\0${id}`
 
 export class ProjectRouteService {
   private readonly projects = new Map<string, ProjectRoute>()

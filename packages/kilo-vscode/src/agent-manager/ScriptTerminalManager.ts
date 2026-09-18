@@ -1,6 +1,8 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import path from "node:path"
 import type { TerminalFont } from "./terminal-font"
-import type { RunHandle } from "./run/manager"
+import { message, type RunHandle } from "./run/manager"
+import { block } from "./pty-cleanup"
 
 export type ScriptTerminalKind = "run" | "setup"
 type ScriptTerminalState = "running" | "stopping" | "exited" | "failed"
@@ -68,11 +70,6 @@ interface TerminalMessage {
   rows?: unknown
 }
 
-function message(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return String(error)
-}
-
 function missing(error: unknown): boolean {
   if (!error || typeof error !== "object") return false
   const value = error as Record<string, unknown>
@@ -84,6 +81,11 @@ function missing(error: unknown): boolean {
 
 function key(kind: ScriptTerminalKind, worktreeId: string, projectId?: string): string {
   return `${projectId ?? "single"}:${kind}:${worktreeId}`
+}
+
+function directoryKey(directory: string) {
+  const value = path.resolve(directory)
+  return process.platform === "win32" ? value.toLowerCase() : value
 }
 
 function terminalId(): string {
@@ -98,10 +100,43 @@ export class ScriptTerminalManager {
   private readonly entries = new Map<string, Entry>()
   private readonly terminals = new Map<string, Entry>()
   private readonly ptys = new Map<string, Entry>()
+  private readonly creates = new Map<string, Set<Promise<unknown>>>()
+  private readonly blocked = new Map<string, number>()
 
   constructor(private readonly deps: ScriptTerminalDeps) {}
 
   async start(
+    kind: ScriptTerminalKind,
+    config: ScriptTerminalConfig,
+    done: (exit: ScriptTerminalExit) => void,
+  ): Promise<RunHandle> {
+    const directory = directoryKey(config.cwd)
+    if (this.blocked.has(directory)) throw new Error(`PTY directory is being removed: ${config.cwd}`)
+    const task = this.startImpl(kind, config, done)
+    const creates = this.creates.get(directory) ?? new Set<Promise<unknown>>()
+    if (!this.creates.has(directory)) this.creates.set(directory, creates)
+    creates.add(task)
+    try {
+      return await task
+    } finally {
+      creates.delete(task)
+      if (creates.size === 0) this.creates.delete(directory)
+    }
+  }
+
+  async blockDirectory(directory: string) {
+    const target = directoryKey(directory)
+    return block(target, this.blocked, this.creates.get(target))
+  }
+
+  async closeDirectory(directory: string): Promise<void> {
+    const target = directoryKey(directory)
+    const entries = [...this.entries.values()].filter((entry) => directoryKey(entry.cwd) === target)
+    const results = await Promise.all(entries.map((entry) => this.close(entry.terminalId, true)))
+    if (results.some((result) => !result)) throw new Error(`Failed to close script terminals in ${directory}`)
+  }
+
+  private async startImpl(
     kind: ScriptTerminalKind,
     config: ScriptTerminalConfig,
     done: (exit: ScriptTerminalExit) => void,

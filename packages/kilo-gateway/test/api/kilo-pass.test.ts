@@ -61,6 +61,30 @@ describe("parseKiloPassState", () => {
     expect(parseKiloPassState({ status: "none" })).toBeNull()
   })
 
+  test("hides canceled and expired subscriptions that still report period credits", () => {
+    const payload = (status: string) => [
+      {
+        result: {
+          data: {
+            subscription: {
+              tier: "tier_19",
+              status,
+              cancelAtPeriodEnd: true,
+              currentPeriodBaseCreditsUsd: 19,
+              currentPeriodUsageUsd: 0,
+              currentPeriodBonusCreditsUsd: null,
+              nextBillingAt: null,
+            },
+          },
+        },
+      },
+    ]
+
+    expect(parseKiloPassState(payload("canceled"))).toBeNull()
+    expect(parseKiloPassState(payload("expired"))).toBeNull()
+    expect(parseKiloPassState(payload("past_due"))).toMatchObject({ currentPeriodBaseCreditsUsd: 19 })
+  })
+
   test("silently ignores transport failures", async () => {
     const prev = global.fetch
     const warn = spyOn(console, "warn").mockImplementation(() => undefined)

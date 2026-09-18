@@ -1,6 +1,8 @@
 Run and manage long-running background processes.
 
-Use this tool for development servers, file watchers, local services, and commands that are expected to keep running, such as `npm run dev`, `next dev`, `vite`, `bun --watch`, or test watchers.
+Use this tool only for processes that must keep running independently after this tool call returns, such as development servers, file watchers, local services, and test watchers (`npm run dev`, `next dev`, `vite`, or `bun --watch`).
+
+This tool cannot wait: `start` returns immediately and never blocks your turn. Do not start `sleep`, timers, cooldowns, delays, or polling loops with this tool. To wait a fixed time before your next action, run the wait as a normal blocking shell command and set its `timeout` higher than the wait.
 
 Do not use the shell tool with `&`, `nohup`, `disown`, `setsid`, `Start-Process`, or similar backgrounding patterns. Processes started with this tool are tracked and shown in the CLI sidebar.
 

@@ -214,9 +214,9 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
         val row = localHistoryRows(listOf(item), snapshot) { true }[0]
 
-        assertTrue(row.deleting)
-        assertTrue(row.cells.isEmpty())
-        assertTrue(row.badges.isEmpty())
+        assertEquals(KiloBundle.message("common.deleting"), row.progress)
+        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertEquals(listOf(SessionActivityKind.RUNNING.label()), row.badges.map { it.text })
     }
 
     fun `test history panel sync updates running badges`() {

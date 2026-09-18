@@ -55,6 +55,18 @@ export type OpenDiffFn = (diff: {
   patch?: string // kilocode_change
   additions: number
   deletions: number
+  status?: "added" | "deleted" | "modified" // kilocode_change
+  // kilocode_change start - multi-file patch preview payload
+  files?: Array<{
+    file: string
+    before?: string
+    after?: string
+    patch?: string
+    additions: number
+    deletions: number
+    status?: "added" | "deleted" | "modified" // kilocode_change
+  }>
+  // kilocode_change end
 }) => void
 
 export type OpenUrlFn = (url: string) => void

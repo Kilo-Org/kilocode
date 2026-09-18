@@ -10,7 +10,6 @@ import { Bus } from "@/bus"
 import { FetchHttpClient } from "effect/unstable/http"
 import { expect, spyOn } from "bun:test"
 import { Telemetry } from "@kilocode/kilo-telemetry"
-import { legacyReviewMessage } from "../../src/kilocode/review/command"
 import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
@@ -189,7 +188,6 @@ const fastAgents = Layer.mock(AgentSvc.Service)({
   list: () => Effect.succeed([agent]),
   defaultInfo: () => Effect.succeed(agent),
   defaultAgent: () => Effect.succeed(agent.name),
-  guardRequirements: () => Effect.void,
 })
 
 const processorCreateStarted: Deferred.Deferred<void>[] = []
@@ -550,6 +548,40 @@ it.instance("loop calls LLM and returns assistant message", () =>
     expect(yield* llm.hits).toHaveLength(1)
   }),
 )
+
+// kilocode_change start - guard provider-compatible max-step request shape
+it.instance(
+  "loop sends max steps instruction as a user message",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig((url) => ({
+        ...providerCfg(url),
+        agent: { build: { steps: 1 } },
+      }))
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+      yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        noReply: true,
+        parts: [{ type: "text", text: "finish at the limit" }],
+      })
+      yield* llm.text("summary")
+
+      yield* prompt.loop({ sessionID: chat.id })
+
+      const inputs = yield* llm.inputs
+      const messages = inputs.at(-1)?.messages
+      if (!Array.isArray(messages)) throw new Error("expected LLM messages")
+      expect(messages.at(-1)).toMatchObject({
+        role: "user",
+        content: expect.stringContaining("MAXIMUM STEPS REACHED"),
+      })
+    }),
+  30_000,
+)
+// kilocode_change end
 
 noLLMServer.instance(
   "new prompt dismisses a pending question",
@@ -3023,37 +3055,6 @@ noLLMServer.instance(
       },
     },
   },
-)
-
-noLLMServer.instance(
-  "deprecated review alias returns static message without LLM",
-  () =>
-    Effect.gen(function* () {
-      const prompt = yield* SessionPrompt.Service
-      const sessions = yield* Session.Service
-      const session = yield* sessions.create({})
-      const text = legacyReviewMessage("local-review-uncommitted")!
-
-      const result = yield* prompt.command({
-        sessionID: session.id,
-        command: "local-review-uncommitted",
-        arguments: "focus on tests",
-        model: "test/test-model",
-      })
-
-      expect(result.info.role).toBe("assistant")
-      expect(result.parts).toHaveLength(1)
-      expect(result.parts[0].type).toBe("text")
-      if (result.parts[0].type === "text") expect(result.parts[0].text).toBe(text)
-
-      const msgs = yield* sessions.messages({ sessionID: session.id })
-      const user = msgs.find((msg) => msg.info.role === "user")
-      expect(
-        user?.parts.some((part) => part.type === "text" && part.text === "/local-review-uncommitted focus on tests"),
-      ).toBe(true)
-    }),
-  { config: cfg },
-  30_000,
 )
 
 it.instance(

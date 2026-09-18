@@ -173,6 +173,11 @@ internal class PickerPopup<T>(
         return popup
     }
 
+    /**
+     * Rebuilds the rows and restores the highlight. Unlike [ai.kilocode.client.ui.list.ActiveListView],
+     * which leaves the selection empty when the remembered row is gone, a picker must always offer a
+     * candidate to accept, so this falls back to the first row.
+     */
     fun refresh(prefer: Any? = selectedKey(), at: Int? = null) {
         val data = rows(field?.text.orEmpty())
         model.replaceAll(data)

@@ -1,0 +1,82 @@
+/* Provider Usage */
+.provider-usage-section {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-weak-base);
+}
+
+.provider-usage-section-heading,
+.provider-usage-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-usage-section-heading {
+  margin-bottom: 12px;
+  /* Optically align with the text inside the cards (1px border + 8px card padding) */
+  padding: 0 9px;
+}
+
+.provider-usage-section-heading h3 {
+  margin: 0;
+  color: var(--text-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+}
+
+.provider-usage-section-heading p,
+.provider-usage-notice {
+  margin: 3px 0 0;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-large);
+}
+
+.provider-usage-list,
+.provider-usage-resources {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.provider-usage-row {
+  display: grid;
+  gap: 4px;
+}
+
+.provider-usage-summary {
+  align-items: baseline;
+  color: var(--text-base);
+  font-size: var(--font-size-small);
+}
+
+.provider-usage-summary strong {
+  text-align: right;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.provider-usage-notice {
+  padding-left: 8px;
+  border-left: 2px solid var(--icon-warning-base);
+}
+
+/* Align the action button label with the card content; small buttons have 12px inline padding */
+.provider-usage-list [data-slot="card-actions"] {
+  margin-left: -12px;
+}
+
+.provider-usage-loading {
+  display: grid;
+  min-height: 92px;
+  place-items: center;
+}
+
+@media (max-width: 360px) {
+  .provider-usage-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

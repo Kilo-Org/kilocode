@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as nodePath from "path"
-import { GitOps } from "../../src/agent-manager/GitOps"
+import { GitOps, parseConflictPaths } from "../../src/agent-manager/GitOps"
 import { Semaphore } from "../../src/agent-manager/semaphore"
 
 function ops(handler: (args: string[], cwd: string) => Promise<string>, semaphore?: Semaphore): GitOps {
@@ -54,6 +54,39 @@ describe("GitOps", () => {
 
       expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
       expect(calls).toBe(1)
+    })
+  })
+
+  it("passes stdin to binary Git commands without decoding their output", async () => {
+    await withRepo(async (cwd) => {
+      const git = new GitOps({ log: () => undefined, binary: async () => "git" })
+      const value = "before\u0000after"
+      const object = await git.execGit(["hash-object", "-w", "--stdin"], cwd, { stdin: value })
+      const result = await git.execGitBuffer(["cat-file", "--batch"], cwd, {
+        stdin: `${object.stdout.trim()}\n`,
+      })
+      expect(result.code).toBe(0)
+      expect(result.stdout.includes(Buffer.from(value))).toBe(true)
+      git.dispose()
+    })
+  })
+
+  it("uses an explicit Git executable path with spaces", async () => {
+    await withRepo(async (cwd) => {
+      const real = Bun.which("git")
+      if (!real) throw new Error("Git is required for this test")
+
+      const dir = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-gitops executable-"))
+      const binary = process.platform === "win32" ? real : nodePath.join(dir, "git")
+      try {
+        if (process.platform !== "win32") await fs.symlink(real, binary)
+
+        const git = new GitOps({ log: () => undefined, binary })
+        expect(git.path).toBe(binary)
+        expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      } finally {
+        await fs.rm(dir, { recursive: true, force: true })
+      }
     })
   })
 
@@ -228,26 +261,60 @@ describe("GitOps", () => {
   })
 
   describe("resolveDefaultBranch", () => {
-    it("returns <remote>/HEAD symbolic ref", async () => {
+    it("uses the remote's advertised HEAD instead of stale local metadata", async () => {
+      const commands: string[][] = []
       const git = ops(async (args) => {
+        commands.push(args)
         // resolveRemote: upstream is configured
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
-        // symbolic-ref for upstream/HEAD
-        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/develop"
+        if (args[0] === "ls-remote") return "ref: refs/heads/develop\tHEAD\nabc123\tHEAD"
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/master"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("upstream/develop")
+      expect(commands.some((args) => args[0] === "symbolic-ref")).toBe(false)
     })
 
-    it("falls back to origin/HEAD when remote is origin", async () => {
+    it("falls back to local origin/HEAD when the remote is unavailable", async () => {
       const git = ops(async (args) => {
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") throw new Error("offline")
         if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/origin/HEAD") return "origin/main"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+    })
+
+    it("keeps master when the remote still advertises master", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") return "ref: refs/heads/master\tHEAD\nabc123\tHEAD"
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/master")
+    })
+
+    it("caches the advertised remote HEAD", async () => {
+      let calls = 0
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") {
+          calls++
+          return "ref: refs/heads/main\tHEAD\nabc123\tHEAD"
+        }
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(calls).toBe(1)
     })
 
     it("returns undefined when <remote>/HEAD is not set", async () => {
@@ -255,24 +322,11 @@ describe("GitOps", () => {
         if (args[0] === "rev-parse") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return ""
+        if (args[0] === "ls-remote") throw new Error("no remote")
         if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo")).toBeUndefined()
-    })
-  })
-
-  describe("hasRemoteRef", () => {
-    it("returns true when ref exists", async () => {
-      const git = ops(async () => "abc123")
-      expect(await git.hasRemoteRef("/repo", "origin/main")).toBe(true)
-    })
-
-    it("returns false when ref does not exist", async () => {
-      const git = ops(async () => {
-        throw new Error("no ref")
-      })
-      expect(await git.hasRemoteRef("/repo", "origin/nonexistent")).toBe(false)
     })
   })
 
@@ -632,11 +686,40 @@ describe("GitOps", () => {
       })
     })
 
+    it("kills an in-flight exec when its request signal aborts", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined, binary: async () => process.execPath })
+        const ctl = new AbortController()
+        const pending = git.execGit(["-e", "setTimeout(() => {}, 5000)"], cwd, { signal: ctl.signal })
+        await sleep(25)
+        ctl.abort()
+
+        const result = await pending
+        expect(result.code).not.toBe(0)
+        git.dispose()
+      })
+    })
+
     it("is safe to call multiple times", () => {
       const git = ops(async () => "ok")
       git.dispose()
       git.dispose()
       expect(git.disposed).toBe(true)
+    })
+
+    it("stops waiting for executable discovery when its request signal aborts", async () => {
+      let release!: (value: string) => void
+      const gate = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      const git = new GitOps({ log: () => undefined, binary: () => gate })
+      const ctl = new AbortController()
+      const pending = git.execGit(["status"], "/repo", { signal: ctl.signal })
+      ctl.abort()
+      const result = await pending
+      expect(result.code).not.toBe(0)
+      release("git")
+      git.dispose()
     })
   })
 
@@ -670,6 +753,51 @@ describe("GitOps", () => {
 
       await Promise.all(Array.from({ length: 4 }, () => git.currentBranch("/repo")))
       expect(peak).toBe(4)
+    })
+  })
+})
+
+describe("GitOps conflicts", () => {
+  it("rejects non-OID conflict revisions before invoking Git", async () => {
+    const git = new GitOps({ log: () => undefined })
+    await expect(git.conflicts("/repo", "origin", "refs/heads/main", "head")).rejects.toThrow(
+      "Invalid pull request commit ID",
+    )
+    git.dispose()
+  })
+
+  it("parses merge-tree name-only output", () => {
+    expect(
+      parseConflictPaths("treeoid\na.txt\nb.txt\n\nAuto-merging a.txt\nCONFLICT (content): Merge conflict in a.txt"),
+    ).toEqual(["a.txt", "b.txt"])
+    expect(parseConflictPaths("treeoid\n")).toEqual([])
+  })
+
+  it("lists conflicting files for divergent commits without changing the worktree", async () => {
+    await withRepo(async (cwd) => {
+      runGit(cwd, ["config", "user.email", "test@example.com"])
+      runGit(cwd, ["config", "user.name", "Test"])
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "base\n")
+      runGit(cwd, ["add", "."])
+      runGit(cwd, ["commit", "-m", "base"])
+      const branch = runGit(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])
+      runGit(cwd, ["checkout", "-b", "feature"])
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "feature\n")
+      runGit(cwd, ["commit", "-am", "feature"])
+      const head = runGit(cwd, ["rev-parse", "HEAD"])
+      runGit(cwd, ["checkout", branch])
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "main\n")
+      runGit(cwd, ["commit", "-am", "main"])
+      const base = runGit(cwd, ["rev-parse", "HEAD"])
+
+      const git = new GitOps({ log: () => undefined })
+      expect(await git.conflicts(cwd, "origin", base, head)).toEqual(["a.txt"])
+      expect(await git.conflicts(cwd, "origin", base, head)).toEqual(["a.txt"])
+      expect((git as unknown as { conflictCache: Map<string, unknown> }).conflictCache.size).toBe(1)
+      expect(await fs.readFile(nodePath.join(cwd, "a.txt"), "utf8")).toBe("main\n")
+      expect(runGit(cwd, ["status", "--porcelain"])).toBe("")
+      git.dispose()
+      expect((git as unknown as { conflictCache: Map<string, unknown> }).conflictCache.size).toBe(0)
     })
   })
 })

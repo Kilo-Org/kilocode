@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Command } from "../../../src/command"
 import { reviewCommand } from "../../../src/kilocode/review/command"
+import DESCRIPTION from "../../../src/kilocode/suggestion/tool.txt"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { resolvePrompt } from "../../../src/kilocode/suggestion/tool"
@@ -14,6 +15,16 @@ afterEach(() => {
 })
 
 describe("suggestion", () => {
+  test("limits worktree review suggestions to managed Agent Manager sessions", () => {
+    expect(DESCRIPTION).toContain("only as the action prompt for an existing Agent Manager managed worktree session")
+    expect(DESCRIPTION).toContain("CLI/TUI")
+    expect(DESCRIPTION).toContain("ordinary sidebar")
+    expect(DESCRIPTION).toContain("Agent Manager Local")
+    expect(DESCRIPTION).toContain("unassigned session")
+    expect(DESCRIPTION).toContain("unmanaged Git worktree")
+    expect(DESCRIPTION).toContain("prefer `/review uncommitted`")
+  })
+
   test("resolves review command arguments into static templates", async () => {
     const commands = Command.Service.of({
       get: (name) => Effect.succeed(name === "review" ? reviewCommand() : undefined),
@@ -22,6 +33,18 @@ describe("suggestion", () => {
     const out = await Effect.runPromise(resolvePrompt("/review uncommitted --focus telemetry", commands))
 
     expect(out).toContain("## User Input\n\nuncommitted --focus telemetry")
+    expect(out).not.toContain("$ARGUMENTS")
+  })
+
+  test("substitutes worktree review arguments into the static template", async () => {
+    const commands = Command.Service.of({
+      get: (name) => Effect.succeed(name === "review" ? reviewCommand() : undefined),
+      list: () => Effect.succeed([reviewCommand()]),
+    })
+    const out = await Effect.runPromise(resolvePrompt("/review worktree focus on committed changes", commands))
+
+    expect(out).toContain("## User Input\n\nworktree focus on committed changes")
+    expect(out).toContain("/review worktree [guidance]")
     expect(out).not.toContain("$ARGUMENTS")
   })
 

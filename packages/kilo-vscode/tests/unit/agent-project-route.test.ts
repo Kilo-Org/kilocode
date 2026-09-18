@@ -50,6 +50,13 @@ describe("ProjectRouteService", () => {
     )
   })
 
+  it("preserves fallback, precedence, and empty fields in composite UI keys", () => {
+    expect(ProjectRouteService.key({ projectId: "a" })).toBe("a\0local")
+    expect(ProjectRouteService.key({ projectId: "a", sessionId: "s", worktreeId: "wt" })).toBe("a\0s")
+    expect(ProjectRouteService.key({ projectId: "a", sessionId: "", worktreeId: "wt" })).toBe("a\0")
+    expect(ProjectRouteService.key({ projectId: "", worktreeId: "" })).toBe("\0")
+  })
+
   describe("safe resolution (non-throwing)", () => {
     it("trySessionDirectory returns the exact dir for an unambiguous raw id", () => {
       const routes = new ProjectRouteService()

@@ -1,9 +1,14 @@
 package ai.kilocode.client.session.ui.prompt
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.CycleModeAction
+import ai.kilocode.client.actions.CycleModelAction
+import ai.kilocode.client.actions.CycleReasoningAction
+import ai.kilocode.client.actions.ResetModelAction
 import ai.kilocode.client.actions.SendPromptAction
 import ai.kilocode.client.actions.StopSessionAction
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.model.PromptAttachment
@@ -15,6 +20,7 @@ import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
 import ai.kilocode.log.ChatLogSummary
@@ -24,6 +30,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.LookupEx
+import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.codeInsight.lookup.LookupManagerListener
 import com.intellij.codeInsight.lookup.LookupPositionStrategy
 import com.intellij.codeInsight.lookup.LookupPresentation
@@ -31,6 +38,7 @@ import com.intellij.ide.DataManager
 import com.intellij.ide.dnd.DnDEvent
 import com.intellij.ide.dnd.DnDSupport
 import com.intellij.ide.dnd.FileCopyPasteUtil
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -40,7 +48,10 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
@@ -60,7 +71,6 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.IslandsState
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
@@ -71,6 +81,7 @@ import com.intellij.util.messages.MessageBusConnection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -118,7 +129,7 @@ class PromptPanel(
     private val approve: Boolean = true,
     private val showEnhance: Boolean = true,
     private val hostedInEditorTab: Boolean = false,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, UiDataProvider {
+) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, PromptSelectors, UiDataProvider {
 
     companion object {
         private val LOG = KiloLog.create(PromptPanel::class.java)
@@ -134,12 +145,12 @@ class PromptPanel(
 
     // Prompt-bar pickers blend into the prompt background when idle and only show the standard
     // hover fill on pointer-over (idleFill = null paints nothing behind the label).
-    val mode = ModePicker().apply { idleFill = null }
-    val model = ModelPicker().apply {
+    override val mode = ModePicker().apply { idleFill = null }
+    override val model = ModelPicker().apply {
         placement = ModelPicker.Placement.ABOVE
         idleFill = null
     }
-    val reasoning = ReasoningPicker().apply { idleFill = null }
+    override val reasoning = ReasoningPicker().apply { idleFill = null }
     var onReset: () -> Unit = {}
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
@@ -157,9 +168,11 @@ class PromptPanel(
     }
     private val attachments = mutableListOf<PromptAttachment>()
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var lookupBus: MessageBusConnection? = null
+    private var commandJob: Job? = null
     private var completionAction: AnAction? = null
     private var completionTarget: JComponent? = null
     private var mentionCaret = false
@@ -187,6 +200,7 @@ class PromptPanel(
             ed.settings.setBlockCursor(false)
             SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.putUserData(PROMPT_TEXT_PASTE_HANDLER_KEY, PromptTextPasteHandler { handlePastedText(ed, it) })
             ed.setHorizontalScrollbarVisible(false)
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -195,6 +209,7 @@ class PromptPanel(
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
             syncHighlights()
+            folds.install(ed)
             ed.caretModel.addCaretListener(object : CaretListener {
                 override fun caretPositionChanged(e: CaretEvent) {
                     val provider = completion ?: return
@@ -233,7 +248,7 @@ class PromptPanel(
 
     private val reset = HoverIcon().apply {
         icon = AllIcons.Actions.Cancel
-        toolTipText = KiloBundle.message("model.picker.reset")
+        toolTipText = resetTooltip()
         accessibleContext.accessibleName = KiloBundle.message("model.picker.reset")
         isVisible = false
         addActionListener { onReset() }
@@ -244,7 +259,19 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
-    private val enhancingIcon = AnimatedIcon.Default()
+    /**
+     * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
+     * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
+     * than needing SessionUi to wire anything through this panel directly.
+     */
+    private val menu = HoverIcon().apply {
+        icon = AllIcons.Actions.More
+        toolTipText = KiloBundle.message("prompt.action.menu")
+        accessibleContext.accessibleName = KiloBundle.message("prompt.action.menu")
+        addActionListener { showMenu() }
+    }
+
+    private val enhancingIcon = SpinnerIcon.icon
     private val enhance = HoverIcon().apply {
         icon = WAND_ICON
         toolTipText = KiloBundle.message("prompt.action.enhance")
@@ -273,10 +300,23 @@ class PromptPanel(
     override val isStopEnabled: Boolean
         get() = busy
 
+    override val resettable: Boolean
+        get() = reset.isVisible
+
+    override fun resetModel() {
+        if (reset.isVisible) onReset()
+    }
+
     init {
         applyStyle(style)
         syncBorder()
         selection?.register(editor)
+        mode.onPickClose = ::focusLater
+        model.onPickClose = ::focusLater
+        reasoning.onPickClose = ::focusLater
+        mode.action = CycleModeAction.ID
+        model.action = CycleModelAction.ID
+        reasoning.action = CycleReasoningAction.ID
         editor.text = ""
         editor.addDocumentListener(object : DocumentListener {
             override fun documentChanged(e: DocumentEvent) {
@@ -287,6 +327,7 @@ class PromptPanel(
                     onChange()
                     return
                 }
+                folds.sync()
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
@@ -315,6 +356,8 @@ class PromptPanel(
         bar.add(reset)
         bar.add(Box.createHorizontalGlue())
         if (approve) {
+            bar.add(menu)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(auto)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         }
@@ -522,6 +565,7 @@ class PromptPanel(
 
     override fun uiDataSnapshot(sink: DataSink) {
         selection?.provideCopy(sink) { editor.text }
+        sink[PromptDataKeys.SELECTORS] = this
     }
 
     @RequiresEdt
@@ -546,6 +590,7 @@ class PromptPanel(
     @RequiresEdt
     fun clear() {
         editor.text = ""
+        folds.clear()
         attachments.clear()
         completion?.clearMentions()
         completion?.prewarm()
@@ -603,11 +648,19 @@ class PromptPanel(
         editor.requestFocusInWindow()
     }
 
+    private fun focusLater() {
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed || !isShowing) return@invokeLater
+            focus()
+        }
+    }
+
     override fun addNotify() {
         super.addNotify()
         bindRoot()
         bindKeymap()
         bindLookup()
+        bindCommandRefresh()
     }
 
     override fun removeNotify() {
@@ -617,8 +670,24 @@ class PromptPanel(
         bus = null
         lookupBus?.disconnect()
         lookupBus = null
+        commandJob?.cancel()
+        commandJob = null
         uninstallCompletionShortcut()
         super.removeNotify()
+    }
+
+    @RequiresEdt
+    private fun showMenu() {
+        val group = ActionManager.getInstance().getAction("Kilo.Session.PromptMenu") as? ActionGroup ?: return
+        val ctx = DataManager.getInstance().getDataContext(menu)
+        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            group,
+            ctx,
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+        )
+        popup.show(PopupShowOptions.aboveComponent(menu))
     }
 
     @RequiresEdt
@@ -714,15 +783,37 @@ class PromptPanel(
 
     private fun triggerCompletion(e: DocumentEvent) {
         if (project.isDisposed) return
+        val provider = completion ?: return
         val value = e.newFragment.toString()
         if (value.length != 1) return
         val text = editor.text
-        val offset = e.offset + value.length
-        val popup = value == "@" || (value == "/" && text.take(offset).trim() == "/")
-        if (!popup) return
+        val offset = (e.offset + value.length).coerceIn(0, text.length)
+        val initial = value == "@" || (value == "/" && text.take(offset).trim() == "/")
+        val ed = editor.getEditor(false)
+        val open = ed?.let { LookupManager.getActiveLookup(it) } != null
+        // Reopen when a keystroke lands inside a slash/mention token but the lookup has closed.
+        // Fast typing can drop the platform's completion restart: the @-mention path stays open
+        // because its backend search keeps the completion calculating, while the instant slash
+        // path settles and can disappear. Re-triggering self-heals it via the same manual path.
+        val retry = !initial && !open && provider.completing(text, offset)
+        if (!initial && !retry) return
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
             editor.getEditor(false)?.let(::showCompletion)
+        }
+    }
+
+    @RequiresEdt
+    private fun bindCommandRefresh() {
+        if (completion == null || commandJob != null) return
+        commandJob = completion.watchCommands {
+            ApplicationManager.getApplication().invokeLater {
+                if (project.isDisposed) return@invokeLater
+                val ed = editor.getEditor(false) ?: return@invokeLater
+                if (LookupManager.getActiveLookup(ed) == null) return@invokeLater
+                if (!completion.completingSlash(ed.document.text, ed.caretModel.offset)) return@invokeLater
+                showCompletion(ed)
+            }
         }
     }
 
@@ -839,6 +930,31 @@ class PromptPanel(
         return processAttachments("prompt-paste", "editor", null, transferable, 0)
     }
 
+    /**
+     * Handles a paste large enough to collapse ([collapsible]) by inserting it and folding it behind
+     * a placeholder. Every such paste becomes its own fold, so a second one never disturbs the
+     * first even when the text is identical.
+     */
+    @RequiresEdt
+    private fun handlePastedText(ed: EditorEx, raw: String) {
+        val text = normalizePaste(raw)
+        val sel = ed.selectionModel
+        val start = if (sel.hasSelection()) sel.selectionStart else ed.caretModel.offset
+        val end = if (sel.hasSelection()) sel.selectionEnd else start
+        // Inserting can expand a neighbouring fold on its own; quiet keeps that from reading as the
+        // reader unfolding it.
+        folds.quiet {
+            WriteCommandAction.runWriteCommandAction(project) {
+                ed.document.replaceString(start, end, text)
+                ed.caretModel.moveToOffset(start + text.length)
+            }
+        }
+        folds.fold(ed, start, start + text.length, placeholder(text))
+        syncEditorHeight()
+    }
+
+    private fun normalizePaste(text: String): String = text.replace("\r\n", "\n").replace('\r', '\n')
+
     private fun processAttachments(
         kind: String,
         area: String,
@@ -898,6 +1014,7 @@ class PromptPanel(
             override fun activeKeymapChanged(keymap: Keymap?) {
                 editor.setPlaceholder(placeholder())
                 syncTooltip()
+                syncSelectorTooltips()
                 refreshCompletionShortcut()
             }
 
@@ -908,8 +1025,20 @@ class PromptPanel(
                     syncTooltip()
                 }
                 if (IdeActions.ACTION_CODE_COMPLETION in actionIds) refreshCompletionShortcut()
+                if (CycleModeAction.ID in actionIds || CycleModelAction.ID in actionIds ||
+                    CycleReasoningAction.ID in actionIds || ResetModelAction.ID in actionIds) {
+                    syncSelectorTooltips()
+                }
             }
         })
+    }
+
+    @RequiresEdt
+    private fun syncSelectorTooltips() {
+        mode.syncTooltip()
+        model.syncTooltip()
+        reasoning.syncTooltip()
+        reset.toolTipText = resetTooltip()
     }
 
     @RequiresEdt
@@ -967,6 +1096,8 @@ class PromptPanel(
         )
     }
 
+    private fun resetTooltip(): String = KeymapUtil.createTooltipText(KiloBundle.message("model.picker.reset"), ResetModelAction.ID)
+
     private fun placeholder(): String {
         val send = KeymapUtil.getFirstKeyboardShortcutText(SendPromptAction.ID)
         val line = KeymapUtil.getFirstKeyboardShortcutText(IdeActions.ACTION_EDITOR_START_NEW_LINE)
@@ -1022,6 +1153,7 @@ class PromptPanel(
         ApplicationManager.getApplication().invokeLater {
             deferred = false
             if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            folds.sync()
             syncEditorHeight()
             syncHighlights()
             syncButton()

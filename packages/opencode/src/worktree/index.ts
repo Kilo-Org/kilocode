@@ -17,6 +17,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
 import { InstanceState } from "@/effect/instance-state"
 import { WorktreeCleanup } from "@/kilocode/worktree-cleanup" // kilocode_change
+import { clearPtys } from "@/kilocode/worktree/pty-cleanup" // kilocode_change
 import { WorktreeEvent } from "@opencode-ai/schema/worktree-event"
 
 export const Event = WorktreeEvent
@@ -390,6 +391,7 @@ const layer: Layer.Layer<
 
     const remove = Effect.fn("Worktree.remove")(function* (input: RemoveInput) {
       const ctx = yield* InstanceState.context
+      const workspaceID = yield* InstanceState.workspaceID // kilocode_change
       if (ctx.project.vcs !== "git") {
         return yield* new NotGitError({ message: "Worktrees are only supported for git projects" })
       }
@@ -408,6 +410,7 @@ const layer: Layer.Layer<
       const entry = yield* locateWorktree(entries, directory)
 
       if (!entry?.path) {
+        yield* clearPtys(directory, workspaceID) // kilocode_change
         const directoryExists = yield* fs.exists(directory).pipe(Effect.orDie)
         if (directoryExists) {
           yield* stopFsmonitor(directory)
@@ -418,6 +421,7 @@ const layer: Layer.Layer<
 
       // Git may return the original casing when a caller supplied a normalized Windows path.
       yield* store.disposeDirectory(entry.path)
+      yield* clearPtys(entry.path, workspaceID) // kilocode_change
       const removed = yield* WorktreeCleanup.remove({
         root: ctx.worktree,
         target: entry.path,

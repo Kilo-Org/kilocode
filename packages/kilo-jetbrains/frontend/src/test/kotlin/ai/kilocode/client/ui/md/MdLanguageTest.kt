@@ -56,6 +56,11 @@ class MdLanguageTest : BasePlatformTestCase() {
         assertKind(" ansi-stdout ignored metadata ", Stream.Stdout, Mode.Ansi)
     }
 
+    fun `test mermaid resolves to diagram kind`() {
+        assertSame(type("mmd"), (MdLanguage.kind("mermaid") as Kind.Diagram).file)
+        assertSame(type("mmd"), (MdLanguage.kind("mmd title") as Kind.Diagram).file)
+    }
+
     private fun assertKind(lang: String, stream: Stream, mode: Mode) {
         val kind = MdLanguage.kind(lang) as Kind.Terminal
 

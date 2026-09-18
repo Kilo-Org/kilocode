@@ -73,11 +73,27 @@ class MockCliServer : AutoCloseable {
     @Volatile var agentBuilderStatus = 200
     @Volatile var lastMcpActionPath: String? = null
     @Volatile var lastAgentRemoveBody: String? = null
+    @Volatile var sessionBoard = """{"ownerSessionID":"ses_root","revision":1,"hasMore":false,"messages":[]}"""
+    @Volatile var sessionBoardStatus = 200
+    @Volatile var resetSessionBoardResponse = """{"ownerSessionID":"ses_root","revision":2,"hasMore":false,"messages":[]}"""
+    @Volatile var resetSessionBoardStatus = 200
+    @Volatile var lastSessionBoardPath: String? = null
+    @Volatile var lastResetSessionBoardPath: String? = null
+    @Volatile var lastResetSessionBoardBody: String? = null
     @Volatile var lastCommandRemoveBody: String? = null
     @Volatile var lastSkillRemoveBody: String? = null
     @Volatile var lastAgentBuilderPath: String? = null
     @Volatile var lastAgentBuilderBody: String? = null
     @Volatile var lastAgentBuilderMethod: String? = null
+    @Volatile var marketplaceList = """{"items":[],"installed":{"project":{},"global":{}}}"""
+    @Volatile var marketplaceListStatus = 200
+    @Volatile var marketplaceInstallResult = """{"success":true,"slug":"test"}"""
+    @Volatile var marketplaceInstallStatus = 200
+    @Volatile var marketplaceRemoveResult = """{"success":true,"slug":"test"}"""
+    @Volatile var marketplaceRemoveStatus = 200
+    @Volatile var lastMarketplaceListPath: String? = null
+    @Volatile var lastMarketplaceInstallBody: String? = null
+    @Volatile var lastMarketplaceRemoveBody: String? = null
 
     // Project-scoped REST responses
     @Volatile var providers = """{"all":[],"default":{},"connected":[],"failed":[]}"""
@@ -104,6 +120,15 @@ class MockCliServer : AutoCloseable {
     @Volatile var sessions = "[]"
     @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var sessionFork = """{"id":"ses_forked","slug":"forked","projectID":"prj_test","directory":"/worktree","title":"Forked Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var sessionForkStatus = 200
+    @Volatile var lastForkPath: String? = null
+    @Volatile var lastForkBody: String? = null
+    @Volatile var sessionShare = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000},"share":{"url":"https://app.kilo.ai/s/tok"}}"""
+    @Volatile var sessionUnshare = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var sessionShareStatus = 200
+    @Volatile var lastSharePath: String? = null
+    @Volatile var lastShareMethod: String? = null
     @Volatile var sessionStatuses = "{}"
     @Volatile var sessionDiff = "[]"
     @Volatile var lastSessionDiffPath: String? = null
@@ -397,6 +422,27 @@ class MockCliServer : AutoCloseable {
                     lastSkillRemoveBody = body
                     respond(output, skillRemoveStatus, if (skillRemoveStatus == 200) "true" else """{"error":"Skill not found"}""")
                 }
+                bare == "/kilocode/marketplace" && method == "GET" -> {
+                    lastMarketplaceListPath = path
+                    respond(output, marketplaceListStatus, marketplaceList)
+                }
+                bare == "/kilocode/marketplace/install" && method == "POST" -> {
+                    lastMarketplaceInstallBody = body
+                    respond(output, marketplaceInstallStatus, marketplaceInstallResult)
+                }
+                bare == "/kilocode/marketplace/remove" && method == "POST" -> {
+                    lastMarketplaceRemoveBody = body
+                    respond(output, marketplaceRemoveStatus, marketplaceRemoveResult)
+                }
+                bare.matches(Regex("/kilocode/session/ses_[^/]+/board")) && method == "GET" -> {
+                    lastSessionBoardPath = path
+                    respond(output, sessionBoardStatus, sessionBoard)
+                }
+                bare.matches(Regex("/kilocode/session/ses_[^/]+/board/reset")) && method == "POST" -> {
+                    lastResetSessionBoardPath = path
+                    lastResetSessionBoardBody = body
+                    respond(output, resetSessionBoardStatus, resetSessionBoardResponse)
+                }
                 bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
@@ -441,6 +487,16 @@ class MockCliServer : AutoCloseable {
                     lastSessionRenameBody = body
                     lastSessionRenameMethod = method
                     respond(output, sessionRenameStatus, sessionRenameResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/fork")) && method == "POST" -> {
+                    lastForkPath = path
+                    lastForkBody = body
+                    respond(output, sessionForkStatus, sessionFork)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/share")) && (method == "POST" || method == "DELETE") -> {
+                    lastSharePath = path
+                    lastShareMethod = method
+                    respond(output, sessionShareStatus, if (method == "POST") sessionShare else sessionUnshare)
                 }
                 bare.matches(Regex("/session/ses_[^/]+/diff")) && method == "GET" -> {
                     lastSessionDiffPath = path
@@ -489,6 +545,7 @@ class MockCliServer : AutoCloseable {
             200 -> "OK"
             401 -> "Unauthorized"
             404 -> "Not Found"
+            409 -> "Conflict"
             500 -> "Internal Server Error"
             else -> "Error"
         }

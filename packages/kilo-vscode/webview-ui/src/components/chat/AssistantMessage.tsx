@@ -7,7 +7,7 @@
  * Active questions render inline via QuestionDock; permissions are in the bottom dock.
  */
 
-import { Component, For, Show, createMemo, type JSX } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, type JSX } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import {
   Part,
@@ -15,6 +15,7 @@ import {
   ToolRegistry,
   ToolApprovalProvider,
   resolveToolApproval,
+  useGrowIn,
 } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
 import type {
@@ -32,8 +33,10 @@ import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
 import { messageThroughput, formatTG } from "../../context/session-utils"
+import { formatClock, formatDuration } from "../../utils/message-time"
+import type { TurnTiming } from "../../context/transcript-rows"
 import { color as timelineColor } from "../../utils/timeline/colors"
-import type { Part as TimelinePart } from "../../types/messages"
+import type { Part as TimelinePart, QuestionRequest } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { QuestionDock } from "./QuestionDock"
@@ -52,7 +55,7 @@ function planExitInfo(part: SDKPart): { plan: string } | undefined {
   return { plan }
 }
 
-function PlanExitCard(props: { part: ToolPart }) {
+function PlanExitCard(props: { part: ToolPart; sessionID: string }) {
   const language = useLanguage()
   const server = useServer()
   const data = useData()
@@ -70,12 +73,13 @@ function PlanExitCard(props: { part: ToolPart }) {
     e.preventDefault()
     const i = info()
     if (!i || !data.openFile) return
-    data.openFile(i.plan)
+    data.openFile(i.plan, undefined, undefined, props.sessionID)
   }
   return (
     <Show when={info()}>
       <div data-component="plan-exit-card">
         <span data-slot="plan-exit-label">{label()}</span>{" "}
+        <span data-slot="plan-exit-badge">{language.t("ui.patch.action.plan")}</span>
         <a data-slot="plan-exit-link" href="#" onClick={open}>
           {display()}
         </a>
@@ -99,20 +103,25 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
   return requests.find((r) => r.tool?.callID === tp.callID && r.tool?.messageID === tp.messageID)
 }
 
+/** A question tool part still executes until the backend returns its result. */
+function questionBusy(part: SDKPart): boolean {
+  if (part.type !== "tool") return false
+  const status = (part as unknown as ToolPart).state?.status
+  return status === "pending" || status === "running"
+}
+
 interface AssistantMessageProps {
   message: SDKAssistantMessage
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
+  /** Finish time and duration for the turn, shown inline in the assistant
+   * action row once the turn settles. */
+  timing?: TurnTiming
   feedback?: MessageFeedbackControls
-  /** id of the part containing the current chat-search match, if any — forces
-   * that part's collapsed tool/reasoning content open so the user can see
-   * the highlighted match without manually expanding it first. */
-  forceOpenPartID?: string
-  /** For a multi-file apply_patch match, the specific file within that part —
-   * lets that one nested item open instead of every file in the patch. */
-  forceOpenFile?: string
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
+  readonly?: boolean
+  interactivePrompts?: boolean
 }
 
 type ToolStateProps = {
@@ -122,7 +131,7 @@ type ToolStateProps = {
   status?: string
 }
 
-function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
+function TodoToolCard(props: { part: ToolPart }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
   const language = useLanguage()
@@ -140,7 +149,6 @@ function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
             output={state()?.output}
             status={state()?.status}
             defaultOpen
-            forceOpen={props.forceOpen}
             reveal={false}
           />
         </ToolApprovalProvider>
@@ -149,7 +157,7 @@ function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
   )
 }
 
-function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?: boolean }) {
+function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
   const language = useLanguage()
@@ -168,7 +176,6 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
             output={state()?.output}
             status={state()?.status}
             defaultOpen={props.defaultOpen}
-            forceOpen={props.forceOpen}
             animate
             reveal={state()?.status === "pending" || state()?.status === "running"}
           />
@@ -226,12 +233,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const parts = createMemo(() => {
     const stored = props.parts ?? data.store.part?.[props.message.id]
     if (!stored) return []
-    return (stored as SDKPart[]).filter((part) => {
-      if (!isRenderable(part, props.message)) return false
-      if (part.type !== "tool" || part.tool !== "question") return true
-      if (part.state.status !== "pending" && part.state.status !== "running") return true
-      return !!matchToolRequest(part, "question", session.questions())
-    })
+    return (stored as SDKPart[]).filter((part) => isRenderable(part, props.message))
   })
   // Pull the weighted generation rate across the turn's step-finish parts
   // (output + reasoning tokens over active generation duration) so the badge
@@ -256,11 +258,30 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           const isUpstreamSuppressed =
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
 
-          // Active question tool parts render the interactive QuestionDock inline
-          const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
+          // Active question tool parts render the interactive QuestionDock inline.
+          // The backend publishes question.replied before the tool part completes,
+          // so the request is gone a beat before the answered card can render.
+          // Hold the last matched request while the part is still busy so the dock
+          // stays mounted instead of vanishing to an empty row and snapping back.
+          const liveQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
+          const [heldQuestion, setHeldQuestion] = createSignal<QuestionRequest>()
+          createEffect(() => {
+            const request = liveQuestion()
+            if (request) {
+              setHeldQuestion(request)
+              return
+            }
+            if (!questionBusy(part)) setHeldQuestion(undefined)
+          })
+          const activeQuestion = createMemo(() => {
+            if (props.interactivePrompts === false) return undefined
+            return liveQuestion() ?? (questionBusy(part) ? heldQuestion() : undefined)
+          })
 
           // Active suggestion tool parts render the interactive SuggestBar inline
-          const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
+          const activeSuggestion = createMemo(() =>
+            props.interactivePrompts === false ? undefined : matchToolRequest(part, "suggest", session.suggestions()),
+          )
           const bash = createMemo(() => {
             if (part.type !== "tool") return
             const tool = part as unknown as ToolPart
@@ -272,7 +293,25 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             if (!planExitInfo(part)) return
             return part as unknown as ToolPart
           })
-          const forceOpen = createMemo(() => !!props.forceOpenPartID && part.id === props.forceOpenPartID)
+          // Reasoning blocks are excluded: they animate their own height and
+          // their header and body bleed 6px past this wrapper, so the grow-in
+          // clip would trim their sides for the whole stream and then release
+          // them when the text stops growing, resizing the block at the end.
+          // Tool parts are excluded too: worktree and session switches remount
+          // them, so the wrapper would replay the reveal on an already-seen tool.
+          // Encrypted reasoning items only set time.end on their summaries once
+          // the whole item finishes, so a summary the stream already moved past
+          // would keep pulsing. Read the full store list: props.parts is a chunk.
+          const settled = createMemo(() => {
+            if (part.type !== "reasoning") return false
+            if (props.message.time.completed) return true
+            const all = (data.store.part?.[props.message.id] ?? props.parts ?? []) as SDKPart[]
+            const index = all.findIndex((item) => item.id === part.id)
+            return index >= 0 && index < all.length - 1
+          })
+          const live = part.type === "text" && !!part.time && !part.time.end
+          let el: HTMLDivElement | undefined
+          useGrowIn(() => el, live)
 
           // Lights up when this part is behind the hovered/focused task-timeline
           // bar, using that bar's own color so the two stay easy to correlate.
@@ -293,6 +332,24 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return <ThroughputBadge metrics={metrics} />
           })
 
+          // Turn finish time and duration render inline in the same action row
+          // as the copy/feedback buttons, on the trailing side, so the turn's
+          // timing never introduces a second line. Only the copy-carrying part
+          // builds it, which keeps it to one row per settled turn.
+          const turnMetaEl = createMemo<JSX.Element | undefined>(() => {
+            const timing = props.timing
+            if (!timing) return undefined
+            if (part.id !== props.showAssistantCopyPartID) return undefined
+            return (
+              <span data-component="message-time">
+                {formatClock(timing.completedAt, language.locale())}
+                <Show when={timing.durationMs}>
+                  {(ms) => <span data-slot="message-time-duration"> · {formatDuration(ms())}</span>}
+                </Show>
+              </span>
+            )
+          })
+
           return (
             <Show
               when={
@@ -305,6 +362,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
               }
             >
               <div
+                ref={el}
                 data-component="tool-part-wrapper"
                 data-part-type={part.type}
                 data-part-id={part.id}
@@ -333,11 +391,12 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
                                       defaultOpen={toolDefaultOpen(part, open(), edit(), mcp())}
-                                      forceOpen={forceOpen()}
-                                      forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
-                                      reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                      reasoningDisplay={display.reasoningDisplay()}
+                                      settled={settled()}
                                       feedback={props.feedback}
                                       throughput={throughputEl()}
+                                      turnMeta={turnMetaEl()}
+                                      readonly={props.readonly}
                                       animate={
                                         part.type === "tool" &&
                                         ((part as unknown as ToolPart).state?.status === "pending" ||
@@ -346,21 +405,15 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                     />
                                   }
                                 >
-                                  <TodoToolCard part={part as unknown as ToolPart} forceOpen={forceOpen()} />
+                                  <TodoToolCard part={part as unknown as ToolPart} />
                                 </Show>
                               }
                             >
-                              {(tool) => (
-                                <BashToolCard
-                                  part={tool() as unknown as ToolPart}
-                                  defaultOpen={open()}
-                                  forceOpen={forceOpen()}
-                                />
-                              )}
+                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
                             </Show>
                           }
                         >
-                          {(tp) => <PlanExitCard part={tp()} />}
+                          {(tp) => <PlanExitCard part={tp()} sessionID={props.message.sessionID} />}
                         </Show>
                       }
                     >

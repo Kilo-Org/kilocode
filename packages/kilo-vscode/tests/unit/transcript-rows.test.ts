@@ -18,6 +18,14 @@ const assistant = (id: string, parentID: string, opts: Partial<Message> = {}): M
   ...opts,
 })
 const part = (id: string, messageID: string): Part => ({ id, messageID, type: "text", text: id })
+const tool = (id: string, messageID: string): Part => ({
+  id,
+  messageID,
+  type: "tool",
+  callID: id,
+  tool: "bash",
+  state: { status: "completed", input: {}, output: "" },
+})
 const lookup = (values: Record<string, Part[]>) => (id: string) => values[id] ?? []
 
 describe("transcriptRows", () => {
@@ -71,6 +79,81 @@ describe("transcriptRows", () => {
 
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({ type: "assistant", turn: "u1", partial: true, queued: true, live: true })
+  })
+
+  it("omits queued user rows without visible content", () => {
+    const cases: Part[][] = [
+      [],
+      [{ ...part("context", "u1"), synthetic: true }],
+      [{ ...part("blank", "u1"), text: " \n\t" }],
+      [{ id: "compact", messageID: "u1", type: "compaction", auto: true }],
+      [{ id: "file", messageID: "u1", type: "file", mime: "text/plain", url: "data:,context" }],
+    ]
+
+    for (const parts of cases) {
+      const rows = transcriptRows(messageTurns([user("u1")]), lookup({ u1: parts }), {
+        queued: new Set(["u1"]),
+      })
+
+      expect(rows).toEqual([])
+    }
+  })
+
+  it("shows a queued message when its visible text arrives after metadata and context", () => {
+    const turns = messageTurns([user("u1")])
+    const opts = { queued: new Set(["u1"]) }
+    const parts: Record<string, Part[]> = {}
+    const get = lookup(parts)
+    const empty = transcriptRows(turns, get, opts)
+    expect(empty).toEqual([])
+
+    parts.u1 = [{ ...part("context", "u1"), synthetic: true }]
+    const hidden = transcriptRows(turns, get, opts, empty)
+    expect(hidden).toEqual([])
+
+    parts.u1 = [...parts.u1, part("prompt", "u1")]
+    const ready = transcriptRows(turns, get, opts, hidden)
+    expect(ready).toHaveLength(1)
+    expect(ready[0]).toMatchObject({ type: "user", key: "u1:user", queued: true, parts: parts.u1 })
+    expect(turns[0]?.user.id).toBe("u1")
+  })
+
+  it("keeps queued image and PDF attachments visible without prompt text", () => {
+    for (const mime of ["image/png", "application/pdf"]) {
+      const parts: Part[] = [
+        { ...part("context", "u1"), synthetic: true },
+        { id: "file", messageID: "u1", type: "file", mime, url: "data:,attachment" },
+      ]
+      const rows = transcriptRows(messageTurns([user("u1")]), lookup({ u1: parts }), {
+        queued: new Set(["u1"]),
+      })
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ type: "user", queued: true, parts })
+    }
+  })
+
+  it("preserves assistant, diff, and error rows when an internal queued user row is hidden", () => {
+    const u1 = user("u1", { summary: { diffs: [{ file: "a.ts" }] } })
+    const a1 = assistant("a1", "u1", { error: { name: "ProviderError" } })
+    const rows = transcriptRows(
+      messageTurns([u1, a1]),
+      lookup({ u1: [{ ...part("context", "u1"), synthetic: true }], a1: [part("reply", "a1")] }),
+      { queued: new Set(["u1"]) },
+    )
+
+    expect(rows.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:assistant", "u1:diff", "u1:error"])
+    expect(rows[0]?.message).toBe(a1)
+  })
+
+  it("does not show a blank queued row when only a later text part has content", () => {
+    const rows = transcriptRows(
+      messageTurns([user("u1")]),
+      lookup({ u1: [{ ...part("first", "u1"), text: "" }, part("later", "u1")] }),
+      { queued: new Set(["u1"]) },
+    )
+
+    expect(rows).toEqual([])
   })
 
   it("places only the first visible non-abort error after diffs", () => {
@@ -149,6 +232,23 @@ describe("transcriptRows", () => {
     expect(rows.filter((row) => row.type === "assistant").map((row) => row.copy)).toEqual(["p1", "p1"])
   })
 
+  it("keeps historical copy rows while hiding the live turn copy row", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const u2 = user("u2")
+    const a2 = assistant("a2", "u2")
+    const rows = transcriptRows(
+      messageTurns([u1, a1, u2, a2]),
+      lookup({ a1: [part("p1", "a1")], a2: [part("p2", "a2")] }),
+      { live: new Set(["u2"]) },
+    )
+
+    expect(rows.filter((row) => row.type === "assistant").map((row) => ({ turn: row.turn, copy: row.copy }))).toEqual([
+      { turn: "u1", copy: "p1" },
+      { turn: "u2", copy: undefined },
+    ])
+  })
+
   it("keeps compaction replies ordered under the compacted turn and respects revert turns", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
@@ -178,6 +278,58 @@ describe("transcriptRows", () => {
     expect(live[0]).not.toBe(second[0])
     expect(live[1]).not.toBe(second[1])
   })
+
+  it("attaches finish time and duration to the row that carries the copy part", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1", { finish: "stop", time: { created: 1_500, completed: 3_500 } })
+    const rows = transcriptRows(messageTurns([u1, a1]), lookup({ a1: [part("p1", "a1")] }))
+
+    expect(rows.find((row) => row.type === "assistant")).toMatchObject({
+      timing: { completedAt: 3_500, durationMs: 2_500 },
+    })
+  })
+
+  it("keeps timing on the copy row when non-text parts follow in a later chunk", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1", { finish: "stop", time: { created: 1_500, completed: 3_500 } })
+    const rows = transcriptRows(
+      messageTurns([u1, a1]),
+      lookup({ a1: [part("p0", "a1"), part("p1", "a1"), tool("t2", "a1"), tool("t3", "a1")] }),
+      { size: 2 },
+    )
+    const assistants = rows.filter((row) => row.type === "assistant")
+
+    expect(assistants).toHaveLength(2)
+    expect(assistants[0]?.timing).toEqual({ completedAt: 3_500, durationMs: 2_500 })
+    expect(assistants[1]?.timing).toBeUndefined()
+  })
+
+  it("keeps timing on the copy row when a later assistant message has no visible parts", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1")
+    const a2 = assistant("a2", "u1", { finish: "stop", time: { created: 1_600, completed: 3_600 } })
+    const rows = transcriptRows(messageTurns([u1, a1, a2]), lookup({ a1: [part("p1", "a1")] }))
+    const assistants = rows.filter((row) => row.type === "assistant")
+
+    expect(assistants[0]?.timing).toEqual({ completedAt: 3_600, durationMs: 2_600 })
+    expect(assistants[1]?.timing).toBeUndefined()
+  })
+
+  it("omits turn timing while the last assistant message is still running", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1", { time: { created: 1_500 } })
+    const rows = transcriptRows(messageTurns([u1, a1]), lookup({ a1: [part("p1", "a1")] }))
+
+    expect(rows.find((row) => row.type === "assistant")?.timing).toBeUndefined()
+  })
+
+  it("omits turn timing when the turn ends on a tool call", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1", { finish: "tool-calls", time: { created: 1_500, completed: 3_500 } })
+    const rows = transcriptRows(messageTurns([u1, a1]), lookup({ a1: [part("p1", "a1")] }))
+
+    expect(rows.find((row) => row.type === "assistant")?.timing).toBeUndefined()
+  })
 })
 
 describe("retainTurn", () => {
@@ -206,17 +358,17 @@ describe("partitionRows", () => {
     })
     const result = partitionRows(rows, new Set(["u2"]))
 
-    expect(result.virtual.map((row) => `${row.turn}:${row.type}`)).toEqual([
-      "u1:user",
-      "u1:assistant",
+    // The whole live turn renders directly; only completed turns are virtualized.
+    expect(result.virtual.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:user", "u1:assistant"])
+    expect(result.direct.map((row) => `${row.turn}:${row.type}`)).toEqual([
       "u2:user",
       "u2:assistant",
       "u2:assistant",
+      "u2:assistant",
     ])
-    expect(result.direct.flatMap((row) => (row.type === "assistant" ? row.parts : [])).map((item) => item.id)).toEqual([
-      "p16",
-      "p17",
-    ])
+    expect(result.direct.flatMap((row) => (row.type === "assistant" ? row.parts : [])).map((item) => item.id)).toEqual(
+      parts.map((item) => item.id),
+    )
   })
 
   it("keeps trailing diff and error rows after the direct assistant suffix", () => {
@@ -227,24 +379,25 @@ describe("partitionRows", () => {
     })
     const result = partitionRows(rows, new Set(["u1"]))
 
-    expect(result.virtual.map((row) => row.type)).toEqual(["user"])
-    expect(result.direct.map((row) => row.type)).toEqual(["assistant", "diff", "error"])
+    expect(result.virtual).toEqual([])
+    expect(result.direct.map((row) => row.type)).toEqual(["user", "assistant", "diff", "error"])
   })
 
   it("returns a completed suffix to virtual history after queue handoff", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
     const u2 = user("u2")
-    const first = transcriptRows(messageTurns([u1, a1, u2]), lookup({ a1: [part("p1", "a1")] }), {
+    const parts = { a1: [part("p1", "a1")], u2: [part("up2", "u2")] }
+    const first = transcriptRows(messageTurns([u1, a1, u2]), lookup(parts), {
       live: new Set(["u1"]),
       queued: new Set(["u2"]),
     })
     const active = partitionRows(first, new Set(["u1"]))
-    expect(active.virtual.map((row) => row.type)).toEqual(["user"])
-    expect(active.direct.map((row) => row.turn)).toEqual(["u1"])
+    expect(active.virtual).toEqual([])
+    expect(active.direct.map((row) => row.turn)).toEqual(["u1", "u1"])
     expect(active.queued.map((row) => row.turn)).toEqual(["u2"])
 
-    const second = transcriptRows(messageTurns([u1, a1, u2]), lookup({ a1: [part("p1", "a1")] }), {
+    const second = transcriptRows(messageTurns([u1, a1, u2]), lookup(parts), {
       live: new Set(["u2"]),
     })
     const handed = partitionRows(second, new Set(["u2"]))
@@ -272,22 +425,26 @@ describe("partitionRows", () => {
     const rows = transcriptRows(messageTurns([u1, u2, a2]), lookup({ a2: [part("p1", "a2")] }))
     const result = partitionRows(rows, new Set(["u1", "u2"]))
 
-    expect(result.virtual.map((row) => row.turn)).toEqual(["u1", "u2"])
-    expect(result.direct.map((row) => `${row.turn}:${row.type}`)).toEqual(["u2:assistant"])
+    expect(result.virtual.map((row) => row.turn)).toEqual(["u1"])
+    expect(result.direct.map((row) => `${row.turn}:${row.type}`)).toEqual(["u2:user", "u2:assistant"])
   })
 
   it("keeps queued rows after virtual and direct rows", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
     const u2 = user("u2")
-    const rows = transcriptRows(messageTurns([u1, a1, u2]), lookup({ a1: [part("p1", "a1")] }), {
-      live: new Set(["u1"]),
-      queued: new Set(["u2"]),
-    })
+    const rows = transcriptRows(
+      messageTurns([u1, a1, u2]),
+      lookup({ a1: [part("p1", "a1")], u2: [part("up2", "u2")] }),
+      {
+        live: new Set(["u1"]),
+        queued: new Set(["u2"]),
+      },
+    )
     const result = partitionRows(rows, new Set(["u1"]))
 
-    expect(result.virtual.map((row) => row.type)).toEqual(["user"])
-    expect(result.direct.map((row) => row.type)).toEqual(["assistant"])
+    expect(result.virtual).toEqual([])
+    expect(result.direct.map((row) => row.type)).toEqual(["user", "assistant"])
     expect(result.queued.map((row) => row.turn)).toEqual(["u2"])
     expect(result.queued[0]).toMatchObject({ type: "user", queued: true })
   })

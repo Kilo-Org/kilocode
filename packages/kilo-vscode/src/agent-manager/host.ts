@@ -10,6 +10,7 @@
 
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
+import type { PRMergeMethod } from "./types"
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -25,6 +26,8 @@ export interface Disposable {
 
 export interface OutputHandle {
   appendLine(msg: string): void
+  /** Reveal the channel, e.g. after writing a report the user asked for. */
+  show?(): void
   dispose(): void
 }
 
@@ -126,17 +129,31 @@ export interface Host {
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
 
+  /** Local files with unsaved editor changes. */
+  dirtyFiles(): string[]
+
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
   pickFolder(): Promise<string | undefined>
 
   /** Whether the experimental multi-project Agent Manager mode is enabled. */
   multiProject(): boolean
+  browserAutomation(): boolean
+
+  /** Whether background worktree pre-warming is enabled. */
+  worktreePool(): boolean
+
+  /** Listen for changes to the worktree pre-warming setting. */
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable
 
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown
 
   /** Persist the additional-project registry payload. */
   writeProjects(value: unknown): Promise<void>
+
+  /** Read and persist the user's last PR merge method per repository. */
+  getPRMergeMethod?(repo: string): PRMergeMethod | undefined
+  savePRMergeMethod?(repo: string, method: PRMergeMethod): Promise<void>
 
   unregisterProjectRoutes(projectId: string): void
 
@@ -154,6 +171,15 @@ export interface Host {
   /** Show an error notification. */
   showError(msg: string): void
 
+  /** Show an info, warning, or error notification. */
+  notify(kind: "info" | "warning" | "error", msg: string): void
+
+  /** Reveal a path in the OS file manager. A no-op (logged) on a remote workspace. */
+  revealInOS(path: string): void
+
+  /** Run a cancellable background task behind a progress notification. */
+  withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T>
+
   /** Open a text document in an editor (e.g. setup script). */
   openDocument(path: string): Promise<void>
 
@@ -167,7 +193,7 @@ export interface Host {
   createOutput(name: string): OutputHandle
 
   /** Read extension keybinding metadata. */
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }>
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
 
   /** Copy text to the system clipboard. */
   copyToClipboard(text: string): void
@@ -177,6 +203,9 @@ export interface Host {
 
   /** Open a URL in the user's default browser. */
   openExternal(url: string): void
+
+  /** Open Kilo Settings, optionally focused on a tab and project. */
+  openSettings(tab?: string, projectId?: string): void
 
   /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
   refreshGit(): void

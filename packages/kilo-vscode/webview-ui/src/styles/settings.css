@@ -115,6 +115,16 @@
   }
 }
 
+.settings-branch-trigger {
+  max-width: 160px;
+}
+
+.settings-branch-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
 [data-variant="wide-input"] [data-slot="settings-row-input"] {
   flex: 1 1 0%;

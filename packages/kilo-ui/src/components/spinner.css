@@ -1,0 +1,5 @@
+@media (prefers-reduced-motion: reduce) {
+  [data-component="spinner"] > rect {
+    animation: none !important;
+  }
+}

@@ -10,22 +10,17 @@ interface ProjectSelectProps {
   projects: AgentProjectSnapshot[]
   selected?: string
   onSelect: (id: string) => void
-  labels: { untrusted: string; missing: string }
+  labels: { missing: string }
 }
 
 export const ProjectSelect: Component<ProjectSelectProps> = (props) => (
   <div class="am-dropdown-list">
     <For each={props.projects}>
       {(project) => {
-        const blocked = () => !project.trusted || project.missing
-        const hint = () => {
-          if (project.missing) return props.labels.missing
-          if (!project.trusted) return props.labels.untrusted
-          return project.root
-        }
+        const blocked = () => project.missing
+        const hint = () => (project.missing ? props.labels.missing : project.root)
         const icon = () => {
           if (project.missing) return "warning" as const
-          if (!project.trusted) return "lock" as const
           return "folder" as const
         }
 

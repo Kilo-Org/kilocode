@@ -164,6 +164,7 @@ describe("Bedrock Converse route", () => {
             Message.user("What is the weather?"),
             Message.assistant([ToolCallPart.make({ id: "tool_1", name: "lookup", input: { query: "weather" } })]),
             Message.tool({ id: "tool_1", name: "lookup", result: { forecast: "sunny" } }),
+            Message.user("Summarize the result."), // kilocode_change - preserve Bedrock role alternation
           ],
           cache: "none",
         }),
@@ -186,6 +187,7 @@ describe("Bedrock Converse route", () => {
                   status: "success",
                 },
               },
+              { text: "Summarize the result." }, // kilocode_change - coalesce adjacent user content
             ],
           },
         ],

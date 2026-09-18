@@ -117,12 +117,15 @@ describe("Extension — package.json command sync", () => {
     })
   })
 
-  it("keeps Agent Manager terminal shortcuts distinct", () => {
+  it("keeps Agent Manager session and terminal shortcuts focus-aware", () => {
     const terminal = pkg.contributes?.keybindings?.find(
       (item: { command: string }) => item.command === "kilo-code.new.agentManager.showTerminal",
     )
     const create = pkg.contributes?.keybindings?.find(
-      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTerminal",
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTerminalTab",
+    )
+    const sessionCreate = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTab",
     )
     expect(terminal).toMatchObject({
       key: "ctrl+/",
@@ -132,8 +135,29 @@ describe("Extension — package.json command sync", () => {
     expect(create).toMatchObject({
       key: "ctrl+shift+t",
       mac: "cmd+shift+t",
-      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
     })
+    expect(sessionCreate).toMatchObject({
+      key: "ctrl+t",
+      mac: "cmd+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
+    })
+    const terminalCreate = pkg.contributes?.keybindings?.find(
+      (item: { command: string; key?: string; mac?: string; when?: string }) =>
+        item.command === "kilo-code.new.agentManager.newSideTerminal" && item.key === "ctrl+t",
+    )
+    expect(terminalCreate).toMatchObject({
+      key: "ctrl+t",
+      mac: "cmd+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerSideTerminalFocused",
+    })
+    expect(
+      pkg.contributes?.keybindings?.some(
+        (item: { command: string }) =>
+          item.command === "kilo-code.new.agentManager.newTerminal" ||
+          item.command === "kilo-code.new.agentManager.newMainTerminal",
+      ),
+    ).toBe(false)
   })
 
   it("declares the Agent Manager terminal destination setting", () => {
@@ -141,7 +165,7 @@ describe("Extension — package.json command sync", () => {
     expect(setting).toMatchObject({
       type: "string",
       scope: "application",
-      default: "vscode",
+      default: "agentManager",
       enum: ["vscode", "agentManager"],
     })
     expect(setting.enumDescriptions).toHaveLength(setting.enum.length)
@@ -201,10 +225,7 @@ describe("Extension — KiloProvider handler wiring", () => {
       instances.push(match.index)
     }
 
-    expect(
-      instances.length,
-      "expected at least 3 KiloProvider instances (sidebar, tab, deserializer)",
-    ).toBeGreaterThanOrEqual(3)
+    expect(instances.length, "expected sidebar and shared tab KiloProvider constructors").toBeGreaterThanOrEqual(2)
 
     const missing: string[] = []
     for (let i = 0; i < instances.length; i++) {
@@ -227,26 +248,40 @@ describe("Extension — KiloProvider handler wiring", () => {
     ).toEqual([])
   })
 
-  it("openKiloInNewTab wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
-    const fn = ext.indexOf("function openKiloInNewTab")
-    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
-    const body = sliceBlock(ext, fn)
-    const handler = body.indexOf("setContinueInWorktreeHandler")
+  it("shared tab setup wires services and handlers before resolveWebviewPanel", () => {
+    const start = ext.indexOf("const attach =")
+    expect(start, "shared tab setup must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(ext, start)
     const resolve = body.indexOf("resolveWebviewPanel")
-    expect(handler, "setContinueInWorktreeHandler must be called").toBeGreaterThan(-1)
     expect(resolve, "resolveWebviewPanel must be called").toBeGreaterThan(-1)
-    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+    for (const name of [
+      "setRemoteService",
+      "setAutoApproveController",
+      "setContinueInWorktreeHandler",
+      "setCreateWorktreeHandler",
+      "setDiffVirtualProvider",
+      "setDiffViewerProvider",
+      "setReviewCommentsHandler",
+    ]) {
+      const handler = body.indexOf(name)
+      expect(handler, `${name} must be called`).toBeGreaterThan(-1)
+      expect(handler, `${name} must be wired before resolving the panel`).toBeLessThan(resolve)
+    }
+    expect(body).toContain("tabPanels.set(panel, tabProvider)")
+    expect(body).toContain("return tabProvider")
   })
 
-  it("TabPanel deserializer wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
-    const serializer = ext.indexOf('"kilo-code.new.TabPanel"')
-    expect(serializer, "TabPanel serializer must exist").toBeGreaterThan(-1)
-    const body = sliceBlock(ext, serializer)
-    const handler = body.indexOf("setContinueInWorktreeHandler")
-    const resolve = body.indexOf("resolveWebviewPanel")
-    expect(handler, "setContinueInWorktreeHandler must be called in deserializer").toBeGreaterThan(-1)
-    expect(resolve, "resolveWebviewPanel must be called in deserializer").toBeGreaterThan(-1)
-    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+  it("new and restored tabs use shared setup and retain disposal", () => {
+    expect(ext).toContain("openKiloInNewTab(context, tabPanels, attach)")
+    for (const name of ["function openKiloInNewTab", '"kilo-code.new.TabPanel"']) {
+      const start = ext.indexOf(name)
+      expect(start, `${name} must exist`).toBeGreaterThan(-1)
+      const body = sliceBlock(ext, start)
+      expect(body).toContain("const tabProvider = attach(panel)")
+      expect(body).toContain("panel.onDidDispose(")
+      expect(body).toContain("tabPanels.delete(panel)")
+      expect(body).toContain("tabProvider.dispose()")
+    }
   })
 })
 
@@ -289,7 +324,7 @@ describe("Extension — Agent Manager remote wiring", () => {
   const host = fs.readFileSync(VSCODE_HOST_FILE, "utf-8")
 
   it("passes the shared remote service to Agent Manager", () => {
-    expect(ext).toContain("new VscodeHost(context.extensionUri, connectionService, context, remoteService)")
+    expect(ext).toContain("new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)")
   })
 
   it("wires the remote service before attaching the Agent Manager webview", () => {

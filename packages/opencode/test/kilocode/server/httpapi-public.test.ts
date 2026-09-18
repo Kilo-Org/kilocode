@@ -39,6 +39,27 @@ type Body = {
 }
 
 describe("Kilo PublicApi OpenAPI contract", () => {
+  test("exposes board paging and reset with a minimal snapshot", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const path = KilocodePaths.sessionBoard.replace(":sessionID", "{sessionID}")
+    const reset = KilocodePaths.resetSessionBoard.replace(":sessionID", "{sessionID}")
+    const query = spec.paths[path]?.get?.parameters as Parameter[] | undefined
+    expect(spec.paths[path]?.get?.operationId).toBe("kilocode.sessionBoard")
+    expect(spec.paths[reset]?.post?.operationId).toBe("kilocode.resetSessionBoard")
+    expect(query?.find((field) => field.name === "limit")?.schema).toMatchObject({
+      type: "integer",
+      minimum: 1,
+      maximum: 50,
+    })
+    expect(Object.keys(spec.components?.schemas?.SessionBoard.properties ?? {}).sort()).toEqual([
+      "cursor",
+      "hasMore",
+      "messages",
+      "ownerSessionID",
+      "revision",
+    ])
+  })
+
   test("uses Kilo branding", () => {
     const spec = OpenApi.fromApi(PublicApi)
     expect(spec.info.title).toBe("kilo")
@@ -51,11 +72,20 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       "suggestion.shown",
       "session.network.asked",
       "background_process.updated",
-      "interactive_terminal.updated",
       "indexing.status",
     ]) {
       expect(spec).toContain(type)
     }
+  })
+
+  test("omits interactive terminal routes and events while preserving PTY routes", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const serialized = JSON.stringify(spec)
+    expect(serialized).not.toContain("interactive-terminal")
+    expect(serialized).not.toContain("interactive_terminal")
+    expect(serialized).not.toContain("InteractiveTerminal")
+    expect(spec.paths["/pty"]?.post).toBeDefined()
+    expect(spec.paths["/pty/{ptyID}/connect"]?.get).toBeDefined()
   })
 
   test("constrains embedding model metadata", () => {
@@ -152,6 +182,8 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.tuiConfig },
       { method: "get", path: ConfigConsolePaths.tuiKeybinds },
       { method: "patch", path: ConfigConsolePaths.tuiConfig },
+      { method: "get", path: KilocodePaths.providerUsage },
+      { method: "post", path: KilocodePaths.providerUsageRefresh },
       { method: "get", path: KilocodePaths.sessionModelUsage },
       { method: "post", path: BranchNamePaths.generate },
       { method: "get", path: MemoryPaths.status },
@@ -212,6 +244,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(auth).toEqual({
       authenticated: { type: "boolean" },
       type: { type: "string", enum: ["api", "oauth"] },
+      organizationId: { type: "string" },
     })
 
     const sessions = response(KiloGatewayPaths.cloudSessions)?.properties
@@ -219,16 +252,6 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       anyOf: [{ type: "string" }, { type: "null" }],
     })
     expect(sessions?.nextCursor).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
-
-    const claw = response(KiloGatewayPaths.clawStatus)?.properties
-    expect(claw?.status).toEqual({ anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }] })
-    for (const field of ["openclawVersion", "lastStartedAt", "lastStoppedAt", "botName"]) {
-      expect(claw?.[field]).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
-    }
-
-    expect(response(KiloGatewayPaths.clawChatCredentials)).toEqual({
-      anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }],
-    })
   })
 
   test("keeps transcription prompts in the public contract", () => {
@@ -236,6 +259,39 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const body = spec.paths[KiloGatewayPaths.audioTranscriptions]?.post?.requestBody as Body | undefined
     const schema = body?.content?.["application/json"]?.schema
     expect(schema?.properties?.prompt).toEqual({ type: "string" })
+  })
+
+  test("keeps provider usage flat and credential-free", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const schemas = (spec.components?.schemas ?? {}) as Record<string, Schema>
+    const usage = Object.fromEntries(Object.entries(schemas).filter(([name]) => name.startsWith("ProviderUsage")))
+    const keys = (value: unknown): string[] => {
+      if (Array.isArray(value)) return value.flatMap(keys)
+      if (!value || typeof value !== "object") return []
+      return Object.entries(value).flatMap(([key, item]) => [key, ...keys(item)])
+    }
+    const fields = keys(usage).map((key) => key.toLowerCase())
+
+    expect(spec.paths[KilocodePaths.providerUsage]?.get?.responses?.["200"]).toBeDefined()
+    expect(spec.paths[KilocodePaths.providerUsageRefresh]?.post?.responses?.["200"]).toBeDefined()
+    expect(schemas.ProviderUsageSnapshot?.properties?.windows).toBeDefined()
+    for (const forbidden of [
+      "key",
+      "token",
+      "authorization",
+      "raw",
+      "endpoint",
+      "stripepaymentmethodid",
+      "inventoryid",
+      "upstreamplanid",
+      "fingerprint",
+      "ciphertext",
+    ]) {
+      expect(
+        fields.filter((field) => field.includes(forbidden)),
+        forbidden,
+      ).toEqual([])
+    }
   })
 
   test("documents the transcription model catalog route", () => {

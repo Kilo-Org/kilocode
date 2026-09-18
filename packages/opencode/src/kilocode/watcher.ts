@@ -1,10 +1,12 @@
 import { InstanceState } from "@/effect/instance-state"
+import { registerDisposer } from "@/effect/instance-registry"
+import type { InstanceContext } from "@/project/instance-context"
 import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Location } from "@opencode-ai/core/location"
 import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
 import { AbsolutePath } from "@opencode-ai/core/schema"
-import { Cause, Context, Effect, Layer, Scope } from "effect"
+import { Cause, Context, Effect, Exit, Layer, Scope } from "effect"
 
 const log = Log.create({ service: "kilocode-watcher" })
 
@@ -17,13 +19,8 @@ export namespace KilocodeWatcher {
 
   // Embedded editor clients (VS Code, JetBrains) have their own file watching
   // and git integration and do not consume the CLI's vcs.branch.updated event,
-  // so they must not eagerly warm the location stack — that starts a native
-  // @parcel/watcher subscription per instance that lives for the whole session.
-  // On macOS FSEvents watches the entire subtree recursively (the ignore list
-  // is only a userspace filter), so an always-on, consumer-less watcher on a
-  // churny workspace burns CPU and leaks native memory while idle. The
-  // standalone CLI/TUI stays eager because its sidebar branch label is the only
-  // consumer and no request-driven route would otherwise build the stack.
+  // so they must not eagerly warm the location stack. The standalone CLI/TUI
+  // keeps this subscription for live branch-label updates.
   export function eager(client = Flag.KILO_CLIENT) {
     return client !== "vscode" && client !== "jetbrains"
   }
@@ -33,31 +30,47 @@ export namespace KilocodeWatcher {
     Effect.gen(function* () {
       const locations = yield* LocationServiceMap.Service
       const scope = yield* Scope.Scope
+      const active = new Map<string, Scope.Closeable>()
+      const ref = (directory: string) => Location.Ref.make({ directory: AbsolutePath.make(directory) })
 
-      const state = yield* InstanceState.make(
-        Effect.fn("KilocodeWatcher.state")(function* (ctx) {
-          if (ctx.project.vcs !== "git") return
-          // Warm the v2 location stack for this instance and hold it for the
-          // instance lifetime. Its Watcher subscribes to .git so Vcs sees HEAD
-          // changes and publishes vcs.branch.updated in the CLI, where no v2
-          // route would otherwise build the stack. The ref must be built the
-          // same way the file/pty handlers build theirs (Location.Ref.make) so
-          // the LayerMap shares a single build per directory.
-          const ref = Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) })
-          yield* locations.contextEffect(ref)
-          // Tear the stack down with the instance instead of letting it idle
-          // in the LayerMap; same pattern as the pty handlers' disposer.
-          yield* Effect.addFinalizer(() => locations.invalidate(ref).pipe(Effect.ignore))
-        }),
+      const off = registerDisposer((directory) =>
+        Effect.runPromise(
+          Effect.gen(function* () {
+            const child = active.get(directory)
+            if (child) {
+              active.delete(directory)
+              yield* Scope.close(child, Exit.void)
+            }
+            yield* locations.invalidate(ref(directory))
+          }).pipe(Effect.ignore),
+        ),
       )
+      yield* Effect.addFinalizer(() => Effect.sync(off))
+      yield* Effect.addFinalizer(() =>
+        Effect.forEach(active.values(), (child) => Scope.close(child, Exit.void), { discard: true }).pipe(
+          Effect.andThen(Effect.sync(() => active.clear())),
+        ),
+      )
+
+      const warm = (ctx: InstanceContext, child: Scope.Closeable) =>
+        Scope.provide(child)(locations.contextEffect(ref(ctx.directory)))
 
       return Service.of({
         init: Effect.fn("KilocodeWatcher.init")(function* () {
-          yield* InstanceState.get(state).pipe(
+          const ctx = yield* InstanceState.context
+          if (ctx.project.vcs !== "git" || active.has(ctx.directory)) return
+
+          const child = yield* Scope.make()
+          active.set(ctx.directory, child)
+          yield* warm(ctx, child).pipe(
             Effect.catchCause((cause) =>
-              Effect.sync(() => log.warn("instance watcher init failed", { err: Cause.squash(cause) })),
+              Effect.gen(function* () {
+                if (active.get(ctx.directory) === child) active.delete(ctx.directory)
+                yield* Scope.close(child, Exit.void).pipe(Effect.ignore)
+                yield* Effect.sync(() => log.warn("instance watcher init failed", { err: Cause.squash(cause) }))
+              }),
             ),
-            Effect.forkIn(scope),
+            Effect.forkIn(scope, { startImmediately: true }),
           )
         }),
       })

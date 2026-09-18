@@ -9,6 +9,9 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
+import ai.kilocode.client.session.views.tool.ApprovalReasonTarget
+import ai.kilocode.client.session.views.tool.ToolApprovalFooter
+import ai.kilocode.client.session.views.tool.approvalReasonsVisible
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -28,16 +31,19 @@ class QuestionResultView(
     tool: Tool,
     selection: SessionSelection? = null,
     private val parts: QuestionParts = questionParts(selection),
-) : AbstractSessionPartView(parts.header, { parts.body }) {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { parts.body }, { footer }), ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
     private var result = parse(tool)
+    private var item = tool
     private var style = SessionEditorStyle.current()
 
     init {
         applyStyle(style)
         syncLabels()
+        syncApprovalReason(approvalReasonsVisible())
     }
 
     override fun expand(): Boolean {
@@ -49,11 +55,16 @@ class QuestionResultView(
 
     override fun update(content: Content) {
         if (content !is Tool) return
+        item = content
         val next = parse(content)
-        if (next == result) return
+        if (next == result) {
+            if (syncApprovalReason(approvalReasonsVisible())) refresh()
+            return
+        }
         result = next
         syncLabels()
         if (isExpanded()) parts.body.set(result.questions, result.answers)
+        syncApprovalReason(approvalReasonsVisible())
         refresh()
     }
 
@@ -62,7 +73,14 @@ class QuestionResultView(
         var changed = setFont(parts.title, style.boldFont)
         changed = setFont(parts.sub, style.smallFont) || changed
         changed = parts.body.applyStyle(style) || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     fun labelText(): String = listOf(parts.title.text, parts.sub.text).filter { it.isNotBlank() }.joinToString(" ")

@@ -15,6 +15,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { groupApplyConflicts } from "./apply-conflicts"
 import { ApplyDialog } from "./ApplyDialog"
 import { composeDiffId } from "./diff-scope-state"
+import { diffDataKey } from "./worktree-diffs"
 import type { tracker } from "./telemetry"
 import type { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import type { useLanguage } from "../src/context/language"
@@ -40,6 +41,7 @@ interface ApplyToLocalOptions {
   diffLoading: Accessor<boolean>
   /** Telemetry: metrics.track(name, surface, data). */
   track: ReturnType<typeof tracker>["track"]
+  projectId?: Accessor<string | undefined>
 }
 
 export function createApplyToLocal(opts: ApplyToLocalOptions) {
@@ -73,7 +75,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
   const applyDiffs = createMemo(() => {
     const key = applyDiffKey()
     if (!key) return [] as WorktreeFileDiff[]
-    return diffDatas()[key] ?? ([] as WorktreeFileDiff[])
+    return diffDatas()[diffDataKey(opts.projectId?.(), key)] ?? ([] as WorktreeFileDiff[])
   })
 
   const applyStateForTarget = createMemo(() => {
@@ -116,7 +118,12 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
         conflicts: [],
       },
     }))
-    vscode.postMessage({ type: "agentManager.applyWorktreeDiff", worktreeId, selectedFiles })
+    vscode.postMessage({
+      type: "agentManager.applyWorktreeDiff",
+      projectId: opts.projectId?.(),
+      worktreeId,
+      selectedFiles,
+    })
   }
 
   const resetApplyDialog = () => {
@@ -177,7 +184,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
     setApplyTarget(sel)
     setApplySelectionTouched(false)
     setApplySelectedFiles([])
-    vscode.postMessage({ type: "agentManager.requestWorktreeDiff", sessionId: sel })
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiff", projectId: opts.projectId?.(), sessionId: sel })
 
     setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
 

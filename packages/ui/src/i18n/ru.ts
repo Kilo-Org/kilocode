@@ -202,6 +202,7 @@ export const dict = {
   "ui.patch.action.created": "Создано",
   "ui.patch.action.moved": "Перемещено",
   "ui.patch.action.patched": "Изменено",
+  "ui.patch.action.plan": "План", // kilocode_change
 
   "ui.question.subtitle.answered": "Получено ответов: {{count}}",
   "ui.question.answer.none": "(нет ответа)",
@@ -228,6 +229,10 @@ export const dict = {
   "ui.mermaid.copySvg": "Копировать SVG",
   "ui.mermaid.download": "Скачать",
   "ui.mermaid.downloadPng": "Скачать PNG",
+  "ui.mermaid.zoom": "Масштаб",
+  "ui.mermaid.zoomIn": "Увеличить",
+  "ui.mermaid.zoomOut": "Уменьшить",
+  "ui.mermaid.zoomReset": "Сбросить масштаб",
   "ui.mermaid.downloadSvg": "Скачать SVG",
   "ui.mermaid.errorDefault": "Не удалось отрисовать диаграмму Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid отрисовал пустую диаграмму.",
@@ -236,11 +241,17 @@ export const dict = {
   "ui.message.deleteQueued": "Удалить сообщение из очереди",
   "ui.messagePart.mcp.input": "Ввод",
   "ui.messagePart.mcp.output": "Вывод",
+  "ui.messagePart.board.read": "Чтение сообщений агентов",
+  "ui.messagePart.board.all": "Все агенты",
+  "ui.messagePart.board.primary": "Главный агент",
+  "ui.messagePart.board.agent": "Агент",
+  "ui.messagePart.board.route": "Отправитель: {{from}}, получатель: {{to}}",
+  "ui.messagePart.board.empty": "Нет сообщений агентов",
+  "ui.messagePart.board.stored": "Только сохранено. Доставка и прочтение не подтверждены.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Изменено",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · сохранено {{kept}} из {{total}} строк",
   // kilocode_change end
 }

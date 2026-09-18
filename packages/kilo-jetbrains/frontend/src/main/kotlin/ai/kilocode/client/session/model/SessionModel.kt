@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.ToolApprovalDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -105,6 +106,16 @@ class SessionModel {
 
     @RequiresEdt
     fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
+
+    /**
+     * Every `task` tool's spawned child session id, in the order the tools first appeared —
+     * insertion order of [entries] and of each [Message.parts] map, both `LinkedHashMap`s. Used to
+     * give the shared agent board a stable per-participant avatar (see
+     * `ai.kilocode.client.session.board.BoardAvatars`), not [childRefs], which is unordered.
+     */
+    @RequiresEdt
+    fun childSessions(): List<String> =
+        entries.values.flatMap { it.parts.values }.filterIsInstance<Tool>().mapNotNull { it.childSessionId }
 
     @RequiresEdt
     fun turns(): Collection<Turn> = turnEntries.values
@@ -510,6 +521,7 @@ class SessionModel {
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
+                existing.approval = dto.approval?.toModel()
                 existing.childSessionId = childID(existing)
                 if (old != null && old != existing.childSessionId) {
                     childRefs.remove(old)
@@ -566,6 +578,7 @@ class SessionModel {
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata
+                approval = dto.approval?.toModel()
                 childSessionId = childID(this)
                 output = dto.output
                 error = dto.error
@@ -928,6 +941,16 @@ private fun renderTool(tool: Tool): String {
     ).filterNotNull().joinToString("")
     return "tool#${tool.id} ${tool.name} [$state]$title$data"
 }
+
+private fun ToolApprovalDto.toModel() = ToolApproval(
+    source = source,
+    agent = agent,
+    rulePermission = rulePermission,
+    rulePattern = rulePattern,
+    ruleAction = ruleAction,
+    outsideWorkspace = outsideWorkspace,
+    outsideWorkspacePath = outsideWorkspacePath,
+)
 
 private fun renderMap(map: Map<String, String>): String =
     map.entries.sortedBy { it.key }.joinToString(",", "{", "}") { "${it.key}=${it.value}" }

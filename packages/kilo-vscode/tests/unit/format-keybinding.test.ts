@@ -89,4 +89,29 @@ describe("buildKeybindingMap", () => {
     expect(buildKeybindingMap([], false).previousTerminal).toBe("Ctrl+Shift+[")
     expect(buildKeybindingMap([], false).nextTerminal).toBe("Ctrl+Shift+]")
   })
+
+  it("keeps prompt and side-terminal shortcuts separate", () => {
+    const bindings = [
+      {
+        command: "kilo-code.new.agentManager.newTerminalTab",
+        key: "ctrl+shift+t",
+        mac: "cmd+shift+t",
+        when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerPromptFocused",
+      },
+      {
+        command: "kilo-code.new.agentManager.newSideTerminal",
+        key: "ctrl+t",
+        mac: "cmd+t",
+        when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerSideTerminalFocused",
+      },
+    ]
+    expect(buildKeybindingMap(bindings, true)).toMatchObject({
+      newTerminalCenter: "⌘⇧T",
+      newTerminalTerminal: "⌘T",
+    })
+    expect(buildKeybindingMap(bindings, false)).toMatchObject({
+      newTerminalCenter: "Ctrl+Shift+T",
+      newTerminalTerminal: "Ctrl+T",
+    })
+  })
 })

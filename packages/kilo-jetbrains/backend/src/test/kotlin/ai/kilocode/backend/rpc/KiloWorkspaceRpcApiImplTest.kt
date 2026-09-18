@@ -6,6 +6,7 @@ import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.WorkspaceFileDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -59,6 +60,21 @@ class KiloWorkspaceRpcApiImplTest {
         } finally {
             delete(dir)
         }
+    }
+
+    @Test
+    fun `state maps unsupported workspace`() = runBlocking {
+        val app = app()
+        val rpc = KiloWorkspaceRpcApiImpl(app)
+
+        val state = withTimeoutOrNull(15_000) {
+            rpc.state("/${'$'}devcontainer.ij/abc@u~run~user~1001~podman~podman.sock/workspaces/project")
+                .first { it.status == KiloWorkspaceStatusDto.UNSUPPORTED }
+        }
+
+        assertNotNull(state)
+        assertEquals(KiloWorkspaceStatusDto.UNSUPPORTED, state.status)
+        assertEquals("devcontainer_virtual_filesystem", state.error)
     }
 
     private suspend fun app(): KiloBackendAppService {

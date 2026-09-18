@@ -30,7 +30,6 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { File } from "@kilocode/kilo-ui/file"
 import { SessionContext } from "../context/session"
-import { AgentRequirementsContext, type AgentRequirementsContextValue } from "../context/agent-requirements"
 import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
 import { IndexingProvider } from "../context/indexing"
@@ -52,7 +51,6 @@ import type {
   SessionCloseReason,
   QuestionRequest,
   SuggestionRequest,
-  AgentRequirementResult,
 } from "../types/messages"
 
 type PluginSpec = string | [string, Record<string, unknown>]
@@ -112,6 +110,8 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     providers: () => MOCK_PROVIDERS as any,
     connected: () => ["kilo"],
     defaults: () => ({}),
+    organizationId: () => null,
+    ready: () => true,
     defaultSelection: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     models,
     findModel: (sel: any) => _findModel(models(), sel),
@@ -199,11 +199,13 @@ export function mockSessionValue(overrides?: {
     statusInfo: () => ({ type: status }),
     closeReason: () => overrides?.closeReason,
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
-    busySince: () => (status === "busy" ? Date.now() - 2000 : undefined),
+    busyTiming: () => (status === "busy" ? { active: 2000, since: Date.now() } : undefined),
     loading: () => false,
     loadingOlderMessages: () => false,
     hasOlderMessages: () => false,
     submitting: () => false,
+    canResume: () => false,
+    resume: noop,
     draftSessionID: () => undefined,
     setDraftSessionID: noop,
     userClearedSession: () => false,
@@ -217,6 +219,8 @@ export function mockSessionValue(overrides?: {
     getParts: () => [],
     getSessionToolParts: () => [],
     getSessionToolCount: () => 0,
+    dismissedBackgroundJobs: () => new Set<string>(),
+    dismissBackgroundJobs: noop,
     isErrorHidden: () => false,
     hydrateParts: noop,
     todos: () => [],
@@ -232,10 +236,11 @@ export function mockSessionValue(overrides?: {
     scopedSuggestions: (sid?: string) => (sid ? suggestions.filter((item) => item.sessionID === sid) : suggestions),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
-    configModelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
-    hasModelOverride: () => false,
-    clearModelOverride: noop,
+    preferredSelection: () => undefined,
+    preferencesReady: () => true,
+    rememberSelection: noop,
+    trackScopes: () => noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
     modelUsage: () => undefined,
@@ -264,9 +269,10 @@ export function mockSessionValue(overrides?: {
     variantList: () => [],
     currentVariant: () => undefined,
     variantForAgent: () => undefined,
+    variantPreference: () => undefined,
     selectVariant: noop,
-    sendMessage: noop,
-    sendCommand: noop,
+    sendMessage: () => true,
+    sendCommand: () => true,
     abort: noop,
     compact: noop,
     respondToPermission: noop,
@@ -280,6 +286,11 @@ export function mockSessionValue(overrides?: {
     loadSessions: noop,
     loadOlderMessages: () => false,
     selectSession: noop,
+    // MessageList reads both on mount: `scrollBottomID` must be an accessor
+    // because it is passed to `on(...)`. Omitting it throws and takes down
+    // every chat story in the visual regression suite.
+    scrollBottomID: () => undefined,
+    consumeScrollBottom: () => false,
     deleteSession: noop,
     renameSession: noop,
     syncSession: noop,
@@ -299,9 +310,6 @@ interface StoryProvidersProps {
   questions?: QuestionRequest[]
   suggestions?: SuggestionRequest[]
   notifications?: KilocodeNotification[]
-  agentRequirements?: AgentRequirementResult
-  agentRequirementsChecking?: boolean
-  agentRequirementsBlocked?: boolean
   status?: string
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
@@ -345,6 +353,8 @@ const ConfigWrapper: ParentComponent<{
       return {
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
         sandboxControls: props.features?.sandboxControls ?? false,
+        backgroundSubagents: props.features?.backgroundSubagents ?? false,
+        speechToText: props.features?.speechToText ?? true,
       }
     })
 
@@ -416,23 +426,6 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
   })
   const notifications = mockNotificationsValue(props.notifications)
   const [locale] = createSignal<"en">("en")
-  const result = () => props.agentRequirements
-  const visible = () => {
-    const value = result()
-    return value?.state === "blocked" || value?.state === "error"
-  }
-  const requirements: AgentRequirementsContextValue = {
-    result,
-    checking: () => props.agentRequirementsChecking ?? false,
-    blocked: () => {
-      if (props.agentRequirementsBlocked !== undefined) return props.agentRequirementsBlocked
-      const value = result()
-      if (!value) return props.agentRequirementsChecking === true
-      return value.enabled && (value.state === "blocked" || value.state === "error")
-    },
-    visible,
-  }
-
   return (
     <VSCodeProvider>
       <ServerProvider>
@@ -460,36 +453,34 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                     <I18nProvider value={{ locale: () => "en", t, plural }}>
                       <NotificationsContext.Provider value={notifications}>
                         <SessionContext.Provider value={session as any}>
-                          <AgentRequirementsContext.Provider value={requirements}>
-                            <MemoryProvider>
-                              <IndexingProvider>
-                                <KiloEmbeddingModelsProvider>
-                                  <DataProvider
-                                    data={data()}
-                                    directory="/project/"
-                                    onOpenDiff={props.onOpenDiff}
-                                    onOpenFile={props.onOpenFile}
-                                  >
-                                    <DiffComponentProvider component={Diff}>
-                                      <CodeComponentProvider component={Code}>
-                                        <FileComponentProvider component={File}>
-                                          <MarkedProvider>
-                                            <TranscriptSearchProvider>
-                                              {props.noPadding ? (
-                                                props.children
-                                              ) : (
-                                                <div style={{ padding: "12px" }}>{props.children}</div>
-                                              )}
-                                            </TranscriptSearchProvider>
-                                          </MarkedProvider>
-                                        </FileComponentProvider>
-                                      </CodeComponentProvider>
-                                    </DiffComponentProvider>
-                                  </DataProvider>
-                                </KiloEmbeddingModelsProvider>
-                              </IndexingProvider>
-                            </MemoryProvider>
-                          </AgentRequirementsContext.Provider>
+                          <MemoryProvider>
+                            <IndexingProvider>
+                              <KiloEmbeddingModelsProvider>
+                                <DataProvider
+                                  data={data()}
+                                  directory="/project/"
+                                  onOpenDiff={props.onOpenDiff}
+                                  onOpenFile={props.onOpenFile}
+                                >
+                                  <DiffComponentProvider component={Diff}>
+                                    <CodeComponentProvider component={Code}>
+                                      <FileComponentProvider component={File}>
+                                        <MarkedProvider>
+                                          <TranscriptSearchProvider>
+                                            {props.noPadding ? (
+                                              props.children
+                                            ) : (
+                                              <div style={{ padding: "12px" }}>{props.children}</div>
+                                            )}
+                                          </TranscriptSearchProvider>
+                                        </MarkedProvider>
+                                      </FileComponentProvider>
+                                    </CodeComponentProvider>
+                                  </DiffComponentProvider>
+                                </DataProvider>
+                              </KiloEmbeddingModelsProvider>
+                            </IndexingProvider>
+                          </MemoryProvider>
                         </SessionContext.Provider>
                       </NotificationsContext.Provider>
                     </I18nProvider>

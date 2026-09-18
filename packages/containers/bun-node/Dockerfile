@@ -19,8 +19,20 @@ RUN set -euo pipefail; \
   | tar -xJf - -C /usr/local --strip-components=1; \
   corepack enable
 
+# kilocode_change start - retry the installer and its internal release download
 RUN set -euo pipefail; \
-  curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"; \
+  for attempt in 1 2 3 4 5; do \
+    if curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"; then \
+      break; \
+    fi; \
+    if [ "$attempt" -eq 5 ]; then \
+      echo "Bun installation failed after 5 attempts" >&2; \
+      exit 1; \
+    fi; \
+    echo "Bun installation failed, retrying ($attempt/5)" >&2; \
+    sleep "$((attempt * 5))"; \
+  done; \
   bun --version; \
   node --version; \
   npm --version
+# kilocode_change end

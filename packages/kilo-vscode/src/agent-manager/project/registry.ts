@@ -28,8 +28,6 @@ export interface StoredProject {
   /** Optional user-facing display name. */
   label?: string
   order: number
-  /** Whether project-controlled scripts may execute for this project. */
-  trusted: boolean
   addedAt: string
   /** Whether this project accordion should render its body. */
   expanded?: boolean
@@ -61,7 +59,6 @@ function valid(entry: unknown): entry is StoredProject {
     typeof e.id === "string" &&
     typeof e.root === "string" &&
     typeof e.order === "number" &&
-    typeof e.trusted === "boolean" &&
     typeof e.addedAt === "string" &&
     (e.expanded === undefined || typeof e.expanded === "boolean")
   )
@@ -165,7 +162,6 @@ export class ProjectRegistry {
       root: input.root,
       label: input.label,
       order,
-      trusted: false,
       addedAt: new Date().toISOString(),
     }
     await this.write([...current.projects, project], current.pinnedExpanded)
@@ -184,20 +180,6 @@ export class ProjectRegistry {
     const pinnedExpanded = { ...current.pinnedExpanded }
     delete pinnedExpanded[id]
     await this.write(next, pinnedExpanded)
-    return true
-  }
-
-  setTrusted(id: string, trusted: boolean): Promise<boolean> {
-    return this.run(() => this.doSetTrusted(id, trusted))
-  }
-
-  private async doSetTrusted(id: string, trusted: boolean): Promise<boolean> {
-    const current = this.fresh()
-    if (!current.projects.find((p) => p.id === id)) return false
-    await this.write(
-      current.projects.map((p) => (p.id === id ? { ...p, trusted } : p)),
-      current.pinnedExpanded,
-    )
     return true
   }
 

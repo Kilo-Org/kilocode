@@ -26,6 +26,9 @@ dependencies {
     implementation(libs.commonmark.autolink)
     implementation(libs.commonmark.tables)
     implementation(libs.commonmark.strikethrough)
+    // Bundled explicitly rather than relied on as a transitive of commonmark-ext-autolink: the URL
+    // scanner is used directly to linkify code spans.
+    implementation(libs.autolink)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.zxing.core)
 
@@ -68,5 +71,8 @@ tasks.test {
     // discovered by the vintage engine via JUnit Platform
     useJUnitPlatform()
     // Ensure JUnit 3/4 tests run via vintage engine
-    jvmArgs("-Didea.force.use.core.classloader=true")
+    // Headless matches CI, which has no X display. Without it, Swing paths that need a headful
+    // toolkit (BasicListUI's selection handling calls Toolkit.getMenuShortcutKeyMaskEx) pass locally
+    // on a developer machine and only fail in CI.
+    jvmArgs("-Didea.force.use.core.classloader=true", "-Djava.awt.headless=true")
 }

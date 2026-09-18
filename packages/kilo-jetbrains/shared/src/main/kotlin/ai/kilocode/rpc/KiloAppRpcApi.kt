@@ -4,6 +4,8 @@ import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.LogConfigDto
+import ai.kilocode.rpc.dto.LogFileDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
@@ -74,6 +76,21 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /** Patch global CLI config values. */
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
+
+    /** Apply frontend-managed diagnostic log settings in the backend process. */
+    suspend fun applyLogConfig(config: LogConfigDto)
+
+    /** Whether Kilo-managed worktrees under `.kilo/worktrees` are indexed by their containing project. */
+    suspend fun indexWorktrees(): Boolean
+
+    /**
+     * Persist whether Kilo-managed worktrees under `.kilo/worktrees` are indexed, and reindex every
+     * open project so the change takes effect immediately.
+     */
+    suspend fun setIndexWorktrees(value: Boolean)
+
+    /** Read the backend diagnostic log file for download in split mode. Null when absent. */
+    suspend fun backendLogFile(): LogFileDto?
 
     /** Refresh the user profile and return the latest data, or null if not logged in. */
     suspend fun refreshProfile(): ProfileDto?

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { isEligible, setKillSwitch, resetEligibility, type OrgState } from "@/kilocode/session-export/eligibility"
 
 const base = {
@@ -11,6 +11,7 @@ const base = {
 
 describe("isEligible", () => {
   beforeEach(() => resetEligibility())
+  afterEach(() => resetEligibility())
 
   test("free Kilo Gateway personal context is eligible", () => {
     expect(isEligible(base)).toBe(true)

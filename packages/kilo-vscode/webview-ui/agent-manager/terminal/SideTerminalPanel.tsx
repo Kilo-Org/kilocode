@@ -5,8 +5,14 @@
  * panels, so every mode uses the same persisted resize width. The tab row is
  * the shared inspector strip used by subagents as well.
  *
- * Visibility is opacity-based, never unmount: the xterm render loop dies when
- * its subtree leaves the paint tree (see `render.tsx`).
+ * Hidden slots are translated off-screen while keeping their layout
+ * box, never unmounted: xterm keeps its buffer, socket, and parser
+ * alive, while xterm's own render observer (IntersectionObserver on the
+ * screen element) pauses the render loop for hidden slots and replays a
+ * full refresh when a slot becomes visible again. Keeping the box means
+ * FitAddon can measure the panel (correct wrapping) even while hidden.
+ * `TerminalTab` still does an explicit fit + refresh on activation as
+ * insurance (see `render.tsx`).
  */
 
 import type { Accessor, Component } from "solid-js"
@@ -40,6 +46,7 @@ interface Props {
   /** Deliberately stop a running script terminal. */
   onStop: (terminalId: string) => void
   onFocusPrompt: () => void
+  onFocusChange?: (focused: boolean) => void
 }
 
 export const SideTerminalPanel: Component<Props> = (props) => {
@@ -52,8 +59,9 @@ export const SideTerminalPanel: Component<Props> = (props) => {
   const ids = () => sides().map((term) => term.id)
   const active = () => props.state.sideActiveFor(props.contextKey())
   const pending = () => props.state.pendingSide(props.contextKey())
-  const close = (id: string, focus: { restore: () => void }) => {
+  const close = (id: string, focus: { restore: () => void }, release: () => void) => {
     props.onClose(id)
+    requestAnimationFrame(release)
     if (ids().length > 0) focus.restore()
   }
 
@@ -71,6 +79,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
         overlay={(id) => props.state.title(id) ?? t("agentManager.tab.terminal")}
         onSelect={props.onSelect}
         onReorder={(from, to) => props.state.reorderSideDrag(props.contextKey(), from, to)}
+        drag={() => ({ kind: "terminal" })}
         renderTab={(id, api) => {
           const term = sides().find((item) => item.id === id)
           if (!term) return null
@@ -80,6 +89,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
               label={props.state.title(term.id) ?? term.title}
               tooltip={props.state.title(term.id) ?? term.title}
               status={props.state.scriptStatus(term.id)}
+              state={props.state.activity(term.id)}
               showKeybind={false}
               keybind={active() === term.id ? "" : props.nextKeybind}
               closeKeybind={props.closeKeybind}
@@ -94,9 +104,9 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                 if (event.button !== 1) return
                 event.preventDefault()
                 event.stopPropagation()
-                close(term.id, api.focus)
+                close(term.id, api.focus, api.release)
               }}
-              onClose={() => close(term.id, api.focus)}
+              onClose={() => close(term.id, api.focus, api.release)}
               onCloseOthers={() => props.onCloseOthers(term.id)}
               onStop={(event) => {
                 event.stopPropagation()
@@ -127,6 +137,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
         contextKey: props.contextKey,
         visible: props.visible,
         onFocusPrompt: props.onFocusPrompt,
+        onFocusChange: props.onFocusChange,
       })}
       <Show when={props.visible() && sides().length === 0 && pending()}>
         <div class="am-side-terminal-state" role="status">

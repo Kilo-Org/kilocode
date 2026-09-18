@@ -123,6 +123,27 @@ describe("VtScreen", () => {
     expect(vt.lines()[0]).toBe("abc")
   })
 
+  test.each(["]", "P", "X", "^", "_"])("keeps chunked %s control-string payloads off the screen", (start) => {
+    const vt = new VtScreen(20, 5)
+    for (const char of `a${ESC}${start}hidden${ESC}\\b`) vt.write(char)
+    expect(vt.text()).toBe("ab")
+  })
+
+  test("only OSC accepts BEL as a string terminator", () => {
+    const vt = new VtScreen(20, 5)
+    vt.write(`${ESC}Pquery\x07still hidden${ESC}\\${ESC}]0;title\x07visible`)
+    expect(vt.text()).toBe("visible")
+  })
+
+  test("reconstructs split cursor-addressed redraws without joining unrelated rows", () => {
+    const vt = new VtScreen(100, 40)
+    vt.write(`${CSI}Hleft${"\r\n".repeat(39)}${CSI}1;5`)
+    vt.write("Hright")
+    expect(vt.lines().at(0)).toBe("leftright")
+    vt.write(`${CSI}1;5H${CSI}K${CSI}2;1Hright`)
+    expect(vt.text()).not.toContain("leftright")
+  })
+
   test("cursor hide/show via private mode", () => {
     const vt = new VtScreen(10, 2)
     vt.write(CSI + "?25l")

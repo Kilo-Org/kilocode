@@ -6,10 +6,11 @@ import ai.kilocode.client.session.SessionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 
-class DeleteSessionAction : AnAction() {
+class DeleteSessionAction : AnAction(), DumbAware {
     /** Overridable in tests to avoid showing a real modal dialog. */
     internal var confirm: (project: Project?, msg: String) -> Boolean = { project, msg ->
         Messages.showYesNoDialog(

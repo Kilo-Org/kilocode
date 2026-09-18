@@ -1,5 +1,6 @@
 package ai.kilocode.backend.workspace
 
+import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 
 /**
@@ -18,7 +19,10 @@ sealed class KiloWorkspaceState {
         val agents: AgentData,
         val commands: List<CommandInfo>,
         val skills: List<SkillInfo>,
+        val warnings: List<ConfigWarning> = emptyList(),
     ) : KiloWorkspaceState()
+    data class Unsupported(val reason: String) : KiloWorkspaceState()
+    data class Missing(val path: String) : KiloWorkspaceState()
     data class Error(val message: String, val errors: List<LoadError> = emptyList()) : KiloWorkspaceState()
 }
 

@@ -1,0 +1,180 @@
+import { expect, test, type Page } from "@playwright/test"
+
+const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
+
+async function open(page: Page, side: "left" | "right" = "left", width = 420) {
+  await page.setViewportSize({ width, height: 720 })
+  await page.goto(`/iframe.html?id=chat--prompt-rail-${side}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await expect(page.locator(".prompt-rail-tick")).toHaveCount(5)
+  await page.evaluate(() => document.fonts.ready)
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") })
+  await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"))
+}
+
+for (const side of ["left", "right"] as const) {
+  for (const width of [200, 420]) {
+    test(`opens inward from the ${side} edge at ${width}px`, async ({ page }) => {
+      await open(page, side, width)
+      if (width === 200) await page.evaluate(() => (document.documentElement.dir = "rtl"))
+      const rail = page.locator(".prompt-rail")
+      const lane = await page.locator(".message-list").evaluate((el) => el.clientWidth)
+      await expect(rail).toHaveAttribute("data-side", side)
+      await rail.locator(".prompt-rail-tick").first().focus()
+      const card = page.locator(".prompt-rail-card")
+      await expect(card).toBeVisible()
+      await expect(card).toHaveAttribute("data-side", side)
+      await expect(card).toHaveCSS("transform", "none")
+      const tick = await rail.boundingBox()
+      const box = await card.boundingBox()
+      if (!tick || !box) throw new Error("Prompt navigator geometry is missing")
+      expect(box.x).toBeGreaterThanOrEqual(12)
+      expect(box.x + box.width).toBeLessThanOrEqual(width - 12)
+      expect(box.y).toBeGreaterThanOrEqual(12)
+      expect(box.y + box.height).toBeLessThanOrEqual(708)
+      expect(await page.locator(".message-list").evaluate((el) => el.clientWidth)).toBe(lane)
+      if (side === "left") {
+        expect(tick.x).toBe(8)
+        expect(box.x - tick.x - tick.width).toBe(8)
+        return
+      }
+      expect(width - tick.x - tick.width).toBe(8)
+      expect(tick.x - box.x - box.width).toBe(8)
+    })
+  }
+}
+
+test("ignores brief crossings and restarts the delay for a different tick", async ({ page }) => {
+  await open(page)
+  const ticks = page.locator(".prompt-rail-tick")
+  const card = page.locator(".prompt-rail-card")
+  await ticks.first().hover()
+  await page.clock.runFor(200)
+  await ticks.nth(1).hover()
+  await page.clock.runFor(200)
+  await expect(card).toBeHidden()
+  await page.getByTestId("prompt-rail-content").hover()
+  await page.clock.runFor(500)
+  await expect(card).toBeHidden()
+  await expect(page.locator(".prompt-rail")).toHaveCSS("opacity", "0.5")
+})
+
+test("opens after a deliberate hover and keeps the rail-to-card bridge", async ({ page }) => {
+  await open(page)
+  const ticks = page.locator(".prompt-rail-tick")
+  const card = page.locator(".prompt-rail-card")
+  await ticks.first().hover()
+  await page.clock.runFor(349)
+  await expect(card).toBeHidden()
+  await page.clock.runFor(1)
+  await expect(card).toBeVisible()
+  await ticks.nth(1).hover()
+  await expect(card.locator('[data-prompt-index="1"]')).toHaveClass(/prompt-rail-row--hover/)
+  await expect(card).toHaveCSS("transform", "none")
+  const tick = await ticks.nth(1).boundingBox()
+  const box = await card.boundingBox()
+  if (!tick || !box) throw new Error("Prompt navigator geometry is missing")
+  await page.mouse.move((tick.x + tick.width + box.x) / 2, tick.y + tick.height / 2)
+  await page.clock.runFor(80)
+  await card.hover()
+  await page.clock.runFor(500)
+  await expect(card).toBeVisible()
+  await page.getByTestId("prompt-rail-content").hover()
+  await page.clock.runFor(119)
+  await expect(card).toBeVisible()
+  await page.clock.runFor(1)
+  await expect(card).toBeHidden()
+})
+
+test("keeps click and keyboard navigation immediate", async ({ page }) => {
+  await open(page, "right")
+  const ticks = page.locator(".prompt-rail-tick")
+  const host = page.getByTestId("prompt-rail-host")
+  const card = page.locator(".prompt-rail-card")
+  await ticks.last().click()
+  await expect(host).toHaveAttribute("data-selected", "rail-user-5:user")
+  await expect(card).toBeVisible()
+  await page.keyboard.press("Escape")
+  await page.clock.runFor(500)
+  await expect(card).toBeHidden()
+  await ticks.first().focus()
+  await expect(card).toBeVisible()
+  await page.keyboard.press("End")
+  await expect(ticks.last()).toBeFocused()
+  await page.keyboard.press("Home")
+  await expect(ticks.first()).toBeFocused()
+  await page.keyboard.press("ArrowDown")
+  await expect(ticks.nth(1)).toBeFocused()
+  await page.keyboard.press("Enter")
+  await expect(host).toHaveAttribute("data-selected", "rail-user-2:user")
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("Space")
+  await expect(host).toHaveAttribute("data-selected", "rail-user-3:user")
+  await card.getByRole("button", { name: "Latest prompt", exact: true }).click()
+  await expect(host).toHaveAttribute("data-selected", "rail-user-5:user")
+  await card.getByRole("button", { name: "First prompt", exact: true }).click()
+  await expect(host).toHaveAttribute("data-selected", "rail-user-1:user")
+  await card.locator('[data-prompt-index="3"]').click()
+  await expect(host).toHaveAttribute("data-selected", "rail-user-4:user")
+})
+
+test("Escape dismisses a hover preview before other chat shortcuts", async ({ page }) => {
+  await open(page)
+  await page.getByTestId("prompt-rail-content").focus()
+  await page.evaluate(() => {
+    document.body.dataset.escapes = "0"
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return
+      document.body.dataset.escapes = String(Number(document.body.dataset.escapes) + 1)
+    })
+  })
+  await page.locator(".prompt-rail-tick").first().hover()
+  await page.clock.runFor(350)
+  await expect(page.locator(".prompt-rail-card")).toBeVisible()
+  await page.keyboard.press("Escape")
+  await page.clock.runFor(500)
+  await expect(page.locator(".prompt-rail-card")).toBeHidden()
+  await expect(page.locator("body")).toHaveAttribute("data-escapes", "0")
+  await page.keyboard.press("Escape")
+  await expect(page.locator("body")).toHaveAttribute("data-escapes", "1")
+})
+
+test("does not open during a drag or while scrolling over the rail", async ({ page }) => {
+  await open(page)
+  const tick = page.locator(".prompt-rail-tick").first()
+  await page.getByTestId("prompt-rail-content").hover()
+  await page.mouse.down()
+  await tick.hover()
+  await page.clock.runFor(500)
+  await expect(page.locator(".prompt-rail-card")).toBeHidden()
+  await page.mouse.up()
+  await page.getByTestId("prompt-rail-content").hover()
+  await tick.hover()
+  await page.mouse.wheel(0, -120)
+  await expect(page.getByTestId("prompt-rail-host")).toHaveAttribute("data-wheel", "-120")
+  await page.clock.runFor(500)
+  await expect(page.locator(".prompt-rail-card")).toBeHidden()
+})
+
+test("closes after keyboard focus leaves the navigator", async ({ page }) => {
+  await open(page)
+  const card = page.locator(".prompt-rail-card")
+  await page.locator(".prompt-rail-tick").first().focus()
+  await card.locator(".prompt-rail-row").first().focus()
+  await page.clock.runFor(200)
+  await expect(card).toBeVisible()
+  await page.getByTestId("prompt-rail-content").focus()
+  await page.clock.runFor(120)
+  await expect(card).toBeHidden()
+})
+
+test("retains the virtualized navigator and older-history navigation", async ({ page }) => {
+  await page.goto(`/iframe.html?id=chat--prompt-rail-many-prompts&viewMode=story&globals=${GLOBALS}`, {
+    waitUntil: "load",
+  })
+  const card = page.locator(".prompt-rail-card")
+  await page.locator(".prompt-rail-tick").first().focus()
+  await expect(card).toHaveAttribute("data-virtualized", "true")
+  await card.getByRole("button", { name: "First prompt", exact: true }).click()
+  await expect(page.locator(".message-list-turns")).toHaveAttribute("data-loaded-messages", "160")
+  await expect(card.locator('[data-prompt-index="0"]')).toBeVisible()
+})

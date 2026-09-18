@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../../services/cli-backend"
 import { GitOps } from "../../agent-manager/GitOps"
+import { gitGeneratedFiles } from "../shared/git-attributes"
 import { resolveLocalDiffTarget } from "../shared/target"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { BranchListItem } from "../../agent-manager/git-import"
@@ -18,6 +19,12 @@ import {
 import { TURN_PREFIX, createTurnDiffSource, type TurnDiffFetch } from "./turn"
 import { STAGED_DESCRIPTOR, STAGED_SOURCE_ID, createStagedDiffSource } from "./staged"
 import { UNSTAGED_DESCRIPTOR, UNSTAGED_SOURCE_ID, createUnstagedDiffSource } from "./unstaged"
+import type { WorktreeDiffEntry } from "../../agent-manager/types"
+
+export interface LocalDiffSource {
+  summary: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
+  file: (dir: string, base: string, file: string, signal?: AbortSignal) => Promise<WorktreeDiffEntry | null>
+}
 
 export interface WorkspaceBranchesResult {
   branches: BranchListItem[]
@@ -67,8 +74,13 @@ export class DiffSourceCatalog implements vscode.Disposable {
   // owned by the catalog so it survives source swaps.
   private branchGit: GitOps | undefined
   private branchOutput: vscode.OutputChannel | undefined
+  private attributeGit: GitOps | undefined
+  private attributeOutput: vscode.OutputChannel | undefined
 
-  constructor(private readonly connection: KiloConnectionService) {}
+  constructor(
+    private readonly connection: KiloConnectionService,
+    private readonly local?: LocalDiffSource,
+  ) {}
 
   listAvailable(ctx: PanelContext): DiffSourceDescriptor[] {
     if (ctx.hidePicker) return []
@@ -91,11 +103,17 @@ export class DiffSourceCatalog implements vscode.Disposable {
 
   build(id: string, ctx: PanelContext): DiffSource {
     const opts = { dir: () => ctx.dir, strictDir: ctx.strictDir, git: ctx.git, log: ctx.log }
+    const dir = ctx.dir ?? ctx.workspaceRoot
+    const generated = dir
+      ? (files: readonly string[]) => gitGeneratedFiles(ctx.git ?? this.ensureAttributeGit(), dir, files)
+      : undefined
     if (id === WORKSPACE_SOURCE_ID) {
       return createWorktreeDiffSource({
         ...opts,
         baseBranchOverride: ctx.baseBranchOverride,
         baseBranch: ctx.baseBranch,
+        summary: this.local?.summary,
+        file: this.local?.file,
       })
     }
 
@@ -107,18 +125,13 @@ export class DiffSourceCatalog implements vscode.Disposable {
       if (!sessionId || !messageId) {
         throw new Error(`DiffSourceCatalog.build: malformed turn id "${id}" (expected turn:<sessionId>:<messageId>)`)
       }
-      return createTurnDiffSource(sessionId, messageId, this.turnFetch, ctx.workspaceRoot)
+      return createTurnDiffSource(sessionId, messageId, this.turnFetch, dir, generated)
     }
 
     if (id.startsWith(SESSION_PREFIX)) {
       const sessionId = id.slice(SESSION_PREFIX.length)
       if (!sessionId) throw new Error(`DiffSourceCatalog.build: empty session id in "${id}"`)
-      return createSessionDiffSource(
-        sessionId,
-        this.sessionFetch,
-        ctx.dir ?? ctx.workspaceRoot,
-        this.checkSnapshotsEnabled,
-      )
+      return createSessionDiffSource(sessionId, this.sessionFetch, dir, this.checkSnapshotsEnabled, generated)
     }
 
     throw new Error(`DiffSourceCatalog.build: unknown source id "${id}"`)
@@ -153,8 +166,12 @@ export class DiffSourceCatalog implements vscode.Disposable {
   dispose(): void {
     this.branchGit?.dispose()
     this.branchGit = undefined
+    this.attributeGit?.dispose()
+    this.attributeGit = undefined
     this.branchOutput?.dispose()
     this.branchOutput = undefined
+    this.attributeOutput?.dispose()
+    this.attributeOutput = undefined
   }
 
   private readonly branchLog = (...args: unknown[]) => {
@@ -167,5 +184,14 @@ export class DiffSourceCatalog implements vscode.Disposable {
     this.branchOutput = vscode.window.createOutputChannel("Kilo Diff: Branches")
     this.branchGit = new GitOps({ log: this.branchLog })
     return this.branchGit
+  }
+
+  private ensureAttributeGit(): GitOps {
+    if (this.attributeGit) return this.attributeGit
+    this.attributeOutput = vscode.window.createOutputChannel("Kilo Diff: Attributes")
+    this.attributeGit = new GitOps({
+      log: (...args) => appendOutput(this.attributeOutput!, "DiffSourceCatalog", ...args),
+    })
+    return this.attributeGit
   }
 }

@@ -3,10 +3,20 @@
     <vendor url="https://kilo.ai">Kilo Code</vendor>
 
     <description><![CDATA[
-        Open Source AI coding agent that generates code from natural language, automates tasks,
-        and runs terminal commands. Features inline autocomplete, browser automation, automated
-        refactoring, and custom modes for planning, coding, and debugging.
-        Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.
+        <p>
+            <b>Kilo Code</b> turns your JetBrains IDE into a multi-agent control room: isolated git
+            worktrees for parallel tasks, native remote-development support, GitHub-aware diffs, and
+            600+ models — all in one IDE frame.
+        </p>
+        <ul>
+            <li><b>Remote-dev native.</b> 100% native Swing UI, no embedded browser and no Node.js, so it works identically locally and in JetBrains Remote Development split mode.</li>
+            <li><b>Agent Manager.</b> Run several agent sessions at once, each isolated in its own git worktree, without a new IDE window per task.</li>
+            <li><b>Run and debug per worktree.</b> Your existing Run Configurations work on any worktree; escalate one to a full IDE frame in a click when you need breakpoints.</li>
+            <li><b>GitHub built in.</b> Per-worktree PR status, diff versus base branch, uncommitted changes, and one-click import from a PR URL.</li>
+            <li><b>Model freedom.</b> 600+ models across all major providers, your own API keys or Kilo credits, per-agent model pinning, and org-level access controls.</li>
+            <li><b>One runtime everywhere.</b> Built on the open-source Kilo CLI — the same engine as Kilo's CLI, VS Code extension, and cloud, sharing one config, agents, skills, and MCP servers.</li>
+        </ul>
+        <p><a href="https://kilo.ai">kilo.ai</a></p>
     ]]></description>
 
     <content>

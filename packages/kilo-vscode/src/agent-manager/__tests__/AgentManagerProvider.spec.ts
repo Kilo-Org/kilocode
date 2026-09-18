@@ -82,6 +82,7 @@ function createMockHost(): Host {
     copyToClipboard: vi.fn(),
     capture: vi.fn(),
     openExternal: vi.fn(),
+    openSettings: vi.fn(),
     refreshGit: vi.fn(),
     dispose: vi.fn(),
   }

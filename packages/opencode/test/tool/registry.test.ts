@@ -102,6 +102,7 @@ const withCodeMode = testEffect(
               inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
             } as MCPToolDef,
             client: {} as MCP.McpTool["client"],
+            clientName: "weather", // kilocode_change
           },
         }),
       clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
@@ -134,12 +135,38 @@ const withRestrictedCodeMode = testEffect(
               inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
             } as MCPToolDef,
             client: {} as MCP.McpTool["client"],
+            clientName: "weather", // kilocode_change
           },
         }),
       clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
     }),
   }),
 )
+// kilocode_change end
+
+// kilocode_change start - Code Mode can be enabled from the Kilo config instead of the environment flag
+const weatherMcp = Layer.mock(MCP.Service, {
+  tools: () =>
+    Effect.succeed({
+      weather_current: {
+        def: {
+          name: "current",
+          description: "current weather",
+          inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+        } as MCPToolDef,
+        client: {} as MCP.McpTool["client"],
+        clientName: "weather",
+      },
+    }),
+  clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
+})
+const withConfigCodeMode = testEffect(
+  registryLayer({
+    config: { get: () => Effect.succeed({ experimental: { code_mode: true } }) },
+    mcp: weatherMcp,
+  }),
+)
+const withoutCodeMode = testEffect(registryLayer({ mcp: weatherMcp }))
 // kilocode_change end
 
 afterEach(async () => {
@@ -249,6 +276,18 @@ describe("tool.registry", () => {
     }),
   )
 
+  // kilocode_change start - the CLI can schedule and cancel its own future wakeups
+  it.instance("exposes the scheduled wakeup tools", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("schedule_wakeup")
+      expect(ids).toContain("cancel_wakeup")
+    }),
+  )
+  // kilocode_change end
+
   it.instance("does not expose execute unless code mode is enabled", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
@@ -307,7 +346,38 @@ describe("tool.registry", () => {
   )
   // kilocode_change end
 
-  it.instance("hides task background parameter unless experimental background subagents are enabled", () =>
+  // kilocode_change start - the Kilo config toggle enables Code Mode without the environment flag
+  withConfigCodeMode.instance("exposes execute when experimental.code_mode is true in the Kilo config", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
+      })
+
+      expect(tools.map((tool) => tool.id)).toContain("execute")
+    }),
+  )
+
+  withoutCodeMode.instance("does not expose execute when the config toggle is absent", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
+      })
+
+      expect(tools.map((tool) => tool.id)).not.toContain("execute")
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - background task parameters are available by default
+  it.instance("exposes the task background parameter by default", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
       const agent = yield* Agent.Service
@@ -319,10 +389,12 @@ describe("tool.registry", () => {
         agent: build,
       })).find((tool) => tool.id === "task")
 
-      expect(task?.jsonSchema).toBeDefined()
-      expect((task?.jsonSchema?.properties as Record<string, unknown> | undefined)?.background).toBeUndefined()
+      if (!task) throw new Error("task tool not found")
+      const jsonSchema = ToolJsonSchema.fromTool(task)
+      expect((jsonSchema.properties as Record<string, unknown> | undefined)?.background).toBeDefined()
     }),
   )
+  // kilocode_change end
 
   it.instance("loads tools from .kilo/tool (singular)" /* kilocode_change */, () =>
     Effect.gen(function* () {

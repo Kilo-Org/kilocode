@@ -21,6 +21,7 @@
   --chat-readable-width: 98ch;
   --chat-gutter: clamp(16px, 4cqi, 48px);
   --chat-scrollbar-width: 10px;
+  --prompt-gutter: max(var(--prompt-min-gutter), 2cqi);
 }
 
 /* ============================================
@@ -131,6 +132,15 @@
   margin-inline: calc(var(--chat-scrollbar-width, 10px) / 2) calc(var(--chat-scrollbar-width, 10px) / -2);
 }
 
+/* Streaming content reflows under a parked pointer, so without a cursor of its
+   own the transcript alternated between the text cursor over message text and
+   the default cursor over containers and gaps. The whole transcript is
+   selectable text, so it declares the text cursor once and every descendant
+   inherits it. Controls keep their own pointer cursor. */
+.message-list-content {
+  cursor: text;
+}
+
 .message-list-content-empty {
   display: flex;
   min-height: 100%;
@@ -186,36 +196,240 @@
 }
 
 /* ============================================
+   Session Dock
+   ============================================ */
+
+/* The single row between the transcript and the composer. It is exactly as tall
+   as the visible state: the working indicator, or the session actions row. The
+   inactive state stays mounted but out of flow, so it cannot reserve height.
+
+   The actions row wraps to a second line in a narrow sidebar (see the container
+   query in session-actions.css). Reserving that wrapped height while a turn
+   runs left the spinner floating in an empty band whose size depended on the
+   sidebar width; the row only grows while the actions are actually shown. */
+.session-dock {
+  /* Tracks the natural width of the actions row (measured at 434px: New Session,
+     Fork Session, Move to Worktree, and the diff stats), so the two dock states
+     read as one centered component on wide surfaces. Deliberately px and not ch:
+     a font-relative lane changes width with the webview font metrics. */
+  --session-dock-lane: 440px;
+  position: relative;
+  display: grid;
+  box-sizing: border-box;
+  align-items: center;
+  /* One line of the actions row: 24px small buttons inside the wrapper's 6px
+     padding. The working indicator is a fraction shorter, so without this floor
+     the swap would move the transcript by half a pixel on every surface where
+     the row does not wrap. */
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+.session-dock:not([data-active]) {
+  display: none;
+}
+
+.session-dock-state {
+  display: flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Hidden and out of flow rather than unmounted: the working indicator keeps its
+   refs and width lock across the swap, but contributes nothing to the height. */
+.session-dock-state:not([data-active]) {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ============================================
    Working Indicator
    ============================================ */
 
 .working-indicator {
+  /* Kept under the SWAP budget in StatusText.tsx, which releases the width lock
+     only after the glide has landed. */
+  --working-status-glide: 420ms;
+  --working-status-fade: 240ms;
+  --working-status-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 16px;
+  /* The inset the scroll button adds inside is taken off here, so the row keeps
+     the 8px 16px footprint it had before the indicator became clickable. */
+  padding: 4px 10px;
   font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
 }
 
-.working-indicator-slot {
-  /* Offset the session actions appearing when work finishes. */
-  min-height: 10px;
-  flex-shrink: 0;
-}
-
-.working-text {
-  flex: 1;
+.working-indicator-scroll[data-component="button"] {
+  height: auto;
+  max-width: 100%;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-height: 0;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--session-action-radius);
+  background: transparent;
+  gap: 8px;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
+.working-indicator-scroll:hover:not(:disabled),
+.working-indicator-scroll:focus-visible:not(:disabled),
+.working-indicator-scroll:active:not(:disabled) {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
+}
+
+/* On a wide surface (Agent Manager) the dock spans the whole composer. The lane
+   caps how far a long status label may stretch before it ellipsizes, so the
+   indicator stays a centered cluster on the same axis as the actions row instead
+   of reaching for both edges. */
+.session-working {
+  position: relative;
+  width: fit-content;
+  min-width: 0;
+  max-width: var(--session-dock-lane);
+  margin-inline: auto;
+}
+
+/* The hidden state stays mounted, so the spinner and the label shimmer would
+   otherwise animate for the whole idle session. */
+.session-dock-state:not([data-active]) .working-indicator * {
+  animation-play-state: paused;
+}
+
+/* Sized to its text rather than stretched, so the spinner, the label, and the
+   counter stay one cluster. Stretching it pushed the counter onto the far edge of
+   whatever surface the dock spanned.
+
+   The cluster is centered, so every label change moved the spinner by half the
+   width delta. `StatusText` locks this box to the outgoing width and releases it
+   to the incoming one, which turns that jump into a single short glide. */
+.working-status {
+  display: inline-grid;
+  flex: 0 1 auto;
+  min-width: 0;
+  /* The clip is only meant to bite horizontally. The padding gives the labels room
+     to travel vertically, and the matching negative margin keeps the row the exact
+     height it was. `overflow-y: visible` is not an option: paired with a hidden
+     axis it computes to auto and turns the label into a scroll container. */
+  padding-block: 0.75em;
+  margin-block: -0.75em;
+  overflow: hidden;
+  transition: width var(--working-status-glide) var(--working-status-ease);
+}
+
+/* Set by StatusText while the label does not fit, so the cut reads as truncation
+   rather than a label that lost its last few characters. */
+.working-status[data-clip] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent);
+}
+
+/* Both labels share the one cell, so the outgoing copy never widens the box. */
+.working-status-line {
+  grid-area: 1 / 1;
+  justify-self: start;
+  white-space: nowrap;
+  animation: working-status-in var(--working-status-fade) var(--working-status-ease) both;
+}
+
+/* Rises out of the way as the incoming label rises in, so the swap reads as one
+   line being rewritten rather than two labels crossfading in place. */
+.working-status-line[data-old] {
+  animation-name: working-status-out;
+  animation-duration: calc(var(--working-status-fade) * 0.75);
+}
+
+/* Sweep between the two greys the indicator already uses, instead of the shared
+   text tokens the transcript tools shimmer with. */
+.working-status [data-component="text-shimmer"] {
+  --text-shimmer-base-color: var(--vscode-descriptionForeground);
+  --text-shimmer-peak-color: var(--vscode-foreground);
+}
+
+/* Reserving the width keeps the cluster still while the counter ticks: tabular
+   digits alone still reflow when the value gains a character (9s to 10s). */
 .working-elapsed {
   flex-shrink: 0;
+  min-width: 3.5ch;
+  text-align: right;
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
+  transition: opacity var(--working-status-fade) var(--working-status-ease);
+}
+
+/* Before the first tick the counter holds its slot without showing a stale 0s. */
+.working-elapsed[data-empty] {
+  opacity: 0;
+}
+
+/* Same treatment for the retry countdown: it ticks every second, so it is a
+   fixed-width sibling of the label instead of part of the morphing text. */
+.working-count {
+  flex-shrink: 0;
+  min-width: 5ch;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+@keyframes working-status-in {
+  from {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(0.45em);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes working-status-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(-0.45em);
+    /* Held by the `both` fill: the copy stays mounted until the width lock is
+       released, and this keeps it from being painted for that remainder. */
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working-status {
+    transition-duration: 0ms;
+  }
+
+  .working-status-line {
+    animation: none;
+  }
+
+  /* Without its fade the outgoing copy would sit on top of the new label. */
+  .working-status-line[data-old] {
+    display: none;
+  }
 }
 
 /* ============================================
@@ -248,11 +462,6 @@
   width: 100%;
 }
 
-.vscode-session-turn-user[data-revert-disabled] [data-component="icon-button"][data-icon="arrow-left"] {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .vscode-session-turn-assistant {
   display: flex;
   flex-direction: column;
@@ -260,11 +469,14 @@
   width: 100%;
 }
 
-[data-component="assistant-throughput"] {
+[data-component="assistant-throughput"],
+[data-slot="assistant-turn-meta"],
+[data-component="user-message"] [data-slot="user-message-meta-tail"] {
   /* Plain-text generation-speed value shown beside the copy/feedback buttons
    * on an assistant message. Renders as muted metadata — no icon, no
    * background, no border — so it reads as tertiary info that never
-   * competes with the action row for visual weight. */
+   * competes with the action row for visual weight. The hover timestamps on
+   * both message types share this exact style so the action rows match. */
   color: var(--vscode-descriptionForeground);
   font-family: var(--font-family-sans);
   font-size: var(--kilo-font-size-11);
@@ -331,7 +543,6 @@
 
 .chat-view .message-list-content > .revert-banner,
 .chat-view .message-list-content > [data-component="question-dock"],
-.chat-view .message-list-content > .working-indicator-slot,
 .chat-view .message-list-content > .vscode-session-turn[role="status"],
 .chat-view .message-list-content > [data-component="suggest-bar"] {
   width: calc(100% - 8px);
@@ -340,22 +551,20 @@
 }
 
 .chat-view .prompt-input-container,
-.chat-view .new-task-button-wrapper {
+.chat-view .session-dock {
   box-sizing: border-box;
-  width: min(
-    calc(100% - var(--chat-gutter) - var(--chat-gutter) - var(--chat-scrollbar-width) - 8px),
-    var(--chat-readable-width)
-  );
+  width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;
+}
+
+.chat-view .prompt-input-container {
+  margin-block: var(--prompt-gutter) var(--prompt-min-gutter);
 }
 
 .chat-view .chat-input > .startup-error-banner,
 .chat-view .chat-input > [data-component="permission-shortcuts"] {
   box-sizing: border-box;
-  width: min(
-    calc(100% - var(--chat-gutter) - var(--chat-gutter) - var(--chat-scrollbar-width) - 8px),
-    var(--chat-readable-width)
-  );
+  width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;
 }
 
@@ -387,7 +596,7 @@
 }
 
 .chat-input:has(> [data-component="permission-shortcuts"]) > .prompt-input-container {
-  margin-top: 0;
+  margin-top: var(--prompt-gutter);
 }
 
 .chat-input > [data-component="permission-shortcuts"] {

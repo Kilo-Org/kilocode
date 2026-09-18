@@ -117,6 +117,23 @@ const config = {
 }
 
 describe("ScriptTerminalManager", () => {
+  it("blocks a script PTY create while its worktree is being removed", async () => {
+    const gate = deferred<PtyResponse>()
+    const ctx = harness({ create: async () => gate.promise })
+    const started = ctx.manager.start("setup", config, () => undefined)
+    await wait()
+
+    const blocked = ctx.manager.blockDirectory(config.cwd)
+    await expect(ctx.manager.start("run", config, () => undefined)).rejects.toThrow("directory is being removed")
+    gate.resolve({ data: { location: { directory: config.cwd }, data: info() } })
+    await started
+    const release = await blocked
+    await ctx.manager.closeDirectory(config.cwd)
+    release()
+
+    expect(ctx.calls.remove).toHaveLength(1)
+  })
+
   it("creates a Run PTY with explicit command settings and a safe snapshot", async () => {
     const ctx = harness()
     const done: unknown[] = []

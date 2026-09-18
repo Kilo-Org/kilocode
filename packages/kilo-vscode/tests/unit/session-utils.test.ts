@@ -23,8 +23,11 @@ import {
   removeSessionToolPartsForMessage,
   upsertSessionToolPart,
   recentSessions,
+  optimistic,
+  revertPromptState,
 } from "../../webview-ui/src/context/session-utils"
 import type { Message, Part, ToolPart } from "../../webview-ui/src/types/messages"
+import { formatBrowserFeedback } from "../../src/shared/browser-feedback"
 
 const t = (key: string) => key
 
@@ -981,5 +984,85 @@ describe("sessionThroughput", () => {
 
   it("returns undefined for empty input", () => {
     expect(sessionThroughput([])).toBeUndefined()
+  })
+})
+
+describe("optimistic parts", () => {
+  it("preserves attachments and message ownership with unique part IDs", () => {
+    const file = {
+      mime: "image/png",
+      url: "data:image/png;base64,abc",
+      filename: "shot.png",
+      source: { type: "file" as const, path: "shot.png", text: { value: "@shot.png", start: 0, end: 9 } },
+    }
+    const parts = optimistic("message", "Hello", [file])
+    expect(parts).toMatchObject([
+      { type: "text", id: expect.any(String), messageID: "message", text: "Hello" },
+      { type: "file", id: expect.any(String), messageID: "message", ...file },
+    ])
+    expect(parts.at(0)?.id).not.toBe(parts.at(1)?.id)
+    expect(optimistic("empty", "")).toEqual([])
+  })
+})
+
+describe("revertPromptState", () => {
+  const text = (value: string, synthetic = false) =>
+    ({ type: "text", id: `t-${value}`, text: value, synthetic }) as Part
+  const file = (overrides: Partial<Extract<Part, { type: "file" }>>) =>
+    ({ type: "file", id: "f", mime: "text/plain", url: "", ...overrides }) as Extract<Part, { type: "file" }>
+
+  it("joins non-synthetic text parts and drops synthetic ones", () => {
+    const state = revertPromptState([text("Hello "), { ...text("hidden", true) } as Part, text("world")])
+    expect(state.text).toBe("Hello world")
+  })
+
+  it("restores inline image attachments from data URLs only", () => {
+    const state = revertPromptState([
+      file({ mime: "image/png", url: "data:image/png;base64,abc", filename: "shot.png" }),
+      file({ mime: "image/jpeg", url: "https://example.com/x.jpg" }),
+      file({ mime: "application/pdf", url: "data:application/pdf;base64,def" }),
+    ])
+    expect(state.images).toEqual([{ dataUrl: "data:image/png;base64,abc", mime: "image/png", filename: "shot.png" }])
+  })
+
+  it("collects mention paths but excludes session references from paths", () => {
+    const state = revertPromptState([
+      file({ source: { type: "file", path: "a b.txt", text: { value: "@a b.txt", start: 0, end: 8 } } }),
+      file({ url: "session:ses_1", filename: "Old chat" }),
+    ])
+    expect(state.paths).toEqual(["a b.txt"])
+  })
+
+  it("maps past-chat references to session items with title fallbacks", () => {
+    const state = revertPromptState([
+      file({
+        url: "session:ses_1",
+        source: { type: "file", path: "", text: { value: "@Renamed chat", start: 0, end: 13 } },
+      }),
+      file({ url: "session:ses_2", filename: "Fallback title" }),
+    ])
+    expect(state.sessions).toEqual([
+      { id: "ses_1", title: "Renamed chat", updated: 0 },
+      { id: "ses_2", title: "Fallback title", updated: 0 },
+    ])
+  })
+
+  it("returns empty collections for tool-only messages", () => {
+    const part: Part = { type: "tool", id: "p1", tool: "bash", state: { status: "running", input: {} } }
+    const state = revertPromptState([part])
+    expect(state).toEqual({ text: "", paths: [], sessions: [], images: [], review: [], browser: [] })
+  })
+
+  it("restores browser and review metadata without their formatted prefixes", () => {
+    const browser = {
+      version: 1 as const,
+      references: [{ id: "b", sessionId: "s1", selector: "#save", text: "Save" }],
+    }
+    const content = `${formatBrowserFeedback(browser.references)}\n\nPlease update it`
+    const parts = optimistic("message", content, undefined, undefined, browser)
+    expect(revertPromptState(parts)).toMatchObject({
+      text: "Please update it",
+      browser: browser.references,
+    })
   })
 })

@@ -89,12 +89,13 @@ function tokenScore(token: string, value: string): number {
 }
 
 function matchScore(model: EnrichedModel, query: string): number | undefined {
-  const name = stripSubProviderPrefix(sanitizeName(model.name))
+  const raw = sanitizeName(model.name)
+  const name = stripSubProviderPrefix(raw)
   const tokens = words(query)
   if (tokens.length === 0) return 0
 
   const scores = tokens.map((token) => {
-    const modelScore = Math.max(tokenScore(token, name), tokenScore(token, model.id))
+    const modelScore = Math.max(tokenScore(token, name), tokenScore(token, raw), tokenScore(token, model.id))
     const providerScore = modelScore < 0 ? tokenScore(token, model.providerName) : -1
     return { modelScore, providerScore }
   })
@@ -102,7 +103,8 @@ function matchScore(model: EnrichedModel, query: string): number | undefined {
 
   const modelScore = scores.reduce((sum, score) => sum + Math.max(score.modelScore, 0), 0)
   const providerScore = scores.reduce((sum, score) => sum + Math.max(score.providerScore, 0), 0)
-  const exact = collapse(query) === collapse(name) || collapse(query) === collapse(model.id)
+  const exact =
+    collapse(query) === collapse(name) || collapse(query) === collapse(raw) || collapse(query) === collapse(model.id)
   return modelScore + Math.floor(providerScore / 10) + (exact ? 5000 : 0)
 }
 

@@ -5,18 +5,24 @@ export interface VsCodePoster {
   postMessage: (msg: WebviewMessage) => void
 }
 
+interface Options {
+  initial?: boolean
+  persist?: (collapsed: boolean) => void
+}
+
 /**
  * Encapsulates the sidebar collapsed signal, persistence postMessage, and
  * a single-frame "hydrated" flag that gates the width transition so the
  * initial render (after restart with a persisted-collapsed state) does not
  * animate from open to closed.
  */
-export function createSidebarCollapse(vscode: VsCodePoster) {
-  const [collapsed, setCollapsed] = createSignal(false)
+export function createSidebarCollapse(vscode: VsCodePoster, opts: Options = {}) {
+  const [collapsed, setCollapsed] = createSignal(opts.initial ?? false)
   const [hydrated, setHydrated] = createSignal(false)
 
   const persist = (next: boolean) => {
     setCollapsed(next)
+    opts.persist?.(next)
     vscode.postMessage({ type: "agentManager.setSidebarCollapsed", collapsed: next })
   }
 
@@ -24,7 +30,7 @@ export function createSidebarCollapse(vscode: VsCodePoster) {
     collapsed,
     hydrated,
     /** Apply state from extension push without re-broadcasting. */
-    hydrate: (value: boolean | undefined) => {
+    hydrate: (value?: boolean) => {
       if (value !== undefined) setCollapsed(value)
       if (!hydrated()) requestAnimationFrame(() => setHydrated(true))
     },

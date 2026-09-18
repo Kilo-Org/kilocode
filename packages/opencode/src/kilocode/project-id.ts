@@ -1,6 +1,6 @@
-import { Context, Effect, Layer } from "effect"
+import { Cache, Context, Effect, Layer } from "effect"
 import { Instance } from "@/kilocode/instance"
-import { InstanceState } from "@/effect/instance-state"
+import { registerDisposer } from "@/effect/instance-registry"
 import { makeRuntime } from "@/effect/run-service"
 import path from "path"
 import { $ } from "bun"
@@ -83,9 +83,7 @@ async function getProjectIdFromGit(directory: string): Promise<string | undefine
  * Resolve project ID with priority: .kilo/config.json -> .kilocode/config.json -> git origin URL
  * @returns Normalized project ID or undefined
  */
-async function resolveProjectId(): Promise<string | undefined> {
-  const dir = Instance.directory
-
+async function resolveProjectId(dir: string): Promise<string | undefined> {
   // Priority 1: .kilo/config.json (falls back to .kilocode/config.json)
   const id = await getProjectIdFromConfig(dir)
   if (id) return id
@@ -104,13 +102,15 @@ export namespace KiloProjectID {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const state = yield* InstanceState.make(
-        Effect.fn("KiloProjectID.state")(function* () {
-          return { id: yield* Effect.promise(() => resolveProjectId()) }
-        }),
-      )
+      const cache = yield* Cache.make<string, string | undefined>({
+        capacity: Number.POSITIVE_INFINITY,
+        lookup: (directory) => Effect.promise(() => resolveProjectId(directory)),
+      })
+      const off = registerDisposer((directory) => Effect.runPromise(Cache.invalidate(cache, directory)))
+      yield* Effect.addFinalizer(() => Effect.sync(off))
+
       return Service.of({
-        get: () => InstanceState.use(state, (s) => s.id),
+        get: () => Cache.get(cache, Instance.directory),
       })
     }),
   )

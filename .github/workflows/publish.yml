@@ -211,10 +211,12 @@ jobs:
               export XDG_CACHE_HOME="$root/cache"
               export XDG_CONFIG_HOME="$root/config"
               export XDG_STATE_HOME="$root/state"
+              export KILO_PTY_SMOKE=1 # kilocode_change
               export KILO_DISABLE_MODELS_FETCH=1
               export KILO_DISABLE_PROJECT_CONFIG=1
               export KILO_CONFIG_CONTENT='{"enabled_providers":["anthropic"]}'
               export ANTHROPIC_API_KEY=dummy
+              "$binary" --pure __pty-smoke # kilocode_change
               "$binary" --pure models anthropic | grep -q '^anthropic/'
             )
           }
@@ -311,6 +313,11 @@ jobs:
             $env:KILO_DISABLE_PROJECT_CONFIG = "1"
             $env:KILO_CONFIG_CONTENT = '{"enabled_providers":["anthropic"]}'
             $env:ANTHROPIC_API_KEY = "dummy"
+            if ("${{ matrix.arch }}" -eq "x64") {
+              $env:KILO_PTY_SMOKE = "1"
+              & $binary --pure __pty-smoke
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
             $output = & $binary --pure models anthropic
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             if (-not ($output -match "(?m)^anthropic/")) {
@@ -340,7 +347,8 @@ jobs:
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
 
-      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
+      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli,
+      # then apply changesets so the packaged VSIX ships the current changelog
       - uses: actions/download-artifact@v8
         with:
           name: kilo-cli.tar.zst
@@ -351,6 +359,12 @@ jobs:
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+
+      - name: Apply changesets to changelog
+        run: bun script/kilocode/changeset-version.ts
+        env:
+          KILO_VERSION: ${{ needs.build-cli.outputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
       # kilocode_change end
       - name: Build VSIX packages
         run: bun script/build.ts

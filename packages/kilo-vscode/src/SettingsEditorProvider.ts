@@ -3,6 +3,7 @@ import { KiloProvider } from "./KiloProvider"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
+import type { AgentManagerSettingsHandler } from "./kilo-provider/options"
 
 type PanelView = "settings" | "profile" | "indexing"
 
@@ -27,15 +28,18 @@ export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
   private providers = new Map<PanelView, KiloProvider>()
   private tabs = new Map<PanelView, string>()
+  private projects = new Map<PanelView, string>()
   private remoteService: RemoteStatusService | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
+    private readonly agentManagerSettings?: AgentManagerSettingsHandler,
   ) {}
 
-  private getProjectDirectory(): string | null {
+  private getProjectDirectory(projectId?: string): string | null {
+    if (projectId) return this.agentManagerSettings?.projectDirectory(projectId) ?? null
     const editor = vscode.window.activeTextEditor
     const active =
       editor?.document.uri.scheme === "file"
@@ -53,19 +57,22 @@ export class SettingsEditorProvider implements vscode.Disposable {
     return view
   }
 
-  openPanel(view: PanelView, tab?: string): void {
+  openPanel(view: PanelView, tab?: string, projectId?: string): void {
     if (tab) this.tabs.set(view, tab)
+    if (projectId) this.projects.set(view, projectId)
+    else this.projects.delete(view)
 
-    const projectDirectory = this.getProjectDirectory()
+    const projectDirectory = this.getProjectDirectory(projectId)
     const existing = this.panels.get(view)
     if (existing) {
       this.providers.get(view)?.setProjectDirectory(projectDirectory)
-      if (tab) {
-        const provider = this.providers.get(view)
-        provider?.postMessage({ type: "navigate", view, tab })
-      }
       existing.reveal(vscode.ViewColumn.Active)
-      this.providers.get(view)?.postMessage({ type: "navigate", view, ...(tab ? { tab } : {}) })
+      this.providers.get(view)?.postMessage({
+        type: "navigate",
+        view,
+        ...(tab ? { tab } : {}),
+        ...(projectId ? { projectId } : {}),
+      })
       return
     }
 
@@ -90,7 +97,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       panel.dispose()
       return
     }
-    this.wirePanel(panel, view, this.getProjectDirectory())
+    this.wirePanel(panel, view, this.getProjectDirectory(this.projects.get(view)))
   }
 
   private wirePanel(panel: vscode.WebviewPanel, view: PanelView, projectDirectory: string | null): void {
@@ -104,6 +111,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       projectDirectory,
       hideTopBar: true,
+      agentManagerSettings: view === "settings" ? this.agentManagerSettings : undefined,
     })
     if (this.remoteService) {
       provider.setRemoteService(this.remoteService)
@@ -123,7 +131,12 @@ export class SettingsEditorProvider implements vscode.Disposable {
       if (msg.type === "webviewReady") {
         // Small delay to let KiloProvider's own webviewReady handler finish first
         setTimeout(() => {
-          provider.postMessage({ type: "navigate", view, tab: this.tabs.get(view) })
+          provider.postMessage({
+            type: "navigate",
+            view,
+            tab: this.tabs.get(view),
+            projectId: this.projects.get(view),
+          })
         }, 50)
       }
     })
@@ -148,6 +161,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       this.panels.delete(view)
       this.providers.delete(view)
       this.tabs.delete(view)
+      this.projects.delete(view)
     })
   }
 
@@ -166,5 +180,6 @@ export class SettingsEditorProvider implements vscode.Disposable {
     this.panels.clear()
     this.providers.clear()
     this.tabs.clear()
+    this.projects.clear()
   }
 }

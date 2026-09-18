@@ -14,8 +14,15 @@
  */
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import path from "node:path"
+import { block } from "./pty-cleanup"
 
-const env = { KILO_UNICODE_LOGO: "0" }
+const env = { KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" }
+
+function key(directory: string) {
+  const value = path.resolve(directory)
+  return process.platform === "win32" ? value.toLowerCase() : value
+}
 
 /**
  * Everything the manager needs from the surrounding AgentManagerProvider.
@@ -52,6 +59,8 @@ export class TerminalManager {
   private readonly entries = new Map<string, Entry>()
   private readonly restarts = new Map<string, Promise<void>>()
   private readonly pending = new Map<string, { cols: number; rows: number }>()
+  private readonly creates = new Map<string, Set<Promise<unknown>>>()
+  private readonly blocked = new Map<string, number>()
 
   constructor(private readonly deps: TerminalManagerDeps) {}
 
@@ -64,6 +73,40 @@ export class TerminalManager {
    * tab back into the correct sidebar context.
    */
   async create(params: {
+    terminalId: string
+    worktreeId: string | null
+    cwd: string
+    title: string
+    cols?: number
+    rows?: number
+  }): Promise<{ terminalId: string; worktreeId: string | null; title: string; wsUrl: string }> {
+    const directory = key(params.cwd)
+    if (this.blocked.has(directory)) throw new Error(`PTY directory is being removed: ${params.cwd}`)
+    const task = this.createImpl(params)
+    const creates = this.creates.get(directory) ?? new Set<Promise<unknown>>()
+    if (!this.creates.has(directory)) this.creates.set(directory, creates)
+    creates.add(task)
+    try {
+      return await task
+    } finally {
+      creates.delete(task)
+      if (creates.size === 0) this.creates.delete(directory)
+    }
+  }
+
+  async blockDirectory(directory: string) {
+    const target = key(directory)
+    return block(target, this.blocked, this.creates.get(target))
+  }
+
+  async closeDirectory(directory: string): Promise<void> {
+    const target = key(directory)
+    const entries = [...this.entries.values()].filter((entry) => key(entry.cwd) === target)
+    const results = await Promise.all(entries.map((entry) => this.close(entry.terminalId)))
+    if (results.some((result) => !result)) throw new Error(`Failed to close terminals in ${directory}`)
+  }
+
+  private async createImpl(params: {
     terminalId: string
     worktreeId: string | null
     cwd: string
@@ -153,31 +196,33 @@ export class TerminalManager {
     return out
   }
 
-  /** Kill a single terminal. Best-effort — we always drop our bookkeeping.
+  /** Kill a single terminal. Keep bookkeeping when the backend rejects cleanup so the UI can retry.
    *  The SDK's `pty.remove` returns `{ data, error }` without throwing
    *  on 4xx/5xx, so we have to check `error` ourselves; otherwise a
    *  failed delete would be silently logged as a successful close and
    *  the server-side PTY would linger until `kilo serve` exits. */
-  async close(terminalId: string): Promise<void> {
+  async close(terminalId: string): Promise<boolean> {
     this.pending.delete(terminalId)
     const entry = this.entries.get(terminalId)
-    if (!entry) return
-    this.entries.delete(terminalId)
+    if (!entry) return true
     try {
       const client = this.deps.getClient()
       const { error } = await client.pty.remove({ directory: entry.cwd, ptyID: entry.ptyID })
       if (error) {
         const msg = error instanceof Error ? error.message : String(error)
         this.deps.log(`Terminal close failed (${terminalId}): ${msg} — PTY may linger until kilo serve exits`)
-        return
+        return false
       }
+      this.entries.delete(terminalId)
       this.deps.log(`Terminal closed: ${terminalId} (pty ${entry.ptyID})`)
+      return true
     } catch (err) {
       // Thrown errors are reserved for transport-level failures (no
       // response from the server at all); API-level errors arrive via
       // the `error` field checked above.
       const msg = err instanceof Error ? err.message : String(err)
       this.deps.log(`Terminal close transport error (${terminalId}): ${msg}`)
+      return false
     }
   }
 
@@ -240,7 +285,6 @@ export class TerminalManager {
       }
     })()
     if (!client) {
-      this.entries.clear()
       return
     }
     const results = await Promise.all(
@@ -266,7 +310,11 @@ export class TerminalManager {
     if (failed > 0) {
       this.deps.log(`Terminal dispose: ${failed}/${snapshot.length} PTYs may linger until kilo serve exits`)
     }
-    this.entries.clear()
+    for (const result of results) {
+      if (result.ok && this.entries.get(result.entry.terminalId) === result.entry) {
+        this.entries.delete(result.entry.terminalId)
+      }
+    }
   }
 
   private async restartEntry(entry: Entry, cols?: number, rows?: number): Promise<void> {

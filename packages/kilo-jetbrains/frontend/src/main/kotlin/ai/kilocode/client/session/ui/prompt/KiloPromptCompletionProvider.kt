@@ -23,6 +23,12 @@ import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.util.textCompletion.TextCompletionProvider
 import java.util.Collections
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class KiloPromptCompletionProvider(
@@ -81,6 +87,18 @@ class KiloPromptCompletionProvider(
     }
 
     fun inside(text: String, caret: Int): Boolean = mentionSpans(text).any { span -> caret in span.start..span.end }
+
+    fun completing(text: String, caret: Int): Boolean = token(text, caret) != null
+
+    fun completingSlash(text: String, caret: Int): Boolean = token(text, caret)?.kind == Kind.SLASH
+
+    fun watchCommands(onChanged: () -> Unit): Job =
+        workspace.state
+            .map { it.commands }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach { onChanged() }
+            .launchIn(scope)
 
     private fun clientTokens(): Set<String> = actions.flatMapTo(mutableSetOf()) { action ->
         listOf(action.name) + action.hints

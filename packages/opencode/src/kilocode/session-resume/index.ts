@@ -1116,6 +1116,54 @@ export namespace SessionResume {
     msgs.push({ info, parts })
   }
 
+  // ── Preview ────────────────────────────────────────────────────────
+
+  export type Preview = {
+    /** Detected transcript format. */
+    format: Format
+    /** Major version of the source harness. */
+    version: number
+    /** First user message text, trimmed to a short single line, if any. */
+    title?: string
+    /** Number of user + assistant steps in the transcript. */
+    messages: number
+    /** Number of user steps. */
+    users: number
+    /** Number of assistant steps. */
+    assistants: number
+    /** Source model reference (providerID/modelID), if the transcript records one. */
+    model?: { providerID: string; modelID: string }
+  }
+
+  /** Summarize a parsed transcript into a lightweight preview for discovery. */
+  export function preview(transcript: Transcript): Preview {
+    const users = transcript.steps.filter((s) => s.role === "user").length
+    const assistants = transcript.steps.filter((s) => s.role === "assistant").length
+    return {
+      format: transcript.format,
+      version: transcript.version,
+      title: firstUserText(transcript),
+      messages: transcript.steps.length,
+      users,
+      assistants,
+      model: transcript.sourceModel,
+    }
+  }
+
+  /** First non-empty user text, collapsed to a single line and clamped to 120 chars. */
+  function firstUserText(transcript: Transcript): string | undefined {
+    for (const step of transcript.steps) {
+      if (step.role !== "user") continue
+      for (const part of step.parts) {
+        if (part.type !== "text") continue
+        const text = part.text.replace(/\s+/g, " ").trim()
+        if (text.length === 0) continue
+        return text.length > 120 ? `${text.slice(0, 117)}...` : text
+      }
+    }
+    return undefined
+  }
+
   // ── Command definitions ────────────────────────────────────────────
 
   export const resumeClaude = {

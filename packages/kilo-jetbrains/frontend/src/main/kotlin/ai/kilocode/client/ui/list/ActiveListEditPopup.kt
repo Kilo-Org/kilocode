@@ -5,7 +5,6 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.ui.popup.Balloon
-import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
@@ -13,7 +12,6 @@ import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
-import javax.swing.event.DocumentEvent
 
 data class ActiveListEditOptions(
     val value: String,
@@ -60,22 +58,17 @@ private fun activeListEditPopup(
         }
         next(field)
     }
-    val popup = activeListPopup(
+    // A greyed-out primary button reads as a broken popup, so the button stays live and a blank or
+    // unchanged name just closes without a rename round trip.
+    return activeListPopup(
         body = body,
         button = opts.button,
-        enabled = { enabled(field.text, opts.value) },
         hide = hide,
-        perform = { commit(field.text.trim()) },
+        perform = {
+            val next = field.text.trim()
+            if (next.isNotBlank() && next != opts.value.trim()) commit(next)
+        },
     )
-    field.document.addDocumentListener(object : DocumentAdapter() {
-        override fun textChanged(e: DocumentEvent) = popup.sync()
-    })
-    return popup
-}
-
-private fun enabled(text: String, value: String): Boolean {
-    val next = text.trim()
-    return next.isNotBlank() && next != value.trim()
 }
 
 private fun activeListEditField(root: Container): JBTextField? {

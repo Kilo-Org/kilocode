@@ -1,5 +1,6 @@
 package ai.kilocode.rpc.dto
 
+import ai.kilocode.rpc.dto.orphans.OrphanDto
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,26 +12,141 @@ data class WorktreeDto(
     val main: Boolean = false,     // primary working tree — not deletable
     val locked: Boolean = false,   // git worktree lock — blocks a plain remove
     val lockReason: String? = null, // optional reason recorded when the tree was locked
+    val prunable: Boolean = false, // git marks metadata stale because the directory is gone
 )
 
 @Serializable
-data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
+data class WorktreeListDto(
+    val worktrees: List<WorktreeDto> = emptyList(),
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track — leftovers from interrupted
+     * deletes or hand-removed metadata. Reported so they can be surfaced and cleaned deliberately;
+     * nothing removes them automatically.
+     */
+    val orphans: List<OrphanDto> = emptyList(),
+)
 
 @Serializable
 data class WorktreeStatsDto(
     val path: String,
+    /** Committed additions vs `merge-base(base, HEAD)` — GitHub's "Files changed" number. */
     val additions: Int = 0,
     val deletions: Int = 0,
     val ahead: Int = 0,
     val behind: Int = 0,
     val files: Int = 0,
+    /** Resolved base ref the counts are relative to, e.g. `origin/main`. Empty when unresolved. */
+    val base: String = "",
+    /**
+     * True when the counts could not be measured, so they mean "unknown" rather than "zero".
+     *
+     * Without this a timed-out or failed poll is indistinguishable from a clean worktree, and the UI
+     * quietly drops the badges it was showing a moment earlier.
+     */
+    val unavailable: Boolean = false,
+    /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
+    val reason: String = "",
 )
 
 @Serializable
-data class WorktreeStatsListDto(val items: List<WorktreeStatsDto> = emptyList())
+data class WorktreeStatsListDto(
+    val items: List<WorktreeStatsDto> = emptyList(),
+    /**
+     * True when the worktree listing itself failed, so [items] means "unknown", not "none".
+     *
+     * Without it an empty list is indistinguishable from a repository that has no worktrees, and the
+     * client drops every badge it was showing — a failed poll rendering as clean, which is exactly
+     * what [WorktreeStatsDto.unavailable] exists to prevent per row.
+     */
+    val unavailable: Boolean = false,
+)
+
+/**
+ * Uncommitted state of one worktree, relative to its own HEAD — staged, unstaged, and untracked
+ * together. Deliberately separate from [WorktreeStatsDto], which is measured against the base branch.
+ */
+@Serializable
+data class WorktreeDirtyDto(
+    val path: String,
+    val additions: Int = 0,
+    val deletions: Int = 0,
+    val files: Int = 0,
+    /** How many of [files] are untracked. Their additions are line counts; deletions are always 0. */
+    val untracked: Int = 0,
+    /** Commits ahead of `@{upstream}`. 0 when the branch has no upstream. */
+    val unpushed: Int = 0,
+    /** True when the counts could not be measured; see [WorktreeStatsDto.unavailable]. */
+    val unavailable: Boolean = false,
+    /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
+    val reason: String = "",
+)
+
+@Serializable
+data class WorktreeDirtyListDto(
+    val items: List<WorktreeDirtyDto> = emptyList(),
+    /** True when the worktree listing itself failed; see [WorktreeStatsListDto.unavailable]. */
+    val unavailable: Boolean = false,
+)
 
 @Serializable
 enum class GhState { OPEN, DRAFT, MERGED, CLOSED }
+
+/**
+ * Aggregate review verdict for a pull request, from GitHub's `reviewDecision`. Orthogonal to
+ * [GhState]: a draft PR can be approved, and an open one can be waiting on review.
+ *
+ * [PENDING] means a review is required but not yet given; [NONE] means the repository asks for none.
+ */
+@Serializable
+enum class GhReview { NONE, PENDING, APPROVED, CHANGES_REQUESTED }
+
+/** Rolled-up CI verdict for a pull request head. [NONE] means the head reports no checks at all. */
+@Serializable
+enum class GhChecks { NONE, PENDING, PASSED, FAILED }
+
+/**
+ * Rolled-up CI state for a pull request head, from GitHub's `statusCheckRollup`.
+ *
+ * Counts only, deliberately: per-check names, URLs, and timestamps would make every poll produce a
+ * DTO that compares unequal to the last one, and both `WorktreeRow.equals` and `WorktreeNameCache`
+ * gate listener/row refreshes on whole-DTO equality. Aggregates stay stable between polls that found
+ * nothing new. [total] excludes skipped checks, matching what GitHub's own PR page counts.
+ */
+@Serializable
+data class GhChecksDto(
+    val state: GhChecks = GhChecks.NONE,
+    val total: Int = 0,
+    val passed: Int = 0,
+    val failed: Int = 0,
+    val pending: Int = 0,
+)
+
+/**
+ * Review conversations on a pull request, from GitHub's `reviewThreads`.
+ *
+ * Counts only, for the same reason as [GhChecksDto]. [total] counts conversations, not individual
+ * comments — a thread with a dozen replies is one. [unresolved] counts the threads nobody has marked
+ * resolved, outdated ones included, which is what GitHub's own "unresolved conversations" number says.
+ *
+ * Both are read from the first 100 threads, so a pull request with more under-reports. That bound is
+ * GitHub's page size rather than a limit worth paginating for: no reviewer scans a hundredth thread from
+ * a worktree row.
+ */
+@Serializable
+data class GhCommentsDto(
+    val total: Int = 0,
+    val unresolved: Int = 0,
+)
+
+/**
+ * Whether a pull request still merges into its base branch, from GitHub's `mergeable`.
+ *
+ * [UNKNOWN] is what GitHub answers for the first seconds after a push, because it computes mergeability
+ * asynchronously, and also what an older `gh` or a refused field leaves behind. It therefore has to read as
+ * "nothing to report" — the absence of a verdict is never evidence that the branches merge cleanly.
+ */
+@Serializable
+enum class GhMerge { UNKNOWN, CLEAN, CONFLICTING }
 
 @Serializable
 data class WorktreePrDto(
@@ -39,10 +155,40 @@ data class WorktreePrDto(
     val state: GhState,
     val url: String,
     val title: String = "",
+    val review: GhReview = GhReview.NONE,
+    val checks: GhChecksDto = GhChecksDto(),
+    val comments: GhCommentsDto = GhCommentsDto(),
+    /** Whether the head still merges into base. Answered by the same request as [checks]. */
+    val merge: GhMerge = GhMerge.UNKNOWN,
 )
 
+/**
+ * Why gh cannot answer, or [OK] when it can.
+ *
+ * [RATE_LIMITED] is temporary and fixes itself, unlike the others: GitHub refused the query because the
+ * token's hourly budget is spent. It still has to be a state of its own, because the alternative is
+ * reading a refusal as "this checkout has no pull request" — which blanks every badge with no reason
+ * given, and costs the most calls doing it, since a lookup that stops at the first answer instead walks
+ * its whole strategy ladder.
+ */
 @Serializable
-enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING }
+enum class GhAvailability {
+    OK,
+    MISSING,
+    UNAUTH,
+    GIT_MISSING,
+    RATE_LIMITED,
+
+    /**
+     * `gh` ran but did not answer within its budget.
+     *
+     * Distinct from [OK] because a timeout used to be reported as success, which reset the probe's
+     * failure counter and defeated its own backoff — the loop kept spending a full timeout per poll
+     * on a command that never returns. Distinct from [MISSING] because `gh` is installed and may
+     * answer the next time.
+     */
+    TIMEOUT,
+}
 
 @Serializable
 data class WorktreePrListDto(
@@ -50,10 +196,37 @@ data class WorktreePrListDto(
     val items: List<WorktreePrDto> = emptyList(),
 )
 
+/**
+ * Single-directory branch status for the chat branch/PR dock: the current branch, whether the
+ * directory is a linked worktree, gh availability, and the PR for the branch (if any).
+ */
+@Serializable
+data class BranchStatusDto(
+    val branch: String = "",
+    val worktree: Boolean = false,
+    val availability: GhAvailability = GhAvailability.OK,
+    val pr: WorktreePrDto? = null,
+)
+
+/** Stages of the "Move to Worktree" flow. Mirrors VS Code's ContinueInWorktreeStatus minus setup. */
+@Serializable
+enum class MoveStage { CAPTURING, CREATING, TRANSFERRING, FORKING, DONE, ERROR }
+
+/** Progress event streamed while moving a session into a new worktree. */
+@Serializable
+data class MoveProgressDto(
+    val stage: MoveStage,
+    val error: String? = null,
+    val worktree: WorktreeDto? = null,
+    val session: String? = null,
+)
+
 @Serializable
 data class WorktreeBranchesDto(
     val branches: List<String> = emptyList(),
     val current: String? = null,
+    // `owner/repo` for the checkout's origin remote; null when there is no GitHub origin.
+    val origin: String? = null,
 )
 
 @Serializable

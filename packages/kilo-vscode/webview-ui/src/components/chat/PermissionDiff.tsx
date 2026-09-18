@@ -6,6 +6,11 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { normalize } from "@kilocode/kilo-ui/session-diff"
 import type { PermissionFileDiff } from "../../types/messages"
 import { useVSCode } from "../../context/vscode"
+import { useSession } from "../../context/session"
+import { useWorktreeMode } from "../../context/worktree-mode"
+import { useDiffStyle } from "../../context/diff-style"
+import { dispatchAgentManagerEditPreview } from "../../utils/agent-manager-events"
+import { useLanguage } from "../../context/language"
 
 interface PermissionDiffProps {
   filediff: PermissionFileDiff
@@ -13,6 +18,10 @@ interface PermissionDiffProps {
 
 export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
   const vscode = useVSCode()
+  const session = useSession()
+  const worktree = useWorktreeMode()
+  const diffStyle = useDiffStyle()
+  const { t } = useLanguage()
   const filename = createMemo(() => {
     const parts = props.filediff.file.split("/")
     return parts[parts.length - 1] ?? props.filediff.file
@@ -31,10 +40,18 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
   })
 
   const openInTab = () => {
+    if (worktree) {
+      dispatchAgentManagerEditPreview({
+        diff: props.filediff,
+        sessionID: session.currentSessionID(),
+        initialDiffStyle: diffStyle?.style() ?? "unified",
+      })
+      return
+    }
     vscode.postMessage({
       type: "openDiffVirtual",
       diff: props.filediff,
-      initialDiffStyle: "unified",
+      initialDiffStyle: diffStyle?.style() ?? "unified",
     })
   }
 
@@ -66,8 +83,13 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
         </div>
         <div data-slot="permission-diff-actions">
           <DiffChanges changes={props.filediff} />
-          <Tooltip value="View in new tab">
-            <IconButton size="small" icon="expand" onClick={openInTab} aria-label="View diff in new tab" />
+          <Tooltip value={worktree ? t("agentManager.editPreview.openInPanel") : "View in new tab"}>
+            <IconButton
+              size="small"
+              icon="expand"
+              onClick={openInTab}
+              aria-label={worktree ? t("agentManager.editPreview.openInPanel") : "View diff in new tab"}
+            />
           </Tooltip>
         </div>
       </div>

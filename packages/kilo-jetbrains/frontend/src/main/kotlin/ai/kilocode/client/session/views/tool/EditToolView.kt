@@ -11,18 +11,16 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
-import ai.kilocode.client.session.ui.selection.hoverPlaceholder
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
+import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.ui.DiffStatBadge
-import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
-import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
@@ -46,7 +44,8 @@ class EditToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
     private var body: EditBody = editBody(tool, selection, openFile),
-) : AbstractSessionPartView(parts.header, { body.mount(tool) }), UiDataProvider, SessionCopyTarget {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
@@ -57,10 +56,7 @@ class EditToolView(
     private var sessionId: String? = null
     private var canDiff = false
     private val badge = DiffStatBadge(0, 0)
-    private val diff = toolbarButton(
-        ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer),
-    )
-    private val diffAnchor = hoverPlaceholder(diff)
+    private val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer)
     private val filesTag = JBLabel().apply {
         foreground = SessionUiStyle.Text.Secondary.foreground()
         font = JBFont.small()
@@ -74,7 +70,7 @@ class EditToolView(
         parts.left.next(parts.link)
         parts.left.next(filesTag)
         parts.left.next(PartHeader.centered(badge))
-        parts.left.next(diffAnchor)
+        parts.left.next(open.anchor)
         // The base binds click-to-toggle across the whole header subtree, skipping controls that own
         // a mouse listener. parts.link (FileLinkLabel) installs its own click handler that opens the
         // file, so it is skipped automatically and does not also toggle the card.
@@ -83,8 +79,8 @@ class EditToolView(
     }
 
     override val copyEligible: Boolean get() = canDiff
-    override val copyAnchor: JComponent get() = diffAnchor
-    override val copyToolbar: JComponent get() = diff
+    override val copyAnchor: JComponent get() = open.anchor
+    override val copyToolbar: JComponent get() = open.button
 
     constructor(
         tool: Tool,
@@ -126,7 +122,7 @@ class EditToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + expandedGap() + (body.panel()?.preferredSize?.height ?: 0)
+        val height = row.preferredSize.height + expandedGap() + (body.panel()?.preferredSize?.height ?: 0) + footerHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -138,6 +134,7 @@ class EditToolView(
         changed = swapBody() || changed
         changed = sync() || changed
         changed = syncBody() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (changed) refresh()
     }
 
@@ -207,7 +204,15 @@ class EditToolView(
         changed = setFont(parts.link, style.transcriptFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
         changed = body.applyStyle(style) || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun expandable(): Boolean =
@@ -232,6 +237,7 @@ class EditToolView(
         syncDiffAction(count)
         changed = syncFilesTag(count) || changed
         changed = syncBadge() || changed
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
 
@@ -239,9 +245,9 @@ class EditToolView(
         // Mirrors toDiffFiles(item).isNotEmpty() without re-parsing the metadata JSON or allocating a
         // DiffFileDto per file on every streaming delta: files present, else a single-file patch.
         val show = count > 0 || editDiff(item).isNotBlank()
-        if (canDiff == show && diff.isEnabled == show) return
+        if (canDiff == show && open.enabled == show) return
         canDiff = show
-        diff.isEnabled = show
+        open.enabled = show
     }
 
     private fun openDiffViewer() {

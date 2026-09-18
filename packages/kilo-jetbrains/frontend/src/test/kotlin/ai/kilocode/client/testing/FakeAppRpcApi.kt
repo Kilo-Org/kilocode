@@ -9,6 +9,8 @@ import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.LogConfigDto
+import ai.kilocode.rpc.dto.LogFileDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
@@ -49,6 +51,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
     val cleared = mutableListOf<String>()
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
+    val logConfigs = mutableListOf<LogConfigDto>()
     var configUpdateAttempts = 0
         private set
     var configUpdateGate: CompletableDeferred<Unit>? = null
@@ -171,6 +174,45 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return next
     }
 
+    override suspend fun applyLogConfig(config: LogConfigDto) {
+        assertNotEdt("applyLogConfig")
+        logConfigs.add(config)
+    }
+
+    var indexWorktrees = false
+    val indexWorktreesSaves = mutableListOf<Boolean>()
+
+    /** When set, [indexWorktrees] awaits this deferred, emulating a slow split-mode fetch. */
+    var indexWorktreesGate: CompletableDeferred<Unit>? = null
+
+    /** When set, [setIndexWorktrees] awaits this deferred before recording the save. */
+    var indexWorktreesSaveGate: CompletableDeferred<Unit>? = null
+
+    /** Incremented as soon as [setIndexWorktrees] is entered, before it awaits any gate. */
+    var indexWorktreesSaveAttempts = 0
+        private set
+
+    override suspend fun indexWorktrees(): Boolean {
+        assertNotEdt("indexWorktrees")
+        indexWorktreesGate?.await()
+        return indexWorktrees
+    }
+
+    override suspend fun setIndexWorktrees(value: Boolean) {
+        assertNotEdt("setIndexWorktrees")
+        indexWorktreesSaveAttempts += 1
+        indexWorktreesSaveGate?.await()
+        indexWorktrees = value
+        indexWorktreesSaves.add(value)
+    }
+
+    var backendLog: LogFileDto? = null
+
+    override suspend fun backendLogFile(): LogFileDto? {
+        assertNotEdt("backendLogFile")
+        return backendLog
+    }
+
     private fun applyPatch(config: ConfigDto, patch: ConfigPatchDto): ConfigDto {
         val values = patch.values
         val agents = patch.agents.entries.fold(config.agent) { acc, (name, item) ->
@@ -239,6 +281,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
             mcp = mcp,
             agent = agents,
             permission = mergePermission(config.permission, patch.permission),
+            shared_agent_board = patch.shared_agent_board ?: config.shared_agent_board,
         )
     }
 
