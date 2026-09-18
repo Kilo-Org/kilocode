@@ -281,6 +281,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
             mcp = mcp,
             agent = agents,
             permission = mergePermission(config.permission, patch.permission),
+            shared_agent_board = patch.shared_agent_board ?: config.shared_agent_board,
         )
     }
 
