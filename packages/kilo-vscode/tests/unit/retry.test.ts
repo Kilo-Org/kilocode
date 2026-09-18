@@ -79,4 +79,19 @@ describe("retry", () => {
       expect(calls).toBe(2)
     }
   })
+
+  it("does not retry messages that only contain terminated", async () => {
+    let calls = 0
+    await expect(
+      retry(
+        () => {
+          calls++
+          throw new Error("CLI process terminated by signal SIGSEGV before server started")
+        },
+        3,
+        10,
+      ),
+    ).rejects.toThrow("terminated")
+    expect(calls).toBe(1)
+  })
 })
