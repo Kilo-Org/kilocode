@@ -641,6 +641,160 @@ describe("ConfigProtection.evaluate", () => {
       await fs.rm(parentLink, { recursive: true, force: true })
     }
   })
+
+  test("resolves a dangling in-project symlink to a missing global config target", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    const root = path.join(tmp.path, "global")
+    await fs.mkdir(root, { recursive: true })
+    ;(Global.Path as { config: string }).config = root
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const symlink = path.join(tmp.path, ".kilo", "kilo.json")
+    await fs.symlink(path.join(root, "opencode.jsonc"), symlink, "file")
+    const on = { require_approval_for_config_edits: true }
+    const off = { require_approval_for_config_edits: false }
+    try {
+      // The dangling link escapes to a global config dir: global policy wins, not the project opt-out.
+      expect(verdict(symlink, tmp.path, on, off)).toMatchObject({ candidate: true, external: true, protect: true })
+      // Inverse: the global opt-out auto-approves the escaped target despite the project opt-in.
+      expect(verdict(symlink, tmp.path, off, on)).toMatchObject({ candidate: true, external: true, protect: false })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+    }
+  })
+
+  test("resolves a relative symlink ancestor and dangling suffix to a missing global target", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    const root = path.join(tmp.path, "global")
+    await fs.mkdir(root, { recursive: true })
+    ;(Global.Path as { config: string }).config = root
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    await fs.symlink(root, path.join(tmp.path, ".kilo", "alias"), link)
+    const symlink = path.join(tmp.path, ".kilo", "link")
+    await fs.symlink(path.join("alias", "opencode.jsonc"), symlink, "file")
+    const on = { require_approval_for_config_edits: true }
+    const off = { require_approval_for_config_edits: false }
+    try {
+      expect(verdict(symlink, tmp.path, on, off)).toMatchObject({ candidate: true, external: true, protect: true })
+      expect(verdict(symlink, tmp.path, off, on)).toMatchObject({ candidate: true, external: true, protect: false })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+    }
+  })
+
+  test("resolves a relative `..` in a link target to the physical project scope", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const symlink = path.join(tmp.path, ".kilo", "link")
+    await fs.symlink(["..", "missing.json"].join("/"), symlink, "file")
+    const on = { require_approval_for_config_edits: true }
+    const off = { require_approval_for_config_edits: false }
+    try {
+      // The `..` lands inside the project, so the project policy governs it: an opt-in protects,
+      // while a global opt-out must not weaken the project.
+      expect(verdict(symlink, tmp.path, off, on)).toMatchObject({ candidate: true, external: false, protect: true })
+      expect(verdict(symlink, tmp.path, on, off)).toMatchObject({ candidate: true, external: false, protect: false })
+    } finally {
+      await fs.rm(symlink, { force: true })
+    }
+  })
+
+  test("resolves `..` after a symlink component to the physical out-of-project target", async () => {
+    await using tmp = await tmpdir()
+    await using outside = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    await fs.symlink(outside.path, path.join(tmp.path, "alias"), link)
+    const symlink = path.join(tmp.path, ".kilo", "kilo.json")
+    await fs.symlink(["..", "alias", "..", "opencode.jsonc"].join("/"), symlink, "file")
+    const on = { require_approval_for_config_edits: true }
+    const off = { require_approval_for_config_edits: false }
+    try {
+      // `alias/..` applies to the symlink's physical target, so this escapes and needs global policy.
+      expect(verdict(symlink, tmp.path, on, off)).toMatchObject({ candidate: true, external: true, protect: true })
+      expect(verdict(symlink, tmp.path, off, on)).toMatchObject({ candidate: true, external: true, protect: false })
+    } finally {
+      await fs.rm(symlink, { force: true })
+    }
+  })
+
+  test("consults both policies for an unprovable symlink cycle", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const first = path.join(tmp.path, ".kilo", "a.json")
+    const second = path.join(tmp.path, ".kilo", "b.json")
+    await fs.symlink(second, first, "file")
+    await fs.symlink(first, second, "file")
+    const on = { require_approval_for_config_edits: true }
+    const off = { require_approval_for_config_edits: false }
+    try {
+      // The scope is unprovable: an inside OR a global opt-out alone must not weaken it.
+      expect(verdict(first, tmp.path, off, on)).toMatchObject({ candidate: true, external: false, protect: true })
+      expect(verdict(first, tmp.path, on, off)).toMatchObject({ candidate: true, external: false, protect: true })
+      expect(verdict(first, tmp.path, off, off)).toMatchObject({ candidate: true, external: false, protect: false })
+    } finally {
+      await fs.rm(first, { force: true })
+      await fs.rm(second, { force: true })
+    }
+  })
+
+  test("bounds long relative symlink chains and treats overflow as unproven", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const count = 45
+    for (let i = 0; i < count; i++) {
+      const target = i === count - 1 ? "missing.json" : `link${i + 1}.json`
+      await fs.symlink(target, path.join(tmp.path, ".kilo", `link${i}.json`), "file")
+    }
+    const on = { require_approval_for_config_edits: true }
+    const off = { require_approval_for_config_edits: false }
+    try {
+      const head = path.join(tmp.path, ".kilo", "link0.json")
+      // Exceeding the hop bound is unprovable, so either active policy still protects.
+      expect(verdict(head, tmp.path, off, on)).toMatchObject({ candidate: true, external: false, protect: true })
+      expect(verdict(head, tmp.path, off, off)).toMatchObject({ candidate: true, external: false, protect: false })
+    } finally {
+      await fs.rm(path.join(tmp.path, ".kilo"), { recursive: true, force: true })
+    }
+  })
+
+  test("keeps a dangling symlink whose missing destination is inside the project under project policy", async () => {
+    await using tmp = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const symlink = path.join(tmp.path, ".kilo", "kilo.json")
+    await fs.symlink(path.join(tmp.path, "missing.json"), symlink, "file")
+    const off = { require_approval_for_config_edits: false }
+    const on = { require_approval_for_config_edits: true }
+    try {
+      expect(verdict(symlink, tmp.path, on, off)).toMatchObject({ candidate: true, external: false, protect: false })
+      expect(verdict(symlink, tmp.path, off, on)).toMatchObject({ candidate: true, external: false, protect: true })
+    } finally {
+      await fs.rm(symlink, { force: true })
+    }
+  })
+
+  test("resolves a dangling symlink outside the project to the global policy", async () => {
+    await using tmp = await tmpdir()
+    await using outside = await tmpdir()
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const symlink = path.join(tmp.path, ".kilo", "kilo.json")
+    await fs.symlink(path.join(outside.path, "missing.json"), symlink, "file")
+    const off = { require_approval_for_config_edits: false }
+    const on = { require_approval_for_config_edits: true }
+    try {
+      expect(verdict(symlink, tmp.path, on, off)).toMatchObject({ candidate: true, external: true, protect: true })
+      expect(verdict(symlink, tmp.path, off, on)).toMatchObject({ candidate: true, external: true, protect: false })
+    } finally {
+      await fs.rm(symlink, { force: true })
+    }
+  })
+
+  test("keeps a nonexistent symlink-free config leaf scoped to the project", async () => {
+    await using tmp = await tmpdir()
+    expect(
+      verdict(".kilo/missing.json", tmp.path, undefined, { require_approval_for_config_edits: false }),
+    ).toMatchObject({ candidate: true, external: false, protect: false })
+  })
 })
 
 describe("ConfigProtection.classify", () => {

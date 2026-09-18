@@ -1796,4 +1796,51 @@ describe("require_approval_for_config_edits source scope", () => {
       await disposeAllInstances()
     }
   })
+
+  test("an explicit project value overrides legacy home globals in the effective config", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    ;(Global.Path as { config: string }).config = globalDir.path
+    process.env["KILO_TEST_HOME"] = home.path
+    process.env["HOME"] = home.path
+    await writeConfig(path.join(home.path, ".kilo"), { require_approval_for_config_edits: true })
+    await clear()
+    await disposeAllInstances()
+
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          // Without a project value the legacy home global is the effective fallback.
+          expect((await load()).require_approval_for_config_edits).toBe(true)
+          expect((await read()).require_approval_for_config_edits).toBeUndefined()
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+
+          // An explicit project value overrides the legacy home global for the effective project
+          // config that the permission policy and settings overlay read...
+          await saveProject({ require_approval_for_config_edits: false })
+          expect((await load()).require_approval_for_config_edits).toBe(false)
+          // ...while the effective global policy still reports the legacy value.
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 })
