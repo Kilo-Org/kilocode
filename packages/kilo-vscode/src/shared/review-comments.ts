@@ -122,9 +122,12 @@ export function formatReviewCommentsMarkdown(comments: ReviewCommentEntry[]): st
  * inline comments carry the user's own instructions. The permission prompts
  * on commit and push remain the confirmation step.
  */
+export const PUSH_INSTRUCTION =
+  "When the changes pass local checks, commit them and push to this branch so the pull request updates. Do not force-push."
+
 export function pushInstruction(comments: ReviewCommentEntry[], enabled: boolean): string {
   if (!enabled || !comments.some((item) => isPRReviewComment(item) || isCIReviewComment(item))) return ""
-  return "When the changes pass local checks, commit them and push to this branch so the pull request updates. Do not force-push."
+  return PUSH_INSTRUCTION
 }
 
 export function record(value: unknown): Record<string, unknown> | undefined {

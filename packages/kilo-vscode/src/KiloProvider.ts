@@ -142,6 +142,7 @@ import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
 import type { PRReviewCommentData, ReviewMessageData } from "./shared/review-comments"
 import { feedbackMetadata, parseFeedback, type BrowserFeedbackData } from "./shared/browser-feedback"
+import { mergeInjected } from "./shared/injected-prompt"
 import { completesWithoutStatus, goalControl } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
 
@@ -234,6 +235,7 @@ type SendWebviewMessage = {
   browserFeedback?: unknown
   agentManagerContext?: unknown
   contextDirectory?: unknown
+  injectedTitle?: unknown
 }
 type SandboxSupportClient = {
   support: (
@@ -1573,6 +1575,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
             feedback?.browserFeedback,
+            typeof message.injectedTitle === "string" ? message.injectedTitle : undefined,
           )
           break
         }
@@ -1666,6 +1669,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
       typeof message.contextDirectory === "string" ? message.contextDirectory : undefined,
       feedback?.browserFeedback,
+      typeof message.injectedTitle === "string" ? message.injectedTitle : undefined,
     )
   }
 
@@ -4302,6 +4306,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     context?: string,
     contextDirectory?: string,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -4335,7 +4340,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text, metadata: feedbackMetadata(review, browserFeedback) })
+      parts.push({
+        type: "text",
+        text,
+        metadata: mergeInjected(feedbackMetadata(review, browserFeedback), injectedTitle),
+      })
 
       const editorContext = await this.gatherEditorContext(dir)
       if (draftID && this.closedDrafts.delete(draftID)) {

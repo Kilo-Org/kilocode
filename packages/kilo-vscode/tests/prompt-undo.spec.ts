@@ -1,15 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
-
-const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
-
-async function open(page: Page) {
-  await page.goto(`/iframe.html?id=prompt-input--default-420&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
-  const input = page.locator("textarea.prompt-input")
-  await expect(input).toBeVisible()
-  await page.evaluate(() => window.postMessage({ type: "connectionState", state: "connected" }, window.origin))
-  await expect(input).toBeEnabled()
-  return input
-}
+import { open } from "./helpers/prompt-input"
 
 async function observe(page: Page, block = false) {
   const trace = await page.evaluateHandle((block) => {
