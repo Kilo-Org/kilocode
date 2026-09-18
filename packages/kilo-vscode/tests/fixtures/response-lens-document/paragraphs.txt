@@ -1,0 +1,4 @@
+First plain text paragraph.
+
+Second paragraph keeps its break.
+A following line.

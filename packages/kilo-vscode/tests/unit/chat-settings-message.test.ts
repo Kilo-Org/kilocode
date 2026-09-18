@@ -53,6 +53,15 @@ describe("buildChatSettingsMessage", () => {
 
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
   })
+
+  it("loads valid application Response Lens preferences and resets invalid values", () => {
+    expect(buildChatSettingsMessage().settings.responseLens).toEqual({ enabled: true, level: "simple" })
+    const saved = { enabled: false, level: "university", model: { providerID: "test", modelID: "alternate" } }
+    state.set("responseLens", saved)
+    expect(buildChatSettingsMessage().settings.responseLens).toEqual(saved)
+    state.set("responseLens", { enabled: true, level: "wrong" })
+    expect(buildChatSettingsMessage().settings.responseLens).toEqual({ enabled: true, level: "simple" })
+  })
 })
 
 describe("timeline settings", () => {
@@ -114,5 +123,15 @@ describe("validChatSetting", () => {
     expect(validChatSetting("shiftTabCyclesVariant", false)).toBe(true)
     expect(validChatSetting("shiftTabCyclesVariant", "false")).toBe(false)
     expect(validChatSetting("unknown", true)).toBe(false)
+  })
+
+  it("validates Response Lens writes before persisting", () => {
+    expect(validChatSetting("responseLens", { enabled: true, level: "school" })).toBe(true)
+    expect(validChatSetting("responseLens", { enabled: false, level: "high-school" })).toBe(true)
+    expect(validChatSetting("responseLens", { enabled: true, level: "expert" })).toBe(false)
+    expect(validChatSetting("responseLens", { enabled: "true", level: "simple" })).toBe(false)
+    expect(
+      validChatSetting("responseLens", { enabled: true, level: "simple", model: { providerID: "x", modelID: " " } }),
+    ).toBe(false)
   })
 })
