@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
-import { worktreeDropReference, worktreeReferences } from "../../webview-ui/agent-manager/worktree-references"
+import {
+  worktreeDropReference,
+  worktreeReferences,
+  createWorktreeMentionReferences,
+} from "../../webview-ui/agent-manager/worktree-references"
 import { createProjectStore } from "../../webview-ui/agent-manager/project/store"
 import {
   buildMentionResults,
@@ -128,6 +132,27 @@ describe("Agent Manager worktree references", () => {
     const scope = harness(() => refs)
     expect(scope.mention.worktreeCandidates().map((item) => item.path)).toEqual(["/repo/.kilo/worktrees/other"])
     scope.dispose()
+  })
+
+  it("keeps the selected worktree in the dialog list but leaves stale and busy disabled", () => {
+    const state = createProjectStore("project")
+    state.setWorktrees([tree("current"), tree("stale"), tree("busy"), tree("other")])
+    state.setStaleWorktreeIds(new Set(["stale"]))
+    state.setBusy(new Map([["busy", { reason: "deleting" }]]))
+    let stored: Record<string, unknown> | undefined
+    createRoot((dispose) => {
+      const { dialogRefs } = createWorktreeMentionReferences(
+        { getState: () => stored, setState: (value) => (stored = value) } as never,
+        () => state,
+        () => [],
+        () => "current",
+      )
+      const dialog = dialogRefs()
+      expect(dialog.find((ref) => ref.id === "current")?.disabled).toBe(false)
+      expect(dialog.find((ref) => ref.id === "stale")?.disabled).toBe(true)
+      expect(dialog.find((ref) => ref.id === "busy")?.disabled).toBe(true)
+      dispose()
+    })
   })
 
   it("keeps project inventories separate even when worktree IDs match", () => {
