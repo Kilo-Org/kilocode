@@ -14,6 +14,7 @@ import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { GlobalBus } from "../../../src/bus/global"
 import { Config } from "../../../src/config/config"
+import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { ConfigMarkdown } from "../../../src/config/markdown"
 import { ConfigParse } from "../../../src/config/parse"
 import { Env } from "../../../src/env"
@@ -1672,6 +1673,172 @@ describe("bash permission migration", () => {
       expect(text).toContain(`"read": "allow"`)
     } finally {
       ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
+describe("require_approval_for_config_edits source scope", () => {
+  const read = () =>
+    Effect.runPromise(Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)))
+
+  test("KILO_CONFIG_CONTENT false disables the effective project policy but not the global policy", async () => {
+    await using dir = await tmpdir()
+    await using project = await tmpdir()
+    const previous = process.env["KILO_CONFIG_CONTENT"]
+    const prev = Global.Path.config
+    process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ require_approval_for_config_edits: false })
+    ;(Global.Path as { config: string }).config = dir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          const merged = await load()
+          const global = await read()
+          expect(merged.require_approval_for_config_edits).toBe(false)
+          expect(global.require_approval_for_config_edits).toBeUndefined()
+          // The env-provided value is project-scoped: it disables the effective project policy, while
+          // the global policy that governs global config files stays enabled.
+          expect(ConfigProtection.enabled(merged)).toBe(false)
+          expect(ConfigProtection.enabled(global)).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (previous === undefined) delete process.env["KILO_CONFIG_CONTENT"]
+      else process.env["KILO_CONFIG_CONTENT"] = previous
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("project updates change the effective project policy while the global policy stays", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalDir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          await saveGlobal({ require_approval_for_config_edits: true })
+          expect(ConfigProtection.enabled(await load())).toBe(true)
+
+          await saveProject({ require_approval_for_config_edits: false })
+          expect(ConfigProtection.enabled(await load())).toBe(false)
+          // A project value never changes the global policy that governs global config files.
+          expect(ConfigProtection.enabled(await read())).toBe(true)
+
+          await saveProject({ require_approval_for_config_edits: true })
+          expect(ConfigProtection.enabled(await load())).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("invalidateInstance reloads the project config without dropping the cached global config", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalDir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+      await writeConfig(project.path, { username: "before" })
+
+      await provideTestInstance({
+        directory: project.path,
+        fn: () =>
+          Effect.runPromise(
+            Effect.gen(function* () {
+              const svc = yield* Config.Service
+              const globalBefore = yield* svc.getGlobal()
+              expect((yield* svc.get()).username).toBe("before")
+
+              // A direct project edit changes only project-owned sources.
+              yield* Effect.promise(() => writeConfig(project.path, { username: "after" }))
+              yield* svc.invalidateInstance()
+              expect((yield* svc.get()).username).toBe("after")
+              // Instance-only invalidation preserves the cached global object.
+              expect(yield* svc.getGlobal()).toBe(globalBefore)
+
+              // Repeated instance invalidations (an unknown project digest reloads every time) also
+              // keep the global object warm and still reload the project config each time.
+              yield* svc.invalidateInstance()
+              yield* svc.invalidateInstance()
+              expect(yield* svc.get()).toMatchObject({ username: "after" })
+              expect(yield* svc.getGlobal()).toBe(globalBefore)
+
+              // A real global edit still propagates through the global stamp.
+              yield* Effect.promise(() => writeConfig(globalDir.path, { require_approval_for_config_edits: false }))
+              const globalFresh = yield* svc.getGlobal()
+              expect(globalFresh).not.toBe(globalBefore)
+              expect(globalFresh.require_approval_for_config_edits).toBe(false)
+            }).pipe(Effect.scoped, Effect.provide(layer)),
+          ),
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("an explicit project value overrides legacy home globals in the effective config", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    ;(Global.Path as { config: string }).config = globalDir.path
+    process.env["KILO_TEST_HOME"] = home.path
+    process.env["HOME"] = home.path
+    await writeConfig(path.join(home.path, ".kilo"), { require_approval_for_config_edits: true })
+    await clear()
+    await disposeAllInstances()
+
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          // Without a project value the legacy home global is the effective fallback.
+          expect((await load()).require_approval_for_config_edits).toBe(true)
+          expect((await read()).require_approval_for_config_edits).toBeUndefined()
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+
+          // An explicit project value overrides the legacy home global for the effective project
+          // config that the permission policy and settings overlay read...
+          await saveProject({ require_approval_for_config_edits: false })
+          expect((await load()).require_approval_for_config_edits).toBe(false)
+          // ...while the effective global policy still reports the legacy value.
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
       await clear()
       await disposeAllInstances()
     }

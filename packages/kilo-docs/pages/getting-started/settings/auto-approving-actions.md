@@ -280,6 +280,42 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
 
+## Config File Protection
+
+Config file edits always require approval by default, even when `edit` or `external_directory` is set to `"allow"`. Kilo protects these paths:
+
+- The root-level `AGENTS.md`
+- Root-level `kilo.json`, `kilo.jsonc`, `opencode.json`, and `opencode.jsonc`
+- Project `.kilo/` and `.kilocode/` directories at any depth, except `plans/`
+- Global config directories `~/.config/kilo/`, `~/.kilo/`, and `~/.kilocode/`
+
+Protection by filename applies to the root-level `AGENTS.md` and the root-level config files above. A nested `AGENTS.md` or `AGENT.md` is not protected by name alone, but any file inside a project `.kilo/` or `.kilocode/` directory, or inside a global config directory, is still protected by directory, except files in an exempt `plans/` subtree.
+
+Set `require_approval_for_config_edits` to `false` to disable the check. The setting is scoped to where you set it:
+
+- A value in **project config** (`kilo.json`, `kilo.jsonc`, or a `.kilo/` config file in the project) applies only to files **inside that project's boundary** — the git worktree, or the working directory for non-git projects. For this setting, an explicit project value overrides every global source, including legacy `~/.kilo/` and `~/.kilocode/` config; when the project does not set the key, the effective global value is the fallback.
+- A value in **global config** (`~/.config/kilo/kilo.json` or `kilo.jsonc`) applies to global config directories and to existing protected config targets outside the project boundary, such as a `.kilo/` directory in another checkout. Only the protected paths listed above are covered; an arbitrary config-looking filename outside the project (for example a sibling `AGENTS.md`) keeps following ordinary permission rules. When the value comes from a legacy `~/.kilo/` or `~/.kilocode/` config file, the settings page shows the field as read-only and names that file, because those legacy files are merged after the primary global config and an edit to the primary global value cannot override them.
+
+A project value never weakens protection for global config files or for protected config targets outside the project, and it cannot opt out of protection for a global config directory even when that directory sits inside the workspace. Because the project value takes precedence for the project's own files, an explicit global `false` can be turned back on for a single project, and an explicit global `true` can be turned off for a single project. Symlinks are resolved against their real location, so an alias that lands inside the project follows the project policy and an alias that escapes it stays outside.
+
+Other non-global configuration sources, such as `KILO_CONFIG_CONTENT`, are merged into the project config and follow the same rule: they only affect the project's own files, never global config files or files outside the project.
+
+For example, to disable the check for the current project's own files only, place this in the project's `kilo.json`, `kilo.jsonc`, or `.kilo/` config:
+
+```jsonc
+{
+  "require_approval_for_config_edits": false,
+}
+```
+
+The option defaults to enabled, so leaving it out keeps the current behavior.
+
+With protection off, config file edits follow your regular `edit` and `external_directory` rules, and any `deny` or agent-level restrictions still apply.
+
+{% callout type="note" %}
+This setting controls a permission check, not a security boundary. Other tools, including shell commands and scripts, can still change files and bypass the check.
+{% /callout %}
+
 ## MCP Tool Permissions
 
 MCP tools use the same `allow` / `ask` / `deny` permission system as built-in tools. Each MCP tool's permission key is its namespaced name: `{server}_{tool}` (e.g. `github_create_pull_request`). You can use glob patterns like `github_*` for broad rules.

@@ -27,7 +27,7 @@ flowchart LR
   end
 
   subgraph schema ["Editor validation and completion"]
-    info["Config.Info<br/>Effect Schema"] --> generated["Locally generated schema<br/>for verification"]
+    info["ConfigV1.Info<br/>Effect Schema"] --> generated["Locally generated schema<br/>for verification"]
     upstream["https://opencode.ai/config.json"] --> overlay["Kilo Cloud merge route"]
     extras["Kilo extras.ts overlay buckets"] --> overlay --> endpoint["https://app.kilo.ai/config.json"] --> editor["Editor validation and completion"]
     generated -. "Keep aligned" .-> extras
@@ -38,7 +38,7 @@ Changing runtime config precedence affects first path. Adding or changing config
 
 ## Source of truth
 
-Canonical CLI config source is Effect Schema `Config.Info` in `packages/opencode/src/config/config.ts` in [`Kilo-Org/kilocode`](https://github.com/Kilo-Org/kilocode). CLI derives `.zod` compatibility surface from Effect Schema for plugin and SDK consumers. Do not maintain separate handwritten Zod definition for Kilo config fields.
+Canonical CLI config source is Effect Schema `ConfigV1.Info` in `packages/core/src/v1/config/config.ts` in [`Kilo-Org/kilocode`](https://github.com/Kilo-Org/kilocode). `packages/opencode/src/config/config.ts` re-exports it as `Config.Info` and adds derived provenance fields. The CLI derives the `.zod` compatibility surface from Effect Schema for plugin and SDK consumers. Do not maintain separate handwritten Zod definition for Kilo config fields.
 
 ## Cloud schema endpoint
 
@@ -71,7 +71,7 @@ Treat schema synchronization as cross-repository contract. Tests should detect b
 
 ## Adding or changing Kilo-only config key
 
-1. Add or update Effect Schema field with `kilocode_change` marker in `packages/opencode/src/config/config.ts`.
+1. Add or update Effect Schema field with `kilocode_change` marker in `packages/core/src/v1/config/config.ts`.
 2. Generate JSON Schema shape:
 
 ```sh
@@ -94,7 +94,8 @@ Repository column identifies source root for each relative path.
 
 | Repository | Source path | Role |
 |---|---|---|
-| `Kilo-Org/kilocode` | `packages/opencode/src/config/config.ts` | Canonical Effect Schema and derived `.zod` surface |
+| `Kilo-Org/kilocode` | `packages/core/src/v1/config/config.ts` | Canonical Effect Schema (`ConfigV1.Info`) |
+| `Kilo-Org/kilocode` | `packages/opencode/src/config/config.ts` | Re-exports canonical schema as `Config.Info`; adds derived fields |
 | `Kilo-Org/cloud` | `apps/web/src/app/config.json/route.ts` | Cloud overlay route |
 | `Kilo-Org/cloud` | `apps/web/src/app/config.json/extras.ts` | Kilo overlay buckets |
 | `Kilo-Org/cloud` | `apps/web/src/tests/cli-config-schema.test.ts` | Cloud schema assertions |

@@ -2561,6 +2561,7 @@ export type Config = {
   mcp_tool_display?: "expanded" | "collapsed"
   hide_prompt_training_models?: boolean
   privacy_mode?: boolean
+  require_approval_for_config_edits?: boolean
   /**
    * Sandbox configuration for agent tools
    */

@@ -268,6 +268,7 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 | `instructions` | `string[]` | Glob patterns for additional instruction files |
 | `plugin` | `string[]` | Plugin specifiers (npm packages or `file://` paths) |
 | `snapshot` | `boolean` | Enable git snapshots |
+| `require_approval_for_config_edits` | `boolean` | Require approval for protected config edits (default: `true`). Project config scopes to the project's own files; global config covers global config dirs and protected config targets outside the project; shell commands can still bypass |
 | `share` | `"manual"\|"auto"\|"disabled"` | Session sharing mode |
 | `autoupdate` | `boolean\|"notify"` | Auto-update behavior |
 | `username` | `string` | Display name override |

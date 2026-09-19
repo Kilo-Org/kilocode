@@ -58,6 +58,7 @@ import {
 } from "@kilocode/kilo-indexing/config"
 import { unique } from "remeda"
 import { installLocalPluginDependency, needsLocalPluginDependency } from "@/kilocode/config/plugin-deps"
+import { KiloLocalOverride } from "@/kilocode/config/local-override"
 // kilocode_change end
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
@@ -190,6 +191,8 @@ export interface Interface {
   ) => Effect.Effect<{ info: Info; changed: boolean }>
   // kilocode_change end
   readonly invalidate: () => Effect.Effect<void>
+  readonly invalidateInstance: () => Effect.Effect<void> // kilocode_change - instance-only invalidation for project config freshness
+  readonly getEffectiveGlobal: () => Effect.Effect<Info> // kilocode_change - primary + legacy home global config sources
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
   readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
@@ -465,6 +468,31 @@ const layer = Layer.effect(
       return yield* cachedGlobal
     })
 
+    // kilocode_change start - config-protection policies must observe the primary global config and
+    // the legacy home config directories, not only Global.Path.config. The loader merges the legacy
+    // home dirs after the primary global config (later wins), so merge their files through the same
+    // loadFile and mergeConfigConcatArrays path rather than re-parsing config here. The primary
+    // global stays cached; legacy files are read on each call so direct edits are observed. A
+    // malformed legacy file is logged and skipped like the normal loader's directory pass, so it
+    // cannot abort a permission decision or erase a valid primary/legacy value.
+    const getEffectiveGlobal = Effect.fn("Config.getEffectiveGlobal")(function* () {
+      let result = yield* getGlobal()
+      for (const dir of [path.join(Global.Path.home, ".kilocode"), path.join(Global.Path.home, ".kilo")]) {
+        for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
+          const source = path.join(dir, name)
+          const next = yield* loadFile(source, undefined, true).pipe(
+            Effect.catchDefect((err: unknown) => {
+              log.warn("skipping malformed legacy global config", { path: source, err })
+              return Effect.succeed({} as Info)
+            }),
+          )
+          result = mergeConfigConcatArrays(result, next)
+        }
+      }
+      return result
+    })
+    // kilocode_change end
+
     const ensureGitignore = Effect.fn("Config.ensureGitignore")(function* (dir: string) {
       // kilocode_change start - optional config setup must not abort tools after entering filesystem confinement or read-only locations
       yield* fs.ensureDir(dir).pipe(Effect.catchTag("PlatformError", () => Effect.void))
@@ -573,6 +601,8 @@ const layer = Layer.effect(
           return result
         }
 
+        const protection = KiloLocalOverride.make()
+
         const merge = Effect.fnUntraced(function* (
           source: string,
           next: Info,
@@ -582,6 +612,7 @@ const layer = Layer.effect(
           const scope = kind ?? (yield* pluginScopeForSource(source))
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
+          protection.observe(scoped, scope) // kilocode_change - track a project override for the config-edit protection field
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
@@ -762,6 +793,9 @@ const layer = Layer.effect(
               )
               plugins.push(...(next.plugin ?? []))
               yield* merge(source, next, dirScope, dirTrusted)
+              // kilocode_change - the explicit env dir's own config is an eligible source even though
+              // it is merged with the global trust policy; only the field is tracked.
+              if (dir === Flag.KILO_CONFIG_DIR) protection.observe(next, "local")
               result.agent ??= {}
               result.mode ??= {}
               result.plugin ??= []
@@ -812,6 +846,10 @@ const layer = Layer.effect(
           }
           // kilocode_change end
         }
+
+        // kilocode_change start - re-apply the last eligible project/env value before inline/env/cloud/managed.
+        result = protection.apply(result)
+        // kilocode_change end
 
         if (process.env.KILO_CONFIG_CONTENT) {
           // kilocode_change start - capture KILO_CONFIG_CONTENT parse failures as warnings
@@ -1046,6 +1084,14 @@ const layer = Layer.effect(
       yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void)) // kilocode_change
     })
 
+    // kilocode_change start - invalidate only this instance's cached config, preserving the cached
+    // global config. Used when only project-owned config sources changed (project digest) so the
+    // warm global object is not dropped; real global edits still propagate via refreshGlobal.
+    const invalidateInstance = Effect.fn("Config.invalidateInstance")(function* () {
+      yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
+    })
+    // kilocode_change end
+
     // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes
     const updateGlobal = Effect.fn("Config.updateGlobal")(function* (config: Info, options?: { dispose?: boolean }) {
       const dispose = options?.dispose ?? true
@@ -1139,6 +1185,8 @@ const layer = Layer.effect(
       update,
       updateGlobal,
       invalidate,
+      invalidateInstance, // kilocode_change
+      getEffectiveGlobal, // kilocode_change
       directories,
       waitForDependencies,
       warnings, // kilocode_change

@@ -44,7 +44,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         Effect.map(Option.getOrUndefined),
         Effect.orElseSucceed(() => undefined),
       )
-      const [base, global, sources] = yield* Effect.all(
+      const [base, global, sources, legacy] = yield* Effect.all(
         [
           config.get(),
           config.getGlobal(),
@@ -56,8 +56,9 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
               account: active,
             }),
           ),
+          Effect.promise(() => KilocodeConfigOverlay.legacyField()),
         ],
-        { concurrency: 3 },
+        { concurrency: 4 },
       )
       return yield* Effect.promise(() =>
         KilocodeConfigOverlay.resolve({
@@ -67,6 +68,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           effective: base,
           global,
           sources: sources.sources,
+          legacy,
         }),
       )
     })
@@ -81,6 +83,21 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       }
       const expected = body.expected ? { ...body.expected } : undefined
       const instance = yield* InstanceState.context
+      const patch = KilocodeConfigOverlay.patch(body)
+      // A legacy home global value overrides the primary global target, so a global write for this
+      // field would be reported as saved while the effective value never changes. Reject it instead.
+      if (body.scope === "global" && Object.hasOwn(patch, KilocodeConfigOverlay.protectionField)) {
+        const legacy = yield* Effect.promise(() => KilocodeConfigOverlay.legacyField())
+        if (legacy) {
+          return yield* Effect.fail(
+            new InvalidRequestError({
+              message: `This setting is overridden by legacy global config at ${legacy.file}. Edit or remove that value to change it.`,
+              kind: "read-only",
+              field: KilocodeConfigOverlay.protectionField,
+            }),
+          )
+        }
+      }
       const result = yield* flock
         .withLock(
           Effect.promise(() =>
@@ -104,7 +121,6 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           new ConfigOverlayConflictError({ code: result.code, message: result.message, target: result.target }),
         )
       }
-      const patch = KilocodeConfigOverlay.patch(body)
       const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
       if (body.scope === "global") {
         yield* config.invalidate()
