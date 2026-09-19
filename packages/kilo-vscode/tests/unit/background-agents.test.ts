@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import {
   backgroundAgents,
   backgroundJobAgents,
-  children,
+  taskChildren,
   fitBackgroundAgents,
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
@@ -82,13 +82,13 @@ describe("children", () => {
       taskPart({ id: "part_3", child: "ses_a" }),
     ]
 
-    expect(children(tools)).toEqual(["ses_a", "ses_b"])
+    expect(taskChildren(tools)).toEqual(["ses_a", "ses_b"])
   })
 
   it("ignores non-task tools and parts without a child session", () => {
     const bash = { id: "part_3", type: "tool", tool: "bash", state: { status: "running", input: {} } } as ToolPart
 
-    expect(children([bash, taskPart({ id: "part_4", background: true })])).toEqual([])
+    expect(taskChildren([bash, taskPart({ id: "part_4", background: true })])).toEqual([])
   })
 })
 
