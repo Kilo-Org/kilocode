@@ -59,6 +59,14 @@ function quoteQ(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
 }
 
+// The Bitbucket `q` filter for a branch, bounded to the branch's source and to
+// OPEN state. Exported so the escaping can be asserted on every platform: a
+// branch containing `"` is a valid git ref but cannot be checked out on Windows,
+// where the loose ref file name is invalid, so no repo fixture can carry one.
+export function bitbucketQuery(branch: string): string {
+  return `source.branch.name="${quoteQ(branch)}" AND state="OPEN"`
+}
+
 // Read a nested string field without trusting the host's JSON shape.
 function stringAt(value: unknown, ...keys: string[]): string | undefined {
   let current: unknown = value
@@ -143,7 +151,7 @@ async function gitlabOpenMr(identity: Identity): Promise<Answer> {
 async function bitbucketOpenPr(identity: Identity): Promise<Answer> {
   if (identity.host !== "bitbucket.org") return "unknown"
   const query = new URLSearchParams({
-    q: `source.branch.name="${quoteQ(identity.branch)}" AND state="OPEN"`,
+    q: bitbucketQuery(identity.branch),
     pagelen: "1",
   })
   const token = process.env.BITBUCKET_TOKEN

@@ -66,7 +66,9 @@ const {
   recordedKey,
   recordPrLinkText,
 } = await import("@/kilo-sessions/pr-link")
-const { PR_POLL_INTERVAL_MS, refreshPrLink, startPrLinkPoll } = await import("@/kilo-sessions/pr-link-poller")
+const { PR_POLL_INTERVAL_MS, bitbucketQuery, refreshPrLink, startPrLinkPoll } = await import(
+  "@/kilo-sessions/pr-link-poller"
+)
 const { Instance } = await import("@/kilocode/instance")
 import type { InstanceContext } from "@/project/instance-context"
 
@@ -425,13 +427,13 @@ describe("refreshPrLink", () => {
   })
 
   // Git allows `"` in ref names, so the branch must be escaped inside the `q`
-  // filter or the host answers 400 and the check never runs for that branch.
-  test("escapes a quote in the Bitbucket branch filter", async () => {
-    const dir = await makeRepo('a"b', "https://bitbucket.org/team/repo.git")
-    respondApi({ values: [] })
-
-    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
-    expect(apiUrl().searchParams.get("q")).toBe('source.branch.name="a\\"b" AND state="OPEN"')
+  // filter or the host answers 400 and the check never runs for that branch. The
+  // escaping is asserted on the filter builder rather than through a repo: a
+  // branch containing `"` is a valid ref, but on Windows its loose ref file name
+  // is invalid, so a fixture that checks one out cannot be created there. The
+  // Bitbucket test above covers the builder's wiring into the request.
+  test("escapes a quote in the Bitbucket branch filter", () => {
+    expect(bitbucketQuery('a"b')).toBe('source.branch.name="a\\"b" AND state="OPEN"')
   })
 
   // The check asks each host's bounded API, never the unbounded ref namespaces.
