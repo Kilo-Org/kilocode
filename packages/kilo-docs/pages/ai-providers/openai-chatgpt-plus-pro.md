@@ -57,7 +57,7 @@ When you are signed in with ChatGPT, Kilo reports your Codex quota alongside you
 - **VS Code:** open the **Profile** view and find the **Plans & usage** section.
 - **CLI:** run `/usage` (aliases `/plans` and `/quota`) and press `ctrl+r` to refresh.
 
-Codex shows its plan and each usage window — for example, a five-hour and a weekly limit — with the percentage used and the reset time. A **Manage** link opens your Codex usage settings at chatgpt.com. If your ChatGPT sign-in has expired, the view says so and you can reconnect from the provider settings.
+Codex shows its plan and each usage window — for example, a five-hour and a weekly limit — with the percentage used and the reset time. The **Manage** link opens your Codex usage settings at chatgpt.com. If your ChatGPT sign-in has expired, you can reconnect from the provider settings.
 
 ## Tips and Notes
 
