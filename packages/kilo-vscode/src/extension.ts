@@ -7,6 +7,7 @@ import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
+import { approvalDiffContentProvider, approvalDiffScheme } from "./kilo-provider/approval-diff"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
 import { MarketplaceNotifier } from "./services/marketplace/notifier"
@@ -412,6 +413,11 @@ export async function activate(context: vscode.ExtensionContext) {
   provider.setDiffVirtualProvider(diffVirtualProvider)
   agentManagerHost.setDiffVirtualProvider(diffVirtualProvider)
   context.subscriptions.push(diffVirtualProvider)
+
+  // Virtual "after" document for native VS Code diff editors opened from edit approvals.
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(approvalDiffScheme(), approvalDiffContentProvider),
+  )
 
   // Create standalone editor providers (open in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context, {

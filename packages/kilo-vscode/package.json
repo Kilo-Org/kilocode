@@ -1272,6 +1272,24 @@
             "split"
           ],
           "description": "Remembered unified/split choice for Kilo diff viewers. Set automatically the first time you toggle the style in a diff viewer."
+        },
+        "kilo-code.new.approvalDiff.autoOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically open the full diff view when the agent asks to edit a file, instead of showing only the inline approval card."
+        },
+        "kilo-code.new.approvalDiff.viewer": {
+          "type": "string",
+          "default": "kilo",
+          "enum": [
+            "kilo",
+            "vscode"
+          ],
+          "enumDescriptions": [
+            "Kilo Code diff panel (same as the expand button in the approval card)",
+            "Native VS Code diff editor comparing the file on disk with the proposed edit"
+          ],
+          "description": "Which diff viewer to open when a file edit approval is shown."
         }
       }
     }

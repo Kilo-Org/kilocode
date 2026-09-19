@@ -17,6 +17,14 @@ const noop = () => {}
 const mockUri = {
   parse: (value: string) => ({ scheme: "https", authority: "", path: value, query: "", fragment: "", fsPath: value }),
   file: (path: string) => ({ scheme: "file", authority: "", path, query: "", fragment: "", fsPath: path }),
+  from: (components: { scheme: string; path?: string; query?: string; fragment?: string }) => ({
+    scheme: components.scheme,
+    authority: "",
+    path: components.path ?? "",
+    query: components.query ?? "",
+    fragment: components.fragment ?? "",
+    fsPath: components.path ?? "",
+  }),
   joinPath: (base: { fsPath: string }, ...segments: string[]) => {
     const joined = [base.fsPath, ...segments].join("/")
     return { scheme: "file", authority: "", path: joined, query: "", fragment: "", fsPath: joined }
@@ -87,7 +95,10 @@ const mockVscode = {
     activeNotebookEditor: undefined,
     visibleTextEditors: [],
     visibleNotebookEditors: [],
-    tabGroups: { all: [] },
+    tabGroups: {
+      all: [] as Array<{ tabs: Array<{ input: unknown }> }>,
+      close: async () => {},
+    },
     showTextDocument: async () => {},
     showInformationMessage: async () => undefined,
     showQuickPick: async () => undefined,
@@ -147,6 +158,12 @@ const mockVscode = {
   },
   TabInputText: class {
     constructor(public uri: { scheme: string; fsPath: string }) {}
+  },
+  TabInputTextDiff: class {
+    constructor(
+      public original: { toString(): string },
+      public modified: { toString(): string },
+    ) {}
   },
   TabInputNotebook: class {
     constructor(public uri: { scheme: string; fsPath: string }) {}
