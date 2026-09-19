@@ -148,7 +148,7 @@ describe("watchRestore", () => {
   it("still sends one restore after settlement if the webview already reported focus", () => {
     let focused = true
     const listeners: Array<(state: { focused: boolean }) => void> = []
-    const restored: boolean[] = []
+    const restored: Array<{ live: boolean; prompt: boolean }> = []
     const waits: Array<() => void> = []
     const watch = watchRestore({
       focused: () => focused,
@@ -156,7 +156,7 @@ describe("watchRestore", () => {
         listeners.push(listener)
         return { dispose: () => {} }
       },
-      restore: (live) => restored.push(live),
+      restore: (state) => restored.push(state),
       wait: (fn) => {
         waits.push(fn)
         return { dispose: () => {} }
@@ -169,7 +169,34 @@ describe("watchRestore", () => {
     listeners.at(0)?.({ focused: true })
     watch.note(true)
     waits.at(0)?.()
-    expect(restored).toEqual([true])
+    expect(restored).toEqual([{ live: true, prompt: false }])
+  })
+
+  it("restores prompt focus only when the prompt itself was held", () => {
+    let focused = true
+    const listeners: Array<(state: { focused: boolean }) => void> = []
+    const restored: Array<{ live: boolean; prompt: boolean }> = []
+    const waits: Array<() => void> = []
+    const watch = watchRestore({
+      focused: () => focused,
+      onChange: (listener) => {
+        listeners.push(listener)
+        return { dispose: () => {} }
+      },
+      restore: (state) => restored.push(state),
+      wait: (fn) => {
+        waits.push(fn)
+        return { dispose: () => {} }
+      },
+    })
+    watch.note(true)
+    watch.input(true)
+    focused = false
+    listeners.at(0)?.({ focused: false })
+    focused = true
+    listeners.at(0)?.({ focused: true })
+    waits.at(0)?.()
+    expect(restored).toEqual([{ live: true, prompt: true }])
   })
 
   it("skips restore when disabled", () => {

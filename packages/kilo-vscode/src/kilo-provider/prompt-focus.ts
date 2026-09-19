@@ -45,13 +45,14 @@ export function createLatch(opts: { focused: () => boolean; defer?: (fn: () => v
 export function watchRestore(opts: {
   focused: () => boolean
   onChange: (listener: (state: { focused: boolean }) => void) => { dispose(): void }
-  restore: (live: boolean) => void
+  restore: (state: { live: boolean; prompt: boolean }) => void
   enabled?: () => boolean
   defer?: (fn: () => void) => void
   wait?: (fn: () => void, ms: number) => { dispose(): void }
   delay?: number
 }) {
-  const latch = createLatch({ focused: opts.focused, defer: opts.defer })
+  const view = createLatch({ focused: opts.focused, defer: opts.defer })
+  const prompt = createLatch({ focused: opts.focused, defer: opts.defer })
   const wait =
     opts.wait ??
     ((fn, ms) => {
@@ -65,15 +66,20 @@ export function watchRestore(opts: {
     timer?.dispose()
     timer = undefined
   }
+  const unlock = () => {
+    view.unlock()
+    prompt.unlock()
+  }
   const sub = opts.onChange((state) => {
     clear()
     pending = false
     if (!state.focused) {
-      latch.lock()
+      view.lock()
+      prompt.lock()
       return
     }
-    if ((opts.enabled && !opts.enabled()) || !latch.restore()) {
-      latch.unlock()
+    if ((opts.enabled && !opts.enabled()) || !view.restore()) {
+      unlock()
       return
     }
     pending = true
@@ -81,17 +87,18 @@ export function watchRestore(opts: {
       timer = undefined
       if (!pending) return
       pending = false
-      if (!opts.focused() || (opts.enabled && !opts.enabled()) || !latch.restore()) {
-        latch.unlock()
+      if (!opts.focused() || (opts.enabled && !opts.enabled()) || !view.restore()) {
+        unlock()
         return
       }
-      opts.restore(latch.live())
-      latch.unlock()
+      opts.restore({ live: view.live(), prompt: prompt.restore() })
+      unlock()
     }, delay)
   })
   return {
-    note: (value: boolean) => latch.note(value),
-    mark: (value: FocusTarget) => latch.mark(value),
+    note: (value: boolean) => view.note(value),
+    input: (value: boolean) => prompt.note(value),
+    mark: (value: FocusTarget) => view.mark(value),
     dispose: () => {
       clear()
       sub.dispose()
