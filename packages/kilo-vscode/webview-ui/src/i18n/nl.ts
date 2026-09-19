@@ -94,6 +94,7 @@ export const dict = {
     "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
   "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
+  "revert.error.body": "De repository is mogelijk in gebruik. Probeer het opnieuw of bekijk de Kilo-logs voor details.",
   "command.session.compact": "Sessie comprimeren",
   "command.session.export": "Sessietranscript exporteren",
 

@@ -94,6 +94,8 @@ export const dict = {
     "Conversa revertida. O status da restauração do espaço de trabalho não está disponível para esta reversão anterior.",
   "revert.banner.workspace.enableSnapshots": "Ativar snapshots",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
+  "revert.error.body":
+    "O repositório pode estar em uso. Tente novamente ou consulte os logs do Kilo para mais detalhes.",
   "command.session.compact": "Compactar sessão",
   "command.session.export": "Exportar transcrição da sessão",
 

@@ -94,6 +94,8 @@ export const dict = {
     "Konwersacja została cofnięta. Stan przywracania obszaru roboczego nie jest dostępny dla tego wcześniejszego cofnięcia.",
   "revert.banner.workspace.enableSnapshots": "Włącz migawki",
   "revert.disabled.agentBusy": "Poczekaj aż agent zakończy",
+  "revert.error.body":
+    "Repozytorium może być w użyciu. Spróbuj ponownie lub sprawdź dzienniki Kilo, aby poznać szczegóły.",
   "command.session.compact": "Kompaktuj sesję",
   "command.session.export": "Eksportuj transkrypcję sesji",
 

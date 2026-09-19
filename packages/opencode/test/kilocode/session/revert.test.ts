@@ -1,13 +1,17 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Exit } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { Global } from "@opencode-ai/core/global"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { Hash } from "@opencode-ai/core/util/hash"
 import { MessageV2 } from "@/session/message-v2"
+import { Instance } from "@/kilocode/instance"
 import { KiloSessionRevert } from "@/kilocode/session/revert"
 import { SessionRevert } from "@/session/revert"
 import { MessageID, PartID } from "@/session/schema"
@@ -15,6 +19,17 @@ import { Session } from "@/session/session"
 import { Snapshot } from "@/snapshot"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
+
+// plant an index.lock the way a concurrent git write would
+const snapshotGitdir = () => path.join(Global.Path.data, "snapshot", Instance.project.id, Hash.fast(Instance.worktree))
+
+const plantLock = Effect.fnUntraced(function* () {
+  const gitdir = snapshotGitdir()
+  yield* Effect.promise(() => fs.mkdir(gitdir, { recursive: true }))
+  const lock = path.join(gitdir, "index.lock")
+  yield* Effect.promise(() => fs.writeFile(lock, ""))
+  return lock
+})
 
 const env = LayerNode.compile(
   LayerNode.group([
@@ -27,6 +42,33 @@ const env = LayerNode.compile(
 )
 const it = testEffect(env)
 const guarded = process.platform === "win32" ? it.live.skip : it.live
+
+// flockOnly takes the real on-disk lock; impatientFlock fails givingUp keys without waiting
+const flockOnly = LayerNode.compile(LayerNode.group([EffectFlock.node]))
+
+const givingUp = new Set<string>()
+
+const impatientWithLock = <A, E, R>(body: Effect.Effect<A, E, R>, key: string) =>
+  givingUp.has(key) ? Effect.fail(new EffectFlock.LockTimeoutError({ key })) : body
+
+const impatientFlock = Layer.mock(EffectFlock.Service, {
+  acquire: (key: string) => (givingUp.has(key) ? Effect.fail(new EffectFlock.LockTimeoutError({ key })) : Effect.void),
+  withLock: impatientWithLock as unknown as EffectFlock.Interface["withLock"],
+})
+const impatient = testEffect(
+  LayerNode.compile(
+    LayerNode.group([
+      Session.node,
+      SessionProjector.node,
+      SessionRevert.node,
+      Snapshot.node,
+      EffectFlock.node,
+      CrossSpawnSpawner.node,
+    ]),
+    [[EffectFlock.node, impatientFlock]],
+  ),
+)
+const guardedImpatient = process.platform === "win32" ? impatient.live.skip : impatient.live
 
 const setup = Effect.fnUntraced(function* (dir: string, deleted = false) {
   const sessions = yield* Session.Service
@@ -462,6 +504,136 @@ describe("workspace revert status", () => {
             ),
           ).toBe(false)
           expect(yield* Effect.promise(() => fs.readFile(item.writable, "utf8"))).toBe("after")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  // the pre-revert snapshot needs the index lock too, and without it there is no baseline
+  guarded(
+    "fails instead of rewinding when a locked index blocks the pre-revert snapshot",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const lock = yield* plantLock()
+
+          const outcome = yield* item.revert
+            .revert({ sessionID: item.session.id, messageID: item.user.id })
+            .pipe(Effect.exit, Effect.ensuring(Effect.promise(() => fs.rm(lock, { force: true }))))
+          const current = yield* item.sessions.get(item.session.id)
+
+          expect({
+            failed: Exit.isFailure(outcome),
+            reverted: current.revert !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+            writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
+          }).toEqual({ failed: true, reverted: false, protected: "after", writable: "after" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  // a locked index leaves the workspace unchanged even when the rollback hits the same lock
+  it.live(
+    "keeps the workspace unchanged when a locked index blocks both the revert and its rollback",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const lock = yield* plantLock()
+
+          const outcome = yield* KiloSessionRevert.apply(
+            item.snapshot,
+            item.after,
+            item.patch.files,
+            Effect.gen(function* () {
+              yield* item.snapshot.revert([item.patch])
+            }),
+          ).pipe(Effect.exit)
+
+          // git cannot take the index lock, so the revert fails rather than reporting a success it
+          // did not perform; the reason is on stderr in the log, not in the failure value.
+          expect(Exit.isFailure(outcome)).toBe(true)
+
+          expect(yield* Effect.promise(() => fs.readFile(item.protected, "utf8"))).toBe("after")
+          expect(yield* Effect.promise(() => fs.readFile(item.writable, "utf8"))).toBe("after")
+
+          // The failed rollback must still release the snapshot lock, or every later
+          // operation on this repository would hang instead of failing.
+          yield* Effect.promise(() => fs.rm(lock, { force: true }))
+          yield* item.snapshot.revert([item.patch])
+          expect(yield* Effect.promise(() => fs.readFile(item.protected, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    20_000,
+  )
+
+  // another agent snapshotting the same project delays a revert, not fails it
+  guarded(
+    "waits for a snapshot lock held elsewhere and reverts once it is released",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const entered = yield* Deferred.make<void>()
+          const release = yield* Deferred.make<void>()
+          const key = `snapshot:${snapshotGitdir()}`
+          const held = yield* Effect.gen(function* () {
+            const flock = yield* EffectFlock.Service
+            yield* flock.withLock(
+              Effect.gen(function* () {
+                yield* Deferred.succeed(entered, undefined)
+                yield* Deferred.await(release)
+              }),
+              key,
+            )
+          }).pipe(Effect.provide(flockOnly), Effect.forkChild)
+          yield* Deferred.await(entered)
+
+          const reverting = yield* item.snapshot.revert([item.patch]).pipe(Effect.forkChild)
+          yield* Effect.sleep("500 millis")
+          expect({
+            done: reverting.pollUnsafe() !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+          }).toEqual({ done: false, protected: "after" })
+
+          yield* Deferred.succeed(release, undefined)
+          yield* Fiber.join(held)
+          yield* Fiber.join(reverting)
+
+          expect(yield* Effect.promise(() => fs.readFile(item.protected, "utf8"))).toBe("before")
+          expect(yield* Effect.promise(() => fs.readFile(item.writable, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  // a lock that never comes free is not actionable, so the revert aborts as a defect
+  guardedImpatient(
+    "aborts the revert without touching the workspace when the snapshot lock never comes free",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const key = `snapshot:${snapshotGitdir()}`
+          givingUp.add(key)
+
+          const outcome = yield* item.revert
+            .revert({ sessionID: item.session.id, messageID: item.user.id })
+            .pipe(Effect.exit, Effect.ensuring(Effect.sync(() => givingUp.delete(key))))
+          const current = yield* item.sessions.get(item.session.id)
+
+          expect(Exit.isFailure(outcome) && Cause.hasDies(outcome.cause)).toBe(true)
+          expect({
+            reverted: current.revert !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+            writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
+          }).toEqual({ reverted: false, protected: "after", writable: "after" })
         }),
       { git: true },
     ),
