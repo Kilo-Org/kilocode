@@ -30,6 +30,16 @@ async function script(dir: string, name: string, source: string, exec = process.
   return `${bin} ${arg}`
 }
 
+function alive(pid: number) {
+  if (!pid) return false
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
 const agentInfo = {
   name: "code",
   mode: "primary",
@@ -117,13 +127,20 @@ describe("background_process monitor", () => {
         const sessionID = SessionID.descending()
         // The command hands its stdio to a grandchild that outlives it, so the
         // pipes never close. `status`/`monitor` must still observe the exit
-        // instead of reporting the dead parent as running until the cap.
+        // instead of reporting the dead parent as running until the cap. The
+        // grandchild records its pid because `stopSession` only terminates a
+        // live process, so the test has to signal the terminal parent's
+        // descendant itself or it would keep running past the test.
+        const pidfile = path.join(test.directory, "monitor-orphan.pid")
         const command = yield* Effect.promise(() =>
           script(
             test.directory,
             "monitor-orphan.mjs",
             `import { spawn } from "node:child_process"\n` +
-              `spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" }).unref()\n` +
+              `import { writeFileSync } from "node:fs"\n` +
+              `const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" })\n` +
+              `child.unref()\n` +
+              `writeFileSync(${JSON.stringify(pidfile)}, String(child.pid))\n` +
               `console.log("launched")\n`,
           ),
         )
@@ -137,6 +154,16 @@ describe("background_process monitor", () => {
           expect(result.metadata.status).toBe("exited")
           expect(result.output).toContain("launched")
         } finally {
+          yield* Effect.promise(async () => {
+            const pid = Number((await Bun.file(pidfile).text().catch(() => "")).trim())
+            if (alive(pid)) {
+              try {
+                process.kill(pid, "SIGKILL")
+              } catch (err) {
+                if (alive(pid)) throw err
+              }
+            }
+          })
           yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
         }
       }),
