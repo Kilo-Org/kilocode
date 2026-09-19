@@ -1264,6 +1264,12 @@
           "type": "boolean",
           "default": false,
           "description": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
+        },
+        "kilo-code.new.sessionsLimit": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 1,
+          "description": "Max sessions shown in the history list"
         }
       }
     }
