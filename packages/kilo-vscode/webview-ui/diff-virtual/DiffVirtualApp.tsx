@@ -59,6 +59,7 @@ const DiffVirtualContent: Component = () => {
               onSelect={(value) => {
                 if (value) {
                   setStyle(value)
+                  getVSCodeAPI().postMessage({ type: "diffVirtual.setDiffStyle", style: value })
                 }
               }}
             />

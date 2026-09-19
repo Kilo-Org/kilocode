@@ -1265,6 +1265,11 @@ export interface DiffVirtualSetMarkdownRenderRequest {
   render: boolean
 }
 
+export interface DiffVirtualSetDiffStyleRequest {
+  type: "diffVirtual.setDiffStyle"
+  style: "unified" | "split"
+}
+
 export interface RetryConnectionRequest {
   type: "retryConnection"
 }
@@ -1772,6 +1777,7 @@ export type WebviewMessage =
   | DiffViewerRequestBranchesRequest
   | DiffViewerSetBaseBranchRequest
   | DiffVirtualSetMarkdownRenderRequest
+  | DiffVirtualSetDiffStyleRequest
   | RetryConnectionRequest
   | ReloadRequest
   | OpenSubAgentViewerRequest

@@ -56,6 +56,9 @@ const DiffViewerContent: Component = () => {
   const [threads, setThreads] = createSignal<string[]>([])
   const [focus, setFocus] = createSignal<{ id: string; file: string }>()
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  // Remembered style pushed by the host (diffViewer.initialDiffStyle); used
+  // when the source or PR identity changes so a persisted choice survives.
+  const [savedDiffStyle, setSavedDiffStyle] = createSignal<DiffStyle>()
   const [markdown, setMarkdown] = createSignal(false)
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
   const [loadingFiles, setLoadingFiles] = createSignal<Set<string>>(new Set())
@@ -216,7 +219,7 @@ const DiffViewerContent: Component = () => {
         setThreads(msg.threads ?? [])
         if (changed) {
           setComments([])
-          setDiffStyle("unified")
+          setDiffStyle(savedDiffStyle() ?? "unified")
           setPRMode(false)
         }
       })
@@ -255,6 +258,13 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.markdownRender") {
       setMarkdown(msg.render)
+      return
+    }
+    if (msg.type === "diffViewer.initialDiffStyle") {
+      if (msg.style === "unified" || msg.style === "split") {
+        setSavedDiffStyle(msg.style)
+        setDiffStyle(msg.style)
+      }
       return
     }
     if ((msg as { type: string; file?: string }).type === "diffViewer.initialFile") {
@@ -311,7 +321,7 @@ const DiffViewerContent: Component = () => {
     on(currentSourceId, (id, prev) => {
       if (prev === undefined || id === prev) return
       setComments([])
-      setDiffStyle("unified")
+      setDiffStyle(savedDiffStyle() ?? "unified")
       setReverting(new Set<string>())
       setNotice(undefined)
       setPRError(undefined)
