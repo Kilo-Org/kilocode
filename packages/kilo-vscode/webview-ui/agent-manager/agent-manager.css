@@ -181,6 +181,17 @@ html[data-theme="kilo-vscode"]
   color: var(--am-activity-color);
 }
 
+:is(
+  .am-tab-icon,
+  .am-wt-icon,
+  .am-local-status,
+  .am-sidebar-search-icon,
+  .am-sidebar-search-status
+)[data-activity="scheduled"] {
+  --am-activity-color: currentColor;
+  color: var(--am-activity-color);
+}
+
 :is(.am-tab-icon, .am-wt-icon, .am-local-status, .am-sidebar-search-icon)[data-activity]:not([data-activity="idle"])
   [data-component="icon"] {
   color: var(--am-activity-color);
@@ -3441,6 +3452,11 @@ body.am-wt-dragging-active * {
   max-width: none;
 }
 
+.am-mention-dropdown {
+  min-width: 0;
+  max-width: none;
+}
+
 .am-nv-dialog .am-prompt-input-ghost-wrapper {
   height: 100%;
 }
@@ -3450,7 +3466,10 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-dialog .am-prompt-input {
-  color: var(--vscode-input-foreground, var(--text-base));
+  /* The highlight overlay paints the text, so the textarea stays transparent
+     and only its caret shows. Placeholder keeps its own color. */
+  color: transparent;
+  caret-color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
   width: 100%;
   height: 100%;

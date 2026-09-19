@@ -1,4 +1,4 @@
-import type { InstallMarketplaceItemOptions, MarketplaceFilters, MarketplaceItem } from "../marketplace"
+import type { InstallMarketplaceItemOptions, MarketplaceItem } from "../marketplace"
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
@@ -37,6 +37,8 @@ export interface SendMessageRequest {
   browserFeedback?: BrowserFeedbackData
   agentManagerContext?: string
   contextDirectory?: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ResumeSessionRequest {
@@ -157,6 +159,8 @@ export interface ImportAndSendMessage {
   browserFeedback?: BrowserFeedbackData
   command?: string
   commandArgs?: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface LoginRequest {
@@ -337,6 +341,7 @@ export interface RequestCommandsMessage {
 
 export interface SendCommandRequest {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string
@@ -654,16 +659,6 @@ export interface UnsyncSessionRequest {
   type: "unsyncSession"
   sessionID: string
   scope?: "task" | "inspector"
-}
-
-// Agent Manager worktree messages
-export interface CreateWorktreeSessionRequest {
-  type: "agentManager.createWorktreeSession"
-  text: string
-  providerID?: string
-  modelID?: string
-  agent?: string
-  files?: FileAttachment[]
 }
 
 export interface TelemetryRequest {
@@ -1025,6 +1020,9 @@ export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
   projectId?: string
   text?: string
+  // When set, the first prompt runs this server command instead of `text`.
+  command?: string
+  arguments?: string
   name?: string
   versions: number
   providerID?: string
@@ -1584,11 +1582,6 @@ export interface FetchMarketplaceDataMessage {
   type: "fetchMarketplaceData"
 }
 
-export interface FilterMarketplaceItemsMessage {
-  type: "filterMarketplaceItems"
-  filters: MarketplaceFilters
-}
-
 export interface InstallMarketplaceItemMessage {
   type: "installMarketplaceItem"
   mpItem: MarketplaceItem
@@ -1719,7 +1712,6 @@ export type WebviewMessage =
   | SettingsTabChangedMessage
   | SyncSessionRequest
   | UnsyncSessionRequest
-  | CreateWorktreeSessionRequest
   | RequestNotificationsMessage
   | DismissNotificationMessage
   | CreateWorktreeRequest
@@ -1826,7 +1818,6 @@ export type WebviewMessage =
   | SetSandboxDefaultMessage
   | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
-  | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage
   | RemoveInstalledMarketplaceItemMessage
   | DismissAgentMigrationBannerMessage

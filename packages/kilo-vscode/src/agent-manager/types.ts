@@ -316,6 +316,9 @@ interface SendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -775,6 +778,9 @@ interface CreateMultiVersionIn {
   type: "agentManager.createMultiVersion"
   projectId?: string
   text?: string
+  /** Server command to execute as the first prompt instead of `text`. */
+  command?: string
+  arguments?: string
   name?: string
   versions?: number
   providerID?: string
@@ -1036,6 +1042,7 @@ interface SendMessageIn {
 
 interface SendCommandIn {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string
