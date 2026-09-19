@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.session.background.BackgroundAgent
 import ai.kilocode.client.session.background.BackgroundAgentStatus
+import ai.kilocode.client.session.background.BackgroundAgents
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
@@ -381,12 +382,12 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
             ),
         )
         click(strip.rowPanel())
-        assertEquals(listOf("job1", "job2"), strip.rowOrder())
+        assertTrue(laidOutY(strip, "job1") < laidOutY(strip, "job2"))
 
         // job1 finished, so BackgroundAgents.order puts the still-running job2 first; the existing
-        // rows must be reordered, not left in their original slots.
+        // rows must move, not keep their original slots.
         strip.update(
-            ai.kilocode.client.session.background.BackgroundAgents.order(
+            BackgroundAgents.order(
                 listOf(
                     agent("job1", BackgroundAgentStatus.COMPLETED),
                     agent("job2", BackgroundAgentStatus.RUNNING),
@@ -394,7 +395,19 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
             ),
         )
 
-        assertEquals(listOf("job2", "job1"), strip.rowOrder())
+        assertTrue(laidOutY(strip, "job2") < laidOutY(strip, "job1"))
+    }
+
+    /**
+     * Real laid-out position of a row. Asserting against the layout output rather than the AWT
+     * component array matters here: [ai.kilocode.client.ui.layout.Stack] lays out from its own entry
+     * list, so the component array can disagree with what the user actually sees.
+     */
+    private fun laidOutY(strip: BackgroundAgentStrip, job: String): Int {
+        val body = (strip.bodyComponent() as JBScrollPane).viewport.view as JComponent
+        body.setSize(JBUI.scale(400), body.preferredSize.height)
+        body.doLayout()
+        return strip.agentRowPanel(job)!!.y
     }
 
     fun `test auto collapses once when the last active agent finishes`() {

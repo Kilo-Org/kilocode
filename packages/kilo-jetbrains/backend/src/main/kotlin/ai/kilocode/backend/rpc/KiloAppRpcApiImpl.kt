@@ -149,8 +149,6 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)
     }
 
-    private fun dto(state: KiloAppState): KiloAppStateDto =
-        appStateDto(state, app.capabilities.value)
 }
 
 internal fun appStateDto(state: KiloAppState, backgroundSubagents: Boolean = false): KiloAppStateDto =

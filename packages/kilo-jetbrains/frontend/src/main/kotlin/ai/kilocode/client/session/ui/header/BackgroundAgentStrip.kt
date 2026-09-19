@@ -172,11 +172,17 @@ class BackgroundAgentStrip(
                 row.update(agent)
             }
             // Rows that already exist are updated in place, so without this an agent that finishes
-            // would keep its old slot above still-active ones. Stack lays children out in component
-            // order, so restate that order to match BackgroundAgents.order's active-first intent.
-            agents.forEachIndexed { index, agent ->
-                val row = rows[agent.job] ?: return@forEachIndexed
-                if (getComponentZOrder(row.panel) != index) setComponentZOrder(row.panel, index)
+            // would keep its old slot above still-active ones instead of following
+            // BackgroundAgents.order. Stack lays out from its own entries list rather than the AWT
+            // component array, and re-adding a child moves it to the end of that list, so restate the
+            // order by re-adding every row. setComponentZOrder would not work here: it reorders the
+            // component array that Stack's layout does not read.
+            val order = agents.map { it.job }
+            if (order != rows.keys.toList()) {
+                for (job in order) next(rows[job]?.panel ?: continue)
+                val sorted = order.mapNotNull { job -> rows[job]?.let { job to it } }
+                rows.clear()
+                rows.putAll(sorted)
             }
             revalidate()
             repaint()
@@ -197,11 +203,6 @@ class BackgroundAgentStrip(
     internal fun clearFinishedButton(): HoverIcon = clearFinished
     internal fun openAllButton(): HoverIcon = openAll
     internal fun rowCount(): Int = rows.size
-
-    /** Job ids in the order their rows are laid out, for asserting active-first ordering. */
-    internal fun rowOrder(): List<String> = body.components.mapNotNull { component ->
-        rows.entries.firstOrNull { it.value.panel === component }?.key
-    }
     internal fun agentRowPanel(job: String): JComponent? = rows[job]?.panel
     internal fun rowTitleText(job: String): String? = rows[job]?.title?.text
     internal fun rowStatusText(job: String): String? = rows[job]?.status?.text
