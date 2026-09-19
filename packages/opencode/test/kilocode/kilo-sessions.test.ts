@@ -1470,10 +1470,12 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
   }, 30000)
 
   test("detected link advertises prLink and ingests the set triple", async () => {
-    const detect = spyOn(PrLink, "detectPrLink").mockResolvedValue({
-      platform: "github",
-      prUrl: "https://github.com/o/r/pull/2",
-      prNumber: 2,
+    const detect = spyOn(PrLink, "detectPrLinkState").mockResolvedValue({
+      link: {
+        platform: "github",
+        prUrl: "https://github.com/o/r/pull/2",
+        prNumber: 2,
+      },
     })
     try {
       await using tmp = await tmpdir({ git: true })
@@ -1501,7 +1503,7 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
   }, 30000)
 
   test("no detected link omits prLink and sends no clear ingest", async () => {
-    const detect = spyOn(PrLink, "detectPrLink").mockResolvedValue(undefined)
+    const detect = spyOn(PrLink, "detectPrLinkState").mockResolvedValue({})
     try {
       await using tmp = await tmpdir({ git: true })
       await provide({
@@ -1527,7 +1529,7 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
   }, 30000)
 
   test("override present wins and skips detection", async () => {
-    const detect = spyOn(PrLink, "detectPrLink")
+    const detect = spyOn(PrLink, "detectPrLinkState")
     try {
       await using tmp = await tmpdir({ git: true })
       await provide({
@@ -1721,6 +1723,44 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
         } finally {
           await runtime.dispose()
         }
+      },
+    })
+  }, 30000)
+
+  // The clear the app row depends on: the 5-minute check writes `cleared: true`
+  // for a polled link after the remote's PR ref disappears, and the next
+  // heartbeat ingests the null `session_pr_link` triple.
+  test("a polled clear makes the next heartbeat ingest the null triple", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const id = await setupSession()
+        await KiloSessions.bootstrap(id)
+        await KiloSessions.enableRemote()
+        await KiloSessions.attachRemoteSession(id)
+        await clearStaleIngest()
+
+        await PrLink.writePolledPrLink(Instance.worktree, "origin/feature/x", {
+          platform: "github",
+          prUrl: "https://github.com/o/r/pull/3",
+          prNumber: 3,
+        })
+        const linked = await capturedGetSessions()()
+        expect(linked.sessions.find((s) => s.id === id)?.prLink).toEqual({
+          platform: "github",
+          prUrl: "https://github.com/o/r/pull/3",
+          prNumber: 3,
+        })
+        await new Promise((r) => setTimeout(r, 1200))
+        expect(prLinkItems().length).toBe(1)
+
+        await PrLink.clearPolledPrLink(Instance.worktree, "origin/feature/x")
+        const cleared = await capturedGetSessions()()
+        expect(cleared.sessions.find((s) => s.id === id)?.prLink).toBeUndefined()
+        await new Promise((r) => setTimeout(r, 1200))
+        const links = prLinkItems()
+        expect(links.at(-1)!.data).toEqual({ platform: null, prUrl: null, prNumber: null })
       },
     })
   }, 30000)
@@ -2042,4 +2082,127 @@ describe("KiloSessions remote session log lifecycle", () => {
   test("the fetch stub installed by the share gate does not leak past its block", () => {
     expect("mock" in globalThis.fetch).toBe(false)
   })
+})
+
+// The 5-minute check is started by `init` — once per instance, with the default
+// interval, and never on a session update or a heartbeat. The poller module is
+// replaced with a spy that spreads the real exports, so the scheduler start is
+// counted without issuing a real host query.
+describe("KiloSessions PR poll wiring", () => {
+  beforeEach(() => {
+    process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    process.env["KILO_API_KEY"] = "tok"
+    reset("tok")
+    KiloSessions.resetInstanceAdvertisementForTests()
+
+    spyOn(RemoteSender, "create").mockImplementation(
+      () =>
+        ({
+          handle() {},
+          dispose() {},
+        }) as RemoteSender.Sender,
+    )
+    spyOn(RemoteWS, "connect").mockImplementation(
+      (options) =>
+        ({
+          connectionId: "test-conn",
+          send() {},
+          heartbeat: () => options.getSessions().then(() => undefined),
+          close() {},
+          get connected() {
+            return true
+          },
+        }) as RemoteWS.Connection,
+    )
+
+    clearInFlightCache("kilo-sessions:token")
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+        if (url.endsWith("/api/session")) return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+        return new Response("{}", { status: 200 })
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    spyOn(globalThis, "fetch").mockImplementation(fetch)
+  })
+
+  afterEach(async () => {
+    const pub = spyOn(Bus, "publish").mockResolvedValue(undefined as never)
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        KiloSessions.disableRemote()
+      },
+    })
+    pub.mockRestore()
+    mock.restore()
+    delete process.env["KILO_DISABLE_SESSION_INGEST"]
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    delete process.env["KILO_PLATFORM"]
+    delete process.env["KILO_API_KEY"]
+    reset("tok")
+  })
+
+  function capturedGetSessions(): () => Promise<RemoteProtocol.Heartbeat> {
+    const calls = (RemoteWS.connect as unknown as { mock: { calls: { 0: RemoteWS.Options }[] } }).mock.calls
+    const getSessions = calls[0]?.[0].getSessions
+    if (!getSessions) throw new Error("RemoteWS.connect was not called")
+    return getSessions as () => Promise<RemoteProtocol.Heartbeat>
+  }
+
+  test("starts the check once at init and never on a session update or a heartbeat", async () => {
+    const poller = await import("@/kilo-sessions/pr-link-poller")
+    const startPoll = mock((_run: () => Promise<void>, _opts?: { intervalMs?: number }) => () => {})
+    void mock.module("@/kilo-sessions/pr-link-poller", () => ({
+      ...poller,
+      startPrLinkPoll: startPoll,
+    }))
+
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        // The instance bootstrap runs KiloSessions.init for this instance, so the
+        // check has started exactly once with no interval override (the default
+        // 5-minute interval applies).
+        expect(startPoll).toHaveBeenCalledTimes(1)
+        expect(startPoll.mock.calls[0]?.[1]).toBeUndefined()
+        expect(poller.PR_POLL_INTERVAL_MS).toBe(5 * 60_000)
+
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        const { Session } = await import("@/session/session")
+        const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+        await KiloSessions.bootstrap(chat.id)
+        await KiloSessions.enableRemote()
+        await KiloSessions.attachRemoteSession(chat.id)
+
+        // A session update never starts another check.
+        GlobalBus.emit("event", {
+          directory: Instance.directory,
+          payload: {
+            id: "poll-part",
+            type: MessageV2.Event.PartUpdated.type,
+            properties: {
+              sessionID: chat.id,
+              part: { id: "p-poll", sessionID: chat.id, messageID: "m-poll", type: "text", text: "no link here" },
+              time: Date.now(),
+            },
+          },
+        })
+        await new Promise((r) => setTimeout(r, 50))
+        expect(startPoll).toHaveBeenCalledTimes(1)
+
+        // Nor does a heartbeat.
+        await capturedGetSessions()()
+        await new Promise((r) => setTimeout(r, 50))
+        expect(startPoll).toHaveBeenCalledTimes(1)
+      },
+    })
+  }, 30000)
 })
