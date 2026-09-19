@@ -9,6 +9,12 @@ object KiloPluginSettings {
     private const val PERMISSION_RULES_EXPANDED_KEY = "kilo.session.permissionRulesExpanded"
     private const val GITHUB_KEY = "kilo.integrations.github"
     private const val AGENT_KEY = "kilo.session.agent"
+    private const val COMPACT_MODE_KEY = "kilo.session.compactMode"
+    private const val COMPACT_GROUP_READS_KEY = "kilo.session.compact.groupReads"
+    private const val COMPACT_GROUP_WRITES_KEY = "kilo.session.compact.groupWrites"
+    private const val COMPACT_GROUP_WEB_KEY = "kilo.session.compact.groupWeb"
+    private const val COMPACT_GROUP_SUBAGENTS_KEY = "kilo.session.compact.groupSubagents"
+    private const val COMPACT_GROUP_OTHER_KEY = "kilo.session.compact.groupOther"
 
     /**
      * Mode the prompt picker last selected, or null when the CLI's own default should win.
@@ -76,5 +82,70 @@ object KiloPluginSettings {
 
     internal fun unsetGithub() {
         PropertiesComponent.getInstance().unsetValue(GITHUB_KEY)
+    }
+
+    /**
+     * Master switch for the transcript's compact mode: consecutive groupable tool cards collapse
+     * into one summary card. IDE-level, like [getShowApprovalReason] — never sent to the CLI.
+     */
+    fun getCompactMode(): Boolean = PropertiesComponent.getInstance().getBoolean(COMPACT_MODE_KEY, false)
+
+    fun setCompactMode(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(COMPACT_MODE_KEY, value.toString())
+    }
+
+    internal fun unsetCompactMode() {
+        PropertiesComponent.getInstance().unsetValue(COMPACT_MODE_KEY)
+    }
+
+    fun getCompactGroupReads(): Boolean = PropertiesComponent.getInstance().getBoolean(COMPACT_GROUP_READS_KEY, true)
+
+    fun setCompactGroupReads(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(COMPACT_GROUP_READS_KEY, value.toString())
+    }
+
+    internal fun unsetCompactGroupReads() {
+        PropertiesComponent.getInstance().unsetValue(COMPACT_GROUP_READS_KEY)
+    }
+
+    fun getCompactGroupWrites(): Boolean = PropertiesComponent.getInstance().getBoolean(COMPACT_GROUP_WRITES_KEY, true)
+
+    fun setCompactGroupWrites(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(COMPACT_GROUP_WRITES_KEY, value.toString())
+    }
+
+    internal fun unsetCompactGroupWrites() {
+        PropertiesComponent.getInstance().unsetValue(COMPACT_GROUP_WRITES_KEY)
+    }
+
+    fun getCompactGroupWeb(): Boolean = PropertiesComponent.getInstance().getBoolean(COMPACT_GROUP_WEB_KEY, true)
+
+    fun setCompactGroupWeb(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(COMPACT_GROUP_WEB_KEY, value.toString())
+    }
+
+    internal fun unsetCompactGroupWeb() {
+        PropertiesComponent.getInstance().unsetValue(COMPACT_GROUP_WEB_KEY)
+    }
+
+    fun getCompactGroupSubagents(): Boolean = PropertiesComponent.getInstance().getBoolean(COMPACT_GROUP_SUBAGENTS_KEY, true)
+
+    fun setCompactGroupSubagents(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(COMPACT_GROUP_SUBAGENTS_KEY, value.toString())
+    }
+
+    internal fun unsetCompactGroupSubagents() {
+        PropertiesComponent.getInstance().unsetValue(COMPACT_GROUP_SUBAGENTS_KEY)
+    }
+
+    /** Shell commands, MCP tools, skills, lsp, and anything else with no dedicated category. */
+    fun getCompactGroupOther(): Boolean = PropertiesComponent.getInstance().getBoolean(COMPACT_GROUP_OTHER_KEY, true)
+
+    fun setCompactGroupOther(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(COMPACT_GROUP_OTHER_KEY, value.toString())
+    }
+
+    internal fun unsetCompactGroupOther() {
+        PropertiesComponent.getInstance().unsetValue(COMPACT_GROUP_OTHER_KEY)
     }
 }

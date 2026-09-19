@@ -2,6 +2,7 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionActions
 import ai.kilocode.client.session.SessionActionsKeys
 import ai.kilocode.client.session.SessionManager
@@ -39,6 +40,14 @@ import java.awt.Component
  */
 @Suppress("UnstableApiUsage")
 class SessionContextMenuActionsTest : SessionUiTestBase() {
+
+    override fun tearDown() {
+        try {
+            KiloPluginSettings.unsetCompactMode()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     // ---- group shape ----
 
@@ -82,6 +91,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals(
             listOf(
                 "Kilo.Session.AutoApprove",
+                "Kilo.Session.CompactMode",
                 "---",
                 "Kilo.Session.Fork",
                 "Kilo.Session.Board",
@@ -200,6 +210,46 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
     fun `test auto approve action hidden for readonly session`() {
         val action = SessionAutoApproveAction()
         val event = event(action, Fake(id = "ses_test", readonly = true))
+
+        ActionUtil.updateAction(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    // ---- compact mode ----
+
+    fun `test compact mode action reflects and flips the app level setting`() {
+        KiloPluginSettings.unsetCompactMode()
+        val action = SessionCompactModeAction()
+        val event = event(action, Fake(id = "ses_test"))
+
+        ActionUtil.updateAction(action, event)
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertFalse("compact mode is opt-in", Toggleable.isSelected(event.presentation))
+
+        action.setSelected(event, true)
+        assertTrue(KiloPluginSettings.getCompactMode())
+
+        ActionUtil.updateAction(action, event)
+        assertTrue(Toggleable.isSelected(event.presentation))
+
+        action.setSelected(event, false)
+        assertFalse(KiloPluginSettings.getCompactMode())
+    }
+
+    // Compact mode changes how a transcript reads, not what it can do, so a subagent tab keeps it.
+    fun `test compact mode action stays available when readonly`() {
+        val action = SessionCompactModeAction()
+        val event = event(action, Fake(id = "ses_test", readonly = true))
+
+        ActionUtil.updateAction(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test compact mode action hidden outside a session`() {
+        val action = SessionCompactModeAction()
+        val event = event(action, null)
 
         ActionUtil.updateAction(action, event)
 

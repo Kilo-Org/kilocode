@@ -443,6 +443,9 @@
         <action id="Kilo.Session.AutoApprove"
                 class="ai.kilocode.client.actions.SessionAutoApproveAction"/>
 
+        <action id="Kilo.Session.CompactMode"
+                class="ai.kilocode.client.actions.SessionCompactModeAction"/>
+
         <action id="Kilo.Session.Fork"
                 class="ai.kilocode.client.actions.ForkSessionAction"/>
 
@@ -501,6 +504,7 @@
         -->
         <group id="Kilo.Session.PromptMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
+            <reference ref="Kilo.Session.CompactMode"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
             <reference ref="Kilo.Session.Board"/>

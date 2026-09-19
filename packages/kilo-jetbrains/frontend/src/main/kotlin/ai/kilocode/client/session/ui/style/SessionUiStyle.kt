@@ -364,6 +364,15 @@ object SessionUiStyle {
 
             fun error(): Color = UiStyle.Colors.errorLabelForeground()
         }
+
+        /** Compact-mode tool group card. */
+        object Group {
+            /**
+             * Shortest run that becomes a group. A group wrapping one child costs an extra row and a
+             * click while hiding nothing, so a lone tool stays a standalone card.
+             */
+            const val MIN_RUN = 2
+        }
     }
 
     object AccountPopup {
