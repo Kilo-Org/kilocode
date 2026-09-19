@@ -70,9 +70,14 @@ export const PermissionDock: Component<{
   const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
   const external = () => props.request.toolName === "external_directory"
   const sandboxEscalation = () => props.request.toolName === "sandbox_escalation"
+  const supported = () =>
+    ["read", "external_directory", "bash"].includes(props.request.toolName) &&
+    !skillShell() &&
+    props.request.args?.backgroundProcess !== true
   const cmdDescription = () => {
     const val = props.request.args?.description
-    return typeof val === "string" && val.length > 0 ? val : undefined
+    if (typeof val !== "string") return undefined
+    return (supported() ? val.trim() : val) || undefined
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
@@ -347,8 +352,11 @@ export const PermissionDock: Component<{
                 <>
                   <Show when={cmdDescription()}>
                     {(desc) => (
-                      <div data-slot="permission-hint" data-wrap>
-                        {desc()}
+                      <div data-slot={supported() ? "permission-reason" : "permission-hint"} data-wrap>
+                        <Show when={supported()} fallback={desc()}>
+                          <span>{language.t("ui.permission.reason")} </span>
+                          <em>{desc()}</em>
+                        </Show>
                       </div>
                     )}
                   </Show>

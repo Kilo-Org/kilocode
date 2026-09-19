@@ -266,6 +266,7 @@ export const dict = {
   "ui.permission.reject": "拒绝",
   "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒绝，按 Esc 取消",
+  "ui.permission.reason": "原因：",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
   "ui.permission.doomLoop.rule": "继续调用 {{tool}}",
   "ui.permission.rule.addToAllowed": "添加到允许列表",
