@@ -1,5 +1,9 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import simpleGit from "simple-git"
 import { Agent } from "@/agent/agent"
 import { InstanceRef } from "@/effect/instance-ref"
 import { MessageID, SessionID } from "@/session/schema"
@@ -61,7 +65,33 @@ const ctx: Tool.Context = {
 }
 
 const worktree = "/tmp/link-pr-worktree"
-const instance = { directory: worktree, worktree, project: {} } as unknown as InstanceContext
+
+const created: string[] = []
+
+afterAll(async () => {
+  await Promise.all(created.map((dir) => fs.rm(dir, { recursive: true, force: true })))
+})
+
+// A real offline git repo so the tool's own-repository check can resolve the
+// worktree's host, owner and repo through `identityFor`.
+async function makeRepo(remote = "https://github.com/owner/repo.git") {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "link-pr-"))
+  created.push(dir)
+  const git = simpleGit(dir)
+  await git.init()
+  await git.addConfig("user.email", "test@example.com")
+  await git.addConfig("user.name", "Test")
+  await git.checkoutLocalBranch("feature/x")
+  await fs.writeFile(path.join(dir, "a.txt"), "hello")
+  await git.add("a.txt")
+  await git.commit("init")
+  await git.addRemote("origin", remote)
+  const head = (await git.revparse(["HEAD"])).trim()
+  await git.raw(["update-ref", "refs/remotes/origin/feature/x", head])
+  await git.addConfig("branch.feature/x.remote", "origin")
+  await git.addConfig("branch.feature/x.merge", "refs/heads/feature/x")
+  return dir
+}
 
 const layer = Layer.mergeAll(
   Layer.succeed(Agent.Service, agents),
@@ -74,7 +104,8 @@ beforeEach(() => {
   writeOverride.mockClear()
 })
 
-function run(url: string) {
+function run(url: string, dir = worktree) {
+  const instance = { directory: dir, worktree: dir, project: {} } as unknown as InstanceContext
   return Effect.runPromise(
     Effect.gen(function* () {
       const info = yield* LinkPrTool
@@ -159,6 +190,28 @@ describe("link_pr tool", () => {
     expect(result.metadata.reason).toBe("invalid_url")
     expect(result.title).toBe("PR link rejected")
     expect(result.output).toContain("is not a pull request URL")
+    expect(writes).toHaveLength(0)
+  })
+
+  test("links a pull request for the worktree's own repository", async () => {
+    const dir = await makeRepo()
+
+    const result = await run("https://github.com/owner/repo/pull/9", dir)
+
+    expect(result.metadata.ok).toBe(true)
+    expect(writes).toHaveLength(1)
+    expect(writes[0]?.worktree).toBe(dir)
+  })
+
+  test("rejects a pull request for another repository", async () => {
+    const dir = await makeRepo()
+
+    const result = await run("https://github.com/other/repo/pull/9", dir)
+
+    expect(result.metadata.ok).toBe(false)
+    expect(result.metadata.reason).toBe("wrong_repo")
+    expect(result.title).toBe("PR link rejected")
+    expect(result.output).toContain("is not a pull request for this repository")
     expect(writes).toHaveLength(0)
   })
 

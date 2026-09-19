@@ -28,6 +28,37 @@ const timeoutMs = 10_000
 // inconclusive check that must keep the branch's current link.
 type Answer = PrLink | undefined | "unknown"
 
+// The host each platform is served from. A repository's remote is attacker
+// controlled, and `identity.platform` is only the host's first DNS label, so a
+// host is trusted with a credential only when it is the platform's canonical
+// host or a host the user designated through the platform CLI's own environment
+// variable. Trust gates whether a credential is sent, and whether GitHub is
+// queried at all: an untrusted GitHub host is inconclusive rather than pointed
+// at with `gh --hostname`, which would target whatever the remote names.
+const canonicalHost: Record<string, string> = {
+  github: "github.com",
+  gitlab: "gitlab.com",
+  bitbucket: "bitbucket.org",
+}
+
+function designatedHost(platform: string): string | undefined {
+  const value =
+    platform === "github" ? process.env.GH_HOST : platform === "gitlab" ? process.env.GITLAB_HOST : undefined
+  return value?.trim().toLowerCase() || undefined
+}
+
+function trustedHost(platform: string, host: string): boolean {
+  const name = host.toLowerCase()
+  return name === canonicalHost[platform] || name === designatedHost(platform)
+}
+
+// Escape a value for the Bitbucket `q` filter's quoted string. Git allows `\`
+// and `"` in ref names, so a branch such as `a"b` must be escaped or the filter
+// is malformed, the host answers 400, and the check silently never runs for it.
+function quoteQ(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+}
+
 // Read a nested string field without trusting the host's JSON shape.
 function stringAt(value: unknown, ...keys: string[]): string | undefined {
   let current: unknown = value
@@ -55,6 +86,7 @@ async function getJson(url: string, headers: Record<string, string>): Promise<un
 // call (missing, unauthenticated, offline) is inconclusive.
 async function githubOpenPr(worktree: string, identity: Identity): Promise<Answer> {
   if (!identity.owner || !identity.repo) return "unknown"
+  if (!trustedHost("github", identity.host)) return "unknown"
   const head = encodeURIComponent(`${identity.owner}:${identity.branch}`)
   // A GitHub Enterprise host is not `github.com`; `gh` must be pointed at it or
   // the request would look for the repository on github.com instead.
@@ -83,11 +115,15 @@ async function githubOpenPr(worktree: string, identity: Identity): Promise<Answe
 // so a closed merge request — whose `refs/merge-requests/<n>/head` GitLab keeps —
 // answers empty instead of being linked as open. `GITLAB_TOKEN` authenticates a
 // private project; a public one answers without it. A failed call is
-// inconclusive. Self-hosted GitLab uses the same `/api/v4` path on its own host.
+// inconclusive. Self-hosted GitLab uses the same `/api/v4` path on its own host,
+// but the token is attached only to a trusted host (the canonical one or
+// `GITLAB_HOST`), so a hostile remote cannot make the poller send it.
 async function gitlabOpenMr(identity: Identity): Promise<Answer> {
   const query = new URLSearchParams({ source_branch: identity.branch, state: "opened", per_page: "1" })
   const project = encodeURIComponent(identity.path)
-  const token = process.env.GITLAB_TOKEN ?? process.env.GITLAB_ACCESS_TOKEN
+  const token = trustedHost("gitlab", identity.host)
+    ? (process.env.GITLAB_TOKEN ?? process.env.GITLAB_ACCESS_TOKEN)
+    : undefined
   const headers: Record<string, string> = token ? { "PRIVATE-TOKEN": token } : {}
   const parsed = await getJson(`https://${identity.host}/api/v4/projects/${project}/merge_requests?${query}`, headers)
   if (!Array.isArray(parsed)) return "unknown"
@@ -107,7 +143,7 @@ async function gitlabOpenMr(identity: Identity): Promise<Answer> {
 async function bitbucketOpenPr(identity: Identity): Promise<Answer> {
   if (identity.host !== "bitbucket.org") return "unknown"
   const query = new URLSearchParams({
-    q: `source.branch.name="${identity.branch}" AND state="OPEN"`,
+    q: `source.branch.name="${quoteQ(identity.branch)}" AND state="OPEN"`,
     pagelen: "1",
   })
   const token = process.env.BITBUCKET_TOKEN

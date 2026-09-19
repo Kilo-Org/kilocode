@@ -250,16 +250,21 @@ export async function identityFor(worktree: string): Promise<Identity | undefine
 
   // Read the declared remote URL first: `git remote get-url` applies any
   // `url.*.insteadOf` rewrite, which could hide the declared host from identity.
+  // Fall back to `git remote get-url` when the declared value is missing or is
+  // not itself a remote URL: a `url.*.insteadOf` alias (`gh:owner/repo.git`) is
+  // declared but unparseable on its own, and only `get-url` expands it to a real
+  // host, so treating a non-empty declared value as final would lose detection.
   const declared = await git
     .raw(["config", "--get", `remote.${remote}.url`])
     .then((value) => value.trim())
     .catch(() => undefined)
   const url =
-    declared ||
-    (await git
-      .raw(["remote", "get-url", remote])
-      .then((value) => value.trim())
-      .catch(() => undefined))
+    declared && remoteRepo(declared)
+      ? declared
+      : await git
+          .raw(["remote", "get-url", remote])
+          .then((value) => value.trim())
+          .catch(() => undefined)
   const repo = url ? remoteRepo(url) : undefined
   if (!repo) return undefined
 
@@ -274,6 +279,17 @@ export async function identityFor(worktree: string): Promise<Identity | undefine
     host: repo.host,
     path: repo.path,
   }
+}
+
+// Whether a parsed link names the worktree's own repository, for the `link_pr`
+// tool. It mirrors the session-output check: when the worktree's own repository
+// is known, a link for another host or project is refused, so an agent cannot
+// pin an unrelated repository's URL (or a phishing one) onto the session. A
+// worktree whose repository cannot be resolved has nothing to compare against,
+// so the link stays accepted the way the session-output path accepts it.
+export async function linkMatchesWorktree(link: PrLink, worktree: string): Promise<boolean> {
+  const identity = await identityFor(worktree)
+  return !identity || sameRepo(link, identity)
 }
 
 function firstPrUrl(text: string): PrLink | undefined {
@@ -399,8 +415,14 @@ export async function readPrLinkOverride(worktree: string): Promise<PrLinkOverri
 
 // Record the link the 5-minute check found for the worktree's branch and persist
 // it for the next process. `source: "poll"` marks it so a later clear only
-// removes a polled link, never a session-output one.
+// removes a polled link, never a session-output one. A session-output record for
+// this branch is the session's own claim and outranks the check, so the check
+// never relabels it `poll` (which would let a later clear remove it, or let a
+// second open pull request replace it); a record for another branch is stale and
+// may be replaced.
 export async function writePolledPrLink(worktree: string, branch: string, link: PrLink) {
+  const current = recordedLinks.get(worktree) ?? (await readRecordedPrLink(worktree))
+  if (current && current.source !== "poll" && (current.key == null || current.key === branch)) return
   remember(recordedLinks, worktree, { key: branch, link, source: "poll" })
   await persistRecordedPrLink(worktree)
 }

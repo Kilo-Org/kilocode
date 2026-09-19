@@ -1,6 +1,6 @@
 // kilocode_change - new file (moved from src/kilo-sessions/pr-link.test.ts so the
 // package test runner scans it; it previously sat under src/ and never ran).
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { Global } from "@opencode-ai/core/global"
 import fs from "node:fs/promises"
 import os from "node:os"
@@ -38,21 +38,27 @@ const realFetch = globalThis.fetch
 type ApiOutcome = { status?: number; body?: unknown } | { error: Error }
 let apiResponder: ((url: string) => ApiOutcome) | undefined
 
-const fetchMock = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
-  const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
-  if (!apiResponder || !/\/api\/v4\/|\/2\.0\/repositories\//.test(url)) return realFetch(input, init)
-  const out = apiResponder(url)
-  if ("error" in out) throw out.error
-  return new Response(typeof out.body === "string" ? out.body : JSON.stringify(out.body ?? null), {
-    status: out.status ?? 200,
-  })
-})
-globalThis.fetch = fetchMock as unknown as typeof fetch
+const fetchMock = spyOn(globalThis, "fetch").mockImplementation(
+  Object.assign(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
+      if (!apiResponder || !/\/api\/v4\/|\/2\.0\/repositories\//.test(url)) return realFetch(input, init)
+      const out = apiResponder(url)
+      if ("error" in out) throw out.error
+      return new Response(typeof out.body === "string" ? out.body : JSON.stringify(out.body ?? null), {
+        status: out.status ?? 200,
+      })
+    },
+    { preconnect: realFetch.preconnect },
+  ),
+)
 
 const {
   detectPrLink,
   detectPrLinkState,
   forgetRecordedPrLink,
+  identityFor,
+  linkMatchesWorktree,
   overrideKey,
   parsePrUrl,
   persistRecordedPrLink,
@@ -88,6 +94,11 @@ function restoreWorktree<T>(worktree: string, fn: () => T): T {
 const created: string[] = []
 
 afterAll(async () => {
+  // `mock.restore()` cannot undo a raw `globalThis.fetch = …` assignment; the
+  // spy's own restore puts the real fetch back so a later file in the same
+  // process (kilo-sessions.test.ts asserts no `mock` on globalThis.fetch) sees
+  // the original.
+  fetchMock.mockRestore()
   await Promise.all(created.map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
@@ -125,6 +136,20 @@ function fetchUrls() {
   return fetchMock.mock.calls.map((call) =>
     typeof call[0] === "string" ? call[0] : call[0] instanceof URL ? call[0].toString() : call[0].url,
   )
+}
+
+function fetchHeader(index: number, name: string) {
+  const headers = fetchMock.mock.calls[index]?.[1]?.headers
+  if (!headers) return undefined
+  if (headers instanceof Headers) return headers.get(name) ?? undefined
+  if (Array.isArray(headers)) return headers.find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1]
+  return headers[name]
+}
+
+function prLink(url: string) {
+  const link = parsePrUrl(url)
+  if (!link) throw new Error(`not a pull request URL: ${url}`)
+  return link
 }
 
 function apiUrl(index = 0) {
@@ -276,22 +301,37 @@ describe("refreshPrLink", () => {
   })
 
   test("a GitHub Enterprise host asks its own host", async () => {
-    const dir = await makeRepo("feature/ghe", "git@github.mycorp.example:owner/repo.git")
-    respondGh([{ html_url: "https://github.mycorp.example/owner/repo/pull/4" }])
+    // A self-hosted GitHub host is trusted only when the user designates it, so
+    // the check cannot be pointed at whatever host a repository's remote names.
+    process.env.GH_HOST = "github.mycorp.example"
+    try {
+      const dir = await makeRepo("feature/ghe", "git@github.mycorp.example:owner/repo.git")
+      respondGh([{ html_url: "https://github.mycorp.example/owner/repo/pull/4" }])
 
-    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
-    expect(link).toEqual({
-      platform: "github",
-      prUrl: "https://github.mycorp.example/owner/repo/pull/4",
-      prNumber: 4,
-    })
-    expect(ghCalls()[0]).toEqual([
-      "gh",
-      "api",
-      "--hostname",
-      "github.mycorp.example",
-      "repos/owner/repo/pulls?head=owner%3Afeature%2Fghe&state=open",
-    ])
+      const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+      expect(link).toEqual({
+        platform: "github",
+        prUrl: "https://github.mycorp.example/owner/repo/pull/4",
+        prNumber: 4,
+      })
+      expect(ghCalls()[0]).toEqual([
+        "gh",
+        "api",
+        "--hostname",
+        "github.mycorp.example",
+        "repos/owner/repo/pulls?head=owner%3Afeature%2Fghe&state=open",
+      ])
+    } finally {
+      delete process.env.GH_HOST
+    }
+  })
+
+  test("a GitHub-like host the user did not designate stays inconclusive and runs no gh", async () => {
+    const dir = await makeRepo("feature/gh", "git@github.attacker.example:owner/repo.git")
+    respondGh([{ html_url: "https://github.attacker.example/owner/repo/pull/4" }])
+
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
   })
 
   // GitLab retains `refs/merge-requests/<n>/head` for closed merge requests, so
@@ -328,6 +368,42 @@ describe("refreshPrLink", () => {
     expect(apiUrl().pathname).toBe("/api/v4/projects/group%2Fproj/merge_requests")
   })
 
+  // The token is the user's credential, so it is sent only to the canonical host
+  // or to a host the user designated: a hostile remote whose host merely starts
+  // with `gitlab` must never receive it.
+  test("the GitLab token is sent to gitlab.com but not to an undesignated host", async () => {
+    process.env.GITLAB_TOKEN = "gl-secret"
+    try {
+      const canonical = await makeRepo("feature/gl", "https://gitlab.com/group/proj.git")
+      respondApi([{ web_url: "https://gitlab.com/group/proj/-/merge_requests/5" }])
+      await restoreWorktree(canonical, () => refreshPrLink(canonical))
+      expect(fetchHeader(0, "PRIVATE-TOKEN")).toBe("gl-secret")
+
+      fetchMock.mockClear()
+      const hostile = await makeRepo("feature/gl", "git@gitlab.attacker.example:group/proj.git")
+      respondApi([{ web_url: "https://gitlab.attacker.example/group/proj/-/merge_requests/5" }])
+      await restoreWorktree(hostile, () => refreshPrLink(hostile))
+      expect(fetchUrls().length).toBe(1)
+      expect(fetchHeader(0, "PRIVATE-TOKEN")).toBeUndefined()
+    } finally {
+      delete process.env.GITLAB_TOKEN
+    }
+  })
+
+  test("the GitLab token is sent to a host the user designated", async () => {
+    process.env.GITLAB_TOKEN = "gl-secret"
+    process.env.GITLAB_HOST = "gitlab.mycorp.example"
+    try {
+      const dir = await makeRepo("feature/gle", "git@gitlab.mycorp.example:group/proj.git")
+      respondApi([{ web_url: "https://gitlab.mycorp.example/group/proj/-/merge_requests/8" }])
+      await restoreWorktree(dir, () => refreshPrLink(dir))
+      expect(fetchHeader(0, "PRIVATE-TOKEN")).toBe("gl-secret")
+    } finally {
+      delete process.env.GITLAB_TOKEN
+      delete process.env.GITLAB_HOST
+    }
+  })
+
   // Bitbucket does not advertise `refs/pull-requests/<n>/from`, so the check
   // asks the Cloud API for the branch's open pull request, bounded by the `q`
   // filter to the branch and to OPEN state.
@@ -346,6 +422,16 @@ describe("refreshPrLink", () => {
     expect(apiUrl().pathname).toBe("/2.0/repositories/team/repo/pullrequests")
     expect(apiUrl().searchParams.get("q")).toBe('source.branch.name="feature/bb" AND state="OPEN"')
     expect(ghCalls().length).toBe(0)
+  })
+
+  // Git allows `"` in ref names, so the branch must be escaped inside the `q`
+  // filter or the host answers 400 and the check never runs for that branch.
+  test("escapes a quote in the Bitbucket branch filter", async () => {
+    const dir = await makeRepo('a"b', "https://bitbucket.org/team/repo.git")
+    respondApi({ values: [] })
+
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(apiUrl().searchParams.get("q")).toBe('source.branch.name="a\\"b" AND state="OPEN"')
   })
 
   // The check asks each host's bounded API, never the unbounded ref namespaces.
@@ -426,6 +512,30 @@ describe("refreshPrLink", () => {
     const stored = await readRecordedPrLink(dir)
     expect(stored?.link).toEqual({ platform: "gitlab", prUrl: url, prNumber: 7 })
     expect(stored?.cleared).toBeUndefined()
+  })
+
+  // A session-output record must not be relabelled `poll` when the check finds a
+  // pull request, or a later clear would remove the session's own link. This is
+  // also the two-open-pull-requests case: the check takes the host's first
+  // result and must not replace the session-created link with a different one.
+  test("the poll never overwrites a session-output record for the same branch", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    const url = "https://gitlab.example.com/group/sub/proj/-/merge_requests/7"
+    recordPrLinkText(dir, `Opened ${url}`)
+    // Bind the record to the branch the way the hot path does.
+    expect(await restoreWorktree(dir, () => detectPrLink())).toEqual({
+      platform: "gitlab",
+      prUrl: url,
+      prNumber: 7,
+    })
+
+    respondApi([{ web_url: "https://gitlab.example.com/group/sub/proj/-/merge_requests/5" }])
+    await restoreWorktree(dir, () => refreshPrLink(dir))
+
+    expect(await readRecordedPrLink(dir)).toEqual({
+      key: "origin/feature/gl",
+      link: { platform: "gitlab", prUrl: url, prNumber: 7 },
+    })
   })
 
   test("a non-zero or spawn-failed GitHub check keeps the link and clears nothing", async () => {
@@ -935,6 +1045,44 @@ describe("recordPrLinkText", () => {
     const link = recordPrLinkText(dir, "Opened https://github.com/owner/repo/pull/7")
     expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/7", prNumber: 7 })
     expect(await restoreWorktree(dir, () => detectPrLink())).toEqual(link)
+  })
+
+  // A declared remote that is an `insteadOf` alias (`gh:owner/repo.git`) is not
+  // itself a URL, so identity must fall back to `git remote get-url`, which
+  // expands the alias to the real host. Treating the non-empty declared value as
+  // final would lose detection for the worktree.
+  test("an unparseable declared remote falls back to git remote get-url", async () => {
+    const dir = await makeRepo("feature/expand", "gh:owner/repo.git")
+    const git = simpleGit(dir)
+    await git.raw(["config", "url.https://github.com/owner/repo.git.insteadOf", "gh:owner/repo.git"])
+
+    const identity = await identityFor(dir)
+    expect(identity?.host).toBe("github.com")
+    expect(identity?.path).toBe("owner/repo")
+    expect(identity?.platform).toBe("github")
+  })
+})
+
+describe("linkMatchesWorktree", () => {
+  test("accepts a pull request for the worktree's own repository", async () => {
+    const dir = await makeRepo()
+    expect(await linkMatchesWorktree(prLink("https://github.com/owner/repo/pull/7"), dir)).toBe(true)
+  })
+
+  test("refuses another repository on the same host", async () => {
+    const dir = await makeRepo()
+    expect(await linkMatchesWorktree(prLink("https://github.com/other/repo/pull/7"), dir)).toBe(false)
+  })
+
+  test("refuses a phishing host with the same project path", async () => {
+    const dir = await makeRepo()
+    expect(await linkMatchesWorktree(prLink("https://github.evil.example/owner/repo/pull/7"), dir)).toBe(false)
+  })
+
+  test("accepts when the worktree's repository cannot be resolved", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "pr-link-none-"))
+    created.push(dir)
+    expect(await linkMatchesWorktree(prLink("https://github.com/owner/repo/pull/7"), dir)).toBe(true)
   })
 })
 
