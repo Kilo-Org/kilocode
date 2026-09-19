@@ -533,6 +533,9 @@ describe("kilocode tool registry indexing", () => {
         cancel: () => Effect.succeed(undefined),
         cancelSession: () => Effect.succeed(0),
         adopt: () => Effect.void,
+        cronCreate: () => Effect.die(new Error("wakeup cronCreate is not used by this test")),
+        cronList: () => Effect.succeed([]),
+        cronCancel: () => Effect.succeed(undefined),
       }),
     )
     const indexing = spyOn(KiloIndexing, "init").mockRejectedValue(err)
