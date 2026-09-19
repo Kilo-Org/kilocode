@@ -23,8 +23,36 @@ The mobile app lets you:
 - Track a session's [goal](/docs/code-with-ai/agents/goals) from a fixed section under the session header, and start or control one with `/goal`.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
-- Review GitHub pull requests end to end — diffs, checks, comments, and merging.
+- Copy a link to the message on screen from the session header, then open it on the web or another device to continue from the same position.
+- Review GitHub pull requests, GitLab merge requests, and Bitbucket pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
+
+## App actions
+
+Four actions are available from outside the app. On iOS they appear in the **Shortcuts** app; on Android the same four are addressable from the launcher, the Assistant, or another app.
+
+| Action | What it does |
+|---|---|
+| Start agent | Starts a new session and reports it to the caller. Runs with the app closed. |
+| Open agent needing input | Opens the only session waiting for input, or the Agents list when none or several are waiting. |
+| Open session | Opens a session in the app. |
+| Open pull request | Opens a pull request or merge request from a review link. |
+
+**Start agent** uses the same create path as the in-app new-session screen, including your repository, model preference, and mode. An unsupported GitHub or GitLab repository reports a repository-specific reason and a next action, and a start-agent request with no prompt is refused as prompt-required instead of being left to time out.
+
+**Open session** and **Open pull request** open the same screens as their in-app controls. A pull request link that is not a review link reports the app's not-a-pull-request message and opens nothing.
+
+### App icon shortcuts and Quick Settings tile
+
+On Android, long-press the Kilo app icon to open the [app shortcuts](https://developer.android.com/guide/topics/ui/shortcuts) **New agent**, **Needs input**, and **Open last session**. On iOS, long-press the app icon to see the same actions as [Home Screen Quick Actions](https://developer.apple.com/design/human-interface-guidelines/home-screen-quick-actions). Each opens the same screen as the matching in-app control.
+
+- **New agent** opens the new-agent composer.
+- **Needs input** opens the session that is waiting for input. It appears only while at least one session is waiting and disappears again when nothing is waiting.
+- **Open last session** opens the session you last opened. It is available after a cold start even when your account identity resolves after the chat screen first renders.
+
+On Android, the Kilo [Quick Settings tile](https://developer.android.com/develop/ui/views/quicksettings-tiles) mirrors this state. While a session is waiting, the tile reads **Needs input** and opens the chat of the session that has waited longest; with nothing waiting, it reads **New agent** and opens the new-agent composer. If the backend is unreachable, the tile still opens the last published waiting session and shows no error of its own. Signing out removes **Needs input** and **Open last session** from the app shortcuts and the tile.
+
+App shortcuts require Android 7.1 (API 25) or later; the Quick Settings tile works on Android 7.0 (API 24) or later.
 
 ## Finding sessions
 
@@ -78,6 +106,12 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. Use **Folder** to choose a child folder, including nested folders, before starting. If the CLI cannot list folders, the app explains this and starts in the launch directory instead. In organization context, the new session belongs to that organization.
 
 For Cloud Agent sessions, choose a repository from GitHub, GitLab, or, for organizations, Bitbucket. The picker groups repositories by provider and includes **Recently used**. Each provider has its own connection and error messages, so a problem with one does not hide the others.
+
+Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend's default destination. Tap it to pick a sandbox type from a sheet that groups the types the backend offers by provider; the field then shows the choice, such as `Cloudflare · Shared`. While the options load, a field-sized skeleton holds the slot, and a failed load shows **Couldn't load sandbox options** with **Retry**. If a chosen type is no longer offered, the field shows why and offers **Use Default**, and you cannot start until you resolve it. Starting sends the type you picked, or the backend default when you pick nothing. Owners without sandbox selection see no Sandbox field.
+
+## Starting a session from a picture
+
+Home has a **New task from a picture** button beneath the new-task button. It offers **Camera** and **Photo Library**, with Cancel last. Taking a photo or picking a screenshot opens the ordinary new-agent composer with the image attached, where you can add typed text before starting the session. The photo library asks for a single selection, so one tap attaches one image. Cancelling the sheet or the system picker returns to Home without starting an agent.
 
 ## Continuing a finished session
 
@@ -139,19 +173,23 @@ Attaching files from the phone is the mobile flow — this is separate from `kil
 
 While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.
 
-## Reviewing GitHub pull requests
+## Reviewing pull requests and merge requests
 
-Open a pull request from a PR link to review it without leaving the app:
+Open a pull request or merge request from a link to review it without leaving the app. GitHub pull requests, GitLab merge requests, and Bitbucket pull requests use the same review layout, with each provider's own wording for states and checks:
 
-- **Overview** — PR state and CI checks, plus sidebar metadata: when the pull request opened and last moved, its labels, the reviewers and each one's state (approved, changes requested, commented, dismissed, or awaiting review), assignees, the linked issues it closes, and a comment-count badge on the **Discussion** tab. Sections that GitHub reports nothing for are hidden.
+- **Overview** — request state and CI checks, plus sidebar metadata for the details the provider reports, such as when the request opened and last moved, its labels, reviewers and each one's state, assignees, and the linked issues it closes. A comment-count badge on the **Discussion** tab shows the unresolved threads, and sections the provider reports nothing for are hidden.
 - **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
 - **Discussion** — review threads with replies, resolve/unresolve, and reactions.
 
-Comments you leave on diffs are collected into a pending review on your device and submitted to GitHub as a single review. To post a regular conversation comment instead, tap **Comment on this pull request** at the bottom of **Discussion**. These comments appear directly in the discussion and are not part of a review.
+Comments you leave on diffs are collected into a pending review on your device and submitted as a single review. To post a regular conversation comment instead, tap **Comment on this pull request** at the bottom of **Discussion**. These comments appear directly in the discussion and are not part of a review, and they work on GitHub pull requests, GitLab merge requests, and Bitbucket pull requests. The comment sheet header shows the provider's own reference, such as `group/sub/repo!12` on GitLab or `workspace/repo#77` on Bitbucket.
 
-When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch, all from the app.
+Every comment row shows a **Fix with Kilo** pill beside its overflow menu, on diff-line review threads and on conversation comments. Tapping it opens the new-session screen with the composer prefilled with `Please address the following PR comment: <that comment's link>`. The link targets the exact comment, and a comment with no addressable provider URL shows no pill.
 
-PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
+When the request is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge where the provider supports it, or update the branch, all from the app. Bitbucket's API has no auto-merge, so the app explains that instead of offering it.
+
+Reviews use your connected account for that provider; the app asks you to connect it if you have not already. GitLab merge requests work in personal and organization contexts, including self-managed instances. Bitbucket Cloud is available in organization contexts and explains how to proceed from a personal context.
+
+Recents, drafts, viewed-file sets, and pending comments stay separate across providers, accounts, and GitLab instances, so same-named repositories never share state.
 
 ## Session cost and model details
 
@@ -167,7 +205,9 @@ Cost is recorded when a session closes; sessions that closed before this feature
 
 Add the **Active Agents** widget to track **Needs input**, **Working**, and **Idle** session counts. Tap the widget to open your agents in the app. Background updates keep these surfaces informed while the app is not open; signing out stops updates for that account.
 
-- **iOS**: widgets are available on the Home Screen and Lock Screen, with a Live Activity on the Lock Screen and Dynamic Island. Compact layouts prioritize agents that need input, then working agents, then idle agents. If Live Activities are disabled, the Agents tab offers a prompt to open device settings.
+The Home Screen widget also shows the newest session and how many agents are waiting, refreshed on every session update. When an agent is waiting, it offers **Approve**, which answers that agent's oldest permission without opening the app. With no agents waiting, it reads **No agents waiting** and offers **New agent**, which starts a session from your saved draft. While an action runs, the widget shows its progress line; a failed action shows its own message and stays tappable for a retry. An agent waiting on a free-form question, and a tap on the widget body, open the app instead of acting inside the widget.
+
+- **iOS**: widgets are available on the Home Screen and Lock Screen, with a Live Activity on the Lock Screen and Dynamic Island. The Home Screen widget carries the newest session line and both action buttons; the Lock Screen widget stays generic. Compact layouts prioritize agents that need input, then working agents, then idle agents. If Live Activities are disabled, the Agents tab offers a prompt to open device settings.
 - **Android**: the resizable Home Screen widget shows **Needs input**, **Working**, and **Idle** counts at every size, including zeros while work is present. An ongoing **Active agents** notification also reports session activity. Supported devices can promote it to a Live Update. If notifications are disabled while work is pending, the app offers a prompt to enable them in device settings.
 
 ## Android App
