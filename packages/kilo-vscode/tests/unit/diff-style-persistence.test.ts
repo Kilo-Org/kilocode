@@ -46,7 +46,18 @@ describe("diff style persistence", () => {
   })
 
   test("getUserDiffStyle reads the global layer, not workspace-local overrides", () => {
-    installConfig({ "diff.style": "split" })
+    // Mock a workspace-level value differing from the global one; only the
+    // global layer may win, matching the inspect().globalValue read.
+    ;(vscode.workspace as unknown as { getConfiguration: typeof vscode.workspace.getConfiguration }).getConfiguration =
+      () =>
+        ({
+          get: <T>(key: string, fallback?: T) => (store[key] as T) ?? fallback,
+          inspect: (key: string) => ({ globalValue: store[key], workspaceValue: store[`${key}#ws`] }),
+          update: async (key: string, value: unknown) => {
+            store[key] = value
+          },
+        }) as vscode.WorkspaceConfiguration
+    installConfig({ "diff.style": "split", "diff.style#ws": "unified" })
     expect(getUserDiffStyle()).toBe("split")
   })
 })

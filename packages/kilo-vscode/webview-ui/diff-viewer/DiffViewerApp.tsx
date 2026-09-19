@@ -433,6 +433,7 @@ const DiffViewerContent: Component = () => {
         diffStyle={diffStyle()}
         onDiffStyleChange={(style) => {
           setDiffStyle(style)
+          setSavedDiffStyle(style)
           post({ type: "diffViewer.setDiffStyle", style })
         }}
         markdownRender={markdown()}
