@@ -1,5 +1,5 @@
 import path from "path"
-import { lstatSync, readlinkSync } from "fs"
+import { lstatSync, readlinkSync, realpathSync } from "fs"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
@@ -60,8 +60,6 @@ export namespace ConfigProtection {
     candidate: boolean
     /** Protection applies to this request under the current policies. */
     protect: boolean
-    /** Some protected target is global or outside the project boundary. */
-    external: boolean
     /** Exact global skill subtree resolved for this request, when it is one skill. */
     skill?: string
   }
@@ -159,6 +157,22 @@ export namespace ConfigProtection {
     }
   }
 
+  /**
+   * Canonical spelling of an existing component. Windows exposes the same directory under an 8.3
+   * short alias and its long name, and the file tools normalize request paths through `realpath`, so
+   * the walk records the OS name rather than the spelling the caller happened to use. Only called
+   * for a component lstat proved exists and is not a symlink, so no `..` remains for realpath to
+   * collapse lexically.
+   */
+  function real(file: string): string {
+    try {
+      return realpathSync.native(file)
+    } catch {
+      // lstat proved the component exists; canonicalization can still race a concurrent removal.
+      return file
+    }
+  }
+
   /** Join a raw path without normalizing `..`, so the OS, not `path.resolve`, applies it. */
   function joinRaw(base: string, child: string): string {
     return base.endsWith(path.sep) ? base + child : base + path.sep + child
@@ -168,8 +182,9 @@ export namespace ConfigProtection {
    * Resolve `input` to its physical location component by component, following symlinks as they are
    * encountered and applying `..` to the already-resolved physical parent. The runtime `realpath`
    * collapses a `..` that follows a symlink lexically, which can disagree with the kernel, so it is
-   * not used here. A nonexistent trailing run is re-appended only while it is made of plain names,
-   * so an ordinary new file keeps its lexical project scope. Returns undefined when the result
+   * never applied to a path containing `..`; each already-resolved component is still canonicalized
+   * for its OS spelling. A nonexistent trailing run is re-appended only while it is made of plain
+   * names, so an ordinary new file keeps its lexical project scope. Returns undefined when the result
    * cannot be proven (unreadable component, link cycle, hop overflow, or a `..` behind a
    * missing/non-directory component); callers then treat the path as unproven, never as inside.
    */
@@ -211,7 +226,7 @@ export namespace ConfigProtection {
         return canonical(rest.length > 0 ? joinRaw(next, rest.join(path.sep)) : next, links + 1)
       }
       dirs.push(info.isDirectory())
-      current = candidate
+      current = real(candidate)
     }
     return current
   }
@@ -287,10 +302,6 @@ export namespace ConfigProtection {
     const first = roots[0]
     if (!first || roots.some((root) => !root || !within(root, first) || !within(first, root))) return
     return normalize(path.join(first, "*"))
-  }
-
-  export function isGlobalSkillRequest(request: { permission: string; patterns: readonly string[] }): boolean {
-    return globalSkillPattern(request) !== undefined
   }
 
   /** Structural shape shared by config-gated permission requests. */
@@ -383,11 +394,6 @@ export namespace ConfigProtection {
     return configPath(canon)
   }
 
-  /** Whether one target looks like a protected config path, ignoring policy and containment. */
-  function configLike(target: string): boolean {
-    return path.isAbsolute(target) ? isAbsolute(target) || configPath(target) : isRelative(target)
-  }
-
   /**
    * Immutable per-request target classification, computed once and reused for both the config-load
    * gate and the policy verdict within one permission operation. `skill` is resolved lazily and
@@ -411,8 +417,8 @@ export namespace ConfigProtection {
   /**
    * Classify every target path of one request against the project boundary. This is the single
    * filesystem-resolution pass: the returned scopes drive `candidate`, `external`, `inside`, and
-   * `unproven`, and the lazy skill probe is memoized. Prefer this plus `verdict` over `evaluate`
-   * when the same request is both gated (does policy loading apply?) and evaluated.
+   * `unproven`, and the lazy skill probe is memoized. Callers pair this with `verdict` so the same
+   * request is both gated (does policy loading apply?) and evaluated from one classification.
    */
   export function classify(request: Target, root: string): Classification {
     const scopes = targets(request).map((target) => level(target, root))
@@ -439,8 +445,7 @@ export namespace ConfigProtection {
 
   /** Apply the global and project protection policies to one already-classified request. */
   export function verdict(classification: Classification, input: { global?: Config; project?: Config } = {}): Verdict {
-    if (!classification.candidate)
-      return { candidate: false, protect: false, external: false, skill: classification.skill }
+    if (!classification.candidate) return { candidate: false, protect: false, skill: classification.skill }
     const global = enabled(input.global)
     const project = enabled(input.project)
     // Unproven targets are protected when either policy is active, so one opt-out cannot weaken the
@@ -452,32 +457,7 @@ export namespace ConfigProtection {
     return {
       candidate: true,
       protect,
-      external: classification.external,
       skill: classification.external ? classification.skill : undefined,
     }
-  }
-
-  /**
-   * Determine if a permission request targets config files at all, ignoring policy.
-   * Gates `edit` permissions and bash-originated `external_directory` requests.
-   * File-tool reads are not restricted. When `root` is provided, relative targets are resolved
-   * against the project boundary so paths into global config dirs are still detected.
-   */
-  export function isRequest(request: Target, root?: string): boolean {
-    if (root) return classify(request, root).candidate
-    return targets(request).some(configLike)
-  }
-
-  /**
-   * Apply the global and project protection policies to one permission request.
-   *
-   * Targets proven inside the project boundary use the effective project policy; global config
-   * dirs and out-of-boundary targets use the global policy. A target whose physical location is
-   * unprovable is protected when either policy is enabled, so one opt-out cannot weaken the other.
-   * A request is protected when any of its targets is protected under its own policy, so a project
-   * opt-out can never bypass protection for an out-of-project target.
-   */
-  export function evaluate(request: Target, input: { root: string; global?: Config; project?: Config }): Verdict {
-    return verdict(classify(request, input.root), input)
   }
 }

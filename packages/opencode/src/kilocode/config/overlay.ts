@@ -259,8 +259,6 @@ export namespace KilocodeConfigOverlay {
     return [Global.Path.config, path.join(Global.Path.home, ".kilocode"), path.join(Global.Path.home, ".kilo")]
   }
 
-  const legacyDirs = [".kilocode", ".kilo"] as const
-
   /**
    * Read the explicit legacy home global value for the config-edit protection field. The shared loader
    * merges these directories after the primary global config, and its later values win, so the last
@@ -270,7 +268,7 @@ export namespace KilocodeConfigOverlay {
    */
   export async function legacyField(): Promise<LegacyField | undefined> {
     let found: LegacyField | undefined
-    for (const dir of legacyDirs) {
+    for (const dir of dirs) {
       const root = path.join(Global.Path.home, dir)
       if (!existsSync(root)) continue
       for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
