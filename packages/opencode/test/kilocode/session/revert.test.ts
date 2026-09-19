@@ -1,17 +1,17 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect" // kilocode_change - lock tests
+import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { Global } from "@opencode-ai/core/global" // kilocode_change
-import { EffectFlock } from "@opencode-ai/core/util/effect-flock" // kilocode_change
-import { Hash } from "@opencode-ai/core/util/hash" // kilocode_change
+import { Global } from "@opencode-ai/core/global"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { Hash } from "@opencode-ai/core/util/hash"
 import { MessageV2 } from "@/session/message-v2"
-import { Instance } from "@/kilocode/instance" // kilocode_change
+import { Instance } from "@/kilocode/instance"
 import { KiloSessionRevert } from "@/kilocode/session/revert"
 import { SessionRevert } from "@/session/revert"
 import { MessageID, PartID } from "@/session/schema"
@@ -20,7 +20,7 @@ import { Snapshot } from "@/snapshot"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-// kilocode_change start - plant an index.lock the way a concurrent git write would
+// plant an index.lock the way a concurrent git write would
 const snapshotGitdir = () => path.join(Global.Path.data, "snapshot", Instance.project.id, Hash.fast(Instance.worktree))
 
 const plantLock = Effect.fnUntraced(function* () {
@@ -30,7 +30,6 @@ const plantLock = Effect.fnUntraced(function* () {
   yield* Effect.promise(() => fs.writeFile(lock, ""))
   return lock
 })
-// kilocode_change end
 
 const env = LayerNode.compile(
   LayerNode.group([
@@ -44,7 +43,7 @@ const env = LayerNode.compile(
 const it = testEffect(env)
 const guarded = process.platform === "win32" ? it.live.skip : it.live
 
-// kilocode_change start - flockOnly takes the real on-disk lock; impatientFlock fails givingUp keys without waiting
+// flockOnly takes the real on-disk lock; impatientFlock fails givingUp keys without waiting
 const flockOnly = LayerNode.compile(LayerNode.group([EffectFlock.node]))
 
 const givingUp = new Set<string>()
@@ -70,7 +69,6 @@ const impatient = testEffect(
   ),
 )
 const guardedImpatient = process.platform === "win32" ? impatient.live.skip : impatient.live
-// kilocode_change end
 
 const setup = Effect.fnUntraced(function* (dir: string, deleted = false) {
   const sessions = yield* Session.Service
@@ -512,7 +510,7 @@ describe("workspace revert status", () => {
     30_000,
   )
 
-  // kilocode_change start - the pre-revert snapshot needs the index lock too, and without it there is no baseline
+  // the pre-revert snapshot needs the index lock too, and without it there is no baseline
   guarded(
     "fails instead of rewinding when a locked index blocks the pre-revert snapshot",
     provideTmpdirInstance(
@@ -537,9 +535,8 @@ describe("workspace revert status", () => {
     ),
     30_000,
   )
-  // kilocode_change end
 
-  // kilocode_change start - a locked index leaves the workspace unchanged even when the rollback hits the same lock
+  // a locked index leaves the workspace unchanged even when the rollback hits the same lock
   it.live(
     "keeps the workspace unchanged when a locked index blocks both the revert and its rollback",
     provideTmpdirInstance(
@@ -574,9 +571,8 @@ describe("workspace revert status", () => {
     ),
     20_000,
   )
-  // kilocode_change end
 
-  // kilocode_change start - another agent snapshotting the same project delays a revert, not fails it
+  // another agent snapshotting the same project delays a revert, not fails it
   guarded(
     "waits for a snapshot lock held elsewhere and reverts once it is released",
     provideTmpdirInstance(
@@ -616,9 +612,8 @@ describe("workspace revert status", () => {
     ),
     30_000,
   )
-  // kilocode_change end
 
-  // kilocode_change start - a lock that never comes free is not actionable, so the revert aborts as a defect
+  // a lock that never comes free is not actionable, so the revert aborts as a defect
   guardedImpatient(
     "aborts the revert without touching the workspace when the snapshot lock never comes free",
     provideTmpdirInstance(
@@ -644,5 +639,4 @@ describe("workspace revert status", () => {
     ),
     30_000,
   )
-  // kilocode_change end
 })
