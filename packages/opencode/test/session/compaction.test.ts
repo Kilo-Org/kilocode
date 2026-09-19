@@ -1581,6 +1581,116 @@ describe("session.compaction.process", () => {
       expect(part?.tail_start_id).toBe(keep.id)
     }).pipe(withCompaction({ config: cfg({ tail_turns: 2, preserve_recent_tokens: 500 }) })),
   )
+
+  // kilocode_change start - empty compaction worker response is a retryable failure
+  itCompaction.instance(
+    "keeps the session and reports a retryable failure when the empty compaction worker returns no content",
+    () => {
+      const stub = llm()
+      stub.push(
+        Stream.make(
+          LLMEvent.stepFinish({ index: 0, reason: "stop", usage: basicUsage() }),
+          LLMEvent.finish({ reason: "stop", usage: basicUsage() }),
+        ),
+      )
+      return Effect.gen(function* () {
+        const ssn = yield* SessionNs.Service
+        const session = yield* ssn.create({})
+        const first = yield* createUserMessage(session.id, "first")
+        yield* createUserMessage(session.id, "second")
+        yield* createSummaryCompaction(session.id)
+
+        const msgs = yield* ssn.messages({ sessionID: session.id })
+        const parent = msgs.at(-1)?.info.id
+        expect(parent).toBeTruthy()
+        const result = yield* SessionCompaction.use.process({
+          parentID: parent!,
+          messages: msgs,
+          sessionID: session.id,
+          auto: false,
+        })
+
+        const summary = (yield* ssn.messages({ sessionID: session.id })).find(
+          (msg) => msg.info.role === "assistant" && msg.info.summary,
+        )
+
+        expect(result).toBe("stop")
+        expect(summary?.info.role).toBe("assistant")
+        if (summary?.info.role !== "assistant") return
+        expect(summary.info.error?.name).toBe("APIError")
+        if (summary.info.error?.name !== "APIError") return
+        expect(summary.info.error.data.isRetryable).toBe(true)
+        expect(summary.info.error.data.message).toContain("Compaction did not run")
+        expect(summary.parts.some((part) => part.type === "text" && part.text.includes("Compaction did not run"))).toBe(
+          true,
+        )
+
+        const filtered = MessageV2.filterCompacted(yield* MessageV2.stream(session.id))
+        expect(filtered.map((msg) => msg.info.id)).toContain(first.id)
+
+        const part = yield* readCompactionPart(session.id)
+        expect(part?.tail_start_id).toBeUndefined()
+      }).pipe(withCompaction({ llm: stub.llmLayer }))
+    },
+    { git: true },
+  )
+
+  itCompaction.instance(
+    "retries an empty compaction worker response and compacts once a usable summary arrives",
+    () => {
+      const stub = llm()
+      stub.push(
+        Stream.make(
+          LLMEvent.stepFinish({ index: 0, reason: "stop", usage: basicUsage() }),
+          LLMEvent.finish({ reason: "stop", usage: basicUsage() }),
+        ),
+      )
+      stub.push(reply("usable summary"))
+      return Effect.gen(function* () {
+        const ssn = yield* SessionNs.Service
+        const session = yield* ssn.create({})
+        const first = yield* createUserMessage(session.id, "first")
+        const second = yield* createUserMessage(session.id, "second")
+        yield* createSummaryCompaction(session.id)
+
+        let msgs = yield* ssn.messages({ sessionID: session.id })
+        let parent = msgs.at(-1)?.info.id
+        expect(parent).toBeTruthy()
+        const failed = yield* SessionCompaction.use.process({
+          parentID: parent!,
+          messages: msgs,
+          sessionID: session.id,
+          auto: false,
+        })
+        expect(failed).toBe("stop")
+
+        yield* createSummaryCompaction(session.id)
+        msgs = yield* ssn.messages({ sessionID: session.id })
+        parent = msgs.at(-1)?.info.id
+        expect(parent).toBeTruthy()
+        const result = yield* SessionCompaction.use.process({
+          parentID: parent!,
+          messages: msgs,
+          sessionID: session.id,
+          auto: false,
+        })
+
+        const all = yield* ssn.messages({ sessionID: session.id })
+        const latest = all.filter((msg) => msg.info.role === "assistant" && msg.info.summary).at(-1)
+
+        expect(result).toBe("continue")
+        expect(latest?.info.role).toBe("assistant")
+        if (latest?.info.role !== "assistant") return
+        expect(latest.info.error).toBeUndefined()
+
+        const ids = MessageV2.filterCompacted(yield* MessageV2.stream(session.id)).map((msg) => msg.info.id)
+        expect(ids).not.toContain(first.id)
+        expect(ids).not.toContain(second.id)
+      }).pipe(withCompaction({ llm: stub.llmLayer }))
+    },
+    { git: true },
+  )
+  // kilocode_change end
 })
 
 describe("util.token.estimate", () => {
