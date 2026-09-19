@@ -167,6 +167,50 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
     }
 
+    fun `test continue in background is hidden when the CLI lacks the capability`() {
+        val off = view(running(), promote = BackgroundPromote({ false }, {}))
+
+        assertFalse(promoteIcon(off).isVisible)
+    }
+
+    fun `test continue in background shows for a running foreground task when capable`() {
+        val on = view(running(), promote = BackgroundPromote({ true }, {}))
+
+        assertTrue(promoteIcon(on).isVisible)
+    }
+
+    fun `test continue in background re-checks the capability on every update`() {
+        // The capability is only known after the connection load completes, so a card created before
+        // it arrives must pick it up rather than caching the value from construction.
+        var capable = false
+        val view = view(running(), promote = BackgroundPromote({ capable }, {}))
+        assertFalse(promoteIcon(view).isVisible)
+
+        capable = true
+        view.update(running())
+
+        assertTrue(promoteIcon(view).isVisible)
+    }
+
+    fun `test continue in background is hidden without a promote binding or for finished and background tasks`() {
+        val none = view(running(), promote = null)
+        val done = view(task(), promote = BackgroundPromote({ true }, {}))
+        val already = view(running(background = true), promote = BackgroundPromote({ true }, {}))
+
+        assertFalse(promoteIcon(none).isVisible)
+        assertFalse(promoteIcon(done).isVisible)
+        assertFalse(promoteIcon(already).isVisible)
+    }
+
+    fun `test continue in background promotes the child session`() {
+        val promoted = mutableListOf<String>()
+        val view = view(running(), promote = BackgroundPromote({ true }, { promoted.add(it) }))
+
+        promoteIcon(view).doClick()
+
+        assertEquals(listOf("ses_child"), promoted)
+    }
+
     fun `test task popup only shows when collapsed with children`() {
         val view = view(task(children = listOf(child("c1", "read"))))
         assertTrue(view.isExpanded())
@@ -257,7 +301,22 @@ class TaskToolViewTest : BasePlatformTestCase() {
         }
     }
 
-    private fun view(tool: Tool, onOpen: ((String, String) -> Unit)? = null): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen).also { views.add(it) }
+    private fun view(
+        tool: Tool,
+        onOpen: ((String, String) -> Unit)? = null,
+        promote: BackgroundPromote? = null,
+    ): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen, onPromoteBackgroundAgent = promote)
+        .also { views.add(it) }
+
+    /** A still-running foreground task — the only state "Continue in background" applies to. */
+    private fun running(background: Boolean = false) = task().also {
+        it.state = ToolExecState.RUNNING
+        if (background) it.metadata = it.metadata + mapOf("background" to "true")
+    }
+
+    private fun promoteIcon(view: TaskToolView) = descendants(view)
+        .filterIsInstance<HoverIcon>()
+        .first { it.toolTipText == "Continue in background" }
 
     private fun task(children: List<Tool> = emptyList(), sessionId: String? = "ses_child", description: String = "Find files") = Tool("part_task", "task", toolKind("task")).also {
         it.state = ToolExecState.COMPLETED

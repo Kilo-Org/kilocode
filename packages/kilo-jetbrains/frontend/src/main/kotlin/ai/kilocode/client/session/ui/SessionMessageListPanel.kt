@@ -12,6 +12,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.SessionOutcomeView
@@ -70,6 +71,7 @@ class SessionMessageListPanel(
     private val deleteQueued: ((String) -> Unit)? = null,
     private val banner: RevertBanner? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
+    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
 ) : SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
     Insets(
@@ -186,6 +188,7 @@ class SessionMessageListPanel(
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
@@ -311,7 +314,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent).also {
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent).also {
             it.setDiffOpener(openDiff, sessionId)
         }
         turnViews[turn.id] = tv
@@ -383,7 +386,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent).also {
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent).also {
                 it.setDiffOpener(openDiff, sessionId)
             }
             turnViews[turn.id] = tv

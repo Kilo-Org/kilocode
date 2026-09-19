@@ -54,6 +54,7 @@ object ViewFactory {
         openDiff: SessionDiffOpener = { _, _, _ -> },
         sessionId: String? = null,
         onOpenSubagent: ((String, String) -> Unit)? = null,
+        onPromoteBackgroundAgent: BackgroundPromote? = null,
     ): PartView = when (content) {
         is Text -> TextView(content, openFile = openFile, openUrl = openUrl, selection = selection)
         is Reasoning -> ReasoningView(content, openFile = openFile, openUrl = openUrl, selection = selection)
@@ -67,7 +68,12 @@ object ViewFactory {
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
             EditToolView.canRender(content) -> EditToolView(content, openFile, selection, openDiff, sessionId)
-            TaskToolView.canRender(content) -> TaskToolView(content, selection = selection, onOpenSubagent = onOpenSubagent)
+            TaskToolView.canRender(content) -> TaskToolView(
+                content,
+                selection = selection,
+                onOpenSubagent = onOpenSubagent,
+                onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            )
             BoardToolView.canRender(content) -> BoardToolView(content, selection = selection)
             else -> ToolView(content, selection = selection)
         }
@@ -98,9 +104,10 @@ object ViewFactory {
         openDiff: SessionDiffOpener = { _, _, _ -> },
         sessionId: String? = null,
         onOpenSubagent: ((String, String) -> Unit)? = null,
+        onPromoteBackgroundAgent: BackgroundPromote? = null,
     ): PartView = when (content) {
         is Text -> PromptView(content, openFile = openFile, openAttachment = openAttachment, openUrl = openUrl, selection = selection, mentions = mentions)
-        else -> create(content, openFile, openUrl, selection, repo, openAttachment, openDiff, sessionId, onOpenSubagent)
+        else -> create(content, openFile, openUrl, selection, repo, openAttachment, openDiff, sessionId, onOpenSubagent, onPromoteBackgroundAgent)
     }
 
     /**
