@@ -8,6 +8,7 @@ import { BrowserOpenTool } from "./browser-open"
 import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
 import { GenerateImageTool } from "./generate-image"
+import { LinkPrTool } from "./link-pr"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
@@ -91,6 +92,7 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const openPlan = yield* OpenPlanTool
       const send = yield* SendFileTool
+      const linkPr = yield* LinkPrTool
       // Wakeup.Service is provided by Wakeup.node in the tool-registry node graph.
       const schedule = yield* ScheduleWakeupTool
       const cancel = yield* CancelWakeupTool
@@ -113,6 +115,7 @@ export namespace KiloToolRegistry {
           notify,
           openPlan,
           send,
+          linkPr,
           schedule,
           cancel,
           ...board,
@@ -135,6 +138,7 @@ export namespace KiloToolRegistry {
         notify,
         openPlan,
         send,
+        linkPr,
         schedule,
         cancel,
         ...board,
@@ -159,6 +163,7 @@ export namespace KiloToolRegistry {
       notify: Tool.Info
       openPlan?: Tool.Info
       send: Tool.Info
+      linkPr: Tool.Info
       schedule?: Tool.Info
       cancel?: Tool.Info
       boardRead?: Tool.Info
@@ -183,6 +188,7 @@ export namespace KiloToolRegistry {
         image: Tool.init(tools.image),
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
+        linkPr: Tool.init(tools.linkPr),
       })
       const openPlan = tools.openPlan ? yield* Tool.init(tools.openPlan) : undefined
       const schedule = tools.schedule ? yield* Tool.init(tools.schedule) : undefined
@@ -277,6 +283,7 @@ export namespace KiloToolRegistry {
       notify: Tool.Def
       openPlan?: Tool.Def
       send: Tool.Def
+      linkPr: Tool.Def
       schedule?: Tool.Def
       cancel?: Tool.Def
       boardRead?: Tool.Def
@@ -324,6 +331,7 @@ export namespace KiloToolRegistry {
       tools.notify,
       ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
+      tools.linkPr,
     ]
   }
 

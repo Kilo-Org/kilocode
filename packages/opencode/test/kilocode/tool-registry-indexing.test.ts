@@ -346,6 +346,7 @@ describe("kilocode tool registry indexing", () => {
       image: def("generate_image"),
       notify: def("notify_user"),
       send: def("send_file"),
+      linkPr: def("link_pr"),
       boardRead: def("board_read"),
       boardPost: def("board_post"),
       notebookRead: def("notebook_read"),
@@ -364,6 +365,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
       expect(
         KiloToolRegistry.extra(tools, { experimental: { image_generation: true } }, flags).map((tool) => tool.id),
@@ -376,6 +378,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
 
       for (const client of ["cli", "run", "acp"]) {
@@ -405,6 +408,7 @@ describe("kilocode tool registry indexing", () => {
         "browser_open",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
       expect(
         KiloToolRegistry.extra(
@@ -429,6 +433,7 @@ describe("kilocode tool registry indexing", () => {
         "notebook_execute",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}, flags).map((tool) => tool.id)).toEqual([
         "kilo_memory_recall",
@@ -441,6 +446,7 @@ describe("kilocode tool registry indexing", () => {
         "browser_open",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
@@ -451,6 +457,7 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
 
       process.env["KILO_CLIENT"] = "run"
@@ -461,6 +468,7 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
 
       process.env["KILO_CLIENT"] = "acp"
@@ -471,6 +479,7 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
       for (const client of ["cli", "vscode", "jetbrains", "desktop", "run", "acp"]) {
         process.env["KILO_CLIENT"] = client
