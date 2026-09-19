@@ -98,7 +98,6 @@ export const dict = {
     "대화가 되돌려졌습니다. 이 이전 되돌리기에서는 작업 영역 복원 상태를 확인할 수 없습니다.",
   "revert.banner.workspace.enableSnapshots": "스냅샷 활성화",
   "revert.disabled.agentBusy": "에이전트가 완료될 때까지 기다리세요",
-  "revert.error.title": "되돌리기 실패",
   "revert.error.body": "저장소가 사용 중일 수 있습니다. 다시 시도하거나 자세한 내용은 Kilo 로그를 확인하세요.",
   "command.session.compact": "세션 압축",
   "command.session.export": "세션 기록 내보내기",

@@ -819,7 +819,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.code !== REVERT_ERROR_CODE) return
     showToast({
       variant: "error",
-      title: language.t("revert.error.title"),
+      title: language.t("common.requestFailed"),
       description: language.t(REVERT_ERROR_CODE),
     })
   }

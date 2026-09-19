@@ -97,7 +97,6 @@ export const dict = {
     "Samtalen er tilbakeført. Statusen for gjenoppretting av arbeidsområdet er ikke tilgjengelig for denne tidligere tilbakeføringen.",
   "revert.banner.workspace.enableSnapshots": "Aktiver øyeblikksbilder",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
-  "revert.error.title": "Tilbakestilling mislyktes",
   "revert.error.body": "Repositoriet er kanskje i bruk. Prøv igjen, eller se Kilo-loggene for detaljer.",
   "command.session.compact": "Komprimer sesjon",
   "command.session.export": "Eksporter sesjonsutskrift",

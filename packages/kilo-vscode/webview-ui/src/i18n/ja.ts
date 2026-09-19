@@ -94,7 +94,6 @@ export const dict = {
     "会話を元に戻しました。この以前の復元では、ワークスペースの復元状態を利用できません。",
   "revert.banner.workspace.enableSnapshots": "スナップショットを有効にする",
   "revert.disabled.agentBusy": "エージェントの完了を待ってください",
-  "revert.error.title": "元に戻す操作に失敗しました",
   "revert.error.body":
     "リポジトリが使用中の可能性があります。もう一度お試しいただくか、詳細は Kilo のログを確認してください。",
   "command.session.compact": "セッションを圧縮",

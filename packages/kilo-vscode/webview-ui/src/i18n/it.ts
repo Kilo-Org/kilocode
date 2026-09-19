@@ -91,7 +91,6 @@ export const dict = {
     "Conversazione ripristinata. Lo stato del ripristino dell'area di lavoro non è disponibile per questo ripristino precedente.",
   "revert.banner.workspace.enableSnapshots": "Abilita snapshot",
   "revert.disabled.agentBusy": "Attendi che l'agente finisca",
-  "revert.error.title": "Ripristino non riuscito",
   "revert.error.body": "Il repository potrebbe essere in uso. Riprova o controlla i log di Kilo per i dettagli.",
   "command.session.compact": "Compatta sessione",
   "dialog.provider.search.placeholder": "Cerca provider",

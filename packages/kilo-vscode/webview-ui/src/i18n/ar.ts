@@ -91,7 +91,6 @@ export const dict = {
   "revert.banner.workspace.legacy": "تم التراجع عن المحادثة. حالة استعادة مساحة العمل غير متاحة لهذا التراجع السابق.",
   "revert.banner.workspace.enableSnapshots": "تفعيل اللقطات",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
-  "revert.error.title": "فشل التراجع",
   "revert.error.body": "قد يكون المستودع قيد الاستخدام. أعد المحاولة أو راجع سجلات Kilo للتفاصيل.",
   "command.session.compact": "ضغط الجلسة",
   "command.session.export": "تصدير سجل الجلسة",

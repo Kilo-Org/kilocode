@@ -94,7 +94,6 @@ export const dict = {
     "Диалог отменён. Статус восстановления рабочей области недоступен для этого более раннего отката.",
   "revert.banner.workspace.enableSnapshots": "Включить снимки",
   "revert.disabled.agentBusy": "Дождитесь завершения агента",
-  "revert.error.title": "Не удалось откатить",
   "revert.error.body": "Репозиторий может использоваться. Повторите попытку или проверьте журналы Kilo.",
   "command.session.compact": "Сжать сессию",
   "command.session.export": "Экспортировать запись сеанса",

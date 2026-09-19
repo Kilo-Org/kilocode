@@ -94,7 +94,6 @@ export const dict = {
     "Razgovor je vraćen. Status vraćanja radnog prostora nije dostupan za ovo ranije vraćanje.",
   "revert.banner.workspace.enableSnapshots": "Omogući snimke stanja",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
-  "revert.error.title": "Vraćanje nije uspjelo",
   "revert.error.body": "Repozitorij je možda u upotrebi. Pokušajte ponovo ili pogledajte Kilo zapise za detalje.",
   "command.session.compact": "Sažmi sesiju",
   "command.session.export": "Izvezi transkript sesije",
