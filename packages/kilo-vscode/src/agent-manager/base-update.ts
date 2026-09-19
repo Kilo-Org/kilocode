@@ -5,6 +5,7 @@ import type { Worktree } from "./WorktreeStateManager"
 import { prompt } from "./orchestration-domain"
 import { startSession } from "./mcp-warmup"
 import { PLATFORM } from "./constants"
+import { injectedMetadata } from "../shared/injected-prompt"
 
 import type { BaseUpdateRequest } from "../../webview-ui/src/types/messages/agent-manager"
 
@@ -103,6 +104,7 @@ export async function handleBaseUpdate(
       sessionID: id,
       text: baseUpdatePrompt(worktree, push),
       messageID: randomUUID(),
+      metadata: injectedMetadata(`Update from ${worktree.parentBranch}`),
       questions: "dismiss",
       model: msg.model,
       variant: msg.variant,

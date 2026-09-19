@@ -20,6 +20,7 @@ import type {
   Provider,
   Event,
   EventSessionStatus,
+  EventSessionWakeup,
   EventSessionTurnClose,
   EventSessionError,
   EventSandboxStatusChanged,
@@ -382,6 +383,19 @@ describe("mapSSEEventToWebviewMessage", () => {
       expect(msg.message).toBe("trying again")
       expect(msg.next).toBe(5000)
     }
+  })
+
+  it("maps session.wakeup to sessionWakeup", () => {
+    const event: EventSessionWakeup = {
+      type: "session.wakeup",
+      properties: { sessionID: "sess-1", pending: 2 },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sessionWakeup",
+      sessionID: "sess-1",
+      pending: 2,
+    })
   })
 
   it("maps sandbox status changes to effective button state", () => {

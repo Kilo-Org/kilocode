@@ -67,7 +67,7 @@ function meta(part: ToolPart, key: string): unknown {
 }
 
 /** Child session IDs of Task tool parts. */
-function taskChildren(tools: ToolPart[]): string[] {
+export function taskChildren(tools: ToolPart[]): string[] {
   const ids: string[] = []
   for (const part of tools) {
     if (part.tool !== "task") continue
@@ -76,11 +76,6 @@ function taskChildren(tools: ToolPart[]): string[] {
     ids.push(id)
   }
   return ids
-}
-
-/** Child session IDs of every Task tool part, in spawn order, without duplicates. */
-export function children(tools: ToolPart[]): string[] {
-  return taskChildren(tools)
 }
 
 function working(status: SessionStatusInfo | undefined): boolean {
