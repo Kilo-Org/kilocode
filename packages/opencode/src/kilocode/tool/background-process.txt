@@ -1,18 +1,25 @@
 Run and manage long-running background processes.
 
-Use this tool only for processes that must keep running independently after this tool call returns, such as development servers, file watchers, local services, and test watchers (`npm run dev`, `next dev`, `vite`, or `bun --watch`).
+Use `start` only for processes that must keep running independently after this tool call returns, such as development servers, file watchers, local services, and test watchers (`npm run dev`, `next dev`, `vite`, or `bun --watch`).
 
-This tool cannot wait: `start` returns immediately and never blocks your turn. Do not start `sleep`, timers, cooldowns, delays, or polling loops with this tool. To wait a fixed time before your next action, run the wait as a normal blocking shell command and set its `timeout` higher than the wait.
+`start` returns immediately and never blocks your turn. `monitor` starts the same kind of process but waits for its output, bounded by a line cap and a wall-time cap, so you read progress instead of polling. Do not start `sleep`, timers, cooldowns, delays, or polling loops with this tool. To wait a fixed time before your next action, run the wait as a normal blocking shell command and set its `timeout` higher than the wait.
 
 Do not use the shell tool with `&`, `nohup`, `disown`, `setsid`, `Start-Process`, or similar backgrounding patterns. Processes started with this tool are tracked and shown in the CLI sidebar.
 
 Actions:
 - `start`: start a new background process. Include `command`, optional `workdir`, optional `description`, optional `ready` detection, and at most one lifetime option.
+- `monitor`: run `command` and return its output as it arrives. Accepts optional `workdir`, `description`, `ready`, `lines`, and `timeout`; the process has session lifetime.
 - `list`: list background processes for this session.
 - `status`: inspect one process by `id`.
 - `logs`: return the retained tail output for one process.
 - `stop`: terminate one process and its child process tree.
 - `restart`: stop and restart one process with its original command and lifetime.
+
+Monitor:
+- `lines` caps how many output lines are returned (default 200, clamped to 1..1000).
+- `timeout` caps wall time in milliseconds (default 120000, clamped to 5000..600000).
+- `monitor` also stops as soon as the process exits. Reaching either cap does not stop the process: it keeps running as a normal background process, and the result names the process `id` so you can follow up with `logs`, `status`, or `stop`.
+- Prefer `monitor` over `start` plus repeated `logs` when you need the output of a command that finishes on its own, such as a build, a test run, or a deploy. Use `start` for servers and watchers that should outlive the call.
 
 Lifetime options for `start`:
 - By default, the process stops when its session ends, the user switches session groups, or Kilo exits.
@@ -20,7 +27,7 @@ Lifetime options for `start`:
 - Set `persistent: true` when the process must survive both session closure and Kilo shutdown. Persistent processes are visible and manageable from every session, including after Kilo starts again.
 - `inherit` and `persistent` cannot be combined.
 
-Only include `id` for `status`, `logs`, `stop`, and `restart`. Do not invent or pass an `id` when starting a process.
+Only include `id` for `status`, `logs`, `stop`, and `restart`. Do not invent or pass an `id` when starting or monitoring a process.
 
 Readiness:
 - Use `ready.pattern` when the process prints a recognizable line like `ready`, `Local:`, or `started server`.
