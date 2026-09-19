@@ -33887,7 +33887,7 @@
           },
           "vectorStore": {
             "type": "string",
-            "enum": ["lancedb", "qdrant"]
+            "enum": ["lancedb", "qdrant", "milvus"]
           },
           "kilo": {
             "type": "object",
@@ -34001,6 +34001,21 @@
                 "type": "string"
               },
               "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "milvus": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "token": {
+                "type": "string"
+              },
+              "database": {
                 "type": "string"
               }
             },
@@ -35208,6 +35223,9 @@
                 "type": "boolean"
               },
               "task_model_selection": {
+                "type": "boolean"
+              },
+              "code_mode": {
                 "type": "boolean"
               },
               "speech_to_text_model": {
