@@ -347,11 +347,11 @@ describe("Wakeup cron", () => {
       yield* wake.adopt(dir)
       expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
 
-      // The re-armed window is a live timer. Real ticks let the guard's re-arm
-      // finish writing and arming; advancing the test clock then fires it.
-      // Without the re-arm the schedule stalls and this loop exhausts.
-      for (let index = 0; index < 20 && recorder.calls.length < 2; index++) {
-        yield* Effect.promise(() => new Promise<void>((resolve) => setTimeout(resolve, 5)))
+      // The re-armed window is a live timer. `TestClock.adjust` is virtual, so
+      // advancing it returns to the scheduler and lets the guard's re-arm
+      // persist and arm without any wall-clock wait; the bounded loop keeps the
+      // assertion honest if that re-arm is ever dropped.
+      for (let attempt = 0; attempt < 20 && recorder.calls.length < 2; attempt++) {
         yield* TestClock.adjust("2 minutes")
       }
       expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id, persisted.id])
@@ -390,6 +390,52 @@ describe("Wakeup cron", () => {
 
       expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
       expect(yield* wake.cronList({ sessionID: persisted.sessionID })).toEqual([])
+    }),
+  )
+
+  it.effect("drops an adopted task whose persisted window is past its expiry", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
+      const dir = (yield* TestDir).dir
+      const now = Date.now()
+      // The stored window is itself past expiry, so adopt drops the record
+      // before it can arm or fire it, unlike a task whose overdue window is
+      // still live and is fired before the re-arm drops it.
+      const persisted = cronInfo({ directory: dir, dueAt: now + 60_000, expiresAt: now + 30_000 })
+      persistCron(dir, persisted)
+
+      yield* wake.adopt(dir)
+
+      expect(recorder.calls).toEqual([])
+      expect(yield* wake.cronList({ sessionID: persisted.sessionID })).toEqual([])
+    }),
+  )
+
+  it.effect("keeps a re-armed window whose jitter would cross its expiry", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const dir = (yield* TestDir).dir
+      const now = Date.now()
+      // A fixed yearly window keeps the test's computed base identical to the
+      // one the re-arm derives, with no dependence on the current minute.
+      const base = next("0 0 1 1 *", now)
+      // The next window is inside the task's life, but adding the id's jitter
+      // would push the fire past it. Expiry must be decided by the window, not
+      // by the jitter, so the task is kept and its fire pulled back to expiry.
+      const persisted = cronInfo({
+        directory: dir,
+        schedule: "0 0 1 1 *",
+        dueAt: now - 1_000,
+        expiresAt: base + 1,
+      })
+      persistCron(dir, persisted)
+
+      yield* wake.adopt(dir)
+
+      const list = yield* wake.cronList({ sessionID: persisted.sessionID })
+      expect(list.map((item) => item.id)).toEqual([persisted.id])
+      expect(list[0].dueAt).toBeLessThanOrEqual(list[0].expiresAt)
     }),
   )
 

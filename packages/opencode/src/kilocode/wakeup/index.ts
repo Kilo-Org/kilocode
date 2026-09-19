@@ -169,17 +169,20 @@ export namespace Wakeup {
 
       // Compute, persist and arm a task's next occurrence, computed from now so
       // a missed window is skipped rather than replayed one-for-one. Drop the
-      // record when there is no next occurrence (a one-shot) or the next one is
-      // past expiry, so a finished task never holds a session slot.
+      // record when there is no next occurrence (a one-shot) or the next window
+      // is past expiry, so a finished task never holds a session slot. The
+      // expiry check reads the schedule's next window before jitter, and jitter
+      // is clamped to the expiry, so only the schedule decides the cutoff.
       const rearm = (task: CronInfo): Effect.Effect<CronInfo | undefined> =>
         Effect.gen(function* () {
-          const due = task.recurring ? schema.next(task.schedule, Date.now()) + schema.jitter(task.id) : undefined
-          if (due === undefined || due > task.expiresAt) {
+          const base = task.recurring ? schema.next(task.schedule, Date.now()) : undefined
+          if (base === undefined || base > task.expiresAt) {
             cronEntries.delete(task.id)
             cronTimers.delete(task.id)
             yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
             return undefined
           }
+          const due = Math.min(base + schema.jitter(task.id), task.expiresAt)
           const updated: CronInfo = { ...task, dueAt: due }
           cronEntries.set(updated.id, updated)
           yield* storage.write(cronKey(updated), updated).pipe(Effect.orDie)
@@ -328,23 +331,28 @@ export namespace Wakeup {
             const id = ID.ascending()
             const expiresAt = now + CRON_TTL_MS
             // A one-shot keeps the 10-second `resolve` minimum; a cron schedule
-            // is minute-granular through the expression engine.
-            const dueAt = recurring
-              ? yield* Effect.try({
-                  try: () => schema.next(expression, now) + schema.jitter(id),
-                  catch: (cause) =>
-                    new InvalidSchedule({
-                      message: `Invalid cron expression: ${cause instanceof Error ? cause.message : String(cause)}`,
-                    }),
-                })
-              : yield* schema.resolve({ when, delay }, now)
+            // is minute-granular through the expression engine. The expiry
+            // check reads the schedule's own next window, before jitter, so a
+            // boundary schedule is accepted or rejected the same way for every
+            // id; the jitter is then clamped so it can never fire past expiry.
+            const base =
+              recurring
+                ? yield* Effect.try({
+                    try: () => schema.next(expression, now),
+                    catch: (cause) =>
+                      new InvalidSchedule({
+                        message: `Invalid cron expression: ${cause instanceof Error ? cause.message : String(cause)}`,
+                      }),
+                  })
+                : yield* schema.resolve({ when, delay }, now)
             // A first window past the TTL would arm and retain the task without
             // it ever firing before expiry, holding a session slot. Refuse it.
-            if (dueAt > expiresAt) {
+            if (base > expiresAt) {
               return yield* new InvalidSchedule({
-                message: `Next occurrence ${new Date(dueAt).toISOString()} is beyond this task's 7-day expiry`,
+                message: `Next occurrence ${new Date(base).toISOString()} is beyond this task's 7-day expiry`,
               })
             }
+            const dueAt = recurring ? Math.min(base + schema.jitter(id), expiresAt) : base
             const task: CronInfo = {
               id,
               sessionID: input.sessionID,

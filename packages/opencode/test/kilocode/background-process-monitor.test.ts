@@ -110,6 +110,40 @@ describe("background_process monitor", () => {
   )
 
   it.instance(
+    "finalizes when a descendant holds the stdio pipes",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const sessionID = SessionID.descending()
+        // The command hands its stdio to a grandchild that outlives it, so the
+        // pipes never close. `status`/`monitor` must still observe the exit
+        // instead of reporting the dead parent as running until the cap.
+        const command = yield* Effect.promise(() =>
+          script(
+            test.directory,
+            "monitor-orphan.mjs",
+            `import { spawn } from "node:child_process"\n` +
+              `spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" }).unref()\n` +
+              `console.log("launched")\n`,
+          ),
+        )
+        const tool = yield* build()
+        const { ctx } = context(sessionID)
+
+        try {
+          const result = yield* tool.execute({ action: "monitor", command, timeout: 5000 }, ctx)
+
+          expect(result.metadata.reason).toBe("exit")
+          expect(result.metadata.status).toBe("exited")
+          expect(result.output).toContain("launched")
+        } finally {
+          yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+        }
+      }),
+    30_000,
+  )
+
+  it.instance(
     "caps captured lines and leaves the process running",
     () =>
       Effect.gen(function* () {
