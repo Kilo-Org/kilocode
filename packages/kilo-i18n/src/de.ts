@@ -47,6 +47,10 @@ export const dict = {
     "Projektdateien können in die Versionsverwaltung aufgenommen werden. Speichern Sie hier keine Geheimnisse, es sei denn, die Konfiguration verweist auf eine Umgebungsvariable.",
   "marketplace.install.learnMore": "Erfahren Sie, wie Installationen aus dem Marketplace funktionieren",
   "marketplace.install.learnMcp": "Mehr über MCP erfahren",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "Installiert unter {{path}}",
   "marketplace.intro":
     "Installieren Sie wiederverwendbare Agenten, Skills und MCP-Werkzeuge für ein Projekt oder für alle Projekte.",
@@ -77,6 +81,7 @@ export const dict = {
   "marketplace.scope.project": "Projekt",
   "marketplace.scope.global": "Global",
   "marketplace.remove.type.mcp": "MCP-Server",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "Skill",
   "marketplace.remove.type.agent": "Agent",
   "marketplace.remove.failed": "Fehler beim Entfernen von {{name}}",

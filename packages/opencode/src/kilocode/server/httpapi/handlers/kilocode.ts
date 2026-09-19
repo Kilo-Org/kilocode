@@ -325,7 +325,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         parameterCount: Object.keys(ctx.payload.parameters ?? {}).length,
       })
       const result = yield* MarketplaceInstaller.install(
-        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        {
+          config,
+          agents,
+          skills,
+          directory: instance.directory,
+          worktree: instance.worktree,
+          vcs: instance.project.vcs,
+        },
         ctx.payload,
       )
       if (result.success) yield* store.dispose(instance)
@@ -355,7 +362,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         scope: ctx.payload.scope,
       })
       const result: MarketplaceRemoveResult = yield* MarketplaceInstaller.remove(
-        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        {
+          config,
+          agents,
+          skills,
+          directory: instance.directory,
+          worktree: instance.worktree,
+          vcs: instance.project.vcs,
+        },
         ctx.payload.item,
         ctx.payload.scope,
       )

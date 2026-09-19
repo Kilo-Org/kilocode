@@ -44,6 +44,10 @@ export const dict = {
     "プロジェクトファイルはバージョン管理に追加される場合があります。設定で環境変数を参照している場合を除き、ここにシークレットを保存しないでください。",
   "marketplace.install.learnMore": "Marketplaceからのインストールの仕組みを見る",
   "marketplace.install.learnMcp": "MCPについて詳しく見る",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "{{path}} にインストール済み",
   "marketplace.intro":
     "再利用可能なエージェント、スキル、MCPツールを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
@@ -73,6 +77,7 @@ export const dict = {
   "marketplace.scope.project": "プロジェクト",
   "marketplace.scope.global": "グローバル",
   "marketplace.remove.type.mcp": "MCPサーバー",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "スキル",
   "marketplace.remove.type.agent": "エージェント",
   "marketplace.remove.failed": "{{name}} の削除に失敗しました",

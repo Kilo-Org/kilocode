@@ -23,6 +23,9 @@ describe("marketplace catalog api", () => {
       if (raw.endsWith("/mcps")) {
         return response('{"items":[{"id":"memory","name":"Memory","description":"Remember","category":"dev","url":"https://example.com","content":"{}"}]}')
       }
+      if (raw.endsWith("/plugins")) {
+        return response('{"items":[{"id":"opencode-models-discovery","name":"Models Discovery","description":"Discover models","category":"providers","content":"opencode-models-discovery"}]}')
+      }
       return response("items:\n  - id: campaign-writer\n    description: Write campaigns\n    category: marketing\n    githubUrl: https://example.com\n    content: https://example.com/skill.tar.gz\n")
     }
 
@@ -31,14 +34,17 @@ describe("marketplace catalog api", () => {
     expect(out.items.map((item) => `${item.type}:${item.id}`).sort()).toEqual([
       "agent:reviewer",
       "mcp:memory",
+      "plugin:opencode-models-discovery",
       "skill:campaign-writer",
     ])
     const skill = out.items.find((item) => item.type === "skill")
     expect(skill?.name).toBe("Campaign Writer")
     expect(skill?.category).toBe("marketing")
+    const plugin = out.items.find((item) => item.type === "plugin")
+    expect(plugin?.content).toBe("opencode-models-discovery")
 
     await fetchAll({ fetch: fake as typeof fetch, baseUrl: "https://market.test" })
-    expect(calls).toHaveLength(3)
+    expect(calls).toHaveLength(4)
   })
 
   test("aggregates per-kind fetch errors", async () => {

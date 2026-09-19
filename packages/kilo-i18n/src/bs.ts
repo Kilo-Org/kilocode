@@ -51,6 +51,10 @@ export const dict = {
     "Datoteke projekta mogu se dodati u kontrolu verzija. Ne čuvajte tajne ovdje osim ako konfiguracija upućuje na varijablu okruženja.",
   "marketplace.install.learnMore": "Saznajte kako funkcionišu instalacije s Marketplacea",
   "marketplace.install.learnMcp": "Saznajte više o MCP-u",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "Instalirano u {{path}}",
   "marketplace.intro": "Instalirajte višekratne agente, vještine i MCP alate za jedan ili sve projekte.",
   "marketplace.intro.learnMore": "O Marketplaceu",
@@ -80,6 +84,7 @@ export const dict = {
   "marketplace.scope.project": "projekat",
   "marketplace.scope.global": "globalno",
   "marketplace.remove.type.mcp": "MCP server",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "vještina",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Uklanjanje {{name}} nije uspjelo",

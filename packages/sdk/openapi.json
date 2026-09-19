@@ -15395,7 +15395,7 @@
             }
           }
         },
-        "description": "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+        "description": "Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.",
         "summary": "Install a marketplace item",
         "requestBody": {
           "content": {
@@ -15472,7 +15472,7 @@
             }
           }
         },
-        "description": "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
+        "description": "Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.",
         "summary": "Remove a marketplace item",
         "requestBody": {
           "content": {
@@ -35210,6 +35210,9 @@
               "task_model_selection": {
                 "type": "boolean"
               },
+              "code_mode": {
+                "type": "boolean"
+              },
               "speech_to_text_model": {
                 "type": "string"
               },
@@ -40058,6 +40061,50 @@
         ],
         "additionalProperties": false
       },
+      "PluginMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["plugin"]
+          },
+          "content": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "description", "category", "type", "content"],
+        "additionalProperties": false
+      },
       "MarketplaceItem": {
         "anyOf": [
           {
@@ -40068,6 +40115,9 @@
           },
           {
             "$ref": "#/components/schemas/SkillMarketplaceItem"
+          },
+          {
+            "$ref": "#/components/schemas/PluginMarketplaceItem"
           }
         ]
       },
@@ -40241,6 +40291,23 @@
         "required": ["type", "id", "content"],
         "additionalProperties": false
       },
+      "PluginInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["plugin"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
       "MarketplaceInstallItem": {
         "anyOf": [
           {
@@ -40251,6 +40318,9 @@
           },
           {
             "$ref": "#/components/schemas/SkillInstallItem"
+          },
+          {
+            "$ref": "#/components/schemas/PluginInstallItem"
           }
         ]
       },
@@ -40284,7 +40354,7 @@
           },
           "type": {
             "type": "string",
-            "enum": ["mcp", "agent", "skill"]
+            "enum": ["mcp", "agent", "skill", "plugin"]
           }
         },
         "required": ["id", "type"],

@@ -8,6 +8,7 @@ import type {
   MarketplaceItem,
   McpMarketplaceItem,
   SkillMarketplaceItem,
+  PluginMarketplaceItem,
   MarketplaceInstalledMetadata,
   MarketplaceRelevanceMetadata,
 } from "../../types/marketplace"
@@ -58,13 +59,14 @@ export const MarketplaceListView = (props: Props) => {
 
   const allTypes = createMemo(() => {
     const available = new Set(props.items.map((item) => item.type))
-    return (["agent", "mcp", "skill"] as const).filter((type) => available.has(type))
+    return (["agent", "mcp", "skill", "plugin"] as const).filter((type) => available.has(type))
   })
   const allCategories = createMemo(() => Array.from(new Set(props.items.map((item) => item.category))).sort())
 
   const typeLabel = (type: MarketplaceItem["type"]) => {
     if (type === "mcp") return t("marketplace.badge.mcpServer")
     if (type === "agent") return t("marketplace.remove.type.agent")
+    if (type === "plugin") return t("marketplace.remove.type.plugin")
     return t("marketplace.remove.type.skill")
   }
 
@@ -103,6 +105,7 @@ export const MarketplaceListView = (props: Props) => {
         agent: typeLabel("agent"),
         mcp: typeLabel("mcp"),
         skill: typeLabel("skill"),
+        plugin: typeLabel("plugin"),
       },
       relevant(),
       props.relevance,
@@ -198,12 +201,13 @@ export const MarketplaceListView = (props: Props) => {
               {(item) => {
                 const skill = item.type === "skill" ? (item as SkillMarketplaceItem) : undefined
                 const mcp = item.type === "mcp" ? (item as McpMarketplaceItem) : undefined
+                const plugin = item.type === "plugin" ? (item as PluginMarketplaceItem) : undefined
                 return (
                   <ItemCard
                     item={item}
                     metadata={props.metadata}
                     displayName={skill?.displayName}
-                    linkUrl={skill?.githubUrl ?? mcp?.url}
+                    linkUrl={skill?.githubUrl ?? mcp?.url ?? plugin?.url}
                     onInstall={props.onInstall}
                     onRemove={props.onRemove}
                     footer={<Tag>{label(item.category)}</Tag>}

@@ -42,6 +42,10 @@ export const dict = {
     "项目文件可能会提交到版本控制。除非配置引用了环境变量，否则不要在此处存储密钥。",
   "marketplace.install.learnMore": "了解 Marketplace 安装的工作方式",
   "marketplace.install.learnMcp": "详细了解 MCP",
+  "marketplace.install.about.plugin":
+    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.installedAt": "已安装到 {{path}}",
   "marketplace.intro": "为一个项目或所有项目安装可复用的智能体、技能和 MCP 工具。",
   "marketplace.intro.learnMore": "关于 Marketplace",
@@ -70,6 +74,7 @@ export const dict = {
   "marketplace.scope.project": "项目",
   "marketplace.scope.global": "全局",
   "marketplace.remove.type.mcp": "MCP 服务器",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "技能",
   "marketplace.remove.type.agent": "智能体",
   "marketplace.remove.failed": "移除 {{name}} 失败",
