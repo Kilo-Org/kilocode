@@ -2527,6 +2527,13 @@ export type Config = {
     ignore?: Array<string>
   }
   snapshot?: boolean
+  retention?: {
+    enabled?: boolean
+    /**
+     * Days a session is kept before retention deletes it. Defaults to 30, minimum 1.
+     */
+    maxAgeDays?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
   plugin?: Array<
     | string
     | [
@@ -17663,6 +17670,90 @@ export type KilocodeWakeupsResponses = {
 }
 
 export type KilocodeWakeupsResponse = KilocodeWakeupsResponses[keyof KilocodeWakeupsResponses]
+
+export type KilocodeRetentionStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention"
+}
+
+export type KilocodeRetentionStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionStatusError = KilocodeRetentionStatusErrors[keyof KilocodeRetentionStatusErrors]
+
+export type KilocodeRetentionStatusResponses = {
+  /**
+   * Session retention policy and last run
+   */
+  200: {
+    policy: {
+      enabled: boolean
+      maxAgeDays: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    last?: {
+      at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      scanned: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      deleted: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+  }
+}
+
+export type KilocodeRetentionStatusResponse = KilocodeRetentionStatusResponses[keyof KilocodeRetentionStatusResponses]
+
+export type KilocodeRetentionRunData = {
+  body?: {
+    force?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention/run"
+}
+
+export type KilocodeRetentionRunErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionRunError = KilocodeRetentionRunErrors[keyof KilocodeRetentionRunErrors]
+
+export type KilocodeRetentionRunResponses = {
+  /**
+   * Retention pass outcome
+   */
+  200: {
+    policy: {
+      enabled: boolean
+      maxAgeDays: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    last?: {
+      at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      scanned: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      deleted: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+  }
+}
+
+export type KilocodeRetentionRunResponse = KilocodeRetentionRunResponses[keyof KilocodeRetentionRunResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

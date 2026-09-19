@@ -196,6 +196,7 @@ import {
 } from "./kilo-provider/config-bindings"
 import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project/paths"
 import { buildTimelineSettingMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
+import { retention } from "./services/task-cleanup/retention"
 import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
 import {
   buildAutoApprovalReasonSettingMessage,
@@ -1170,6 +1171,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       if (this.handleEditorOpenMessage(message)) return
       if (await this.handleAgentManagerSettingsMessage(message)) return
+      if (await this.handleAutoCleanupMessage(message)) return
       if (
         await handleWorkStyleMessage({
           message,
@@ -3446,6 +3448,38 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private sendTimelineSetting(): void {
     this.postMessage(buildTimelineSettingMessage())
+  }
+
+  private sendAutoCleanupState(): void {
+    this.postMessage({ type: "autoCleanupStateLoaded", last: this.autoCleanup()?.lastResult() ?? null })
+  }
+
+  private autoCleanup() {
+    return this.extensionContext ? retention(this.connectionService, this.extensionContext) : undefined
+  }
+
+  private async handleAutoCleanupMessage(message: TypedWebviewMessage): Promise<boolean> {
+    if (message.type === "requestAutoCleanupState") {
+      const service = this.autoCleanup()
+      const status = await service?.status().catch(() => null)
+      this.postMessage({ type: "autoCleanupStateLoaded", last: status?.last ?? service?.lastResult() ?? null })
+      return true
+    }
+    if (message.type === "runAutoCleanupNow") {
+      const service = this.autoCleanup()
+      if (!service) {
+        this.postMessage({ type: "error", message: "Task cleanup is unavailable" })
+        this.sendAutoCleanupState()
+        return true
+      }
+      const status = await service.run(true).catch(() => null)
+      if (!status) {
+        this.postMessage({ type: "error", message: "Task cleanup did not run — is the CLI backend connected?" })
+      }
+      this.sendAutoCleanupState()
+      return true
+    }
+    return false
   }
 
   private sendWorkStyle(): void {

@@ -1103,6 +1103,20 @@ export const dict = {
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
+  "settings.autoCleanup.enable.title": "Enable automatic task cleanup",
+  "settings.autoCleanup.enable.description":
+    "Automatically delete old task history after a fixed number of days — across all projects and every Kilo client on this machine, not just this window. Running tasks and tasks with a recent fork are never deleted. Deletion is permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Keep tasks for (days)",
+  "settings.autoCleanup.defaultRetention.description":
+    "How long task history is kept before automatic cleanup deletes it.",
+  "settings.autoCleanup.lastRun.title": "Last cleanup",
+  "settings.autoCleanup.lastRun.never": "Never run",
+  "settings.autoCleanup.result":
+    "{{date}}: deleted {{deleted}} of {{scanned}} tasks ({{active}} active skipped, {{failed}} failed) in {{seconds}}s",
+  "settings.autoCleanup.runNow": "Run Cleanup Now",
+  "settings.autoCleanup.runNow.confirm":
+    "Permanently delete expired tasks across all projects and every Kilo client on this machine?",
+
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
   "settings.context.compaction.title": "Compaction",

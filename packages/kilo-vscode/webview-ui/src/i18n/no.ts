@@ -1118,6 +1118,19 @@ export const dict = {
     "Forhindre gjentatte identiske handlinger. Utløses når det samme verktøyanropet gjentas med identisk inndata.",
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
+  "settings.autoCleanup.enable.title": "Aktiver automatisk opprydding av oppgaver",
+  "settings.autoCleanup.enable.description":
+    "Sletter gammel oppgavehistorikk automatisk etter et fast antall dager — på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen, ikke bare i dette vinduet. Kjørende oppgaver og oppgaver med nylig forgrening slettes aldri. Sletting er permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Behold oppgaver i (dager)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Hvor lenge oppgavehistorikk beholdes før automatisk opprydding sletter den.",
+  "settings.autoCleanup.lastRun.title": "Siste opprydding",
+  "settings.autoCleanup.lastRun.never": "Aldri kjørt",
+  "settings.autoCleanup.result":
+    "{{date}}: slettet {{deleted}} av {{scanned}} oppgaver ({{active}} aktive hoppet over, {{failed}} feilet) på {{seconds}}s",
+  "settings.autoCleanup.runNow": "Kjør opprydding nå",
+  "settings.autoCleanup.runNow.confirm":
+    "Slett utløpte oppgaver permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",
