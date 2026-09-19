@@ -57,7 +57,18 @@ export namespace FSUtil {
       const fs = decorateFileSystem(yield* FileSystem.FileSystem) // kilocode_change
 
       const existsSafe = Effect.fn("FileSystem.existsSafe")(function* (path: string) {
-        return yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false))
+        const found = yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false)) // kilocode_change
+        // kilocode_change start - `access` on Windows is backed by GetFileAttributesW, which returns a
+        // dangling symlink's own attributes and so reports it as existing. Follow with `stat`, the
+        // same correction Node applies in existsSync, so a broken link is absent before it is read.
+        if (found && process.platform === "win32") {
+          return yield* fs.stat(path).pipe(
+            Effect.as(true),
+            Effect.orElseSucceed(() => false),
+          )
+        }
+        return found
+        // kilocode_change end
       })
 
       const readFileStringSafe = Effect.fn("FileSystem.readFileStringSafe")(function* (path: string) {

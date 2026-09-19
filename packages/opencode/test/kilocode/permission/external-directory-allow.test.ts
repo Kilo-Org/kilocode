@@ -74,11 +74,7 @@ const config = path.resolve(Global.Path.config)
 const configFile = path.join(config, "hello.txt")
 const configGlob = glob(path.join(config, "*"))
 const bus = Bus.layer
-const env = Layer.mergeAll(
-  AppNodeBuilder.build(Permission.node),
-  bus,
-  AppNodeBuilder.build(CrossSpawnSpawner.node),
-)
+const env = Layer.mergeAll(AppNodeBuilder.build(Permission.node), bus, AppNodeBuilder.build(CrossSpawnSpawner.node))
 const it = testEffect(env)
 
 const ask = (input: Permission.AskInput) =>
@@ -203,11 +199,14 @@ describe("external_directory allow config protection", () => {
   for (const pattern of variants(configGlob)) {
     test(`detects unknown bash external_directory requests for global config paths [${pattern}]`, () => {
       expect(
-        ConfigProtection.isRequest({
-          permission: "external_directory",
-          patterns: [pattern],
-          metadata: { command: `rm ${quote(configFile)}` },
-        }),
+        ConfigProtection.classify(
+          {
+            permission: "external_directory",
+            patterns: [pattern],
+            metadata: { command: `rm ${quote(configFile)}` },
+          },
+          config,
+        ).candidate,
       ).toBe(true)
     })
   }

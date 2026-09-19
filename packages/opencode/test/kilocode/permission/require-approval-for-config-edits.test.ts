@@ -162,6 +162,26 @@ async function legacyHome(files: Record<string, string | undefined>) {
   return home
 }
 
+// Set one environment variable for the duration of an effect and restore the previous value even
+// when an assertion fails. The value is applied synchronously so it is in place before the effect runs.
+function withEnv<T, E, R>(name: string, value: string | undefined, effect: Effect.Effect<T, E, R>) {
+  const previous = process.env[name]
+  if (value === undefined) delete process.env[name]
+  else process.env[name] = value
+  return effect.pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (previous === undefined) delete process.env[name]
+        else process.env[name] = previous
+      }),
+    ),
+  )
+}
+
+function withConfigDir<T, E, R>(dir: string, effect: Effect.Effect<T, E, R>) {
+  return withEnv("KILO_CONFIG_DIR", dir, effect)
+}
+
 const auto = (id: string, file: string) =>
   Effect.gen(function* () {
     const outcome = yield* ask(editRequest(id, file))
@@ -658,62 +678,61 @@ describe("require_approval_for_config_edits", () => {
     ),
   )
 
-  it.live("KILO_CONFIG_CONTENT false only disables protection inside the project", () => {
-    const previous = process.env["KILO_CONFIG_CONTENT"]
-    process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ require_approval_for_config_edits: false })
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_CONTENT"]
-      else process.env["KILO_CONFIG_CONTENT"] = previous
-    }
-    return provideTmpdirInstance(
-      () =>
-        Effect.gen(function* () {
-          yield* withGlobal(undefined)
-          // The env-provided value is a non-global source: it feeds the effective project config,
-          // so it can disable protection for this project's own files...
-          expect((yield* ask(request("per_env_content_local"))).manual).toBe(false)
+  it.live("KILO_CONFIG_CONTENT false only disables protection inside the project", () =>
+    withEnv(
+      "KILO_CONFIG_CONTENT",
+      JSON.stringify({ require_approval_for_config_edits: false }),
+      provideTmpdirInstance(
+        () =>
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            // The env-provided value is a non-global source: it feeds the effective project config,
+            // so it can disable protection for this project's own files...
+            expect((yield* ask(request("per_env_content_local"))).manual).toBe(false)
 
-          // ...but it never changes the global policy for global config files.
-          const file = globalFile()
-          const fiber = yield* ask(
-            request("per_env_content_global", {
-              patterns: [file],
-              metadata: { filepath: file },
-              always: [file],
-              ruleset: [],
-            }),
-          ).pipe(Effect.forkScoped)
-          expect(yield* wait(1)).toHaveLength(1)
-          yield* reject("per_env_content_global")
-          yield* Fiber.await(fiber)
-        }).pipe(Effect.ensuring(Effect.sync(restore))),
-      { git: true },
-    )
-  })
+            // ...but it never changes the global policy for global config files.
+            const file = globalFile()
+            const fiber = yield* ask(
+              request("per_env_content_global", {
+                patterns: [file],
+                metadata: { filepath: file },
+                always: [file],
+                ruleset: [],
+              }),
+            ).pipe(Effect.forkScoped)
+            expect(yield* wait(1)).toHaveLength(1)
+            yield* reject("per_env_content_global")
+            yield* Fiber.await(fiber)
+          }),
+        { git: true },
+      ),
+    ),
+  )
 
   it.live("drain keeps exact global-skill constraints while protection is on", () =>
     provideTmpdirInstance(
       () =>
-        Effect.gen(function* () {
-          const { skill, concrete } = yield* Effect.promise(() => paths("drain-on"))
-          yield* withGlobal(undefined)
-          const first = yield* ask(external("per_drain_skill_on_1", concrete, [concrete])).pipe(Effect.forkScoped)
-          const second = yield* ask(external("per_drain_skill_on_2", concrete, [concrete])).pipe(Effect.forkScoped)
-          const items = yield* wait(2)
-          expect(items.find((item) => item.id === PermissionV1.ID.make("per_drain_skill_on_2"))?.always).toEqual([
-            skill,
-          ])
+        withSkill("drain-on", ({ skill, concrete }) =>
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            const first = yield* ask(external("per_drain_skill_on_1", concrete, [concrete])).pipe(Effect.forkScoped)
+            const second = yield* ask(external("per_drain_skill_on_2", concrete, [concrete])).pipe(Effect.forkScoped)
+            const items = yield* wait(2)
+            expect(items.find((item) => item.id === PermissionV1.ID.make("per_drain_skill_on_2"))?.always).toEqual([
+              skill,
+            ])
 
-          yield* reply({ requestID: PermissionV1.ID.make("per_drain_skill_on_2"), reply: "always" })
-          yield* Fiber.await(second)
-          // Enabled mode narrows persistence to the exact skill subtree, never the concrete file.
-          const written = yield* Effect.promise(text)
-          expect(written).toContain(skill)
-          expect(written).not.toContain(concrete)
+            yield* reply({ requestID: PermissionV1.ID.make("per_drain_skill_on_2"), reply: "always" })
+            yield* Fiber.await(second)
+            // Enabled mode narrows persistence to the exact skill subtree, never the concrete file.
+            const written = yield* Effect.promise(text)
+            expect(written).toContain(skill)
+            expect(written).not.toContain(concrete)
 
-          yield* Fiber.await(first)
-          expect(yield* list()).toEqual([])
-        }),
+            yield* Fiber.await(first)
+            expect(yield* list()).toEqual([])
+          }),
+        ),
       { git: true },
     ),
   )
@@ -721,21 +740,22 @@ describe("require_approval_for_config_edits", () => {
   it.live("drain resolves a global-skill request under ordinary rules when protection is disabled", () =>
     provideTmpdirInstance(
       () =>
-        Effect.gen(function* () {
-          const { skill, concrete } = yield* Effect.promise(() => paths("drain-off"))
-          yield* withGlobal({ require_approval_for_config_edits: false })
-          const first = yield* ask(external("per_drain_skill_off_1", concrete, [concrete])).pipe(Effect.forkScoped)
-          const second = yield* ask(external("per_drain_skill_off_2", concrete, [concrete])).pipe(Effect.forkScoped)
-          expect(yield* wait(2)).toHaveLength(2)
-          yield* reply({ requestID: PermissionV1.ID.make("per_drain_skill_off_2"), reply: "always" })
-          yield* Fiber.await(first)
-          yield* Fiber.await(second)
-          expect(yield* list()).toEqual([])
-          // Disabled mode persists the ordinary concrete pattern, not the exact skill subtree.
-          const written = yield* Effect.promise(text)
-          expect(written).toContain(concrete)
-          expect(written).not.toContain(skill)
-        }),
+        withSkill("drain-off", ({ skill, concrete }) =>
+          Effect.gen(function* () {
+            yield* withGlobal({ require_approval_for_config_edits: false })
+            const first = yield* ask(external("per_drain_skill_off_1", concrete, [concrete])).pipe(Effect.forkScoped)
+            const second = yield* ask(external("per_drain_skill_off_2", concrete, [concrete])).pipe(Effect.forkScoped)
+            expect(yield* wait(2)).toHaveLength(2)
+            yield* reply({ requestID: PermissionV1.ID.make("per_drain_skill_off_2"), reply: "always" })
+            yield* Fiber.await(first)
+            yield* Fiber.await(second)
+            expect(yield* list()).toEqual([])
+            // Disabled mode persists the ordinary concrete pattern, not the exact skill subtree.
+            const written = yield* Effect.promise(text)
+            expect(written).toContain(concrete)
+            expect(written).not.toContain(skill)
+          }),
+        ),
       { git: true },
     ),
   )
@@ -743,21 +763,22 @@ describe("require_approval_for_config_edits", () => {
   it.live("saveAlwaysRules drain resolves a global-skill request when protection is disabled", () =>
     provideTmpdirInstance(
       () =>
-        Effect.gen(function* () {
-          const { concrete } = yield* Effect.promise(() => paths("drain-save"))
-          yield* withGlobal({ require_approval_for_config_edits: false })
-          const first = yield* ask(external("per_drain_skill_save_1", concrete, [concrete])).pipe(Effect.forkScoped)
-          const second = yield* ask(external("per_drain_skill_save_2", concrete, [concrete])).pipe(Effect.forkScoped)
-          expect(yield* wait(2)).toHaveLength(2)
-          yield* saveAlwaysRules({
-            requestID: PermissionV1.ID.make("per_drain_skill_save_2"),
-            approvedAlways: [concrete],
-          })
-          yield* Fiber.await(first)
-          expect(yield* list()).toHaveLength(1)
-          yield* reject("per_drain_skill_save_2")
-          yield* Fiber.await(second)
-        }),
+        withSkill("drain-save", ({ concrete }) =>
+          Effect.gen(function* () {
+            yield* withGlobal({ require_approval_for_config_edits: false })
+            const first = yield* ask(external("per_drain_skill_save_1", concrete, [concrete])).pipe(Effect.forkScoped)
+            const second = yield* ask(external("per_drain_skill_save_2", concrete, [concrete])).pipe(Effect.forkScoped)
+            expect(yield* wait(2)).toHaveLength(2)
+            yield* saveAlwaysRules({
+              requestID: PermissionV1.ID.make("per_drain_skill_save_2"),
+              approvedAlways: [concrete],
+            })
+            yield* Fiber.await(first)
+            expect(yield* list()).toHaveLength(1)
+            yield* reject("per_drain_skill_save_2")
+            yield* Fiber.await(second)
+          }),
+        ),
       { git: true },
     ),
   )
@@ -1101,18 +1122,19 @@ describe("require_approval_for_config_edits", () => {
   it.live("keeps global skill constraints for global targets when only the project disables protection", () =>
     provideTmpdirInstance(
       () =>
-        Effect.gen(function* () {
-          const { skill, concrete } = yield* Effect.promise(() => paths("drain-project-off"))
-          yield* withGlobal(undefined)
-          const first = yield* ask(external("per_skill_project_off", concrete, [concrete])).pipe(Effect.forkScoped)
-          expect(yield* wait(1)).toHaveLength(1)
-          yield* reply({ requestID: PermissionV1.ID.make("per_skill_project_off"), reply: "always" })
-          yield* Fiber.await(first)
-          // The global skill guard still narrows persistence to the exact skill subtree.
-          const written = yield* Effect.promise(text)
-          expect(written).toContain(skill)
-          expect(written).not.toContain(concrete)
-        }),
+        withSkill("drain-project-off", ({ skill, concrete }) =>
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            const first = yield* ask(external("per_skill_project_off", concrete, [concrete])).pipe(Effect.forkScoped)
+            expect(yield* wait(1)).toHaveLength(1)
+            yield* reply({ requestID: PermissionV1.ID.make("per_skill_project_off"), reply: "always" })
+            yield* Fiber.await(first)
+            // The global skill guard still narrows persistence to the exact skill subtree.
+            const written = yield* Effect.promise(text)
+            expect(written).toContain(skill)
+            expect(written).not.toContain(concrete)
+          }),
+        ),
       { git: true, config: { require_approval_for_config_edits: false } },
     ),
   )
@@ -1313,30 +1335,27 @@ describe("require_approval_for_config_edits", () => {
   )
 
   it.live("observes direct edits to a KILO_CONFIG_DIR config", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
     const conf = path.join(os.tmpdir(), "opencode-test-confdir-" + Math.random().toString(36).slice(2))
-    process.env["KILO_CONFIG_DIR"] = conf
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return provideTmpdirInstance(
-      () =>
-        Effect.gen(function* () {
-          yield* withGlobal(undefined)
-          yield* Effect.promise(() => fs.mkdir(conf, { recursive: true }))
+    return withConfigDir(
+      conf,
+      provideTmpdirInstance(
+        () =>
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            yield* Effect.promise(() => fs.mkdir(conf, { recursive: true }))
 
-          const blocked = yield* ask(request("per_confdir_blocked")).pipe(Effect.forkScoped)
-          expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
-          yield* reject("per_confdir_blocked")
-          yield* Fiber.await(blocked)
+            const blocked = yield* ask(request("per_confdir_blocked")).pipe(Effect.forkScoped)
+            expect((yield* wait(1))[0]?.metadata).toMatchObject({ configProtected: true })
+            yield* reject("per_confdir_blocked")
+            yield* Fiber.await(blocked)
 
-          yield* Effect.promise(() =>
-            fs.writeFile(path.join(conf, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false })),
-          )
-          expect((yield* ask(request("per_confdir_off"))).manual).toBe(false)
-        }).pipe(Effect.ensuring(Effect.sync(restore))),
-      { git: true },
+            yield* Effect.promise(() =>
+              fs.writeFile(path.join(conf, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false })),
+            )
+            expect((yield* ask(request("per_confdir_off"))).manual).toBe(false)
+          }),
+        { git: true },
+      ),
     )
   })
 
@@ -1434,53 +1453,54 @@ describe("require_approval_for_config_edits", () => {
   it.live("narrows an aliased global-skill read to the canonical skill before persisting", () =>
     provideTmpdirInstance(
       () =>
-        Effect.gen(function* () {
-          yield* withGlobal(undefined)
-          const permission = yield* Permission.Service
-          const { skill, concrete } = yield* Effect.promise(() => paths("per_read_alias"))
-          const skillDir = path.dirname(concrete)
-          const alias = path.join(os.tmpdir(), `opencode-read-alias-${process.pid}-${Date.now()}`)
-          const aliasGlob = path.join(alias, "*").replaceAll("\\", "/")
-          const link = process.platform === "win32" ? "junction" : "dir"
-          yield* Effect.promise(() => fs.writeFile(concrete, "body"))
-          yield* Effect.promise(() => fs.symlink(skillDir, alias, link))
+        withSkill("per_read_alias", ({ skill, concrete }) =>
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            const permission = yield* Permission.Service
+            const skillDir = path.dirname(concrete)
+            const alias = path.join(os.tmpdir(), `opencode-read-alias-${process.pid}-${Date.now()}`)
+            const aliasGlob = path.join(alias, "*").replaceAll("\\", "/")
+            const link = process.platform === "win32" ? "junction" : "dir"
+            yield* Effect.promise(() => fs.writeFile(concrete, "body"))
+            yield* Effect.promise(() => fs.symlink(skillDir, alias, link))
 
-          yield* Effect.gen(function* () {
-            const first = yield* assertExternalDirectoryEffect(
-              toolCtx(permission, "per_read_alias_first"),
-              path.join(alias, "SKILL.md"),
-              { kind: "file" },
-            ).pipe(Effect.forkScoped)
-            const items = yield* wait(1)
-            // A file-tool read is not config-protected, but its canonical skill scope must still
-            // replace the alias so an "always" reply cannot persist the alias itself.
-            expect(items[0]?.always).toEqual([skill])
-            expect(items[0]?.metadata).toMatchObject({ rules: [skill] })
-            yield* reply({ requestID: items[0].id, reply: "always" })
-            expect(Exit.isSuccess(yield* Fiber.await(first))).toBe(true)
+            yield* Effect.gen(function* () {
+              const first = yield* assertExternalDirectoryEffect(
+                toolCtx(permission, "per_read_alias_first"),
+                path.join(alias, "SKILL.md"),
+                { kind: "file" },
+              ).pipe(Effect.forkScoped)
+              const items = yield* wait(1)
+              // A file-tool read is not config-protected, but its canonical skill scope must still
+              // replace the alias so an "always" reply cannot persist the alias itself.
+              expect(items[0]?.always).toEqual([skill])
+              expect(items[0]?.metadata).toMatchObject({ rules: [skill] })
+              yield* reply({ requestID: items[0].id, reply: "always" })
+              expect(Exit.isSuccess(yield* Fiber.await(first))).toBe(true)
 
-            const written = yield* Effect.promise(() => text())
-            expect(written).toContain(skill)
-            expect(written).not.toContain(aliasGlob)
+              const written = yield* Effect.promise(() => text())
+              expect(written).toContain(skill)
+              expect(written).not.toContain(aliasGlob)
 
-            // Retarget the alias outside any skill. The saved canonical rule must not authorize the read.
-            const other = path.join(os.tmpdir(), `opencode-read-other-${process.pid}-${Date.now()}`)
-            yield* Effect.promise(() => fs.mkdir(other, { recursive: true }))
-            yield* Effect.promise(() => fs.writeFile(path.join(other, "secret.txt"), "x"))
-            yield* Effect.promise(() => fs.rm(alias, { force: true }))
-            yield* Effect.promise(() => fs.symlink(other, alias, link))
+              // Retarget the alias outside any skill. The saved canonical rule must not authorize the read.
+              const other = path.join(os.tmpdir(), `opencode-read-other-${process.pid}-${Date.now()}`)
+              yield* Effect.promise(() => fs.mkdir(other, { recursive: true }))
+              yield* Effect.promise(() => fs.writeFile(path.join(other, "secret.txt"), "x"))
+              yield* Effect.promise(() => fs.rm(alias, { force: true }))
+              yield* Effect.promise(() => fs.symlink(other, alias, link))
 
-            const second = yield* assertExternalDirectoryEffect(
-              toolCtx(permission, "per_read_alias_second"),
-              path.join(alias, "secret.txt"),
-              { kind: "file" },
-            ).pipe(Effect.forkScoped)
-            expect(yield* wait(1)).toHaveLength(1)
-            yield* reject("per_read_alias_second")
-            expect(Exit.isFailure(yield* Fiber.await(second))).toBe(true)
-            yield* Effect.promise(() => fs.rm(other, { recursive: true, force: true }))
-          }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))))
-        }),
+              const second = yield* assertExternalDirectoryEffect(
+                toolCtx(permission, "per_read_alias_second"),
+                path.join(alias, "secret.txt"),
+                { kind: "file" },
+              ).pipe(Effect.forkScoped)
+              expect(yield* wait(1)).toHaveLength(1)
+              yield* reject("per_read_alias_second")
+              expect(Exit.isFailure(yield* Fiber.await(second))).toBe(true)
+              yield* Effect.promise(() => fs.rm(other, { recursive: true, force: true }))
+            }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))))
+          }),
+        ),
       { git: true },
     ),
   )
@@ -1488,34 +1508,35 @@ describe("require_approval_for_config_edits", () => {
   it.live("persists the canonical skill when saving always rules for an aliased read", () =>
     provideTmpdirInstance(
       () =>
-        Effect.gen(function* () {
-          yield* withGlobal(undefined)
-          const permission = yield* Permission.Service
-          const { skill, concrete } = yield* Effect.promise(() => paths("per_read_save"))
-          const skillDir = path.dirname(concrete)
-          const alias = path.join(os.tmpdir(), `opencode-read-save-${process.pid}-${Date.now()}`)
-          const aliasGlob = path.join(alias, "*").replaceAll("\\", "/")
-          const link = process.platform === "win32" ? "junction" : "dir"
-          yield* Effect.promise(() => fs.writeFile(concrete, "body"))
-          yield* Effect.promise(() => fs.symlink(skillDir, alias, link))
+        withSkill("per_read_save", ({ skill, concrete }) =>
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            const permission = yield* Permission.Service
+            const skillDir = path.dirname(concrete)
+            const alias = path.join(os.tmpdir(), `opencode-read-save-${process.pid}-${Date.now()}`)
+            const aliasGlob = path.join(alias, "*").replaceAll("\\", "/")
+            const link = process.platform === "win32" ? "junction" : "dir"
+            yield* Effect.promise(() => fs.writeFile(concrete, "body"))
+            yield* Effect.promise(() => fs.symlink(skillDir, alias, link))
 
-          yield* Effect.gen(function* () {
-            const fiber = yield* assertExternalDirectoryEffect(
-              toolCtx(permission, "per_read_save_first"),
-              path.join(alias, "SKILL.md"),
-              { kind: "file" },
-            ).pipe(Effect.forkScoped)
-            const items = yield* wait(1)
-            yield* saveAlwaysRules({ requestID: items[0].id, approvedAlways: [skill] })
+            yield* Effect.gen(function* () {
+              const fiber = yield* assertExternalDirectoryEffect(
+                toolCtx(permission, "per_read_save_first"),
+                path.join(alias, "SKILL.md"),
+                { kind: "file" },
+              ).pipe(Effect.forkScoped)
+              const items = yield* wait(1)
+              yield* saveAlwaysRules({ requestID: items[0].id, approvedAlways: [skill] })
 
-            const written = yield* Effect.promise(() => text())
-            expect(written).toContain(skill)
-            expect(written).not.toContain(aliasGlob)
+              const written = yield* Effect.promise(() => text())
+              expect(written).toContain(skill)
+              expect(written).not.toContain(aliasGlob)
 
-            yield* reject("per_read_save_first")
-            yield* Fiber.await(fiber)
-          }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))))
-        }),
+              yield* reject("per_read_save_first")
+              yield* Fiber.await(fiber)
+            }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))))
+          }),
+        ),
       { git: true },
     ),
   )
@@ -1768,258 +1789,190 @@ describe("require_approval_for_config_edits", () => {
   )
 
   it.live("an explicit project value overrides KILO_CONFIG when they conflict", () => {
-    const previous = process.env["KILO_CONFIG"]
     const file = path.join(os.tmpdir(), "opencode-test-kiloconfig-" + Math.random().toString(36).slice(2) + ".json")
-    process.env["KILO_CONFIG"] = file
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG"]
-      else process.env["KILO_CONFIG"] = previous
-    }
-    return Effect.gen(function* () {
-      yield* withGlobal(undefined)
-      yield* Effect.promise(() => fs.writeFile(file, JSON.stringify({ require_approval_for_config_edits: false })))
-      yield* provideTmpdirInstance(
-        () =>
-          Effect.gen(function* () {
-            // KILO_CONFIG loads before the project files, so an explicit project true still wins.
-            yield* prompts("per_kiloconfig_project", target)
-          }),
-        { git: true, config: { require_approval_for_config_edits: true } },
-      )
-    }).pipe(Effect.ensuring(Effect.sync(restore)), Effect.ensuring(Effect.promise(() => fs.rm(file, { force: true }))))
-  })
-
-  it.live("keeps KILO_CONFIG_DIR precedence over an explicit project value", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const conf = path.join(os.tmpdir(), "opencode-test-confdir-priority-" + Math.random().toString(36).slice(2))
-    process.env["KILO_CONFIG_DIR"] = conf
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
-      yield* withGlobal(undefined)
-      yield* Effect.promise(async () => {
-        await fs.mkdir(conf, { recursive: true })
-        await fs.writeFile(path.join(conf, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false }))
-      })
-      yield* provideTmpdirInstance(() => auto("per_confdir_beats_project", target), {
-        git: true,
-        config: { require_approval_for_config_edits: true },
-      })
-    }).pipe(
-      Effect.ensuring(Effect.sync(restore)),
-      Effect.ensuring(Effect.promise(() => fs.rm(conf, { recursive: true, force: true }))),
+    return withEnv(
+      "KILO_CONFIG",
+      file,
+      Effect.gen(function* () {
+        yield* withGlobal(undefined)
+        yield* Effect.promise(() => fs.writeFile(file, JSON.stringify({ require_approval_for_config_edits: false })))
+        yield* provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              // KILO_CONFIG loads before the project files, so an explicit project true still wins.
+              yield* prompts("per_kiloconfig_project", target)
+            }),
+          { git: true, config: { require_approval_for_config_edits: true } },
+        )
+      }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(file, { force: true })))),
     )
   })
 
-  it.live("keeps KILO_CONFIG_DIR precedence when it aliases a legacy .kilo home dir", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
-      const home = yield* Effect.promise(() =>
-        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }) }),
-      )
-      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilo")
-      yield* withGlobal(undefined)
-      yield* withHome(
-        home,
-        provideTmpdirInstance(() => auto("per_env_alias_kilo", target), {
+  it.live("keeps KILO_CONFIG_DIR precedence over an explicit project value", () => {
+    const conf = path.join(os.tmpdir(), "opencode-test-confdir-priority-" + Math.random().toString(36).slice(2))
+    return withConfigDir(
+      conf,
+      Effect.gen(function* () {
+        yield* withGlobal(undefined)
+        yield* Effect.promise(async () => {
+          await fs.mkdir(conf, { recursive: true })
+          await fs.writeFile(path.join(conf, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false }))
+        })
+        yield* provideTmpdirInstance(() => auto("per_confdir_beats_project", target), {
           git: true,
           config: { require_approval_for_config_edits: true },
-        }),
-      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
+        })
+      }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(conf, { recursive: true, force: true })))),
+    )
   })
 
-  it.live("keeps KILO_CONFIG_DIR precedence when it aliases a legacy .kilocode home dir", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
-      const home = yield* Effect.promise(() =>
-        legacyHome({ ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }) }),
-      )
-      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilocode")
-      yield* withGlobal(undefined)
-      yield* withHome(
-        home,
-        provideTmpdirInstance(() => auto("per_env_alias_kilocode", target), {
-          git: true,
-          config: { require_approval_for_config_edits: true },
-        }),
-      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
-  })
+  it.live("keeps KILO_CONFIG_DIR precedence when it aliases a legacy home dir", () =>
+    Effect.gen(function* () {
+      for (const c of [
+        { dir: ".kilo", id: "kilo" },
+        { dir: ".kilocode", id: "kilocode" },
+      ]) {
+        const home = yield* Effect.promise(() =>
+          legacyHome({ [`${c.dir}/kilo.json`]: JSON.stringify({ require_approval_for_config_edits: false }) }),
+        )
+        yield* withConfigDir(
+          path.join(home, c.dir),
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            yield* withHome(
+              home,
+              provideTmpdirInstance(() => auto(`per_env_alias_${c.id}`, target), {
+                git: true,
+                config: { require_approval_for_config_edits: true },
+              }),
+            ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+          }),
+        )
+      }
+    }),
+  )
 
-  it.live("keeps an aliased KILO_CONFIG_DIR ahead of the project and other legacy home dirs", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
+  it.live("keeps an aliased KILO_CONFIG_DIR ahead of the project and other legacy home dirs", () =>
+    Effect.gen(function* () {
       const home = yield* Effect.promise(() =>
         legacyHome({
           ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }),
           ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
         }),
       )
-      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilo")
-      yield* withGlobal(undefined)
-      yield* withHome(
-        home,
-        provideTmpdirInstance(() => auto("per_env_alias_kilo_beats", target), {
-          git: true,
-          config: { require_approval_for_config_edits: true },
+      yield* withConfigDir(
+        path.join(home, ".kilo"),
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          yield* withHome(
+            home,
+            provideTmpdirInstance(() => auto("per_env_alias_kilo_beats", target), {
+              git: true,
+              config: { require_approval_for_config_edits: true },
+            }),
+          ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
         }),
-      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
-  })
+      )
+    }),
+  )
 
   it.live("keeps KILO_CONFIG_DIR precedence when it aliases the primary global config dir", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
     const prevConfig = Global.Path.config
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-      ;(Global.Path as { config: string }).config = prevConfig
-    }
     return Effect.gen(function* () {
       const globalDir = yield* Effect.promise(() => fs.mkdtemp(path.join(os.tmpdir(), "opencode-env-primary-")))
       ;(Global.Path as { config: string }).config = globalDir
-      process.env["KILO_CONFIG_DIR"] = globalDir
-      yield* Effect.promise(() =>
-        fs.writeFile(path.join(globalDir, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false })),
-      )
-      yield* provideTmpdirInstance(() => auto("per_env_alias_primary", target), {
-        git: true,
-        config: { require_approval_for_config_edits: true },
-      }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(globalDir, { recursive: true, force: true }))))
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
-  })
-
-  it.live("keeps a project value when KILO_CONFIG_DIR aliases the primary global dir without its own field", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
-      const home = yield* Effect.promise(() =>
-        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }) }),
-      )
-      process.env["KILO_CONFIG_DIR"] = Global.Path.config
-      yield* withGlobal(undefined)
-      yield* withHome(
-        home,
-        provideTmpdirInstance(() => prompts("per_env_primary_no_field_on", target), {
-          git: true,
-          config: { require_approval_for_config_edits: true },
-        }),
-      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
-  })
-
-  it.live("keeps a project opt-out when KILO_CONFIG_DIR aliases the primary global dir without its own field", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
-      const home = yield* Effect.promise(() =>
-        legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }) }),
-      )
-      process.env["KILO_CONFIG_DIR"] = Global.Path.config
-      yield* withGlobal(undefined)
-      yield* withHome(
-        home,
-        provideTmpdirInstance(() => auto("per_env_primary_no_field_off", target), {
-          git: true,
-          config: { require_approval_for_config_edits: false },
-        }),
-      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
-  })
-
-  it.live("keeps an explicit aliased KILO_CONFIG_DIR field ahead of a later legacy home dir", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
-      const home = yield* Effect.promise(() =>
-        legacyHome({
-          ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
-          ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }),
+      yield* withConfigDir(
+        globalDir,
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              path.join(globalDir, "kilo.json"),
+              JSON.stringify({ require_approval_for_config_edits: false }),
+            ),
+          )
+          yield* provideTmpdirInstance(() => auto("per_env_alias_primary", target), {
+            git: true,
+            config: { require_approval_for_config_edits: true },
+          }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(globalDir, { recursive: true, force: true }))))
         }),
       )
-      process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilocode")
-      yield* withGlobal(undefined)
-      yield* withHome(
-        home,
-        provideTmpdirInstance(() => auto("per_env_field_beats_later_legacy_off", target), { git: true }),
-      ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
+    }).pipe(Effect.ensuring(Effect.sync(() => ((Global.Path as { config: string }).config = prevConfig))))
   })
 
-  it.live(
-    "keeps an explicit aliased KILO_CONFIG_DIR field that enables protection ahead of a later legacy home dir",
-    () => {
-      const previous = process.env["KILO_CONFIG_DIR"]
-      const restore = () => {
-        if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-        else process.env["KILO_CONFIG_DIR"] = previous
-      }
-      return Effect.gen(function* () {
+  it.live("keeps a project value when KILO_CONFIG_DIR aliases the primary global dir without its own field", () =>
+    Effect.gen(function* () {
+      for (const c of [
+        { id: "on", legacy: false, project: true, check: prompts },
+        { id: "off", legacy: true, project: false, check: auto },
+      ]) {
         const home = yield* Effect.promise(() =>
-          legacyHome({
-            ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: true }),
-            ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: false }),
+          legacyHome({ ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: c.legacy }) }),
+        )
+        yield* withConfigDir(
+          Global.Path.config,
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            yield* withHome(
+              home,
+              provideTmpdirInstance(() => c.check(`per_env_primary_no_field_${c.id}`, target), {
+                git: true,
+                config: { require_approval_for_config_edits: c.project },
+              }),
+            ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
           }),
         )
-        process.env["KILO_CONFIG_DIR"] = path.join(home, ".kilocode")
-        yield* withGlobal(undefined)
-        yield* withHome(
-          home,
-          provideTmpdirInstance(() => prompts("per_env_field_beats_later_legacy_on", target), { git: true }),
-        ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
-      }).pipe(Effect.ensuring(Effect.sync(restore)))
-    },
+      }
+    }),
   )
 
-  it.live("keeps a project .kilo directory that loads after an aliased primary KILO_CONFIG_DIR", () => {
-    const previous = process.env["KILO_CONFIG_DIR"]
-    const restore = () => {
-      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = previous
-    }
-    return Effect.gen(function* () {
-      process.env["KILO_CONFIG_DIR"] = Global.Path.config
-      yield* withGlobal({ require_approval_for_config_edits: false })
-      yield* provideTmpdirInstance(
-        (dir) =>
-          Effect.gen(function* () {
-            yield* Effect.promise(async () => {
-              await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
-              await fs.writeFile(
-                path.join(dir, ".kilo", "kilo.json"),
-                JSON.stringify({ require_approval_for_config_edits: true }),
-              )
-            })
-            yield* prompts("per_env_primary_project_dir_on", target)
+  it.live("keeps an explicit aliased KILO_CONFIG_DIR field ahead of a later legacy home dir", () =>
+    Effect.gen(function* () {
+      for (const c of [
+        { id: "off", kilocode: false, kilo: true, check: auto },
+        { id: "on", kilocode: true, kilo: false, check: prompts },
+      ]) {
+        const home = yield* Effect.promise(() =>
+          legacyHome({
+            ".kilocode/kilo.json": JSON.stringify({ require_approval_for_config_edits: c.kilocode }),
+            ".kilo/kilo.json": JSON.stringify({ require_approval_for_config_edits: c.kilo }),
           }),
-        { git: true },
-      )
-    }).pipe(Effect.ensuring(Effect.sync(restore)))
-  })
+        )
+        yield* withConfigDir(
+          path.join(home, ".kilocode"),
+          Effect.gen(function* () {
+            yield* withGlobal(undefined)
+            yield* withHome(
+              home,
+              provideTmpdirInstance(() => c.check(`per_env_field_beats_later_legacy_${c.id}`, target), { git: true }),
+            ).pipe(Effect.ensuring(Effect.promise(() => fs.rm(home, { recursive: true, force: true }))))
+          }),
+        )
+      }
+    }),
+  )
+
+  it.live("keeps a project .kilo directory that loads after an aliased primary KILO_CONFIG_DIR", () =>
+    withConfigDir(
+      Global.Path.config,
+      Effect.gen(function* () {
+        yield* withGlobal({ require_approval_for_config_edits: false })
+        yield* provideTmpdirInstance(
+          (dir) =>
+            Effect.gen(function* () {
+              yield* Effect.promise(async () => {
+                await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+                await fs.writeFile(
+                  path.join(dir, ".kilo", "kilo.json"),
+                  JSON.stringify({ require_approval_for_config_edits: true }),
+                )
+              })
+              yield* prompts("per_env_primary_project_dir_on", target)
+            }),
+          { git: true },
+        )
+      }),
+    ),
+  )
 })
 
 const editRequest = (id: string, file: string): Permission.AskInput =>
@@ -2030,11 +1983,25 @@ const editRequest = (id: string, file: string): Permission.AskInput =>
     ruleset: [{ permission: "edit", pattern: "*", action: "allow" }],
   })
 
-async function paths(name: string) {
-  const dir = path.join(Global.Path.config, "skills", name)
-  await fs.mkdir(dir, { recursive: true })
-  const raw = path.join(dir, "*").replaceAll("\\", "/")
-  const skill = ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns: [raw] })
-  if (!skill) throw new Error(`expected a global skill pattern for ${dir}`)
-  return { skill, concrete: skill.slice(0, -2) + "/SKILL.md" }
-}
+// Create one global skill root for a test and always remove it, even when the effect fails or is
+// interrupted. The name is unique to this file and the root lives under the test process's
+// XDG_CONFIG_HOME, so removing exactly the directory this helper created cannot delete a real skill.
+const withSkill = <A, E, R>(
+  name: string,
+  use: (created: { skill: string; concrete: string; dir: string }) => Effect.Effect<A, E, R>,
+) =>
+  Effect.acquireRelease(
+    Effect.promise(async () => {
+      const dir = path.join(Global.Path.config, "skills", name)
+      await fs.mkdir(dir, { recursive: true })
+      return dir
+    }),
+    (dir) => Effect.promise(() => fs.rm(dir, { recursive: true, force: true })),
+  ).pipe(
+    Effect.flatMap((dir) => {
+      const raw = path.join(dir, "*").replaceAll("\\", "/")
+      const skill = ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns: [raw] })
+      if (!skill) return Effect.die(new Error(`expected a global skill pattern for ${dir}`))
+      return use({ skill, concrete: skill.slice(0, -2) + "/SKILL.md", dir })
+    }),
+  )

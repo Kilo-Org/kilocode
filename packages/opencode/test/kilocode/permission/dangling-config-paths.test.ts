@@ -98,6 +98,9 @@ const run = (id: string, file: string, content: string) =>
       return { kind: "prompt" as const, metadata, exit, body: undefined }
     }
     const exit = yield* Fiber.await(fiber)
+    // A failed write must surface the real Cause. Reporting it as "auto" would hide a runtime tool
+    // error and make a failed write look like an auto-approved one.
+    if (Exit.isFailure(exit)) return yield* Effect.failCause(exit.cause)
     const body = yield* Effect.promise(() => fs.readFile(file, "utf8").catch(() => undefined))
     return { kind: "auto" as const, metadata: undefined, exit, body }
   })
@@ -279,6 +282,36 @@ describe("dangling config symlinks through the real WriteTool", () => {
               ),
             ),
           ).toBe(false)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("treats a dangling symlink as absent", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const svc = yield* FSUtil.Service
+          const link = path.join(dir, "dangling-link")
+          yield* Effect.promise(() => fs.symlink(path.join(dir, "missing-target"), link, "file"))
+          // `access` on Windows reports a broken reparse point as existing; the follow-check keeps it
+          // absent so the write path asks permission instead of aborting on a read of the missing target.
+          expect(yield* svc.existsSafe(link)).toBe(false)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("surfaces a failed fiber instead of reporting it as auto-approved", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          // A directory cannot be read as a pre-image, so the tool fails before the permission ask.
+          // The helper must forward that Cause rather than label the failed write "auto".
+          const target = path.join(dir, "a-directory")
+          yield* Effect.promise(() => fs.mkdir(target, { recursive: true }))
+          const exit = yield* run("per_failure", target, "content").pipe(Effect.exit)
+          expect(Exit.isFailure(exit)).toBe(true)
         }),
       { git: true },
     ),
