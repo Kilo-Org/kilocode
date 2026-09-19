@@ -28,7 +28,7 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
-import { children } from "./background-agents"
+import { taskChildren } from "./background-agents"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
@@ -376,7 +376,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   )
 
   // Sibling-aware avatar colors for every subagent spawned by this session.
-  const siblings = createMemo(() => (id() ? children(session.getSessionToolParts(id()!)) : []))
+  const siblings = createMemo(() => (id() ? taskChildren(session.getSessionToolParts(id()!)) : []))
 
   return (
     <AgentAvatarPalette ids={siblings()}>

@@ -27,29 +27,10 @@ interface Draft {
 type Props = {
   projectId?: string
   worktreeId: string
-  /** Submit on plain Enter. Diff composers keep their existing Enter-to-send behavior. */
-  submitOnEnter?: boolean
-  /** Called when Escape is pressed in the editor. */
-  onEscape?: () => void
   inline?: boolean
 } & (
   | { action: "reply"; threadId: string }
   | { action: "create"; prNumber: number; prUrl: string }
-  | {
-      projectId?: string
-      worktreeId: string
-      action: "local"
-      file: string
-      side: "LEFT" | "RIGHT"
-      startLine: number
-      endLine: number
-      selectedText: string
-      initialBody?: string
-      onBodyChange?: (body: string) => void
-      onSubmit: (body: string, selectedText: string) => void
-      onSend: (body: string, selectedText: string) => void
-      onCancel: () => void
-    }
   | {
       action: "diff"
       worktreeId: string
@@ -119,7 +100,7 @@ const decisions = [
   { event: "REQUEST_CHANGES", action: "review-request-changes", label: "agentManager.pr.review.requestChanges" },
 ] as const
 
-// The form supports local, inline, reply, edit, and review actions in one shared UI.
+// The form supports diff, inline, reply, edit, and review actions in one shared UI.
 // eslint-disable-next-line complexity
 export function PRCommentForm(props: Props) {
   const { t } = useLanguage()
@@ -133,15 +114,9 @@ export function PRCommentForm(props: Props) {
       props.projectId,
       props.worktreeId,
       props.action,
-      props.action === "reply"
-        ? props.threadId
-        : props.action === "local" || props.action === "diff"
-          ? props.file
-          : props.prUrl,
+      props.action === "reply" ? props.threadId : props.action === "diff" ? props.file : props.prUrl,
       props.action === "edit" ? props.commentId : undefined,
-      props.action === "local" || props.action === "diff"
-        ? [props.file, props.side, props.startLine, props.endLine]
-        : undefined,
+      props.action === "diff" ? [props.file, props.side, props.startLine, props.endLine] : undefined,
       props.action === "diff" ? [props.github?.prNumber, props.github?.snapshotId] : undefined,
       props.action === "line" ? [props.snapshotId, props.path, props.side, props.startLine, props.endLine] : undefined,
       props.action === "review" ? [props.snapshotId, props.head] : undefined,
@@ -153,12 +128,12 @@ export function PRCommentForm(props: Props) {
   }
   const state = () =>
     drafts[key()] ??
-    ((props.action === "line" || props.action === "local" || props.action === "diff") && props.initialBody
+    ((props.action === "line" || props.action === "diff") && props.initialBody
       ? { ...blank, body: props.initialBody }
       : blank)
   const [collapsed, setCollapsed] = createSignal<string>()
   const compact = () => props.action === "reply" || props.action === "create"
-  const cancellable = () => props.action === "edit" || props.action === "local" || props.action === "diff" || compact()
+  const cancellable = () => props.action === "edit" || props.action === "diff" || compact()
   const expanded = () =>
     !!state().pending || state().open || (collapsed() !== key() && !!(state().body || state().error))
   const placeholder = () =>
@@ -169,7 +144,7 @@ export function PRCommentForm(props: Props) {
       ? t("agentManager.pr.comment.reply")
       : props.action === "review"
         ? t("agentManager.pr.review.summary")
-        : props.action === "create" || props.action === "line" || props.action === "local" || props.action === "diff"
+        : props.action === "create" || props.action === "line" || props.action === "diff"
           ? t("agentManager.pr.comment.add")
           : t("common.edit")
   const ready = () =>
@@ -215,7 +190,7 @@ export function PRCommentForm(props: Props) {
 
   function cancel() {
     if (state().pending) return
-    if (props.action === "local" || props.action === "diff") {
+    if (props.action === "diff") {
       patch({ body: "", error: undefined, preview: false, sent: undefined })
       props.onCancel()
       return
@@ -281,11 +256,6 @@ export function PRCommentForm(props: Props) {
         : !ready()
     )
       return
-    if (props.action === "local") {
-      patch({ body: "", error: undefined, preview: false, sent: undefined })
-      props.onSubmit(body, props.selectedText)
-      return
-    }
     const id = key()
     const requestId = crypto.randomUUID()
     const route = { projectId: props.projectId, worktreeId: props.worktreeId }
@@ -476,16 +446,10 @@ export function PRCommentForm(props: Props) {
                 disabled={!!state().pending}
                 onChange={(body) => {
                   patch({ body, sent: undefined })
-                  if (props.action === "line" || props.action === "local" || props.action === "diff")
-                    props.onBodyChange?.(body)
+                  if (props.action === "line" || props.action === "diff") props.onBodyChange?.(body)
                 }}
                 onKeyDown={(event: KeyboardEvent) => {
                   if (event.isComposing || event.keyCode === 229) return
-                  if (event.key === "Escape" && props.onEscape) {
-                    event.preventDefault()
-                    props.onEscape()
-                    return
-                  }
                   if (props.action === "diff") {
                     if (event.key !== "Enter" || event.shiftKey) return
                     // Cmd/Ctrl+Enter saves the comment. Plain Enter sends it to Kilo,
@@ -505,10 +469,6 @@ export function PRCommentForm(props: Props) {
                     event.preventDefault()
                     submit()
                     return
-                  }
-                  if (props.submitOnEnter && !event.shiftKey) {
-                    event.preventDefault()
-                    submit()
                   }
                 }}
               />
@@ -652,7 +612,7 @@ export function PRCommentForm(props: Props) {
                 </Show>
                 <Button
                   data-action="submit"
-                  variant={props.inline && props.action === "local" ? "secondary" : "primary"}
+                  variant="primary"
                   size="small"
                   disabled={!ready()}
                   onClick={() => submit()}
@@ -664,32 +624,14 @@ export function PRCommentForm(props: Props) {
                     ? t("agentManager.pr.comment.replySending")
                     : props.inline && props.action === "line"
                       ? t("diffViewer.comment.postToGithub")
-                      : props.inline && props.action === "local"
-                        ? t("diffViewer.comment.saveLocal")
-                        : props.action === "reply"
-                          ? t("agentManager.pr.comment.reply")
-                          : props.action === "review"
-                            ? t("agentManager.pr.review.title")
-                            : props.action === "create" || props.action === "line" || props.action === "local"
-                              ? t("agentManager.pr.comment.addSubmit")
-                              : t("common.save")}
+                      : props.action === "reply"
+                        ? t("agentManager.pr.comment.reply")
+                        : props.action === "review"
+                          ? t("agentManager.pr.review.title")
+                          : props.action === "create" || props.action === "line"
+                            ? t("agentManager.pr.comment.addSubmit")
+                            : t("common.save")}
                 </Button>
-                <Show when={props.action === "local"}>
-                  <Button
-                    data-action="send"
-                    aria-label={t("diffViewer.comment.sendToAgent")}
-                    title={t("diffViewer.comment.sendToAgent")}
-                    variant="primary"
-                    size="small"
-                    disabled={!ready()}
-                    onClick={() => {
-                      if (props.action !== "local") return
-                      props.onSend(state().body, props.selectedText)
-                    }}
-                  >
-                    {t("prompt.action.send")}
-                  </Button>
-                </Show>
                 <Show when={cancellable()}>
                   <Button
                     data-action="cancel"

@@ -294,6 +294,38 @@ describe("handlePermissionResponse", () => {
     expect(permDirs.has("p1")).toBe(true)
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
   })
+
+  it("treats an aborted rule save as stale once the request is settled", async () => {
+    const error = new Error("The operation was aborted due to timeout")
+    const { fake, messages, permDirs, queries } = ctx({ tracked: ["s1"], errors: { save: error } })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(queries).toContain("/workspace/.kilo/worktrees/feature")
+    expect(permDirs.has("p1")).toBe(false)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", stale: true }])
+  })
+
+  it("keeps an aborted rule save retryable while the request is still pending", async () => {
+    const error = new Error("The operation was aborted due to timeout")
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, permDirs } = ctx({
+      tracked: ["s1"],
+      errors: { save: error },
+      permsPerDir: { [dir]: [pending("p1", "s1")] },
+    })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", dir)
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(permDirs.has("p1")).toBe(true)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+  })
 })
 
 describe("recoverablePermissions", () => {
