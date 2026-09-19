@@ -467,7 +467,7 @@ const layer = Layer.effect(
             updatePart: session.updatePart,
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
 
-      const fallback = KiloCompactionChunks.eligible({
+      let fallback = KiloCompactionChunks.eligible({
         result,
         error: processor.message.error ?? processor.compactError?.(),
       })
@@ -499,12 +499,38 @@ const layer = Layer.effect(
         return "stop"
       }
 
-      if (compactionPart && selected.tail_start_id && compactionPart.tail_start_id !== selected.tail_start_id) {
+      // kilocode_change start - an empty worker response fails retryably and never replaces the session
+      if (fallback === "continue") {
+        const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
+        const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
+        // A processor that returns "continue" without rendering any text
+        // answered with nothing; fail retryably instead of replacing the session.
+        if (!visible) {
+          processor.message.error = new MessageV2.APIError({
+            message: KiloCompactionChunks.EMPTY_SUMMARY,
+            isRetryable: true,
+          }).toObject()
+          processor.message.finish = "error"
+          processor.message.time.completed = Date.now()
+          yield* session.updateMessage(processor.message)
+          fallback = "stop"
+        }
+      }
+      // kilocode_change end
+
+      // kilocode_change start - a failed compaction never anchors a tail
+      if (
+        fallback === "continue" &&
+        compactionPart &&
+        selected.tail_start_id &&
+        compactionPart.tail_start_id !== selected.tail_start_id
+      ) {
         yield* session.updatePart({
           ...compactionPart,
           tail_start_id: selected.tail_start_id,
         })
       }
+      // kilocode_change end
 
       // kilocode_change start
       if (fallback === "continue" && input.auto) {
@@ -617,7 +643,26 @@ const layer = Layer.effect(
       }
 
       // kilocode_change start - compaction already invalidates cache, so collapse stale tool outputs too
-      if (processor.message.error) return "stop"
+      if (processor.message.error) {
+        // The empty-summary copy is written only for the empty-summary failure:
+        // a retryable failure with no rendered part is dropped by clients, so
+        // surface it as a real text part before stopping. Other provider
+        // failures must keep their own error.
+        const error = processor.message.error
+        const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
+        const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
+        const empty = error.name === "APIError" && error.data.message === KiloCompactionChunks.EMPTY_SUMMARY
+        if (empty && !visible) {
+          yield* session.updatePart({
+            id: PartID.ascending(),
+            messageID: msg.id,
+            sessionID: input.sessionID,
+            type: "text",
+            text: KiloCompactionChunks.EMPTY_SUMMARY,
+          })
+        }
+        return "stop"
+      }
       if (fallback === "continue") {
         const summary = summaryText(
           (yield* session.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)).find(
