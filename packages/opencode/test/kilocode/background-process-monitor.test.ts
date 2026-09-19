@@ -30,6 +30,45 @@ async function script(dir: string, name: string, source: string, exec = process.
   return `${bin} ${arg}`
 }
 
+function alive(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function read(pidfile: string) {
+  const value = Number(await Bun.file(pidfile).text().catch(() => ""))
+  return Number.isInteger(value) && value > 0 ? value : undefined
+}
+
+/**
+ * Reap the grandchild a test spawned with inherited stdio. `stopSession` only
+ * signals a non-terminal leader, so an orphan whose parent already exited is
+ * left running; the pid file is written before the leader exits, so it is
+ * readable here even when the monitor call fails.
+ */
+async function reap(pidfile: string) {
+  const target = await read(pidfile)
+  if (!target || !alive(target)) return
+  try {
+    process.kill(target, "SIGKILL")
+  } catch (err) {
+    if (alive(target)) throw err
+  }
+}
+
+async function gone(target: number) {
+  const end = Date.now() + 2_000
+  while (Date.now() < end) {
+    if (!alive(target)) return true
+    await Bun.sleep(50)
+  }
+  return false
+}
+
 const agentInfo = {
   name: "code",
   mode: "primary",
@@ -117,13 +156,19 @@ describe("background_process monitor", () => {
         const sessionID = SessionID.descending()
         // The command hands its stdio to a grandchild that outlives it, so the
         // pipes never close. `status`/`monitor` must still observe the exit
-        // instead of reporting the dead parent as running until the cap.
+        // instead of reporting the dead parent as running until the cap. The
+        // grandchild records its pid because `stopSession` drops the terminal
+        // record without signalling the inherited pipes, so the test reaps it.
+        const pidfile = path.join(test.directory, "monitor-orphan.pid")
         const command = yield* Effect.promise(() =>
           script(
             test.directory,
             "monitor-orphan.mjs",
             `import { spawn } from "node:child_process"\n` +
-              `spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" }).unref()\n` +
+              `import { writeFileSync } from "node:fs"\n` +
+              `const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" })\n` +
+              `writeFileSync(${JSON.stringify(pidfile)}, String(child.pid))\n` +
+              `child.unref()\n` +
               `console.log("launched")\n`,
           ),
         )
@@ -138,7 +183,13 @@ describe("background_process monitor", () => {
           expect(result.output).toContain("launched")
         } finally {
           yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+          yield* Effect.promise(() => reap(pidfile))
         }
+        // `stopSession` drops the terminal record without signalling the
+        // inherited pipes, so the reap above is what stops the orphan.
+        const orphan = yield* Effect.promise(() => read(pidfile))
+        if (!orphan) throw new Error("the orphan did not record its pid")
+        expect(yield* Effect.promise(() => gone(orphan))).toBe(true)
       }),
     30_000,
   )
