@@ -31,8 +31,27 @@ void mock.module("@/util/process", () => ({
   },
 }))
 
+// The GitLab and Bitbucket checks ask their host's API through `fetch`, so the
+// test intercepts those requests the way it intercepts `Process.text`. Any other
+// request falls through to the real fetch.
+const realFetch = globalThis.fetch
+type ApiOutcome = { status?: number; body?: unknown } | { error: Error }
+let apiResponder: ((url: string) => ApiOutcome) | undefined
+
+const fetchMock = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
+  if (!apiResponder || !/\/api\/v4\/|\/2\.0\/repositories\//.test(url)) return realFetch(input, init)
+  const out = apiResponder(url)
+  if ("error" in out) throw out.error
+  return new Response(typeof out.body === "string" ? out.body : JSON.stringify(out.body ?? null), {
+    status: out.status ?? 200,
+  })
+})
+globalThis.fetch = fetchMock as unknown as typeof fetch
+
 const {
   detectPrLink,
+  detectPrLinkState,
   forgetRecordedPrLink,
   overrideKey,
   parsePrUrl,
@@ -41,6 +60,7 @@ const {
   recordedKey,
   recordPrLinkText,
 } = await import("@/kilo-sessions/pr-link")
+const { PR_POLL_INTERVAL_MS, refreshPrLink, startPrLinkPoll } = await import("@/kilo-sessions/pr-link-poller")
 const { Instance } = await import("@/kilocode/instance")
 import type { InstanceContext } from "@/project/instance-context"
 
@@ -99,6 +119,31 @@ function ghCalls() {
 
 function ghOptions() {
   return ghText.mock.calls.map((call) => call[1])
+}
+
+function fetchUrls() {
+  return fetchMock.mock.calls.map((call) =>
+    typeof call[0] === "string" ? call[0] : call[0] instanceof URL ? call[0].toString() : call[0].url,
+  )
+}
+
+function apiUrl(index = 0) {
+  return new URL(fetchUrls()[index])
+}
+
+// Answer the GitLab or Bitbucket check's API call with a JSON body.
+function respondApi(body: unknown, status = 200) {
+  apiResponder = () => ({ status, body })
+}
+
+function respondApiError(error: Error) {
+  apiResponder = () => ({ error })
+}
+
+// Answer the GitHub check's bounded `gh api` call with a pull-request listing.
+function respondGh(payload: unknown, code = 0) {
+  const text = typeof payload === "string" ? payload : JSON.stringify(payload)
+  responder = (cmd) => (cmd[0] === "gh" ? { code, text } : { code: 1, text: "" })
 }
 
 describe("parsePrUrl", () => {
@@ -208,6 +253,303 @@ describe("overrideKey", () => {
   })
 })
 
+describe("refreshPrLink", () => {
+  beforeEach(() => {
+    outcome = { code: 0, text: "" }
+    responder = undefined
+    apiResponder = undefined
+    ghText.mockClear()
+    fetchMock.mockClear()
+  })
+
+  // GitHub retains `refs/pull/<n>/head` for every pull request ever opened, so
+  // the check must not list that namespace: it asks the REST API for the
+  // branch's open pull request instead, bounded to the branch and to open state.
+  test("a GitHub branch with an open pull request links #12", async () => {
+    const dir = await makeRepo()
+    respondGh([{ html_url: "https://github.com/owner/repo/pull/12" }])
+
+    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/12", prNumber: 12 })
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/x", link, source: "poll" })
+    expect(ghCalls()[0]).toEqual(["gh", "api", "repos/owner/repo/pulls?head=owner%3Afeature%2Fx&state=open"])
+  })
+
+  test("a GitHub Enterprise host asks its own host", async () => {
+    const dir = await makeRepo("feature/ghe", "git@github.mycorp.example:owner/repo.git")
+    respondGh([{ html_url: "https://github.mycorp.example/owner/repo/pull/4" }])
+
+    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+    expect(link).toEqual({
+      platform: "github",
+      prUrl: "https://github.mycorp.example/owner/repo/pull/4",
+      prNumber: 4,
+    })
+    expect(ghCalls()[0]).toEqual([
+      "gh",
+      "api",
+      "--hostname",
+      "github.mycorp.example",
+      "repos/owner/repo/pulls?head=owner%3Afeature%2Fghe&state=open",
+    ])
+  })
+
+  // GitLab retains `refs/merge-requests/<n>/head` for closed merge requests, so
+  // the check must not list that namespace either: it asks the API for the
+  // branch's open merge request, bounded to the branch and to open state.
+  test("a GitLab branch with an open merge request links #5 with the /-/merge_requests URL", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    respondApi([{ web_url: "https://gitlab.example.com/group/sub/proj/-/merge_requests/5" }])
+
+    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+    expect(link).toEqual({
+      platform: "gitlab",
+      prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/5",
+      prNumber: 5,
+    })
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/gl", link, source: "poll" })
+    expect(apiUrl().pathname).toBe("/api/v4/projects/group%2Fsub%2Fproj/merge_requests")
+    expect(apiUrl().searchParams.get("source_branch")).toBe("feature/gl")
+    expect(apiUrl().searchParams.get("state")).toBe("opened")
+    expect(ghCalls().length).toBe(0)
+  })
+
+  test("a self-hosted GitLab host asks its own API", async () => {
+    const dir = await makeRepo("feature/gle", "git@gitlab.mycorp.example:group/proj.git")
+    respondApi([{ web_url: "https://gitlab.mycorp.example/group/proj/-/merge_requests/8" }])
+
+    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+    expect(link).toEqual({
+      platform: "gitlab",
+      prUrl: "https://gitlab.mycorp.example/group/proj/-/merge_requests/8",
+      prNumber: 8,
+    })
+    expect(apiUrl().origin).toBe("https://gitlab.mycorp.example")
+    expect(apiUrl().pathname).toBe("/api/v4/projects/group%2Fproj/merge_requests")
+  })
+
+  // Bitbucket does not advertise `refs/pull-requests/<n>/from`, so the check
+  // asks the Cloud API for the branch's open pull request, bounded by the `q`
+  // filter to the branch and to OPEN state.
+  test("a Bitbucket branch with an open pull request links #3 with the /pull-requests URL", async () => {
+    const dir = await makeRepo("feature/bb", "https://bitbucket.org/team/repo.git")
+    respondApi({ values: [{ links: { html: { href: "https://bitbucket.org/team/repo/pull-requests/3" } } }] })
+
+    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+    expect(link).toEqual({
+      platform: "bitbucket",
+      prUrl: "https://bitbucket.org/team/repo/pull-requests/3",
+      prNumber: 3,
+    })
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/bb", link, source: "poll" })
+    expect(apiUrl().origin).toBe("https://api.bitbucket.org")
+    expect(apiUrl().pathname).toBe("/2.0/repositories/team/repo/pullrequests")
+    expect(apiUrl().searchParams.get("q")).toBe('source.branch.name="feature/bb" AND state="OPEN"')
+    expect(ghCalls().length).toBe(0)
+  })
+
+  // The check asks each host's bounded API, never the unbounded ref namespaces.
+  test("the GitLab and Bitbucket checks never list refs", async () => {
+    const gitlab = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    respondApi([{ web_url: "https://gitlab.example.com/group/sub/proj/-/merge_requests/5" }])
+    await restoreWorktree(gitlab, () => refreshPrLink(gitlab))
+    expect(fetchUrls().length).toBe(1)
+    expect(ghCalls().length).toBe(0)
+
+    const bitbucket = await makeRepo("feature/bb", "https://bitbucket.org/team/repo.git")
+    respondApi({ values: [] })
+    await restoreWorktree(bitbucket, () => refreshPrLink(bitbucket))
+    expect(fetchUrls().length).toBe(2)
+    expect(ghCalls().length).toBe(0)
+  })
+
+  test("a non-Cloud Bitbucket host stays inconclusive and queries nothing", async () => {
+    const dir = await makeRepo("feature/bb", "https://bitbucket.mycorp.example/team/repo.git")
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(fetchUrls().length).toBe(0)
+    expect(ghCalls().length).toBe(0)
+  })
+
+  test("bounds each host check with an abort signal", async () => {
+    const gitlab = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    respondApi([])
+    await restoreWorktree(gitlab, () => refreshPrLink(gitlab))
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
+
+    const github = await makeRepo()
+    respondGh([])
+    await restoreWorktree(github, () => refreshPrLink(github))
+    const opts = ghOptions()[0]
+    expect(opts?.abort).toBeInstanceOf(AbortSignal)
+    expect(opts?.timeout).toBe(10_000)
+  })
+
+  test("no open pull request clears a polled GitHub link and persists the clear", async () => {
+    const dir = await makeRepo()
+    respondGh([{ html_url: "https://github.com/owner/repo/pull/12" }])
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).not.toBeUndefined()
+
+    respondGh([])
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/x", cleared: true, source: "poll" })
+  })
+
+  test("a closed merge request clears a polled link and persists the clear", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    respondApi([{ web_url: "https://gitlab.example.com/group/sub/proj/-/merge_requests/5" }])
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).not.toBeUndefined()
+
+    respondApi([])
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/gl", cleared: true, source: "poll" })
+  })
+
+  test("a closed Bitbucket pull request clears a polled link", async () => {
+    const dir = await makeRepo("feature/bb", "https://bitbucket.org/team/repo.git")
+    respondApi({ values: [{ links: { html: { href: "https://bitbucket.org/team/repo/pull-requests/3" } } }] })
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).not.toBeUndefined()
+
+    respondApi({ values: [] })
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/bb", cleared: true, source: "poll" })
+  })
+
+  test("no open merge request leaves a session-output record untouched", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    const url = "https://gitlab.example.com/group/sub/proj/-/merge_requests/7"
+    recordPrLinkText(dir, `Opened ${url}`)
+    await persistRecordedPrLink(dir)
+
+    respondApi([])
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+
+    const stored = await readRecordedPrLink(dir)
+    expect(stored?.link).toEqual({ platform: "gitlab", prUrl: url, prNumber: 7 })
+    expect(stored?.cleared).toBeUndefined()
+  })
+
+  test("a non-zero or spawn-failed GitHub check keeps the link and clears nothing", async () => {
+    const dir = await makeRepo()
+    respondGh([{ html_url: "https://github.com/owner/repo/pull/12" }])
+    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+    expect(link).not.toBeUndefined()
+
+    respondGh("", 1)
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toEqual(link)
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/x", link, source: "poll" })
+
+    responder = undefined
+    outcome = { error: new Error("spawn gh ENOENT") }
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toEqual(link)
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/x", link, source: "poll" })
+  })
+
+  test("a failed or unauthorized API check keeps the link and clears nothing", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    respondApi([{ web_url: "https://gitlab.example.com/group/sub/proj/-/merge_requests/5" }])
+    const link = await restoreWorktree(dir, () => refreshPrLink(dir))
+    expect(link).not.toBeUndefined()
+
+    respondApi({ message: "401 Unauthorized" }, 401)
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toEqual(link)
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/gl", link, source: "poll" })
+
+    respondApiError(new Error("fetch failed"))
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toEqual(link)
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/gl", link, source: "poll" })
+  })
+
+  test("an unparseable remote queries nothing", async () => {
+    const dir = await makeRepo("feature/x", "not a url")
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
+    expect(fetchUrls().length).toBe(0)
+  })
+
+  test("an unknown host stays inconclusive and queries nothing", async () => {
+    const dir = await makeRepo("feature/x", "https://example.com/owner/repo.git")
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
+    expect(fetchUrls().length).toBe(0)
+  })
+
+  test("the hot path never queries the host, even with an open PR", async () => {
+    const dir = await makeRepo()
+    respondGh([{ html_url: "https://github.com/owner/repo/pull/12" }])
+
+    // The session hot path (`detectPrLink`) must not ask the host.
+    expect(await restoreWorktree(dir, () => detectPrLink())).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
+
+    // Only the 5-minute check asks, and it finds the PR through the bounded API
+    // query rather than by enumerating the pull-ref namespace.
+    expect(await restoreWorktree(dir, () => refreshPrLink(dir))).not.toBeUndefined()
+    expect(ghCalls().length).toBe(1)
+    expect(ghCalls()[0][0]).toBe("gh")
+    expect(ghCalls()[0][1]).toBe("api")
+  })
+
+  test("the hot path never asks a GitLab or Bitbucket host either", async () => {
+    const gitlab = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    const bitbucket = await makeRepo("feature/bb", "https://bitbucket.org/team/repo.git")
+    respondApi([{ web_url: "https://gitlab.example.com/group/sub/proj/-/merge_requests/5" }])
+
+    expect(await restoreWorktree(gitlab, () => detectPrLink())).toBeUndefined()
+    expect(await restoreWorktree(bitbucket, () => detectPrLink())).toBeUndefined()
+    expect(fetchUrls().length).toBe(0)
+
+    expect(await restoreWorktree(gitlab, () => refreshPrLink(gitlab))).not.toBeUndefined()
+    expect(fetchUrls().length).toBe(1)
+  })
+})
+
+describe("startPrLinkPoll", () => {
+  test("defaults to a 5-minute interval", () => {
+    expect(PR_POLL_INTERVAL_MS).toBe(5 * 60_000)
+  })
+
+  test("runs immediately, again on the interval, and the stop function ends it", async () => {
+    let calls = 0
+    const stop = startPrLinkPoll(
+      async () => {
+        calls++
+      },
+      { intervalMs: 10 },
+    )
+    expect(calls).toBe(1)
+
+    await new Promise((r) => setTimeout(r, 80))
+    expect(calls).toBeGreaterThanOrEqual(3)
+
+    stop()
+    const seen = calls
+    await new Promise((r) => setTimeout(r, 60))
+    expect(calls).toBe(seen)
+  })
+
+  test("coalesces overlapping runs", async () => {
+    let calls = 0
+    let release: (() => void) | undefined
+    const stop = startPrLinkPoll(
+      () =>
+        new Promise<void>((resolve) => {
+          calls++
+          release = resolve
+        }),
+      { intervalMs: 10 },
+    )
+    expect(calls).toBe(1)
+
+    await new Promise((r) => setTimeout(r, 60))
+    expect(calls).toBe(1)
+
+    release?.()
+    await new Promise((r) => setTimeout(r, 40))
+    expect(calls).toBe(2)
+    stop()
+  })
+})
+
 describe("detectPrLink", () => {
   beforeEach(() => {
     outcome = { code: 0, text: "" }
@@ -215,150 +557,13 @@ describe("detectPrLink", () => {
     ghText.mockClear()
   })
 
-  // The repro: before the fix this ran `gh pr view --json url` on every call
-  // (the 10s in-flight/TTL cache drops an undefined result), so three calls
-  // produced three GraphQL probes. After the fix it is local git plus at most
-  // one REST lookup.
-  test("never probes gh pr view and makes at most one REST lookup for three calls", async () => {
-    const dir = await makeRepo()
-    outcome = { code: 0, text: "[]" }
-
-    const first = await restoreWorktree(dir, () => detectPrLink())
-    const second = await restoreWorktree(dir, () => detectPrLink())
-    const third = await restoreWorktree(dir, () => detectPrLink())
-
-    expect(first).toBeUndefined()
-    expect(second).toBeUndefined()
-    expect(third).toBeUndefined()
-
-    const calls = ghCalls()
-    expect(calls.some((cmd) => cmd[0] === "gh" && cmd[1] === "pr" && cmd[2] === "view")).toBe(false)
-    expect(calls.length).toBe(1)
-    expect(calls[0]).toEqual([
-      "gh",
-      "api",
-      "repos/owner/repo/pulls?head=owner%3Afeature%2Fx&state=all",
-    ])
-  })
-
-  test("re-checks once when the branch head changes", async () => {
-    const dir = await makeRepo()
-    outcome = { code: 0, text: "[]" }
-
-    await restoreWorktree(dir, () => detectPrLink())
-    expect(ghCalls().length).toBe(1)
-
-    const git = simpleGit(dir)
-    await fs.writeFile(path.join(dir, "b.txt"), "second")
-    await git.add("b.txt")
-    await git.commit("second")
-
-    await restoreWorktree(dir, () => detectPrLink())
-    expect(ghCalls().length).toBe(2)
-  })
-
-  test("maps a positive REST result to a PrLink and caches it", async () => {
-    const dir = await makeRepo()
-    outcome = {
-      code: 0,
-      text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]),
-    }
-
-    const link = await restoreWorktree(dir, () => detectPrLink())
-    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
-
-    const again = await restoreWorktree(dir, () => detectPrLink())
-    expect(again).toEqual(link)
-    expect(ghCalls().length).toBe(1)
-  })
-
-  test("keeps the last known link when a head change triggers a failed lookup", async () => {
-    const dir = await makeRepo()
-    outcome = { code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]) }
-
-    const link = await restoreWorktree(dir, () => detectPrLink())
-    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
-    expect(ghCalls().length).toBe(1)
-
-    const git = simpleGit(dir)
-    await fs.writeFile(path.join(dir, "b.txt"), "second")
-    await git.add("b.txt")
-    await git.commit("second")
-
-    outcome = { code: 1, text: "API rate limit exceeded" }
-    const after = await restoreWorktree(dir, () => detectPrLink())
-    expect(after).toEqual(link)
-    expect(ghCalls().length).toBe(2)
-  })
-
-  test("bounds a hung lookup with an abort signal", async () => {
-    const dir = await makeRepo()
-    outcome = { code: 0, text: "[]" }
-
-    await restoreWorktree(dir, () => detectPrLink())
-
-    const opts = ghOptions()[0]
-    expect(opts?.abort).toBeInstanceOf(AbortSignal)
-    expect(opts?.timeout).toBe(5000)
-  })
-
-  test("backs off after a failed lookup and spawns nothing on the next call", async () => {
-    const dir = await makeRepo()
-    outcome = { code: 1, text: "API rate limit exceeded" }
-
-    const first = await restoreWorktree(dir, () => detectPrLink())
-    expect(first).toBeUndefined()
-    expect(ghCalls().length).toBe(1)
-
-    const second = await restoreWorktree(dir, () => detectPrLink())
-    expect(second).toBeUndefined()
-    expect(ghCalls().length).toBe(1)
-  })
-
-  test("backs off when gh is missing", async () => {
-    const dir = await makeRepo()
-    outcome = { error: new Error("spawn gh ENOENT") }
-
-    const first = await restoreWorktree(dir, () => detectPrLink())
-    expect(first).toBeUndefined()
-    expect(ghCalls().length).toBe(1)
-
-    const second = await restoreWorktree(dir, () => detectPrLink())
-    expect(second).toBeUndefined()
-    expect(ghCalls().length).toBe(1)
-  })
-
+  // The hot-path contract: detection is local git only, so a worktree on any
+  // host links without a host query.
   test("zero spawns without a GitHub remote", async () => {
     const dir = await makeRepo("feature/y", "https://gitlab.com/owner/repo.git")
 
     const link = await restoreWorktree(dir, () => detectPrLink())
     expect(link).toBeUndefined()
-    expect(ghCalls().length).toBe(0)
-  })
-
-  // The repro for the malformed REST call: a remote with a single path segment
-  // (`git@github.com:repo.git`) has no owner, so `repos//repo/pulls` can only
-  // fail and arm the backoff. Before the fix `gh` was spawned for it.
-  test("a single-segment remote spawns no gh REST lookup", async () => {
-    const dir = await makeRepo("feature/one", "git@github.com:repo.git")
-    outcome = { code: 1, text: "HTTP 404" }
-
-    expect(await restoreWorktree(dir, () => detectPrLink())).toBeUndefined()
-    expect(ghCalls().length).toBe(0)
-  })
-
-  // The repro for the GitHub Enterprise lookup: `platform` is the host's first
-  // label, so `github.mycorp.example` also reads as `github` and the REST
-  // lookup ran for it. `gh api` resolves its host to `api.github.com` (the
-  // remote's enterprise host is not inferred), so the call fails against the
-  // default host and arms the 15-minute backoff; with github.com auth it could
-  // even answer with the same-named github.com repository. Only `github.com`
-  // may reach the lookup.
-  test("a GitHub Enterprise remote spawns no gh REST lookup", async () => {
-    const dir = await makeRepo("feature/ghe", "git@github.mycorp.example:owner/repo.git")
-    outcome = { code: 1, text: "HTTP 401" }
-
-    expect(await restoreWorktree(dir, () => detectPrLink())).toBeUndefined()
     expect(ghCalls().length).toBe(0)
   })
 
@@ -377,56 +582,22 @@ describe("detectPrLink", () => {
     await git.add("b.txt")
     await git.commit("second")
 
-    outcome = { code: 0, text: "[]" }
-    const before = ghCalls().length
     const after = await restoreWorktree(dir, () => detectPrLink())
     expect(after).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/7", prNumber: 7 })
-    expect(ghCalls().length).toBe(before)
-  })
-
-  // The repro for the stale last-positive fallback: after a branch switch a
-  // failed lookup must not advertise the previous branch's link.
-  test("does not advertise the previous branch's link after a failed switch", async () => {
-    const dir = await makeRepo()
-    outcome = { code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]) }
-
-    const link = await restoreWorktree(dir, () => detectPrLink())
-    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
-
-    const git = simpleGit(dir)
-    await git.checkoutLocalBranch("feature/y")
-
-    outcome = { code: 1, text: "API rate limit exceeded" }
-    const after = await restoreWorktree(dir, () => detectPrLink())
-    expect(after).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
   })
 
   test("drops a recorded URL for another repo once the identity is known", async () => {
     const dir = await makeRepo()
 
     recordPrLinkText(dir, "mentions https://github.com/other/repo/pull/5")
-    outcome = { code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]) }
 
-    const link = await restoreWorktree(dir, () => detectPrLink())
-    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
-    expect(ghCalls().length).toBe(1)
+    expect(await restoreWorktree(dir, () => detectPrLink())).toBeUndefined()
+    expect(ghCalls().length).toBe(0)
   })
 
-  test("bounds the per-worktree state and evicts the least recent worktree", async () => {
-    const dir = await makeRepo()
-    recordPrLinkText(dir, "https://github.com/owner/repo/pull/7")
-    for (let i = 0; i < 128; i++) {
-      recordPrLinkText(path.join(os.tmpdir(), `pr-link-other-${i}`), `https://github.com/owner/repo/pull/${i + 1}`)
-    }
-
-    outcome = { code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]) }
-    const link = await restoreWorktree(dir, () => detectPrLink())
-
-    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
-  })
-
-  // The retryable unhappy state: a foreign-host MR URL must not stick to the
-  // branch, and a later correct URL in the same worktree still links normally.
+  // A foreign-host MR URL must not stick to the branch, and a later correct URL
+  // in the same worktree still links normally.
   test("rejects another host's GitLab MR URL then accepts the own-host URL", async () => {
     const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
     await restoreWorktree(dir, () => detectPrLink())
@@ -445,10 +616,28 @@ describe("detectPrLink", () => {
     expect(ghCalls().length).toBe(0)
   })
 
-  // The happy state across processes: the link a previous process persisted
-  // from the session's own output is returned by a later `detectPrLink` (the
-  // CLI's `kilo pr status`), with no `gh` spawn for a GitLab or Bitbucket host.
-  test("persisted link: GitLab worktree returns the record with no gh call", async () => {
+  // A cleared polled link for the matching branch reports cleared and is kept,
+  // so the heartbeat can ingest the null triple that clears the app row.
+  test("a cleared record for the branch reports cleared and is kept", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    await writeRecorded(dir, { key: "origin/feature/gl", cleared: true, source: "poll" })
+
+    expect(await restoreWorktree(dir, () => detectPrLinkState())).toEqual({ cleared: true })
+    expect(await readRecordedPrLink(dir)).toEqual({ key: "origin/feature/gl", cleared: true, source: "poll" })
+  })
+
+  test("a cleared record for another branch is dropped like a stale link", async () => {
+    const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
+    await writeRecorded(dir, { key: "origin/other", cleared: true, source: "poll" })
+
+    expect(await restoreWorktree(dir, () => detectPrLinkState())).toEqual({})
+    expect(await readRecordedPrLink(dir)).toBeUndefined()
+  })
+
+  // The happy state across processes: the link a previous process persisted from
+  // the session's own output is returned by a later `detectPrLink` (the CLI's
+  // `kilo pr status`), with no host query for a GitLab or Bitbucket host.
+  test("persisted link: GitLab worktree returns the record with no host query", async () => {
     const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
     await writeRecorded(dir, {
       key: "origin/feature/gl",
@@ -468,7 +657,7 @@ describe("detectPrLink", () => {
     expect(ghCalls().length).toBe(0)
   })
 
-  test("persisted link: Bitbucket worktree returns the record with no gh call", async () => {
+  test("persisted link: Bitbucket worktree returns the record with no host query", async () => {
     const dir = await makeRepo("feature/bb", "https://bitbucket.org/team/repo.git")
     await writeRecorded(dir, {
       key: "origin/feature/bb",
@@ -535,7 +724,7 @@ describe("detectPrLink", () => {
     expect(ghCalls().length).toBe(0)
   })
 
-  test("persisted link: GitHub record is returned without spawning gh", async () => {
+  test("persisted link: GitHub record is returned without querying the host", async () => {
     const dir = await makeRepo()
     await writeRecorded(dir, {
       key: "origin/feature/x",
@@ -555,7 +744,7 @@ describe("recordPrLinkText", () => {
     ghText.mockClear()
   })
 
-  test("records a PR URL from session output without spawning gh", async () => {
+  test("records a PR URL from session output without spawning a process", async () => {
     const dir = await makeRepo()
 
     const link = recordPrLinkText(dir, "Opened https://github.com/owner/repo/pull/7 for this branch")
@@ -576,9 +765,8 @@ describe("recordPrLinkText", () => {
     expect(ghCalls().length).toBe(0)
   })
 
-  test("detectPrLink returns the recorded session-output link before any lookup", async () => {
+  test("detectPrLink returns the recorded session-output link before any check", async () => {
     const dir = await makeRepo()
-    responder = () => ({ code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/99" }]) })
 
     recordPrLinkText(dir, "https://github.com/owner/repo/pull/7")
     const link = await restoreWorktree(dir, () => detectPrLink())
@@ -589,13 +777,12 @@ describe("recordPrLinkText", () => {
 
   test("ignores a session-output URL for a different repository", async () => {
     const dir = await makeRepo()
-    outcome = { code: 0, text: "[]" }
     await restoreWorktree(dir, () => detectPrLink())
 
     expect(recordPrLinkText(dir, "saw https://github.com/other/repo/pull/5")).toBeUndefined()
   })
 
-  test("gitlab worktree records its own MR URL and detectPrLink returns it with zero gh calls", async () => {
+  test("gitlab worktree records its own MR URL and detectPrLink returns it with zero spawns", async () => {
     const dir = await makeRepo("feature/gl", "https://gitlab.example.com/group/sub/proj.git")
 
     const link = recordPrLinkText(dir, "Opened https://gitlab.example.com/group/sub/proj/-/merge_requests/3")
@@ -688,8 +875,7 @@ describe("recordPrLinkText", () => {
   })
 
   // A GitHub Enterprise worktree still links the PR URL its session printed,
-  // without `gh`: the REST lookup is github.com's alone, the session output is
-  // not.
+  // without a host query.
   test("a GitHub Enterprise remote still records its own session-output PR URL", async () => {
     const dir = await makeRepo("feature/ghe", "git@github.mycorp.example:owner/repo.git")
     await restoreWorktree(dir, () => detectPrLink())
@@ -719,7 +905,6 @@ describe("recordPrLinkText", () => {
   // still fold a leading `www.` so a `www` link matches its bare worktree host.
   test("records a www link for a bare-host worktree", async () => {
     const dir = await makeRepo()
-    outcome = { code: 0, text: "[]" }
     await restoreWorktree(dir, () => detectPrLink())
 
     const link = recordPrLinkText(dir, "see https://www.github.com/owner/repo/pull/7")
@@ -731,16 +916,25 @@ describe("recordPrLinkText", () => {
   })
 
   // A remote ending `…/proj.git/` must resolve to the `proj` project, not
-  // `proj.git`, or the worktree's own URL never matches and the `gh` REST call
-  // asks for `repos/owner/repo.git/pulls`.
+  // `proj.git`, or the worktree's own URL never matches.
   test("remote with a trailing slash after .git resolves its own URL", async () => {
     const dir = await makeRepo("feature/slash", "https://github.com/owner/repo.git/")
-    outcome = { code: 0, text: "[]" }
     await restoreWorktree(dir, () => detectPrLink())
-    expect(ghCalls()[0]).toEqual(["gh", "api", "repos/owner/repo/pulls?head=owner%3Afeature%2Fslash&state=all"])
 
     const link = recordPrLinkText(dir, "see https://github.com/owner/repo/pull/7")
     expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/7", prNumber: 7 })
+  })
+
+  // A `url.*.insteadOf` rewrite changes what `git remote get-url` prints; the
+  // declared URL must still name the worktree's own host.
+  test("a url.insteadOf rewrite does not hide the declared host", async () => {
+    const dir = await makeRepo("feature/rewrite", "https://github.com/owner/repo.git")
+    const git = simpleGit(dir)
+    await git.raw(["config", "url.git@github-work:owner/repo.git.insteadOf", "https://github.com/owner/repo.git"])
+
+    const link = recordPrLinkText(dir, "Opened https://github.com/owner/repo/pull/7")
+    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/7", prNumber: 7 })
+    expect(await restoreWorktree(dir, () => detectPrLink())).toEqual(link)
   })
 })
 
