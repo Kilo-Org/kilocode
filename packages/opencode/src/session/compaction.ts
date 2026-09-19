@@ -503,9 +503,9 @@ const layer = Layer.effect(
       if (fallback === "continue") {
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
         const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
-        // Test-double guard, not production logic: the real processor stamps
-        // time.completed in cleanup before "continue", so only the stub skips it.
-        if (!visible && processor.message.time.completed !== undefined) {
+        // A processor that returns "continue" without rendering any text
+        // answered with nothing; fail retryably instead of replacing the session.
+        if (!visible) {
           processor.message.error = new MessageV2.APIError({
             message: KiloCompactionChunks.EMPTY_SUMMARY,
             isRetryable: true,
