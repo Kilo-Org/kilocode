@@ -7,14 +7,15 @@ import { getUserDiffStyle, setUserDiffStyle } from "../../src/review-settings"
 const store: Record<string, unknown> = {}
 const original = vscode.workspace.getConfiguration
 
-function installConfig(values: Record<string, unknown> = {}) {
+function installConfig(values: Record<string, unknown> = {}, workspace: Record<string, unknown> = {}) {
   for (const key of Object.keys(store)) delete store[key]
   Object.assign(store, values)
   ;(vscode.workspace as unknown as { getConfiguration: typeof vscode.workspace.getConfiguration }).getConfiguration =
     () =>
       ({
         get: <T>(key: string, fallback?: T) => (key in store ? (store[key] as T) : fallback),
-        inspect: (key: string) => (key in store ? { globalValue: store[key] } : undefined),
+        inspect: (key: string) =>
+          key in store ? { globalValue: store[key], workspaceValue: workspace[key] } : undefined,
         update: async (key: string, value: unknown) => {
           store[key] = value
         },
@@ -46,18 +47,9 @@ describe("diff style persistence", () => {
   })
 
   test("getUserDiffStyle reads the global layer, not workspace-local overrides", () => {
-    // Mock a workspace-level value differing from the global one; only the
-    // global layer may win, matching the inspect().globalValue read.
-    ;(vscode.workspace as unknown as { getConfiguration: typeof vscode.workspace.getConfiguration }).getConfiguration =
-      () =>
-        ({
-          get: <T>(key: string, fallback?: T) => (store[key] as T) ?? fallback,
-          inspect: (key: string) => ({ globalValue: store[key], workspaceValue: store[`${key}#ws`] }),
-          update: async (key: string, value: unknown) => {
-            store[key] = value
-          },
-        }) as vscode.WorkspaceConfiguration
-    installConfig({ "diff.style": "split", "diff.style#ws": "unified" })
+    // Global split, workspace-local unified: only the global layer may win,
+    // matching the inspect().globalValue read.
+    installConfig({ "diff.style": "split" }, { "diff.style": "unified" })
     expect(getUserDiffStyle()).toBe("split")
   })
 })
