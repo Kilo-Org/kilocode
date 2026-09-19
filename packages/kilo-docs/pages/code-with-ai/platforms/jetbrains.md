@@ -16,7 +16,9 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
+- **Agent Behavior → Kilo Swarm** — turn the shared agent board on or off. Kilo Swarm is on by default; turn it off to stop a session and its task subagents, including nested ones, from exchanging messages on a shared board. See [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) for what the board is for.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
+- **Marketplace** - browse, search, and install marketplace agents, MCP servers, and skills from inside the IDE. Filter by item type, by installed items, or by items relevant to the current workspace, and review the destination, prerequisites, and security note before installing. The Agents, MCP Servers, and Skills settings pages link here too. See [Marketplace](/docs/customize/marketplace) for what each item type adds, install scopes, and the files an install changes.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
 
 ## Chat and worktrees
@@ -27,6 +29,12 @@ Use **Chat** for the current workspace and **Agents** to manage parallel tasks i
 - **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. This action is also available from the main checkout's session list.
 - Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it and drag worktree rows to reorder them.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
+
+### Leftover worktree folders
+
+Kilo creates every managed worktree under `.kilo/worktrees/`. When a worktree is removed outside Kilo, a deletion is interrupted, or a tool writes into the folder after git stops tracking it, the folder stays on disk while git no longer lists it as a worktree. Kilo shows a warning banner above the worktree list with the number of leftover folders and how much disk they use. While the total is still being measured the banner says so, and if the measurement fails it reports the count alone instead of claiming a size.
+
+Choose **Resolve…** to review the folders before deleting anything. The dialog lists each folder's full path, its size, and whether it still contains a git checkout. A folder that contains a checkout may hold uncommitted work, so it starts unselected and you have to opt in to deleting it. Deleting removes the selected folders from disk without going through the Trash, runs in the background so the panel never freezes, and reports how many were removed in a notification. It does not touch any branch or active worktree. Closing a managed worktree is also more thorough than before: JetBrains clears its backend state and removes its snapshot repository, so a worktree delete does not leave that data behind.
 
 ### Worktree setup scripts
 
@@ -66,6 +74,8 @@ Worktree rows separate committed changes against the base branch from uncommitte
 ## Session controls
 
 Right-click in a session or open the prompt bar's more menu to compare changes, copy the session ID, or share the conversation. **Share Session** creates a public link; **Stop Sharing** revokes it. Sharing requires signing in to Kilo and must be allowed by your configuration. The right-click menu also includes **Stop Session**. Its **Auto-Approve** toggle applies across Kilo sessions in the IDE, not just the current conversation.
+
+When a session has [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) messages, a **Board** icon appears in its header. Open it, or choose **View Kilo Swarm** from the session menu, to page through the board messages, open a participating subagent in a read-only tab, and reset the board. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for ownership and reset rules.
 
 If a turn fails, use **Retry** after resolving the problem or selecting a different model or agent. Retry uses the current selections. A turn you stop yourself is marked as stopped, not as a failure.
 

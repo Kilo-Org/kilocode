@@ -66,6 +66,18 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 3. Click `Add Your First Key`, select the provider, and paste your API key.
 4. Save.
 
+### OpenAI (ChatGPT subscription)
+
+The BYOK page also has an **OpenAI (ChatGPT subscription)** card for connecting without an API key. Choose **Sign in with ChatGPT** and complete the OpenAI consent flow; the card switches to a connected state. While the connection is enabled, eligible OpenAI model requests use your ChatGPT subscription ahead of other billing paths.
+
+The connection belongs to the account you connect it from, not to your Kilo user account as a whole. Connecting on your personal account does not sign the subscription in for an organization, and connecting it to one organization does not connect it to another. To use the same subscription in more than one account, connect it separately from each account's BYOK page.
+
+In an organization, the organization's BYOK page shows the ChatGPT card to every member so each member can connect their own subscription. Your connection is never shared with teammates: a member without their own connection keeps the normal gateway billing path. Managing pasted API keys for the organization still requires owner or billing manager access.
+
+The models that the ChatGPT connection can serve show the `BYOK` badge in the model picker, the same as a pasted API key. Because those requests bill your ChatGPT plan rather than Kilo credits, they are not blocked by a zero Kilo credit balance. Abuse and organization policy checks still apply.
+
+If the connection fails or expires, the card shows a readable message with a reconnect action. Use **Disconnect** to remove the stored connection for the account you are viewing: disconnecting on your personal BYOK page clears only the personal connection, while a connection you made for an organization is removed from that organization's BYOK page. The OpenAI API-key entry on the same page stays available and is labeled **OpenAI API key**.
+
 ### AWS Bedrock configuration
 
 AWS Bedrock requires JSON credentials. Use one of these two formats; don't mix fields from both.

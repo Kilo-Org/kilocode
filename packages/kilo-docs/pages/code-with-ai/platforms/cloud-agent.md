@@ -103,6 +103,14 @@ Group worktrees into folders in the sidebar. Folders are private to you, not sha
 - Use the folder menu to rename it, change its color, move it up or down, or delete it. Deleting a folder returns its worktrees to **Ungrouped** without deleting them.
 - Click a folder's header to collapse or expand it.
 
+## Forking a session
+
+You can fork a Cloud Agent session into a new Cloud Agent session. The fork clones the source session's transcript into a new session that inherits its repository, model, mode, and custom agents, then opens the new session so you can continue from there.
+
+Choose **Fork to a new Cloud Agent session** from a session's actions (Share/Fork) menu or from the sessions list. The action appears only for Cloud Agent sessions. Opening a read-only session shows the same fork action in its continuation panel.
+
+Forking requires a GitHub or GitLab repository; Bitbucket and unknown platforms are not supported.
+
 ## Reviewing changes
 
 Select **Changes** in the chat header to review the worktree's saved change summary, including file status and lines added and removed. The panel shows the comparison's base branch and when the summary was saved. Refresh the panel to load the latest saved summary. Large summaries can be partial, with some files or line counts omitted.
@@ -110,6 +118,16 @@ Select **Changes** in the chat header to review the worktree's saved change summ
 Select a file to open its saved diff and, when available, full contents in a read-only tab. Reloading reads the latest saved revision without starting the workspace.
 
 These are saved snapshots, not a live view of the checkout. Diffs or contents may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
+
+### Commits in the transcript
+
+When automatic commit and push is enabled, each commit the agent creates in the managed workspace also appears in the chat as a subdued transcript entry after the turn that produced it. Hover over or tap the entry to see its metadata, including the commit message and its push status. Commits are tracked by identity, so replaying a session does not duplicate entries, and the entry reflects the commit that was actually created. Commit entries summarize the commit only; they do not include a historical diff. Use the saved worktree viewer above to inspect file contents.
+
+### Review comments on saved diffs
+
+While a saved diff is open, add a comment to a line or to a selected range of lines. Comments are collected as drafts per worktree, so you can move between files and chats and build up a review before sending. Select the send-review action to deliver all pending comments to the agent as a single message. The message is pinned to the worktree and chat the review was written against, so it reaches the right conversation even after you switch away.
+
+Each draft records the revision it was written against. If the saved diff changes before you send, the editor flags the affected comments as stale and asks you to review them again instead of sending them against the new revision.
 
 ## Agent Environment Profiles
 

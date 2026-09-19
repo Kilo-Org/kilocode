@@ -69,6 +69,10 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 
 The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions. Use `@filename` to attach a file. In the sidebar, `@terminal` includes the active VS Code terminal output. In Agent Manager, it includes the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
+**Messages Kilo sends for you:**
+
+Some messages in the transcript are composed by Kilo rather than typed by you, such as a worktree update from base, an expanded slash-command template, or an editor or terminal code action. These show a **Sent by Kilo** header followed by the prompt's title, so you can tell them apart from your own messages. When an injected prompt is longer than four lines, it collapses to its first paragraph; select **Show prompt** to read the full text. Reverting or editing that turn restores the command name instead of the full template.
+
 **Exporting local transcripts:**
 
 Run `/export` in chat, or open a local session's **History** context menu and choose **Export session transcript**. The save dialog lets you choose the Markdown (`.md`) destination.

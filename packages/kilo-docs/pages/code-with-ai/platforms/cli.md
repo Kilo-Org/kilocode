@@ -183,6 +183,20 @@ Review your code locally before pushing — catch issues early without waiting f
 | `/review <commit-hash>` | Review a specific commit |
 | `/review <PR URL or number>` | Review a pull request |
 
+## Pull Request Linking
+
+When a session's output mentions a GitHub pull request, GitLab merge request, or Bitbucket pull request URL, Kilo links it to the current worktree. The link outlives the session, so a later `kilo pr status` prints the platform and URL instead of `no PR linked`.
+
+| Command | Description |
+|---|---|
+| `kilo pr link <url>` | Link the current worktree to a pull request |
+| `kilo pr unlink` | Clear the linked pull request |
+| `kilo pr status` | Show the linked pull request |
+
+GitLab `/-/merge_requests/N` and Bitbucket `/pull-requests/N` URLs are recognized, with or without a trailing page path such as `/diffs` or `/overview`, and self-hosted GitLab hosts link the same way as `gitlab.com`. GitHub pull requests are also detected through the GitHub CLI when the session did not print a URL; GitLab and Bitbucket links come from the session's own output or from `kilo pr link`. A URL that matches no pull request shape stays plain text, and `kilo pr link` reports `Invalid PR URL` without changing the link.
+
+See the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference#kilo-pr) for the full `kilo pr` command list.
+
 ## Config Reference
 
 Configuration is managed through:
@@ -688,6 +702,15 @@ Add to `~/.config/kilo/config.json`:
 Once enabled, start a CLI session and open [Cloud Agents](https://app.kilo.ai/cloud). Your local session appears in the dashboard. See [Cloud Agent Remote Connections](/docs/code-with-ai/platforms/cloud-agent#remote-connections) for details.
 
 A connected client can start a session in a child folder of the CLI's launch directory, or continue an existing cloud session locally. Requested folders must remain within the launch directory; absolute paths and paths that escape it are rejected.
+
+### Session Logs
+
+`kilo remote` records each session it hosts in two log lines:
+
+- A start line when hosting begins, with the session ID, start time, model, and working directory.
+- An end line when hosting ends, with the same session ID and start time, how long the session ran, and why it ended, such as `detached`, `deleted`, or `shutdown`.
+
+A session the relay refuses is rolled back and gets no start line. Neither line contains credentials, tokens, or prompt text.
 
 ### Requirements
 

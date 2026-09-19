@@ -163,7 +163,7 @@ Some commands must write outside the sandbox boundary. Kilo then shows an escala
 
 ### Git and linked worktrees
 
-`.git` is always read-only inside the sandbox. A mutating git command, such as `git commit`, `git checkout`, or `git worktree add`, must write to `.git` metadata. In a linked worktree, the `.git` file points into the parent repository's `.git` directory. That directory is outside the worktree, so the write is outside the sandbox write boundary. Read-only git commands, such as `git status` or `git log`, do not trigger the prompt.
+`.git` is always read-only inside the sandbox. A mutating git command, such as `git commit`, `git checkout`, or `git worktree add`, must write to `.git` metadata. In a linked worktree, the `.git` file points into the parent repository's `.git` directory. That directory is outside the worktree, so the write is outside the sandbox write boundary. Read-only git commands do not trigger the prompt, including `git status`, `git log`, `git remote -v`, `git stash list`, `git branch -v`, and `git tag -l`.
 
 | Detail | Behavior |
 |---|---|

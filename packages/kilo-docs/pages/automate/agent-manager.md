@@ -300,6 +300,8 @@ Turn the setting off to keep fixes local for manual commit and push. Local draft
 2. Enter a branch name (or let Kilo generate one)
 3. Type your first message, then create the worktree
 
+The prompt also supports `@` mentions for worktree-independent references. Type `@` to reference a model, a past chat, or another worktree. See [Mentions in the New Worktree prompt](/docs/code-with-ai/agents/context-mentions#mentions-in-the-new-worktree-prompt) for the supported entries.
+
 Kilo creates the worktree from the selected project's configured default base branch. In a multi-project workspace, the selected project determines this setting. An explicit base branch selected in the dialog takes precedence. If no default is configured, Kilo falls back to automatic detection of the repository's remote default branch. The agent works in isolation, so your main branch is unaffected.
 
 Explicit branch names preserve slashes and case, such as `feature/MyTask`. The checkout directory can have a different name.
@@ -316,6 +318,13 @@ The new worktree prompt supports slash commands for its configuration options, s
 | `/agents` | `/modes` | Open the agent selector |
 | `/variant` | `/variants`, `/reasoning`, `/thinking` | Open the reasoning effort selector |
 | `/sandbox` | — | Toggle the sandbox for the new worktree |
+| `/project` | — | Open the project selector (multi-project workspaces only) |
+
+The menu also lists server-side commands: custom commands, skills, MCP prompts, and `/goal`. When your first prompt starts with one of them, Kilo runs that command on the new session instead of sending the text as a literal message, so the command's real template or skill is used.
+
+Session and navigation commands such as `/compact`, `/export`, `/review`, `/memory`, `/update-from-base`, `/help`, `/settings`, `/remote`, `/reload`, and `/caffeinate` are not offered here. `/init`, `/resume-claude`, and `/resume-codex` are also hidden because they are not worktree-independent. Plain prompts are still sent as ordinary messages.
+
+Submitting `/goal` alone starts a two-step flow instead of creating the worktree immediately. The prompt clears, the goal composer appears in the prompt box, and the button becomes **Start goal**. Type the objective, then submit to start the session with that goal.
 
 Navigate the menu with the arrow keys, select with `Enter` or `Tab`, and close it with `Escape`. Focus returns to the prompt after a selection or cancellation. `/agents` appears only when multiple agents are available, `/variant` only when the selected model has reasoning variants, and `/sandbox` only when sandbox controls are enabled.
 
@@ -345,6 +354,8 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Hover a session in history for actions to open it in a new worktree or move it to the project's Local tabs.
 - When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
+
+A session that scheduled a wakeup to resume itself later stays idle while the timer is pending. Those sessions show a neutral clock icon instead of the idle indicator on their tab, worktree row, the Local row, and the VS Code editor tab title. The icon clears when the wakeup fires or is cancelled. A pending wakeup does not count as active, so it never starts the busy spinner or blocks worktree deletion.
 
 File mentions, clickable file links, review-comment file links, file-link validation, and native VS Code opening resolve against the referenced session's directory or worktree. If a session ID is present in multiple projects, Kilo rejects the unqualified reference rather than choosing an arbitrary project.
 
@@ -421,7 +432,7 @@ Use `Cmd+T` / `Ctrl+T` in the panel, or `mode: "local"` with a selected `worktre
 - **Sessions in different worktrees:** Use targeted prompts plus commits, diffs, or pull requests to pass changes between isolated checkouts. Files are not shared automatically.
 - **Task descendants:** A `task` child belongs to the session that launched it. Its Kilo Swarm board is scoped to that session tree, not to every Agent Manager session in the project.
 
-Messages sent by another agent show **Sent by Kilo from another session**. Select the source link to open that session. If it is closed, the message shows **Session not open** instead.
+Messages sent by another agent show **Sent by Kilo from another session**. Select the source link to open that session. If it is closed, the message shows **Session not open** instead. Prompts Kilo composes for the current session, such as a worktree update from base or an expanded slash-command template, show a **Sent by Kilo** header followed by the prompt's title instead.
 
 ## Sections
 

@@ -519,6 +519,10 @@ When a connected MCP server provides instructions, Kilo adds them to the model c
 
 Resource-capable servers also make the `list_mcp_resources`, `list_mcp_resource_templates`, and `read_mcp_resource` tools available to the agent. Resource templates describe parameterized URIs; the agent fills in a template, then reads the resulting resource URI. Resource listing and reads use Kilo's normal read approval flow.
 
+### Reduce MCP tool definition overhead
+
+Every connected MCP tool is sent to the model as its own tool definition, so a server that exposes many tools consumes context before the conversation starts. Enable **Programmatic Tool Calling** under **Settings → Experimental** to let the agent call MCP tools from a confined JavaScript program and discover them on demand instead. It is off by default. See [Programmatic tool calling](/docs/getting-started/settings#programmatic-tool-calling).
+
 ## Troubleshooting MCP Servers
 
 {% tabs %}

@@ -45,6 +45,16 @@ In Agent Manager, choose **Worktrees** to search other worktrees by name, branch
 
 Choose **Model** to insert an inline `@provider/model` reference. Use it to request a particular model for a subagent or Agent Manager session. It does not attach a file or change the current session's model. Subagent overrides require [Task Subagent Model Selection](/docs/getting-started/settings#task-subagent-model-selection).
 
+### Mentions in the New Worktree prompt
+
+The Agent Manager's **New Worktree** prompt supports a restricted set of mentions, because the new worktree does not exist until you create it. Type `@` to choose:
+
+- **Model** inserts an inline `@provider/model` reference. It stays plain text and never becomes a file attachment.
+- **Past chats** attaches the selected session's chat history when the new session starts.
+- **Worktrees** attaches the selected worktree's location and session metadata.
+
+File, folder, opened-file, terminal, and git-changes mentions are not offered here, because resolving them would require the worktree that does not exist yet. Inserted mentions are highlighted in the prompt, and the prompt keeps multiple spaces and newlines. Press `Enter` for a newline and `Cmd+Enter` (`Ctrl+Enter` on Windows and Linux) to create the worktree.
+
 ### Drag and Drop
 
 You can also add file mentions by dragging and dropping:

@@ -5,7 +5,7 @@ description: "Configure Kilo Code and connect to your AI providers"
 
 # Authentication
 
-When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
+When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, Google, Apple, GitHub, GitLab, Discord, LinkedIn, Anaconda, or ChatGPT. You can also sign in through your organization's single sign-on. Signing in with ChatGPT uses your OpenAI account: a verified ChatGPT account signs in to the matching existing Kilo account, and an unknown account creates a new one.
 
 ## Quick Start with Kilo Account
 

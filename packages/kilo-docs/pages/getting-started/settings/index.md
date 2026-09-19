@@ -246,6 +246,7 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
+- **Programmatic Tool Calling** - let the agent call MCP tools from a confined JavaScript program instead of exposing every MCP tool definition (off by default)
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
@@ -291,3 +292,11 @@ The migration imports:
 - Top-level MCP server definitions from `~/.claude.json`, disabled until you enable them.
 
 Existing Kilo content takes precedence; conflicts and unsupported items are skipped. Your original Claude files are not changed or deleted. After the attempt, Kilo stops loading global Claude instructions and skills as a fallback, but project-level compatibility such as a repository's `CLAUDE.md` is unaffected. A notification reports the outcome and points to a receipt with imported, skipped, and failed items.
+
+### Programmatic tool calling
+
+Enable **Programmatic Tool Calling** in **Settings → Experimental**, or set `experimental.code_mode` to `true` in `kilo.jsonc`. It is off by default.
+
+Every connected MCP tool is normally sent to the model as its own tool definition, so a server that exposes many tools consumes context before the conversation starts. With Programmatic Tool Calling, the agent receives a single `execute` tool instead. It writes a confined JavaScript program that calls MCP tools, sequences calls, filters results, and discovers remaining tools on demand. Use it when you have many MCP tools connected and want to reduce context usage.
+
+Programmatic Tool Calling is unavailable while network access is restricted, because MCP tool calls are blocked in restricted sessions. See [Network restrictions](/docs/getting-started/settings/sandboxing#network-restrictions).

@@ -68,6 +68,14 @@ Send a message while Kilo is working to queue it for processing in order. To rev
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
 
+## Pasting large text
+
+Pasting a large block of text into the prompt input collapses it into a `[Pasted ~N lines]` chip instead of filling the composer. The chip appears when a plain-text paste is 15 lines or more, or more than 4,000 characters. Click the chip, copy the message, or send it to restore the exact content — Kilo never sends the placeholder in place of your text.
+
+Chips are stored with the draft, so they stay expandable when you switch sessions. Press `Backspace` at a chip to remove it in one keystroke, and the arrow keys skip over it. This applies to the sidebar, Agent Manager chat, and Kilo editor tabs, and short pastes, images, and pasted files keep their existing behavior.
+
+If you would rather edit pasted text directly in the composer, set `experimental.disable_paste_summary` to `true` in `kilo.jsonc`. The CLI collapses large pastes the same way; see [Pasting large text](/docs/code-with-ai/platforms/cli#pasting-large-text).
+
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.

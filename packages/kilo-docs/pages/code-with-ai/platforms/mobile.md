@@ -23,6 +23,7 @@ The mobile app lets you:
 - Track a session's [goal](/docs/code-with-ai/agents/goals) from a fixed section under the session header, and start or control one with `/goal`.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
+- Copy a link to the message on screen from the session header, then open it on the web or another device to continue from the same position.
 - Review GitHub pull requests, GitLab merge requests, and Bitbucket pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
@@ -40,6 +41,18 @@ Four actions are available from outside the app. On iOS they appear in the **Sho
 **Start agent** uses the same create path as the in-app new-session screen, including your repository, model preference, and mode. An unsupported GitHub or GitLab repository reports a repository-specific reason and a next action, and a start-agent request with no prompt is refused as prompt-required instead of being left to time out.
 
 **Open session** and **Open pull request** open the same screens as their in-app controls. A pull request link that is not a review link reports the app's not-a-pull-request message and opens nothing.
+
+### App icon shortcuts and Quick Settings tile
+
+On Android, long-press the Kilo app icon to open the [app shortcuts](https://developer.android.com/guide/topics/ui/shortcuts) **New agent**, **Needs input**, and **Open last session**. On iOS, long-press the app icon to see the same actions as [Home Screen Quick Actions](https://developer.apple.com/design/human-interface-guidelines/home-screen-quick-actions). Each opens the same screen as the matching in-app control.
+
+- **New agent** opens the new-agent composer.
+- **Needs input** opens the session that is waiting for input. It appears only while at least one session is waiting and disappears again when nothing is waiting.
+- **Open last session** opens the session you last opened. It is available after a cold start even when your account identity resolves after the chat screen first renders.
+
+On Android, the Kilo [Quick Settings tile](https://developer.android.com/develop/ui/views/quicksettings-tiles) mirrors this state. While a session is waiting, the tile reads **Needs input** and opens the chat of the session that has waited longest; with nothing waiting, it reads **New agent** and opens the new-agent composer. If the backend is unreachable, the tile still opens the last published waiting session and shows no error of its own. Signing out removes **Needs input** and **Open last session** from the app shortcuts and the tile.
+
+App shortcuts require Android 7.1 (API 25) or later; the Quick Settings tile works on Android 7.0 (API 24) or later.
 
 ## Finding sessions
 
