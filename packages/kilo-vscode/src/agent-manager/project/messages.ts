@@ -6,14 +6,18 @@
  * projects and disabled experiments leave state untouched.
  */
 
-import simpleGit from "simple-git"
-import type { GitOps } from "../GitOps"
-import type { AgentManagerInMessage } from "../types"
+import { GitOps } from "../GitOps"
+import type { Host } from "../host"
+import type { AgentManagerInMessage, AgentManagerOutMessage } from "../types"
 import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
-import { projectIdFor, resolveProjectRoot, samePath } from "./paths"
+import { canonicalizePath, projectIdFor, resolveProjectRoot, samePath } from "./paths"
 import type { SidebarTarget, SessionRef } from "./route"
+import { cloneProject, createProject, defaultParent, onboard, type Onboarding } from "./onboarding"
+import { runner } from "./prepare"
+
+const pending = new WeakSet<ProjectMessageDeps>()
 
 /** Route one session to a directory inside a project via the shared session provider. */
 export function routeProjectSession(
@@ -39,7 +43,8 @@ export interface ProjectMessageDeps {
   /** Whether the multi-project experiment is enabled. */
   enabled: () => boolean
   /** Show a folder picker; resolves undefined when cancelled. */
-  pickFolder: () => Promise<string | undefined>
+  pickFolder: Host["pickFolder"]
+  onboarding: Onboarding["host"]
   /** Re-initialize provider state for a freshly activated context. */
   activate: (ctx: ProjectContext) => void
   /** Initialize an expanded background context and push its state. */
@@ -50,12 +55,14 @@ export interface ProjectMessageDeps {
   pushState?: (ctx: ProjectContext) => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: SidebarTarget) => void
+  /** Post an outbound message to the webview. */
+  post: (message: AgentManagerOutMessage) => void
   /** Show a user-facing error. */
   error: (message: string) => void
   /** Open the Kilo Settings editor, optionally on a tab and project. */
   openSettings: (tab?: string, projectId?: string) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
-  ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
+  ready: (ctx: ProjectContext, options?: { warm?: boolean }) => Promise<ProjectInitResult>
   /** Route one session to a directory inside a project (session override + project route). */
   routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
   git?: GitOps
@@ -74,6 +81,26 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
   }
   if (m.type === "agentManager.addProject") {
     await addProject(deps)
+    return true
+  }
+  if (m.type === "agentManager.cloneProject") {
+    await cloneNewProject(m.url, m.parent, deps)
+    return true
+  }
+  if (m.type === "agentManager.createProject") {
+    await createNewProject(m.parent, m.name, deps)
+    return true
+  }
+  if (m.type === "agentManager.requestProjectParent") {
+    await postParent(deps)
+    return true
+  }
+  if (m.type === "agentManager.pickProjectParent") {
+    const picked = await deps.pickFolder({
+      defaultPath: m.defaultPath || undefined,
+      title: "Choose the parent folder for the project",
+    })
+    deps.post({ type: "agentManager.projectParent", parent: picked })
     return true
   }
   if (m.type === "agentManager.removeProject") {
@@ -111,7 +138,7 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
-  const result = await deps.ready(ctx)
+  const result = await deps.ready(ctx, { warm: true })
   if (!result.current || !result.ok) {
     deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
     deps.push()
@@ -147,7 +174,7 @@ async function openSessionLocally(projectId: string, sessionId: string, deps: Pr
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
-  const result = await deps.ready(ctx)
+  const result = await deps.ready(ctx, { warm: true })
   if (!result.current || !result.ok) {
     deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
     deps.push()
@@ -202,46 +229,92 @@ function disabled(deps: ProjectMessageDeps): boolean {
   return true
 }
 
+function onboardingDeps(deps: ProjectMessageDeps, git: GitOps): Onboarding {
+  return {
+    host: deps.onboarding,
+    pickFolder: deps.pickFolder,
+    primary: deps.contexts.pinned()?.root,
+    git,
+    enabled: deps.enabled,
+    registered: (dir) => Boolean(deps.registry.get(projectIdFor(canonicalizePath(dir)))),
+  }
+}
+
 async function addProject(deps: ProjectMessageDeps): Promise<void> {
+  await attachPrepared((git) => onboard(onboardingDeps(deps, git)), deps)
+}
+
+async function cloneNewProject(url: string, parent: string, deps: ProjectMessageDeps): Promise<void> {
+  await attachPrepared((git) => cloneProject(url, parent, onboardingDeps(deps, git)), deps)
+}
+
+async function createNewProject(parent: string, name: string, deps: ProjectMessageDeps): Promise<void> {
+  await attachPrepared((git) => createProject(parent, name, onboardingDeps(deps, git)), deps)
+}
+
+/** Post the canonical parent folder for a new project: the primary checkout's parent. */
+async function postParent(deps: ProjectMessageDeps): Promise<void> {
   if (disabled(deps)) return
-  const dir = await deps.pickFolder()
-  if (!dir) return
-  // resolveProjectRoot (not resolveGitRoot) so a folder inside a linked worktree
-  // registers the primary checkout and cannot duplicate an existing project.
-  const git = deps.git
-  const root = await resolveProjectRoot(
-    dir,
-    git
-      ? async (cwd, args) => {
-          const result = await git.execGit(args, cwd)
-          if (result.code !== 0) throw new Error(result.stderr)
-          return result.stdout
-        }
-      : (cwd, args) => simpleGit(cwd).raw(args),
-  )
-  if (!root) {
-    deps.error("The selected folder is not inside a Git repository.")
-    return
-  }
-  const pinned = deps.contexts.pinned()
-  if (pinned && samePath(pinned.root, root)) {
-    deps.error("That repository is already the workspace project.")
-    return
-  }
-  const id = projectIdFor(root)
-  if (deps.registry.get(id)) {
-    deps.error("That repository is already registered as a project.")
-    return
-  }
+  const git = deps.git ?? new GitOps({ log: deps.log })
   try {
-    await deps.registry.add({ id, root })
+    deps.post({
+      type: "agentManager.projectParent",
+      parent: await defaultParent(deps.contexts.pinned()?.root, git),
+    })
   } catch (err) {
-    deps.log("addProject: registry write failed:", err)
-    deps.error("Failed to save the project. See the Agent Manager output for details.")
-    return
+    deps.log("defaultProjectParent failed:", err)
+    deps.post({ type: "agentManager.projectParent" })
+  } finally {
+    if (!deps.git) git.dispose()
   }
-  deps.log(`addProject: registered ${root}`)
+}
+
+/** Prepare a root through a native flow, then register and select it. */
+async function attachPrepared(
+  prepare: (git: GitOps) => Promise<string | undefined>,
+  deps: ProjectMessageDeps,
+): Promise<void> {
+  if (disabled(deps) || pending.has(deps)) return
+  pending.add(deps)
+  const git = deps.git ?? new GitOps({ log: deps.log })
+  let root: string | undefined
+  try {
+    root = await prepare(git)
+    if (root) await attach(root, deps, git)
+  } catch (err) {
+    deps.log("addProject failed:", err)
+    const message = err instanceof Error ? err.message : "Failed to add the project."
+    deps.error(
+      root
+        ? `Could not add the project at ${root}. The repository has been kept; use Open local folder to retry. ${message}`
+        : message,
+    )
+  } finally {
+    pending.delete(deps)
+    if (!deps.git) git.dispose()
+  }
+}
+
+/** Register a prepared root, then select it without warming a worktree of its own. */
+async function attach(root: string, deps: ProjectMessageDeps, git: GitOps): Promise<void> {
+  root = canonicalizePath(root)
+  if (!deps.enabled())
+    throw new Error(
+      "Multi-project Agent Manager was disabled. Enable it and use Open local folder to attach this project.",
+    )
+  const pinned = deps.contexts.pinned()
+  const primary = pinned && (await resolveProjectRoot(pinned.root, runner(git)))
+  const id = pinned && samePath(primary ?? pinned.root, root) ? pinned.id : projectIdFor(root)
+  const existing = id === pinned?.id || Boolean(deps.registry.get(id))
+  if (!existing) await deps.registry.add({ id, root })
+  await deps.registry.setExpanded(id, true)
+  const ctx = deps.contexts.expand(id)
+  if (!ctx) throw new Error("The project is unavailable.")
+  const result = await deps.ready(ctx, { warm: false })
   deps.push()
+  if (!result.current || !result.ok || !deps.enabled()) throw new Error("Expand the project to retry initialization.")
+  finish({ projectId: id, kind: "local" }, deps)
+  if (existing) deps.onboarding.notify("info", `Opened the existing project at ${root}.`)
 }
 
 async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void> {
@@ -260,6 +333,7 @@ function selectProject(id: string, deps: ProjectMessageDeps): void {
     return
   }
   deps.activate(ctx)
+  ctx.warmPool()
   deps.push()
 }
 
@@ -273,7 +347,10 @@ async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDe
   await deps.registry.setExpanded(id, expanded)
   if (expanded) {
     const next = deps.contexts.expand(id)
-    if (next) deps.expand(next)
+    if (next) {
+      await deps.ready(next, { warm: true })
+      deps.expand(next)
+    }
   }
   if (!expanded) deps.contexts.collapse(id)
   deps.push()

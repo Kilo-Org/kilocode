@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test"
+import { afterEach, beforeEach, describe, it, expect } from "bun:test"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
@@ -11,14 +11,60 @@ import { projectIdFor } from "../../src/agent-manager/project/paths"
 import type { AgentManagerInMessage } from "../../src/agent-manager/types"
 
 const WORKSPACE = "/repo/main"
+const directories: string[] = []
+let environment: NodeJS.ProcessEnv
 
-function gitRepo(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-am-msg-"))
-  execFileSync("git", ["init", "-q", dir])
-  return fs.realpathSync(dir)
+beforeEach(() => {
+  environment = { ...process.env }
+  const config = path.join(directory(), "gitconfig")
+  fs.writeFileSync(
+    config,
+    "[user]\nname = Test\nemail = test@example.com\n[commit]\ngpgsign = false\n[init]\ntemplateDir =\n",
+  )
+  process.env.GIT_CONFIG_GLOBAL = config
+  process.env.GIT_CONFIG_NOSYSTEM = "1"
+  process.env.GIT_AUTHOR_NAME = "Test"
+  process.env.GIT_AUTHOR_EMAIL = "test@example.com"
+  process.env.GIT_COMMITTER_NAME = "Test"
+  process.env.GIT_COMMITTER_EMAIL = "test@example.com"
+})
+
+afterEach(() => {
+  for (const key of Object.keys(process.env)) {
+    if (!(key in environment)) delete process.env[key]
+  }
+  Object.assign(process.env, environment)
+  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+})
+
+function directory() {
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "kilo-am-msg-")))
+  directories.push(dir)
+  return dir
 }
 
-function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps } = {}) {
+function gitRepo(dir = directory()): string {
+  execFileSync("git", ["-c", "init.templateDir=", "init", "-q", dir])
+  execFileSync(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "--allow-empty",
+      "-qm",
+      "Initial commit",
+    ],
+    { cwd: dir },
+  )
+  return dir
+}
+
+function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps; trusted?: boolean } = {}) {
   let stored: unknown
   let pickResult: string | undefined
   const storage: RegistryStorage = {
@@ -41,20 +87,45 @@ function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps } = {
     error: [] as string[],
     pick: 0,
     ready: [] as string[],
+    selected: [] as string[],
+    confirm: [] as string[],
+    notifications: [] as string[],
+    inputs: [] as string[],
+    answers: [] as boolean[],
+    clone: [] as string[][],
+    folders: [] as Parameters<ProjectMessageDeps["pickFolder"]>[0][],
+    posts: [] as Array<{ type: string; parent?: string }>,
     readyResult: { ok: true, refsFixed: 0, current: true } as { ok: boolean; refsFixed: number; current: boolean },
   }
   const deps: ProjectMessageDeps = {
     registry,
     contexts,
     enabled: () => opts.enabled ?? true,
-    pickFolder: async () => {
+    pickFolder: async (input) => {
       calls.pick++
+      calls.folders.push(input)
       return pickResult
+    },
+    onboarding: {
+      input: async () => calls.inputs.shift(),
+      confirm: async (message) => {
+        calls.confirm.push(message)
+        return calls.answers.shift() ?? false
+      },
+      cloneRepository: async (url, parent) => {
+        calls.clone.push([url, parent])
+        return pickResult
+      },
+      isTrusted: () => opts.trusted ?? true,
+      notify: (_kind, message) => calls.notifications.push(message),
     },
     activate: (ctx) => calls.activate.push(ctx.id),
     expand: (ctx) => calls.expand.push(ctx.id),
     push: () => calls.push++,
     error: (message) => calls.error.push(message),
+    selected: (target) => calls.selected.push(target.projectId),
+    post: (message) => calls.posts.push(message as { type: string; parent?: string }),
+    openSettings: () => {},
     ready: async (ctx) => {
       calls.ready.push(ctx.id)
       return calls.readyResult
@@ -73,6 +144,25 @@ function msg(type: string, extra: Record<string, unknown> = {}): AgentManagerInM
 }
 
 describe("handleProjectMessage", () => {
+  it("reuses the registered project when cloning through a symlink parent", async () => {
+    const root = gitRepo()
+    const parent = directory()
+    const alias = path.join(parent, "alias")
+    fs.symlinkSync(path.dirname(root), alias, process.platform === "win32" ? "junction" : "dir")
+    const { deps, registry, calls } = setup()
+    const id = projectIdFor(root)
+    await registry.add({ id, root })
+    await handleProjectMessage(
+      msg("agentManager.cloneProject", {
+        url: `https://example.com/${path.basename(root)}.git`,
+        parent: alias,
+      }),
+      deps,
+    )
+    expect(calls.error).toEqual([])
+    expect(calls.clone).toEqual([])
+    expect(calls.selected).toEqual([id])
+  })
   it("ignores non-project messages", async () => {
     const { deps } = setup()
     expect(await handleProjectMessage(msg("agentManager.createWorktree"), deps)).toBe(false)
@@ -88,6 +178,8 @@ describe("handleProjectMessage", () => {
     const { deps, calls } = setup({ enabled: false })
     for (const m of [
       msg("agentManager.addProject"),
+      msg("agentManager.createProject"),
+      msg("agentManager.cloneProject"),
       msg("agentManager.removeProject", { projectId: "prj-x" }),
       msg("agentManager.selectProject", { projectId: "prj-x" }),
       msg("agentManager.setProjectExpanded", { projectId: "prj-x", expanded: true }),
@@ -96,7 +188,7 @@ describe("handleProjectMessage", () => {
     }
     expect(calls.pick).toBe(0)
     expect(calls.activate).toEqual([])
-    expect(calls.error.length).toBe(4)
+    expect(calls.error.length).toBe(6)
   })
 
   it("adds a picked git repository to the registry", async () => {
@@ -107,17 +199,21 @@ describe("handleProjectMessage", () => {
     const id = projectIdFor(repo)
     const project = registry.get(id)
     expect(project?.root).toBe(repo)
-    expect(calls.push).toBe(1)
+    expect(calls.push).toBe(2)
+    expect(calls.selected).toEqual([id])
+    expect(project?.expanded).toBe(true)
     expect(calls.error).toEqual([])
   })
 
-  it("rejects folders outside a git repository", async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-am-nogit-"))
+  it("does not initialize a non-git folder without confirmation", async () => {
+    const dir = directory()
     const { deps, calls, registry, pick } = setup()
     pick(dir)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
     expect(registry.list()).toEqual([])
-    expect(calls.error).toEqual(["The selected folder is not inside a Git repository."])
+    expect(calls.confirm.at(0)).toContain("Initialize Git")
+    expect(fs.existsSync(path.join(dir, ".git"))).toBe(false)
+    expect(calls.error).toEqual([])
   })
 
   it("uses the configured Git executable when adding a project", async () => {
@@ -130,24 +226,27 @@ describe("handleProjectMessage", () => {
     git.dispose()
 
     expect(registry.list()).toEqual([])
-    expect(calls.error).toEqual(["The selected folder is not inside a Git repository."])
+    expect(calls.error.length).toBe(1)
+    expect(calls.confirm).toEqual([])
   })
 
-  it("rejects the pinned workspace repository", async () => {
+  it("selects the pinned workspace repository without duplicating it", async () => {
     const repo = gitRepo()
     const { deps, calls, pick } = setup({ workspace: repo })
     pick(repo)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
-    expect(calls.error).toEqual(["That repository is already the workspace project."])
+    expect(calls.error).toEqual([])
+    expect(calls.selected).toEqual([projectIdFor(repo)])
   })
 
-  it("rejects duplicate registration", async () => {
+  it("selects an existing registration without duplicating it", async () => {
     const repo = gitRepo()
     const { deps, calls, pick } = setup()
     pick(repo)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
-    expect(calls.error).toEqual(["That repository is already registered as a project."])
+    expect(calls.error).toEqual([])
+    expect(calls.selected).toEqual([projectIdFor(repo), projectIdFor(repo)])
   })
 
   it("does nothing when the picker is cancelled", async () => {
@@ -156,6 +255,129 @@ describe("handleProjectMessage", () => {
     await handleProjectMessage(msg("agentManager.addProject"), deps)
     expect(registry.list()).toEqual([])
     expect(calls.push).toBe(0)
+  })
+
+  it("creates and selects a sibling project from an explicit parent and name", async () => {
+    const workspace = gitRepo()
+    const parent = directory()
+    const { deps, calls, registry, contexts } = setup({ workspace })
+    await handleProjectMessage(msg("agentManager.createProject", { parent, name: "new-project" }), deps)
+    const root = path.join(parent, "new-project")
+    expect(calls.error).toEqual([])
+    expect(calls.pick).toBe(0)
+    expect(calls.folders).toEqual([])
+    expect(registry.list().map((entry) => entry.root)).toEqual([root])
+    expect(contexts.pinned()?.root).toBe(workspace)
+    expect(contexts.active()?.root).toBe(root)
+    expect(calls.selected).toEqual([projectIdFor(root)])
+    expect(execFileSync("git", ["ls-tree", "HEAD"], { cwd: root, encoding: "utf8" })).toBe("")
+    expect(execFileSync("git", ["remote"], { cwd: root, encoding: "utf8" })).toBe("")
+  })
+
+  it("opens an existing repository at the destination instead of duplicating it", async () => {
+    const workspace = gitRepo()
+    const parent = directory()
+    const root = path.join(parent, "existing")
+    fs.mkdirSync(root)
+    gitRepo(root)
+    const { deps, calls, registry, contexts } = setup({ workspace })
+    await handleProjectMessage(msg("agentManager.createProject", { parent, name: "existing" }), deps)
+    expect(calls.confirm).toEqual([])
+    expect(calls.error).toEqual([])
+    expect(registry.list().map((entry) => entry.root)).toEqual([root])
+    expect(contexts.active()?.root).toBe(root)
+    calls.notifications.length = 0
+    await handleProjectMessage(msg("agentManager.createProject", { parent, name: "existing" }), deps)
+    expect(registry.list()).toHaveLength(1)
+    expect(calls.notifications.some((note) => note.includes("existing project"))).toBe(true)
+  })
+
+  it("opens a registered checkout instead of cloning the same repository", async () => {
+    const workspace = gitRepo()
+    const parent = directory()
+    const root = path.join(parent, "repo")
+    fs.mkdirSync(root)
+    gitRepo(root)
+    const { deps, calls, pick, registry, contexts } = setup({ workspace })
+    pick(root)
+    await handleProjectMessage(msg("agentManager.addProject"), deps)
+    calls.clone.length = 0
+    await handleProjectMessage(msg("agentManager.cloneProject", { url: "git@company:team/repo.git", parent }), deps)
+    expect(calls.clone).toEqual([])
+    expect(calls.error).toEqual([])
+    expect(registry.list()).toHaveLength(1)
+    expect(contexts.active()?.root).toBe(root)
+  })
+
+  it("posts the primary checkout parent for a new project", async () => {
+    const workspace = gitRepo()
+    const { deps, calls } = setup({ workspace })
+    await handleProjectMessage(msg("agentManager.requestProjectParent"), deps)
+    expect(calls.posts).toEqual([{ type: "agentManager.projectParent", parent: path.dirname(workspace) }])
+  })
+
+  it("posts the picked parent and stays silent on cancel", async () => {
+    const picked = directory()
+    const { deps, calls, pick } = setup()
+    pick(picked)
+    await handleProjectMessage(msg("agentManager.pickProjectParent", { defaultPath: "/somewhere" }), deps)
+    expect(calls.folders.at(0)?.defaultPath).toBe("/somewhere")
+    expect(calls.posts).toEqual([{ type: "agentManager.projectParent", parent: picked }])
+    pick(undefined)
+    await handleProjectMessage(msg("agentManager.pickProjectParent"), deps)
+    expect(calls.posts.at(1)).toEqual({ type: "agentManager.projectParent", parent: undefined })
+  })
+
+  it("clones through the host and attaches its returned path outside the workspace", async () => {
+    const workspace = gitRepo()
+    const checkout = gitRepo()
+    const { deps, calls, pick, contexts } = setup({ workspace })
+    pick(checkout)
+    await handleProjectMessage(
+      msg("agentManager.cloneProject", { url: "git@company:team/project.git", parent: checkout }),
+      deps,
+    )
+    expect(calls.clone).toEqual([["git@company:team/project.git", checkout]])
+    expect(calls.pick).toBe(0)
+    expect(contexts.pinned()?.root).toBe(workspace)
+    expect(contexts.active()?.root).toBe(checkout)
+    expect(calls.error).toEqual([])
+  })
+
+  it("initializes an existing folder only after confirmation and keeps files untracked", async () => {
+    const root = directory()
+    fs.writeFileSync(path.join(root, "secret.env"), "keep outside Git")
+    const { deps, calls, pick, registry } = setup()
+    pick(root)
+    calls.answers.push(true)
+    await handleProjectMessage(msg("agentManager.addProject"), deps)
+    expect(calls.error).toEqual([])
+    expect(registry.get(projectIdFor(root))?.root).toBe(root)
+    expect(execFileSync("git", ["ls-tree", "HEAD"], { cwd: root, encoding: "utf8" })).toBe("")
+    expect(fs.readFileSync(path.join(root, "secret.env"), "utf8")).toBe("keep outside Git")
+  })
+
+  it("blocks create and clone before opening dialogs in an untrusted window", async () => {
+    const { deps, calls } = setup({ trusted: false })
+    await handleProjectMessage(msg("agentManager.createProject"), deps)
+    await handleProjectMessage(msg("agentManager.cloneProject"), deps)
+    expect(calls.pick).toBe(0)
+    expect(calls.clone).toEqual([])
+    expect(calls.error).toHaveLength(2)
+  })
+
+  it("ignores duplicate clicks while a native onboarding flow is open", async () => {
+    const { deps, calls } = setup()
+    const gate = Promise.withResolvers<string | undefined>()
+    deps.pickFolder = () => {
+      calls.pick++
+      return gate.promise
+    }
+    const first = handleProjectMessage(msg("agentManager.addProject"), deps)
+    await handleProjectMessage(msg("agentManager.addProject"), deps)
+    gate.resolve(undefined)
+    await first
+    expect(calls.pick).toBe(1)
   })
 
   it("selects a registered project without a separate trust step", async () => {
