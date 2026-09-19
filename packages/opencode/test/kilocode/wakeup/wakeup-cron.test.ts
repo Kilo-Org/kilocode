@@ -346,15 +346,22 @@ describe("Wakeup cron", () => {
 
       yield* wake.adopt(dir)
       expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
+      // The in-flight fire re-armed and persisted the next window, so the task
+      // is still scheduled rather than dropped.
+      expect((yield* wake.cronList({ sessionID: persisted.sessionID })).map((item) => item.id)).toEqual([persisted.id])
 
       // The re-armed window is a live timer. `TestClock.adjust` is virtual, so
       // advancing it returns to the scheduler and lets the guard's re-arm
-      // persist and arm without any wall-clock wait; the bounded loop keeps the
-      // assertion honest if that re-arm is ever dropped.
+      // persist and arm without any wall-clock wait. The re-arm derives its
+      // delay from the real clock while these sleeps are virtual, so a single
+      // adjust can release several already-armed windows; the property under
+      // test is that the schedule keeps firing, not a fixed number of fires.
+      // The bounded loop keeps the assertion honest if that re-arm is dropped.
       for (let attempt = 0; attempt < 20 && recorder.calls.length < 2; attempt++) {
         yield* TestClock.adjust("2 minutes")
       }
-      expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id, persisted.id])
+      expect(recorder.calls.length).toBeGreaterThanOrEqual(2)
+      expect(recorder.calls.every((item) => item.id === persisted.id)).toBe(true)
     }),
   )
 
