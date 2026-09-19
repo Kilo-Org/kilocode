@@ -66,12 +66,18 @@ export namespace KiloSnapshotMaterialize {
       "-z",
       input.seed,
     ])
-    if (diff.code !== 0) return false
+    if (diff.code !== 0) {
+      log.warn("failed to diff snapshot seed", { stderr: diff.stderr })
+      return false
+    }
     const files = new Set(diff.text.split("\0").filter(Boolean))
     if (!files.size) return true
 
     const listed = yield* input.git(["--git-dir", input.gitdir, "ls-files", "--stage", "-z"])
-    if (listed.code !== 0) return false
+    if (listed.code !== 0) {
+      log.warn("failed to list snapshot seed files", { stderr: listed.stderr })
+      return false
+    }
     const objects = Array.from(
       new Set(
         listed.text.split("\0").flatMap((line) => {
@@ -86,7 +92,10 @@ export namespace KiloSnapshotMaterialize {
 
   export const localizeTrees = Effect.fnUntraced(function* (input: Input & { readonly staging: string }, hash: string) {
     const listed = yield* input.git(["--git-dir", input.gitdir, "ls-tree", "-r", "-t", "-z", hash])
-    if (listed.code !== 0) return false
+    if (listed.code !== 0) {
+      log.warn("failed to list snapshot tree", { hash, stderr: listed.stderr })
+      return false
+    }
     const objects = Array.from(
       new Set([
         hash,

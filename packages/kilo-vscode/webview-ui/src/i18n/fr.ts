@@ -94,6 +94,9 @@ export const dict = {
     "Conversation annulée. L’état de restauration de l’espace de travail n’est pas disponible pour cette annulation antérieure.",
   "revert.banner.workspace.enableSnapshots": "Activer les instantanés",
   "revert.disabled.agentBusy": "Attendre la fin de l'agent",
+  "revert.error.title": "Échec de la restauration",
+  "revert.error.body":
+    "Le dépôt est peut-être en cours d'utilisation. Réessayez ou consultez les journaux Kilo pour plus de détails.",
   "command.session.compact": "Compacter la session",
   "command.session.export": "Exporter la transcription de la session",
 
