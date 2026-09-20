@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "fcf518b9-c8bc-4ee5-8e68-2608bffcef43",
+  "id": "8e919778-bf29-4e1b-a106-88bc9d8b8b21",
   "prevIds": [
-    "08cfecbf-f95d-404b-a76a-2afc564baa8b"
+    "38a74186-5907-4662-9e14-e059300a8b4e"
   ],
   "ddl": [
     {
@@ -697,6 +697,16 @@
       "default": "1",
       "generated": null,
       "name": "next_seq",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "cleared_seq",
       "entityType": "columns",
       "table": "kilo_board"
     },
@@ -2202,6 +2212,28 @@
     {
       "columns": [
         {
+          "value": "id",
+          "isExpression": false
+        },
+        {
+          "value": "json_extract(\"data\", '$.role')",
+          "isExpression": true
+        },
+        {
+          "value": "coalesce(json_extract(\"data\", '$.parentID'), '')",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "recall_message_role_idx",
+      "entityType": "indexes",
+      "table": "message"
+    },
+    {
+      "columns": [
+        {
           "value": "message_id",
           "isExpression": false
         },
@@ -2472,3 +2504,4 @@
   ],
   "renames": []
 }
+

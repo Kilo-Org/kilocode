@@ -4,9 +4,11 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.MoveStage
+import ai.kilocode.rpc.dto.orphans.OrphanDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDto
@@ -36,6 +38,10 @@ class WorktreeController(
     private val abort: suspend (String, String) -> Unit = { _, _ -> },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
+    companion object {
+        private val LOG = KiloLog.create(WorktreeController::class.java)
+    }
+
     val model = CollectionListModel<WorktreeDto>()
     private val pending = LinkedHashMap<String, WorktreeDto>()
     private val tasks = LinkedHashMap<String, String>()
@@ -60,6 +66,14 @@ class WorktreeController(
     private var kinds: Map<String, SessionActivityKind> = emptyMap()
 
     init {
+        // The New Worktree dialog rejects a pull request from another repository using [origin], and
+        // it can open before any reload has run — the chat dock and worktree editor actions call
+        // configure() directly, and only selecting the Agent Manager tab triggers a reload. Resolve
+        // it here so the check is armed on every entry path, not just the tab one.
+        cs.launch {
+            val info = service.listBranches(directory)
+            edt { origin = info.origin }
+        }
         cs.launch {
             activity.collect { snap ->
                 edt {
@@ -89,6 +103,21 @@ class WorktreeController(
     @Volatile
     private var known: Set<String> = emptySet()
 
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track, from the most recent [reload].
+     * [ai.kilocode.client.agentManager.orphans.OrphanBanner] reads this on the EDT after [onReload]
+     * fires — never polled independently, so the banner and the worktree list always agree on which
+     * paths are orphans.
+     */
+    @Volatile
+    var orphans: List<OrphanDto> = emptyList()
+        private set
+
+    /** `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. */
+    @Volatile
+    var origin: String? = null
+        private set
+
     fun isPending(id: String): Boolean = id in pending
 
     fun progress(id: String): String? = tasks[id]
@@ -111,6 +140,8 @@ class WorktreeController(
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
+                origin = branchInfo.origin
+                orphans = result.orphans
                 onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
@@ -208,11 +239,14 @@ class WorktreeController(
         tasks[dto.id] = KiloBundle.message("common.deleting")
         edt { refresh(dto) }
         cs.launch {
+            val start = System.currentTimeMillis()
             // Stop anything the worktree run popup started here first, so git can remove the
             // directory without orphaning a process left running against a deleted working tree.
             service<KiloRunService>().release(directory, dto.path)
             val result = service.remove(directory, dto.path, dto.branch, force)
+            val ms = System.currentTimeMillis() - start
             if (result.ok) {
+                LOG.info("worktree delete: path=${dto.path} force=$force ok=true ms=$ms")
                 edt {
                     tasks.remove(dto.id)
                     val index = model.getElementIndex(dto)
@@ -226,6 +260,7 @@ class WorktreeController(
             }
             // Removal failed: git still tracks the worktree. Keep the row and reconcile with
             // ground truth so a stale optimistic delete can't make the entry reappear later.
+            LOG.warn("worktree delete: path=${dto.path} force=$force ok=false locked=${result.locked} ms=$ms error=${result.error}")
             edt {
                 tasks.remove(dto.id)
                 refresh(dto)

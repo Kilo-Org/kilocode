@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { useFileMention } from "../../webview-ui/src/hooks/useFileMention"
-import { FILE_PICKER_RESULT, TERMINAL_RESULT } from "../../webview-ui/src/hooks/file-mention-utils"
+import {
+  FILE_PICKER_RESULT,
+  MODEL_RESULT,
+  TERMINAL_RESULT,
+  type WorktreeReference,
+} from "../../webview-ui/src/hooks/file-mention-utils"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 declare global {
@@ -339,6 +344,170 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("opens the model picker from the @ menu and inserts an inline model reference", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const input = editor("@mod")
+    mockDocument(input)
+    try {
+      mention.selectMention(MODEL_RESULT, input, () => {})
+      expect(mention.modelPicker()).toBe(true)
+      expect(mention.showMention()).toBe(false)
+
+      mention.selectModelReference("anthropic", "claude-sonnet-4", () => {})
+    } finally {
+      restoreDocument()
+    }
+
+    expect(mention.modelPicker()).toBe(false)
+    expect(input.value).toBe("@anthropic/claude-sonnet-4 ")
+    expect(mention.mentionedModels().has("anthropic/claude-sonnet-4")).toBe(true)
+    // Model references are inline text, never file attachments.
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(false)
+    expect(mention.parseFileAttachments(input.value)).toEqual([])
+
+    dispose.fn?.()
+  })
+
+  it("seeds known model references from restored text without treating them as files", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+    const modelKeys = () => new Set(["anthropic/claude-sonnet-4"])
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+    })
+
+    mention.seedFromText("use @anthropic/claude-sonnet-4 for the subagent")
+    expect(mention.mentionedModels().has("anthropic/claude-sonnet-4")).toBe(true)
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(false)
+    expect(mention.parseFileAttachments("use @anthropic/claude-sonnet-4 for the subagent")).toEqual([])
+
+    dispose.fn?.()
+  })
+
+  it("clears an empty draft without catalog work and keeps known mentions for restore", () => {
+    const ctx = { postMessage: () => {}, onMessage: () => () => {} }
+    let reads = 0
+    const keys = () => {
+      reads++
+      return new Set(["anthropic/claude-sonnet-4"])
+    }
+    createRoot((dispose) => {
+      const mention = useFileMention(ctx, undefined, undefined, undefined, keys)
+      const text = "@src/my file.ts @Earlier chat @anthropic/claude-sonnet-4"
+      mention.seedFromText("@anthropic/claude-sonnet-4")
+      mention.seedFromParts(["src/my file.ts"], text)
+      mention.seedSessions([{ id: "ses_earlier", title: "Earlier chat", directory: "/repo", updated: 1 }], text)
+      const count = reads
+
+      mention.seedFromText("")
+      expect(mention.mentionedPaths().size).toBe(0)
+      expect(mention.mentionedSessions().size).toBe(0)
+      expect(mention.mentionedModels().size).toBe(0)
+      const paths = mention.mentionedPaths()
+      const sessions = mention.mentionedSessions()
+      const models = mention.mentionedModels()
+      mention.seedFromText("")
+      expect(mention.mentionedPaths()).toBe(paths)
+      expect(mention.mentionedSessions()).toBe(sessions)
+      expect(mention.mentionedModels()).toBe(models)
+      expect(mention.parseFileAttachments("")).toEqual([])
+      expect(reads).toBe(count)
+
+      mention.onInput(text, text.length)
+      expect([...mention.mentionedPaths()]).toEqual(["src/my file.ts"])
+      expect([...mention.mentionedSessions().keys()]).toEqual(["Earlier chat"])
+      expect([...mention.mentionedModels()]).toEqual(["anthropic/claude-sonnet-4"])
+      dispose()
+    })
+  })
+
+  it("checks known paths without iterating the model catalog", () => {
+    const ctx = { postMessage: () => {}, onMessage: () => () => {} }
+    const catalog = new Set(["anthropic/claude-sonnet-4"])
+    catalog[Symbol.iterator] = () => {
+      throw new Error("Mention classification must not scan the model catalog")
+    }
+    createRoot((dispose) => {
+      const mention = useFileMention(ctx, undefined, undefined, undefined, () => catalog)
+      const text = "@src/file.ts @anthropic/claude-sonnet-4"
+      mention.seedFromParts(["src/file.ts", "anthropic/claude-sonnet-4"], text)
+      expect([...mention.mentionedPaths()]).toEqual(["src/file.ts"])
+      expect([...mention.mentionedModels()]).toEqual(["anthropic/claude-sonnet-4"])
+      dispose()
+    })
+  })
+
+  it("reclassifies a restored model reference once the catalog loads after seeding", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+    // The catalog is empty while the draft is restored, so the seed cannot yet
+    // tell the token is a model reference.
+    let catalog = new Set<string>()
+    const modelKeys = () => catalog
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+    })
+
+    const text = "use @anthropic/claude-sonnet-4 for the subagent"
+    mention.seedFromText(text)
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(true)
+
+    catalog = new Set(["anthropic/claude-sonnet-4"])
+    mention.seedFromText(text)
+    expect(mention.mentionedModels().has("anthropic/claude-sonnet-4")).toBe(true)
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(false)
+    expect(mention.parseFileAttachments(text)).toEqual([])
+
+    dispose.fn?.()
+  })
+
+  it("never turns a catalog model reference into a file attachment", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+    // Simulate a path that was seeded before the catalog was available.
+    let catalog = new Set<string>()
+    const modelKeys = () => catalog
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+    })
+
+    const text = "use @anthropic/claude-sonnet-4 for the subagent"
+    mention.seedFromText(text)
+    mention.addPaths(["anthropic/claude-sonnet-4"], "/workspace")
+    catalog = new Set(["anthropic/claude-sonnet-4"])
+
+    expect(mention.parseFileAttachments(text)).toEqual([])
+
+    dispose.fn?.()
+  })
+
   it("waits for past chats before treating a spaced query as prose", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()
@@ -454,11 +623,15 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
-  it("keeps searching a spaced path that starts like an earlier mention", () => {
+  it("keeps searching a spaced path that starts like an earlier mention", async () => {
     const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
     const ctx = {
       postMessage: (message: WebviewMessage) => posted.push(message),
-      onMessage: () => () => {},
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
     }
 
     const dispose: { fn?: () => void } = {}
@@ -469,8 +642,21 @@ describe("useFileMention", () => {
 
     // "my" is a folder mentioned earlier in the session, so it stays in the
     // sticky known set. Typing a longer, distinct path that begins with it must
-    // still search instead of being mistaken for prose after a mention.
+    // still search while a result extends it, instead of being mistaken for
+    // prose after a mention.
     mention.addPaths(["my"], "/repo")
+    mention.onInput("@my", 3)
+    await wait(170)
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["my report.txt"],
+        items: [{ path: "my report.txt", type: "file" }],
+      })
+    }
     mention.onInput("@my report", 10)
 
     expect(mention.showMention()).toBe(true)
@@ -879,6 +1065,379 @@ describe("useFileMention", () => {
     const event = { key: "Enter", preventDefault: () => prevented.count++ } as unknown as KeyboardEvent
     expect(mention.onKeyDown(event, undefined, () => {})).toBe(false)
     expect(prevented.count).toBe(0)
+
+    dispose.fn?.()
+  })
+
+  it("closes on prose after a typed mention that is still a result", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    // The folder is typed by hand, never picked from the dropdown.
+    mention.onInput("@agents", 7)
+    await wait(170)
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["agents/skills/dsf.md"],
+        items: [
+          { path: "agents/", type: "folder" },
+          { path: "agents/skills/dsf.md", type: "file" },
+        ],
+      })
+    }
+    expect(mention.showMention()).toBe(true)
+
+    // A space after the folder name is prose, so the dropdown closes at once
+    // and stays closed while the sentence continues.
+    mention.onInput("@agents ", 8)
+    expect(mention.showMention()).toBe(false)
+    mention.onInput("@agents asdf", 12)
+    expect(mention.showMention()).toBe(false)
+
+    // Deleting back into the name reopens the search.
+    mention.onInput("@agent", 6)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("keeps a typed spaced query open while a result extends it", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@my", 3)
+    await wait(170)
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["my report.txt"],
+        items: [
+          { path: "my/", type: "folder" },
+          { path: "my report.txt", type: "file" },
+        ],
+      })
+    }
+
+    // "my" is a folder on offer, but "my report.txt" still starts with the
+    // query, so the user may be completing that filename.
+    mention.onInput("@my ", 4)
+    expect(mention.showMention()).toBe(true)
+    mention.onInput("@my rep", 7)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("closes a spaced query once late results show it names a folder", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    // Typed too fast for the folder to be on offer when the space lands.
+    mention.onInput("@agents ", 8)
+    expect(mention.showMention()).toBe(true)
+    await wait(170)
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["agents/skills/dsf.md"],
+        items: [
+          { path: "agents/", type: "folder" },
+          { path: "agents/skills/dsf.md", type: "file" },
+        ],
+      })
+    }
+    // The folder is on offer, but the past chats could still match the query,
+    // so the close waits for them.
+    expect(mention.showMention()).toBe(true)
+
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [],
+      })
+    }
+    expect(mention.showMention()).toBe(false)
+    mention.onInput("@agents a", 9)
+    expect(mention.showMention()).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("settles a picked mention even after the text before it changed", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const input = editor("@REA")
+    mockDocument(input)
+    try {
+      mention.onInput("@REA", 4)
+      mention.selectMention({ type: "file", value: "README.md" }, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe("@README.md ")
+
+    // Inserting a word before the mention shifts its "@" offset.
+    mention.onInput("see @README.md and", 18)
+    expect(mention.showMention()).toBe(false)
+    mention.onInput("see @README.md and then", 23)
+    expect(mention.showMention()).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("does not settle a new query on a mention earlier in the text", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const input = editor("@sr")
+    mockDocument(input)
+    try {
+      mention.onInput("@sr", 3)
+      mention.selectMention({ type: "file", value: "src" }, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe("@src ")
+
+    // "src" sits earlier in the text, but this fresh "@src utils" could still
+    // grow into a longer path, so the search must stay open until the results
+    // say otherwise rather than reading the earlier mention as prose.
+    mention.onInput("@src then @src utils", 20)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("does not settle a fresh query after the picked mention was deleted", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const input = editor("@sr")
+    mockDocument(input)
+    try {
+      mention.onInput("@sr", 3)
+      mention.selectMention({ type: "file", value: "src" }, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe("@src ")
+
+    // Deleting the mention drops its record, so the next "@src ..." is a new
+    // query rather than prose after the deleted one.
+    mention.onInput("", 0)
+    expect(mention.showMention()).toBe(false)
+    mention.onInput("@src utils", 10)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("keeps the dropdown closed after Escape until the query shrinks", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@agents", 7)
+    expect(mention.showMention()).toBe(true)
+
+    const event = {
+      key: "Escape",
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as KeyboardEvent
+    expect(mention.onKeyDown(event, undefined, () => {})).toBe(true)
+    expect(mention.showMention()).toBe(false)
+
+    mention.onInput("@agents ", 8)
+    expect(mention.showMention()).toBe(false)
+    mention.onInput("@agents asdf", 12)
+    expect(mention.showMention()).toBe(false)
+
+    // Editing back below the dismissed query, or a new "@", searches again.
+    mention.onInput("@agent", 6)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("lets Enter send when a spaced query only loosely matches the top result", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@agents asdf", 12)
+    await wait(170)
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["agents/skills/dsf.md"],
+        items: [{ path: "agents/skills/dsf.md", type: "file" }],
+      })
+    }
+    expect(mention.showMention()).toBe(true)
+    expect(mention.mentionResults().at(0)).toEqual({ type: "file", value: "agents/skills/dsf.md" })
+
+    // The fuzzy hit is not what the prose spells, so Enter must not replace the draft.
+    const prevented = { count: 0 }
+    const enter = { key: "Enter", preventDefault: () => prevented.count++ } as unknown as KeyboardEvent
+    expect(mention.onKeyDown(enter, undefined, () => {})).toBe(false)
+    expect(prevented.count).toBe(0)
+
+    // Choosing the result by hand still selects it.
+    const down = { key: "ArrowDown", preventDefault: () => {} } as unknown as KeyboardEvent
+    const up = { key: "ArrowUp", preventDefault: () => {} } as unknown as KeyboardEvent
+    mention.onKeyDown(down, undefined, () => {})
+    mention.onKeyDown(up, undefined, () => {})
+    expect(mention.mentionIndex()).toBe(0)
+    const input = editor("@agents asdf")
+    mockDocument(input)
+    try {
+      expect(mention.onKeyDown(enter, input, () => {})).toBe(true)
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe("@agents/skills/dsf.md ")
+
+    dispose.fn?.()
+  })
+
+  it("lets Enter pick a spaced filename the query spells", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@my rep", 7)
+    await wait(170)
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["my report.txt"],
+        items: [{ path: "my report.txt", type: "file" }],
+      })
+    }
+
+    const input = editor("@my rep")
+    mockDocument(input)
+    const enter = { key: "Enter", preventDefault: () => {} } as unknown as KeyboardEvent
+    try {
+      expect(mention.onKeyDown(enter, input, () => {})).toBe(true)
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe("@my report.txt ")
 
     dispose.fn?.()
   })
@@ -1515,6 +2074,7 @@ describe("useFileMention", () => {
     }
 
     expect(mention.mentionResults()).toEqual([
+      MODEL_RESULT,
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
       FILE_PICKER_RESULT,
@@ -1528,6 +2088,7 @@ describe("useFileMention", () => {
 
     mention.onInput("@", 1)
     expect(mention.mentionResults()).toEqual([
+      MODEL_RESULT,
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
       FILE_PICKER_RESULT,
@@ -1675,6 +2236,7 @@ describe("useFileMention", () => {
     state.mention.onInput("@", 1)
 
     expect(state.mention.mentionResults()).toEqual([
+      MODEL_RESULT,
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
       FILE_PICKER_RESULT,
@@ -1809,5 +2371,107 @@ describe("useFileMention", () => {
     expect(mention.mentionResults()).not.toContainEqual({ type: "file", value: "late.ts" })
 
     dispose.fn?.()
+  })
+})
+
+describe("useFileMention reference drops", () => {
+  const ctx = {
+    postMessage: () => {},
+    onMessage: () => () => {},
+  }
+
+  const worktree: WorktreeReference = {
+    id: "w1",
+    name: "Feature",
+    branch: "feature",
+    path: "/repo/worktrees/feature",
+    base: "main",
+    sessions: [{ id: "s1", title: "Chat" }],
+    disabled: false,
+  }
+
+  const withMention = (
+    text: string,
+    worktrees: WorktreeReference[] | undefined,
+    run: (mention: ReturnType<typeof useFileMention>, area: ReturnType<typeof editor>) => void,
+  ) => {
+    const area = editor(text)
+    mockDocument(area)
+    const dispose: { fn?: () => void } = {}
+    let mention!: ReturnType<typeof useFileMention>
+    createRoot((root) => {
+      dispose.fn = root
+      mention = useFileMention(
+        ctx,
+        () => "s1",
+        () => false,
+        worktrees ? () => worktrees : undefined,
+      )
+    })
+    try {
+      run(mention, area)
+    } finally {
+      dispose.fn?.()
+      restoreDocument()
+    }
+  }
+
+  it("inserts a worktree reference after existing text and attaches it", () => {
+    withMention("hello", [worktree], (mention, area) => {
+      mention.insertDrop({ kind: "worktree", worktree }, area, () => {}, "")
+      expect(area.value).toBe("hello @/repo/worktrees/feature ")
+      expect(mention.mentionedPaths().has(worktree.path)).toBe(true)
+      expect(mention.parseFileAttachments(area.value).map((file) => file.filename)).toContain("worktree-w1.txt")
+    })
+  })
+
+  it("inserts a session reference and attaches it", () => {
+    withMention("", undefined, (mention, area) => {
+      mention.insertDrop({ kind: "session", session: { id: "s2", title: "My Chat", updated: 5 } }, area, () => {}, "")
+      expect(area.value).toBe("@My Chat ")
+      expect(mention.mentionedSessions().has("My Chat")).toBe(true)
+      expect(mention.parseFileAttachments(area.value).map((file) => file.url)).toContain("session:s2")
+    })
+  })
+
+  it("inserts the terminal reference", () => {
+    withMention("", undefined, (mention, area) => {
+      expect(mention.insertDrop({ kind: "terminal" }, area, () => {}, "")).toBe(true)
+      expect(area.value).toBe("@terminal ")
+    })
+  })
+
+  it("keeps the dropdown closed while typing after a dropped mention", () => {
+    withMention("", undefined, (mention, area) => {
+      mention.insertDrop({ kind: "terminal" }, area, () => {}, "")
+      mention.onInput("@terminal what failed", 21)
+      expect(mention.showMention()).toBe(false)
+    })
+  })
+
+  it("inserts a relative file reference from a document tab", () => {
+    withMention("", undefined, (mention, area) => {
+      expect(mention.insertDrop({ kind: "file", path: "/repo/docs/plan.md" }, area, () => {}, "/repo")).toBe(true)
+      expect(area.value).toBe("@docs/plan.md ")
+      expect(mention.mentionedPaths().has("docs/plan.md")).toBe(true)
+    })
+  })
+
+  it("skips a disabled worktree reference", () => {
+    withMention("", [worktree], (mention, area) => {
+      expect(
+        mention.insertDrop({ kind: "worktree", worktree: { ...worktree, disabled: true } }, area, () => {}, ""),
+      ).toBe(false)
+      expect(area.value).toBe("")
+    })
+  })
+
+  it("reports a drop as unhandled when the editor does not apply the insert", () => {
+    withMention("", undefined, (mention, area) => {
+      // execCommand can silently no-op; the textarea stays unchanged.
+      globalThis.document.execCommand = () => false
+      expect(mention.insertDrop({ kind: "terminal" }, area, () => {}, "")).toBe(false)
+      expect(area.value).toBe("")
+    })
   })
 })

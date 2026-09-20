@@ -1,15 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
-
-const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
-
-async function open(page: Page) {
-  await page.goto(`/iframe.html?id=prompt-input--default-420&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
-  const input = page.locator("textarea.prompt-input")
-  await expect(input).toBeVisible()
-  await page.evaluate(() => window.postMessage({ type: "connectionState", state: "connected" }, window.origin))
-  await expect(input).toBeEnabled()
-  return input
-}
+import { open } from "./helpers/prompt-input"
 
 async function observe(page: Page, block = false) {
   const trace = await page.evaluateHandle((block) => {
@@ -36,7 +26,7 @@ async function observe(page: Page, block = false) {
     }))
 }
 
-test("native undo and redo stay local despite host key forwarding", async ({ page }) => {
+test("undo and redo are applied locally and never reach the host", async ({ page }) => {
   const input = await open(page)
   await input.pressSequentially("Draft text")
   await expect(input).toHaveValue("Draft text")
@@ -44,14 +34,35 @@ test("native undo and redo stay local despite host key forwarding", async ({ pag
 
   await input.press("ControlOrMeta+z")
   await expect(input).toHaveValue("")
-  expect(await read()).toEqual({ prevented: [false], forwarded: [] })
+  expect(await read()).toEqual({ prevented: [true], forwarded: [] })
 
   await input.press("ControlOrMeta+Shift+Z")
   await expect(input).toHaveValue("Draft text")
-  expect(await read()).toEqual({ prevented: [false], forwarded: [] })
+  expect(await read()).toEqual({ prevented: [true], forwarded: [] })
 })
 
-test("only supported history chords stop propagation without cancelling text defaults", async ({ page }) => {
+test("non-Latin layouts match the undo chord by keyCode", async ({ page }) => {
+  const input = await open(page)
+  await input.pressSequentially("Draft text")
+  await expect(input).toHaveValue("Draft text")
+  const read = await observe(page, true)
+
+  await input.evaluate((element) => {
+    const event = new KeyboardEvent("keydown", {
+      key: "ז",
+      code: "KeyZ",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    Object.defineProperty(event, "keyCode", { get: () => 90 })
+    element.dispatchEvent(event)
+  })
+  await expect(input).toHaveValue("")
+  expect(await read()).toEqual({ prevented: [true], forwarded: [] })
+})
+
+test("only supported history chords are cancelled, other text shortcuts forward", async ({ page }) => {
   const input = await open(page)
   await input.pressSequentially("Draft text")
   const read = await observe(page)
@@ -59,7 +70,7 @@ test("only supported history chords stop propagation without cancelling text def
   for (const modifier of ["Control", "Meta"]) {
     for (const chord of ["z", "Shift+Z", "y"]) {
       await input.press(`${modifier}+${chord}`)
-      expect(await read(), `${modifier}+${chord}`).toEqual({ prevented: [false], forwarded: [] })
+      expect(await read(), `${modifier}+${chord}`).toEqual({ prevented: [true], forwarded: [] })
     }
     for (const chord of ["c", "x", "v", "Alt+z", "Alt+Shift+Z", "Alt+y", "Shift+Y"]) {
       await input.dispatchEvent("keydown", {

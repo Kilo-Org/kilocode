@@ -7,14 +7,10 @@ import {
   getCloudSessions,
   getOrganizationId,
   getToken,
-  normalizeClawStatus,
 } from "@kilocode/kilo-gateway"
 import {
   HEADER_FEATURE,
-  HEADER_ORGANIZATIONID,
   KILO_API_BASE,
-  KILO_CHAT_URL,
-  KILO_EVENT_SERVICE_URL,
   clearModesCache,
   fetchBalance,
   fetchKilocodeNotifications,
@@ -34,6 +30,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Database } from "@opencode-ai/core/database/database"
 import { KilocodeConfig } from "@/kilocode/config/config"
+import { ClaudeMigration } from "@/kilocode/config/claude-migration"
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import { compatible, organization as catalogOrganization } from "@/kilocode/provider/catalog"
@@ -43,7 +40,7 @@ import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { AudioTranscriptionsBody, ClawStatus, CloudSessionImportError, EditBody, FimBody } from "../groups/kilo-gateway"
+import { AudioTranscriptionsBody, CloudSessionImportError, EditBody, FimBody } from "../groups/kilo-gateway"
 
 const FIM_TIMEOUT_MS = 30_000
 const log = Log.create({ service: "kilo-gateway" })
@@ -327,9 +324,10 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         worktree: Instance.worktree,
         scanProject: !Flag.KILO_DISABLE_PROJECT_CONFIG,
       })
-      const append = <T>(list: T[]) => (notice ? [...list, notice] : list)
+      const claude = yield* Effect.promise(() => ClaudeMigration.notification())
+      const append = <T>(list: T[]) => [...list, ...(notice ? [notice] : []), ...(claude ? [claude] : [])]
 
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
       const token = getToken(info)
       if (!token) return append([])
 
@@ -360,52 +358,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       clearModesCache()
       yield* store.disposeAll().pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
       return true
-    })
-
-    const clawStatus = Effect.fn("KiloGatewayHttpApi.clawStatus")(function* () {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-
-      const headers: Record<string, string> = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      }
-      const org = getOrganizationId(info)
-      if (org) headers[HEADER_ORGANIZATIONID] = org
-
-      return yield* Effect.tryPromise({
-        try: async () => {
-          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
-          if (!response.ok) throw new GatewayError(await response.text(), response.status)
-          return Schema.decodeUnknownPromise(ClawStatus)(normalizeClawStatus(await response.json()))
-        },
-        catch: (err) => err,
-      }).pipe(
-        Effect.match({
-          onFailure: (err) => {
-            if (err instanceof GatewayError)
-              return jsonError(`KiloClaw request failed: ${err.status} ${err.message}`, err.status)
-            logError("claw/status", err)
-            return jsonError("Failed to reach KiloClaw", 502)
-          },
-          onSuccess: (result) => result,
-        }),
-      )
-    })
-
-    const clawChatCredentials = Effect.fn("KiloGatewayHttpApi.clawChatCredentials")(function* () {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-
-      const expires = info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
-      return {
-        token,
-        expiresAt: new Date(expires).toISOString(),
-        kiloChatUrl: KILO_CHAT_URL,
-        eventServiceUrl: KILO_EVENT_SERVICE_URL,
-      }
     })
 
     const cloudSessions = Effect.fn("KiloGatewayHttpApi.cloudSessions")(function* (ctx) {
@@ -577,8 +529,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("transcriptionModels", transcriptionModels)
       .handle("notifications", notifications)
       .handle("organization", organization)
-      .handle("clawStatus", clawStatus)
-      .handle("clawChatCredentials", clawChatCredentials)
       .handle("cloudSessions", cloudSessions)
       .handle("cloudSession", cloudSession)
       .handle("cloudSessionImport", cloudSessionImport)

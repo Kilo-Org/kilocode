@@ -97,6 +97,7 @@ export type Event =
   | EventGlobalConfigUpdated1
   | EventSessionDrained1
   | EventSessionDrainInterrupted1
+  | EventSessionWakeup1
   | EventServerInstanceDisposed
   | EventSessionTurnOpen
   | EventSessionTurnClose
@@ -107,9 +108,6 @@ export type Event =
   | EventSessionNetworkRestored
   | EventBackgroundProcessUpdated
   | EventBackgroundProcessDeleted
-  | EventInteractiveTerminalUpdated
-  | EventInteractiveTerminalData
-  | EventInteractiveTerminalDeleted
   | EventSandboxStatusChanged
   | EventSuggestionShown
   | EventSuggestionAccepted
@@ -218,6 +216,7 @@ export type Event =
   | EventGlobalConfigUpdated
   | EventSessionDrained
   | EventSessionDrainInterrupted
+  | EventSessionWakeup
 
 export type QuestionReplied = {
   sessionID: string
@@ -305,26 +304,6 @@ export type BackgroundProcessInfo = {
   }
 }
 
-export type InteractiveTerminalInfo = {
-  id: string
-  sessionID: string
-  pid: number
-  command: string
-  cwd: string
-  description?: string
-  status: "running" | "closed"
-  cols: number
-  rows: number
-  exitCode?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-  signal?: string
-  closedBy?: "exit" | "user" | "abort"
-  time: {
-    started: number
-    updated: number
-    ended?: number
-  }
-}
-
 export type SuggestionRequest = {
   id: string
   sessionID: string
@@ -370,6 +349,7 @@ export type AgentManagerPromptRequest = {
   targetSessionID: string
   sourceSessionID?: string
   prompt: string
+  replyTo?: AgentManagerRequestId
 }
 
 export type AgentManagerStopRequest = {
@@ -1172,9 +1152,6 @@ export type GlobalEvent = {
     | EventSessionNetworkRestored
     | EventBackgroundProcessUpdated
     | EventBackgroundProcessDeleted
-    | EventInteractiveTerminalUpdated
-    | EventInteractiveTerminalData
-    | EventInteractiveTerminalDeleted
     | EventSandboxStatusChanged
     | EventSuggestionShown
     | EventSuggestionAccepted
@@ -1283,6 +1260,7 @@ export type GlobalEvent = {
     | EventGlobalConfigUpdated
     | EventSessionDrained
     | EventSessionDrainInterrupted
+    | EventSessionWakeup
     | {
         id: string
         type: "models-dev.refreshed"
@@ -2183,6 +2161,14 @@ export type GlobalEvent = {
           sessionID: string
         }
       }
+    | {
+        id: string
+        type: "session.wakeup"
+        properties: {
+          sessionID: string
+          pending: number
+        }
+      }
     | SyncEventSessionCreated
     | SyncEventSessionUpdated
     | SyncEventSessionDeleted
@@ -2560,6 +2546,8 @@ export type Config = {
   enabled_providers?: Array<string>
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
+  reasoning_display?: "expanded" | "preview" | "headline"
+  shared_agent_board?: boolean
   indexing?: IndexingConfig
   console?: {
     /**
@@ -2707,9 +2695,11 @@ export type Config = {
     image_generation_model?: string
     native_notebook_tools?: boolean
     task_model_selection?: boolean
+    code_mode?: boolean
     speech_to_text_model?: string
+    speech_to_text_base_url?: string
+    speech_to_text_api_key?: string
     openTelemetry?: boolean
-    shared_agent_board?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean
@@ -4129,31 +4119,38 @@ export type ConflictError = {
   resource?: string
 }
 
-export type InteractiveTerminalSnapshot = {
-  info: InteractiveTerminalInfo
-  output: string
-  cursor: number
-}
-
-export type InteractiveTerminalWriteInput = {
-  data: string
-}
-
-export type InteractiveTerminalResizeInput = {
-  cols: number
-  rows: number
-}
-
 export type EffectHttpApiErrorUnauthorized = {
   _tag: "Unauthorized"
 }
 
-export type EffectHttpApiErrorServiceUnavailable = {
-  _tag: "ServiceUnavailable"
-}
-
 export type CloudSessionImportError = {
   error: string
+}
+
+export type BoardMessage = {
+  id: string
+  timestamp: number
+  from: string
+  to: string
+  fromLabel?: string
+  toLabel?: string
+  type: "INFO" | "ASK" | "RESULT" | "HOLD" | "VETO"
+  body: string
+  reply_to?: string
+}
+
+export type SessionBoard = {
+  ownerSessionID: string
+  revision: number
+  messages: Array<BoardMessage>
+  cursor?: string
+  hasMore: boolean
+}
+
+export type UnknownError1 = {
+  _tag: "UnknownError"
+  message: string
+  ref?: string
 }
 
 export type CommandFile = {
@@ -4169,6 +4166,172 @@ export type CommandFile = {
   content?: string
   subtask?: boolean
   hints: Array<string>
+}
+
+export type VscodeExtensionRef =
+  | string
+  | {
+      name: string
+      id: string
+    }
+
+export type MarketplaceSuggestFor = {
+  filename?: Array<string>
+  vscode_extension?: Array<VscodeExtensionRef>
+}
+
+export type McpParameter = {
+  name: string
+  key: string
+  placeholder?: string
+  optional?: boolean
+}
+
+export type McpInstallationMethod = {
+  name: string
+  content: string
+  parameters?: Array<McpParameter>
+  prerequisites?: Array<string>
+}
+
+export type McpMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "mcp"
+  url: string
+  content: string | Array<McpInstallationMethod>
+  parameters?: Array<McpParameter>
+}
+
+export type AgentMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "agent"
+  content: {
+    mode: "primary" | "subagent" | "all"
+    description: string
+    prompt: string
+    options?: {
+      [key: string]: unknown
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    requirements?: {
+      skills?: Array<string>
+      mcps?: Array<string>
+      vscode_extensions?: Array<{
+        name: string
+        id: string
+      }>
+    }
+  }
+}
+
+export type SkillMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "skill"
+  githubUrl: string
+  content: string
+  displayName: string
+  displayCategory: string
+}
+
+export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem
+
+export type MarketplaceInstalledMetadata = {
+  project: {
+    [key: string]: {
+      type: string
+    }
+  }
+  global: {
+    [key: string]: {
+      type: string
+    }
+  }
+}
+
+export type MarketplaceListResult = {
+  items: Array<MarketplaceItem>
+  installed: MarketplaceInstalledMetadata
+  errors?: Array<string>
+}
+
+export type McpInstallItem = {
+  type: "mcp"
+  id: string
+  content: string | Array<McpInstallationMethod>
+}
+
+export type AgentInstallItem = {
+  type: "agent"
+  id: string
+  content: {
+    mode: "primary" | "subagent" | "all"
+    description: string
+    prompt: string
+    options?: {
+      [key: string]: unknown
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    requirements?: {
+      skills?: Array<string>
+      mcps?: Array<string>
+      vscode_extensions?: Array<{
+        name: string
+        id: string
+      }>
+    }
+  }
+}
+
+export type SkillInstallItem = {
+  type: "skill"
+  id: string
+  content: string
+}
+
+export type MarketplaceInstallItem = McpInstallItem | AgentInstallItem | SkillInstallItem
+
+export type MarketplaceInstallResult = {
+  success: boolean
+  slug: string
+  error?: string
+  filePath?: string
+  line?: number
+}
+
+export type MarketplaceItemRef = {
+  id: string
+  type: "mcp" | "agent" | "skill"
+}
+
+export type MarketplaceRemoveResult = {
+  success: boolean
+  slug: string
+  error?: string
 }
 
 export type ProviderUsagePeriod = {
@@ -4215,6 +4378,10 @@ export type ProviderUsageSnapshot = {
 export type ProviderUsage = {
   items: Array<ProviderUsageSnapshot>
   generatedAt: string
+}
+
+export type EffectHttpApiErrorServiceUnavailable = {
+  _tag: "ServiceUnavailable"
 }
 
 export type NotebookOutput = {
@@ -4645,7 +4812,7 @@ export type MessageNotFoundError = {
   message: string
 }
 
-export type UnknownError1 = {
+export type UnknownError2 = {
   _tag: "UnknownError"
   message: string
   ref?: string
@@ -4861,6 +5028,7 @@ export type V2Event =
   | GlobalConfigUpdated
   | SessionDrained
   | SessionDrainInterrupted
+  | SessionWakeup
 
 export type V2EventStream = string
 
@@ -4879,26 +5047,6 @@ export type ProjectCopyError = {
 
 export type EffectHttpApiErrorForbidden = {
   _tag: "Forbidden"
-}
-
-export type InteractiveTerminalInfo1 = {
-  id: string
-  sessionID: string
-  pid: number
-  command: string
-  cwd: string
-  description?: string
-  status: "running" | "closed"
-  cols: number
-  rows: number
-  exitCode?: number | "NaN" | "Infinity" | "-Infinity"
-  signal?: string
-  closedBy?: "exit" | "user" | "abort"
-  time: {
-    started: number
-    updated: number
-    ended?: number
-  }
 }
 
 export type CredentialValue = CredentialOAuth | CredentialKey
@@ -5005,34 +5153,6 @@ export type EventBackgroundProcessDeleted = {
     sessionID: string
     processID: string
     scope: string
-  }
-}
-
-export type EventInteractiveTerminalUpdated = {
-  id: string
-  type: "interactive_terminal.updated"
-  properties: {
-    info: InteractiveTerminalInfo
-  }
-}
-
-export type EventInteractiveTerminalData = {
-  id: string
-  type: "interactive_terminal.data"
-  properties: {
-    terminalID: string
-    sessionID: string
-    data: string
-    cursor: number
-  }
-}
-
-export type EventInteractiveTerminalDeleted = {
-  id: string
-  type: "interactive_terminal.deleted"
-  properties: {
-    terminalID: string
-    sessionID: string
   }
 }
 
@@ -6366,6 +6486,15 @@ export type EventSessionDrainInterrupted = {
   type: "session.drain.interrupted"
   properties: {
     sessionID: string
+  }
+}
+
+export type EventSessionWakeup = {
+  id: string
+  type: "session.wakeup"
+  properties: {
+    sessionID: string
+    pending: number
   }
 }
 
@@ -9378,6 +9507,24 @@ export type SessionDrainInterrupted = {
   }
 }
 
+export type SessionWakeup = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.wakeup"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    sessionID: string
+    pending: number
+  }
+}
+
 export type QuestionV2Request = {
   id: string
   sessionID: string
@@ -10413,6 +10560,15 @@ export type EventSessionDrainInterrupted1 = {
   type: "session.drain.interrupted"
   properties: {
     sessionID: string
+  }
+}
+
+export type EventSessionWakeup1 = {
+  id: string
+  type: "session.wakeup"
+  properties: {
+    sessionID: string
+    pending: number
   }
 }
 
@@ -15983,173 +16139,6 @@ export type InstanceReloadResponses = {
 
 export type InstanceReloadResponse = InstanceReloadResponses[keyof InstanceReloadResponses]
 
-export type InteractiveTerminalListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal"
-}
-
-export type InteractiveTerminalListErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type InteractiveTerminalListError = InteractiveTerminalListErrors[keyof InteractiveTerminalListErrors]
-
-export type InteractiveTerminalListResponses = {
-  /**
-   * List of interactive terminals
-   */
-  200: Array<InteractiveTerminalSnapshot>
-}
-
-export type InteractiveTerminalListResponse = InteractiveTerminalListResponses[keyof InteractiveTerminalListResponses]
-
-export type InteractiveTerminalGetData = {
-  body?: never
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}"
-}
-
-export type InteractiveTerminalGetErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalGetError = InteractiveTerminalGetErrors[keyof InteractiveTerminalGetErrors]
-
-export type InteractiveTerminalGetResponses = {
-  /**
-   * Interactive terminal snapshot
-   */
-  200: InteractiveTerminalSnapshot
-}
-
-export type InteractiveTerminalGetResponse = InteractiveTerminalGetResponses[keyof InteractiveTerminalGetResponses]
-
-export type InteractiveTerminalWriteData = {
-  body?: InteractiveTerminalWriteInput
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}/input"
-}
-
-export type InteractiveTerminalWriteErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalWriteError = InteractiveTerminalWriteErrors[keyof InteractiveTerminalWriteErrors]
-
-export type InteractiveTerminalWriteResponses = {
-  /**
-   * Input written
-   */
-  200: boolean
-}
-
-export type InteractiveTerminalWriteResponse =
-  InteractiveTerminalWriteResponses[keyof InteractiveTerminalWriteResponses]
-
-export type InteractiveTerminalResizeData = {
-  body?: InteractiveTerminalResizeInput
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}/resize"
-}
-
-export type InteractiveTerminalResizeErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalResizeError = InteractiveTerminalResizeErrors[keyof InteractiveTerminalResizeErrors]
-
-export type InteractiveTerminalResizeResponses = {
-  /**
-   * Terminal resized
-   */
-  200: boolean
-}
-
-export type InteractiveTerminalResizeResponse =
-  InteractiveTerminalResizeResponses[keyof InteractiveTerminalResizeResponses]
-
-export type InteractiveTerminalCloseData = {
-  body?: never
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}/close"
-}
-
-export type InteractiveTerminalCloseErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalCloseError = InteractiveTerminalCloseErrors[keyof InteractiveTerminalCloseErrors]
-
-export type InteractiveTerminalCloseResponses = {
-  /**
-   * Terminal closed
-   */
-  200: boolean
-}
-
-export type InteractiveTerminalCloseResponse =
-  InteractiveTerminalCloseResponses[keyof InteractiveTerminalCloseResponses]
-
 export type KiloProfileData = {
   body?: never
   path?: never
@@ -16597,95 +16586,6 @@ export type KiloOrganizationSetResponses = {
 
 export type KiloOrganizationSetResponse = KiloOrganizationSetResponses[keyof KiloOrganizationSetResponses]
 
-export type KiloClawStatusData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/kilo/claw/status"
-}
-
-export type KiloClawStatusErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * ServiceUnavailable
-   */
-  503: EffectHttpApiErrorServiceUnavailable
-}
-
-export type KiloClawStatusError = KiloClawStatusErrors[keyof KiloClawStatusErrors]
-
-export type KiloClawStatusResponses = {
-  /**
-   * Instance status
-   */
-  200: {
-    status:
-      | "provisioned"
-      | "starting"
-      | "restarting"
-      | "recovering"
-      | "running"
-      | "stopped"
-      | "destroying"
-      | "restoring"
-      | null
-    sandboxId?: string
-    flyRegion?: string
-    machineSize?: {
-      cpus: number
-      memory_mb: number
-    }
-    openclawVersion?: string | null
-    lastStartedAt?: string | null
-    lastStoppedAt?: string | null
-    channelCount?: number
-    secretCount?: number
-    userId?: string
-    botName?: string | null
-  }
-}
-
-export type KiloClawStatusResponse = KiloClawStatusResponses[keyof KiloClawStatusResponses]
-
-export type KiloClawChatCredentialsData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/kilo/claw/chat-credentials"
-}
-
-export type KiloClawChatCredentialsErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type KiloClawChatCredentialsError = KiloClawChatCredentialsErrors[keyof KiloClawChatCredentialsErrors]
-
-export type KiloClawChatCredentialsResponses = {
-  /**
-   * Kilo Chat credentials or null
-   */
-  200: {
-    token: string
-    expiresAt: string
-    kiloChatUrl: string
-    eventServiceUrl: string
-  } | null
-}
-
-export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
-
 export type KiloCloudSessionsData = {
   body?: never
   path?: never
@@ -16904,6 +16804,95 @@ export type KilocodeDrainSessionResponses = {
 
 export type KilocodeDrainSessionResponse = KilocodeDrainSessionResponses[keyof KilocodeDrainSessionResponses]
 
+export type KilocodeSessionBoardData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+    before?: string
+    limit?: number
+  }
+  url: "/kilocode/session/{sessionID}/board"
+}
+
+export type KilocodeSessionBoardErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UnknownError
+   */
+  500: UnknownError1
+}
+
+export type KilocodeSessionBoardError = KilocodeSessionBoardErrors[keyof KilocodeSessionBoardErrors]
+
+export type KilocodeSessionBoardResponses = {
+  /**
+   * Shared board snapshot
+   */
+  200: SessionBoard
+}
+
+export type KilocodeSessionBoardResponse = KilocodeSessionBoardResponses[keyof KilocodeSessionBoardResponses]
+
+export type KilocodeResetSessionBoardData = {
+  body?: {
+    revision: number
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session/{sessionID}/board/reset"
+}
+
+export type KilocodeResetSessionBoardErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UnknownError
+   */
+  500: UnknownError1
+}
+
+export type KilocodeResetSessionBoardError = KilocodeResetSessionBoardErrors[keyof KilocodeResetSessionBoardErrors]
+
+export type KilocodeResetSessionBoardResponses = {
+  /**
+   * Shared board after reset
+   */
+  200: SessionBoard
+}
+
+export type KilocodeResetSessionBoardResponse =
+  KilocodeResetSessionBoardResponses[keyof KilocodeResetSessionBoardResponses]
+
 export type KilocodeHeapSnapshotData = {
   body?: never
   path?: never
@@ -17051,6 +17040,101 @@ export type KilocodeRemoveAgentResponses = {
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
 
+export type KilocodeMarketplaceListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace"
+}
+
+export type KilocodeMarketplaceListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceListError = KilocodeMarketplaceListErrors[keyof KilocodeMarketplaceListErrors]
+
+export type KilocodeMarketplaceListResponses = {
+  /**
+   * Marketplace catalog and installed metadata
+   */
+  200: MarketplaceListResult
+}
+
+export type KilocodeMarketplaceListResponse = KilocodeMarketplaceListResponses[keyof KilocodeMarketplaceListResponses]
+
+export type KilocodeMarketplaceInstallData = {
+  body?: {
+    item: MarketplaceInstallItem
+    target?: "project" | "global"
+    parameters?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/install"
+}
+
+export type KilocodeMarketplaceInstallErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceInstallError = KilocodeMarketplaceInstallErrors[keyof KilocodeMarketplaceInstallErrors]
+
+export type KilocodeMarketplaceInstallResponses = {
+  /**
+   * Marketplace install result
+   */
+  200: MarketplaceInstallResult
+}
+
+export type KilocodeMarketplaceInstallResponse =
+  KilocodeMarketplaceInstallResponses[keyof KilocodeMarketplaceInstallResponses]
+
+export type KilocodeMarketplaceRemoveData = {
+  body?: {
+    item: MarketplaceItemRef
+    scope: "project" | "global"
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/remove"
+}
+
+export type KilocodeMarketplaceRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceRemoveError = KilocodeMarketplaceRemoveErrors[keyof KilocodeMarketplaceRemoveErrors]
+
+export type KilocodeMarketplaceRemoveResponses = {
+  /**
+   * Marketplace removal result
+   */
+  200: MarketplaceRemoveResult
+}
+
+export type KilocodeMarketplaceRemoveResponse =
+  KilocodeMarketplaceRemoveResponses[keyof KilocodeMarketplaceRemoveResponses]
+
 export type KilocodeRemoveSnapshotData = {
   body?: {
     worktree: string
@@ -17080,6 +17164,70 @@ export type KilocodeRemoveSnapshotResponses = {
 }
 
 export type KilocodeRemoveSnapshotResponse = KilocodeRemoveSnapshotResponses[keyof KilocodeRemoveSnapshotResponses]
+
+export type KilocodeTeardownWorktreeData = {
+  body?: {
+    worktree: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/worktree/teardown"
+}
+
+export type KilocodeTeardownWorktreeErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeTeardownWorktreeError = KilocodeTeardownWorktreeErrors[keyof KilocodeTeardownWorktreeErrors]
+
+export type KilocodeTeardownWorktreeResponses = {
+  /**
+   * Worktree backend teardown result
+   */
+  200: {
+    disposed: boolean
+  }
+}
+
+export type KilocodeTeardownWorktreeResponse =
+  KilocodeTeardownWorktreeResponses[keyof KilocodeTeardownWorktreeResponses]
+
+export type KilocodeSnapshotPrepareData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/snapshot/prepare"
+}
+
+export type KilocodeSnapshotPrepareErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSnapshotPrepareError = KilocodeSnapshotPrepareErrors[keyof KilocodeSnapshotPrepareErrors]
+
+export type KilocodeSnapshotPrepareResponses = {
+  /**
+   * Snapshot repository preparation result
+   */
+  200: {
+    prepared: boolean
+    durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
+export type KilocodeSnapshotPrepareResponse = KilocodeSnapshotPrepareResponses[keyof KilocodeSnapshotPrepareResponses]
 
 export type KilocodeProviderUsageGetData = {
   body?: never
@@ -17527,6 +17675,37 @@ export type KilocodeBackgroundJobPromoteResponses = {
 
 export type KilocodeBackgroundJobPromoteResponse =
   KilocodeBackgroundJobPromoteResponses[keyof KilocodeBackgroundJobPromoteResponses]
+
+export type KilocodeWakeupsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/wakeups"
+}
+
+export type KilocodeWakeupsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeWakeupsError = KilocodeWakeupsErrors[keyof KilocodeWakeupsErrors]
+
+export type KilocodeWakeupsResponses = {
+  /**
+   * Pending wakeups for the routed directory
+   */
+  200: Array<{
+    sessionID: string
+    pending: number
+  }>
+}
+
+export type KilocodeWakeupsResponse = KilocodeWakeupsResponses[keyof KilocodeWakeupsResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never
@@ -19614,7 +19793,7 @@ export type V2SessionRevertStageErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionRevertStageError = V2SessionRevertStageErrors[keyof V2SessionRevertStageErrors]
@@ -19655,7 +19834,7 @@ export type V2SessionRevertClearErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionRevertClearError = V2SessionRevertClearErrors[keyof V2SessionRevertClearErrors]
@@ -19729,7 +19908,7 @@ export type V2SessionContextErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionContextError = V2SessionContextErrors[keyof V2SessionContextErrors]
@@ -19929,7 +20108,7 @@ export type V2SessionMessagesErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionMessagesError = V2SessionMessagesErrors[keyof V2SessionMessagesErrors]

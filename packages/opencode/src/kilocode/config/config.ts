@@ -214,7 +214,8 @@ export namespace KilocodeConfig {
     if (!isRecord(info.experimental)) return info
     const indexing = "semantic_indexing" in info.experimental
     const codebase = "codebase_search" in info.experimental
-    if (!indexing && !codebase) return info
+    const board = "shared_agent_board" in info.experimental
+    if (!indexing && !codebase && !board) return info
     const experimental = { ...info.experimental }
     if (indexing) {
       delete experimental.semantic_indexing
@@ -223,6 +224,15 @@ export namespace KilocodeConfig {
     if (codebase) {
       delete experimental.codebase_search
       log.warn("ignored retired experimental.codebase_search config", { path: source })
+    }
+    if (board) {
+      delete experimental.shared_agent_board
+      log.warn(
+        "ignored retired experimental.shared_agent_board config; use the top-level shared_agent_board key instead",
+        {
+          path: source,
+        },
+      )
     }
     return { ...info, experimental }
   }
@@ -617,6 +627,11 @@ export namespace KilocodeConfig {
 
     const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
     for (const [name, src] of Object.entries(srcMcp)) {
+      if (src === null) {
+        delete out[name]
+        continue
+      }
+
       const base = baseMcp[name]
       if (!isRecord(src) || !isRecord(base)) {
         out[name] = src
@@ -671,7 +686,11 @@ export namespace KilocodeConfig {
    * opencode configuration but no longer reads `.opencode` directories.
    * Returns the existing `.opencode` locations (global + project), highest first.
    */
-  export function detectOpencodeConfig(input: { directory: string; worktree?: string; scanProject: boolean }): string[] {
+  export function detectOpencodeConfig(input: {
+    directory: string
+    worktree?: string
+    scanProject: boolean
+  }): string[] {
     const found: string[] = []
 
     // Global opencode config dir (sibling of the kilo global config dir, e.g. ~/.config/opencode).

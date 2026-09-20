@@ -14,6 +14,7 @@ import type {
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { DeferredPopover } from "../src/components/shared/DeferredPopover"
@@ -23,7 +24,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { DEFAULT_VARIANT, cycleVariant, preserveVariant } from "../src/context/session-variant-store"
+import { DEFAULT_VARIANT, cycleVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -43,21 +44,38 @@ import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToTex
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
-import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { insertSpacedText, undoKey } from "../src/components/chat/prompt-input-utils"
+import { GoalHeader } from "../src/components/chat/goal/GoalHeader"
+import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
+import type { MentionResult, WorktreeReference } from "../src/hooks/file-mention-utils"
+import { segmentMentionText } from "../src/hooks/file-mention-utils"
+import { SessionMentionPicker } from "../src/components/chat/SessionMentionPicker"
+import { WorktreeMentionPicker } from "../src/components/chat/WorktreeMentionPicker"
+import { formatRelativeDate } from "../src/utils/date"
+import { useWorktreeMention } from "./worktree-mention"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
-import { createDialogModels } from "./new-worktree-models"
+import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
+import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
+// Local dialog actions offered by the prompt slash menu. Server commands
+// (custom commands, skills, MCP prompts, /goal) are always offered; the
+// exclude set hides the session/global/navigation commands that do not apply
+// to creating a worktree.
 const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox", "project"])
+const WORKTREE_PROMPT_HIDDEN = ["init", "review", "resume-claude", "resume-codex"]
 const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
+// The `@model` entry opens the shared model selector through its programmatic
+// open event, keyed to this prompt scope so the footer model selector and slash
+// commands are unaffected.
+const WORKTREE_MENTION_MODEL_TRIGGER = "agent-manager-worktree-mention-model"
 
 type DialogTab = "new" | "import"
 type Model = { providerID: string; modelID: string }
@@ -94,6 +112,50 @@ function restoreAgent(value: string | undefined, list: Array<{ name: string }>, 
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
+/**
+ * One row of the dialog's `@` menu. Only the three worktree-independent
+ * references plus past-chat matches can appear here.
+ */
+function MentionRow(props: { item: MentionResult }) {
+  const { t } = useLanguage()
+  const item = props.item
+  if (item.type === "model")
+    return (
+      <>
+        <Icon name="models" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "past-chats")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "worktrees")
+    return (
+      <>
+        <Icon name="branch" class="file-mention-icon" />
+        <span class="file-mention-name">{t("prompt.worktrees.title")}</span>
+        <span class="file-mention-dir">{t("prompt.worktrees.search")}</span>
+      </>
+    )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
+      </>
+    )
+  return null
+}
+
 export const NewWorktreeDialog: Component<{
   onClose: () => void
   defaultBase?: (projectId: string) => string | undefined
@@ -101,6 +163,7 @@ export const NewWorktreeDialog: Component<{
   projects?: () => AgentProjectSnapshot[]
   activeProjectId?: string
   onCreate?: (projectId: string) => void
+  worktrees?: () => WorktreeReference[]
   mode: ModeRouter
 }> = (props) => {
   const { t } = useLanguage()
@@ -137,19 +200,25 @@ export const NewWorktreeDialog: Component<{
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
+  const [compareMode, setCompareMode] = createSignal(false)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
-  const [agent, setAgent] = createSignal(initialAgent)
-  const selection = createDialogModels({
-    saved: saved.model,
-    fallback: () => session.modelForAgent(agent()),
+  const preferences = createDialogPreferences({
+    saved,
+    agent: initialAgent,
+    fallback: session.modelForAgent,
+    effort: session.variantPreference,
+    preferred: session.preferredSelection,
+    hydrated: session.preferencesReady,
     ready: provider.ready,
     valid: provider.isModelValid,
     variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
+    compare: compareMode,
+    remember: session.rememberSelection,
   })
-  const model = selection.model
-  const [compareMode, setCompareMode] = createSignal(false)
+  const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [starting, setStarting] = createSignal(false)
+  const [goalMode, setGoalMode] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
@@ -157,7 +226,6 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(saved.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -168,7 +236,7 @@ export const NewWorktreeDialog: Component<{
   const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true
   const speech = useSpeechToText(vscode, server, { t })
   const speechModels = useSpeechToTextModels()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   let prior: string | null = null
   let request: string | undefined
@@ -176,12 +244,6 @@ export const NewWorktreeDialog: Component<{
     prior = null
     request = undefined
     setEnhancing(false)
-  }
-
-  const selectAgent = (name: string) => {
-    setAgent(name)
-    selection.select(undefined)
-    setVariant(undefined)
   }
 
   const cycle = (direction: 1 | -1) => {
@@ -197,33 +259,6 @@ export const NewWorktreeDialog: Component<{
     if (tab() !== "new") return
     const dispose = props.mode.register(cycle)
     onCleanup(dispose)
-  })
-
-  // Variant list for the currently selected model
-  const variants = createMemo(() => {
-    const sel = model()
-    if (!sel) return []
-    const found = provider.findModel(sel)
-    if (!found?.variants) return []
-    return Object.keys(found.variants)
-  })
-
-  const effectiveVariant = createMemo(() => {
-    const list = variants()
-    if (list.length === 0) return undefined
-    const stored = variant() ?? session.variantForAgent(agent(), model())
-    return stored && list.includes(stored) ? stored : undefined
-  })
-
-  // Reset variant when model changes and stored variant is not in new list
-  createEffect(() => {
-    const list = variants()
-    if (list.length === 0) {
-      setVariant(undefined)
-      return
-    }
-    const stored = variant()
-    if (stored && !list.includes(stored)) setVariant(preserveVariant(stored, list))
   })
 
   createEffect(() => {
@@ -300,9 +335,7 @@ export const NewWorktreeDialog: Component<{
     vscode.setState({
       ...state,
       advancedDialogSelections: {
-        agent: agent(),
-        model: selection.choice(),
-        variant: variant(),
+        ...preferences.saved(),
         sandbox: sandbox(),
       },
     })
@@ -326,7 +359,7 @@ export const NewWorktreeDialog: Component<{
     vscode,
     { action: toggleSandbox, enabled: () => sandboxVisible() && sandbox() !== undefined && sandboxAvailable() },
     () => {
-      const hidden = new Set<string>()
+      const hidden = new Set<string>(WORKTREE_PROMPT_HIDDEN)
       if (session.agents().length < 2) hidden.add("agents")
       if (variants().length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
@@ -348,7 +381,27 @@ export const NewWorktreeDialog: Component<{
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  const mention = useWorktreeMention(vscode, () => props.worktrees?.() ?? [])
+  let highlightRef: HTMLDivElement | undefined
+  const mentionSegments = createMemo(() => segmentMentionText(prompt(), mention.highlightTokens()))
+  const syncHighlight = () => {
+    if (!highlightRef || !textareaRef) return
+    highlightRef.scrollTop = textareaRef.scrollTop
+    highlightRef.scrollLeft = textareaRef.scrollLeft
+  }
+  // Picking the `@` model entry opens the shared model selector, mounted hidden
+  // and keyed to its own trigger. The mention latch resets first because the
+  // selector owns its open state afterwards.
+  createEffect(() => {
+    if (!mention.modelPicker()) return
+    mention.closeMention()
+    window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: WORKTREE_MENTION_MODEL_TRIGGER } }))
+  })
+
   onMount(() => {
+    // Server commands must be known before submit so a pasted `/command`
+    // prompt can be routed through the command path, not only via the menu.
+    vscode.postMessage({ type: "requestCommands" })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
     const focus = () => {
@@ -389,10 +442,25 @@ export const NewWorktreeDialog: Component<{
   const canSubmit = () => {
     if (starting()) return false
     if (speech.active()) return false
+    // In goal mode the objective replaces the prompt, so a session can only
+    // start once the objective has been typed.
+    if (goalMode() && !prompt().trim()) return false
     return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
   const mode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
+
+  /**
+   * Attachments for the new sessions. Mentions are resolved here, at creation
+   * time: the new worktree does not exist yet, so nothing is read from it. Past
+   * chats and worktrees travel as attachments; model references stay inline.
+   */
+  const resolveFiles = (text: string | undefined) => {
+    const mentionFiles = text ? mention.parseAttachments(text) : []
+    const imgFiles = imageAttach.images().map((img) => ({ mime: img.mime, url: img.dataUrl }))
+    const files = [...mentionFiles, ...imgFiles]
+    return files.length > 0 ? files : undefined
+  }
 
   const handleSubmit = () => {
     if (!canSubmit()) return
@@ -406,13 +474,21 @@ export const NewWorktreeDialog: Component<{
       })
       return
     }
+    const draft = prompt().trim()
+    if (shouldComposeGoal(goalMode(), draft)) {
+      // First step of the two-step goal flow: switch to goal composition and
+      // start the session only after the objective is entered.
+      setGoalMode(true)
+      setPromptValue("")
+      slash.close()
+      requestAnimationFrame(() => textareaRef?.focus({ preventScroll: true }))
+      return
+    }
     setStarting(true)
 
-    const text = prompt().trim() || undefined
+    const payload = submitPayload(goalMode(), draft, slash.commands())
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
-    const imgs = imageAttach.images()
-    const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
 
     const isCompare = compareMode()
     const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
@@ -424,7 +500,9 @@ export const NewWorktreeDialog: Component<{
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
       projectId: target,
-      text,
+      text: payload.text,
+      command: payload.command,
+      arguments: payload.arguments,
       name: name().trim() || undefined,
       versions: count,
       providerID: sel?.providerID,
@@ -435,7 +513,7 @@ export const NewWorktreeDialog: Component<{
       branchName: customBranch,
       modelAllocations: allocations,
       sandbox: sandboxVisible() ? sandboxOverride() : undefined,
-      files: imgFiles,
+      files: resolveFiles(payload.text),
     })
 
     persistPrompt("")
@@ -451,8 +529,14 @@ export const NewWorktreeDialog: Component<{
   }
 
   const undo = (e: KeyboardEvent) => {
-    if (e.key !== "z" || (!e.metaKey && !e.ctrlKey) || e.shiftKey || prior === null) return
+    const action = undoKey(e)
+    if (!action) return
+    e.stopPropagation()
     e.preventDefault()
+    if (action === "redo" || prior === null) {
+      document.execCommand(action)
+      return
+    }
     const restored = prior
     cancel()
     setPrompt(restored)
@@ -475,6 +559,23 @@ export const NewWorktreeDialog: Component<{
       return
     }
 
+    if (mention.onKeyDown(e, textareaRef, setPromptValue, restorePrompt)) {
+      e.stopPropagation()
+      return
+    }
+
+    // The chat composer submits on Enter, so mirror that for the two-step goal
+    // flow. Use the shared IME guard so confirming a composition does not submit.
+    // Plain prompts keep Enter as a newline and still create with Cmd/Ctrl+Enter.
+    if (isEnterKeyCommitNotIme(e) && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (goalMode() || prompt().trim() === "/goal") {
+        e.preventDefault()
+        e.stopPropagation()
+        handleSubmit()
+        return
+      }
+    }
+
     // Shift+Tab cycles reasoning effort variants (setting: chat.shiftTabCyclesVariant).
     // When disabled or no variants exist, fall through to default focus navigation.
     if (e.key === "Tab" && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -483,7 +584,7 @@ export const NewWorktreeDialog: Component<{
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
       e.preventDefault()
-      setVariant(next ?? DEFAULT_VARIANT)
+      selectVariant(next)
       return
     }
     undo(e)
@@ -500,6 +601,7 @@ export const NewWorktreeDialog: Component<{
     box.style.height = "auto"
     const chrome = box.offsetHeight - area.offsetHeight
     box.style.height = `${Math.min(area.scrollHeight, 200) + chrome}px`
+    syncHighlight()
   }
 
   const insertSpeechText = (value: string) => {
@@ -729,6 +831,83 @@ export const NewWorktreeDialog: Component<{
               onDragLeave={imageAttach.handleDragLeave}
               onDrop={imageAttach.handleDrop}
             >
+              <div class="mention-model-anchor" aria-hidden="true">
+                <ModelSelectorBase
+                  value={null}
+                  trigger={WORKTREE_MENTION_MODEL_TRIGGER}
+                  collapsed
+                  placement="top-start"
+                  portal={false}
+                  deferDismiss
+                  onSelect={(providerID, modelID) => {
+                    if (providerID && modelID) mention.selectModelReference(providerID, modelID)
+                  }}
+                  onCancel={() => {
+                    mention.closeMention()
+                    restorePrompt()
+                  }}
+                />
+              </div>
+              <Show when={mention.showMention()}>
+                <div class="file-mention-dropdown am-mention-dropdown" data-component="popover-content">
+                  <Show
+                    when={!mention.sessionPicker()}
+                    fallback={
+                      <SessionMentionPicker
+                        sessions={mention.sessionCandidates()}
+                        onSelect={(picked) => {
+                          if (textareaRef) mention.selectSession(picked, textareaRef, setPromptValue, restorePrompt)
+                        }}
+                        onClose={() => {
+                          mention.closeMention()
+                          restorePrompt()
+                        }}
+                      />
+                    }
+                  >
+                    <Show
+                      when={!mention.worktreePicker()}
+                      fallback={
+                        <WorktreeMentionPicker
+                          worktrees={mention.worktreeCandidates()}
+                          onSelect={(picked) => {
+                            if (textareaRef) mention.selectWorktree(picked, textareaRef, setPromptValue, restorePrompt)
+                          }}
+                          onClose={() => {
+                            mention.closeMention()
+                            restorePrompt()
+                          }}
+                        />
+                      }
+                    >
+                      <Show
+                        when={mention.mentionResults().length > 0}
+                        fallback={<div class="file-mention-empty">No mentions found</div>}
+                      >
+                        <For each={mention.mentionResults()}>
+                          {(item, index) => (
+                            <div
+                              class="file-mention-item"
+                              data-type={item.type}
+                              classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                if (textareaRef) mention.selectMention(item, textareaRef, setPromptValue, restorePrompt)
+                              }}
+                              onMouseEnter={() => mention.setMentionIndex(index())}
+                            >
+                              <MentionRow item={item} />
+                            </div>
+                          )}
+                        </For>
+                      </Show>
+                    </Show>
+                  </Show>
+                </div>
+              </Show>
+              <Show when={goalMode()}>
+                <GoalHeader onCancel={() => setGoalMode(false)} />
+              </Show>
               <Show when={slash.show()}>
                 <div class="slash-command-dropdown am-slash-command-dropdown" data-component="popover-content">
                   <Show
@@ -784,6 +963,18 @@ export const NewWorktreeDialog: Component<{
               </Show>
               <div class="prompt-input-wrapper am-prompt-input-wrapper">
                 <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
+                  <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
+                    <For each={mentionSegments()}>
+                      {(seg) => (
+                        <Show when={seg.mention} fallback={<span>{seg.text}</span>}>
+                          <span class="prompt-input-file-mention">{seg.text}</span>
+                        </Show>
+                      )}
+                    </For>
+                    <Show when={prompt().endsWith("\n")}>
+                      <br />
+                    </Show>
+                  </div>
                   <textarea
                     ref={textareaRef}
                     class="prompt-input am-prompt-input"
@@ -799,11 +990,14 @@ export const NewWorktreeDialog: Component<{
                       setPrompt(val)
                       persistPrompt(val)
                       adjustHeight()
-                      slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
+                      if (goalMode()) slash.close()
+                      else slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
+                      mention.onInput(val, e.currentTarget.selectionStart ?? val.length)
                     }}
                     onKeyDown={onKey}
                     onKeyUp={speechUp}
                     onPaste={(e) => imageAttach.handlePaste(e)}
+                    onScroll={syncHighlight}
                     rows={3}
                     dir="auto"
                   />
@@ -824,14 +1018,7 @@ export const NewWorktreeDialog: Component<{
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
                       value={model()}
-                      onSelect={(pid, mid) => {
-                        if (!pid || !mid) return
-                        const current = effectiveVariant()
-                        const next = { providerID: pid, modelID: mid }
-                        const list = Object.keys(provider.findModel(next)?.variants ?? {})
-                        selection.select(next)
-                        setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
-                      }}
+                      onSelect={selectModel}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
                       trigger={WORKTREE_PROMPT_SCOPE}
@@ -842,8 +1029,8 @@ export const NewWorktreeDialog: Component<{
                     <ThinkingSelectorBase
                       variants={variants()}
                       value={effectiveVariant()}
-                      onSelect={setVariant}
-                      onClear={() => setVariant(DEFAULT_VARIANT)}
+                      onSelect={selectVariant}
+                      onClear={() => selectVariant(DEFAULT_VARIANT)}
                       allowClear
                       clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}
@@ -855,15 +1042,15 @@ export const NewWorktreeDialog: Component<{
                 </div>
                 <div class="prompt-input-hint-actions">
                   <Tooltip value={t("prompt.action.enhance")} placement="top">
-                    <Button
+                    <IconButton
+                      icon="wand-sparkles"
                       variant="ghost"
                       size="small"
                       onClick={handleEnhance}
                       disabled={!canEnhance()}
+                      loading={enhancing()}
                       aria-label={t("prompt.action.enhance")}
-                    >
-                      <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
-                    </Button>
+                    />
                   </Tooltip>
                   <Show when={sandboxVisible()}>
                     <SandboxButtonBase
@@ -1145,7 +1332,7 @@ export const NewWorktreeDialog: Component<{
                   </>
                 }
               >
-                {t("agentManager.dialog.createWorktree")}
+                {goalMode() ? t("prompt.goal.start") : t("agentManager.dialog.createWorktree")}
               </Show>
             </Button>
           </div>

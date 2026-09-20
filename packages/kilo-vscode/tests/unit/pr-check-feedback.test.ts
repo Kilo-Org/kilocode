@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { checkFeedback } from "../../webview-ui/agent-manager/pr/pr-check-feedback"
 import type { PRCheck } from "../../webview-ui/agent-manager/pr/pr-types"
 
-function feedback(checks: PRCheck[], url = "https://github.com/owner/repo/pull/42") {
+function feedback(checks: PRCheck[], url = "https://github.com/owner/repo/pull/42", push = false) {
   return checkFeedback(
     {
       number: 42,
@@ -10,6 +10,7 @@ function feedback(checks: PRCheck[], url = "https://github.com/owner/repo/pull/4
       checks: { status: "failure", total: checks.length, passed: 0, failed: 0, pending: 0, checks },
     },
     "CI feedback",
+    push,
   )
 }
 
@@ -39,6 +40,15 @@ describe("CI check feedback", () => {
     expect(item.body).toContain('> "$log" 2>&1')
     expect(item.body).toContain("40 lines / 4 KB")
     expect(item.body).toContain("at most 3 excerpts")
+  })
+
+  it("keeps publish policy explicit for manual and terminal flows", () => {
+    const manual = feedback([failed])!
+    expect(manual.body).toContain("Do not commit, push, or rerun the failed workflows")
+
+    const publish = feedback([failed], undefined, true)!
+    expect(publish.body).toContain("Do not rerun the failed workflows")
+    expect(publish.body).not.toContain("Do not commit, push")
   })
 
   it("offers no feedback for successful, skipped, pending or empty checks", () => {

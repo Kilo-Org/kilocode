@@ -11,7 +11,6 @@ export function PRCommentDiff(props: {
   hunk: string
   after?: string[]
   inline?: boolean
-  top?: boolean
   bottom?: boolean
   children?: JSXElement
 }) {
@@ -65,9 +64,6 @@ export function PRCommentDiff(props: {
               <div class="am-pr-diff-file">
                 {props.file}:{props.line}
               </div>
-            </Show>
-            <Show when={props.top || value().hunk.top}>
-              <div class="am-pr-diff-context-marker">...</div>
             </Show>
             <Diff
               fileDiff={value().value.fileDiff}

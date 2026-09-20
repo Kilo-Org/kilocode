@@ -174,6 +174,8 @@ export interface RoutingSelectorBaseProps {
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Render inline instead of through a portal when nested in a dialog. */
   portal?: boolean
+  /** Disable this prompt-scoped selector while a permission owns the prompt. */
+  blocked?: boolean
 }
 
 export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) => {
@@ -224,8 +226,13 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
     requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
   }
 
+  createEffect(() => {
+    if (props.blocked) setOpen(false)
+  })
+
   function onOpen(val: boolean) {
     if (val) {
+      if (props.blocked) return
       props.onOpen?.()
       const idx = rows().findIndex((row) => row?.provider === props.value)
       setFocused(idx >= 0 ? idx : 0)
@@ -290,7 +297,12 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
       open={open()}
       onOpenChange={onOpen}
       triggerAs={Button}
-      triggerProps={{ variant: "ghost", size: "small", "aria-label": language.t("model.routing.label") }}
+      triggerProps={{
+        variant: "ghost",
+        size: "small",
+        "aria-label": language.t("model.routing.label"),
+        disabled: props.blocked,
+      }}
       trigger={
         <>
           <span class="routing-selector-trigger-label">{props.value ?? auto()}</span>
@@ -355,6 +367,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
 
 interface RoutingSelectorProps {
   sessionID?: Accessor<string | undefined>
+  blocked?: boolean
 }
 
 export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
@@ -403,6 +416,7 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
         <RoutingSelectorBase
           endpoints={endpoints.endpoints()}
           value={routing.value(model())}
+          blocked={props.blocked}
           onSelect={(provider) => routing.pick(model(), provider)}
           onClear={() => routing.pick(model(), null)}
           onOpen={() => {

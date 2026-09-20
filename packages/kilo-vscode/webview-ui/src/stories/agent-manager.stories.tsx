@@ -33,7 +33,10 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { PRComments } from "../../agent-manager/pr/PRComments"
-import type { PRComment } from "../../agent-manager/pr/pr-types"
+import { PRConversation } from "../../agent-manager/pr/PRConversation"
+import { PRPanel } from "../../agent-manager/pr/PRPanel"
+import { PRReviewers } from "../../agent-manager/pr/PRReviewers"
+import type { PRComment, PRReviewer, PRTimelineItem } from "../../agent-manager/pr/pr-types"
 import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
@@ -1295,6 +1298,23 @@ const MockTabAdd = () => (
   </div>
 )
 
+const MockDiffToggle = (props: { files: string; additions: string; deletions: string; active?: boolean }) => (
+  <IconButton
+    icon="layers"
+    size="small"
+    variant="ghost"
+    class="am-diff-toggle-btn"
+    aria-label="Toggle diff"
+    aria-pressed={props.active ?? false}
+  >
+    <span class="am-diff-toggle-stats">
+      <span class="am-stat-files">{props.files}</span>
+      <span class="am-stat-additions">{props.additions}</span>
+      <span class="am-stat-deletions">{props.deletions}</span>
+    </span>
+  </IconButton>
+)
+
 export const TabBarMultipleTabs: Story = {
   name: "TabBar — multiple tabs with active",
   render: () => (
@@ -1312,14 +1332,7 @@ export const TabBarMultipleTabs: Story = {
         </div>
         <MockTabAdd />
         <div class="am-tab-actions">
-          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
-            <Icon name="layers" size="small" />
-            <span class="am-diff-toggle-stats">
-              <span class="am-stat-files">4f</span>
-              <span class="am-stat-additions">+32</span>
-              <span class="am-stat-deletions">−8</span>
-            </span>
-          </button>
+          <MockDiffToggle files="4f" additions="+32" deletions="−8" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
         </div>
       </div>
@@ -1343,7 +1356,6 @@ export const TabBarWithReviewTab: Story = {
         </div>
         <MockTabAdd />
         <div class="am-tab-actions">
-          <IconButton icon="expand" size="small" variant="ghost" label="Review" class="am-tab-diff-btn-active" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
         </div>
       </div>
@@ -1366,14 +1378,7 @@ export const TabBarSingleTab: Story = {
         </div>
         <MockTabAdd />
         <div class="am-tab-actions">
-          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
-            <Icon name="layers" size="small" />
-            <span class="am-diff-toggle-stats">
-              <span class="am-stat-files">188f</span>
-              <span class="am-stat-additions">+23625</span>
-              <span class="am-stat-deletions">−359</span>
-            </span>
-          </button>
+          <MockDiffToggle files="188f" additions="+23625" deletions="−359" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
         </div>
       </div>
@@ -1383,8 +1388,20 @@ export const TabBarSingleTab: Story = {
 
 const MockFullContextActions = () => (
   <div class="am-tab-actions">
-    <TooltipKeybind title="Open this worktree in VS Code" keybind="" placement="bottom">
-      <IconButton icon="folder" size="small" variant="ghost" aria-label="Open this worktree in VS Code" />
+    <span class="am-tab-session-panels">
+      <TooltipKeybind title="Documents" keybind="" placement="bottom">
+        <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
+      </TooltipKeybind>
+      <TooltipKeybind title="Subagents" keybind="" placement="bottom">
+        <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
+      </TooltipKeybind>
+      <span class="am-tab-actions-separator" />
+    </span>
+    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
+      <MockDiffToggle files="4f" additions="+32" deletions="−8" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
+      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
     </TooltipKeybind>
     <TooltipKeybind title="Apply selected worktree changes to local branch" keybind="" placement="bottom">
       <IconButton
@@ -1394,45 +1411,31 @@ const MockFullContextActions = () => (
         aria-label="Apply selected worktree changes to local branch"
       />
     </TooltipKeybind>
+    <TooltipKeybind title="Open this worktree in VS Code" keybind="" placement="bottom">
+      <IconButton icon="folder" size="small" variant="ghost" aria-label="Open this worktree in VS Code" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Browser" keybind="" placement="bottom">
+      <IconButton icon="globe" size="small" variant="ghost" label="Browser" />
+    </TooltipKeybind>
     <span class="am-split-button">
       <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
         <IconButton size="small" variant="ghost" icon="play" aria-label="Run" />
       </TooltipKeybind>
       <TooltipKeybind title="Run options" keybind="" placement="bottom">
-        <button class="am-split-arrow" aria-label="Run options">
-          <Icon name="chevron-down" size="small" />
-        </button>
+        <IconButton icon="chevron-down" size="small" variant="ghost" aria-label="Run options" class="am-split-arrow" />
       </TooltipKeybind>
     </span>
-    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
-      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
-    </TooltipKeybind>
-    <TooltipKeybind title="Documents" keybind="" placement="bottom">
-      <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
-    </TooltipKeybind>
-    <TooltipKeybind title="Subagents" keybind="" placement="bottom">
-      <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
-    </TooltipKeybind>
-    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
-      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
-        <Icon name="layers" size="small" />
-        <span class="am-diff-toggle-stats">
-          <span class="am-stat-files">4f</span>
-          <span class="am-stat-additions">+32</span>
-          <span class="am-stat-deletions">−8</span>
-        </span>
-      </button>
-    </TooltipKeybind>
-    <TooltipKeybind title="Toggle review" keybind="" placement="bottom">
-      <IconButton icon="expand" size="small" variant="ghost" label="Toggle review" />
-    </TooltipKeybind>
     <div class="am-split-button">
       <TooltipKeybind title="Open Terminal" keybind="" placement="bottom">
         <IconButton icon="console" size="small" variant="ghost" label="Open Terminal" />
       </TooltipKeybind>
-      <button class="am-split-arrow" aria-label="Choose terminal destination">
-        <Icon name="chevron-down" size="small" />
-      </button>
+      <IconButton
+        icon="chevron-down"
+        size="small"
+        variant="ghost"
+        aria-label="Choose terminal destination"
+        class="am-split-arrow"
+      />
     </div>
   </div>
 )
@@ -1909,82 +1912,110 @@ const storyLocal = (branch: string, additions: number, deletions: number, ahead 
   behind,
 })
 
+const renderProjectSidebar = (width: number) => (
+  <StoryProviders noPadding>
+    <div class="am-sidebar" style={{ width: `${width}px`, height: "720px", "box-sizing": "border-box" }}>
+      <ProjectList
+        mode={createModeRouter()}
+        projects={[projectA, projectB]}
+        states={{
+          [projectA.id]: projectState(
+            projectA.id,
+            [
+              wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
+              wt("wt-a2", "fix/session-routing"),
+              wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
+              wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
+              wt("wt-a5", "feat/sticky-project-row", "Sticky project row"),
+              wt("wt-a6", "fix/overflow-menu", "Project overflow menu"),
+              wt("wt-a7", "chore/storybook-scroll"),
+              wt("wt-a8", "docs/agent-manager-projects"),
+              wt("wt-a9", "refactor/project-row-actions"),
+              wt("wt-a10", "test/project-row-sticky"),
+              wt("wt-a11", "feat/project-menu-i18n"),
+              wt("wt-a12", "fix/collapsed-project-plus"),
+            ],
+            [
+              { id: "ses-a1", worktreeId: null },
+              { id: "ses-a2", worktreeId: "wt-a1" },
+            ],
+            [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
+            "main",
+            [
+              "wt-a2",
+              "sec-a1",
+              "wt-a1",
+              "wt-a3",
+              "wt-a4",
+              "wt-a5",
+              "wt-a6",
+              "wt-a7",
+              "wt-a8",
+              "wt-a9",
+              "wt-a10",
+              "wt-a11",
+              "wt-a12",
+            ],
+          ),
+          [projectB.id]: projectState(
+            projectB.id,
+            [wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }), wt("wt-b2", "fix/api")],
+            [{ id: "ses-b1", worktreeId: null }],
+            [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
+            "master",
+            ["wt-b2", "sec-b1", "wt-b1"],
+          ),
+        }}
+        stats={{
+          [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
+          [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
+        }}
+        local={{
+          [projectA.id]: storyLocal("main", 124, 33, 1),
+          [projectB.id]: storyLocal("master", 0, 0, 0, 2),
+        }}
+        prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+        busy={() => false}
+        blocked={() => false}
+        sessions={{
+          [projectA.id]: [
+            projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
+            projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
+          ],
+          [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
+        }}
+        selectedProject={projectA.id}
+        selection="local"
+        activityFor={() => "idle"}
+        sessionActivity={() => "idle"}
+        bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
+        t={t}
+        onSearchRef={() => {}}
+        onShortcuts={() => {}}
+        onHistory={() => {}}
+      />
+    </div>
+  </StoryProviders>
+)
+
 export const MultiProjectSidebar: Story = {
   name: "Project List — two expanded projects with restored controls",
-  render: () => {
-    return (
-      <StoryProviders noPadding>
-        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
-          <ProjectList
-            mode={createModeRouter()}
-            projects={[projectA, projectB]}
-            states={{
-              [projectA.id]: projectState(
-                projectA.id,
-                [
-                  wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
-                  wt("wt-a2", "fix/session-routing"),
-                  wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
-                  wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
-                ],
-                [
-                  { id: "ses-a1", worktreeId: null },
-                  { id: "ses-a2", worktreeId: "wt-a1" },
-                ],
-                [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
-                "main",
-                ["wt-a2", "sec-a1", "wt-a1", "wt-a3", "wt-a4"],
-              ),
-              [projectB.id]: projectState(
-                projectB.id,
-                [
-                  wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }),
-                  wt("wt-b2", "fix/api"),
-                ],
-                [{ id: "ses-b1", worktreeId: null }],
-                [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
-                "master",
-                ["wt-b2", "sec-b1", "wt-b1"],
-              ),
-            }}
-            stats={{
-              [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
-              [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
-            }}
-            local={{
-              [projectA.id]: storyLocal("main", 124, 33, 1),
-              [projectB.id]: storyLocal("master", 0, 0, 0, 2),
-            }}
-            prs={{ [projectA.id]: {}, [projectB.id]: {} }}
-            busy={() => false}
-            blocked={() => false}
-            sessions={{
-              [projectA.id]: [
-                projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
-                projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
-              ],
-              [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
-            }}
-            selectedProject={projectA.id}
-            selection="local"
-            activityFor={() => "idle"}
-            sessionActivity={() => "idle"}
-            bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
-            t={t}
-            onSearchRef={() => {}}
-            onShortcuts={() => {}}
-            onHistory={() => {}}
-          />
-        </div>
-      </StoryProviders>
-    )
-  },
+  render: () => renderProjectSidebar(280),
 }
 
 export const MultiProjectSidebar200: Story = {
-  ...MultiProjectSidebar,
   name: "Project List - minimum sidebar width",
   parameters: { layout: "fullscreen" },
+  render: () => renderProjectSidebar(200),
+}
+
+export const MultiProjectSidebarScrolled: Story = {
+  ...MultiProjectSidebar,
+  name: "Project List — scrolled with pinned project row",
+  play: (context: { canvasElement: HTMLElement }) => {
+    const list = context.canvasElement.querySelector<HTMLElement>(".am-projects-list")
+    if (list) list.scrollTop = 360
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -2009,6 +2040,7 @@ const prComments: NonNullable<PRStatus["comments"]> = {
       diffHunk:
         '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
       side: "additions",
+      reactions: [{ content: "THUMBS_UP", count: 2, viewerHasReacted: false }],
       preview: {
         patch:
           '@@ -40,6 +40,6 @@\n   const options = { timeout: 5000 }\n   const result = await\n-    execWithShellEnv("gh", args, options)\n+    execWithShellEnv("gh", args, { ...options, env: env(options) })\n   return result\n }\n ',
@@ -2019,7 +2051,15 @@ const prComments: NonNullable<PRStatus["comments"]> = {
         top: true,
         bottom: true,
       },
-      replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
+      replies: [
+        {
+          id: "PRRC_1_REPLY",
+          author: "hubot",
+          body: "Agreed. A guard plus a log line is enough here.",
+          createdAt: Date.now() - 4 * 60 * 1000,
+          reactions: [{ content: "HEART", count: 1, viewerHasReacted: false }],
+        },
+      ],
     },
     {
       id: "PRRC_2",
@@ -2057,6 +2097,24 @@ const prComments: NonNullable<PRStatus["comments"]> = {
   ],
 }
 
+const prReviewers: PRReviewer[] = [
+  { login: "marius-kilocode", state: "approved" },
+  { login: "reviewer-changes", state: "changes_requested" },
+  { login: "reviewer-comment", state: "commented" },
+  { login: "reviewer-pending", state: "pending" },
+]
+
+export const PRPanelReviewers: Story = {
+  name: "PR panel — reviewers",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)", width: "320px" }}>
+        <PRReviewers reviewers={prReviewers} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const PRPanelComments: Story = {
   name: "PR panel — review comments",
   render: () => (
@@ -2065,6 +2123,8 @@ export const PRPanelComments: Story = {
         <PRComments
           comments={prComments}
           worktreeId="wt-a1"
+          prNumber={8594}
+          prUrl="https://github.com/org/repo/pull/8594"
           onOpenFile={() => {}}
           onOpenDiff={() => {}}
           onOpenUrl={() => {}}
@@ -2082,6 +2142,190 @@ export const PRPanelComments200: Story = {
         <PRComments
           comments={prComments}
           worktreeId="wt-a1"
+          prNumber={8594}
+          prUrl="https://github.com/org/repo/pull/8594"
+          onOpenFile={() => {}}
+          onOpenDiff={() => {}}
+          onOpenUrl={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const prPanelStatus: PRStatus = {
+  number: 13945,
+  title: "fix(cli): prevent snapshot progress session hangs",
+  url: "https://github.com/org/repo/pull/13945",
+  state: "open",
+  review: "pending",
+  checks: {
+    status: "success",
+    total: 3,
+    passed: 3,
+    failed: 0,
+    pending: 0,
+    checks: [
+      { name: "Kilo Code Review", status: "success", duration: "2m 41s" },
+      { name: "build", status: "success", duration: "1m 12s" },
+      { name: "test", status: "success", duration: "4m 03s" },
+    ],
+  },
+  reviewers: [{ login: "octocat", state: "pending" }],
+  comments: prComments,
+  additions: 219,
+  deletions: 6,
+  files: 9,
+  body: [
+    "## What Problem This Solves",
+    "",
+    "Snapshot initialization could remain visible after a mid-session snapshot operation, and an interrupted progress part could be replayed into the next provider request.",
+    "",
+    "## Why This Change Was Made",
+    "",
+    "- Preserve the project Effect context for delayed snapshot progress updates and cleanup.",
+    "- Skip snapshot lock acquisition when snapshots are disabled.",
+    "",
+    "## Evidence",
+    "",
+    "- 39 focused snapshot, history, and fork regression tests pass.",
+  ].join("\n"),
+}
+
+export const PRPanelOverview: Story = {
+  name: "PR panel — overview layout",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ height: "700px", background: "var(--vscode-sideBar-background)" }}>
+        <PRPanel
+          pr={prPanelStatus}
+          worktree={{ ...baseWorktree, branch: "fix-snapshot-initialization-hang" }}
+          worktreeId="wt-a1"
+          onClose={() => {}}
+          onRefresh={() => {}}
+          onOpenExternal={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const prConversation: PRTimelineItem[] = [
+  {
+    kind: "commit",
+    id: "commit-1",
+    sha: "a".repeat(40),
+    short: "a9f21c3",
+    message: "Guard the missing gh fallback",
+    author: "octocat",
+    createdAt: Date.now() - 50 * 60 * 1000,
+    url: "https://github.com/org/repo/commit/a9f21c3",
+  },
+  {
+    kind: "commit",
+    id: "commit-2",
+    sha: "b".repeat(40),
+    short: "b7d4e12",
+    message: "Add a regression test for the cached status",
+    author: "octocat",
+    createdAt: Date.now() - 45 * 60 * 1000,
+    url: "https://github.com/org/repo/commit/b7d4e12",
+  },
+  {
+    kind: "event",
+    event: "force_pushed",
+    id: "force-push-1",
+    actor: "octocat",
+    detail: "a9f21c3 to b7d4e12",
+    createdAt: Date.now() - 40 * 60 * 1000,
+  },
+  {
+    kind: "review",
+    id: "review-1",
+    author: "hubot",
+    body: "",
+    state: "approved",
+    createdAt: Date.now() - 30 * 60 * 1000,
+  },
+  {
+    id: "conversation-1",
+    kind: "issue",
+    author: "octocat",
+    body: "Thanks, this also covers the empty response case.",
+    createdAt: Date.now() - 20 * 60 * 1000,
+  },
+  {
+    kind: "event",
+    event: "merged",
+    id: "merged-1",
+    actor: "hubot",
+    detail: "main",
+    createdAt: Date.now() - 10 * 60 * 1000,
+  },
+]
+
+export const PRPanelConversation: Story = {
+  name: "PR panel — conversation timeline",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRConversation
+          prNumber={8594}
+          prUrl="https://github.com/org/repo/pull/8594"
+          worktreeId="wt-a1"
+          description={
+            "Replaces the separate comments and reviews queries with the GitHub timeline.\n\nCommits, force pushes, merges, and reviews now read in the order they happened."
+          }
+          author="octocat"
+          createdAt={Date.now() - 60 * 60 * 1000}
+          items={prConversation}
+          onOpenUrl={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const summaryPR: PRStatus = {
+  ...basePR,
+  review: "changes_requested",
+  checks: {
+    status: "failure",
+    total: 5,
+    passed: 3,
+    failed: 2,
+    pending: 0,
+    checks: [
+      { name: "Typecheck", status: "failure", url: "https://github.com/org/repo/actions/runs/100/job/200" },
+      { name: "Tests", status: "failure" },
+      { name: "Lint", status: "success" },
+      { name: "Build", status: "success" },
+      { name: "Docs", status: "success" },
+    ],
+  },
+  comments: prComments,
+  conversation: [
+    {
+      id: "IC_1",
+      author: "octocat",
+      body: "Ship it once CI is green.",
+      createdAt: Date.now() - 60_000,
+      isBot: false,
+    },
+  ],
+}
+
+export const PRPanelSummary: Story = {
+  name: "PR panel — header and summary",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)", height: "680px" }}>
+        <PRPanel
+          pr={summaryPR}
+          worktreeId="wt-a1"
+          onClose={() => {}}
+          onRefresh={() => {}}
+          onOpenExternal={() => {}}
           onOpenFile={() => {}}
           onOpenDiff={() => {}}
           onOpenUrl={() => {}}
@@ -2136,7 +2380,7 @@ function RemoteReviewStory(props: { full?: boolean }) {
   const [style, setStyle] = createSignal<"unified" | "split">("unified")
   const [comments, setComments] = createSignal<ReviewComment[]>([
     {
-      id: "local-review",
+      id: "review-note",
       file: tail.file,
       side: "additions",
       line: 1,

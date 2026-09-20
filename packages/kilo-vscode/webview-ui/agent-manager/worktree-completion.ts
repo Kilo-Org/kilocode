@@ -35,7 +35,7 @@ export function createWorktreeCompletion(
         // Fallback for hidden webviews or interrupted CSS animations.
         timers.set(
           worktree.id,
-          setTimeout(() => release(worktree.id), 1400),
+          setTimeout(() => release(worktree.id), 900),
         )
       }),
     )

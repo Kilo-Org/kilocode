@@ -5,7 +5,7 @@ import { solidPlugin } from "esbuild-plugin-solid"
 
 const root = path.resolve(import.meta.dir, "../..")
 
-test("coffee button is named and keeps cleanup retries available", async () => {
+test("coffee button reflects keep-awake state and keeps cleanup retries available", async () => {
   const solid = path.dirname(Bun.resolveSync("solid-js/package.json", root))
   const result = await build({
     entryPoints: [path.join(root, "tests/fixtures/caffeination-button.tsx")],
