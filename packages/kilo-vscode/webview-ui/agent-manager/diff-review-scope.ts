@@ -144,5 +144,19 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
     currentBase,
     isAuto,
     currentBranch,
+    controls: () => ({
+      descriptors: descriptors(),
+      currentId: id(),
+      onSelectScope: select,
+      showBase: isBranch(),
+      branches: branches(),
+      branchesLoading: loading(),
+      defaultBranch: defaultBranch(),
+      autoBase: autoBase(),
+      currentBase: currentBase(),
+      isAuto: isAuto(),
+      currentBranch: currentBranch(),
+      onSelectBase: selectBase,
+    }),
   }
 }

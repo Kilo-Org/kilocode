@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Voltooid (gemeld door het model)",
+  "session.goal.blocked": "Geblokkeerd",
+  "session.goal.restart": "Doel opnieuw starten",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Bord",
+  "task.swarm.refresh": "Vernieuwen",
+  "task.swarm.reset": "Bord resetten",
+  "task.swarm.resetTitle": "Dit bord resetten?",
+  "task.swarm.resetDescription":
+    "Zichtbare berichten wissen? Gesprekken en lopende taken blijven ongewijzigd. Agenten kunnen nieuwe berichten plaatsen.",
+  "task.swarm.loading": "Bord laden...",
+  "task.swarm.failed": "Het bord kon niet worden geladen of gereset. Probeer het te vernieuwen.",
 
   "command.provider.connect": "Provider verbinden",
 
@@ -63,6 +74,7 @@ export const dict = {
   "session.activity.error": "Fout of verbinding verbroken.",
   "session.activity.retry": "Automatisch opnieuw proberen.",
   "session.activity.busy": "In uitvoering.",
+  "session.activity.scheduled": "Wacht op een geplande wekactie.",
   "session.activity.done": "Beurt voltooid.",
   "session.activity.idle": "Niet actief.",
 
@@ -191,6 +203,7 @@ export const dict = {
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.action.indexing": "Indexeringsinstellingen",
   "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
   "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
@@ -198,6 +211,7 @@ export const dict = {
     "Automatisch goedkeuren is ingeschakeld. Toestemmingsverzoeken worden automatisch goedgekeurd.",
   "prompt.action.autoApprove.disabled":
     "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
+  "prompt.action.autoApprove.sandboxExcluded": "Escalatieaanvragen van de sandbox worden altijd uitgesloten.",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
   "prompt.action.sandbox.enable": "Sandbox inschakelen",
@@ -215,12 +229,14 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Toegestaan",
   "prompt.action.sandbox.unrestricted": "Onbeperkt",
   "prompt.action.sandbox.description.enabled": "Schrijfbewerkingen zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.description.escalation":
+    "Toestemmingsregels en automatisch goedkeuren gelden binnen de sandbox. Commando's die deze moeten verlaten, vragen altijd.",
   "prompt.action.sandbox.description.disabled":
     "Klik om schrijfbewerkingen in het bestandssysteem en netwerktoegang te beperken.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
-  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.start": "Spraakinvoer starten",
   "speechToText.tooltip.shortcut":
     "Tik of druk op Cmd/Ctrl+K om de opname te starten of te stoppen; houd de knop ingedrukt terwijl je spreekt en laat deze los om te transcriberen en te verzenden.",
   "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
@@ -260,8 +276,13 @@ export const dict = {
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
-  "notification.permission.titleSandboxEscalation": "Git-bewerking buiten de sandbox toestaan?",
+  "notification.permission.titleSandboxEscalation": "Buiten de sandbox uitvoeren?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Dit voert het hele commando uit zonder beperkingen voor het bestandssysteem en netwerk, alleen voor dit commando. Git moet naar .git schrijven, dat alleen-lezen is in de sandbox en bij een gekoppelde worktree buiten de worktree ligt. Bash-toestemmingsregels en automatisch goedkeuren keuren deze aanvraag nooit automatisch goed.",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
+  "ui.permission.reject": "Weigeren",
+  "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
+  "ui.permission.feedbackHint": "Enter om te weigeren, Esc om te annuleren",
   "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
   "ui.permission.doomLoop.rule": "Doorgaan met {{tool}}-aanroepen",
   "ui.permission.rule.addToAllowed": "Toevoegen aan toegestane lijst",
@@ -311,7 +332,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nieuwe Taak",
   "sidebar.topBar.history": "Geschiedenis",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profiel",
   "sidebar.topBar.settings": "Instellingen",
@@ -411,6 +431,7 @@ export const dict = {
   "settings.providers.tag.other": "Overige",
   "settings.providers.connected.environmentDescription": "Gekoppeld via je omgevingsvariabelen",
   "settings.providers.action.signInChatGPT": "Inloggen met ChatGPT",
+  "settings.providers.action.changeApiKey": "API-sleutel wijzigen",
   "settings.providers.custom.description": "Voeg een aangepaste provider toe via basis-URL.",
 
   "provider.custom.title": "Aangepaste provider",
@@ -495,38 +516,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Updaten van toestemmingen is mislukt",
 
-  "settings.permissions.tool.read.title": "Lezen",
   "settings.permissions.tool.read.description": "Een bestand lezen (komt overeen met het bestandspad)",
-  "settings.permissions.tool.edit.title": "Bewerken",
   "settings.permissions.tool.edit.description":
     "Bestanden wijzigen, inclusief bewerkingen, schrijven, patchen en meervoudige bewerkingen",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Overeenkomende bestanden zoeken met glob-patronen",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Inhoud van bestanden doorzoeken met behulp van reguliere expressies",
-  "settings.permissions.tool.list.title": "Lijst",
   "settings.permissions.tool.list.description": "Lijst met bestanden in een map",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Shell-opdrachten uitvoeren",
-  "settings.permissions.tool.task.title": "Taak",
   "settings.permissions.tool.task.description": "Sub-agents starten",
-  "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "Laad een skill op naam",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Voer language server queries uit",
-  "settings.permissions.tool.todoread.title": "Todo Lezen",
   "settings.permissions.tool.todoread.description": "Lees de todo-lijst",
-  "settings.permissions.tool.todowrite.title": "Todo Schrijven",
   "settings.permissions.tool.todowrite.description": "Werk de todo-lijst bij",
-  "settings.permissions.tool.webfetch.title": "Web Ophalen",
   "settings.permissions.tool.webfetch.description": "Haal inhoud op van een URL",
-  "settings.permissions.tool.websearch.title": "Web Zoeken",
   "settings.permissions.tool.websearch.description": "Zoek op het web",
-  "settings.permissions.tool.codesearch.title": "Code Zoeken",
   "settings.permissions.tool.codesearch.description": "Zoek code op het web",
-  "settings.permissions.tool.external_directory.title": "Externe Map",
   "settings.permissions.tool.external_directory.description": "Krijg toegang tot bestanden buiten de projectmap",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Detecteer herhaalde tool calls met identieke invoer",
 
   "session.delete.title": "Verwijder sessie",
@@ -544,6 +549,7 @@ export const dict = {
   "session.tabs.switcher.current": "Huidig",
   "session.tabs.switcher.pending": "Nieuw",
   "session.tabs.switcher.busy": "Bezig",
+  "session.tabs.switcher.scheduled": "Gepland",
   "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Werkboom",
@@ -620,6 +626,7 @@ export const dict = {
   "profile.usage.source.direct": "Direct",
   "profile.usage.state.stale": "De laatst bijgewerkte gebruiksgegevens worden weergegeven.",
   "profile.usage.state.unavailable": "Gebruiksgegevens niet beschikbaar.",
+  "profile.usage.state.empty": "Geen gebruikslimieten gemeld.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling achterstallig",
   "profile.usage.plan.canceling": "Abonnement: Wordt aan het einde van de periode opgezegd",
   "profile.usage.plan.unknown": "Abonnement: Status onbekend",
@@ -741,6 +748,14 @@ export const dict = {
   "session.outcome.interrupted": "Beurt onderbroken",
   "session.outcome.error": "Beurt mislukt",
   "session.outcome.finish": "Voltooiingsreden: {{reason}}",
+  "session.goal.label": "Doel",
+  "prompt.goal.set": "Doel instellen",
+  "prompt.goal.start": "Doel starten",
+  "session.goal.active": "Actief",
+  "session.goal.paused": "Gepauzeerd",
+  "session.goal.pause": "Pauzeren",
+  "session.goal.resume": "Hervatten",
+  "session.goal.clear": "Doel wissen",
   "session.costAlert.header": "Sessiekostenwaarschuwing",
   "session.costAlert.continue": "Doorgaan",
   "session.costAlert.question":
@@ -814,7 +829,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Indien ingeschakeld kan de AI agent interactie hebben met webpagina's — navigeren, klikken, typen en screenshots maken. Er wordt een Chrome-venster geopend zodat je de agent aan het werk kunt zien.",
+    "Configureer ingebouwde browserautomatisering mogelijk gemaakt door Playwright. Kilo kan in je sessies door webpagina's navigeren, ermee werken en schermafbeeldingen maken.",
   "settings.browser.enable.title": "Browserautomatisering inschakelen",
   "settings.browser.enable.description": "Registreer de Playwright MCP-server bij de CLI backend.",
   "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
@@ -845,7 +860,17 @@ export const dict = {
   "settings.notifications.enable.title": "Geluidsmeldingen inschakelen",
   "settings.notifications.enable.description":
     "Geluiden afspelen wanneer sessies worden voltooid, er een fout optreedt of uw invoer vereist is",
+  "settings.notifications.workbench.title": "VS Code-meldingen inschakelen",
+  "settings.notifications.workbench.description":
+    "VS Code-meldingen tonen wanneer Kilo een taak voltooit of uw invoer vereist",
+  "settings.notifications.os.title": "Besturingssysteemmeldingen inschakelen",
+  "settings.notifications.os.description":
+    "Systeemeigen meldingswaarschuwingen tonen wanneer Kilo een taak voltooit of uw invoer vereist terwijl VS Code niet actief is.",
   "settings.notifications.testSound": "Testen",
+  "settings.notifications.testOS": "Testen",
+  "settings.notifications.testOS.testing": "Testmelding wordt verzonden…",
+  "settings.notifications.testOS.success": "Testmelding verzonden.",
+  "settings.notifications.testOS.error": "Testmelding mislukt",
   "settings.notifications.sound.default": "Standaard",
   "settings.notifications.sound.system": "Systeem",
   "settings.notifications.sound.description":
@@ -864,15 +889,28 @@ export const dict = {
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Deel een bord tussen een hoofdsessie en de subagenten die haar taken uitvoeren, inclusief geneste subagenten. Gebruik het voor parallelle oplossingspogingen of werkzaamheden die elkaar aanvullen, niet voor elke taak.",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
   "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Model-ID die naar uw eigen transcriptie-eindpunt wordt gestuurd, bijvoorbeeld whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Spraak-naar-tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Gebruik een OpenAI-compatibele transcriptie-API in plaats van Kilo Gateway. Modellen worden gelezen van /models en audio gaat naar /audio/transcriptions. Laat leeg om Kilo Gateway te gebruiken.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Spraak-naar-tekst-API-sleutel",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token dat naar de eigen transcriptie-basis-URL wordt gestuurd. Opgeslagen in uw Kilo-configuratiebestand.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
+    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken, of stel hieronder een eigen transcriptie-basis-URL in.",
+  "settings.models.speechToText.remoteDescription":
+    "Spraakinvoer is niet beschikbaar in externe vensters. Open Kilo in een lokaal venster om de microfoon te gebruiken.",
   "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
@@ -893,6 +931,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
   "settings.experimental.multiProject.title": "Multi-project Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migratie",
+  "settings.experimental.claudeMigration.description":
+    "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
   "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
@@ -909,6 +950,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
+  "settings.experimental.codeMode.title": "Programmatische toolaanroepen",
+  "settings.experimental.codeMode.description":
+    "Leidt MCP-toolaanroepen via een afgeschermde JavaScript-runtime met on-demand tooldetectie, in plaats van elke MCP-tool direct beschikbaar te stellen. Bespaart context wanneer veel MCP-tools zijn verbonden.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",
@@ -963,6 +1007,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
+  "settings.agentBehaviour.pushFixes.title": "Pull request-fixes pushen",
+  "settings.agentBehaviour.pushFixes.description":
+    "Wanneer je CI-fouten of reviewopmerkingen van een pull request naar de agent stuurt, of een worktree bijwerkt vanaf de basis, vraag de agent dan te committen en te pushen zodat de pull request wordt bijgewerkt. Toestemmingsvragen blijven gelden. Schakel uit om handmatig te committen.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1051,6 +1098,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model dat wordt gebruikt voor automatische en handmatige compactie. Laat dit leeg om het chatmodel te gebruiken. Kosten, snelheid en de kwaliteit van de samenvatting hangen af van het model.",
   "settings.context.compactionModel.useChatModel": "Chatmodel gebruiken",
+  "settings.context.compactionModel.hint":
+    "Om te kiezen welk model wordt gebruikt voor compactie, zie de Modellen-instellingen.",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
@@ -1095,9 +1144,12 @@ export const dict = {
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.fontSize.title": "Lettergrootte",
   "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
-  "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
-  "settings.display.reasoningAutoCollapse.description":
-    "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
+  "settings.display.reasoningDisplay.title": "Redeneringsblokken",
+  "settings.display.reasoningDisplay.description":
+    "Kies hoe redeneringsblokken starten. Uitgeklapt toont de volledige tekst, Voorbeeld beperkt het tot een kort, scrollbaar voorbeeld, en Kop toont alleen de titel en streamingindicator totdat je het opent.",
+  "settings.display.reasoningDisplay.expanded": "Uitgeklapt",
+  "settings.display.reasoningDisplay.preview": "Voorbeeld",
+  "settings.display.reasoningDisplay.headline": "Kop",
   "settings.display.shiftTabCycle.title": "Doorloop niveaus van redeneringsinspanning met Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Druk op Shift+Tab in een promptinvoerveld om naar het volgende niveau van redeneringsinspanning te gaan. Schakel dit uit om Shift+Tab te behouden voor focusnavigatie via het toetsenbord.",
@@ -1293,6 +1345,16 @@ export const dict = {
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "Op GitHub plaatsen",
+  "diffViewer.comment.loadFailed": "De wijzigingen van de pull request konden niet worden geladen.",
+  "diffViewer.comment.unavailable": "Deze regel is niet beschikbaar in de huidige snapshot van de pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Pull request openen",
+  "diffViewer.comment.localChanges": "Lokale wijzigingen",
+  "diffViewer.comment.prChanges": "PR-wijzigingen",
+  "diffViewer.comment.sendToKilo": "Naar Kilo sturen",
+  "diffViewer.comment.sendToGithub": "Naar GitHub #{{number}} sturen",
+  "diffViewer.comment.chooseDestination": "Bestemming kiezen",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 
@@ -1314,5 +1376,11 @@ export const dict = {
   "chat.search.close": "Zoeken sluiten",
   "chat.search.invalidRegex": "Ongeldige reguliere expressie",
   "chat.search.noResults": "Geen resultaten",
+  "settings.experimental.browserAutomation.title": "Geïntegreerde browser",
+  "settings.experimental.browserAutomation.description":
+    "Toon voorbeelden van lokale applicaties in Agent Manager en stel de tool browser_open beschikbaar aan Agent Manager-sessies.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Gebruik Systeem Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
 }

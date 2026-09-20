@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Terminé (signalé par le modèle)",
+  "session.goal.blocked": "Bloqué",
+  "session.goal.restart": "Relancer l'objectif",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tableau",
+  "task.swarm.refresh": "Actualiser",
+  "task.swarm.reset": "Réinitialiser le tableau",
+  "task.swarm.resetTitle": "Réinitialiser ce tableau ?",
+  "task.swarm.resetDescription":
+    "Effacer les messages visibles ? Les conversations et les tâches en cours restent inchangées. Les agents peuvent publier de nouveaux messages.",
+  "task.swarm.loading": "Chargement du tableau...",
+  "task.swarm.failed": "Impossible de charger ou de réinitialiser le tableau. Essayez de l’actualiser.",
 
   "command.provider.connect": "Connecter un fournisseur",
 
@@ -63,6 +74,7 @@ export const dict = {
   "session.activity.error": "Erreur ou connexion perdue.",
   "session.activity.retry": "Nouvelle tentative automatique.",
   "session.activity.busy": "En cours.",
+  "session.activity.scheduled": "En attente d'un réveil programmé.",
   "session.activity.done": "Tour terminé.",
   "session.activity.idle": "Inactif.",
 
@@ -191,12 +203,14 @@ export const dict = {
   "prompt.action.send.recording": "Transcrire et envoyer",
   "prompt.action.stop": "Arrêter",
   "prompt.action.enhance": "Améliorer le prompt",
+  "prompt.paste.expand": "Cliquez pour développer le texte collé",
   "prompt.action.autoApprove.enable": "Activer l'approbation automatique",
   "prompt.action.autoApprove.disable": "Désactiver l'approbation automatique",
   "prompt.action.autoApprove.enabled":
     "L'approbation automatique est activée. Les demandes d'autorisation seront approuvées automatiquement.",
   "prompt.action.autoApprove.disabled":
     "L'approbation automatique est désactivée. Cliquez pour approuver automatiquement les demandes d'autorisation.",
+  "prompt.action.autoApprove.sandboxExcluded": "Les demandes d’escalade du bac à sable sont toujours exclues.",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
@@ -215,12 +229,14 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Autorisé",
   "prompt.action.sandbox.unrestricted": "Sans restriction",
   "prompt.action.sandbox.description.enabled": "Les écritures sont limitées aux répertoires du projet et de Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Les règles d’autorisation et l’approbation automatique s’appliquent à l’intérieur du bac à sable. Les commandes qui doivent en sortir demandent toujours.",
   "prompt.action.sandbox.description.disabled":
     "Cliquez pour restreindre les écritures dans le système de fichiers et l'accès au réseau.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Cliquez pour restreindre les écritures dans le système de fichiers. L'accès au réseau reste autorisé par vos paramètres de sandbox.",
 
-  "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
+  "speechToText.tooltip.start": "Démarrer la saisie vocale",
   "speechToText.tooltip.shortcut":
     "Touchez ou appuyez sur Cmd/Ctrl+K pour démarrer ou arrêter l’enregistrement ; maintenez la touche pendant que vous parlez, puis relâchez-la pour transcrire et envoyer.",
   "speechToText.tooltip.starting": "Démarrage du microphone... Attendez avant de parler.",
@@ -260,8 +276,13 @@ export const dict = {
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
-  "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
+  "notification.permission.titleSandboxEscalation": "Exécuter en dehors du bac à sable ?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Cette action exécute toute la commande sans les restrictions de système de fichiers et de réseau, pour cette commande uniquement. Git doit écrire dans .git, qui est en lecture seule dans le bac à sable et se trouve hors de l’arborescence de travail pour un worktree lié. Les règles d’autorisation Bash et l’approbation automatique n’approuvent jamais cette demande automatiquement.",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
+  "ui.permission.reject": "Rejeter",
+  "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
+  "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
   "ui.permission.doomLoop.rule": "Continuer les appels à {{tool}}",
   "ui.permission.rule.addToAllowed": "Ajouter à la liste des autorisés",
@@ -310,7 +331,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nouvelle Tâche",
   "sidebar.topBar.history": "Historique",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Paramètres",
@@ -454,6 +474,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Fournisseur personnalisé",
   "settings.providers.connected.environmentDescription": "Connecté depuis vos variables d'environnement",
   "settings.providers.action.signInChatGPT": "Se connecter avec ChatGPT",
+  "settings.providers.action.changeApiKey": "Modifier la clé API",
   "settings.providers.custom.description": "Ajoutez un fournisseur personnalisé par URL de base.",
   "settings.providers.subagentModel.title": "Modèle de sous-agent",
   "settings.providers.subagentModel.description":
@@ -548,39 +569,23 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Échec de la mise à jour des permissions",
 
-  "settings.permissions.tool.read.title": "Lire",
   "settings.permissions.tool.read.description": "Lecture d'un fichier (correspond au chemin du fichier)",
-  "settings.permissions.tool.edit.title": "Modifier",
   "settings.permissions.tool.edit.description":
     "Modifier des fichiers, y compris les modifications, écritures, patchs et multi-modifications",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Correspondre aux fichiers utilisant des modèles glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description":
     "Rechercher dans le contenu des fichiers à l'aide d'expressions régulières",
-  "settings.permissions.tool.list.title": "Lister",
   "settings.permissions.tool.list.description": "Lister les fichiers dans un répertoire",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Exécuter des commandes shell",
-  "settings.permissions.tool.task.title": "Tâche",
   "settings.permissions.tool.task.description": "Lancer des sous-agents",
-  "settings.permissions.tool.skill.title": "Compétence",
   "settings.permissions.tool.skill.description": "Charger une compétence par son nom",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Exécuter des requêtes de serveur de langage",
-  "settings.permissions.tool.todoread.title": "Lire Todo",
   "settings.permissions.tool.todoread.description": "Lire la liste de tâches",
-  "settings.permissions.tool.todowrite.title": "Écrire Todo",
   "settings.permissions.tool.todowrite.description": "Mettre à jour la liste de tâches",
-  "settings.permissions.tool.webfetch.title": "Récupération Web",
   "settings.permissions.tool.webfetch.description": "Récupérer le contenu d'une URL",
-  "settings.permissions.tool.websearch.title": "Recherche Web",
   "settings.permissions.tool.websearch.description": "Rechercher sur le web",
-  "settings.permissions.tool.codesearch.title": "Recherche de code",
   "settings.permissions.tool.codesearch.description": "Rechercher du code sur le web",
-  "settings.permissions.tool.external_directory.title": "Répertoire externe",
   "settings.permissions.tool.external_directory.description": "Accéder aux fichiers en dehors du répertoire du projet",
-  "settings.permissions.tool.doom_loop.title": "Boucle infernale",
   "settings.permissions.tool.doom_loop.description": "Détecter les appels d'outils répétés avec une entrée identique",
 
   "session.delete.title": "Supprimer la session",
@@ -598,6 +603,7 @@ export const dict = {
   "session.tabs.switcher.current": "Actuel",
   "session.tabs.switcher.pending": "Nouveau",
   "session.tabs.switcher.busy": "En cours",
+  "session.tabs.switcher.scheduled": "Programmé",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbre de travail",
@@ -679,6 +685,7 @@ export const dict = {
   "profile.usage.source.direct": "Direct",
   "profile.usage.state.stale": "Affichage des dernières données d'utilisation mises à jour.",
   "profile.usage.state.unavailable": "Données d'utilisation indisponibles.",
+  "profile.usage.state.empty": "Aucune limite d'utilisation signalée.",
   "profile.usage.plan.pastDue": "Forfait : paiement en retard",
   "profile.usage.plan.canceling": "Forfait : résiliation à la fin de la période",
   "profile.usage.plan.unknown": "Forfait : statut inconnu",
@@ -764,6 +771,14 @@ export const dict = {
   "session.outcome.interrupted": "Tour interrompu",
   "session.outcome.error": "Échec du tour",
   "session.outcome.finish": "Motif de fin : {{reason}}",
+  "session.goal.label": "Objectif",
+  "prompt.goal.set": "Définir un objectif",
+  "prompt.goal.start": "Démarrer l'objectif",
+  "session.goal.active": "Actif",
+  "session.goal.paused": "En pause",
+  "session.goal.pause": "Mettre en pause",
+  "session.goal.resume": "Reprendre",
+  "session.goal.clear": "Effacer l'objectif",
   "session.costAlert.header": "Alerte de coût de session",
   "session.costAlert.continue": "Continuer",
   "session.costAlert.question":
@@ -838,7 +853,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Compétences",
 
   "settings.browser.description":
-    "Lorsqu'il est activé, l'agent IA peut interagir avec les pages web — naviguer, cliquer, saisir du texte et prendre des captures d'écran. Une fenêtre Chrome s'ouvrira pour que vous puissiez observer l'agent travailler.",
+    "Configurez l'automatisation de navigateur intégrée propulsée par Playwright. Kilo peut naviguer, interagir et prendre des captures d'écran de pages web dans vos sessions.",
   "settings.browser.enable.title": "Activer l'automatisation du navigateur",
   "settings.browser.enable.description": "Enregistrer le serveur Playwright MCP auprès du backend CLI.",
   "settings.browser.systemChrome.title": "Utiliser le Chrome système",
@@ -868,7 +883,17 @@ export const dict = {
   "settings.notifications.enable.title": "Activer les notifications sonores",
   "settings.notifications.enable.description":
     "Lire des sons lorsque les sessions se terminent, rencontrent une erreur ou nécessitent votre intervention",
+  "settings.notifications.workbench.title": "Activer les notifications VS Code",
+  "settings.notifications.workbench.description":
+    "Afficher des notifications VS Code lorsque Kilo termine une tâche ou nécessite votre intervention",
+  "settings.notifications.os.title": "Activer les notifications du système d'exploitation",
+  "settings.notifications.os.description":
+    "Afficher des alertes de notification natives du système d'exploitation lorsque Kilo termine une tâche ou nécessite votre intervention alors que VS Code n'est pas actif.",
   "settings.notifications.testSound": "Tester",
+  "settings.notifications.testOS": "Tester",
+  "settings.notifications.testOS.testing": "Envoi de la notification de test…",
+  "settings.notifications.testOS.success": "Notification de test envoyée.",
+  "settings.notifications.testOS.error": "Échec de l'envoi de la notification de test",
   "settings.notifications.sound.default": "Par défaut",
   "settings.notifications.sound.system": "Système",
   "settings.notifications.sound.description":
@@ -886,15 +911,28 @@ export const dict = {
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Partagez un tableau entre une session principale et ses sous-agents chargés de tâches, y compris les sous-agents imbriqués. Utilisez-le pour des tentatives de résolution en parallèle ou des travaux complémentaires, pas pour toutes les tâches.",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",
   "settings.experimental.imageGenerationModel.description": "Modèle de génération d'images",
   "settings.experimental.imageGenerationModel.placeholder": "Par défaut (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Identifiant de modèle envoyé à votre point de terminaison de transcription personnalisé, par exemple whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "URL de base de transcription vocale",
+  "settings.models.speechToTextBaseUrl.description":
+    "Utiliser une API de transcription compatible OpenAI au lieu de Kilo Gateway. Les modèles sont lus depuis /models et l'audio est envoyé à /audio/transcriptions. Laissez vide pour utiliser Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Clé d'API de transcription vocale",
+  "settings.models.speechToTextApiKey.description":
+    "Jeton porteur envoyé à l'URL de base de transcription personnalisée. Stocké dans votre fichier de configuration Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Activez et connectez-vous au fournisseur Kilo pour utiliser Speech to Text. Speech to Text n'est actuellement pris en charge qu'avec Kilo Gateway.",
+    "Activez et connectez-vous au fournisseur Kilo pour utiliser Speech to Text, ou définissez ci-dessous une URL de base de transcription personnalisée.",
+  "settings.models.speechToText.remoteDescription":
+    "La saisie vocale n'est pas disponible dans les fenêtres distantes. Ouvrez Kilo dans une fenêtre locale pour utiliser le microphone.",
   "settings.models.speechToTextModel.title": "Modèle de transcription vocale",
   "settings.models.speechToTextModel.description":
     "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",
@@ -916,6 +954,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
+  "settings.experimental.claudeMigration.title": "Migration Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
   "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
@@ -1036,6 +1077,9 @@ export const dict = {
     "Les règles sont des fichiers d'instructions qui guident le comportement de l'agent. Elles sont incluses dans le prompt système pour chaque conversation. Ajoutez des chemins de fichiers ci-dessous pour inclure des règles supplémentaires.",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.instructionFiles.description": "Chemins vers des fichiers d'instructions supplémentaires",
+  "settings.agentBehaviour.pushFixes.title": "Pousser les correctifs de la pull request",
+  "settings.agentBehaviour.pushFixes.description":
+    "Lorsque vous envoyez à l'agent des échecs de CI ou des commentaires de revue d'une pull request, ou que vous mettez à jour un worktree depuis sa base, lui demander de commiter et de pousser pour que la pull request soit mise à jour. Les demandes d'autorisation restent actives. Désactivez pour commiter manuellement.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilité Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Charger les fichiers Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1055,6 +1099,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "modèle",
   "settings.agentBehaviour.workflows.variant": "variante",
   "settings.agentBehaviour.workflows.modelDescription": "Remplacement global du modèle",
+  "settings.experimental.codeMode.title": "Appels d'outils programmatiques",
+  "settings.experimental.codeMode.description":
+    "Achemine les appels d'outils MCP via un environnement d'exécution JavaScript confiné avec découverte d'outils à la demande, au lieu d'exposer directement chaque outil MCP. Économise du contexte lorsque de nombreux outils MCP sont connectés.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",
@@ -1111,6 +1158,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modèle utilisé pour le compactage automatique et manuel. Laissez ce champ vide pour utiliser le modèle de chat. Le coût, la vitesse et la qualité du résumé dépendent du modèle.",
   "settings.context.compactionModel.useChatModel": "Utiliser le modèle de chat",
+  "settings.context.compactionModel.hint":
+    "Pour choisir le modèle utilisé pour le compactage, consultez les paramètres des Modèles.",
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
@@ -1156,9 +1205,12 @@ export const dict = {
   "settings.display.fontSize.title": "Taille de la police",
   "settings.display.fontSize.description":
     "Ajustez la taille de la police de la webview UI de Kilo indépendamment de VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Réduire automatiquement le raisonnement",
-  "settings.display.reasoningAutoCollapse.description":
-    "Réduit les blocs de raisonnement une fois que l'agent a fini de les écrire. Laissez désactivé pour garder le raisonnement développé, sauf si vous le réduisez manuellement.",
+  "settings.display.reasoningDisplay.title": "Blocs de raisonnement",
+  "settings.display.reasoningDisplay.description":
+    "Choisissez comment démarrent les blocs de raisonnement. Développés affiche le texte complet, Aperçu le limite à un court aperçu défilant, et En-tête affiche uniquement le titre et l'indicateur de streaming jusqu'à ce que vous l'ouvriez.",
+  "settings.display.reasoningDisplay.expanded": "Développés",
+  "settings.display.reasoningDisplay.preview": "Aperçu",
+  "settings.display.reasoningDisplay.headline": "En-tête",
   "settings.display.shiftTabCycle.title": "Parcourir l'effort de raisonnement avec Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Appuyez sur Shift+Tab dans un champ de saisie de prompt pour passer au niveau d'effort de raisonnement suivant. Désactivez cette option pour conserver Shift+Tab pour la navigation du focus au clavier.",
@@ -1302,6 +1354,16 @@ export const dict = {
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "Publier sur GitHub",
+  "diffViewer.comment.loadFailed": "Impossible de charger les modifications de la pull request.",
+  "diffViewer.comment.unavailable": "Cette ligne n’est pas disponible dans l’instantané actuel de la pull request.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Ouvrir la pull request",
+  "diffViewer.comment.localChanges": "Modifications locales",
+  "diffViewer.comment.prChanges": "Modifications du PR",
+  "diffViewer.comment.sendToKilo": "Envoyer à Kilo",
+  "diffViewer.comment.sendToGithub": "Envoyer à GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choisir la destination",
   "diffViewer.notice.snapshotsDisabled":
     "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
 
@@ -1323,5 +1385,11 @@ export const dict = {
   "chat.search.close": "Fermer la recherche",
   "chat.search.invalidRegex": "Expression régulière non valide",
   "chat.search.noResults": "Aucun résultat",
+  "settings.experimental.browserAutomation.title": "Navigateur intégré",
+  "settings.experimental.browserAutomation.description":
+    "Affichez des aperçus d'applications locales dans Agent Manager et exposez l'outil browser_open aux sessions Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Utiliser le Chrome système",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Utilisez le Google Chrome installé pour le Navigateur intégré. Désactivez uniquement lorsqu'un navigateur Playwright Chromium compatible est déjà installé.",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
 }

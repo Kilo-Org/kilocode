@@ -63,7 +63,7 @@ export function registerToggleAutoApprove(
       return active
     }
 
-    vscode.window.showInformationMessage("Auto-approve enabled")
+    vscode.window.showInformationMessage("Auto-approve enabled. Sandbox escalation prompts are excluded.")
     // Drain any already-pending permission requests across all tracked directories
     const client = tryGetClient(connectionService)
     if (!client) return active

@@ -31,7 +31,7 @@
   display: flex;
   gap: 4px;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-height: 22px;
   justify-content: center;
 }

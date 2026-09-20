@@ -13,11 +13,13 @@ import { useConfig } from "./config"
 import { useVSCode } from "./vscode"
 import type { ExtensionMessage } from "../types/messages"
 import { applyFontSize, clampFontSize, readFontSize } from "../font-size"
+import { resolveReasoningDisplay } from "../utils/reasoning-display"
+import type { ReasoningDisplay } from "../types/messages"
 import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/message-part"
 
 interface DisplayContextValue {
-  reasoningAutoCollapse: Accessor<boolean>
-  setReasoningAutoCollapse: (collapse: boolean) => void
+  reasoningDisplay: Accessor<ReasoningDisplay>
+  setReasoningDisplay: (mode: ReasoningDisplay) => void
   fontSize: Accessor<number>
   setFontSize: (size: number) => void
   // Shared throughput toggle — the same signal backs the per-message badge in
@@ -33,7 +35,7 @@ export const DisplayContext = createContext<DisplayContextValue>()
 export const DisplayProvider: ParentComponent = (props) => {
   const { config, updateConfig } = useConfig()
   const vscode = useVSCode()
-  const reasoningAutoCollapse = createMemo(() => config().auto_collapse_reasoning ?? false)
+  const reasoningDisplay = createMemo(() => resolveReasoningDisplay(config()))
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
   const [throughputVisible, setThroughputVisible] = createSignal(true)
   const [autoApprovalReasonVisible, setAutoApprovalReasonVisible] = createSignal(true)
@@ -61,8 +63,8 @@ export const DisplayProvider: ParentComponent = (props) => {
   return (
     <DisplayContext.Provider
       value={{
-        reasoningAutoCollapse,
-        setReasoningAutoCollapse: (collapse) => updateConfig({ auto_collapse_reasoning: collapse }),
+        reasoningDisplay,
+        setReasoningDisplay: (mode) => updateConfig({ reasoning_display: mode }),
         fontSize,
         setFontSize: (size) => {
           const next = clampFontSize(size)

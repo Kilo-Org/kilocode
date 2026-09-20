@@ -1,10 +1,15 @@
 import { Effect } from "effect"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
+import { parse as parseJsonc } from "jsonc-parser"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
-import { array, check, isRecord, object } from "../../server/httpapi-exercise/assertions"
+import { Database } from "@opencode-ai/core/database/database"
+import { BoardStore } from "../../../src/kilocode/board/store"
+import { array, check, isRecord, object, stable } from "../../server/httpapi-exercise/assertions"
+import { request } from "../../server/httpapi-exercise/backend"
 import { http, route } from "../../server/httpapi-exercise/dsl"
+import { exerciseDatabasePath } from "../../server/httpapi-exercise/environment"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
 import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
 
@@ -37,6 +42,28 @@ const agent = async (dir: string) => {
   )
 }
 
+const MARKETPLACE_MCP_ID = "httpapi-marketplace"
+
+// Seed a project config that already contains the marketplace MCP so the remove scenario
+// exercises the real deletion path instead of the missing-entry short circuit.
+const marketplaceMcp = async (dir: string) => {
+  await mkdir(path.join(dir, ".kilo"), { recursive: true })
+  await Bun.write(
+    path.join(dir, ".kilo", "kilo.jsonc"),
+    JSON.stringify({ mcp: { [MARKETPLACE_MCP_ID]: { type: "local", command: ["npx", "server"] } } }, null, 2),
+  )
+}
+
+async function projectMcp(dir: string, id: string) {
+  for (const name of ["kilo.jsonc", "kilo.json"]) {
+    const file = Bun.file(path.join(dir, ".kilo", name))
+    if (await file.exists()) return !!(parseJsonc(await file.text())?.mcp ?? {})[id]
+  }
+  const root = Bun.file(path.join(dir, "opencode.json"))
+  if (await root.exists()) return !!(parseJsonc(await root.text())?.mcp ?? {})[id]
+  return false
+}
+
 const duplicates = async (dir: string) => {
   for (const name of ["kilo.jsonc", "opencode.jsonc"]) {
     await Bun.write(
@@ -67,6 +94,32 @@ function memory(ctx: ScenarioContext) {
 function enable(ctx: ScenarioContext) {
   const dir = directory(ctx)
   return Effect.promise(() => KiloMemory.enable({ ctx: { directory: dir, worktree: dir } }))
+}
+
+function board(ctx: ScenarioContext) {
+  return Effect.gen(function* () {
+    const root = yield* ctx.session({ title: "Board owner" })
+    const child = yield* ctx.session({ title: "Board reviewer", parentID: root.id })
+    const message = yield* ctx.message(child.id, { text: "Review the changes and report on the board." })
+    const first = yield* BoardStore.post({
+      sessionID: child.id,
+      messageID: message.info.id,
+      callID: "board-start",
+      to: "ALL",
+      type: "INFO",
+      body: "Review started",
+    })
+    const last = yield* BoardStore.post({
+      sessionID: child.id,
+      messageID: message.info.id,
+      callID: "board-result",
+      to: "main",
+      type: "RESULT",
+      body: "Review complete",
+      reply_to: first.id,
+    })
+    return { root, child, first, last, transcript: yield* ctx.messages(child.id) }
+  }).pipe(Effect.provide(Database.layerFromPath(exerciseDatabasePath)), Effect.orDie)
 }
 
 const edit = {
@@ -120,37 +173,6 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "session process stop should return true")),
-  http.protected.get("/interactive-terminal", "interactiveTerminal.list").json(200, array),
-  http.protected
-    .get("/interactive-terminal/{terminalID}", "interactiveTerminal.get")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-    }))
-    .status(404),
-  http.protected
-    .post("/interactive-terminal/{terminalID}/input", "interactiveTerminal.write")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}/input", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-      body: { data: "x" },
-    }))
-    .status(404),
-  http.protected
-    .post("/interactive-terminal/{terminalID}/resize", "interactiveTerminal.resize")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}/resize", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-      body: { cols: 1, rows: 1 },
-    }))
-    .status(404),
-  http.protected
-    .post("/interactive-terminal/{terminalID}/close", "interactiveTerminal.close")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}/close", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-    }))
-    .status(404),
   http.protected.get("/config/warnings", "config.warnings").json(200, array),
   http.protected.get("/config/effective", "config.effective").json(200, object),
   http.protected.get("/config/model-state", "config.modelState").json(200, object),
@@ -437,8 +459,6 @@ export const kiloScenarios: Scenario[] = [
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))
     .status(401),
-  http.protected.get("/kilo/claw/status", "kilo.claw.status").probe({ path: "/path" }).status(401),
-  http.protected.get("/kilo/claw/chat-credentials", "kilo.claw.chatCredentials").probe({ path: "/path" }).status(401),
   http.protected.get("/kilo/cloud-sessions", "kilo.cloudSessions").probe({ path: "/path" }).status(401),
   http.protected
     .get("/kilo/cloud/session/{id}", "kilo.cloud.session.get")
@@ -580,6 +600,105 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(400),
   http.protected
+    .get("/kilocode/session/{sessionID}/board", "kilocode.sessionBoard")
+    .probe({ path: "/kilocode/session/ses_httpapi_missing/board" })
+    .seeded(board)
+    .at((ctx) => ({
+      path: `${route("/kilocode/session/{sessionID}/board", { sessionID: ctx.state.child.id })}?limit=1`,
+      headers: ctx.headers(),
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(
+          stable(body) ===
+            stable({
+              ownerSessionID: ctx.state.root.id,
+              revision: 2,
+              messages: [ctx.state.last],
+              cursor: ctx.state.last.id,
+              hasMore: true,
+            }),
+          "child board should return the owner, newest post, and pagination cursor",
+        )
+        const older = yield* request("GET", {
+          path: `${route("/kilocode/session/{sessionID}/board", { sessionID: ctx.state.root.id })}?before=${ctx.state.last.id}&limit=1`,
+          headers: ctx.headers(),
+        })
+        check(older.status === 200, "older board page should succeed")
+        check(
+          stable(older.body) ===
+            stable({
+              ownerSessionID: ctx.state.root.id,
+              revision: 2,
+              messages: [ctx.state.first],
+              hasMore: false,
+            }),
+          "before should return the older post without changing the board revision",
+        )
+        check(
+          stable(yield* ctx.messages(ctx.state.child.id)) === stable(ctx.state.transcript),
+          "observing the board should not change the conversation",
+        )
+      }),
+    ),
+  http.protected
+    .post("/kilocode/session/{sessionID}/board/reset", "kilocode.resetSessionBoard")
+    .probe({ path: "/kilocode/session/ses_httpapi_missing/board/reset", body: { revision: 0 } })
+    .mutating()
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const state = yield* board(ctx)
+        const path = route("/kilocode/session/{sessionID}/board", { sessionID: state.root.id })
+        const stale = yield* request("POST", {
+          path: `${path}/reset`,
+          headers: ctx.headers(),
+          body: { revision: 0 },
+        })
+        check(stale.status === 409, "reset should reject a stale board revision")
+        const current = yield* request("GET", { path, headers: ctx.headers() })
+        check(current.status === 200, "board should remain readable after a stale reset")
+        object(current.body)
+        check(current.body.revision === 2, "stale reset should preserve the board revision")
+        check(
+          stable(current.body.messages) === stable([state.first, state.last]),
+          "stale reset should preserve visible posts",
+        )
+        return { ...state, revision: current.body.revision }
+      }),
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/board/reset", { sessionID: ctx.state.root.id }),
+      headers: ctx.headers(),
+      body: { revision: ctx.state.revision },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(
+          stable(body) ===
+            stable({
+              ownerSessionID: ctx.state.root.id,
+              revision: ctx.state.revision,
+              messages: [],
+              hasMore: false,
+            }),
+          "reset should return an empty board without rewinding its revision",
+        )
+        const current = yield* request("GET", {
+          path: route("/kilocode/session/{sessionID}/board", { sessionID: ctx.state.child.id }),
+          headers: ctx.headers(),
+        })
+        check(current.status === 200 && stable(current.body) === stable(body), "reset should persist for child viewers")
+        check(
+          (yield* ctx.sessionGet(ctx.state.child.id))?.parentID === ctx.state.root.id,
+          "reset should preserve the session family",
+        )
+        check(
+          stable(yield* ctx.messages(ctx.state.child.id)) === stable(ctx.state.transcript),
+          "reset should preserve the conversation",
+        )
+      }),
+    ),
+  http.protected
     .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
     .seeded((ctx) => ctx.session({ title: "Model usage" }))
     .at((ctx) => ({
@@ -607,6 +726,20 @@ export const kiloScenarios: Scenario[] = [
       }
     }),
   http.protected
+    .get("/kilocode/wakeups", "kilocode.wakeups")
+    .at((ctx) => ({
+      path: "/kilocode/wakeups",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      array(body)
+      for (const item of body) {
+        object(item)
+        check(typeof item.sessionID === "string", "wakeup should include a session id")
+        check(typeof item.pending === "number" && item.pending > 0, "wakeup should include a positive pending count")
+      }
+    }),
+  http.protected
     .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")
     .at((ctx) => ({
       path: route("/kilocode/background-jobs/{jobID}/cancel", { jobID: "job_httpapi_missing" }),
@@ -630,6 +763,19 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .post("/kilocode/snapshot/prepare", "kilocode.snapshot.prepare")
+    .mutating()
+    .inProject({ git: true })
+    .at((ctx) => ({
+      path: `/kilocode/snapshot/prepare?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.prepared === "boolean", "snapshot preparation should report whether it prepared")
+      check(typeof body.durationMs === "number", "snapshot preparation should report its duration")
+    }),
+  http.protected
     .post("/kilocode/snapshot/remove", "kilocode.removeSnapshot")
     .mutating()
     .inProject({ git: true })
@@ -648,6 +794,16 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected
+    .post("/kilocode/worktree/teardown", "kilocode.teardownWorktree")
+    .mutating()
+    .inProject({ git: true })
+    .at((ctx) => ({
+      path: `/kilocode/worktree/teardown?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: { worktree: path.join(directory(ctx), ".kilo", "worktrees", "api-worktree-teardown") },
+    }))
+    .status(401),
+  http.protected
     .get("/kilocode/command/files", "kilocode.commandFiles")
     .inProject({ git: true, init: command })
     .json(200, (body, ctx) => {
@@ -663,7 +819,10 @@ export const kiloScenarios: Scenario[] = [
       check(item.builtin === false, "command file should not be builtin")
       check(item.model === "anthropic/claude-sonnet-4-6", "command file should include model metadata")
       check(item.variant === "high", "command file should include variant metadata")
-      check(typeof item.content === "string" && item.content.includes("Run command."), "command file should include content")
+      check(
+        typeof item.content === "string" && item.content.includes("Run command."),
+        "command file should include content",
+      )
     }),
   http.protected
     .post("/kilocode/command/remove", "kilocode.removeCommand")
@@ -679,10 +838,7 @@ export const kiloScenarios: Scenario[] = [
       Effect.gen(function* () {
         check(body === true, "command removal should return true")
         const location = path.join(directory(ctx), ".kilo/command/httpapi-remove.md")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed command should not remain on disk",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed command should not remain on disk")
       }),
     ),
   http.protected
@@ -753,6 +909,57 @@ export const kiloScenarios: Scenario[] = [
       object(body)
       check(body.message === "agent not found", "agent removal should preserve the backend error message")
     }),
+  http.protected.get("/kilocode/marketplace", "kilocode.marketplace.list").json(200, (body) => {
+    object(body)
+    // The catalog fetch degrades to an empty list on failure, so only the shape is asserted.
+    array(body.items)
+    object(body.installed)
+  }),
+  http.protected
+    .post("/kilocode/marketplace/install", "kilocode.marketplace.install")
+    .inProject({ git: true })
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/install",
+      headers: ctx.headers(),
+      body: {
+        target: "project",
+        item: {
+          type: "mcp",
+          id: MARKETPLACE_MCP_ID,
+          name: "HTTP API Marketplace",
+          description: "HTTP API marketplace fixture",
+          category: "development",
+          url: "https://example.com",
+          content: JSON.stringify({ command: "npx", args: ["server"] }),
+        },
+      },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        check(body.success === true, "marketplace install should succeed")
+        const written = yield* Effect.promise(() => projectMcp(directory(ctx), MARKETPLACE_MCP_ID))
+        check(written, "installed MCP should be written to the project config")
+      }),
+    ),
+  http.protected
+    .post("/kilocode/marketplace/remove", "kilocode.marketplace.remove")
+    .inProject({ git: true, init: marketplaceMcp })
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/remove",
+      headers: ctx.headers(),
+      body: { scope: "project", item: { id: MARKETPLACE_MCP_ID, type: "mcp" } },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        check(body.success === true, "marketplace remove should succeed")
+        const present = yield* Effect.promise(() => projectMcp(directory(ctx), MARKETPLACE_MCP_ID))
+        check(!present, "removed MCP should be gone from the project config")
+      }),
+    ),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()

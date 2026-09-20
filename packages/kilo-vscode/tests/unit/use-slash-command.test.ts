@@ -38,6 +38,33 @@ function setup(
 }
 
 describe("worktree update slash action", () => {
+  it("activates a composer selection without turning the goal shortcut into a client action", () => {
+    let active = false
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "goal",
+          hints: [],
+          select: () => {
+            active = true
+          },
+        },
+      ],
+    })
+    const textarea = {
+      value: "/goal\nKeep this objective",
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput(textarea.value, 5)
+    const entry = ctx.slash.results().find((item) => item.name === "goal")!
+    expect(entry.action).toBeUndefined()
+    ctx.slash.select(entry, textarea, () => {})
+    expect(active).toBe(true)
+    expect(textarea.value).toBe("\nKeep this objective")
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
   it("uses the current worktree selection and preserves text after the action", () => {
     const state = { selected: "first", sent: "", text: "/update-from-base keep this draft" }
     const ctx = setup(() => {}, {
@@ -112,7 +139,7 @@ describe("useSlashCommand sandbox action", () => {
     ctx.dispose()
   })
 
-  it("can restrict the menu to worktree configuration commands", () => {
+  it("restricts client actions with include without hiding server commands", () => {
     const ctx = setup(() => {}, { include: new Set(["models", "agents", "variant", "sandbox"]) })
 
     ctx.fire({
@@ -122,11 +149,16 @@ describe("useSlashCommand sandbox action", () => {
         { name: "models", description: "Server model command", hints: [] },
       ],
     })
+    // Server commands stay available so worktree-independent commands can run.
     ctx.slash.onInput("/merge", 6)
-    expect(ctx.slash.results()).toEqual([])
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["merge"])
 
     ctx.slash.onInput("/models", 7)
     expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+
+    // Client actions outside the include set stay hidden.
+    ctx.slash.onInput("/review", 7)
+    expect(ctx.slash.results()).toEqual([])
     ctx.dispose()
   })
 
@@ -369,7 +401,114 @@ describe("useSlashCommand sandbox action", () => {
   })
 })
 
+// Issue #14096: skills were listed as indistinguishable "Commands" rows.
+describe("skill entries in the slash menu", () => {
+  const loaded = (ctx: ReturnType<typeof setup>) =>
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "foo", description: "custom command", source: "command", hints: [] },
+        { name: "foo", description: "skill with the same name", source: "skill", hints: [] },
+        { name: "grill", description: "a plain skill", source: "skill", hints: [] },
+        { name: "grill", description: "duplicate skill row", source: "skill", hints: [] },
+        { name: "notes", description: "mcp prompt", source: "mcp", hints: [] },
+      ],
+    })
+
+  it("orders skills after commands so the dropdown can render a Skills group", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/", 1)
+    const server = ctx.slash.results().filter((cmd) => !cmd.action)
+    const sources = server.map((cmd) => cmd.source ?? "command")
+    const first = sources.indexOf("skill")
+    expect(first).toBeGreaterThan(0)
+    expect(sources.slice(first).every((source) => source === "skill")).toBe(true)
+    expect(sources.slice(0, first).every((source) => source !== "skill")).toBe(true)
+    ctx.dispose()
+  })
+
+  it("suffixes a skill that clashes with a command and drops exact duplicate rows", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/", 1)
+    const rows = ctx.slash
+      .results()
+      .filter((cmd) => !cmd.action)
+      .map((cmd) => `${cmd.source ?? "command"}:${cmd.name}`)
+    expect(rows.filter((row) => row.endsWith(":foo"))).toEqual(["command:foo"])
+    expect(rows.filter((row) => row.startsWith("skill:"))).toEqual(["skill:foo:skill", "skill:grill"])
+    ctx.dispose()
+  })
+
+  it("inserts /name:skill when the clashing skill row is selected", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    let text = ""
+    const textarea = { value: "/foo", setSelectionRange: () => {}, focus: () => {} } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput("/foo", 4)
+    const entry = ctx.slash.results().find((cmd) => cmd.source === "skill" && cmd.name.startsWith("foo"))!
+    ctx.slash.select(entry, textarea, (value) => (text = value))
+    expect(text.startsWith("/foo:skill")).toBe(true)
+    ctx.dispose()
+  })
+
+  it("still matches a clashing skill by its plain name", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/foo", 4)
+    const names = ctx.slash
+      .results()
+      .filter((cmd) => !cmd.action)
+      .map((cmd) => cmd.name)
+    expect(names).toEqual(["foo", "foo:skill"])
+    ctx.dispose()
+  })
+})
+
 describe("slash command keyboard selection", () => {
+  it.each(["sandbox", "verify"])("leaves Shift+Tab unhandled with /%s selected", (name) => {
+    const draft = `/${name} keep this draft`
+    const state = { text: draft, prevented: 0, selected: 0, toggles: 0 }
+    const ctx = setup(() => state.toggles++)
+    const cursor = name.length + 1
+    const textarea = {
+      value: draft,
+      selectionStart: cursor,
+      setSelectionRange: (start: number) => (textarea.selectionStart = start),
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key: "Tab",
+      shiftKey: true,
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "verify", description: "Verify changes", hints: [] }],
+    })
+    ctx.slash.onInput(draft, cursor)
+    expect(ctx.slash.results()[0]?.name).toBe(name)
+
+    const handled = ctx.slash.onKeyDown(
+      event,
+      textarea,
+      (text) => (state.text = text),
+      () => state.selected++,
+    )
+
+    expect(handled).toBe(false)
+    expect(state).toEqual({ text: draft, prevented: 0, selected: 0, toggles: 0 })
+    expect(textarea.value).toBe(draft)
+    expect(textarea.selectionStart).toBe(cursor)
+    expect(ctx.slash.show()).toBe(true)
+    expect(ctx.slash.index()).toBe(0)
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
   it.each(["Enter", "Tab"] as const)("keeps %s selection aligned with the action-first menu", (key) => {
     const state = { text: "/refresh", prevented: 0 }
     const ctx = setup(() => {})

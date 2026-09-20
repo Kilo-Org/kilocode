@@ -16,6 +16,9 @@ type ProviderInternals = {
   isWebviewReady: boolean
   syncWebviewState: (reason: string) => Promise<void>
   handleMigrationMessage: (message: { type: string }) => boolean
+  seedSessionWakeups: () => Promise<void>
+  handleEvent: (event: unknown, directory?: string) => void
+  wakeupSessions: Set<string>
 }
 
 function deferred<T>() {
@@ -77,6 +80,13 @@ function createClient() {
       notifications: async () => ({ data: [] }),
       profile: async () => ({ data: {} }),
     },
+    kilocode: {
+      wakeups: async (_params: {
+        directory: string
+      }): Promise<{ data: Array<{ sessionID: string; pending: number }> }> => ({
+        data: [],
+      }),
+    },
   }
 }
 
@@ -101,6 +111,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onModelSelectorExpandedChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
+    getKnownDirectories: () => ["/repo"],
     getServerInfo: () => ({ port: 12345 }),
     getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),
     getConnectionState: () => "connected" as const,
@@ -383,5 +394,74 @@ describe("KiloProvider pending session refresh", () => {
     })
 
     expect(errors).toEqual([])
+  })
+
+  it("reconciles a cancelled wakeup to zero after a complete seed", async () => {
+    const client = createClient()
+    client.kilocode.wakeups = async () => ({ data: [{ sessionID: "s1", pending: 2 }] })
+    const connection = createConnection(client)
+    await connection.connect()
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.webview = { postMessage: async (message: unknown) => void sent.push(message) }
+
+    await internal.seedSessionWakeups()
+    expect(sent).toContainEqual({ type: "sessionWakeup", sessionID: "s1", pending: 2 })
+
+    client.kilocode.wakeups = async () => ({ data: [] })
+    await internal.seedSessionWakeups()
+
+    expect(sent).toContainEqual({ type: "sessionWakeup", sessionID: "s1", pending: 0 })
+    expect(internal.wakeupSessions.has("s1")).toBe(false)
+  })
+
+  it("keeps tracked wakeups when one directory fails", async () => {
+    const client = createClient()
+    client.kilocode.wakeups = async () => ({ data: [{ sessionID: "s1", pending: 2 }] })
+    const connection = createConnection(client)
+    connection.getKnownDirectories = () => ["/repo", "/good"]
+    await connection.connect()
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.webview = { postMessage: async (message: unknown) => void sent.push(message) }
+
+    await internal.seedSessionWakeups()
+    expect(internal.wakeupSessions.has("s1")).toBe(true)
+
+    sent.length = 0
+    client.kilocode.wakeups = async (params: { directory: string }) => {
+      if (params.directory === "/good") throw new Error("offline")
+      return { data: [] }
+    }
+    await internal.seedSessionWakeups()
+
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionWakeup", sessionID: "s1", pending: 0 }))
+    expect(internal.wakeupSessions.has("s1")).toBe(true)
+  })
+
+  it("keeps a wakeup scheduled while a complete seed is in flight", async () => {
+    const client = createClient()
+    const pending = deferred<{ data: Array<{ sessionID: string; pending: number }> }>()
+    client.kilocode.wakeups = () => pending.promise
+    const connection = createConnection(client)
+    await connection.connect()
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.webview = { postMessage: async (message: unknown) => void sent.push(message) }
+
+    const seeding = internal.seedSessionWakeups()
+    internal.handleEvent({ type: "session.wakeup", properties: { sessionID: "live", pending: 1 } })
+    pending.resolve({ data: [] })
+    await seeding
+
+    expect(sent).not.toContainEqual({ type: "sessionWakeup", sessionID: "live", pending: 0 })
+    expect(sent).toContainEqual({ type: "sessionWakeup", sessionID: "live", pending: 1 })
+    expect(internal.wakeupSessions.has("live")).toBe(true)
   })
 })

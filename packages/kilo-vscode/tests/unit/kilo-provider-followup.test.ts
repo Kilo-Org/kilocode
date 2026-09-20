@@ -238,6 +238,7 @@ describe("KiloProvider follow-up sessions", () => {
         parentID: null,
         revert: null,
         summary: null,
+        goal: null,
       },
     })
   })
@@ -406,6 +407,7 @@ describe("KiloProvider follow-up sessions", () => {
           parentID: null,
           revert: null,
           summary: null,
+          goal: null,
         },
         activate: true,
       },

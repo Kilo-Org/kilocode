@@ -3,12 +3,15 @@
 
 import * as fs from "fs/promises"
 import type { GitOps } from "../../agent-manager/GitOps"
-import { generatedLike } from "../../agent-manager/local-diff"
+import { classifyGenerated, generatedLike, gitGeneratedFiles } from "../shared/git-attributes"
 import { imageMime, readImageFile } from "../shared/image"
 import { resolveInside } from "../shared/path"
 import type { DiffFile } from "../types"
 
-export { MAX_DETAIL_BYTES } from "../../agent-manager/local-diff"
+// Re-exported from the definition module so the diff sources can size entries
+// without routing through local-diff. The definition stays in the batch module
+// so this file has no back-edge from agent-manager.
+export { fileSize, MAX_DETAIL_BYTES } from "../../agent-manager/local-diff-batch"
 
 export type Status = "added" | "deleted" | "modified"
 
@@ -19,7 +22,48 @@ export interface FileEntry {
   deletions: number
   tracked: boolean
   binary: boolean
+  generatedLike?: boolean
   stamp?: string
+}
+
+export async function applyGeneratedAttributes(
+  git: GitOps,
+  dir: string,
+  entries: FileEntry[],
+  cached = false,
+): Promise<FileEntry[]> {
+  const configured = await gitGeneratedFiles(
+    git,
+    dir,
+    entries.map((entry) => entry.file),
+    { cached },
+  )
+  return entries.map((entry) => ({
+    ...entry,
+    generatedLike: classifyGenerated(entry.file, configured),
+  }))
+}
+
+export function createFileEntry(
+  item: { file: string; status: Status },
+  stats: Map<string, { additions: number; deletions: number; binary: boolean }>,
+): FileEntry {
+  const stat = stats.get(item.file)
+  return {
+    file: item.file,
+    status: item.status,
+    additions: stat?.additions ?? 0,
+    deletions: stat?.deletions ?? 0,
+    tracked: true,
+    binary: stat?.binary ?? false,
+  }
+}
+
+/** Stamp image entries on their blob refs so cache invalidation tracks the
+ *  encoded sides, not only the numstat counts. */
+export function stamp(entry: FileEntry, before: string, after: string): FileEntry {
+  if (!imageMime(entry.file)) return entry
+  return { ...entry, stamp: `${entry.status}:${before}:${after}` }
 }
 
 /** Parse `git diff --name-status` output into entries (status code + path). */
@@ -85,7 +129,7 @@ export function summarize(entry: FileEntry): DiffFile {
     deletions: entry.deletions,
     status: entry.status,
     tracked: entry.tracked,
-    generatedLike: generatedLike(entry.file),
+    generatedLike: entry.generatedLike ?? generatedLike(entry.file),
     // Binary metadata is complete because no deferred text body exists.
     // Images are the exception: their encoded sides load lazily on expansion.
     summarized: image || !entry.binary,
@@ -165,16 +209,4 @@ export async function diskStamp(dir: string, file: string): Promise<string> {
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) return "missing"
   return `${stat.size}:${stat.mtimeMs}`
-}
-
-/**
- * Size of the working-tree entry at `file`. Uses `lstat` so symlinks report
- * the link's own size (length of the target string) instead of resolving to
- * whatever the link points at — see `readDisk` for why.
- */
-export async function fileSize(dir: string, file: string): Promise<number> {
-  const full = resolveInside(dir, file)
-  if (!full) return 0
-  const stat = await fs.lstat(full).catch(() => undefined)
-  return stat?.size ?? 0
 }

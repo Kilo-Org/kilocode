@@ -19,6 +19,24 @@ export function sortByScore(matches: SlashCommandEntry[], query: string): SlashC
   return [...matches].sort((a, b) => getMatchScore(b, lower) - getMatchScore(a, lower))
 }
 
+export const skill = (cmd: SlashCommandEntry) => !cmd.action && cmd.source === "skill"
+
+/**
+ * The CLI lists a skill next to a command of the same name so the TUI can offer both as
+ * `/name` and `/name:skill`. Apply the same suffix here so the two rows are distinguishable
+ * and selecting the skill row inserts the text the CLI resolves to that skill.
+ */
+export function disambiguate(list: SlashCommandEntry[], taken: Set<string>): SlashCommandEntry[] {
+  const seen = new Set<string>()
+  return list.flatMap((cmd) => {
+    const name = skill(cmd) && taken.has(cmd.name) ? `${cmd.name}:skill` : cmd.name
+    const key = `${cmd.source ?? "command"}:${name}`
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [name === cmd.name ? cmd : { ...cmd, name }]
+  })
+}
+
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -26,6 +44,7 @@ interface VSCodeContext {
 
 export interface SlashCommandEntry extends SlashCommandInfo {
   action?: () => void
+  select?: () => void
   enabled?: Accessor<boolean>
   nested?: boolean
 }
@@ -190,14 +209,6 @@ export function useSlashCommand(
       },
     },
     {
-      name: "kiloclaw",
-      description: "Open KiloClaw chat",
-      hints: ["claw"],
-      action: () => {
-        vscode.postMessage({ type: "openKiloClaw" })
-      },
-    },
-    {
       name: "sandbox",
       description: "Toggle sandbox",
       hints: [],
@@ -235,9 +246,13 @@ export function useSlashCommand(
     const list = client()
     const names = new Set(list.map((c) => c.name))
     const set = excluded()
-    const only = included()
-    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name)))
-    return [...list, ...filtered]
+    // `include` restricts the local client actions only. Server commands are
+    // worktree-independent configuration (custom commands, skills, MCP prompts,
+    // /goal), so callers that pass `include` still get every server command
+    // unless they explicitly exclude it.
+    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name))
+    const taken = new Set(filtered.filter((c) => !skill(c)).map((c) => c.name))
+    return [...list, ...disambiguate(filtered, taken)]
   }
 
   const show = () => query() !== null
@@ -284,8 +299,12 @@ export function useSlashCommand(
 
   const results = () => {
     const list = matched()
-    // PromptInput renders contiguous Actions and Commands groups, so keyboard indexes must use the same order.
-    return [...list.filter((cmd) => cmd.action), ...list.filter((cmd) => !cmd.action)]
+    // PromptInput renders contiguous Actions, Commands, and Skills groups, so keyboard indexes must use the same order.
+    return [
+      ...list.filter((cmd) => cmd.action),
+      ...list.filter((cmd) => !cmd.action && !skill(cmd)),
+      ...list.filter(skill),
+    ]
   }
 
   const unsubscribe = vscode.onMessage((message) => {
@@ -346,14 +365,14 @@ export function useSlashCommand(
     // slashEnd is the cursor position from onInput when the slash pattern was matched.
     const trailingText = textarea.value.substring(cursor)
 
-    if (cmd.action) {
+    if (cmd.action || cmd.select) {
       if (cmd.enabled && !cmd.enabled()) return
       textarea.value = trailingText
       setText(trailingText)
       textarea.setSelectionRange(0, 0)
       close()
       onSelect?.()
-      cmd.action()
+      ;(cmd.select ?? cmd.action)?.()
       return
     }
     const commandText = `/${cmd.name} `
@@ -392,7 +411,7 @@ export function useSlashCommand(
       setIndex((i) => Math.max(i - 1, 0))
       return true
     }
-    if (e.key === "Enter" || e.key === "Tab") {
+    if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
       const cmd = filtered[index()]
       if (!cmd) return false
       e.preventDefault()

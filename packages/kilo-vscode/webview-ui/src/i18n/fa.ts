@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "تکمیل‌شده (گزارش مدل)",
+  "session.goal.blocked": "مسدود",
+  "session.goal.restart": "شروع مجدد هدف",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "برد",
+  "task.swarm.refresh": "تازه‌سازی",
+  "task.swarm.reset": "بازنشانی برد",
+  "task.swarm.resetTitle": "این برد بازنشانی شود؟",
+  "task.swarm.resetDescription":
+    "پیام‌های قابل مشاهده پاک شوند؟ گفتگوها و کارهای در حال اجرا تغییر نمی‌کنند. عامل‌ها می‌توانند پیام‌های جدید منتشر کنند.",
+  "task.swarm.loading": "در حال بارگیری برد...",
+  "task.swarm.failed": "بارگیری یا بازنشانی برد ممکن نشد. تازه‌سازی را امتحان کنید.",
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
@@ -63,6 +74,7 @@ export const dict = {
   "session.activity.error": "خطا یا قطع اتصال.",
   "session.activity.retry": "تلاش مجدد خودکار.",
   "session.activity.busy": "در حال انجام.",
+  "session.activity.scheduled": "در انتظار بیدارشدن زمان‌بندی‌شده.",
   "session.activity.done": "نوبت به پایان رسید.",
   "session.activity.idle": "در حال اجرا نیست.",
 
@@ -191,11 +203,13 @@ export const dict = {
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.action.indexing": "تنظیمات ایندکس‌گذاری",
   "prompt.action.autoApprove.enable": "فعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.disable": "غیرفعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.enabled": "تأیید خودکار فعال است. درخواست‌های مجوز به‌صورت خودکار تأیید می‌شوند.",
   "prompt.action.autoApprove.disabled": "تأیید خودکار غیرفعال است. برای تأیید خودکار درخواست‌های مجوز کلیک کنید.",
+  "prompt.action.autoApprove.sandboxExcluded": "درخواست‌های خروج از sandbox همیشه مستثنا هستند.",
   "prompt.action.sandbox.enable": "فعال‌سازی سندباکس",
   "prompt.action.sandbox.disable": "غیرفعال‌سازی سندباکس",
   "prompt.action.sandbox.enabled": "سندباکس فعال است. دستورات شل عامل به پوشه‌های پروژه و Kilo محدود شده‌اند.",
@@ -210,12 +224,14 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "مجاز",
   "prompt.action.sandbox.unrestricted": "بدون محدودیت",
   "prompt.action.sandbox.description.enabled": "نوشتن‌ها به پوشه‌های پروژه و Kilo محدود شده‌اند.",
+  "prompt.action.sandbox.description.escalation":
+    "قواعد مجوز و تأیید خودکار در داخل sandbox اعمال می‌شوند. فرمان‌هایی که باید از آن خارج شوند همیشه می‌پرسند.",
   "prompt.action.sandbox.description.disabled": "برای محدود کردن نوشتن در سیستم فایل و دسترسی به شبکه کلیک کنید.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "برای محدود کردن نوشتن در سیستم فایل کلیک کنید. دسترسی به شبکه طبق تنظیمات sandbox شما مجاز است.",
   "prompt.action.enhanceDescription":
     "دکمه «بهبود پرامپت» با ارائه زمینه بیشتر، توضیح یا بازنویسی، به بهتر کردن پرامپت شما کمک می‌کند. یک پرامپت تایپ کنید و دوباره روی دکمه کلیک کنید تا نحوه عملکرد آن را ببینید.",
-  "speechToText.tooltip.start": "شروع ورودی صوتی با Kilo Gateway",
+  "speechToText.tooltip.start": "شروع ورودی صوتی",
   "speechToText.tooltip.shortcut":
     "برای شروع یا توقف ضبط، روی دکمه ضربه بزنید یا Cmd/Ctrl+K را فشار دهید؛ هنگام صحبت دکمه را نگه دارید و سپس رها کنید تا گفتار به متن تبدیل و ارسال شود.",
   "speechToText.tooltip.starting": "در حال راه‌اندازی میکروفون... منتظر بمانید.",
@@ -255,8 +271,13 @@ export const dict = {
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
-  "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
+  "notification.permission.titleSandboxEscalation": "اجرا خارج از sandbox؟",
+  "notification.permission.descriptionSandboxEscalation":
+    "این کل فرمان را با حذف محدودیت‌های فایل‌سیستم و شبکه، فقط برای همین فرمان اجرا می‌کند. Git باید در .git بنویسد؛ این مسیر در sandbox فقط‌خواندنی است و در یک worktree مرتبط خارج از worktree قرار دارد. قواعد اجازه Bash و تأیید خودکار هرگز این درخواست را به‌صورت خودکار تأیید نمی‌کنند.",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
+  "ui.permission.reject": "رد",
+  "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
+  "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
   "ui.permission.rule.addToAllowed": "افزودن به لیست مجاز",
@@ -374,6 +395,7 @@ export const dict = {
   "settings.providers.tag.other": "سایر",
   "settings.providers.connected.environmentDescription": "از متغیرهای محیطی شما متصل شده است",
   "settings.providers.action.signInChatGPT": "ورود با ChatGPT",
+  "settings.providers.action.changeApiKey": "تغییر کلید API",
   "settings.providers.custom.description": "یک ارائه‌دهنده سفارشی از طریق URL پایه اضافه کنید.",
 
   "provider.custom.title": "ارائه‌دهنده سفارشی",
@@ -457,37 +479,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "به‌روزرسانی مجوزها ناموفق بود",
 
-  "settings.permissions.tool.read.title": "خواندن",
   "settings.permissions.tool.read.description": "خواندن یک فایل (با مسیر فایل تطابق دارد)",
-  "settings.permissions.tool.edit.title": "ویرایش",
   "settings.permissions.tool.edit.description": "تغییر فایل‌ها، شامل ویرایش، نوشتن، وصله‌گذاری و ویرایش‌های چندگانه",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "تطبیق فایل‌ها با استفاده از الگوهای glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "جستجوی محتوای فایل‌ها با استفاده از عبارات منظم",
-  "settings.permissions.tool.list.title": "فهرست",
   "settings.permissions.tool.list.description": "فهرست کردن فایل‌های درون یک پوشه",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "اجرای دستورات شل",
-  "settings.permissions.tool.task.title": "وظیفه",
   "settings.permissions.tool.task.description": "راه‌اندازی زیر-عامل‌ها",
-  "settings.permissions.tool.skill.title": "مهارت",
   "settings.permissions.tool.skill.description": "بارگذاری یک مهارت با نام",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "اجرای پرس‌وجوهای سرور زبان",
-  "settings.permissions.tool.todoread.title": "خواندن وظایف",
   "settings.permissions.tool.todoread.description": "خواندن فهرست وظایف",
-  "settings.permissions.tool.todowrite.title": "نوشتن وظایف",
   "settings.permissions.tool.todowrite.description": "به‌روزرسانی فهرست وظایف",
-  "settings.permissions.tool.webfetch.title": "دریافت وب",
   "settings.permissions.tool.webfetch.description": "دریافت محتوا از یک URL",
-  "settings.permissions.tool.websearch.title": "جستجوی وب",
   "settings.permissions.tool.websearch.description": "جستجو در وب",
-  "settings.permissions.tool.codesearch.title": "جستجوی کد",
   "settings.permissions.tool.codesearch.description": "جستجوی کد در وب",
-  "settings.permissions.tool.external_directory.title": "پوشه خارجی",
   "settings.permissions.tool.external_directory.description": "دسترسی به فایل‌های خارج از پوشه پروژه",
-  "settings.permissions.tool.doom_loop.title": "حلقه بی‌پایان",
   "settings.permissions.tool.doom_loop.description": "تشخیص فراخوانی‌های تکراری ابزار با ورودی یکسان",
 
   "session.delete.title": "حذف جلسه",
@@ -505,6 +511,7 @@ export const dict = {
   "session.tabs.switcher.current": "فعلی",
   "session.tabs.switcher.pending": "جدید",
   "session.tabs.switcher.busy": "در حال کار",
+  "session.tabs.switcher.scheduled": "زمان‌بندی‌شده",
   "session.tab.local": "محلی",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -580,6 +587,7 @@ export const dict = {
   "profile.usage.source.direct": "مستقیم",
   "profile.usage.state.stale": "آخرین میزان استفاده به‌روزشده نمایش داده می‌شود.",
   "profile.usage.state.unavailable": "میزان استفاده در دسترس نیست.",
+  "profile.usage.state.empty": "هیچ محدودیتی برای استفاده گزارش نشده است.",
   "profile.usage.plan.pastDue": "طرح: سررسید گذشته",
   "profile.usage.plan.canceling": "طرح: در پایان دوره لغو می‌شود",
   "profile.usage.plan.unknown": "طرح: وضعیت نامشخص",
@@ -701,6 +709,14 @@ export const dict = {
   "session.outcome.interrupted": "نوبت قطع شد.",
   "session.outcome.error": "نوبت با شکست مواجه شد.",
   "session.outcome.finish": "دلیل فنی پایان: {{reason}}",
+  "session.goal.label": "هدف",
+  "prompt.goal.set": "تعیین هدف",
+  "prompt.goal.start": "شروع هدف",
+  "session.goal.active": "فعال",
+  "session.goal.paused": "متوقف",
+  "session.goal.pause": "توقف موقت",
+  "session.goal.resume": "ازسرگیری",
+  "session.goal.clear": "پاک کردن هدف",
   "session.costAlert.header": "هشدار هزینه جلسه",
   "session.costAlert.continue": "ادامه",
   "session.costAlert.question": "هزینه این جلسه از آستانه هشدار {{limit}} شما فراتر رفت و {{cost}} شد. ادامه می‌دهید؟",
@@ -709,7 +725,6 @@ export const dict = {
   "sidebar.topBar.newTask": "وظیفه جدید",
   "sidebar.topBar.history": "تاریخچه",
   "sidebar.topBar.agentManager": "مدیر عامل‌ها",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "بازارچه",
   "sidebar.topBar.profile": "پروفایل",
   "sidebar.topBar.settings": "تنظیمات",
@@ -802,7 +817,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "مهارت‌ها",
 
   "settings.browser.description":
-    "وقتی فعال است، عامل هوش مصنوعی می‌تواند با صفحات وب تعامل داشته باشد — پیمایش، کلیک، تایپ و گرفتن اسکرین‌شات. یک پنجره Chrome باز می‌شود تا بتوانید عملکرد عامل را مشاهده کنید.",
+    "پیکربندی اتوماسیون مرورگر داخلی با پشتیبانی Playwright. Kilo می‌تواند در جلسات شما در صفحات وب پیمایش کند، با آن‌ها تعامل داشته باشد و اسکرین‌شات بگیرد.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
   "settings.browser.enable.description": "سرور Playwright MCP را با بک‌اند CLI ثبت کنید.",
   "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
@@ -831,7 +846,17 @@ export const dict = {
   "settings.notifications.sounds": "صداها",
   "settings.notifications.enable.title": "فعال‌سازی اعلان‌های صوتی",
   "settings.notifications.enable.description": "پخش صدا هنگام تکمیل جلسات، بروز خطا یا نیاز به ورودی شما",
+  "settings.notifications.workbench.title": "فعال‌سازی اعلان‌های VS Code",
+  "settings.notifications.workbench.description":
+    "نمایش اعلان‌های VS Code هنگام تکمیل یک وظیفه توسط Kilo یا نیاز به ورودی شما",
+  "settings.notifications.os.title": "فعال‌سازی اعلان‌های سیستم‌عامل",
+  "settings.notifications.os.description":
+    "نمایش هشدارهای اعلان بومی سیستم‌عامل هنگام تکمیل یک وظیفه توسط Kilo یا نیاز به ورودی شما در زمانی که VS Code فعال نیست.",
   "settings.notifications.testSound": "آزمایش",
+  "settings.notifications.testOS": "آزمایش",
+  "settings.notifications.testOS.testing": "در حال ارسال اعلان آزمایشی…",
+  "settings.notifications.testOS.success": "اعلان آزمایشی ارسال شد.",
+  "settings.notifications.testOS.error": "ارسال اعلان آزمایشی ناموفق بود",
   "settings.notifications.sound.default": "پیش‌فرض",
   "settings.notifications.sound.system": "سیستم",
   "settings.notifications.sound.description":
@@ -850,15 +875,28 @@ export const dict = {
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "یک برد را بین یک جلسهٔ اصلی و عامل‌های فرعی مسئول وظایف آن، از جمله عامل‌های فرعی تودرتو، به اشتراک بگذارید. از آن برای تلاش‌های موازی جهت یافتن راه‌حل یا کارهای مکمل استفاده کنید، نه برای هر وظیفه.",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
   "settings.experimental.imageGenerationModel.description": "مدل تولید تصویر",
   "settings.experimental.imageGenerationModel.placeholder": "پیش‌فرض (مسیریاب خودکار)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "شناسه مدلی که به نقطه پایانی رونویسی دلخواه شما فرستاده می‌شود، برای نمونه whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "نشانی پایه تبدیل گفتار به متن",
+  "settings.models.speechToTextBaseUrl.description":
+    "به‌جای Kilo Gateway از یک API رونویسی سازگار با OpenAI استفاده کنید. مدل‌ها از /models خوانده می‌شوند و صدا به /audio/transcriptions فرستاده می‌شود. برای استفاده از Kilo Gateway خالی بگذارید.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "کلید API تبدیل گفتار به متن",
+  "settings.models.speechToTextApiKey.description":
+    "توکن Bearer که به نشانی پایه رونویسی دلخواه فرستاده می‌شود. در فایل پیکربندی Kilo شما ذخیره می‌شود.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "برای استفاده از تبدیل گفتار به متن، ارائه‌دهنده Kilo را فعال کرده و وارد شوید. تبدیل گفتار به متن در حال حاضر فقط از طریق Kilo Gateway پشتیبانی می‌شود.",
+    "برای استفاده از تبدیل گفتار به متن، ارائه‌دهنده Kilo را فعال کرده و وارد شوید، یا در پایین یک نشانی پایه رونویسی دلخواه تعیین کنید.",
+  "settings.models.speechToText.remoteDescription":
+    "ورودی صوتی در پنجره‌های راه دور در دسترس نیست. برای استفاده از میکروفون، Kilo را در یک پنجره محلی باز کنید.",
   "settings.models.speechToTextModel.title": "مدل تبدیل گفتار به متن",
   "settings.models.speechToTextModel.description": "مدل رونویسی Kilo Gateway را برای ورودی صوتی انتخاب کنید.",
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
@@ -866,6 +904,9 @@ export const dict = {
     "ابزارهای آزمایشی برای خواندن، ویرایش و اجرای VS Code notebooks را فعال کنید",
   "settings.experimental.continueOnDeny.title": "ادامه در صورت رد",
   "settings.experimental.continueOnDeny.description": "حلقه عامل را هنگام رد شدن یک مجوز ادامه دهید",
+  "settings.experimental.codeMode.title": "فراخوانی برنامه‌نویسی ابزارها",
+  "settings.experimental.codeMode.description":
+    "فراخوانی‌های ابزار MCP را از طریق یک محیط اجرای JavaScript محدودشده و با کشف ابزار به‌صورت درخواستی هدایت می‌کند، به‌جای نمایش مستقیم هر ابزار MCP. در صورت اتصال ابزارهای MCP متعدد، در مصرف زمینه صرفه‌جویی می‌کند.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "اجرای دستورات شل عامل در یک Sandbox سطح سیستم‌عامل که نوشتن را به پوشه‌های پروژه و وضعیت Kilo محدود می‌کند",
@@ -880,6 +921,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
   "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
@@ -939,6 +983,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "فایل‌های دستورالعمل اضافی",
   "settings.agentBehaviour.instructionFiles.description":
     "مسیرهای فایل‌های دستورالعمل اضافی که در پرامپت سیستم گنجانده می‌شوند",
+  "settings.agentBehaviour.pushFixes.title": "پوش کردن اصلاحات درخواست ادغام",
+  "settings.agentBehaviour.pushFixes.description":
+    "وقتی خطاهای CI یا نظرات بازبینی یک درخواست ادغام را برای عامل می‌فرستید، یا یک worktree را از شاخه پایه به‌روز می‌کنید، از عامل بخواهید کامیت و پوش کند تا درخواست ادغام به‌روز شود. درخواست‌های مجوز همچنان اعمال می‌شوند. برای کامیت دستی این گزینه را خاموش کنید.",
   "settings.agentBehaviour.claudeCompat.heading": "سازگاری با Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "بارگذاری فایل‌های Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1066,6 +1113,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "مدل مورد استفاده برای فشرده‌سازی خودکار و دستی. برای استفاده از مدل چت، خالی بگذارید. هزینه، سرعت و کیفیت خلاصه به مدل بستگی دارند.",
   "settings.context.compactionModel.useChatModel": "استفاده از مدل چت",
+  "settings.context.compactionModel.hint": "برای انتخاب مدل مورد استفاده در فشرده‌سازی، به تنظیمات مدل‌ها مراجعه کنید.",
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",
@@ -1109,9 +1157,12 @@ export const dict = {
   "settings.display.username.description": "نام کاربری سفارشی که در مکالمات نمایش داده می‌شود",
   "settings.display.fontSize.title": "اندازه قلم",
   "settings.display.fontSize.description": "اندازه قلم رابط کاربری وب‌ویو Kilo را مستقل از VS Code تنظیم کنید.",
-  "settings.display.reasoningAutoCollapse.title": "جمع‌شدن خودکار استدلال",
-  "settings.display.reasoningAutoCollapse.description":
-    "بلوک‌های استدلال را پس از اتمام نوشتن توسط عامل جمع می‌کند. برای نگه داشتن استدلال در حالت باز، این گزینه را خاموش بگذارید مگر اینکه خودتان آن را جمع کنید.",
+  "settings.display.reasoningDisplay.title": "بلوک‌های استدلال",
+  "settings.display.reasoningDisplay.description":
+    "انتخاب کنید که بلوک‌های استدلال چگونه شروع شوند. باز متن کامل را نشان می‌دهد، پیش‌نمایش آن را به یک پیش‌نمایش کوتاه قابل اسکرول محدود می‌کند، و عنوان تنها عنوان و نشانگر پخش جریانی را تا زمانی که آن را باز کنید نمایش می‌دهد.",
+  "settings.display.reasoningDisplay.expanded": "باز",
+  "settings.display.reasoningDisplay.preview": "پیش‌نمایش",
+  "settings.display.reasoningDisplay.headline": "عنوان",
   "settings.display.shiftTabCycle.title": "چرخش سطح استدلال با Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "در ورودی پرامپت، Shift+Tab را فشار دهید تا به سطح تلاش استدلال بعدی بروید. برای حفظ عملکرد Shift+Tab جهت ناوبری فوکوس صفحه‌کلید، این گزینه را غیرفعال کنید.",
@@ -1265,6 +1316,16 @@ export const dict = {
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "انتشار در GitHub",
+  "diffViewer.comment.loadFailed": "بارگذاری تغییرات درخواست ادغام ممکن نشد.",
+  "diffViewer.comment.unavailable": "این خط در تصویر لحظه‌ای فعلی درخواست ادغام موجود نیست.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "باز کردن درخواست ادغام",
+  "diffViewer.comment.localChanges": "تغییرات محلی",
+  "diffViewer.comment.prChanges": "تغییرات PR",
+  "diffViewer.comment.sendToKilo": "ارسال به Kilo",
+  "diffViewer.comment.sendToGithub": "ارسال به GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "انتخاب مقصد",
   "diffViewer.notice.snapshotsDisabled":
     "عکس‌های فوری برای این مخزن غیرفعال هستند. لطفاً فایل‌های پیکربندی خود را ویرایش کنید تا تغییرات جلسه نمایش داده شوند.",
 
@@ -1287,5 +1348,11 @@ export const dict = {
   "chat.search.close": "بستن جستجو",
   "chat.search.invalidRegex": "عبارت منظم نامعتبر",
   "chat.search.noResults": "نتیجه‌ای یافت نشد",
+  "settings.experimental.browserAutomation.title": "مرورگر یکپارچه",
+  "settings.experimental.browserAutomation.description":
+    "پیش‌نمایش برنامه‌های محلی را در Agent Manager نشان دهید و ابزار browser_open را در اختیار جلسات Agent Manager قرار دهید.",
+  "settings.experimental.browserAutomation.systemChrome.title": "استفاده از Chrome سیستم",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
 }

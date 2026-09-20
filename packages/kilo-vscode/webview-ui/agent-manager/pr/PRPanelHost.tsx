@@ -3,6 +3,7 @@ import { Show, batch, createEffect, createSignal, untrack } from "solid-js"
 import type { PRStatus, WorktreeState } from "../../src/types/messages"
 import { useVSCode } from "../../src/context/vscode"
 import { PRPanel } from "./PRPanel"
+import type { PRComment } from "./pr-types"
 import { openFile, openUrl } from "./pr-panel-actions"
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   worktreeId: string
   activeTerminalId?: string
   sessionId?: string
+  onOpenDiff?: (comment: PRComment) => void
   jump?: number
   onJump?: (id: number) => void
   onClose: () => void
@@ -81,6 +83,7 @@ export function PRPanelHost(props: Props) {
         worktree={props.worktree}
         worktreeId={props.worktreeId}
         activeTerminalId={props.activeTerminalId}
+        sessionId={props.sessionId}
         jump={props.jump}
         onJump={props.onJump}
         onClose={props.onClose}
@@ -93,6 +96,7 @@ export function PRPanelHost(props: Props) {
         }
         onOpenExternal={() => openUrl(vscode.postMessage, props.worktreeId, props.pr.url)}
         onOpenFile={(file, line) => openFile(vscode.postMessage, props.sessionId, file, line)}
+        onOpenDiff={props.onOpenDiff}
         onOpenUrl={(url) => openUrl(vscode.postMessage, props.worktreeId, url)}
       />
     </Show>

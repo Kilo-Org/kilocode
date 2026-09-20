@@ -100,6 +100,16 @@ export function PageFooter() {
             <span>Edit page</span>
           </button>
         </div>
+        <p className="footer-note">
+          Kilo has been acquired by Anaconda.{" "}
+          <a
+            href="https://www.anaconda.com/blog/anaconda-acquires-kilo-code"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Read the announcement
+          </a>
+        </p>
       </footer>
       <style jsx>{`
         .page-footer {
@@ -153,6 +163,22 @@ export function PageFooter() {
 
         .footer-action.errored {
           color: var(--error-color, #ef4444);
+        }
+
+        .footer-note {
+          margin: 0.75rem 0 0;
+          font-size: 0.8125rem;
+          color: var(--text-secondary);
+        }
+
+        .footer-note a {
+          color: var(--accent-color);
+          text-decoration: none;
+          font-weight: 500;
+        }
+
+        .footer-note a:hover {
+          color: var(--accent-hover);
         }
       `}</style>
     </>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
+import { simpleGit } from "simple-git"
 import {
   canonicalizePath,
   findTrackedBranch,
@@ -79,13 +80,92 @@ describe("project-paths", () => {
 
   it("resolveProjectRoot maps a linked worktree to the primary checkout", async () => {
     const calls = new Map([
-      ["rev-parse --path-format=absolute --show-toplevel", "/repo/worktree"],
-      ["rev-parse --path-format=absolute --git-dir", "/repo/.git/worktrees/feature"],
-      ["rev-parse --path-format=absolute --git-common-dir", "/repo/.git"],
+      ["rev-parse --show-toplevel", "/repo/worktree"],
+      ["rev-parse --git-dir", "/repo/.git/worktrees/feature"],
+      ["rev-parse --git-common-dir", "/repo/.git"],
       ["worktree list --porcelain -z", "worktree /repo\0HEAD abc\0\0worktree /repo/worktree\0HEAD def\0"],
     ])
     const root = await resolveProjectRoot("/repo/worktree", async (_cwd, args) => calls.get(args.join(" ")) ?? "")
 
     expect(root).toBe(canonicalizePath("/repo"))
+  })
+
+  it("rejects option-contaminated top-level output instead of using the process cwd", async () => {
+    const root = await resolveProjectRoot(os.tmpdir(), async () => `--path-format=absolute\n${os.tmpdir()}\n`)
+    expect(root).toBeUndefined()
+  })
+
+  it("resolves relative metadata paths against the Git cwd", async () => {
+    const dir = path.join(os.tmpdir(), "pp-relative", "server")
+    const root = path.dirname(dir)
+    const calls = new Map([
+      ["rev-parse --show-toplevel", `${root}\n`],
+      ["rev-parse --git-dir", "../.git\n"],
+      ["rev-parse --git-common-dir", `${path.join(root, ".git")}\n`],
+    ])
+    const commands: string[] = []
+    const result = await resolveProjectRoot(dir, async (_cwd, args) => {
+      commands.push(args.join(" "))
+      return calls.get(args.join(" ")) ?? ""
+    })
+    expect(result).toBe(canonicalizePath(root))
+    expect(commands).toEqual([...calls.keys()])
+  })
+
+  it.each([undefined, "worktree --path-format=absolute\ninvalid\0"])(
+    "falls back to the valid checkout when worktree listing is unavailable or malformed (%s)",
+    async (listing) => {
+      const dir = path.join(os.tmpdir(), "pp-linked")
+      const calls = new Map([
+        ["rev-parse --show-toplevel", `${dir}\n`],
+        ["rev-parse --git-dir", path.join(os.tmpdir(), "repo", ".git", "worktrees", "linked")],
+        ["rev-parse --git-common-dir", path.join(os.tmpdir(), "repo", ".git")],
+        ["worktree list --porcelain -z", listing],
+      ])
+      const root = await resolveProjectRoot(dir, async (_cwd, args) => {
+        const output = calls.get(args.join(" "))
+        if (output == null) throw new Error("unsupported option")
+        return output
+      })
+      expect(root).toBe(canonicalizePath(dir))
+    },
+  )
+
+  it("resolves real Unicode checkout and linked-worktree subfolders without newer Git flags", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pp-git-"))
+    const root = path.join(dir, "\u76ee\u5f55 primary")
+    const linked = path.join(dir, "\u76ee\u5f55 linked")
+    fs.mkdirSync(root)
+    try {
+      const git = simpleGit(root)
+      await git.init()
+      await git.raw([
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.com",
+        "commit",
+        "--allow-empty",
+        "-m",
+        "init",
+      ])
+      await git.raw(["worktree", "add", "-b", "linked", linked])
+      for (const checkout of [root, linked]) {
+        const subdir = path.join(checkout, "server")
+        fs.mkdirSync(subdir)
+        const result = await resolveProjectRoot(subdir, (cwd, args) => {
+          expect(args.some((arg) => arg.startsWith("--path-format"))).toBe(false)
+          return simpleGit(cwd).raw(args)
+        })
+        expect(result).toBe(canonicalizePath(root))
+      }
+      const fallback = await resolveProjectRoot(path.join(linked, "server"), (cwd, args) => {
+        if (args.includes("-z")) throw new Error("unsupported option: -z")
+        return simpleGit(cwd).raw(args)
+      })
+      expect(fallback).toBe(canonicalizePath(root))
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

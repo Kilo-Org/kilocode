@@ -1,4 +1,4 @@
-import { isTextControl } from "../src/utils/focus"
+import { hasPopup, isTextControl } from "../src/utils/focus"
 
 const OPTION = '[data-component="question-dock"] button[data-slot="question-option"]'
 
@@ -55,6 +55,7 @@ export function createChatFocus(deps: {
 }) {
   const focus = (force: boolean) => {
     if ((!force && (!document.hasFocus() || deps.term())) || deps.history() || deps.review()) return
+    if (hasPopup()) return
     if (preservesTextFocus(document.activeElement) || (!force && isTextControl(document.activeElement))) return
     if (!force && document.activeElement?.matches('[role="tab"]')) return
     if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
