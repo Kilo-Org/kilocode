@@ -47,6 +47,8 @@ const mockVscode = {
   version: "1.90.0",
   workspace: {
     workspaceFolders: [{ uri: { fsPath: "/repo" } }],
+    /** Overridden per test to stand in for the editor's own file index. */
+    findFiles: async (_include: unknown, _exclude?: unknown, _max?: number): Promise<Array<{ fsPath: string }>> => [],
     textDocuments: [] as Array<unknown>,
     notebookDocuments: [] as Array<unknown>,
     onDidOpenTextDocument: () => ({ dispose: noop }),
@@ -79,6 +81,12 @@ const mockVscode = {
   StatusBarAlignment: { Left: 1, Right: 2 },
   ThemeColor: class {
     constructor(public id: string) {}
+  },
+  RelativePattern: class {
+    constructor(
+      public base: { uri?: { fsPath: string } } | string,
+      public pattern: string,
+    ) {}
   },
   window: {
     activeTextEditor: undefined,

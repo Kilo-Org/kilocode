@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import * as path from "path"
+import * as vscode from "vscode"
 import { handleFileSearch, splitRoots } from "../../src/kilo-provider/file-search"
 
 type Query = { query: string; directory: string; type: "file" | "directory"; limit: number }
@@ -37,6 +38,46 @@ function multiClient(data: Record<string, { files: string[]; folders: string[] }
 }
 
 const abs = (root: string, rel: string) => path.resolve(root, rel).replaceAll("\\", "/")
+
+type Glob = { base: { uri: { fsPath: string } }; pattern: string }
+
+/**
+ * Stand in for the editor's own file index, which is what added workspace
+ * folders are searched with. Filters on the glob's literal the way VS Code
+ * would, and records the calls so a test can assert nothing reached the
+ * backend.
+ */
+function editorIndex(files: Record<string, string[]>, fail?: string) {
+  const calls: Array<{ root: string; pattern: string; max?: number }> = []
+  const workspace = vscode.workspace as unknown as {
+    workspaceFolders: unknown
+    findFiles: (include: unknown, exclude?: unknown, max?: number) => Promise<Array<{ fsPath: string }>>
+  }
+  const priorFolders = workspace.workspaceFolders
+  const priorFind = workspace.findFiles
+  workspace.workspaceFolders = Object.keys(files).map((root) => ({ uri: { fsPath: root } }))
+  workspace.findFiles = async (include, _exclude, max) => {
+    const glob = include as Glob
+    const root = glob.base.uri.fsPath
+    calls.push({ root, pattern: glob.pattern, max })
+    if (root === fail) throw new Error("EACCES: permission denied")
+    const needle = glob.pattern
+      .replace(/^\*\*\/\*/, "")
+      .replace(/\*$/, "")
+      .toLowerCase()
+    return (files[root] ?? [])
+      .filter((rel) => rel.toLowerCase().includes(needle))
+      .slice(0, max ?? Infinity)
+      .map((rel) => ({ fsPath: abs(root, rel) }))
+  }
+  return {
+    calls,
+    restore: () => {
+      workspace.workspaceFolders = priorFolders
+      workspace.findFiles = priorFind
+    },
+  }
+}
 
 describe("handleFileSearch", () => {
   it("posts one fresh response for each request", async () => {
@@ -93,38 +134,133 @@ describe("handleFileSearch", () => {
   })
 
   it("searches every workspace folder and returns outside roots as labelled absolute paths", async () => {
-    const api = multiClient({
-      "/repo": { files: ["src/a.ts"], folders: ["src"] },
-      "/other": { files: ["lib/b.ts"], folders: ["lib"] },
-    })
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: ["src"] } })
+    const index = editorIndex({ "/repo": [], "/other": ["lib/b.ts"] })
     const posted: Array<Record<string, unknown>> = []
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "ts", requestId: "request-multi" },
-      dir: () => "/repo",
-      roots: () => [
-        { path: "/repo", name: "repo" },
-        { path: "/other", name: "other" },
-      ],
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "ts", requestId: "request-multi" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
 
-    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo", "/other", "/other"])
-    // The session's own project stays relative and stays first; the added
-    // folder is absolute so it can be mentioned without being auto-attached.
+    // The backend is only ever asked about the session's own directory.
+    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo"])
+    expect(index.calls.map((call) => call.root)).toEqual(["/other"])
+    // The session's own project stays relative; the added folder is absolute so
+    // it can be mentioned without being auto-attached, and carries its path
+    // within that folder, which is what the webview ranks it on.
     expect(posted[0]!.paths).toEqual(["src/a.ts", abs("/other", "lib/b.ts")])
-    // Every entry is labelled once the workspace has more than one folder,
-    // including the session's own project.
-    // Outside entries also carry their path within the owning folder, which is
-    // what the webview ranks them on.
     expect(posted[0]!.items).toEqual([
       { path: "src/a.ts", type: "file", root: "repo" },
       { path: abs("/other", "lib/b.ts"), type: "file", root: "other", relative: "lib/b.ts" },
       { path: "src", type: "folder", root: "repo" },
-      { path: abs("/other", "lib"), type: "folder", root: "other", relative: "lib" },
     ])
+  })
+
+  it("never asks the backend about a folder the session does not belong to", async () => {
+    // Naming a directory on find.files boots a full instance for it, which
+    // loads that folder's config and runs the plugins it declares. Adding a
+    // folder to the workspace must not do that.
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["lib/b.ts"], "/third": ["lib/c.ts"] })
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "lib", requestId: "request-no-backend" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+          { path: "/third", name: "third" },
+        ],
+        open: async () => new Set(),
+        post: () => {},
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect([...new Set(api.calls.map((call) => call.directory))]).toEqual(["/repo"])
+    expect(index.calls.map((call) => call.root)).toEqual(["/other", "/third"])
+  })
+
+  it("searches every added folder, however many there are", async () => {
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const extras = Array.from({ length: 8 }, (_, i) => `/extra-${i}`)
+    const index = editorIndex({ "/repo": [], ...Object.fromEntries(extras.map((root) => [root, []])) })
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "x", requestId: "request-all-roots" },
+        dir: () => "/repo",
+        roots: () => [{ path: "/repo", name: "repo" }, ...extras.map((p, i) => ({ path: p, name: `extra-${i}` }))],
+        open: async () => new Set(),
+        post: () => {},
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(index.calls.map((call) => call.root)).toEqual(extras)
+  })
+
+  it("bounds how many files one added folder can contribute", async () => {
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": [] })
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "x", requestId: "request-limit" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: () => {},
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(index.calls[0]!.max).toBe(200)
+  })
+
+  it("drops glob syntax from the query rather than letting it match as a pattern", async () => {
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["src/note.ts"] })
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "no*te", requestId: "request-glob" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: () => {},
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(index.calls[0]!.pattern).toBe("**/*note*")
   })
 
   it("leaves entries unlabelled when the workspace has a single folder", async () => {
@@ -144,50 +280,56 @@ describe("handleFileSearch", () => {
   })
 
   it("ranks an exact filename match in an added folder above fuzzy matches in the session's project", async () => {
+    // None of the primary files is a real match for "CLAUDE.md"; they match
+    // only as a scattered subsequence of the full path.
     const api = multiClient({
-      // None of these is a real match for "CLAUDE.md"; they only match as a
-      // scattered subsequence of the full path.
       "/repo": {
         files: ["docs/error-handling/extension-refresh-on-update.md", "docs/features/background-agent-visibility.md"],
         folders: [],
       },
-      "/other": { files: ["CLAUDE.md"], folders: [] },
     })
+    const index = editorIndex({ "/repo": [], "/other": ["CLAUDE.md"] })
     const posted: Array<Record<string, unknown>> = []
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "CLAUDE.md", requestId: "request-exact" },
-      dir: () => "/repo",
-      roots: () => [
-        { path: "/repo", name: "repo" },
-        { path: "/other", name: "other" },
-      ],
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "CLAUDE.md", requestId: "request-exact" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
 
     expect((posted[0]!.paths as string[])[0]).toBe(abs("/other", "CLAUDE.md"))
   })
 
   it("prefers the session's own project when matches are equally good", async () => {
-    const api = multiClient({
-      "/repo": { files: ["notes.md"], folders: [] },
-      "/other": { files: ["notes.md"], folders: [] },
-    })
+    const api = multiClient({ "/repo": { files: ["notes.md"], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["notes.md"] })
     const posted: Array<Record<string, unknown>> = []
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "notes.md", requestId: "request-tie" },
-      dir: () => "/repo",
-      roots: () => [
-        { path: "/repo", name: "repo" },
-        { path: "/other", name: "other" },
-      ],
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "notes.md", requestId: "request-tie" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
 
     expect(posted[0]!.paths).toEqual(["notes.md", abs("/other", "notes.md")])
   })
@@ -217,25 +359,24 @@ describe("handleFileSearch resilience and ranking basis", () => {
   ]
 
   it("still returns the session's own files when an added folder cannot be read", async () => {
-    const api = multiClient({
-      "/repo": { files: ["src/a.ts"], folders: ["src"] },
-      "/other": { files: ["lib/b.ts"], folders: [] },
-    })
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: ["src"] } })
+    // An added folder is an arbitrary user-chosen directory; one unreadable
+    // folder must not empty the whole mention list.
+    const index = editorIndex({ "/repo": [], "/other": ["lib/b.ts"] }, "/other")
     const posted: Array<Record<string, unknown>> = []
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "b", requestId: "request-broken-root" },
-      dir: () => "/repo",
-      roots: () => roots,
-      // A .kilocodeignore that cannot be read propagates out of the ignore
-      // controller; it must not empty the whole mention list.
-      open: async (dir) => {
-        if (dir === "/other") throw new Error("EACCES: permission denied")
-        return new Set()
-      },
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "b", requestId: "request-broken-root" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
 
     expect(posted).toHaveLength(1)
     expect(posted[0]!.paths).toEqual(["src/a.ts"])
@@ -243,6 +384,31 @@ describe("handleFileSearch resilience and ranking basis", () => {
       { path: "src/a.ts", type: "file", root: "repo" },
       { path: "src", type: "folder", root: "repo" },
     ])
+  })
+
+  it("still returns the session's own files when an added folder's ignore rules cannot be read", async () => {
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["lib/b.ts"] })
+    const posted: Array<Record<string, unknown>> = []
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "b", requestId: "request-broken-ignore" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async (dir) => {
+          if (dir === "/other") throw new Error("EACCES: permission denied")
+          return new Set()
+        },
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(posted).toHaveLength(1)
+    expect(posted[0]!.paths).toEqual(["src/a.ts"])
   })
 
   it("posts a result even when the workspace folder list throws", async () => {
@@ -265,24 +431,26 @@ describe("handleFileSearch resilience and ranking basis", () => {
   })
 
   it("does not search added folders for a bare @", async () => {
-    // Each added folder costs a file index the backend holds for an hour.
-    // Opening the menu is not a reason to build them.
-    const api = multiClient({
-      "/repo": { files: ["src/a.ts"], folders: [] },
-      "/other": { files: ["lib/b.ts"], folders: [] },
-    })
+    // A glob needs something literal to match on, and listing a whole added
+    // repo is not what an unqualified @ is asking for.
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["lib/b.ts"] })
     const posted: Array<Record<string, unknown>> = []
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "", requestId: "request-bare" },
-      dir: () => "/repo",
-      roots: () => roots,
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "", requestId: "request-bare" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
 
-    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo"])
+    expect(index.calls).toEqual([])
     expect(posted[0]!.paths).toEqual(["src/a.ts"])
     // The badge still reflects the workspace, so rows do not gain one the
     // moment a character is typed.
@@ -290,82 +458,68 @@ describe("handleFileSearch resilience and ranking basis", () => {
   })
 
   it("searches added folders as soon as there is something to search for", async () => {
-    const api = multiClient({
-      "/repo": { files: ["src/a.ts"], folders: [] },
-      "/other": { files: ["lib/b.ts"], folders: [] },
-    })
-    const posted: Array<Record<string, unknown>> = []
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["lib/b.ts"] })
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "b", requestId: "request-typed" },
-      dir: () => "/repo",
-      roots: () => roots,
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "b", requestId: "request-typed" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        post: () => {},
+      })
+    } finally {
+      index.restore()
+    }
 
-    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo", "/other", "/other"])
+    expect(index.calls.map((call) => call.root)).toEqual(["/other"])
   })
 
   it("treats a whitespace-only query as a bare @", async () => {
     const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
-    const posted: Array<Record<string, unknown>> = []
+    const index = editorIndex({ "/repo": [], "/other": ["lib/b.ts"] })
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "   ", requestId: "request-spaces" },
-      dir: () => "/repo",
-      roots: () => roots,
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "   ", requestId: "request-spaces" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        post: () => {},
+      })
+    } finally {
+      index.restore()
+    }
 
-    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo"])
-  })
-
-  it("bounds how many added folders one query can search", async () => {
-    const many = [
-      { path: "/repo", name: "repo" },
-      ...Array.from({ length: 8 }, (_, i) => ({ path: `/extra-${i}`, name: `extra-${i}` })),
-    ]
-    const api = multiClient({ "/repo": { files: [], folders: [] } })
-    const posted: Array<Record<string, unknown>> = []
-
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "x", requestId: "request-cap" },
-      dir: () => "/repo",
-      roots: () => many,
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
-
-    const searched = [...new Set(api.calls.map((call) => call.directory))]
-    expect(searched).toEqual(["/repo", "/extra-0", "/extra-1", "/extra-2", "/extra-3"])
+    expect(index.calls).toEqual([])
   })
 
   it("does not let the filesystem prefix of an added folder count as a match", async () => {
     // "nested" occurs in the added folder's own path but nowhere in the file's
     // relative path. Scoring the absolute form matched every file under that
     // folder on a query that describes none of them.
-    const api = multiClient({
-      "/repo": { files: ["src/a.ts"], folders: [] },
-      "/deep-nested-name": { files: [], folders: [] },
-    })
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/deep-nested-name": [] })
     const posted: Array<Record<string, unknown>> = []
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "nested", requestId: "request-prefix" },
-      dir: () => "/repo",
-      roots: () => [
-        { path: "/repo", name: "repo" },
-        { path: "/deep-nested-name", name: "deep-nested-name" },
-      ],
-      open: async (dir) => (dir === "/deep-nested-name" ? new Set(["src/zzz.ts"]) : new Set()),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "nested", requestId: "request-prefix" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/deep-nested-name", name: "deep-nested-name" },
+        ],
+        open: async (dir) => (dir === "/deep-nested-name" ? new Set(["src/zzz.ts"]) : new Set()),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
 
     expect(posted[0]!.paths).not.toContain(abs("/deep-nested-name", "src/zzz.ts"))
   })
@@ -375,21 +529,54 @@ describe("handleFileSearch resilience and ranking basis", () => {
     // before ranking handed it the whole budget and dropped every added folder.
     const api = multiClient({
       "/repo": { files: [], folders: Array.from({ length: 60 }, (_, i) => `pkg-${i}`) },
-      "/other": { files: [], folders: ["target"] },
     })
+    const index = editorIndex({ "/repo": [], "/other": ["target/file.ts"] })
     const posted: Array<Record<string, unknown>> = []
 
-    await handleFileSearch({
-      client: api.value as never,
-      message: { query: "target", requestId: "request-folder-cap" },
-      dir: () => "/repo",
-      roots: () => roots,
-      open: async () => new Set(),
-      post: (message) => posted.push(message as Record<string, unknown>),
-    })
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "target", requestId: "request-folder-cap" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
 
     const items = posted[0]!.items as Array<{ path: string; root?: string }>
     expect(items.some((item) => item.path === abs("/other", "target"))).toBe(true)
+  })
+
+  it("offers a directory from an added folder when the query names it", async () => {
+    // findFiles matches on the whole path, so a hit may be owed to a directory
+    // name; those directories are offered too, as the backend does.
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["src/auth/login.ts"] })
+    const posted: Array<Record<string, unknown>> = []
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "auth", requestId: "request-derived-folder" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
+
+    const items = posted[0]!.items as Array<{ path: string; type: string; relative?: string }>
+    expect(items).toContainEqual({
+      path: abs("/other", "src/auth"),
+      type: "folder",
+      root: "other",
+      relative: "src/auth",
+    })
   })
 })
 
