@@ -41,6 +41,8 @@ type Input = {
    * sessions stay scoped to their own tree.
    */
   roots?: () => readonly SearchRoot[]
+  /** Narrow a folder's files to those its own ignore rules permit. */
+  allowed?: (dir: string, files: string[]) => Promise<string[]>
 }
 
 const slash = (value: string) => value.replaceAll("\\", "/")
@@ -153,6 +155,7 @@ async function gatherExternal(
   root: SearchRoot,
   query: string,
   open: (dir: string) => Promise<Set<string>>,
+  allowed?: (dir: string, files: string[]) => Promise<string[]>,
 ): Promise<Gathered> {
   // A glob needs something literal to match on, so metacharacters are dropped
   // rather than escaped; the ranking below still judges the real query.
@@ -161,11 +164,19 @@ async function gatherExternal(
   try {
     const folder = vscode.workspace.workspaceFolders?.find((entry) => same(entry.uri.fsPath, root.path))
     if (!folder) return EMPTY
-    const found = await vscode.workspace.findFiles(
-      new vscode.RelativePattern(folder, `**/*${needle}*`),
-      undefined,
-      EXTERNAL_LIMIT,
-    )
+    const find = (pattern: string) =>
+      vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern), undefined, EXTERNAL_LIMIT)
+    // A glob's `*` spans one path segment, so interleaving them asks for the
+    // query's characters in order within a single segment — the subsequence
+    // shape fuzzysort matches on, and a superset of the plain substring form.
+    // Both run because the limit truncates before anything is ranked, and a
+    // literal hit must not be crowded out by looser ones.
+    const loose = [...needle].join("*")
+    const [literal, subsequence] = await Promise.all([
+      find(`**/*${needle}*`),
+      loose === needle ? Promise.resolve([]) : find(`**/*${loose}*`),
+    ])
+    const found = [...literal, ...subsequence]
 
     const relative = new Map<string, string>()
     const files: string[] = []
@@ -176,9 +187,12 @@ async function gatherExternal(
       relative.set(full, rel)
       return full
     }
+    const seen = new Set<string>()
     for (const uri of found) {
       const rel = slash(path.relative(root.path, uri.fsPath))
       if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) continue
+      if (seen.has(rel)) continue
+      seen.add(rel)
       files.push(record(rel))
       // The glob matches on the whole path, so a hit may be owed to a directory
       // name. Offer those directories too, as the backend does from its walk.
@@ -188,9 +202,13 @@ async function gatherExternal(
       })
     }
 
+    // findFiles honours files.exclude, search.exclude and .gitignore, but knows
+    // nothing of .kilocodeignore. Apply it here so a folder the user has told
+    // Kilo to leave alone stays out of the mention list too.
+    const kept = allowed ? new Set(await allowed(root.path, files)) : undefined
     const active = activeIn(root.path)
     return {
-      files,
+      files: kept ? files.filter((file) => kept.has(file)) : files,
       folders: [...folders],
       open: new Set([...(await open(root.path))].map(record)),
       active: active ? record(active) : undefined,
@@ -234,7 +252,7 @@ export async function handleFileSearch(input: Input): Promise<void> {
 
   const [primary, secondary] = await Promise.all([
     gather(client, dir, query, input.open),
-    Promise.all(extras.map((root) => gatherExternal(root, query, input.open))),
+    Promise.all(extras.map((root) => gatherExternal(root, query, input.open, input.allowed))),
   ])
 
   // In a multi-root workspace every entry is labelled, including the session's

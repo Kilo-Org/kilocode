@@ -2493,6 +2493,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         dir: (id) => this.getWorkspaceDirectory(id),
         open: (dir) => this.getOpenTabPaths(dir),
         roots: () => this.getWorkspaceRoots(),
+        allowed: (dir, files) => this.filterIgnored(dir, files),
         post: (msg) => this.postMessage(msg),
       })
       return
@@ -5502,6 +5503,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       path: folder.uri.fsPath,
       name: folder.name,
     }))
+  }
+
+  /**
+   * Narrow a directory's files to those its own ignore rules permit.
+   *
+   * The editor's file index honours files.exclude, search.exclude and
+   * .gitignore, but knows nothing of .kilocodeignore, so that is applied here.
+   * A controller that cannot be built lets the files through rather than
+   * hiding everything, since this is a relevance filter and not a permission
+   * boundary.
+   */
+  private async filterIgnored(dir: string, files: string[]): Promise<string[]> {
+    if (!dir || !files.length) return files
+    const controller = await this.getIgnoreController(dir).catch((err) => {
+      console.warn("[Kilo New] Failed to read ignore rules for", dir, err)
+      return undefined
+    })
+    if (!controller) return files
+    return files.filter((file) => controller.validateAccess(file))
   }
 
   /**

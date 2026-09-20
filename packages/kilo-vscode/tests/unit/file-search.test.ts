@@ -41,6 +41,8 @@ const abs = (root: string, rel: string) => path.resolve(root, rel).replaceAll("\
 
 type Glob = { base: { uri: { fsPath: string } }; pattern: string }
 
+const quote = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
 /**
  * Stand in for the editor's own file index, which is what added workspace
  * folders are searched with. Filters on the glob's literal the way VS Code
@@ -61,12 +63,12 @@ function editorIndex(files: Record<string, string[]>, fail?: string) {
     const root = glob.base.uri.fsPath
     calls.push({ root, pattern: glob.pattern, max })
     if (root === fail) throw new Error("EACCES: permission denied")
-    const needle = glob.pattern
-      .replace(/^\*\*\/\*/, "")
-      .replace(/\*$/, "")
-      .toLowerCase()
+    // Emulate VS Code glob semantics closely enough to be useful: `*` spans one
+    // path segment, so the pattern has to match within a single segment.
+    const body = glob.pattern.replace(/^\*\*\//, "")
+    const expr = new RegExp(`^${body.split("*").map(quote).join("[^/]*")}$`, "i")
     return (files[root] ?? [])
-      .filter((rel) => rel.toLowerCase().includes(needle))
+      .filter((rel) => rel.split("/").some((segment) => expr.test(segment)))
       .slice(0, max ?? Infinity)
       .map((rel) => ({ fsPath: abs(root, rel) }))
   }
@@ -156,7 +158,7 @@ describe("handleFileSearch", () => {
 
     // The backend is only ever asked about the session's own directory.
     expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo"])
-    expect(index.calls.map((call) => call.root)).toEqual(["/other"])
+    expect([...new Set(index.calls.map((call) => call.root))]).toEqual(["/other"])
     // The session's own project stays relative; the added folder is absolute so
     // it can be mentioned without being auto-attached, and carries its path
     // within that folder, which is what the webview ranks it on.
@@ -193,7 +195,7 @@ describe("handleFileSearch", () => {
     }
 
     expect([...new Set(api.calls.map((call) => call.directory))]).toEqual(["/repo"])
-    expect(index.calls.map((call) => call.root)).toEqual(["/other", "/third"])
+    expect([...new Set(index.calls.map((call) => call.root))]).toEqual(["/other", "/third"])
   })
 
   it("searches every added folder, however many there are", async () => {
@@ -214,7 +216,7 @@ describe("handleFileSearch", () => {
       index.restore()
     }
 
-    expect(index.calls.map((call) => call.root)).toEqual(extras)
+    expect([...new Set(index.calls.map((call) => call.root))]).toEqual(extras)
   })
 
   it("bounds how many files one added folder can contribute", async () => {
@@ -261,6 +263,110 @@ describe("handleFileSearch", () => {
     }
 
     expect(index.calls[0]!.pattern).toBe("**/*note*")
+  })
+
+  it("finds a file in an added folder by a subsequence of its name", async () => {
+    // The backend matches the session's own project by subsequence, so an added
+    // folder asking only for a literal substring would answer a strictly
+    // narrower question than the same keystrokes do at home.
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["src/file-mention-utils.ts"] })
+    const posted: Array<Record<string, unknown>> = []
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "fmu", requestId: "request-subsequence" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(index.calls.map((call) => call.pattern)).toEqual(["**/*fmu*", "**/*f*m*u*"])
+    expect(posted[0]!.paths).toContain(abs("/other", "src/file-mention-utils.ts"))
+  })
+
+  it("asks only once when the query is a single character", async () => {
+    // The subsequence form of a one-character query is the literal form.
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": [] })
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "f", requestId: "request-single-char" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: () => {},
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(index.calls.map((call) => call.pattern)).toEqual(["**/*f*"])
+  })
+
+  it("returns a file only once when both globs match it", async () => {
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["src/note.ts"] })
+    const posted: Array<Record<string, unknown>> = []
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "note", requestId: "request-dedupe" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
+
+    const hits = (posted[0]!.paths as string[]).filter((p) => p === abs("/other", "src/note.ts"))
+    expect(hits).toHaveLength(1)
+  })
+
+  it("drops files an added folder's own ignore rules exclude", async () => {
+    // findFiles honours files.exclude, search.exclude and .gitignore, but knows
+    // nothing of .kilocodeignore.
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["src/keep.ts", "vendor/skip.ts"] })
+    const posted: Array<Record<string, unknown>> = []
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "ts", requestId: "request-ignored" },
+        dir: () => "/repo",
+        roots: () => [
+          { path: "/repo", name: "repo" },
+          { path: "/other", name: "other" },
+        ],
+        open: async () => new Set(),
+        allowed: async (_dir, files) => files.filter((file) => !file.includes("/vendor/")),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(posted[0]!.paths).toEqual([abs("/other", "src/keep.ts")])
   })
 
   it("leaves entries unlabelled when the workspace has a single folder", async () => {
@@ -474,7 +580,7 @@ describe("handleFileSearch resilience and ranking basis", () => {
       index.restore()
     }
 
-    expect(index.calls.map((call) => call.root)).toEqual(["/other"])
+    expect([...new Set(index.calls.map((call) => call.root))]).toEqual(["/other"])
   })
 
   it("treats a whitespace-only query as a bare @", async () => {
