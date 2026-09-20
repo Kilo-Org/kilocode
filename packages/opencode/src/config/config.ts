@@ -59,7 +59,6 @@ import {
 } from "@kilocode/kilo-indexing/config"
 import { unique } from "remeda"
 import { installLocalPluginDependency, needsLocalPluginDependency } from "@/kilocode/config/plugin-deps"
-import { KiloLocalOverride } from "@/kilocode/config/local-override"
 // kilocode_change end
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
@@ -194,6 +193,7 @@ export interface Interface {
   readonly invalidate: () => Effect.Effect<void>
   readonly invalidateInstance: () => Effect.Effect<void> // kilocode_change - instance-only invalidation for project config freshness
   readonly getEffectiveGlobal: () => Effect.Effect<Info> // kilocode_change - primary + legacy home global config sources
+  readonly getLegacyGlobalField: () => Effect.Effect<KilocodeConfig.LegacyField | undefined> // kilocode_change - winning legacy home value for the config-edit protection field
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
   readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
@@ -325,6 +325,9 @@ const layer = Layer.effect(
       trusted?: boolean,
       fileScope?: ConfigVariable.FileScope,
       configWarnings?: Warning[],
+      // kilocode_change - readOnly skips the $schema write-back and plugin resolution so reads that
+      // only observe a value never mutate the file or run plugin side effects
+      readOnly?: boolean,
       // kilocode_change end
     ) {
       const source = "path" in options ? options.path : options.source
@@ -353,6 +356,7 @@ const layer = Layer.effect(
       const data = ConfigParse.schema(ConfigV1.Info, normalized, source) // kilocode_change
       if (!("path" in options)) return data
 
+      if (readOnly) return data // kilocode_change - pure read: no plugin resolution, no $schema write
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
       if (!data.$schema) {
         // kilocode_change start
@@ -377,6 +381,7 @@ const layer = Layer.effect(
       trusted?: boolean, // kilocode_change
       fileScope?: ConfigVariable.FileScope, // kilocode_change
       configWarnings?: Warning[], // kilocode_change - collect MCP header expansion warnings
+      readOnly?: boolean, // kilocode_change - pure read; skips plugin resolution and $schema write-back
     ) {
       yield* Effect.logInfo("loading", { path: filepath })
       const text = yield* readConfigFile(filepath)
@@ -393,6 +398,7 @@ const layer = Layer.effect(
         trusted,
         fileScope,
         configWarnings,
+        readOnly,
       )
       // kilocode_change end
       return data
@@ -517,28 +523,42 @@ const layer = Layer.effect(
       return (yield* getGlobalState()).config // kilocode_change
     })
 
-    // kilocode_change start - config-protection policies must observe the primary global config and
-    // the legacy home config directories, not only Global.Path.config. The loader merges the legacy
-    // home dirs after the primary global config (later wins), so merge their files through the same
-    // loadFile and mergeConfigConcatArrays path rather than re-parsing config here. The primary
-    // global stays cached; legacy files are read on each call so direct edits are observed. A
-    // malformed legacy file is logged and skipped like the normal loader's directory pass, so it
-    // cannot abort a permission decision or erase a valid primary/legacy value.
-    const getEffectiveGlobal = Effect.fn("Config.getEffectiveGlobal")(function* () {
-      let result = yield* getGlobal()
-      for (const dir of [path.join(Global.Path.home, ".kilocode"), path.join(Global.Path.home, ".kilo")]) {
+    // kilocode_change start - config-protection policies and the settings overlay must observe the
+    // legacy home config directories, not only Global.Path.config. One ordered read owns the source
+    // interpretation: directory order (.kilocode then .kilo), file names, config-variable
+    // substitution, schema validation, malformed warn+skip, and merge order. `readOnly` is per
+    // consumer: the effective global keeps the loader's normal parse (including plugin resolution and
+    // the $schema write-back), while the settings-overlay provenance read is pure and never rewrites
+    // the file. The helper merges the legacy files onto a caller-supplied base and also reports the
+    // winning legacy file for the config-edit protection field; `getEffectiveGlobal` seeds it with
+    // the cached primary global (later files win), while `getLegacyGlobalField` reads legacy only and
+    // never touches the primary config.
+    const loadLegacyGlobal = Effect.fnUntraced(function* (base: Info, readOnly: boolean) {
+      let info = base
+      let legacy: KilocodeConfig.LegacyField | undefined
+      for (const dir of KilocodeConfig.LEGACY_GLOBAL_DIRS) {
         for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
-          const source = path.join(dir, name)
-          const next = yield* loadFile(source, undefined, true).pipe(
+          const source = path.join(Global.Path.home, dir, name)
+          const next = yield* loadFile(source, undefined, true, undefined, undefined, readOnly).pipe(
             Effect.catchDefect((err: unknown) => {
               log.warn("skipping malformed legacy global config", { path: source, err })
               return Effect.succeed({} as Info)
             }),
           )
-          result = mergeConfigConcatArrays(result, next)
+          info = mergeConfigConcatArrays(info, next)
+          const value = next[KilocodeConfig.protectionField]
+          if (typeof value === "boolean") legacy = { value, file: source }
         }
       }
-      return result
+      return { info, legacy }
+    })
+
+    const getEffectiveGlobal = Effect.fn("Config.getEffectiveGlobal")(function* () {
+      return (yield* loadLegacyGlobal(yield* getGlobal(), false)).info
+    })
+
+    const getLegacyGlobalField = Effect.fn("Config.getLegacyGlobalField")(function* () {
+      return (yield* loadLegacyGlobal({}, true)).legacy
     })
     // kilocode_change end
 
@@ -650,7 +670,7 @@ const layer = Layer.effect(
           return result
         }
 
-        const protection = KiloLocalOverride.make()
+        const protection = KilocodeConfig.protectionTracker()
 
         const merge = Effect.fnUntraced(function* (
           source: string,
@@ -1256,6 +1276,7 @@ const layer = Layer.effect(
       invalidate,
       invalidateInstance, // kilocode_change
       getEffectiveGlobal, // kilocode_change
+      getLegacyGlobalField, // kilocode_change
       directories,
       waitForDependencies,
       warnings, // kilocode_change

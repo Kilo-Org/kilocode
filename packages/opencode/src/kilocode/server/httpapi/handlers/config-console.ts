@@ -56,7 +56,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
               account: active,
             }),
           ),
-          Effect.promise(() => KilocodeConfigOverlay.legacyField()),
+          config.getLegacyGlobalField(),
         ],
         { concurrency: 4 },
       )
@@ -87,7 +87,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       // A legacy home global value overrides the primary global target, so a global write for this
       // field would be reported as saved while the effective value never changes. Reject it instead.
       if (body.scope === "global" && Object.hasOwn(patch, KilocodeConfigOverlay.protectionField)) {
-        const legacy = yield* Effect.promise(() => KilocodeConfigOverlay.legacyField())
+        const legacy = yield* config.getLegacyGlobalField()
         if (legacy) {
           return yield* Effect.fail(
             new InvalidRequestError({

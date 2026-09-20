@@ -40,6 +40,9 @@ export namespace KilocodeConfig {
   /** All config file names in precedence order (kilo + opencode). */
   export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
 
+  /** Legacy home config directories in loader precedence order (later wins). */
+  export const LEGACY_GLOBAL_DIRS = [".kilocode", ".kilo"] as const
+
   /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
 
@@ -186,6 +189,47 @@ export namespace KilocodeConfig {
   export function scopeIndexing(info: Config.Info, scope: "global" | "local"): Config.Info {
     if (scope !== "global") return info
     return stripGlobalIndexing(info)
+  }
+
+  // ── Config-edit protection field override ────────────────────────────
+
+  /** The setting whose project/global precedence this tracker resolves specially. */
+  export const protectionField = "require_approval_for_config_edits" as const
+
+  /** The explicit legacy home global value for the config-edit protection field, and the file that set it. */
+  export type LegacyField = { value: boolean; file: string }
+
+  /**
+   * Field-scoped effective value for `require_approval_for_config_edits`.
+   *
+   * The shared config loader merges the legacy home config directories (`~/.kilocode`, `~/.kilo`) after
+   * the project sources, so with the generic merge an explicit project value can lose to a legacy global
+   * value. Reordering the generic loader would change every config key, so this tracker remembers the
+   * last explicit boolean value seen from an eligible source — a project-local source, or the explicit
+   * `KILO_CONFIG_DIR` files — in loader encounter order, and re-applies it once after the directory pass
+   * (before `KILO_CONFIG_CONTENT`, cloud, and managed config, which keep their normal precedence). Legacy
+   * home files that are not the explicit env dir are ignored, so they only win when no eligible source
+   * set the field and the value falls through to the normal global merge. Only this one key is touched.
+   */
+  export function protectionTracker() {
+    let eligible: boolean | undefined
+    return {
+      /**
+       * Record an eligible explicit value. `scope` is the loader's classification; project-local
+       * sources pass `"local"`, and the loader also observes the explicit `KILO_CONFIG_DIR` files as
+       * `"local"` even though that directory is merged with the global trust policy.
+       */
+      observe(info: Config.Info, scope: "global" | "local") {
+        if (scope !== "local") return
+        const value = info[protectionField]
+        if (typeof value === "boolean") eligible = value
+      },
+      /** Re-apply the last eligible value. Idempotent; `undefined` leaves the normal merge untouched. */
+      apply(info: Config.Info): Config.Info {
+        if (eligible === undefined || info[protectionField] === eligible) return info
+        return { ...info, [protectionField]: eligible }
+      },
+    }
   }
 
   /**

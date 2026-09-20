@@ -92,7 +92,6 @@ interface PendingEntry {
   ruleset: Ruleset
   hardRuleset?: Ruleset
   saved?: boolean
-  root?: string
   // kilocode_change end
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
@@ -152,7 +151,7 @@ function covered(
   entry: PendingEntry,
   approved: Ruleset,
   local: Ruleset,
-  decide: (entry: { info: Request; root?: string }) => ConfigProtection.Verdict,
+  decide: (entry: { info: Request }) => ConfigProtection.Verdict,
 ) {
   if (decide(entry).protect) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
@@ -300,7 +299,7 @@ const layer = Layer.effect(
       yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, hardRuleset, deferred, root }) // kilocode_change
+      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
@@ -376,7 +375,7 @@ const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const plan = guard.plan(root, [existing, ...pending.values()])
       const policy = plan.needs() ? yield* guard.load(s) : undefined
-      const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
+      const decide = (entry: { info: Request }) => plan.verdict(entry, policy)
       const existingVerdict = decide(existing)
       if (existingVerdict.protect && existingVerdict.skill === undefined) return
       // kilocode_change end
@@ -433,7 +432,7 @@ const layer = Layer.effect(
       const root = ConfigProtection.boundary(ctx)
       const plan = guard.plan(root, [existing, ...s.pending.values()])
       const policy = plan.needs() ? yield* guard.load(s) : undefined
-      const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
+      const decide = (entry: { info: Request }) => plan.verdict(entry, policy)
       const verdict = decide(existing)
       if (verdict.protect && verdict.skill === undefined) return
       const skill = verdict.skill
@@ -493,7 +492,7 @@ const layer = Layer.effect(
       const root = ConfigProtection.boundary(ctx)
       const plan = guard.plan(root, s.pending.values())
       const policy = plan.needs() ? yield* guard.load(s) : undefined
-      const decide = (entry: { info: Request; root?: string }) => plan.verdict(entry, policy)
+      const decide = (entry: { info: Request }) => plan.verdict(entry, policy)
       // kilocode_change end
 
       if (input.requestID) {

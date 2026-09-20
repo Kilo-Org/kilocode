@@ -14,7 +14,6 @@ import { ConfigVariable } from "@/config/variable"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { KilocodeConfig } from "./config"
-import { KiloLocalOverride } from "./local-override"
 import { sanitizeProjectMcpHeaders } from "./mcp-headers"
 import { KilocodeConfigSources } from "./sources"
 
@@ -25,7 +24,7 @@ export namespace KilocodeConfigOverlay {
   export type Scope = z.infer<typeof Scope>
 
   /** The setting whose project/global precedence this module resolves specially. */
-  export const protectionField = KiloLocalOverride.field
+  export const protectionField = KilocodeConfig.protectionField
 
   export const Origin = z.enum(["project", "global", "system", "default"])
   export type Origin = z.infer<typeof Origin>
@@ -84,13 +83,14 @@ export namespace KilocodeConfigOverlay {
     effective: Config.Info
     global: Config.Info
     sources: KilocodeConfigSources.Source[]
-    // kilocode_change start - explicit value from the legacy home global config, if any
-    legacy?: LegacyField
+    // kilocode_change start - explicit value from the legacy home global config, if any. Required so a
+    // caller cannot silently omit the legacy input and mis-report the global value as editable.
+    legacy: LegacyField | undefined
     // kilocode_change end
   }
 
   /** The explicit legacy home global value for the config-edit protection field, and the file that set it. */
-  export type LegacyField = { value: boolean; file: string }
+  export type LegacyField = KilocodeConfig.LegacyField
 
   const files = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
   const dirs = [".kilocode", ".kilo"] as const
@@ -205,7 +205,7 @@ export namespace KilocodeConfigOverlay {
     const root = input.worktree && input.worktree !== "/" ? input.worktree : input.directory
     const local = await withAgents(await project(input), await projectDirs(input), false, root)
     const global = await withAgents(input.global, globalDirs(), true)
-    const legacy = input.legacy ?? (await legacyField())
+    const legacy = input.legacy
     // kilocode_change end
     const [globalTarget, projectTarget] = await Promise.all([
       target({ ...input, scope: "global" }),
@@ -257,27 +257,6 @@ export namespace KilocodeConfigOverlay {
 
   function globalDirs() {
     return [Global.Path.config, path.join(Global.Path.home, ".kilocode"), path.join(Global.Path.home, ".kilo")]
-  }
-
-  /**
-   * Read the explicit legacy home global value for the config-edit protection field. The shared loader
-   * merges these directories after the primary global config, and its later values win, so the last
-   * valid file in `[.kilocode, .kilo]` x `ALL_CONFIG_FILES` order determines both the effective global
-   * value and whether a primary global edit can take effect. Files are parsed with the same loader
-   * helper, and an invalid or malformed file is skipped so it never falsely blocks the setting.
-   */
-  export async function legacyField(): Promise<LegacyField | undefined> {
-    let found: LegacyField | undefined
-    for (const dir of dirs) {
-      const root = path.join(Global.Path.home, dir)
-      if (!existsSync(root)) continue
-      for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
-        const file = path.join(root, name)
-        const value = (await load(file, undefined, true))[KiloLocalOverride.field]
-        if (typeof value === "boolean") found = { value, file }
-      }
-    }
-    return found
   }
 
   // kilocode_change start - root confines untrusted agent {file:} reads
@@ -333,7 +312,7 @@ export namespace KilocodeConfigOverlay {
     legacy?: LegacyField,
   ): Resolved {
     const key = parts.join(".")
-    if (key === KiloLocalOverride.field) return resolveProtection(scope, effective, global, local, legacy)
+    if (key === KilocodeConfig.protectionField) return resolveProtection(scope, effective, global, local, legacy)
     const value = fieldValue(scope, effective, global, local, parts)
     const hasValue = hasFieldValue(scope, effective, global, local, parts)
     return resolved({
@@ -362,8 +341,8 @@ export namespace KilocodeConfigOverlay {
     local: Config.Info,
     legacy?: LegacyField,
   ): Resolved {
-    const parts = [KiloLocalOverride.field]
-    const key = KiloLocalOverride.field
+    const parts = [KilocodeConfig.protectionField]
+    const key = KilocodeConfig.protectionField
     const localValue = get(local, parts)
     const hasLocal = typeof localValue === "boolean"
     const effectiveValue = get(effective, parts)

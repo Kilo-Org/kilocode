@@ -6,8 +6,6 @@ interface PendingEntry {
   ruleset: Permission.Ruleset
   hardRuleset?: Permission.Ruleset
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
-  /** Project boundary captured when the request was asked, so drains stay scoped. */
-  root?: string
 }
 
 // The caller supplies the reply publisher so drain uses the same EventV2Bridge channel as permission/index.ts.

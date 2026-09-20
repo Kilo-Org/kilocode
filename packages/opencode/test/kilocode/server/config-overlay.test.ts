@@ -476,6 +476,7 @@ describe("config overlay routes", () => {
       effective: {},
       global: {},
       sources: [],
+      legacy: undefined,
     })
 
     expect(body.project.username).toBe("kilo")
@@ -504,6 +505,7 @@ describe("config overlay routes", () => {
       effective: {},
       global: {},
       sources: [],
+      legacy: undefined,
     })
 
     expect(body.project.username ?? "").not.toContain("root:")
@@ -634,6 +636,7 @@ describe("config overlay routes", () => {
       effective: local,
       global,
       sources: [],
+      legacy: undefined,
     })
 
     expect(body.fields["indexing.enabled"]).toMatchObject({ source: "global", value: true })
@@ -1267,6 +1270,53 @@ describe("config overlay routes", () => {
         }),
       )
       expect(saved.effective?.require_approval_for_config_edits).toBe(true)
+    })
+  })
+
+  test.serial("leaves the legacy global file byte-for-byte on overlay reads", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      // Boot the instance config before the legacy file exists: the overlay's config.get() loads the
+      // home legacy dirs on first use, so writing the fixture afterwards isolates the provenance
+      // accessor's own read instead of the loader's existing directory pass.
+      await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      const legacy = path.join(home.path, ".kilo", "kilo.json")
+      await Bun.write(legacy, JSON.stringify({ require_approval_for_config_edits: true }))
+      const before = await Bun.file(legacy).text()
+
+      const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(body.fields.require_approval_for_config_edits).toMatchObject({
+        source: "global",
+        editable: false,
+        value: true,
+      })
+      expect(await Bun.file(legacy).text()).toBe(before)
+    })
+  })
+
+  test.serial("leaves the legacy global file byte-for-byte when a masked global PATCH is rejected", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      const legacy = path.join(home.path, ".kilo", "kilo.json")
+      await Bun.write(legacy, JSON.stringify({ require_approval_for_config_edits: true }))
+      const before = await Bun.file(legacy).text()
+
+      const response = await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { require_approval_for_config_edits: false } }),
+      })
+      expect(response.status).toBe(400)
+      expect(await Bun.file(legacy).text()).toBe(before)
     })
   })
 })

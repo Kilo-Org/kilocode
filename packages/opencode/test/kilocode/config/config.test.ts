@@ -1910,4 +1910,58 @@ describe("require_approval_for_config_edits source scope", () => {
       await disposeAllInstances()
     }
   })
+
+  test("reports the winning legacy home file with the same interpretation as the effective global", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    ;(Global.Path as { config: string }).config = globalDir.path
+    process.env["KILO_TEST_HOME"] = home.path
+    process.env["HOME"] = home.path
+    // `.kilocode` is read first; `.kilo` wins. The malformed later file must be skipped without
+    // erasing the valid `.kilo` value. Both surfaces share one interpretation, not one scan: each
+    // call reads legacy fresh, so the compared outcomes come from separate reads of the same source.
+    const primary = path.join(globalDir.path, "kilo.json")
+    const winner = path.join(home.path, ".kilo", "kilo.json")
+    await writeConfig(path.join(home.path, ".kilocode"), { require_approval_for_config_edits: true }, "kilo.jsonc")
+    await writeConfig(path.join(home.path, ".kilo"), { require_approval_for_config_edits: false })
+    await Filesystem.write(path.join(home.path, ".kilo", "opencode.json"), "{ not json")
+    await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+    await clear()
+    await disposeAllInstances()
+
+    const read = <A>(fn: (svc: Config.Interface) => Effect.Effect<A>) =>
+      Effect.runPromise(Config.Service.use(fn).pipe(Effect.scoped, Effect.provide(layer)))
+    const primaryBefore = await Bun.file(primary).text()
+    const legacyBefore = await Bun.file(winner).text()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          // Reading provenance must not rewrite the legacy file or load the primary global config.
+          expect(await read((svc) => svc.getLegacyGlobalField())).toEqual({ value: false, file: winner })
+          expect(await Bun.file(winner).text()).toBe(legacyBefore)
+          expect(await Bun.file(primary).text()).toBe(primaryBefore)
+
+          // getEffectiveGlobal keeps the loader's normal parse for the effective global: same legacy
+          // interpretation, and the pre-existing $schema stamp is preserved. Only the provenance
+          // accessor is pure.
+          expect((await read((svc) => svc.getEffectiveGlobal())).require_approval_for_config_edits).toBe(false)
+          expect(await Bun.file(winner).text()).toContain("$schema")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 })

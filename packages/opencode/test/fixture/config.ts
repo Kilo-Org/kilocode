@@ -12,6 +12,7 @@ export function make(overrides: Partial<Config.Interface> = {}) {
     invalidate: () => Effect.void,
     invalidateInstance: () => Effect.void, // kilocode_change
     getEffectiveGlobal: () => Effect.succeed({}), // kilocode_change
+    getLegacyGlobalField: () => Effect.succeed(undefined), // kilocode_change
     directories: () => Effect.succeed([]),
     waitForDependencies: () => Effect.void,
     warnings: () => Effect.succeed([]),

@@ -18,10 +18,9 @@ import { ConfigProtection } from "./config-paths"
 export namespace KiloConfigPolicy {
   export type Policy = { global?: Config.Info; project?: Config.Info }
 
-  /** One permission request or pending entry, optionally carrying its captured boundary root. */
+  /** One permission request or pending entry, classified against the active instance boundary. */
   export type Entry = {
     info: ConfigProtection.Target
-    root?: string
   }
 
   export interface Deps {
@@ -82,7 +81,7 @@ export namespace KiloConfigPolicy {
       const inspect = (entry: Entry) => {
         const cached = classes.get(entry)
         if (cached) return cached
-        const value = classify(entry.info, entry.root ?? root)
+        const value = classify(entry.info, root)
         classes.set(entry, value)
         return value
       }
