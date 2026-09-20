@@ -58,6 +58,8 @@ App shortcuts require Android 7.1 (API 25) or later; the Quick Settings tile wor
 
 The **Agents** tab shows live sessions. Tap **See all** there to search past sessions, filter by platform or project, and change the sort order. **See all** on Home opens the live Agents list instead.
 
+Sessions, pull requests, and security findings from the app also appear in your phone's own search — Spotlight on iOS and AppSearch on Android. Tapping a result opens that item's screen in the app. The index is built only from data the app already has, with no background fetch. Signing out, or switching accounts, removes the previous account's entries from the phone's search even when the index was mid-refresh.
+
 ## Privacy and telemetry
 
 On first launch, the app asks for your consent before enabling optional telemetry — product analytics, attribution, and performance tracing. Optional telemetry is pre-selected during onboarding; you can turn it off before accepting. No optional analytics starts before you make a choice.
@@ -200,6 +202,24 @@ The app shows what each session cost and which models did the work:
 - **Per-message model label** — assistant messages show a dimmed model label on the first assistant reply and whenever the model changes during the session. Turns routed by [Auto Model](/docs/code-with-ai/agents/auto-model) show the concrete model that handled the turn.
 
 Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost.
+
+## Notifications
+
+Agent notifications arrive as two kinds: **Needs input** and **Agent progress**. The app has no screen for choosing them — your device's own notification settings own the choice.
+
+- **Needs input** alerts you that an agent is waiting on you, including an explicit `notify_user` message. Turn on the app's Do Not Disturb access to let Needs input break through Do Not Disturb; it also breaks through an iOS Focus, while each Focus can allow or silence Agent progress.
+- **Agent progress** reports ordinary session activity and stays quiet. Silencing Agent progress leaves Needs input alerting.
+
+On Android, the system notification settings list both kinds by name. The ongoing **Active agents** card joins its kind's group and alerts only when it first becomes needs input, including the first card after a restart.
+
+Needs-input notifications are time-sensitive and carry action buttons:
+
+- **Approve** — for a permission request. Answers the agent with the app closed; the notification then reads **Request approved**.
+- **Reply** — for a question. Sends the answer you type with the app closed; the notification then reads **Reply sent**.
+- **Open pull request** — appears only when the session has a pull request, and opens the pull request review screen.
+- **Open session** — opens that session's chat.
+
+A failed **Approve** or **Reply** keeps its buttons and reads **Couldn't answer. Tap again to retry.** An action that can no longer be answered reads **This request is no longer waiting.** and drops its buttons. Button labels follow the app language.
 
 ## Widgets and live updates
 
