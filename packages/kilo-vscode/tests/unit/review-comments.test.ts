@@ -274,6 +274,21 @@ describe("markdownCommentBlocks", () => {
     ])
   })
 
+  it("spans a multi-line item at the end of a list", () => {
+    const result = markdownCommentBlocks("- a\n- b\n  c\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 3,
+        items: [
+          { start: 1, end: 1 },
+          { start: 2, end: 3 },
+        ],
+      },
+    ])
+  })
+
   it("spans loose list items across the blank lines that separate them", () => {
     const result = markdownCommentBlocks("- alpha\n\n- beta\n\n- gamma\n")
     expect(result).toEqual([
