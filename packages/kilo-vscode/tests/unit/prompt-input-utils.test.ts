@@ -21,6 +21,8 @@ import {
   findPastePlaceholders,
   shiftPastes,
   rebasePastes,
+  spanEdit,
+  inputSpan,
   pasteInsertion,
   expandPastes,
   textDiff,
@@ -477,6 +479,98 @@ describe("shiftPastes", () => {
     expect(moved.map((item) => item.text)).toEqual(["one", "two"])
     expect(moved[0]?.start).toBe(0)
     expect(moved[1]?.start).toBe(second + 3)
+  })
+})
+
+describe("spanEdit", () => {
+  it("accepts the span a deletion replaced", () => {
+    const mark = "[Pasted ~5 lines]"
+    const prev = `${mark} ${mark}`
+    expect(spanEdit(prev, mark, 0, mark.length + 1)).toEqual({ start: 0, end: mark.length + 1, length: 0 })
+  })
+
+  it("accepts the span of an insertion", () => {
+    expect(spanEdit("ab", "aXYb", 1, 1)).toEqual({ start: 1, end: 1, length: 2 })
+  })
+
+  it("accepts the span of a replacement", () => {
+    expect(spanEdit("abcd", "aXd", 1, 3)).toEqual({ start: 1, end: 3, length: 1 })
+  })
+
+  it("rejects a span the surrounding text contradicts", () => {
+    expect(spanEdit("abcd", "abd", 0, 1)).toBeUndefined()
+  })
+
+  it("rejects a span that is not a range inside the previous text", () => {
+    expect(spanEdit("ab", "a", 0, 5)).toBeUndefined()
+    expect(spanEdit("ab", "a", 2, 1)).toBeUndefined()
+  })
+
+  it("rejects a span too narrow to account for the text that is gone", () => {
+    expect(spanEdit("abcdef", "a", 0, 1)).toBeUndefined()
+  })
+
+  it("accepts a span recorded for an edit that never landed, so a span must not outlive its edit", () => {
+    const mark = "[Pasted ~5 lines]"
+    const prev = `${mark} ${mark}`
+    const pastes: PasteRange[] = [
+      { id: 1, start: 0, end: mark.length, text: "first" },
+      { id: 2, start: mark.length + 1, end: prev.length, text: "second" },
+    ]
+    const edit = spanEdit(prev, `${prev}!`, prev.length - 1, prev.length)
+    expect(edit).toEqual({ start: prev.length - 1, end: prev.length, length: 2 })
+    expect(rebasePastes(pastes, edit!.start, edit!.end, edit!.length).map((paste) => paste.id)).toEqual([1])
+  })
+
+  it("resolves a deletion that two identical chips leave ambiguous in the text alone", () => {
+    const mark = "[Pasted ~5 lines]"
+    const prev = `${mark} ${mark}`
+    const pastes: PasteRange[] = [
+      { id: 1, start: 0, end: mark.length, text: "first" },
+      { id: 2, start: mark.length + 1, end: prev.length, text: "second" },
+    ]
+    // Deleting the first chip and the space after it leaves the same text as
+    // deleting the space and the second chip, so only the span says which went.
+    const edit = spanEdit(prev, mark, 0, mark.length + 1)!
+    expect(expandPastes(mark, rebasePastes(pastes, edit.start, edit.end, edit.length))).toBe("second")
+
+    const other = spanEdit(prev, mark, mark.length, prev.length)!
+    expect(expandPastes(mark, rebasePastes(pastes, other.start, other.end, other.length))).toBe("first")
+  })
+})
+
+describe("inputSpan", () => {
+  const mark = "[Pasted ~5 lines]"
+  const prev = `${mark} ${mark}`
+  const field = (start: number, end: number) =>
+    ({ value: prev, selectionStart: start, selectionEnd: end }) as HTMLTextAreaElement
+  const event = (inputType: string) => ({ inputType }) as InputEvent
+
+  it("reports the replaced selection that tells two identical chips apart", () => {
+    const pastes: PasteRange[] = [
+      { id: 1, start: 0, end: mark.length, text: "first" },
+      { id: 2, start: mark.length + 1, end: prev.length, text: "second" },
+    ]
+    const span = inputSpan(event("deleteContentBackward"), field(0, mark.length + 1))!
+    const edit = spanEdit(prev, mark, span.start, span.end)!
+    expect(expandPastes(mark, rebasePastes(pastes, edit.start, edit.end, edit.length))).toBe("second")
+
+    const other = inputSpan(event("deleteContentBackward"), field(mark.length, prev.length))!
+    const back = spanEdit(prev, mark, other.start, other.end)!
+    expect(expandPastes(mark, rebasePastes(pastes, back.start, back.end, back.length))).toBe("first")
+  })
+
+  it("reports no span when the selection is a caret", () => {
+    expect(inputSpan(event("deleteContentBackward"), field(mark.length + 1, mark.length + 1))).toBeUndefined()
+  })
+
+  it("reports no span for undo and redo, which replay a span of their own", () => {
+    expect(inputSpan(event("historyUndo"), field(0, mark.length + 1))).toBeUndefined()
+    expect(inputSpan(event("historyRedo"), field(0, mark.length + 1))).toBeUndefined()
+  })
+
+  it("reports no span when there is no field to read the selection from", () => {
+    expect(inputSpan(event("insertText"), undefined)).toBeUndefined()
   })
 })
 
