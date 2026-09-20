@@ -50,7 +50,7 @@ Then set your default model:
 
 ```jsonc
 {
-  "model": "llmtech/unsloth/Qwen3.8-27B-NVFP4"
+  "model": "llmtech/nvidia/Qwen3.8-27B-NVFP4"
 }
 ```
 
@@ -63,7 +63,7 @@ LLM Tech serves a fixed model list from its own EU hardware:
 
 | Model                       | Context | Max output | Input        | Output       | Cache reads  |
 | --------------------------- | ------- | ---------- | ------------ | ------------ | ------------ |
-| `unsloth/Qwen3.8-27B-NVFP4` | 262,144 | 32,768     | $0.38 / M    | $2.90 / M    | $0.04 / M    |
+| `nvidia/Qwen3.8-27B-NVFP4` | 262,144 | 32,768     | $0.38 / M    | $2.90 / M    | $0.04 / M    |
 
 The base URL is fixed: `https://api.llmtech.eu/v1`.
 
