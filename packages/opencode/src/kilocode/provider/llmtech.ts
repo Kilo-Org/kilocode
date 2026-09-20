@@ -5,7 +5,7 @@ import type { Provider } from "@opencode-ai/core/models-dev"
 
 export const PROVIDER_ID = "llmtech"
 
-export const DEFAULT_MODEL_ID = "unsloth/Qwen3.8-27B-NVFP4"
+export const DEFAULT_MODEL_ID = "nvidia/Qwen3.8-27B-NVFP4"
 
 export const CatalogProvider = {
   id: PROVIDER_ID,
