@@ -58,7 +58,7 @@ describe("empty", () => {
     expect(text.split("\n")).toEqual([
       'No results for "auth flow" in /repo.',
       "The index is up to date, so no semantically similar code exists in this scope.",
-      "Only /repo is indexed. Files in other workspace folders are not searchable here — use Read with an absolute path.",
+      "Only /repo is indexed. Files in other workspace folders are not searchable here — reach them with Read, Grep or Glob on an absolute path.",
     ])
   })
 

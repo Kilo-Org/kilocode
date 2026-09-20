@@ -50,6 +50,6 @@ export function empty(query: string, root: string, prefix?: string, status?: Ind
   return [
     `No results for "${query}" in ${scope(root, prefix)}.`,
     reason(status),
-    `Only ${root} is indexed. Files in other workspace folders are not searchable here — use Read with an absolute path.`,
+    `Only ${root} is indexed. Files in other workspace folders are not searchable here — reach them with Read, Grep or Glob on an absolute path.`,
   ].join("\n")
 }
