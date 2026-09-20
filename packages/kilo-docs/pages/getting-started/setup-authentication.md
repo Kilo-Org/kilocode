@@ -5,7 +5,7 @@ description: "Configure Kilo Code and connect to your AI providers"
 
 # Authentication
 
-When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
+When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, with a passkey on the web or in the mobile app, or through your organization's single sign-on.
 
 ## Quick Start with Kilo Account
 
@@ -37,6 +37,15 @@ kilo auth list
 {% callout type="tip" title="Add Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
 {% /callout %}
+
+## Passkeys
+
+Sign in with a passkey instead of a password or an emailed code.
+
+- **Web** — **Sign in with a passkey** appears on the sign-in page beside Apple, Google, and the e-mail code. Create a passkey from a signed-in session to use on a later visit.
+- **Mobile** — the app signs you in with the platform credential API. If a sign-in challenge expired or was already used, tap the same button again to start a fresh sign-in.
+
+List, rename, and remove your passkeys from the web **Connected Accounts** page or from the mobile app profile. If your account requires single sign-on, a passkey sign-in opens your organization's SSO recovery block instead of only a toast.
 
 ## Kilo Gateway API Key
 
