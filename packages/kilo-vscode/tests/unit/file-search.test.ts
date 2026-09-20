@@ -43,6 +43,14 @@ type Glob = { base: { uri: { fsPath: string } }; pattern: string }
 
 const quote = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
+/** Point the editor's active tab at a file, restoring it afterwards. */
+function activeEditor(fsPath: string) {
+  const window = vscode.window as unknown as { activeTextEditor: unknown }
+  const prior = window.activeTextEditor
+  window.activeTextEditor = { document: { uri: { scheme: "file", fsPath } } }
+  return { restore: () => (window.activeTextEditor = prior) }
+}
+
 /**
  * Stand in for the editor's own file index, which is what added workspace
  * folders are searched with. Filters on the glob's literal the way VS Code
@@ -367,6 +375,54 @@ describe("handleFileSearch", () => {
     }
 
     expect(posted[0]!.paths).toEqual([abs("/other", "src/keep.ts")])
+  })
+
+  it("does not offer a directory that only an ignored file put there", async () => {
+    // Deriving folders before filtering let an excluded file reintroduce the
+    // directory holding it.
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["vendor/skip.ts"] })
+    const posted: Array<Record<string, unknown>> = []
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "vendor", requestId: "request-ignored-folder" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        allowed: async (_dir, files) => files.filter((file) => !file.includes("/vendor/")),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+    }
+
+    expect(posted[0]!.items).toEqual([])
+  })
+
+  it("does not pin an ignored file just because it is the active editor", async () => {
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["secrets/creds.ts"] })
+    const editor = activeEditor(abs("/other", "secrets/creds.ts"))
+    const posted: Array<Record<string, unknown>> = []
+
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "creds", requestId: "request-ignored-active" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        allowed: async (_dir, files) => files.filter((file) => !file.includes("/secrets/")),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      index.restore()
+      editor.restore()
+    }
+
+    expect(posted[0]!.paths).toEqual([])
   })
 
   it("leaves entries unlabelled when the workspace has a single folder", async () => {

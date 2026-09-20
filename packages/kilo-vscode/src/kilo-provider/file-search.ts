@@ -96,7 +96,8 @@ type Gathered = {
   relative: Map<string, string>
 }
 
-const EMPTY: Gathered = { files: [], folders: [], open: new Set(), relative: new Map() }
+/** A fresh empty result. Not a shared constant: the sets and maps are mutable. */
+const empty = (): Gathered => ({ files: [], folders: [], open: new Set(), relative: new Map() })
 
 /**
  * Collect the session's own project, without ranking it.
@@ -114,7 +115,7 @@ async function gather(
   query: string,
   open: (dir: string) => Promise<Set<string>>,
 ): Promise<Gathered> {
-  if (!root) return EMPTY
+  if (!root) return empty()
   try {
     const [files, folders] = await fetchBackend(client, root, query)
     return {
@@ -126,7 +127,7 @@ async function gather(
     }
   } catch (err) {
     console.error(`[Kilo New] File search failed for ${root}:`, err)
-    return EMPTY
+    return empty()
   }
 }
 
@@ -160,10 +161,10 @@ async function gatherExternal(
   // A glob needs something literal to match on, so metacharacters are dropped
   // rather than escaped; the ranking below still judges the real query.
   const needle = query.replace(GLOB_SYNTAX, "").trim()
-  if (!needle) return EMPTY
+  if (!needle) return empty()
   try {
     const folder = vscode.workspace.workspaceFolders?.find((entry) => same(entry.uri.fsPath, root.path))
-    if (!folder) return EMPTY
+    if (!folder) return empty()
     const find = (pattern: string) =>
       vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern), undefined, EXTERNAL_LIMIT)
     // A glob's `*` spans one path segment, so interleaving them asks for the
@@ -176,24 +177,41 @@ async function gatherExternal(
       find(`**/*${needle}*`),
       loose === needle ? Promise.resolve([]) : find(`**/*${loose}*`),
     ])
-    const found = [...literal, ...subsequence]
+
+    // Literal hits first, then whatever the looser pass adds, bounded once
+    // across both so two globs cannot contribute twice the stated limit.
+    const hits: string[] = []
+    const seen = new Set<string>()
+    for (const uri of [...literal, ...subsequence]) {
+      if (hits.length >= EXTERNAL_LIMIT) break
+      const rel = slash(path.relative(root.path, uri.fsPath))
+      if (!rel || rel.startsWith("..") || path.isAbsolute(rel) || seen.has(rel)) continue
+      seen.add(rel)
+      hits.push(rel)
+    }
 
     const relative = new Map<string, string>()
-    const files: string[] = []
-    const folders = new Set<string>()
-    const lower = needle.toLowerCase()
     const record = (rel: string) => {
       const full = slash(path.resolve(root.path, rel))
       relative.set(full, rel)
       return full
     }
-    const seen = new Set<string>()
-    for (const uri of found) {
-      const rel = slash(path.relative(root.path, uri.fsPath))
-      if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) continue
-      if (seen.has(rel)) continue
-      seen.add(rel)
-      files.push(record(rel))
+
+    // findFiles honours files.exclude, search.exclude and .gitignore, but knows
+    // nothing of .kilocodeignore. One pass covers everything this folder would
+    // offer, so a file the user told Kilo to leave alone cannot come back as
+    // the directory holding it or as the active editor.
+    const active = activeIn(root.path)
+    const candidates = [...hits, ...(active ? [active] : [])].map(record)
+    const kept = new Set(allowed ? await allowed(root.path, candidates) : candidates)
+
+    const files: string[] = []
+    const folders = new Set<string>()
+    const lower = needle.toLowerCase()
+    for (const rel of hits) {
+      const full = record(rel)
+      if (!kept.has(full)) continue
+      files.push(full)
       // The glob matches on the whole path, so a hit may be owed to a directory
       // name. Offer those directories too, as the backend does from its walk.
       const parts = rel.split("/")
@@ -202,21 +220,17 @@ async function gatherExternal(
       })
     }
 
-    // findFiles honours files.exclude, search.exclude and .gitignore, but knows
-    // nothing of .kilocodeignore. Apply it here so a folder the user has told
-    // Kilo to leave alone stays out of the mention list too.
-    const kept = allowed ? new Set(await allowed(root.path, files)) : undefined
-    const active = activeIn(root.path)
+    const pinned = active ? record(active) : undefined
     return {
-      files: kept ? files.filter((file) => kept.has(file)) : files,
+      files,
       folders: [...folders],
       open: new Set([...(await open(root.path))].map(record)),
-      active: active ? record(active) : undefined,
+      active: pinned && kept.has(pinned) ? pinned : undefined,
       relative,
     }
   } catch (err) {
     console.error(`[Kilo New] File search failed for ${root.path}:`, err)
-    return EMPTY
+    return empty()
   }
 }
 
