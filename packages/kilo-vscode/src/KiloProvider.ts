@@ -459,7 +459,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly requests = new Map<string, number>()
   private epoch = 0
   private sessionDirectories = new Map<string, string>() // Per-session directory overrides, such as Agent Manager worktrees.
-  private readonly approvalDiffSeen = new Set<string>() // Permission asks whose approval diff was already auto-opened.
   private readonly owners = new Map<string, { dir: string; project: string }>()
   private sessionGitDirectories = new Map<string, string>() // Stable Git root resolved for each session.
   private sessionGitRecoveries = new Set<string>() // Sessions whose older history was scanned for a Git root.
@@ -5288,7 +5287,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       openApprovalDiff(ask, {
         diff: this.diffVirtualProvider,
         directory: directory ?? this.getWorkspaceDirectory(event.properties.sessionID),
-        seen: this.approvalDiffSeen,
       })
     }
 

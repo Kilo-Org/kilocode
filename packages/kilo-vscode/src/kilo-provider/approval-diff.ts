@@ -102,14 +102,14 @@ function file(item: unknown): PermissionDiff | undefined {
 
 /**
  * Opens the diff for a permission ask when the user enabled auto-open.
- * Fires once per ask id; returns true when a viewer was opened.
+ * Fires once per ask id (globally — several providers can see one ask);
+ * returns true when a viewer was opened.
  */
 export function openApprovalDiff(
   ask: PermissionAsk,
   opts: {
     diff?: DiffVirtualProvider
     directory: string
-    seen: Set<string>
     enabled?: () => boolean
     viewer?: () => ApprovalDiffViewer
   },
@@ -119,26 +119,29 @@ export function openApprovalDiff(
   if (!enabled()) return false
   // Only edit-style asks carry diffs; bash/external_directory asks never do.
   if (ask.toolName !== "edit") return false
-  if (opts.seen.has(ask.id)) return false
+  if (seen.has(ask.id)) return false
   const diffs = permissionAskDiffs(ask)
   const openable = diffs.filter((diff) => !!diff.patch)
   if (openable.length === 0) return false
-  opts.seen.add(ask.id)
-  const first = openable[0]!
-  const diff = openable.length > 1 ? virtual({ ...first, files: openable }) : virtual(first)
+  seen.add(ask.id)
   if (resolve() === "vscode") {
-    void openNativeDiff(ask.id, diff, opts.directory)
+    void openNativeDiff(ask.id, openable, opts.directory)
     return true
   }
   if (!opts.diff) return false
+  const first = openable[0]!
+  const diff = openable.length > 1 ? virtual({ ...first, files: openable }) : virtual(first)
   diff.askID = ask.id
   opts.diff.open(diff)
   opened.set(ask.id, { kind: "kilo", panel: opts.diff })
   return true
 }
 
+/** Ask ids already auto-opened; module-level because one ask reaches several providers. */
+const seen = new Set<string>()
+
 /** What a resolved ask opened, so closeApprovalDiff can close exactly that. */
-const opened = new Map<string, { kind: "vscode"; uri: vscode.Uri } | { kind: "kilo"; panel: DiffVirtualProvider }>()
+const opened = new Map<string, { kind: "vscode"; uris?: vscode.Uri[] } | { kind: "kilo"; panel: DiffVirtualProvider }>()
 
 /**
  * Close the viewer that was auto-opened for a permission ask, once the user
@@ -148,8 +151,18 @@ export function closeApprovalDiff(askId: string): void {
   const entry = opened.get(askId)
   if (!entry) return
   opened.delete(askId)
+  seen.delete(askId)
   if (entry.kind === "vscode") {
-    const uri = entry.uri
+    release(entry)
+    return
+  }
+  entry.panel.closeIfCurrent(askId)
+}
+
+/** Evict the cached virtual contents for the entry's URIs and close any tabs showing them. */
+function release(entry: { uris?: vscode.Uri[] }): void {
+  for (const uri of entry.uris ?? []) {
+    virtualContents.delete(uri.toString())
     const same = (candidate: vscode.Uri) =>
       candidate.scheme === uri.scheme && candidate.path === uri.path && candidate.query === uri.query
     for (const group of vscode.window.tabGroups.all) {
@@ -160,9 +173,7 @@ export function closeApprovalDiff(askId: string): void {
         }
       }
     }
-    return
   }
-  entry.panel.closeIfCurrent(askId)
 }
 
 function virtual(perm: PermissionDiff): DiffVirtualFile {
@@ -192,9 +203,11 @@ async function contents(diff: PermissionDiff, directory: string): Promise<{ befo
     () => undefined,
   )
   const patch = diff.patch ?? ""
-  if (current === undefined) {
-    // File does not exist yet (create) or is unreadable — render hunks only.
-    const parsed = parsePatch(patch)[0]
+  const parsed = parsePatch(patch)[0]
+  const applied = current === undefined ? false : applyPatch(current, patch)
+  if (typeof applied !== "string") {
+    // File does not exist yet (create), is unreadable, or drifted since the
+    // ask — render the hunks only instead of an empty diff.
     const before: string[] = []
     const after: string[] = []
     for (const hunk of parsed?.hunks ?? []) {
@@ -209,37 +222,71 @@ async function contents(diff: PermissionDiff, directory: string): Promise<{ befo
     }
     return { before: before.join("\n"), after: after.join("\n") }
   }
-  const applied = applyPatch(current, patch)
-  if (typeof applied === "string") return { before: current, after: applied }
-  // Patch did not apply (file drifted since the ask) — show hunks against empty.
-  return { before: current, after: current }
+  return { before: current as string, after: applied }
 }
 
 /**
- * Opens a native VS Code diff editor. The "before" side is the file on disk
- * (pre-approval, unchanged); the "after" side is a virtual document holding the
- * patched content, so no scratch files are written to the workspace.
+ * Opens a native VS Code diff editor per file of the ask. The "before" side is
+ * the file on disk (pre-approval, unchanged); the "after" side is a virtual
+ * document holding the patched content, so no scratch files are written to the
+ * workspace. The ask is reserved in `opened` before any await so a reply that
+ * races the async content read still finds and closes the viewer; the uri is
+ * filled in once contents are cached (VS Code resolves the virtual document
+ * when the diff editor loads it).
  */
-async function openNativeDiff(askId: string, diff: PermissionDiff, directory: string): Promise<void> {
-  const { after } = await contents(diff, directory)
+async function openNativeDiff(askId: string, files: PermissionDiff[], directory: string): Promise<void> {
+  // The stored object itself is the mutable entry: reserved synchronously
+  // here, its uris filled in by show() once contents are cached. If show()
+  // rejects, the reservation is rolled back so the ask isn't stuck in the
+  // maps with no viewer and no way to clean up.
+  const entry: { kind: "vscode"; uris?: vscode.Uri[] } = { kind: "vscode" }
+  opened.set(askId, entry)
+  show(askId, files, directory, entry).catch(() => {
+    if (opened.get(askId) === entry) {
+      opened.delete(askId)
+      seen.delete(askId)
+      release(entry)
+    }
+  })
+}
+
+async function show(askId: string, files: PermissionDiff[], directory: string, entry: { uris?: vscode.Uri[] }) {
+  const uris: vscode.Uri[] = []
+  const read = await Promise.all(files.map((f) => contents(f, directory)))
+  files.forEach((f, i) => uris.push(cache(askId, f, read[i]!.after)))
+  entry.uris = uris
+  if (!opened.has(askId)) {
+    // The ask was replied to while contents were loading — evict and stop.
+    for (const uri of uris) virtualContents.delete(uri.toString())
+    return
+  }
+  for (const [i, f] of files.entries()) {
+    // Awaited (not fire-and-forget) so a failed open rejects show() and the
+    // reservation is rolled back by openNativeDiff's catch; re-checked after
+    // each open so a reply that lands mid-loop stops the remaining files
+    // instead of opening them against evicted contents.
+    if (opened.get(askId) !== entry) return
+    await vscode.commands.executeCommand(
+      "vscode.diff",
+      resolve(directory, f.file),
+      uris[i]!,
+      `${f.file.split(/[\\/]/).pop() ?? f.file} (Kilo proposed edit)`,
+    )
+  }
+}
+
+/** Build the virtual "after" URI for one file and cache its contents under it. */
+function cache(askId: string, diff: PermissionDiff, after: string): vscode.Uri {
   const file = vscode.Uri.file(diff.file)
   // The ask id in the query keys both the content cache and the ask → tab
   // match in closeApprovalDiff.
-  const afterUri = vscode.Uri.from({
+  const uri = vscode.Uri.from({
     scheme: SCHEME,
     path: file.path,
     query: encodeURIComponent(askId),
   })
-  // Cache before opening: VS Code resolves the virtual document synchronously
-  // when the diff editor loads it.
-  virtualContents.set(afterUri.toString(), after)
-  opened.set(askId, { kind: "vscode", uri: afterUri })
-  void vscode.commands.executeCommand(
-    "vscode.diff",
-    resolve(directory, diff.file),
-    afterUri,
-    `${diff.file.split(/[\\/]/).pop() ?? diff.file} (Kilo proposed edit)`,
-  )
+  virtualContents.set(uri.toString(), after)
+  return uri
 }
 
 /** Cached virtual-document contents keyed by URI string. */

@@ -83,6 +83,13 @@ const mockVscode = {
       delete: async () => {},
       stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
     },
+    // Registered content providers, keyed by scheme — lets tests read back
+    // what production registered, like the real workbench does.
+    registeredProviders: new Map<string, unknown>(),
+    registerTextDocumentContentProvider: (scheme: string, provider: unknown) => {
+      mockVscode.workspace.registeredProviders.set(scheme, provider)
+      return { dispose: () => mockVscode.workspace.registeredProviders.delete(scheme) }
+    },
   },
   StatusBarAlignment: { Left: 1, Right: 2 },
   ThemeColor: class {
