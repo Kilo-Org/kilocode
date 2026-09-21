@@ -2,7 +2,6 @@ import { ProviderAuth } from "@/provider/auth"
 import { Config } from "@/config/config"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Provider } from "@/provider/provider"
-import { Auth } from "@/auth"
 
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
