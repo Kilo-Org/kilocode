@@ -373,8 +373,10 @@ describe("replyOnce", () => {
     }
     expect(calls).toBe(1)
   })
+
   it("stops retrying when the caller cancels", async () => {
     let calls = 0
+    let checks = 0
     let allowed = true
     const client = {
       permission: {
@@ -387,11 +389,17 @@ describe("replyOnce", () => {
     }
     const log = spyOn(console, "error").mockImplementation(() => {})
     try {
-      expect(await replyOnce(client as never, "p1", "/workspace", () => allowed)).toBe(false)
+      expect(
+        await replyOnce(client as never, "p1", "/workspace", () => {
+          checks += 1
+          return allowed
+        }),
+      ).toBe(false)
     } finally {
       log.mockRestore()
     }
     expect(calls).toBe(1)
+    expect(checks).toBe(2)
   })
 })
 

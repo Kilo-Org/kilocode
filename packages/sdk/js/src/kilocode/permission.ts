@@ -11,12 +11,14 @@ type Decision = {
 
 const ATTEMPTS = 3
 
-// Keep in sync with the transient classifier in packages/core/src/util/retry.ts
-// (mirrored in packages/kilo-vscode/src/services/cli-backend/retry.ts). Only
-// transport-level failures are retried. A status-less client error such as a
-// response parse failure or a server-version mismatch is definitive and must not
-// be replayed. Re-sending an identical rule set after a lost response is
-// tolerable because duplicate patterns do not change the decision.
+// Mirrors the transient classifier in
+// packages/kilo-vscode/src/services/cli-backend/retry.ts. The SDK cannot import
+// that module, so keep the two lists in sync by hand, including the exact
+// "terminated" match for undici pooled-connection drops. Only transport-level
+// failures are retried. A status-less client error such as a response parse
+// failure or a server-version mismatch is definitive and must not be replayed.
+// Re-sending an identical rule set after a lost response is tolerable because
+// duplicate patterns do not change the decision.
 const TRANSIENT = [
   "load failed",
   "network connection was lost",
@@ -41,17 +43,14 @@ function transport(error: unknown): boolean {
 }
 
 async function send<T>(fn: () => Promise<T>, budget: () => number): Promise<T> {
-  let last: unknown
-  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+  for (let attempt = 0; ; attempt++) {
     try {
       return await fn()
     } catch (error) {
-      last = error
-      if (attempt === ATTEMPTS - 1 || !transport(error) || budget() <= 0) throw error
+      if (attempt >= ATTEMPTS - 1 || !transport(error) || budget() <= 0) throw error
       await new Promise((resolve) => setTimeout(resolve, Math.min(100 * 2 ** attempt, budget())))
     }
   }
-  throw last
 }
 
 /**
