@@ -33,13 +33,13 @@ afterEach(async () => {
 const it = testEffect(LayerNode.compile(LayerNode.group([Provider.node, Env.node, Plugin.node])))
 
 it.instance(
-  "getSmallModel returns undefined without kilo credentials when model IDs lack family metadata",
+  "getSmallModel picks provider model when model IDs lack family metadata",
   Effect.gen(function* () {
     for (const key of ["KILO_API_KEY", "KILO_AUTH_CONTENT", "KILO_CONFIG_CONTENT"]) {
       yield* clearEnv(key)
     }
     const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
-    expect(model).toBeUndefined()
+    expect(model).toMatchObject({ providerID: "test-provider", id: "gpt-5-nano" })
   }),
   {
     config: {
@@ -59,10 +59,10 @@ it.instance(
 )
 
 it.instance(
-  "getSmallModel falls back to Kilo auto when the kilo provider is configured",
+  "getSmallModel picks provider model over kilo auto",
   Effect.gen(function* () {
     const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
-    expect(model).toMatchObject({ providerID: "kilo", id: "kilo-auto/small" })
+    expect(model).toMatchObject({ providerID: "test-provider", id: "gpt-5-nano" })
   }),
   {
     config: {

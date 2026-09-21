@@ -769,6 +769,29 @@ it.instance(
   },
 )
 
+// kilocode_change start
+it.instance(
+  "getSmallModel picks the provider's own model when model IDs lack family metadata",
+  Effect.gen(function* () {
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
+    expect(model).toMatchObject({ providerID: "test-provider", id: "gpt-5-nano" })
+  }),
+  {
+    config: {
+      provider: {
+        "test-provider": {
+          name: "Test Provider",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "gpt-5-nano": { release_date: "2026-01-01" },
+          },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+// kilocode_change end
 it.instance("getSmallModel skips inferred models for Azure", () =>
   Effect.gen(function* () {
     yield* set("AZURE_RESOURCE_NAME", "test-resource")
@@ -777,7 +800,6 @@ it.instance("getSmallModel skips inferred models for Azure", () =>
     expect(model).toBeUndefined()
   }),
 )
-
 it.instance("getSmallModel skips inferred models for Azure Cognitive Services", () =>
   Effect.gen(function* () {
     yield* set("AZURE_COGNITIVE_SERVICES_RESOURCE_NAME", "test-resource")
