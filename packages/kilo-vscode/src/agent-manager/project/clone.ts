@@ -1,4 +1,14 @@
-/** Validate without rewriting Git's SSH aliases or scp-style path semantics. */
+/**
+ * Validate a repository URL without rewriting Git's SSH aliases or scp-style
+ * path semantics. Returns `undefined` when the value is safe to pass to
+ * `git.clone`, or a short human-readable reason when it is not.
+ *
+ * Accepted: `https://`, `ssh://`, `git://`, and scp-style `[user@]host:path`
+ * values, including bracketed IPv6 hosts. Rejected: empty input, whitespace or
+ * control characters, a leading dash, local paths and `file:` URLs, `ext::`
+ * transports, backslashes, query strings or fragments, unsupported or host-less
+ * schemes, option-like hostnames, and embedded credentials.
+ */
 export function validateCloneUrl(value: string): string | undefined {
   if (!value) return "Enter a repository URL."
   if (/\p{Cc}|\s/u.test(value) || value.startsWith("-")) {
@@ -16,6 +26,8 @@ export function validateCloneUrl(value: string): string | undefined {
       ? undefined
       : invalid
   }
+  // `URL.parse` returns null for malformed input instead of throwing, which is why
+  // this uses the static parser rather than `new URL` and needs no try/catch.
   const url = URL.parse(value)
   if (
     !url ||
