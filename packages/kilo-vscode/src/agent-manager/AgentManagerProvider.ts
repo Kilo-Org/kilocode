@@ -227,12 +227,13 @@ export class AgentManagerProvider implements Disposable {
       output: (msg) => this.outputChannel.appendLine(msg),
       activate: (ctx) => this.activateProject(ctx),
       expand: (ctx) => this.initExpanded(ctx),
-      ready: (ctx) => initContextState(ctx, (...args) => this.log(...args)),
+      ready: (ctx, opts) => initContextState(ctx, (...args) => this.log(...args), opts),
       push: () => this.pushProjects(),
       pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
       removed: (id) => this.browserLifecycle.closeProject(id),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
+      post: (message) => this.postToWebview(message),
       routeSession: (pid, sid, dir, gen) => routeProjectSession(this.panel?.sessions, pid, sid, dir, gen),
     })
     this.registry = wiring.registry

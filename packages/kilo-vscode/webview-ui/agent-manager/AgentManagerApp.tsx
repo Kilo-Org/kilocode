@@ -835,6 +835,8 @@ const AgentManagerContent: Component = () => {
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
     if (!pid || !multiProject()) return undefined
+    // Active project sessions come from the paged shared store, not the capped snapshot.
+    if (pid === currentProjectId()) return undefined
     const sessions = projectSessionsLive()[pid]
     if (!sessions) return new Set<string>()
     return new Set(sessions.filter(isKnownRootSession).map((s) => s.id))
