@@ -1020,6 +1020,17 @@ export const dict = {
   "settings.autoApprove.tool.doom_loop": "防止重複相同操作。當相同的工具呼叫以相同的輸入重複時觸發。",
   "settings.checkpoints.enable.title": "啟用快照",
   "settings.checkpoints.enable.description": "在檔案編輯前建立檢查點，以便恢復之前的狀態",
+  "settings.autoCleanup.enable.title": "啟用自動會話清理",
+  "settings.autoCleanup.enable.description":
+    "在固定天數後自動刪除舊會話歷史，涵蓋這台機器上的所有專案和所有 Kilo 用戶端，而不只是這個視窗。正在執行的會話和有近期分支的會話永遠不會被刪除。刪除是不可逆的。",
+  "settings.autoCleanup.defaultRetention.title": "會話保留天數（天）",
+  "settings.autoCleanup.defaultRetention.description": "自動清理刪除會話歷史之前保留的時長。",
+  "settings.autoCleanup.lastRun.title": "上次清理",
+  "settings.autoCleanup.lastRun.never": "從未執行",
+  "settings.autoCleanup.result":
+    "{{date}}：刪除了 {{scanned}} 個會話中的 {{deleted}} 個（跳過 {{active}} 個執行中，{{failed}} 個失敗），耗時 {{seconds}} 秒",
+  "settings.autoCleanup.runNow": "立即執行清理",
+  "settings.autoCleanup.runNow.confirm": "永久刪除這台機器上所有專案和所有 Kilo 用戶端中已過期的會話？",
   "settings.context.autoCompaction.title": "自動壓縮",
   "settings.context.autoCompaction.description": "在上下文達到限制前自動壓縮",
   "settings.context.compaction.title": "壓縮",

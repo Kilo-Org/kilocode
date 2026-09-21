@@ -2,6 +2,7 @@ import { Cause, Effect, Scope } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { KiloSessionContinuation } from "@/kilocode/session/continuation"
+import { KiloSessionRetention } from "@/kilocode/session/retention"
 import { Suggestion } from "@/kilocode/suggestion"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
@@ -73,6 +74,7 @@ import {
   BackgroundJobsQuery,
   SessionBoardQuery,
   ResetSessionBoardPayload,
+  RetentionRunPayload,
 } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -529,6 +531,28 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return yield* wake.pending(directory)
     })
 
+    const retentionActive = Effect.fn("KilocodeHttpApi.retentionActive")(function* () {
+      const info = yield* config.get()
+      const active = KiloSessionRetention.policy(info)
+      return {
+        policy: { enabled: active.enabled, maxAgeDays: active.maxAgeDays },
+      }
+    })
+
+    const retentionStatus = Effect.fn("KilocodeHttpApi.retentionStatus")(function* () {
+      const progress = yield* KiloSessionRetention.readProgress()
+      const last = yield* KiloSessionRetention.readState()
+      return { ...(yield* retentionActive()), ...(last ? { last } : {}), ...(progress ? { progress } : {}) }
+    })
+
+    const retentionRun = Effect.fn("KilocodeHttpApi.retentionRun")(function* (ctx: {
+      payload: typeof RetentionRunPayload.Type
+    }) {
+      const outcome = yield* KiloSessionRetention.run({ force: ctx.payload.force === true })
+      if (!outcome.ran) return yield* retentionStatus()
+      return { ...(yield* retentionActive()), last: outcome.result }
+    })
+
     return handlers
       .handle("resumeSession", resumeSession)
       .handle("drainSession", drainSession)
@@ -564,5 +588,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("backgroundJobCancel", backgroundJobCancel)
       .handle("backgroundJobPromote", backgroundJobPromote)
       .handle("wakeups", wakeups)
+      .handle("retentionStatus", retentionStatus)
+      .handle("retentionRun", retentionRun)
   }),
 )

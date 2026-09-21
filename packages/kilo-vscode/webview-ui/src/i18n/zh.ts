@@ -1058,6 +1058,17 @@ export const dict = {
   "settings.autoApprove.tool.doom_loop": "防止重复相同操作。当相同的工具调用以相同的输入重复时触发。",
   "settings.checkpoints.enable.title": "启用快照",
   "settings.checkpoints.enable.description": "在文件编辑前创建检查点，以便恢复之前的状态",
+  "settings.autoCleanup.enable.title": "启用自动会话清理",
+  "settings.autoCleanup.enable.description":
+    "在固定天数后自动删除旧会话历史，覆盖这台机器上的所有项目和所有 Kilo 客户端，而不只是这个窗口。正在运行的会话和有近期分支的会话永远不会被删除。删除是不可逆的。",
+  "settings.autoCleanup.defaultRetention.title": "会话保留天数（天）",
+  "settings.autoCleanup.defaultRetention.description": "自动清理删除会话历史之前保留的时长。",
+  "settings.autoCleanup.lastRun.title": "上次清理",
+  "settings.autoCleanup.lastRun.never": "从未运行",
+  "settings.autoCleanup.result":
+    "{{date}}：删除了 {{scanned}} 个会话中的 {{deleted}} 个（跳过 {{active}} 个运行中，{{failed}} 个失败），用时 {{seconds}} 秒",
+  "settings.autoCleanup.runNow": "立即运行清理",
+  "settings.autoCleanup.runNow.confirm": "永久删除这台机器上所有项目和所有 Kilo 客户端中已过期的会话？",
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compaction.title": "压缩",
