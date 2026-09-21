@@ -12,10 +12,10 @@ import com.intellij.openapi.util.NlsContexts
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.DrawUtil
-import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.TimerUtil
+import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -110,7 +110,7 @@ open class ShimmerLabel @JvmOverloads constructor(
                 viewR, iconR, textR, iconTextGap,
             )
             paintedIcon?.paintIcon(this, g2, iconR.x, iconR.y)
-            val foreground = foreground ?: JBColor.GRAY
+            val foreground = foreground ?: UIUtil.getLabelForeground()
             val baseColor = NamedColorUtil.getInactiveTextColor()
             g2.paint = shimmerPaint(
                 textStart = textR.x.toFloat(),
