@@ -307,12 +307,17 @@ export function kiloSmallModelPriority(providerID: string): string[] | undefined
  * draws Kilo credits in BYOK setups. Chat-capable means text in and text out;
  * tool calling is not required (e.g. Perplexity sonar and morph chat models
  * advertise tool_call false). Models with no text output (image, audio, video)
- * are skipped. Missing cost data sorts as free; ties break by release date
- * and id, matching the catalog ordering in getSmallModel.
+ * are skipped, and so are embedding and rerank models: they also take text in
+ * and return text scores, but requests to them cannot produce titles or commit
+ * messages. Missing cost data sorts as free; ties break by release date and
+ * id, matching the catalog ordering in getSmallModel.
  */
 export function cheapestSmallModel(models: Provider.Model[]) {
   return sortBy(
-    models.filter((model) => model.capabilities.input.text && model.capabilities.output.text),
+    models.filter((model) => {
+      if (!model.capabilities.input.text || !model.capabilities.output.text) return false
+      return !/(embed|rerank)/.test(`${model.family} ${model.id}`)
+    }),
     [(model) => model.cost.input + model.cost.output, "asc"],
     [(model) => model.release_date, "desc"],
     [(model) => model.id, "desc"],
