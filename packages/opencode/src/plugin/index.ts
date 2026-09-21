@@ -35,6 +35,7 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstallationChannel } from "@opencode-ai/core/installation/version"
+import * as SkillTrust from "@/kilocode/skill/trust" // kilocode_change
 
 type State = {
   hooks: Hooks[]
@@ -250,6 +251,7 @@ const layer = Layer.effect(
         }
 
         // Notify plugins of current config
+        const before = new Set(cfg.skills?.paths) // kilocode_change
         for (const hook of hooks) {
           yield* Effect.tryPromise({
             try: () => Promise.resolve((hook as any).config?.(cfg)),
@@ -259,6 +261,7 @@ const layer = Layer.effect(
             Effect.ignore,
           )
         }
+        SkillTrust.mark(cfg, before) // kilocode_change
 
         const unsubscribe = yield* events.listen((event) => {
           if (event.location?.directory !== ctx.directory) return Effect.void

@@ -1,5 +1,21 @@
 import { realpathSync } from "fs"
 import path from "path"
+import type { Config } from "@/config/config"
+
+export function mark(cfg: Config.Info, before: ReadonlySet<string>) {
+  const paths = cfg.skills?.paths
+  if (!paths?.length) return
+
+  const origins = { ...cfg.skill_path_origins }
+  for (const path of paths) {
+    if (before.has(path) || origins[path]) continue
+    origins[path] = {
+      trusted: true,
+      source: "plugin config hook",
+    }
+  }
+  cfg.skill_path_origins = origins
+}
 
 // A skill discovered under a trusted directory (~/.agents, ~/.claude, config dirs,
 // KILO_CONFIG_DIR) mints trust: shell execution after one approval, and unconfined
