@@ -305,7 +305,7 @@ async function attach(root: string, deps: ProjectMessageDeps, git: GitOps): Prom
   const pinned = deps.contexts.pinned()
   const primary = pinned && (await resolveProjectRoot(pinned.root, runner(git)))
   const id = pinned && samePath(primary ?? pinned.root, root) ? pinned.id : projectIdFor(root)
-  const existing = id === pinned?.id || Boolean(deps.registry.get(id))
+  const existing = id === pinned?.id || deps.registry.has(id)
   if (!existing) await deps.registry.add({ id, root })
   await deps.registry.setExpanded(id, true)
   const ctx = deps.contexts.expand(id)
