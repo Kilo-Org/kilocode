@@ -123,6 +123,10 @@ export interface LoadSessionsRequest {
   type: "loadSessions"
 }
 
+export interface LoadMoreSessionsRequest {
+  type: "loadMoreSessions"
+}
+
 export interface RequestSessionModelUsageMessage {
   type: "requestSessionModelUsage"
   sessionID: string
@@ -1633,6 +1637,7 @@ export type WebviewMessage =
   | ClearSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
+  | LoadMoreSessionsRequest
   | RequestSessionModelUsageMessage
   | RequestCloudSessionsMessage
   | RequestGitRemoteUrlMessage

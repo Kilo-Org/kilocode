@@ -40,6 +40,7 @@ import {
   MessageConfirmation,
   runWithMessageConfirmation,
   loadSessions as loadSessionsUtil,
+  loadMoreSessions as loadMoreSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   resolveContextDirectory,
   resolveNewSessionDirectory,
@@ -75,6 +76,7 @@ import { interceptMessage } from "./kilo-provider/git-changes-request"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
+import { createSessionPageState, fetchSessionPage } from "./kilo-provider/session-page"
 import { editPaths } from "./kilo-provider/session-edits"
 import {
   dismissNotification,
@@ -527,6 +529,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedGitDirectory: string | undefined
   private gitStatusRevision = 0
   private sessionRefreshRevision = 0
+  private sessionPages = createSessionPageState()
 
   private onBeforeMessage: ((msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>) | null = null
 
@@ -1291,6 +1294,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "loadSessions":
           this.handleLoadSessions().catch((e) => console.error("[Kilo New] handleLoadSessions failed:", e))
+          break
+        case "loadMoreSessions":
+          this.handleLoadMoreSessions().catch((e) => console.error("[Kilo New] handleLoadMoreSessions failed:", e))
           break
         case "requestSessionModelUsage":
           void this.fetchAndSendSessionModelUsage(message.sessionID, message.requestID)
@@ -2437,6 +2443,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         ? (dir: string) =>
             client.session.list({ directory: dir, roots: true }, { throwOnError: true }).then(({ data }) => data)
         : null,
+      listSessionPage: client ? (dir: string, cursor?: number) => fetchSessionPage(client, { dir, cursor }) : null,
+      page: this.sessionPages,
       sessionDirectories: this.sessionDirectories,
       worktreeDirectories: this.opts.worktreeDirectories,
       workspaceDirectory: this.getWorkspaceDirectory(),
@@ -2481,6 +2489,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "error",
         message: getErrorMessage(error) || "Failed to load sessions",
       })
+    }
+    this.pendingSessionRefresh = ctx.pendingSessionRefresh
+  }
+
+  /**
+   * Append the next page of older sessions to the history list.
+   */
+  private async handleLoadMoreSessions(): Promise<void> {
+    const revision = ++this.sessionRefreshRevision
+    const ctx = this.getSessionRefreshContext(revision)
+    try {
+      await loadMoreSessionsUtil(ctx)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to load more sessions:", error)
     }
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }

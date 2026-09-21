@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test"
-import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
+import {
+  loadSessions,
+  loadMoreSessions,
+  flushPendingSessionRefresh,
+  type SessionRefreshContext,
+} from "../../src/kilo-provider-utils"
+import { createSessionPageState } from "../../src/kilo-provider/session-page"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -35,6 +41,7 @@ function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefre
     pendingSessionRefresh: false,
     connectionState: "connecting",
     listSessions: null,
+    page: createSessionPageState(),
     sessionDirectories: new Map(),
     workspaceDirectory: "/repo",
     postMessage: (msg: unknown) => sent.push(msg),
@@ -58,9 +65,13 @@ function createClient() {
     calls,
     session: {
       status: async () => ({ data: {} }),
-      list: async (params: { directory: string }) => {
-        calls.push(params.directory)
-        return { data: [] }
+    },
+    experimental: {
+      session: {
+        list: async (params: { directory: string }) => {
+          calls.push(params.directory)
+          return { data: [], response: { headers: new Headers() } }
+        },
       },
     },
     provider: {
@@ -159,9 +170,9 @@ describe("KiloProvider pending session refresh", () => {
 
   it("does not let a late listing restore the previous project's identity", async () => {
     const client = createClient()
-    const pending = new Map<string, ReturnType<typeof deferred<{ data: unknown[] }>>>()
-    client.session.list = async (params: { directory: string }) => {
-      const next = deferred<{ data: unknown[] }>()
+    const pending = new Map<string, ReturnType<typeof deferred<{ data: unknown[]; response: { headers: Headers } }>>>()
+    client.experimental.session.list = async (params: { directory: string }) => {
+      const next = deferred<{ data: unknown[]; response: { headers: Headers } }>()
       pending.set(params.directory, next)
       return next.promise as never
     }
@@ -181,10 +192,12 @@ describe("KiloProvider pending session refresh", () => {
 
     pending.get("/repo/b")!.resolve({
       data: [{ id: "ses-b", projectID: "backend-b", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
     })
     await second
     pending.get("/repo/a")!.resolve({
       data: [{ id: "ses-a", projectID: "backend-a", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
     })
     await first
 
@@ -225,7 +238,7 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(project).toBe("project-new")
     expect(sent).toHaveLength(1)
-    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_root", "ses_worktree"])
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_worktree", "ses_root"])
   })
 
   it("does not use legacy worktree sessions as canonical project", async () => {
@@ -293,7 +306,7 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(sent).toHaveLength(1)
     const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
-    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt2"])
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_wt2", "ses_root"])
     expect(msg.preserveSessionIds).toEqual(["ses_wt1"])
   })
 
@@ -331,8 +344,38 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(sent).toHaveLength(1)
     const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
-    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt"])
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_wt", "ses_root"])
     expect(msg.preserveSessionIds).toBeUndefined()
+  })
+
+  it("pages older sessions per directory and appends them", async () => {
+    const sent: unknown[] = []
+    const calls: Array<{ dir: string; cursor?: number }> = []
+    const ctx = createContext({
+      connectionState: "connected",
+      listSessionPage: async (dir, cursor) => {
+        calls.push({ dir, cursor })
+        if (cursor === undefined) {
+          return { sessions: [{ id: "ses_1", projectID: "p", time: { created: 1, updated: 2 } }] as never, cursor: 2 }
+        }
+        return { sessions: [{ id: "ses_old", projectID: "p", time: { created: 1, updated: 1 } }] as never }
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+    expect(ctx.page?.hasMore).toBe(true)
+
+    await loadMoreSessions(ctx)
+
+    expect(calls).toEqual([
+      { dir: "/repo", cursor: undefined },
+      { dir: "/repo", cursor: 2 },
+    ])
+    const appended = sent[1] as { sessions: { id: string }[]; append?: boolean }
+    expect(appended.append).toBe(true)
+    expect(appended.sessions.map((s) => s.id)).toEqual(["ses_old"])
+    expect(ctx.page?.hasMore).toBe(false)
   })
 
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
