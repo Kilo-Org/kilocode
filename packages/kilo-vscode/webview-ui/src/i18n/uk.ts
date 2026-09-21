@@ -1078,6 +1078,28 @@ export const dict = {
   "settings.checkpoints.enable.title": "Увімкнути знімки",
   "settings.checkpoints.enable.description":
     "Створювати контрольні точки перед редагуванням файлів, щоб мати можливість відновити попередні стани",
+  "settings.autoCleanup.enable.title": "Увімкнути автоматичне очищення сесій",
+  "settings.autoCleanup.enable.description":
+    "Автоматично видаляє стару історію сесій після визначеної кількості днів, в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері, а не лише в цьому вікні. Запущені сесії та сесії з нещодавнім форком ніколи не видаляються. Видалення необоротне.",
+  "settings.autoCleanup.defaultRetention.title": "Зберігати сесії (днів)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Як довго зберігається історія сесій до видалення автоматичним очищенням.",
+  "settings.autoCleanup.lastRun.title": "Останнє очищення",
+  "settings.autoCleanup.lastRun.never": "Ніколи не запускалося",
+  "settings.autoCleanup.result":
+    "{{date}}: видалено {{deleted}} із {{scanned}} сесій ({{active}} активних пропущено, {{failed}} невдалих) за {{seconds}} с",
+  "settings.autoCleanup.starting": "Запуск очищення сесій...",
+  "settings.autoCleanup.error.status": "Статус очищення сесій тимчасово недоступний. Повторна спроба...",
+  "settings.autoCleanup.error.timeout":
+    "Очікування статусу очищення. Серверна частина відповідає довше, ніж очікувалося.",
+  "settings.autoCleanup.error.run":
+    "Не вдалося підтвердити завершення очищення сесій. Перевірте результат останнього очищення перед повторною спробою.",
+  "settings.autoCleanup.progress.scanning": "Сканування сесій: оброблено {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Видалення сесій: оброблено {{processed}}/{{total}} (видалено {{deleted}}, невдалих {{failed}})",
+  "settings.autoCleanup.runNow": "Запустити очищення зараз",
+  "settings.autoCleanup.runNow.confirm":
+    "Безповоротно видалити застарілі сесії в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері?",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",

@@ -986,6 +986,29 @@ export const dict = {
   "settings.checkpoints.enable.title": "Abilita snapshot",
   "settings.checkpoints.enable.description":
     "Crea checkpoint prima delle modifiche ai file così puoi ripristinare stati precedenti",
+  "settings.autoCleanup.enable.title": "Abilita pulizia automatica delle sessioni",
+  "settings.autoCleanup.enable.description":
+    "Elimina automaticamente la vecchia cronologia delle sessioni dopo un numero fisso di giorni, in tutti i progetti e in tutti i client Kilo di questo computer, non solo in questa finestra. Le sessioni in esecuzione e quelle con un fork recente non vengono mai eliminate. L'eliminazione è permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Conserva sessioni per (giorni)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Per quanto tempo viene conservata la cronologia delle sessioni prima che la pulizia automatica la elimini.",
+  "settings.autoCleanup.lastRun.title": "Ultima pulizia",
+  "settings.autoCleanup.lastRun.never": "Mai eseguita",
+  "settings.autoCleanup.result":
+    "{{date}}: eliminate {{deleted}} di {{scanned}} sessioni ({{active}} attive ignorate, {{failed}} non riuscite) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Avvio della pulizia delle sessioni...",
+  "settings.autoCleanup.error.status":
+    "Lo stato della pulizia delle sessioni è temporaneamente non disponibile. Nuovo tentativo...",
+  "settings.autoCleanup.error.timeout":
+    "In attesa dello stato della pulizia. Il backend sta impiegando più tempo del previsto.",
+  "settings.autoCleanup.error.run":
+    "Impossibile confermare il completamento della pulizia delle sessioni. Controlla il risultato dell'ultima pulizia prima di riprovare.",
+  "settings.autoCleanup.progress.scanning": "Analisi delle sessioni: {{processed}}/{{total}} elaborate",
+  "settings.autoCleanup.progress.deleting":
+    "Eliminazione delle sessioni: {{processed}}/{{total}} elaborate ({{deleted}} eliminate, {{failed}} non riuscite)",
+  "settings.autoCleanup.runNow": "Esegui pulizia ora",
+  "settings.autoCleanup.runNow.confirm":
+    "Eliminare definitivamente le sessioni scadute in tutti i progetti e in tutti i client Kilo di questo computer?",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
   "settings.context.compaction.title": "Compattazione",

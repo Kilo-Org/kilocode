@@ -1126,6 +1126,28 @@ export const dict = {
     "Zapobieganie powtarzaniu tych samych akcji. Uruchamiane, gdy to samo wywołanie narzędzia powtarza się z identycznymi danymi wejściowymi.",
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
+  "settings.autoCleanup.enable.title": "Włącz automatyczne czyszczenie sesji",
+  "settings.autoCleanup.enable.description":
+    "Automatycznie usuwa starą historię sesji po określonej liczbie dni, we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze, nie tylko w tym oknie. Uruchomione sesje i sesje z niedawnym forkiem nigdy nie są usuwane. Usunięcie jest trwałe.",
+  "settings.autoCleanup.defaultRetention.title": "Przechowuj sesje (dni)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Jak długo przechowywana jest historia sesji, zanim automatyczne czyszczenie ją usunie.",
+  "settings.autoCleanup.lastRun.title": "Ostatnie czyszczenie",
+  "settings.autoCleanup.lastRun.never": "Nigdy nie uruchomiono",
+  "settings.autoCleanup.result":
+    "{{date}}: usunięto {{deleted}} z {{scanned}} sesji ({{active}} aktywnych pominięto, {{failed}} nie powiodło się) w {{seconds}}s",
+  "settings.autoCleanup.starting": "Uruchamianie czyszczenia sesji...",
+  "settings.autoCleanup.error.status": "Stan czyszczenia sesji jest chwilowo niedostępny. Ponawianie próby...",
+  "settings.autoCleanup.error.timeout":
+    "Oczekiwanie na stan czyszczenia. Backend potrzebuje więcej czasu niż oczekiwano.",
+  "settings.autoCleanup.error.run":
+    "Nie udało się potwierdzić zakończenia czyszczenia sesji. Sprawdź wynik ostatniego czyszczenia przed ponowną próbą.",
+  "settings.autoCleanup.progress.scanning": "Skanowanie sesji: przetworzono {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Usuwanie sesji: przetworzono {{processed}}/{{total}} (usunięto {{deleted}}, nie powiodło się {{failed}})",
+  "settings.autoCleanup.runNow": "Uruchom czyszczenie teraz",
+  "settings.autoCleanup.runNow.confirm":
+    "Trwale usunąć wygasłe sesje we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze?",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
   "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
   "settings.context.compaction.title": "Kompaktowanie",

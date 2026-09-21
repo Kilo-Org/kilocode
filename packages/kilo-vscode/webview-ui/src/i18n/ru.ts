@@ -1120,6 +1120,27 @@ export const dict = {
     "Предотвращение повторных идентичных действий. Срабатывает, когда один и тот же вызов инструмента повторяется с идентичными входными данными.",
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
+  "settings.autoCleanup.enable.title": "Включить автоматическую очистку сессий",
+  "settings.autoCleanup.enable.description":
+    "Автоматически удаляет старую историю сессий по истечении заданного числа дней, во всех проектах и во всех клиентах Kilo на этом компьютере, а не только в этом окне. Запущенные сессии и сессии с недавним форком никогда не удаляются. Удаление необратимо.",
+  "settings.autoCleanup.defaultRetention.title": "Хранить сессии (дней)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Как долго хранится история сессий до удаления автоматической очисткой.",
+  "settings.autoCleanup.lastRun.title": "Последняя очистка",
+  "settings.autoCleanup.lastRun.never": "Никогда не запускалась",
+  "settings.autoCleanup.result":
+    "{{date}}: удалено {{deleted}} из {{scanned}} сессий ({{active}} активных пропущено, {{failed}} с ошибкой) за {{seconds}} с",
+  "settings.autoCleanup.starting": "Запуск очистки сессий...",
+  "settings.autoCleanup.error.status": "Статус очистки сессий временно недоступен. Повторная попытка...",
+  "settings.autoCleanup.error.timeout": "Ожидание статуса очистки. Серверная часть отвечает дольше, чем ожидалось.",
+  "settings.autoCleanup.error.run":
+    "Не удалось подтвердить завершение очистки сессий. Проверьте результат последней очистки перед повторной попыткой.",
+  "settings.autoCleanup.progress.scanning": "Сканирование сессий: обработано {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Удаление сессий: обработано {{processed}}/{{total}} (удалено {{deleted}}, с ошибкой {{failed}})",
+  "settings.autoCleanup.runNow": "Запустить очистку сейчас",
+  "settings.autoCleanup.runNow.confirm":
+    "Безвозвратно удалить устаревшие сессии во всех проектах и во всех клиентах Kilo на этом компьютере?",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
   "settings.context.compaction.title": "Сжатие",

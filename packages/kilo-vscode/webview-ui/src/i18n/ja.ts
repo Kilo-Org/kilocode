@@ -1115,6 +1115,27 @@ export const dict = {
     "繰り返し同一のアクションを防止。同じツール呼び出しが同一の入力で繰り返されたときにトリガーされます。",
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
+  "settings.autoCleanup.enable.title": "自動セッションクリーンアップを有効化",
+  "settings.autoCleanup.enable.description":
+    "決まった日数が経過すると古いセッション履歴を自動削除します。対象はこのマシン上のすべてのプロジェクトとすべての Kilo クライアントで、このウィンドウだけではありません。実行中のセッションや最近フォークを持つセッションは決して削除されません。削除は元に戻せません。",
+  "settings.autoCleanup.defaultRetention.title": "セッションを保持する期間（日数）",
+  "settings.autoCleanup.defaultRetention.description": "自動クリーンアップがセッション履歴を削除するまでの保持期間。",
+  "settings.autoCleanup.lastRun.title": "前回のクリーンアップ",
+  "settings.autoCleanup.lastRun.never": "未実行",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}} 件中 {{deleted}} 件のセッションを削除（{{active}} 件のアクティブをスキップ、{{failed}} 件失敗）、{{seconds}} 秒",
+  "settings.autoCleanup.starting": "セッションのクリーンアップを開始しています...",
+  "settings.autoCleanup.error.status": "セッションのクリーンアップ状況を一時的に取得できません。再試行しています...",
+  "settings.autoCleanup.error.timeout":
+    "クリーンアップ状況を待機中です。バックエンドの応答に予想以上の時間がかかっています。",
+  "settings.autoCleanup.error.run":
+    "セッションのクリーンアップ完了を確認できませんでした。再試行する前に、前回のクリーンアップ結果を確認してください。",
+  "settings.autoCleanup.progress.scanning": "セッションをスキャン中: {{processed}}/{{total}} 件を処理済み",
+  "settings.autoCleanup.progress.deleting":
+    "セッションを削除中: {{processed}}/{{total}} 件を処理済み（{{deleted}} 件削除、{{failed}} 件失敗）",
+  "settings.autoCleanup.runNow": "今すぐクリーンアップを実行",
+  "settings.autoCleanup.runNow.confirm":
+    "このマシン上のすべてのプロジェクトとすべての Kilo クライアントにわたる、削除対象の古いセッションを完全に削除しますか？",
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",

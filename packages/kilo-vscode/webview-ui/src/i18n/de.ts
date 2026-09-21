@@ -1146,6 +1146,28 @@ export const dict = {
   "settings.checkpoints.enable.title": "Snapshots aktivieren",
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
+  "settings.autoCleanup.enable.title": "Automatische Sitzungsbereinigung aktivieren",
+  "settings.autoCleanup.enable.description":
+    "Löscht alten Sitzungsverlauf automatisch nach einer festen Anzahl von Tagen, in allen Projekten und allen Kilo-Clients auf diesem Rechner, nicht nur in diesem Fenster. Laufende Sitzungen und Sitzungen mit jungem Fork werden nie gelöscht. Die Löschung ist dauerhaft.",
+  "settings.autoCleanup.defaultRetention.title": "Sitzungen aufbewahren (Tage)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Wie lange der Sitzungsverlauf aufbewahrt wird, bevor die automatische Bereinigung ihn löscht.",
+  "settings.autoCleanup.lastRun.title": "Letzte Bereinigung",
+  "settings.autoCleanup.lastRun.never": "Nie ausgeführt",
+  "settings.autoCleanup.result":
+    "{{date}}: {{deleted}} von {{scanned}} Sitzungen gelöscht ({{active}} aktiv übersprungen, {{failed}} fehlgeschlagen) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Sitzungsbereinigung wird gestartet...",
+  "settings.autoCleanup.error.status":
+    "Der Status der Sitzungsbereinigung ist vorübergehend nicht verfügbar. Erneuter Versuch...",
+  "settings.autoCleanup.error.timeout": "Warten auf den Bereinigungsstatus. Das Backend braucht länger als erwartet.",
+  "settings.autoCleanup.error.run":
+    "Der Abschluss der Sitzungsbereinigung konnte nicht bestätigt werden. Prüfe das Ergebnis der letzten Bereinigung, bevor du es erneut versuchst.",
+  "settings.autoCleanup.progress.scanning": "Sitzungen werden geprüft: {{processed}}/{{total}} verarbeitet",
+  "settings.autoCleanup.progress.deleting":
+    "Sitzungen werden gelöscht: {{processed}}/{{total}} verarbeitet ({{deleted}} gelöscht, {{failed}} fehlgeschlagen)",
+  "settings.autoCleanup.runNow": "Bereinigung jetzt ausführen",
+  "settings.autoCleanup.runNow.confirm":
+    "Abgelaufene Sitzungen endgültig in allen Projekten und allen Kilo-Clients auf diesem Rechner löschen?",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
   "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
   "settings.context.compaction.title": "Komprimierung",

@@ -1134,6 +1134,28 @@ export const dict = {
     "Prevenir ações idênticas repetidas. Acionado quando a mesma chamada de ferramenta se repete com entrada idêntica.",
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
+  "settings.autoCleanup.enable.title": "Ativar limpeza automática de sessões",
+  "settings.autoCleanup.enable.description":
+    "Exclui automaticamente o histórico de sessões antigo após um número fixo de dias, em todos os projetos e em todos os clientes Kilo desta máquina, não apenas nesta janela. Sessões em execução e sessões com fork recente nunca são excluídas. A exclusão é permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Manter sessões por (dias)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Por quanto tempo o histórico de sessões é mantido antes da limpeza automática excluí-lo.",
+  "settings.autoCleanup.lastRun.title": "Última limpeza",
+  "settings.autoCleanup.lastRun.never": "Nunca executada",
+  "settings.autoCleanup.result":
+    "{{date}}: excluídas {{deleted}} de {{scanned}} sessões ({{active}} ativas ignoradas, {{failed}} falharam) em {{seconds}}s",
+  "settings.autoCleanup.starting": "Iniciando a limpeza de sessões...",
+  "settings.autoCleanup.error.status":
+    "O status da limpeza de sessões está temporariamente indisponível. Tentando novamente...",
+  "settings.autoCleanup.error.timeout": "Aguardando o status da limpeza. O backend está demorando mais que o esperado.",
+  "settings.autoCleanup.error.run":
+    "Não foi possível confirmar a conclusão da limpeza de sessões. Verifique o resultado da última limpeza antes de tentar novamente.",
+  "settings.autoCleanup.progress.scanning": "Verificando sessões: {{processed}}/{{total}} processadas",
+  "settings.autoCleanup.progress.deleting":
+    "Excluindo sessões: {{processed}}/{{total}} processadas ({{deleted}} excluídas, {{failed}} falharam)",
+  "settings.autoCleanup.runNow": "Executar limpeza agora",
+  "settings.autoCleanup.runNow.confirm":
+    "Excluir permanentemente as sessões expiradas em todos os projetos e em todos os clientes Kilo desta máquina?",
   "settings.context.autoCompaction.title": "Compactação automática",
   "settings.context.autoCompaction.description": "Compactar automaticamente o contexto antes que atinja o limite",
   "settings.context.compaction.title": "Compactação",

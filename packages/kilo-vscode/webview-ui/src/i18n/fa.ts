@@ -1107,6 +1107,27 @@ export const dict = {
   "settings.checkpoints.enable.title": "فعال‌سازی اسنپ‌شات‌ها",
   "settings.checkpoints.enable.description":
     "قبل از ویرایش فایل‌ها نقاط بازیابی ایجاد کنید تا بتوانید به حالت‌های قبلی بازگردید",
+  "settings.autoCleanup.enable.title": "فعال‌سازی پاکسازی خودکار جلسه‌ها",
+  "settings.autoCleanup.enable.description":
+    "تاریخچه جلسه‌های قدیمی را پس از تعداد روز مشخصی به‌صورت خودکار حذف می‌کند، در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه، نه فقط همین پنجره. جلسه‌های در حال اجرا و جلسه‌های دارای انشعاب اخیر هرگز حذف نمی‌شوند. حذف دائمی است.",
+  "settings.autoCleanup.defaultRetention.title": "نگهداری جلسه‌ها (روز)",
+  "settings.autoCleanup.defaultRetention.description": "مدت نگهداری تاریخچه جلسه‌ها قبل از حذف توسط پاکسازی خودکار.",
+  "settings.autoCleanup.lastRun.title": "آخرین پاکسازی",
+  "settings.autoCleanup.lastRun.never": "هرگز اجرا نشده",
+  "settings.autoCleanup.result":
+    "{{date}}: {{deleted}} از {{scanned}} جلسه حذف شد ({{active}} فعال رد شد، {{failed}} ناموفق) در {{seconds}} ثانیه",
+  "settings.autoCleanup.starting": "در حال شروع پاکسازی جلسه‌ها...",
+  "settings.autoCleanup.error.status": "وضعیت پاکسازی جلسه‌ها موقتاً در دسترس نیست. در حال تلاش مجدد...",
+  "settings.autoCleanup.error.timeout":
+    "در انتظار وضعیت پاکسازی. پاسخ‌دهی بخش پشتیبان بیشتر از حد انتظار طول کشیده است.",
+  "settings.autoCleanup.error.run":
+    "تکمیل پاکسازی جلسه‌ها تأیید نشد. پیش از تلاش مجدد، نتیجه آخرین پاکسازی را بررسی کنید.",
+  "settings.autoCleanup.progress.scanning": "در حال اسکن جلسه‌ها: {{processed}}/{{total}} پردازش شده",
+  "settings.autoCleanup.progress.deleting":
+    "در حال حذف جلسه‌ها: {{processed}}/{{total}} پردازش شده ({{deleted}} حذف شده، {{failed}} ناموفق)",
+  "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
+  "settings.autoCleanup.runNow.confirm":
+    "حذف دائمی جلسه‌های منقضی‌شده در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه؟",
 
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",

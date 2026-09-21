@@ -81,6 +81,21 @@ export const Info = Schema.Struct({
     description:
       "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.",
   }),
+  // kilocode_change start - machine-wide session retention policy, owned by the backend
+  retention: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Enable automatic deletion of old sessions across all projects and every Kilo client on this machine. Defaults to false; deletion is permanent.",
+      }),
+      maxAgeDays: Schema.optional(Schema.Number).annotate({
+        description: "Days a session is kept before retention deletes it. Defaults to 30, minimum 1.",
+      }),
+    }),
+  ).annotate({
+    description: "Machine-wide session retention. Evaluated by the backend; clients only trigger runs.",
+  }),
+  // kilocode_change end
   plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPluginV1.Spec))),
   share: Schema.optional(Schema.Literals(["manual", "auto", "disabled"])).annotate({
     description:

@@ -1119,6 +1119,27 @@ export const dict = {
     "Forhindre gjentatte identiske handlinger. Utløses når det samme verktøyanropet gjentas med identisk inndata.",
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
+  "settings.autoCleanup.enable.title": "Aktiver automatisk opprydding av økter",
+  "settings.autoCleanup.enable.description":
+    "Sletter gammel økthistorikk automatisk etter et fast antall dager, på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen, ikke bare i dette vinduet. Kjørende økter og økter med nylig forgrening slettes aldri. Sletting er permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Behold økter i (dager)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Hvor lenge økthistorikk beholdes før automatisk opprydding sletter den.",
+  "settings.autoCleanup.lastRun.title": "Siste opprydding",
+  "settings.autoCleanup.lastRun.never": "Aldri kjørt",
+  "settings.autoCleanup.result":
+    "{{date}}: slettet {{deleted}} av {{scanned}} økter ({{active}} aktive hoppet over, {{failed}} feilet) på {{seconds}}s",
+  "settings.autoCleanup.starting": "Starter opprydding av økter...",
+  "settings.autoCleanup.error.status": "Status for opprydding av økter er midlertidig utilgjengelig. Prøver igjen...",
+  "settings.autoCleanup.error.timeout": "Venter på oppryddingsstatus. Bakenden bruker lengre tid enn forventet.",
+  "settings.autoCleanup.error.run":
+    "Kunne ikke bekrefte at oppryddingen av økter er fullført. Kontroller resultatet av siste opprydding før du prøver igjen.",
+  "settings.autoCleanup.progress.scanning": "Skanner økter: {{processed}}/{{total}} behandlet",
+  "settings.autoCleanup.progress.deleting":
+    "Sletter økter: {{processed}}/{{total}} behandlet ({{deleted}} slettet, {{failed}} feilet)",
+  "settings.autoCleanup.runNow": "Kjør opprydding nå",
+  "settings.autoCleanup.runNow.confirm":
+    "Slett utløpte økter permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",

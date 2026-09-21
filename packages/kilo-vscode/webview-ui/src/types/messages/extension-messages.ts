@@ -803,6 +803,31 @@ export interface TimelineSettingLoadedMessage {
   visible: boolean
 }
 
+export interface AutoCleanupLastResult {
+  at: number
+  scanned: number
+  deleted: number
+  skippedActive: number
+  failed: number
+  durationMs: number
+}
+
+export interface AutoCleanupStateLoadedMessage {
+  type: "autoCleanupStateLoaded"
+  last: AutoCleanupLastResult | null
+  requestID?: string
+  pending?: boolean
+  error?: "status" | "timeout" | "run"
+  progress?: {
+    phase: "scanning" | "deleting"
+    total: number
+    processed: number
+    deleted: number
+    failed: number
+    skippedActive: number
+  }
+}
+
 export interface ThroughputSettingLoadedMessage {
   type: "throughputSettingLoaded"
   visible: boolean
@@ -952,6 +977,13 @@ export interface AgentManagerProjectsMessage {
   type: "agentManager.projects"
   multiProject: boolean
   projects: AgentProjectSnapshot[]
+}
+
+// Default (or picked) parent folder for the new-project dialog
+export interface AgentManagerProjectParentMessage {
+  type: "agentManager.projectParent"
+  /** Omitted when the user cancelled the native folder picker. */
+  parent?: string
 }
 
 export interface AgentManagerSelectionActivatedMessage {
@@ -1698,6 +1730,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | OSNotificationTestResultMessage
   | TimelineSettingLoadedMessage
+  | AutoCleanupStateLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
@@ -1714,6 +1747,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
+  | AgentManagerProjectParentMessage
   | AgentManagerSelectionActivatedMessage
   | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage

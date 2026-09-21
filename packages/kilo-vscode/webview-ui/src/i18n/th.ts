@@ -1100,6 +1100,26 @@ export const dict = {
     "ป้องกันการกระทำที่ซ้ำกัน ถูกเรียกเมื่อเครื่องมือเดิมถูกเรียกซ้ำด้วยข้อมูลนำเข้าที่เหมือนกัน",
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
+  "settings.autoCleanup.enable.title": "เปิดการล้างเซสชันอัตโนมัติ",
+  "settings.autoCleanup.enable.description":
+    "ล้างประวัติเซสชันเก่าโดยอัตโนมัติหลังจากผ่านไปตามจำนวนวันที่กำหนด ครอบคลุมทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้ ไม่ใช่แค่หน้าต่างนี้ เซสชันที่กำลังทำงานและเซสชันที่มี fork ล่าสุดจะไม่ถูกลบเด็ดขาด การลบเป็นการถาวร",
+  "settings.autoCleanup.defaultRetention.title": "เก็บเซสชันไว้ (วัน)",
+  "settings.autoCleanup.defaultRetention.description": "ระยะเวลาที่เก็บประวัติเซสชันก่อนการล้างอัตโนมัติจะลบ",
+  "settings.autoCleanup.lastRun.title": "การล้างล่าสุด",
+  "settings.autoCleanup.lastRun.never": "ยังไม่เคยรัน",
+  "settings.autoCleanup.result":
+    "{{date}}: ลบ {{deleted}} จาก {{scanned}} เซสชัน (ข้ามเซสชันที่กำลังทำงาน {{active}} เซสชัน, ล้มเหลว {{failed}}) ใน {{seconds}} วินาที",
+  "settings.autoCleanup.starting": "กำลังเริ่มการล้างเซสชัน...",
+  "settings.autoCleanup.error.status": "ไม่สามารถดูสถานะการล้างเซสชันได้ชั่วคราว กำลังลองใหม่...",
+  "settings.autoCleanup.error.timeout": "กำลังรอสถานะการล้าง ระบบเบื้องหลังใช้เวลานานกว่าที่คาดไว้",
+  "settings.autoCleanup.error.run":
+    "ไม่สามารถยืนยันได้ว่าการล้างเซสชันเสร็จสมบูรณ์ โปรดตรวจสอบผลการล้างล่าสุดก่อนลองอีกครั้ง",
+  "settings.autoCleanup.progress.scanning": "กำลังสแกนเซสชัน: ประมวลผลแล้ว {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "กำลังลบเซสชัน: ประมวลผลแล้ว {{processed}}/{{total}} (ลบแล้ว {{deleted}}, ล้มเหลว {{failed}})",
+  "settings.autoCleanup.runNow": "รันการล้างเดี๋ยวนี้",
+  "settings.autoCleanup.runNow.confirm":
+    "ลบเซสชันที่หมดอายุอย่างถาวรทั่วทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้หรือไม่?",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
   "settings.context.compaction.title": "การบีบอัด",
