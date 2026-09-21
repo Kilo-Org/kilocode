@@ -40,6 +40,17 @@ function permission(id: string, sessionID = childID): PermissionRequest {
   }
 }
 
+function protectedPermission(id: string, sessionID = childID): PermissionRequest {
+  return {
+    id,
+    sessionID,
+    permission: "bash",
+    patterns: ["git push *"],
+    metadata: { skillShell: true, skill: "deploy", commands: ["git push origin main"] },
+    always: [],
+  }
+}
+
 function question(id: string, sessionID = childID): QuestionRequest {
   return {
     id,
@@ -284,6 +295,69 @@ test("an ask created and answered during the refetch is not resurrected", async 
 
     // The stale list must not resurrect the answered ask.
     expect(sync.data.permission[childID]).toBeUndefined()
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("auto mode settles recovered asks but keeps protected ones visible", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  const replies: string[] = []
+  const { app, sync } = await mount(
+    (url) => {
+      const match = url.pathname.match(/^\/permission\/([^/]+)\/reply$/)
+      if (match) {
+        replies.push(match.at(1) ?? "")
+        return json(true)
+      }
+      if (url.pathname === "/permission")
+        return json([permission("per_normal"), protectedPermission("per_protected")])
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+    { auto: true },
+  )
+
+  try {
+    await wait(() => replies.includes("per_normal"))
+
+    // The normal ask was settled: replied once and cleared from the store.
+    expect(sync.data.permission[childID]?.some((item) => item.id === "per_normal")).toBe(false)
+
+    // The protected ask (skill shell batch) cannot be settled by a machine reply:
+    // the server refuses non-interactive approvals, so it must stay visible.
+    expect(sync.data.permission[childID]?.some((item) => item.id === "per_protected")).toBe(true)
+    expect(replies).not.toContain("per_protected")
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("auto mode stores a protected ask delivered by SSE instead of replying", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  const replies: string[] = []
+  const { app, emit, sync } = await mount(
+    (url) => {
+      const match = url.pathname.match(/^\/permission\/([^/]+)\/reply$/)
+      if (match) {
+        replies.push(match.at(1) ?? "")
+        return json(true)
+      }
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+    { auto: true },
+  )
+
+  try {
+    emit(wrap({ id: "evt_ask", type: "permission.asked", properties: protectedPermission("per_protected") }))
+    await wait(() => (sync.data.permission[childID] ?? []).length === 1)
+
+    // The server refuses machine replies for skill shell batches, so auto mode
+    // must not attempt one; the ask stays pending for a human decision.
+    expect(replies).toEqual([])
   } finally {
     app.renderer.destroy()
   }

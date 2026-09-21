@@ -187,8 +187,13 @@ export const {
       for (const child of children) evict(child)
     }
 
-    // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
-    function mergePending<T extends PermissionRequest | QuestionRequest>(
+// pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
+// kilocode_change start - skill shell batches and sandbox escalations need an interactive human decision:
+// the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
+const temporaryPermission = (request: PermissionRequest) =>
+  request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+// kilocode_change end
+function mergePending<T extends PermissionRequest | QuestionRequest>(
       list: T[],
       current: Record<string, T[]>,
       before: Set<string>,
@@ -229,10 +234,25 @@ export const {
       ])
       if (permission.mode === "auto") {
         for (const request of permissions) {
-          terminal.add(request.id) // kilocode_change - the auto-reply settles this ask
+          // kilocode_change start - skill shell batches and sandbox escalations cannot be settled by a
+          // machine reply: the server refuses non-interactive approvals, so they stay pending for a
+          // human decision and must remain visible instead of being cleared
+          if (temporaryPermission(request)) continue
+          // kilocode_change end
+          terminal.add(request.id)
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
         }
-        setStore("permission", reconcile({}))
+        // kilocode_change start - keep protected asks visible; clear only what was settled
+        const kept = new Map<string, PermissionRequest>()
+        for (const request of [...Object.values(store.permission).flat(), ...permissions]) {
+          if (!temporaryPermission(request)) continue
+          kept.set(request.id, request)
+        }
+        const next: Record<string, PermissionRequest[]> = {}
+        for (const request of kept.values()) (next[request.sessionID] ??= []).push(request)
+        for (const list of Object.values(next)) list.sort((a, b) => a.id.localeCompare(b.id))
+        setStore("permission", reconcile(next))
+        // kilocode_change end
       } else {
         setStore(
           "permission",
@@ -312,7 +332,9 @@ export const {
         case "permission.asked": {
           const request = event.properties
           if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
-          if (permission.mode === "auto") {
+          // kilocode_change start - the server refuses non-interactive approvals for skill shell
+          // batches and sandbox escalations, so auto mode cannot settle them: store for a human decision
+          if (permission.mode === "auto" && !temporaryPermission(request)) {
             void sdk.client.permission.reply({
               requestID: request.id,
               reply: "once",
@@ -321,6 +343,7 @@ export const {
             })
             break
           }
+          // kilocode_change end
           const requests = store.permission[request.sessionID]
           if (!requests) {
             setStore("permission", request.sessionID, [request])
