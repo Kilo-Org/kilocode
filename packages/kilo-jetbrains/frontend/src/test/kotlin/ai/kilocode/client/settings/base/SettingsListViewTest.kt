@@ -2,6 +2,9 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.lineColor
+import ai.kilocode.client.testing.rowDescription
+import ai.kilocode.client.testing.rowTitle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.ChangesPanel
@@ -34,7 +37,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.ScrollingUtil
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -68,7 +70,14 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val bounds = view.list.getCellBounds(0, 0)
             val tip = view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4)))
 
-            assertEquals("<html>Use &lt;safe&gt; text<br>Across lines</html>", tip)
+            // Escaped, one line per source line, and capped so a long description wraps instead of
+            // stretching the tooltip off screen.
+            assertEquals(
+                "<html><body><div width=\"${UiStyle.Text.tipWidth()}\">" +
+                    "Use &lt;safe&gt; text<br/>Across lines" +
+                    "</div></body></html>",
+                tip,
+            )
         }
     }
 
@@ -195,8 +204,8 @@ class SettingsListViewTest : BasePlatformTestCase() {
             renderer.setSize(320, renderer.preferredSize.height)
             layout(renderer)
 
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
-            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            val title = rowTitle(renderer)
+            val desc = rowDescription(renderer)
 
             assertEquals(0, title.insets.left)
             assertTrue(desc.insets.left > title.insets.left)
@@ -213,7 +222,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             renderer.getListCellRendererComponent(list, row, 0, true, true)
 
             // Weight is what separates the title from the muted description beside and below it.
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(renderer)
             val iter = title.iterator()
             iter.next()
             assertEquals(SimpleTextAttributes.STYLE_BOLD, iter.textAttributes.style)
@@ -230,7 +239,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             renderer.getListCellRendererComponent(list, row, 0, true, true)
 
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(renderer)
             val iter = title.iterator()
             iter.next()
             assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
@@ -293,7 +302,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             val badge = components(renderer).filterIsInstance<JBLabel>()
                 .single { (it.icon as? FilledBadgeIcon)?.text == "Running" }
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(renderer)
 
             assertTrue(badge.isVisible)
             assertTrue(badge.width >= badge.icon.iconWidth)
@@ -314,7 +323,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             layout(renderer)
 
             val pill = components(renderer).filterIsInstance<ActiveListBadgeCell>().single()
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(renderer)
             val pillX = SwingUtilities.convertPoint(pill.parent, pill.location, renderer).x
             val titleX = SwingUtilities.convertPoint(title.parent, title.location, renderer).x
 
@@ -427,10 +436,10 @@ class SettingsListViewTest : BasePlatformTestCase() {
             view.update(listOf(row))
             layout(view)
             val bounds = view.list.getCellBounds(0, 0)
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(renderer)
             val action = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Edit" }
 
-            assertTrue(components(renderer).filterIsInstance<JBLabel>().none { it.text == "Description" && it.isVisible })
+            assertFalse(rowDescription(renderer).isVisible)
             assertNull(view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4))))
             assertTrue(kotlin.math.abs(centerY(renderer, title) - centerY(renderer, action)) <= 1)
             assertTrue(kotlin.math.abs(centerY(renderer, action) - renderer.height / 2) <= 1)
@@ -580,8 +589,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
-            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
-            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+            assertEquals(UiStyle.Colors.weak(), lineColor(rowDescription(renderer)))
         }
     }
 
@@ -594,8 +602,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             renderer.getListCellRendererComponent(list, row, 0, true, true)
 
-            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
-            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+            assertEquals(UiStyle.Colors.weak(), lineColor(rowDescription(renderer)))
         }
     }
 
@@ -897,8 +904,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
-            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
-            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+            assertEquals(UiStyle.Colors.weak(), lineColor(rowDescription(renderer)))
         }
     }
 
@@ -1313,7 +1319,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
                 val area = activeListCellBounds(view.list, 0, selected = false).getValue("badge")
                 assertTrue(area.width > 0 && area.height > 0)
                 val renderer = rendered(view)
-                val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+                val title = rowTitle(renderer)
                 assertTrue(area.y >= topY(renderer, title) + title.height)
                 assertEquals("badge", activeListCellAt(view.list, 0, center(area), selected = false))
                 assertEquals("Badge details", view.list.getToolTipText(event(view.list, center(area))))
@@ -1353,8 +1359,8 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val leading = areas.getValue("leading")
             val trailing = areas.getValue("trailing")
             val renderer = rendered(view)
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
-            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            val title = rowTitle(renderer)
+            val desc = rowDescription(renderer)
             val panel = rowPanel(renderer)
             val text = (panel.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER)
             val origin = SwingUtilities.convertPoint(text.parent, text.location, renderer)

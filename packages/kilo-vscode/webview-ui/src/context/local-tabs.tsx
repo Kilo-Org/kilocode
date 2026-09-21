@@ -44,7 +44,7 @@ interface LocalTabsValue {
   active: Accessor<string | undefined>
   pending: Accessor<string | undefined>
   add: () => string
-  open: (id: string) => void
+  open: (id: string, options?: { scrollToBottom?: boolean }) => void
   openAfter: (source: string, id: string) => void
   select: (id: string) => void
   close: (id: string) => void
@@ -67,6 +67,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const pending = () => `${PENDING_TAB_PREFIX}${crypto.randomUUID()}`
   const init = restoreTabs(saved?.sidebarSessionTabIDs, saved?.sidebarActiveSessionTabID, pending)
   const [ids, setIds] = createSignal(init.ids)
+  onCleanup(session.trackScopes(ids))
   const [active, setActive] = createSignal(init.active)
   const [cloud, setCloud] = createSignal<string>()
   const fresh = new Set<string>()
@@ -75,13 +76,13 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     if (!same(ids(), next.ids)) setIds(next.ids)
     if (active() !== next.active) setActive(next.active)
   }
-  const focus = (id: string | undefined) => {
+  const focus = (id: string | undefined, options: { scrollToBottom?: boolean } = {}) => {
     setCloud(undefined)
     if (!id || isPendingTab(id)) {
       session.clearCurrentSession()
       return
     }
-    session.selectSession(id)
+    session.selectSession(id, options)
   }
   const real = createMemo(() => ids().filter((id) => !isPendingTab(id)))
   const activePending = createMemo(() => {
@@ -95,9 +96,9 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     focus(id)
   }
 
-  const open = (id: string) => {
+  const open = (id: string, options: { scrollToBottom?: boolean } = {}) => {
     apply(openSessionTab(current(), id))
-    focus(id)
+    focus(id, options)
   }
 
   const openAfter = (source: string, id: string) => {
@@ -203,6 +204,10 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         const before = active()
         const listed = message.sessions.map((item) => item.id)
         for (const id of listed) fresh.delete(id)
+        // Appended pages only add older sessions; they do not list every open
+        // tab, so reconciling against them would close tabs for sessions that
+        // are still valid.
+        if (message.append) return
         const next = reconcileTabs(current(), [...listed, ...(message.preserveSessionIds ?? []), ...fresh], pending)
         apply(next)
         if (before !== next.active) focus(next.active)

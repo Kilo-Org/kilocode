@@ -56,16 +56,7 @@ This returns model information including pricing, context window, and supported 
 
 ### Free models
 
-Several models are available at no cost, subject to rate limits:
-
-| Model ID | Description |
-|---|---|
-| `stepfun/step-3.7-flash:free` | StepFun Step 3.7 Flash |
-| `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 |
-| `poolside/laguna-xs-2.1:free` | Poolside Laguna XS 2.1 |
-| `nvidia/nemotron-3-ultra-550b-a55b:free` | NVIDIA Nemotron 3 Ultra |
-| `tencent/hy3:free` | Tencent Hy3 |
-| `openrouter/free` | Best available free model |
+Several models are available at no cost, subject to rate limits. Availability changes; check the [live model catalog](https://kilo.ai/models) for current free options and model IDs.
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
 
@@ -75,7 +66,7 @@ For NVIDIA free endpoints (Super/Ultra/etc): Trial use only - do not submit pers
 
 ## Auto models
 
-Auto virtual models select an underlying model using tier-specific routing. Frontier uses the `x-kilocode-mode` request header. Efficient classifies task difficulty in session context and falls back to the API interface for its baseline model, Free uses deterministic affinity across available candidates, and Small uses account balance.
+Auto virtual models select an underlying model using tier-specific routing. Frontier uses the `x-kilocode-mode` request header. Efficient classifies task difficulty in session context and falls back to a fixed baseline model, Free uses deterministic affinity across available candidates, and Small uses account balance.
 
 {% callout type="info" title="Underlying models can change" %}
 The mappings below reflect the current routing. The underlying models behind each `kilo-auto/*` tier are updated server-side as better options become available or as providers change pricing and availability — the tier IDs themselves remain stable.
@@ -93,13 +84,7 @@ Highest performance and capability for any task. Frontier requests are sent with
 
 ### `kilo-auto/efficient`
 
-Session-aware routing that classifies each request by difficulty and routes to the cheapest model proven accurate enough for the task. When no confident routing decision can be made, requests fall back to a baseline model resolved by the API interface used by the client.
-
-| API interface | Resolved Model | Reasoning effort |
-|---|---|---|
-| Completions (default) | `qwen/qwen3.6-plus` | enabled |
-| Responses API | `openai/gpt-5.5` | low |
-| Messages API | `anthropic/claude-sonnet-4.6` | low |
+Session-aware routing that classifies each request by difficulty and routes to the cheapest model proven accurate enough for the task. When no confident routing decision can be made, requests fall back to `z-ai/glm-5.3-flash`.
 
 ### `kilo-auto/free`
 
@@ -115,7 +100,7 @@ Automatically routes to a small, fast model for lightweight background tasks (se
 
 | Condition | Resolved Model |
 |---|---|
-| Account has paid balance | `google/gemma-4-31b-it` |
+| Account has paid balance | `google/gemma-4-26b-a4b-it` |
 | No balance / free account | `google/gemma-4-26b-a4b-it:free` |
 
 ### Example usage

@@ -30,7 +30,7 @@ Before connecting:
 - For GitHub: You need permission to install GitHub Apps for the repositories you want Kilo to access.
 - For GitLab: You need **Maintainer** role (or higher) on the projects you want to connect.
 - For DoltHub: You need a DoltHub account to authorize the OAuth connection.
-- (Optional) If you're connecting an organization, you must be an admin or have app installation permissions.
+- For a Kilo organization, adding a GitHub integration requires the **Owner** or **Admin** role, in addition to permission to install the app on GitHub.
 
 ---
 
@@ -161,15 +161,17 @@ Once your integrations are connected, the following features are enabled in Kilo
 - Use DoltHub alongside GitHub or GitLab when a workflow also needs repository access
 - Authorize Gas Town Wasteland to fork commons databases, push claims and evidence, and manage DoltHub PRs. Wasteland also supports an advanced API token option when OAuth is not available.
 
-### Upcoming:
+### Bitbucket
 
-- **Bitbucket Integration**
+Organization accounts can connect Bitbucket Cloud and select its repositories when starting [Cloud Agent sessions](/docs/code-with-ai/platforms/cloud-agent) on the web or in the mobile app. Connect Bitbucket from your organization's **Integrations** page. Bitbucket is not available for personal accounts.
 
 ---
 
 ## Managing or Removing the Integration
 
 ### GitHub
+
+An organization Owner or Admin can connect multiple GitHub organizations. Click **Add organization** and repeat the installation flow. Each installation has its own connection status, repository scope, selected repository list, and management actions. Personal accounts use a single GitHub connection.
 
 From the **Integrations** page, click "Manage on GitHub" to:
 

@@ -1,10 +1,12 @@
 package ai.kilocode.client.ui
 
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
+import com.intellij.xml.util.XmlStringUtil
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -16,6 +18,17 @@ open class PickerButton : JBLabel() {
     private var over = false
 
     var onPickClose: () -> Unit = {}
+
+    /**
+     * Id of the action whose keymap shortcut is appended to the tooltip (e.g. "Select mode (⌃1)").
+     * Null in hosts with no bound shortcut (settings pages, the New Worktree dialog), where the
+     * tooltip stays plain. Setting this triggers [syncTooltip] so the hint appears immediately.
+     */
+    var action: String? = null
+        set(value) {
+            field = value
+            syncTooltip()
+        }
 
     /**
      * Idle (unhovered) fill. Defaults to the standard picker surface; set to `null` to paint
@@ -77,6 +90,22 @@ open class PickerButton : JBLabel() {
     /** Popup close handler: [ok] is true only when a value was chosen (not on cancel/escape). */
     internal fun pickClosed(ok: Boolean) {
         if (ok) onPickClose()
+    }
+
+    /**
+     * Recomputes [toolTipText] from the picker's current state (selection, [action]). No-op by
+     * default; pickers with a tooltip override [syncTooltip] and call [tip] to build the text.
+     */
+    open fun syncTooltip() {}
+
+    /**
+     * [base] with the [action] keymap shortcut appended (e.g. "Select mode (⌃1)"), or [base]
+     * unchanged when [action] is null. [extra], when present, is appended as an additional HTML
+     * line (e.g. a data-collection notice).
+     */
+    protected fun tip(base: String, extra: String? = null): String {
+        val withShortcut = action?.let { KeymapUtil.createTooltipText(base, it) } ?: base
+        return if (extra == null) withShortcut else XmlStringUtil.wrapInHtmlLines(withShortcut, extra)
     }
 
     private fun pickerBorder() = JBUI.Borders.empty(UiStyle.Gap.xs(), UiStyle.Gap.lg())

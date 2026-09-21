@@ -15,6 +15,7 @@
 @import "./session-actions.css";
 @import "./welcome.css";
 @import "./prompt-input.css";
+@import "./goal.css";
 @import "./prompt-dropdowns.css";
 @import "./model-selector.css";
 @import "./permission-dock.css";
@@ -28,3 +29,54 @@
 @import "./settings.css";
 @import "./provider-usage.css";
 @import "./high-contrast.css";
+
+.agent-manager-attribution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 6px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  line-height: 16px;
+  white-space: normal;
+}
+
+.agent-manager-attribution-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.agent-manager-attribution-link {
+  margin-left: auto;
+}
+
+.agent-manager-attribution-status {
+  margin-left: auto;
+}
+
+/* A collapsed injected prompt fades out at the bottom of the bubble so it
+   reads as "continues", not as the complete message. The bubble background is
+   a translucent tint, so a mask is used instead of a color gradient overlay. */
+[data-slot="user-message-text"]:has(> .agent-manager-attribution[data-collapsed]) {
+  mask-image: linear-gradient(to bottom, black calc(100% - 36px), rgba(0, 0, 0, 0.25) 100%);
+}
+
+.agent-manager-attribution-toggle {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-weak);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.agent-manager-attribution-toggle:hover,
+.agent-manager-attribution-toggle:focus-visible {
+  color: var(--text-base);
+  text-decoration: underline;
+}

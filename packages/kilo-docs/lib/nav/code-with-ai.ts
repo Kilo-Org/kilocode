@@ -95,6 +95,10 @@ export const CodeWithAiNav: NavSection[] = [
           },
         ],
       },
+      {
+        href: "/code-with-ai/agents/goals",
+        children: "Session Goals",
+      },
     ],
   },
   {

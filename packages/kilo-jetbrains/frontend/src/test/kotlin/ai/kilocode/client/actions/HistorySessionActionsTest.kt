@@ -378,6 +378,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchName\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchPath\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.RunSetupScript\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.MoveToWorktree\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.RowMenu\""))
@@ -395,13 +396,14 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenLocalDiff\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchName\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchPath\""))
+        assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.MoveToWorktree\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
 
-        // Row menu order: rename, (separator), open pr, copy pr ref, open diff, open local diff,
-        // (separator), copy branch name, copy branch path, (separator), open/create setup script,
-        // run setup script, (separator), delete.
+        // Row menu order: rename, (separator), open pr, (separator), open diff, open local diff,
+        // (separator), copy branch name, copy branch path, copy pr ref, (separator),
+        // open/create setup script, run setup script, (separator), delete.
         val rowMenuStart = xml.indexOf("<group id=\"Kilo.Worktree.RowMenu\">")
         val rowMenuEnd = xml.indexOf("</group>", rowMenuStart)
         val rowMenu = xml.substring(rowMenuStart, rowMenuEnd)
@@ -410,18 +412,30 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
         val rename = rowMenu.indexOf("ref=\"Kilo.Worktree.Rename\"")
         val openPr = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
-        val copyPrRef = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyPrRef\"")
         val openDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
         val openLocalDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenLocalDiff\"")
         val copyName = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchName\"")
         val copyPath = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchPath\"")
+        val copyPrRef = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyPrRef\"")
         val openSetup = rowMenu.indexOf("ref=\"Kilo.OpenSetupScript\"")
         val runSetup = rowMenu.indexOf("ref=\"Kilo.Worktree.RunSetupScript\"")
         val delete = rowMenu.indexOf("ref=\"Kilo.Worktree.Delete\"")
         assertTrue(
-            rename in 0 until openPr && openPr < copyPrRef && copyPrRef < openDiff && openDiff < openLocalDiff &&
-                openLocalDiff < copyName && copyName < copyPath && copyPath < openSetup &&
-                openSetup < runSetup && runSetup < delete,
+            rename in 0 until openPr && openPr < openDiff && openDiff < openLocalDiff &&
+                openLocalDiff < copyName && copyName < copyPath && copyPath < copyPrRef &&
+                copyPrRef < openSetup && openSetup < runSetup && runSetup < delete,
+        )
+
+        // Worktree session row menu order: move to worktree, (separator), rename, delete.
+        val sessionRowMenuStart = xml.indexOf("<group id=\"Kilo.WorktreeSession.RowMenu\">")
+        val sessionRowMenuEnd = xml.indexOf("</group>", sessionRowMenuStart)
+        val sessionRowMenu = xml.substring(sessionRowMenuStart, sessionRowMenuEnd)
+        val move = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.MoveToWorktree\"")
+        val separator = sessionRowMenu.indexOf("<separator/>")
+        val sessionRename = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.Rename\"")
+        val sessionDelete = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.Delete\"")
+        assertTrue(
+            move in 0 until separator && separator < sessionRename && sessionRename < sessionDelete,
         )
     }
 

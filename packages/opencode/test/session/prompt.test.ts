@@ -10,7 +10,6 @@ import { Bus } from "@/bus"
 import { FetchHttpClient } from "effect/unstable/http"
 import { expect, spyOn } from "bun:test"
 import { Telemetry } from "@kilocode/kilo-telemetry"
-import { legacyReviewMessage } from "../../src/kilocode/review/command"
 import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
@@ -3096,37 +3095,6 @@ noLLMServer.instance(
       },
     },
   },
-)
-
-noLLMServer.instance(
-  "deprecated review alias returns static message without LLM",
-  () =>
-    Effect.gen(function* () {
-      const prompt = yield* SessionPrompt.Service
-      const sessions = yield* Session.Service
-      const session = yield* sessions.create({})
-      const text = legacyReviewMessage("local-review-uncommitted")!
-
-      const result = yield* prompt.command({
-        sessionID: session.id,
-        command: "local-review-uncommitted",
-        arguments: "focus on tests",
-        model: "test/test-model",
-      })
-
-      expect(result.info.role).toBe("assistant")
-      expect(result.parts).toHaveLength(1)
-      expect(result.parts[0].type).toBe("text")
-      if (result.parts[0].type === "text") expect(result.parts[0].text).toBe(text)
-
-      const msgs = yield* sessions.messages({ sessionID: session.id })
-      const user = msgs.find((msg) => msg.info.role === "user")
-      expect(
-        user?.parts.some((part) => part.type === "text" && part.text === "/local-review-uncommitted focus on tests"),
-      ).toBe(true)
-    }),
-  { config: cfg },
-  30_000,
 )
 
 it.instance(

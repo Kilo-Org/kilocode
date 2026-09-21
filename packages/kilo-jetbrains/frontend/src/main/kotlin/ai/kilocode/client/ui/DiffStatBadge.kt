@@ -28,10 +28,13 @@ internal class DiffStatBadge(
         REGULAR,
         COMPACT;
 
-        fun height() = when (this) {
-            REGULAR -> JBUI.scale(16)
-            COMPACT -> JBUI.scale(14)
+        /** Unscaled pill height, for the borders and insets that scale what they are handed. */
+        fun size() = when (this) {
+            REGULAR -> 16
+            COMPACT -> 14
         }
+
+        fun height() = JBUI.scale(size())
 
         fun gap() = when (this) {
             REGULAR -> UiStyle.Gap.sm()
@@ -53,6 +56,26 @@ internal class DiffStatBadge(
     }
     private lateinit var row: Stack
 
+    /**
+     * Marks the counts as belonging to a branch that no longer merges into its base.
+     *
+     * Painted as a filled circle behind the pill, offset so part of it clears the pill's trailing edge. The
+     * pill keeps its own background, its geometry, and its text, so the marker reads as something sitting
+     * behind the badge rather than as another figure inside it — a row scanned from the left still reads the
+     * counts first and the state of the merge after them.
+     *
+     * The room it needs is trailing padding, which is why it cannot cover a neighbour and why the counts do
+     * not shift when it appears.
+     */
+    var conflict: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            syncScale()
+            revalidate()
+            repaint()
+        }
+
     init {
         isOpaque = false
         row = Stack.horizontal(variant.gap()).next(removed).next(added)
@@ -69,7 +92,11 @@ internal class DiffStatBadge(
 
     /** A layout manager captures its gap once, so re-derive the spacing for the current scale. */
     private fun syncScale() {
-        border = if (fill) JBUI.Borders.empty(0, variant.pad(), 0, variant.pad() + inset) else JBUI.Borders.empty()
+        border = if (fill) {
+            JBUI.Borders.empty(0, variant.pad(), 0, variant.pad() + inset + overhang())
+        } else {
+            JBUI.Borders.empty()
+        }
         row.space = variant.gap()
     }
 
@@ -77,6 +104,18 @@ internal class DiffStatBadge(
         val dim = super.getPreferredSize()
         return Dimension(dim.width, variant.height())
     }
+
+    /**
+     * Unscaled room past the pill for the part of the conflict marker that clears it.
+     *
+     * A third of the marker's diameter rather than the half that would centre it on the pill's edge: sunk
+     * that much deeper, the circle's arc meets the pill's own trailing cap at a shallow angle and the two
+     * read as one swollen end rather than as a disc parked behind a pill.
+     *
+     * Zero without a pill to sit behind: a fill-less badge paints text alone, and a circle behind bare text
+     * would be a blob with nothing to explain it.
+     */
+    private fun overhang() = if (conflict && fill) variant.size() / 3 else 0
 
     override fun update(additions: Int, deletions: Int) {
         removed.isVisible = deletions > 0
@@ -92,10 +131,17 @@ internal class DiffStatBadge(
         }
         val g2 = g.create() as Graphics2D
         try {
-            val w = maxOf(0, width - JBUI.scale(inset))
+            val over = JBUI.scale(overhang())
+            val w = maxOf(0, width - JBUI.scale(inset) - over)
             val h = minOf(height, variant.height())
             val y = (height - h) / 2
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            if (over > 0) {
+                // Drawn first so the pill covers it: the circle is the pill's own trailing cap shifted out
+                // by [overhang], which leaves the two curves crossing rather than a tab stuck on the side.
+                g2.color = UiStyle.Badge.ActivityError.bg()
+                g2.fillOval(w + over - h, y, h, h)
+            }
             g2.color = backgroundColor()
             g2.fillRoundRect(0, y, w, h, h, h)
         } finally {

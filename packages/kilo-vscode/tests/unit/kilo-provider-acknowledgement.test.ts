@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "bun:test"
 import type { EventSessionTurnClose, Session } from "@kilocode/sdk/v2/client"
 import { KiloProvider } from "../../src/KiloProvider"
+import type { GitOps } from "../../src/agent-manager/GitOps"
+import type { GitStatsPoller } from "../../src/agent-manager/GitStatsPoller"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
 import type { SSEPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
@@ -25,10 +27,20 @@ function completion(id = "evt-001"): EventSessionTurnClose {
   return { id, type: "session.turn.close", properties: { sessionID: "s1", parentID: "parent", reason: "completed" } }
 }
 
-function attach(connection: KiloConnectionService, blocked = true) {
-  const provider = new KiloProvider({} as never, connection)
+function attach(
+  connection: KiloConnectionService,
+  blocked = true,
+  opts: ConstructorParameters<typeof KiloProvider>[3] = {},
+) {
+  const provider = new KiloProvider({} as never, connection, undefined, opts)
   resources.push(provider)
-  const internal = provider as unknown as { initConnectionPromise: Promise<void> }
+  const internal = provider as unknown as {
+    initConnectionPromise: Promise<void>
+    _getHtmlForWebview: () => string
+    startStatsPolling: () => void
+    statsPoller: GitStatsPoller | null
+    statsGitOps: GitOps | null
+  }
   internal.initConnectionPromise = Promise.resolve()
   const pending = Promise.withResolvers<(message: Record<string, unknown>) => Promise<void>>()
   const sent: unknown[] = []
@@ -46,7 +58,7 @@ function attach(connection: KiloConnectionService, blocked = true) {
       return blocked ? null : message
     },
   })
-  return { provider, webview, sent, intercepts, receive: pending.promise }
+  return { provider, internal, webview, sent, intercepts, receive: pending.promise }
 }
 
 describe("session acknowledgement host routing", () => {
@@ -240,5 +252,118 @@ describe("webview activation host routing", () => {
     change()
     expect(editor.sent.at(-1)).toEqual({ type: "webviewActiveChanged", active: false })
     expect([...presence.visible.values()].flatMap((ids) => [...ids])).toEqual([])
+  })
+})
+
+describe("webview stats visibility", () => {
+  function surface(kind: "sidebar" | "panel", visible: boolean) {
+    const editor = attach(create())
+    editor.internal._getHtmlForWebview = () => ""
+    const listeners = new Set<() => void>()
+    const subscribe = (listener: () => void) => {
+      listeners.add(listener)
+      return { dispose: () => listeners.delete(listener) }
+    }
+    const view = {
+      webview: editor.webview,
+      active: false,
+      visible,
+      onDidChangeViewState: subscribe,
+      onDidChangeVisibility: subscribe,
+    }
+    const resolve = () => {
+      if (kind === "sidebar") {
+        editor.provider.resolveWebviewView(view as never, {} as never, {} as never)
+        return
+      }
+      editor.provider.resolveWebviewPanel(view as never)
+    }
+    resolve()
+    return {
+      ...editor,
+      view,
+      listeners,
+      resolve,
+      change: (visible: boolean) => {
+        view.visible = visible
+        for (const listener of listeners) listener()
+      },
+    }
+  }
+
+  it.each(["sidebar", "panel"] as const)("keeps initially hidden %s stats disabled", (kind) => {
+    const editor = surface(kind, false)
+    editor.internal.startStatsPolling()
+
+    expect(editor.internal.statsPoller).toMatchObject({ active: false, visible: false, timer: undefined })
+
+    editor.change(true)
+    expect(editor.internal.statsPoller).toMatchObject({ active: true, visible: true })
+  })
+
+  it.each(["sidebar", "panel"] as const)("pauses and resumes %s stats without replacing the poller", (kind) => {
+    const editor = surface(kind, true)
+    editor.internal.startStatsPolling()
+    const poller = editor.internal.statsPoller
+
+    expect(poller).toMatchObject({ active: true, visible: true })
+    editor.change(false)
+    expect(poller).toMatchObject({ active: false, visible: false, timer: undefined })
+    editor.change(true)
+    expect(editor.internal.statsPoller).toBe(poller)
+    expect(poller).toMatchObject({ active: true, visible: true })
+  })
+
+  it.each(["sidebar", "panel"] as const)("keeps replacement %s stats paused while hidden", (kind) => {
+    const editor = surface(kind, true)
+    editor.change(false)
+    editor.internal.startStatsPolling()
+    const poller = editor.internal.statsPoller
+    const git = editor.internal.statsGitOps
+    editor.internal.startStatsPolling()
+
+    expect(editor.internal.statsPoller).not.toBe(poller)
+    expect(git?.disposed).toBe(true)
+    expect(editor.internal.statsPoller).toMatchObject({ active: false, visible: false, timer: undefined })
+  })
+
+  it.each(["sidebar", "panel"] as const)("applies current %s visibility when resolving again", (kind) => {
+    const editor = surface(kind, true)
+    editor.internal.startStatsPolling()
+    editor.view.visible = false
+    editor.resolve()
+
+    expect(editor.listeners.size).toBe(1)
+    expect(editor.internal.statsPoller).toMatchObject({ active: false, visible: false, timer: undefined })
+  })
+
+  it.each(["sidebar", "panel"] as const)("disposes %s stats and visibility listeners", (kind) => {
+    const editor = surface(kind, true)
+    editor.internal.startStatsPolling()
+    editor.provider.dispose()
+    editor.change(false)
+    editor.change(true)
+
+    expect(editor.listeners.size).toBe(0)
+    expect(editor.internal.statsPoller).toMatchObject({ active: false, timer: undefined })
+    expect(editor.internal.statsGitOps?.disposed).toBe(true)
+  })
+
+  it("preserves stats polling for custom embedded webviews", () => {
+    const editor = attach(create())
+    editor.internal.startStatsPolling()
+    editor.provider.setStreamVisibility(false)
+
+    expect(editor.internal.statsPoller).toMatchObject({ active: true, visible: true })
+  })
+
+  it("keeps Agent Manager embedded stats disabled across activation changes", () => {
+    const editor = attach(create(), true, { disableStatsPolling: true, disableViewedRegistration: true })
+    for (const active of [false, true, false, true]) {
+      editor.provider.setStreamVisibility(active)
+      editor.internal.startStatsPolling()
+      expect(editor.internal.statsPoller).toBeNull()
+      expect(editor.internal.statsGitOps).toBeNull()
+    }
   })
 })

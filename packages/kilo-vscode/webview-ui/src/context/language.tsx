@@ -218,7 +218,9 @@ export const LanguageProvider: ParentComponent<LanguageProviderProps> = (props) 
     <LanguageContext.Provider
       value={{ locale, setLocale, userOverride, t: t as (key: string, params?: UiI18nParams) => string }}
     >
-      <I18nProvider value={{ locale: () => locale(), t, plural }}>{props.children}</I18nProvider>
+      {/* Shared UI formats dates and numbers with Intl from this value, so it
+          must be a BCP-47 tag (Kilo's "zht" is not one). */}
+      <I18nProvider value={{ locale: () => localeToBcp47(locale()), t, plural }}>{props.children}</I18nProvider>
     </LanguageContext.Provider>
   )
 }

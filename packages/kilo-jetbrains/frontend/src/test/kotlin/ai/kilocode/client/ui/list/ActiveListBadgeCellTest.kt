@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.util.ui.JBFont
 import javax.swing.Icon
 
 class ActiveListBadgeCellTest : BasePlatformTestCase() {
@@ -63,6 +64,61 @@ class ActiveListBadgeCellTest : BasePlatformTestCase() {
 
         cell.update(ActiveListBadge("#8", UiStyle.Badge.PullRequestMerged))
         assertEquals("#8", assertInstanceOf(cell.icon, FilledBadgeIcon::class.java).text)
+    }
+
+    fun `test a labelled glyph renders the icon beside its count`() {
+        val cell = ActiveListBadgeCell()
+
+        cell.update(ActiveListBadge("3", id = "pr-comments", icon = glyph), UiStyle.Colors.weak())
+
+        // Unlike a pill, whose text is painted inside the icon, a counted status keeps its number as real
+        // label text so the glyph and the figure sit side by side.
+        assertSame(glyph, cell.icon)
+        assertEquals("3", cell.text)
+        assertEquals(UiStyle.Colors.weak(), cell.foreground)
+        // Font and gap match the ahead/behind counters in ChangesPanel: glyph and figure are one token, and
+        // the default label gap pulls them apart into an icon with a caption.
+        assertEquals(JBFont.small(), cell.font)
+        assertEquals(UiStyle.Gap.xs(), cell.iconTextGap)
+    }
+
+    fun `test a bare glyph carries no label text`() {
+        val cell = ActiveListBadgeCell()
+
+        cell.update(ActiveListBadge("", id = "pr-checks", icon = glyph), UiStyle.Colors.weak())
+
+        assertEquals("", cell.text)
+    }
+
+    fun `test a pill keeps its text inside the icon and off the label`() {
+        val cell = ActiveListBadgeCell()
+
+        cell.update(ActiveListBadge("#7", UiStyle.Badge.PullRequestOpen, id = "pull-request"), UiStyle.Colors.weak())
+
+        // Doubling the text onto the label would print "#7" twice, once painted in the pill.
+        assertEquals("", cell.text)
+        assertEquals("#7", assertInstanceOf(cell.icon, FilledBadgeIcon::class.java).text)
+    }
+
+    fun `test a count that changed replaces the label without churning the glyph`() {
+        val cell = ActiveListBadgeCell()
+        cell.update(ActiveListBadge("3", id = "pr-comments", icon = glyph), UiStyle.Colors.weak())
+
+        cell.update(ActiveListBadge("2", id = "pr-comments", icon = glyph), UiStyle.Colors.weak())
+
+        assertEquals("2", cell.text)
+        assertSame(glyph, cell.icon)
+    }
+
+    fun `test a labelled glyph that loses its count clears the label`() {
+        val cell = ActiveListBadgeCell()
+        cell.update(ActiveListBadge("3", id = "pr-comments", icon = glyph), UiStyle.Colors.weak())
+
+        cell.update(ActiveListBadge("", id = "pr-checks", icon = other), UiStyle.Colors.weak())
+
+        // The cells are recycled across rows, so a stale count must not survive onto a bare glyph.
+        assertEquals("", cell.text)
+        assertSame(other, cell.icon)
     }
 
     fun `test only a badge with an action is treated as clickable`() {

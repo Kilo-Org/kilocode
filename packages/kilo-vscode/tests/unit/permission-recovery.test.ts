@@ -7,6 +7,7 @@ import {
   type RecoverablePermission,
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
+import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
 function pending(id: string, sessionID: string, permission = "bash"): RecoverablePermission {
@@ -128,6 +129,56 @@ describe("recoveryDirs", () => {
 })
 
 describe("handlePermissionResponse", () => {
+  it("rejects an unknown route without using a workspace fallback", async () => {
+    const { fake, messages, replies } = ctx({ tracked: ["s1"] })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+
+    await handlePermissionResponse(fake, "missing", "s1", "once", [], [])
+    log.mockRestore()
+
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "missing" }])
+  })
+
+  it("shares one save/reply sequence across concurrent callers", async () => {
+    const { fake, sdk, messages, replies, saves } = ctx({ tracked: ["s1"] })
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const routed: PermissionContext = {
+      ...fake,
+      recordPermissionDirectory: (id, dir, sessionID) => service.recordPermissionDirectory(id, dir, sessionID),
+      getPermissionDirectory: (id) => service.getPermissionDirectory(id),
+      getPermissionSession: (id) => service.getPermissionSession(id),
+      clearPermissionDirectory: (id) => service.clearPermissionDirectory(id),
+      runPermissionResponse: (id, sessionID, action) => service.runPermissionResponse(id, sessionID, action),
+      isPermissionResponseClaimed: (id) => service.isPermissionResponseClaimed(id),
+      clearPermissionResponse: (id) => service.clearPermissionResponse(id),
+    }
+    const gate = Promise.withResolvers<{ data: true }>()
+    service.recordPermissionDirectory("p1", "/workspace", "s1")
+    spyOn(sdk.permission, "reply").mockImplementation(async (args) => {
+      replies.push(args)
+      return gate.promise
+    })
+
+    try {
+      const first = handlePermissionResponse(routed, "p1", "s1", "once", ["bun *"], [])
+      const second = handlePermissionResponse(routed, "p1", "s1", "reject", ["npm *"], [])
+      await Promise.resolve()
+      gate.resolve({ data: true })
+      await Promise.all([first, second])
+    } finally {
+      service.dispose()
+    }
+
+    expect(saves).toEqual([{ requestID: "p1", directory: "/workspace", approvedAlways: ["bun *"], deniedAlways: [] }])
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: "/workspace", interactive: true }])
+    expect(messages).toEqual([
+      { type: "permissionResolved", permissionID: "p1", sessionID: "s1", response: "once" },
+      { type: "permissionResolved", permissionID: "p1", sessionID: "s1", response: "once" },
+    ])
+    expect(messages.some((message) => (message as { type: string }).type === "permissionError")).toBe(false)
+  })
+
   it.each(["once", "always", "reject"] as const)(
     "acknowledges %s for an untracked child without an SSE event",
     async (response) => {
@@ -171,6 +222,23 @@ describe("handlePermissionResponse", () => {
     ])
     expect(replies).toEqual([
       { requestID: "p1", reply: "reject", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+    ])
+  })
+
+  it("forwards reject feedback as the reply message", async () => {
+    const { fake, replies, permDirs } = ctx({ tracked: ["s1"] })
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "reject", [], [], "use tabs, not spaces")
+
+    expect(replies).toEqual([
+      {
+        requestID: "p1",
+        reply: "reject",
+        directory: "/workspace/.kilo/worktrees/feature",
+        interactive: true,
+        message: "use tabs, not spaces",
+      },
     ])
   })
 
@@ -226,6 +294,38 @@ describe("handlePermissionResponse", () => {
     expect(permDirs.has("p1")).toBe(true)
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
   })
+
+  it("treats an aborted rule save as stale once the request is settled", async () => {
+    const error = new Error("The operation was aborted due to timeout")
+    const { fake, messages, permDirs, queries } = ctx({ tracked: ["s1"], errors: { save: error } })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(queries).toContain("/workspace/.kilo/worktrees/feature")
+    expect(permDirs.has("p1")).toBe(false)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", stale: true }])
+  })
+
+  it("keeps an aborted rule save retryable while the request is still pending", async () => {
+    const error = new Error("The operation was aborted due to timeout")
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, permDirs } = ctx({
+      tracked: ["s1"],
+      errors: { save: error },
+      permsPerDir: { [dir]: [pending("p1", "s1")] },
+    })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", dir)
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(permDirs.has("p1")).toBe(true)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+  })
 })
 
 describe("recoverablePermissions", () => {
@@ -240,6 +340,14 @@ describe("recoverablePermissions", () => {
     const seen = new Set<string>()
     expect(recoverablePermissions([pending("p1", "s1"), pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(1)
     expect(recoverablePermissions([pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(0)
+  })
+
+  it("skips permissions already claimed by a response", () => {
+    const seen = new Set<string>()
+    expect(
+      recoverablePermissions([pending("p1", "s1"), pending("p2", "s1")], new Set(["s1"]), seen, (id) => id === "p1"),
+    ).toEqual([pending("p2", "s1")])
+    expect(seen).toEqual(new Set(["p1", "p2"]))
   })
 })
 

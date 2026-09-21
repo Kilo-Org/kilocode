@@ -11,6 +11,8 @@ import ai.kilocode.client.testing.deactivateIde
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
+import com.intellij.notification.Notification
+import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -108,6 +110,40 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         // And the recovery is picked up on its own, without the user doing anything.
         assertEquals(GhAvailability.OK, service.current())
         handle.close()
+    }
+
+    fun `test coordinator slows down for a gh that does not answer`() {
+        // A timeout used to be classified OK, which reset the failure count and kept the loop paying a
+        // full budget per poll for a command that never returns.
+        rpc.ghResult = GhAvailability.TIMEOUT
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(GhAvailability.TIMEOUT, service.current())
+        assertEquals(1, rpc.ghCalls.size)
+
+        // SLOW, not the 30s OK cadence.
+        timers.advanceBy(59_999)
+        drain()
+        assertEquals("a gh that timed out must not be re-probed on the ok cadence", 1, rpc.ghCalls.size)
+
+        rpc.ghResult = GhAvailability.OK
+        timers.advanceBy(1)
+        drain()
+        assertEquals(2, rpc.ghCalls.size)
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
+    fun `test a timeout stays silent but does not consume the one-shot announcement`() {
+        // `notified` only clears on a return to OK, so a TIMEOUT that marked itself announced would
+        // silence the actionable state reached straight from it.
+        val quiet = notifications { report(GhAvailability.TIMEOUT) }
+        assertTrue("a slow gh is not actionable and must not pop a notification", quiet.isEmpty())
+
+        val loud = notifications { report(GhAvailability.MISSING) }
+
+        assertEquals(1, loud.size)
+        assertTrue(loud.first().title.isNotEmpty())
     }
 
     fun `test coordinator backs off on backend failure without reporting ok`() {
@@ -469,6 +505,27 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
     private fun report(value: GhAvailability) {
         edtWait { service.report(project, value) }
         pump()
+    }
+
+    /** Every notification published while [block] runs, on both buses KiloNotifications can reach. */
+    private fun notifications(block: () -> Unit): List<Notification> {
+        val notes = mutableListOf<Notification>()
+        val listener = object : Notifications {
+            override fun notify(notification: Notification) {
+                notes.add(notification)
+            }
+        }
+        val app = ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+        val proj = project.messageBus.connect(testRootDisposable)
+        app.subscribe(Notifications.TOPIC, listener)
+        proj.subscribe(Notifications.TOPIC, listener)
+        try {
+            block()
+        } finally {
+            app.disconnect()
+            proj.disconnect()
+        }
+        return notes
     }
 
     private fun github(enabled: Boolean) {

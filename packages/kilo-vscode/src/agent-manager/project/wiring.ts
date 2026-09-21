@@ -35,7 +35,7 @@ export function createProjectWiring(opts: {
   /** Initialize an expanded background context and push its state. */
   expand: (ctx: ProjectContext) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
-  ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
+  ready: (ctx: ProjectContext, opts?: { warm?: boolean }) => Promise<ProjectInitResult>
   /** Push the project catalog to the webview. */
   push: () => void
   /** Push one project's state (or every context when omitted) to the webview. */
@@ -45,6 +45,8 @@ export function createProjectWiring(opts: {
   removed?: (id: string) => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: import("./route").SidebarTarget) => void
+  /** Post an outbound message to the webview. */
+  post: (message: import("../types").AgentManagerOutMessage) => void
   /** Route one session to a directory inside a project (override + project route). */
   routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
 }): ProjectWiring {
@@ -60,19 +62,26 @@ export function createProjectWiring(opts: {
       opts.host.unregisterProjectRoutes(id)
       opts.removed?.(id)
     },
-    deps: { log: opts.output, git: opts.git },
+    deps: {
+      log: opts.output,
+      git: opts.git,
+      worktreePool: () => opts.host.worktreePool(),
+      sized: (ctx) => opts.pushState(ctx),
+    },
   })
   const messages: ProjectMessageDeps = {
     registry,
     contexts,
     enabled: () => opts.host.multiProject(),
-    pickFolder: () => opts.host.pickFolder(),
+    pickFolder: (input) => opts.host.pickFolder(input),
+    onboarding: opts.host,
     activate: opts.activate,
     expand: opts.expand,
     ready: opts.ready,
     push: opts.push,
     pushState: opts.pushState,
     selected: opts.selected,
+    post: opts.post,
     routeSession: opts.routeSession,
     git: opts.git,
     error: (message) => opts.host.showError(message),
@@ -94,6 +103,14 @@ export function createProjectWiring(opts: {
       }
       opts.push()
       opts.pushState()
+    }),
+    opts.host.onDidChangeWorktreePool((enabled) => {
+      for (const project of contexts.snapshots()) {
+        const manager = contexts.get(project.id)?.peekWorktrees()
+        if (!manager) continue
+        if (enabled) manager.warmPool()
+        else manager.disposePool().catch((err) => opts.log("Failed to clear worktree pool:", err))
+      }
     }),
   ]
   return {

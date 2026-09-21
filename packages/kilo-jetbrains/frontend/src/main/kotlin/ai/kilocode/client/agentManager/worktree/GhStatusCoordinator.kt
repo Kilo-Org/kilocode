@@ -23,6 +23,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+/**
+ * [probe] always resolves its target directory from [target]'s [Project.kiloRoot], which is the
+ * project's main repository root, never a worktree — so this class does not need to know when a
+ * worktree is being deleted. The one case that still matters (the *open project itself* is a
+ * worktree that another window is deleting) is covered on the backend: `KiloWorktreeRpcApiImpl`'s
+ * `probeGh` checks `WorktreeTrash` before spawning `git`/`gh`, since the RPC is directory-scoped and
+ * cannot rely on this coordinator's behavior.
+ */
 @Service(Service.Level.APP)
 class GhStatusCoordinator(
     private val cs: CoroutineScope,
@@ -110,7 +118,12 @@ class GhStatusCoordinator(
      */
     @RequiresEdt
     private fun focus() {
-        val gone = away.back() ?: return
+        val gone = away.back() ?: run {
+            // Logged so the absence of a frame-focus probe reads as "nothing to answer" rather than as
+            // a listener that never fired, which is otherwise indistinguishable in the log.
+            LOG.info("gh focus ignored, no absence to answer")
+            return
+        }
         syncEdt("frame-focus", Away.ceiling(gone))
     }
 
@@ -249,7 +262,10 @@ class GhStatusCoordinator(
         if (next == GhAvailability.OK) {
             notified = false
         } else if (!notified) {
-            notified = true
+            // TIMEOUT pops nothing (see [notify]), so it must not consume the one-shot either.
+            // `notified` only clears on a return to OK, so marking it here would silence an
+            // actionable MISSING/UNAUTH reached directly from TIMEOUT.
+            if (next != GhAvailability.TIMEOUT) notified = true
             notify(project, next)
         }
         schedule()
@@ -386,10 +402,16 @@ class GhStatusCoordinator(
         GhAvailability.MISSING -> SLOW
         GhAvailability.GIT_MISSING -> SLOW
         GhAvailability.RATE_LIMITED -> LIMITED
+        // A gh that does not answer is asked again rarely: each attempt costs a full budget, and the
+        // fast cadence is what turned one hanging command into a permanent stall.
+        GhAvailability.TIMEOUT -> SLOW
     }
 
     @RequiresEdt
     private fun notify(project: Project?, value: GhAvailability) {
+        // Nothing for the user to do about a slow gh, and a popup per stall would be pure noise. The
+        // banner still explains the degraded state.
+        if (value == GhAvailability.TIMEOUT) return
         val target = project ?: ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
         if (value == GhAvailability.GIT_MISSING) {
             KiloNotifications.suggestion(

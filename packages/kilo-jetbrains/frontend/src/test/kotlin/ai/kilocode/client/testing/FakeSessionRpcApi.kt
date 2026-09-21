@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionShareDto
@@ -135,6 +136,15 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** When set, [create] throws it after incrementing [creates] — simulates a paused backend. */
     var createThrows: Exception? = null
 
+    /** Fork call tracking. [forked] is what [fork] returns; when null it derives one from the source. */
+    val forks = java.util.concurrent.CopyOnWriteArrayList<ForkCall>()
+    var forked: SessionDto? = null
+    var forkThrows: Exception? = null
+
+    /** Holds [fork] open so a test can observe the window a second request would land in. */
+    var forkGate: CompletableDeferred<Unit>? = null
+
+    data class ForkCall(val id: String, val directory: String, val messageId: String?)
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
     data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
@@ -148,6 +158,15 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         creates++
         createThrows?.let { throw it }
         return session
+    }
+
+    override suspend fun fork(id: String, directory: String, messageId: String?): SessionDto {
+        assertNotEdt("fork")
+        forks.add(ForkCall(id, directory, messageId))
+        forkGate?.await()
+        forkThrows?.let { throw it }
+        val source = listed.firstOrNull { it.id == id } ?: session
+        return forked ?: source.copy(id = "${id}_fork", directory = directory, title = "${source.title} (fork #1)")
     }
 
     override suspend fun list(directory: String): SessionListDto {
@@ -362,6 +381,31 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> {
         assertNotEdt("pendingQuestions")
         return pendingQuestionList.toList()
+    }
+
+    // ------ shared agent board ------
+
+    /** The board returned by [sessionBoard] and, unless [resetSessionBoardReturnsConflict], by [resetSessionBoard]. */
+    var board = SessionBoardDto(ownerSessionID = "ses_test", revision = 1, messages = emptyList(), hasMore = false)
+    var sessionBoardThrows: Exception? = null
+    var resetSessionBoardReturnsConflict = false
+    var resetSessionBoardThrows: Exception? = null
+    val sessionBoardCalls = mutableListOf<Triple<String, String?, Int?>>()
+    val resetSessionBoardCalls = mutableListOf<Pair<String, Int>>()
+
+    override suspend fun sessionBoard(sessionID: String, directory: String, before: String?, limit: Int?): SessionBoardDto {
+        assertNotEdt("sessionBoard")
+        sessionBoardThrows?.let { throw it }
+        sessionBoardCalls.add(Triple(sessionID, before, limit))
+        return board
+    }
+
+    override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? {
+        assertNotEdt("resetSessionBoard")
+        resetSessionBoardThrows?.let { throw it }
+        resetSessionBoardCalls.add(sessionID to revision)
+        if (resetSessionBoardReturnsConflict) return null
+        return board
     }
 
     private fun key(part: String, name: String, url: String): String {

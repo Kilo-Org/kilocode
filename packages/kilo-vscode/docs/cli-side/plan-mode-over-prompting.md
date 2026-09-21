@@ -3,7 +3,7 @@
 **Priority:** P1
 **Issue:** [#6143](https://github.com/Kilo-Org/kilocode/issues/6143)
 
-An experimental plan mode prompt exists (`Flag.KILO_EXPERIMENTAL_PLAN_MODE`) that is verbose. Agent still tends to ask "Should I implement this?" repeatedly.
+The plan mode prompt is verbose. The agent still tends to ask "Should I implement this?" repeatedly.
 
 ## Remaining Work
 

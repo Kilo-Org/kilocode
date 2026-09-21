@@ -103,6 +103,16 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test toolbar offers marketplace as final button after separator`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            assertMarketplaceToolbarButton(panel)
+            true
+        }
+    }
+
     fun `test changing default agent saves patch`() {
         val panel = panel()
         flushUntil { rows(panel).size == 6 }

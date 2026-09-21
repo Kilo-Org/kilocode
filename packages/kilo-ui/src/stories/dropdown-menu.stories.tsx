@@ -1,8 +1,8 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
-import { Button } from "@opencode-ai/ui/button"
-import { IconButton } from "@opencode-ai/ui/icon-button"
+import { DropdownMenu } from "../components/dropdown-menu"
+import { Button } from "../components/button"
+import { IconButton } from "../components/icon-button"
 
 const meta: Meta = {
   title: "Components/DropdownMenu",
@@ -43,7 +43,7 @@ export const WithGroups: Story = {
   render: () => (
     <DropdownMenu>
       <DropdownMenu.Trigger>
-        <IconButton variant="ghost" icon="settings-gear" />
+        <IconButton variant="ghost" icon="settings-gear" aria-label="Open settings" />
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content>
