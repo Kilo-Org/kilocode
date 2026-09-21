@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Load untrusted project Markdown, such as skills, that contains `${env:...}` or `${file:...}` placeholders instead of rejecting it as invalid frontmatter or rewriting the placeholders.
+Project skills, agents, commands, and instruction files that contain `${env:...}` or `${file:...}` placeholders now load instead of failing with an environment reference error. The placeholders stay literal there, while project JSON config still rejects them.

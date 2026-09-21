@@ -27,6 +27,7 @@ type SubstituteInput = ParseSource & {
   // kilocode_change start - trust gates {env:}; untrusted project config may only read files inside fileScope.root
   trusted?: boolean
   fileScope?: ConfigVariableGuard.FileScope
+  markdown?: boolean
   // kilocode_change end
   env?: Record<string, string>
 }
@@ -53,8 +54,13 @@ export async function substitute(input: SubstituteInput) {
   // kilocode_change start - untrusted (project) config cannot read environment variables. {env:} has no safe
   // scoped form, so it is rejected outright; {file:} is allowed but confined to fileScope.root below.
   const trusted = input.trusted ?? false
+  // Untrusted markdown and prompt text may document shell placeholders such as ${env:VAR}, so dollar-prefixed
+  // tokens stay literal there. Untrusted JSON config keeps rejecting them as failed {env:} references.
+  const dollar = Boolean(input.markdown) && !trusted
   if (!trusted) {
-    const active = Array.from(input.text.matchAll(/(?<!\$)\{env:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
+    const active = Array.from(input.text.matchAll(dollar ? /(?<!\$)\{env:[^}]+\}/g : /\{env:[^}]+\}/g)).find(
+      (m) => !commented(input.text, m.index),
+    )
     if (active) {
       throw new InvalidError({
         path: source(input),
@@ -65,7 +71,7 @@ export async function substitute(input: SubstituteInput) {
     // scope we cannot enforce that bound, so we reject rather than read unrestricted. In-root file references are
     // still allowed when a scope is supplied (the normal project path); this only guards a caller that omitted it.
     if (!input.fileScope) {
-      const file = Array.from(input.text.matchAll(/(?<!\$)\{file:[^}]+\}/g)).find(
+      const file = Array.from(input.text.matchAll(dollar ? /(?<!\$)\{file:[^}]+\}/g : /\{file:[^}]+\}/g)).find(
         (m) => !commented(input.text, m.index),
       )
       if (file) {
@@ -77,8 +83,8 @@ export async function substitute(input: SubstituteInput) {
     }
   }
   // kilocode_change end
-  // kilocode_change start - untrusted text must not resolve dollar-prefixed placeholders; leave commented tokens literal; reject server credentials
-  const envPattern = trusted ? /\{env:([^}]+)\}/g : /(?<!\$)\{env:([^}]+)\}/g
+  // kilocode_change start - leave commented tokens literal; reject server credentials
+  const envPattern = dollar ? /(?<!\$)\{env:([^}]+)\}/g : /\{env:([^}]+)\}/g
   let text = input.text.replace(envPattern, (match, varName, offset: number) => {
     if (commented(input.text, offset)) return match
     if (!ConfigVariableGuard.env(varName)) {
@@ -88,7 +94,7 @@ export async function substitute(input: SubstituteInput) {
     return (input.env?.[varName] ?? process.env[varName]) || ""
   })
 
-  const fileMatches = Array.from(text.matchAll(trusted ? /\{file:[^}]+\}/g : /(?<!\$)\{file:[^}]+\}/g)) // kilocode_change
+  const fileMatches = Array.from(text.matchAll(dollar ? /(?<!\$)\{file:[^}]+\}/g : /\{file:[^}]+\}/g)) // kilocode_change
   if (!fileMatches.length) return text
 
   const configDir = dir(input)

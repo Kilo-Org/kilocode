@@ -1,6 +1,7 @@
 import path from "node:path"
 import { expect, test } from "bun:test"
 import { ConfigMarkdown } from "@/config/markdown"
+import { ConfigVariable } from "@/config/variable"
 import { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import { tmpdir } from "../../fixture/fixture"
 
@@ -92,4 +93,18 @@ test("keeps resolving dollar-prefixed placeholders in trusted markdown", async (
     if (prior === undefined) delete process.env[name]
     else process.env[name] = prior
   }
+})
+
+test("still rejects dollar-prefixed env references in untrusted config", async () => {
+  await expect(
+    ConfigVariable.substitute({
+      text: "model: ${env:MODEL}",
+      type: "virtual",
+      source: "kilo.json",
+      dir: "/tmp",
+      trusted: false,
+    }),
+  ).rejects.toMatchObject({
+    data: { message: expect.stringContaining("environment references are not allowed") },
+  })
 })
