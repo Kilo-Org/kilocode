@@ -7,8 +7,10 @@ import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.project.DumbAware
+import javax.swing.JComponent
 
 /**
  * `+` toolbar action shown in Agent Manager mode. Opens the New Worktree dialog (New + Import tabs).
@@ -17,7 +19,7 @@ class NewWorktreeAction : AnAction(
     KiloBundle.message("action.Kilo.NewWorktree.text"),
     KiloBundle.message("action.Kilo.NewWorktree.description"),
     KiloActionIcons.add,
-), DumbAware {
+), DumbAware, CustomComponentAction {
     override fun getActionUpdateThread() = ActionUpdateThread.BGT
 
     override fun update(e: AnActionEvent) {
@@ -26,11 +28,13 @@ class NewWorktreeAction : AnAction(
         e.presentation.icon = KiloActionIcons.add
         if (!e.isFromActionToolbar) return
         e.presentation.text = KiloBundle.message("action.Kilo.NewWorktree.toolbar")
-        e.presentation.putClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR, true)
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         Telemetry.send("New Worktree Clicked", mapOf("surface" to "tool_window"))
         e.getData(SidePanelKeys.WORKTREE_PANEL)?.configure()
     }
+
+    override fun createCustomComponent(presentation: Presentation, place: String): JComponent =
+        titleButton(presentation, place)
 }
