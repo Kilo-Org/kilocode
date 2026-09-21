@@ -54,6 +54,7 @@ import type {
   ToolPart,
 } from "../types/messages"
 import { agentProject, isStaleAgentSession } from "./session-project"
+import { createSessionPaging, mergeSessionsLoaded } from "./session-paging"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
   computeStatus,
@@ -227,6 +228,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const [loading, setLoading] = createSignal(false)
   const [loaded, setLoaded] = createSignal<Set<string>>(new Set())
+  const paging = createSessionPaging(
+    (msg) => vscode.postMessage(msg),
+    () => server.isConnected(),
+  )
   const [pages, setPages] = createStore<Record<string, MessagePageState>>({})
 
   // Parts stash: holds parts from messagesLoaded outside the reactive store
@@ -981,7 +986,7 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionsLoaded":
-        handleSessionsLoaded(message.sessions, message.preserveSessionIds)
+        handleSessionsLoaded(message.sessions, message.preserveSessionIds, message.append, message.hasMore)
         break
 
       case "sessionUpdated":
@@ -1907,29 +1912,15 @@ export const SessionProvider: ParentComponent = (props) => {
     resetTodos(session.id, next)
   }
 
-  function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[]) {
-    const ids = new Set(loaded.map((s) => s.id))
-    for (const id of ids) freshSessions.delete(id)
-    const kept = new Set([...(preserve ?? []), ...freshSessions])
-    batch(() => {
-      // Reconcile: remove sessions not in the loaded list to prevent stale
-      // entries from other projects accumulating in the store.
-      // Sessions whose worktree directories failed to list are preserved —
-      // their absence is transient, not a real deletion.
-      setStore(
-        "sessions",
-        produce((sessions) => {
-          for (const id of Object.keys(sessions)) {
-            if (id.startsWith("cloud:")) continue
-            if (kept?.has(id)) continue
-            if (!ids.has(id)) delete sessions[id]
-          }
-        }),
-      )
-      for (const s of loaded) {
-        setStore("sessions", s.id, s)
-      }
+  function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[], append?: boolean, hasMore?: boolean) {
+    mergeSessionsLoaded({
+      loaded,
+      preserve,
+      append,
+      fresh: freshSessions,
+      setSessions: (updater) => setStore("sessions", produce(updater)),
     })
+    paging.finish(hasMore ?? false)
   }
 
   function handleSessionDeleted(sessionID: string) {
@@ -3063,6 +3054,9 @@ export const SessionProvider: ParentComponent = (props) => {
     createSession,
     clearCurrentSession,
     loadSessions,
+    loadMoreSessions: paging.loadMore,
+    sessionsHasMore: paging.hasMore,
+    sessionsLoadingMore: paging.loadingMore,
     loadOlderMessages,
     selectSession,
     scrollBottomID,

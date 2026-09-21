@@ -144,6 +144,8 @@ const Probe = () => {
     visibleTabId: session.currentSessionID,
     activePendingId: () => undefined,
     isPending: () => false,
+    isPinned: () => false,
+    togglePinned: () => {},
     activityFor: session.activityFor,
     stateLabel: (state: string) => state,
     tabLookup: () => new Map(ids.map((id) => [id, { id, title: id }])),

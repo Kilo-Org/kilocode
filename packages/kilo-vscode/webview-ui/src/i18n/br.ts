@@ -316,7 +316,7 @@ export const dict = {
   "ui.approval.source.agent.default": "pelo agente",
   "ui.approval.source.global": "pela configuração global",
   "ui.approval.source.project": "pela configuração do projeto",
-  "ui.approval.source.yolo": "pelo modo de aprovação automática (YOLO)",
+  "ui.approval.source.yolo": "pelo modo de aprovação automática",
   "ui.approval.source.session": "por uma regra de aprovação automática da sessão",
   "ui.approval.source.default": "por padrão",
   "ui.approval.outsideWorkspace": "(fora do seu espaço de trabalho: {{file}})",
@@ -584,14 +584,15 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "O Kilo pausa e mostra o plano enquanto trabalha.",
   "workStyle.choice.human-in-the-loop.permissions": "Pede permissão antes de editar arquivos ou executar comandos.",
   "workStyle.choice.human-in-the-loop.bash": "Pede permissão para executar qualquer comando no terminal.",
-  "workStyle.choice.human-in-the-loop.visibility": "Exibe todos os detalhes da conversa, incluindo o raciocínio.",
+  "workStyle.choice.human-in-the-loop.visibility": "Expande raciocínio, comandos e edições para revisão.",
   "workStyle.choice.autonomous.eyebrow": "Menos interrupções",
   "workStyle.choice.autonomous.title": "Alta autonomia",
   "workStyle.choice.autonomous.description": "Menos interrupções e uma interface simplificada.",
   "workStyle.choice.autonomous.permissions":
     "Edita arquivos e executa comandos no espaço de trabalho sem pedir permissão.",
   "workStyle.choice.autonomous.bash": "Pode executar comandos do terminal no espaço de trabalho sem aprovação.",
-  "workStyle.choice.autonomous.visibility": "Os detalhes permanecem recolhidos até você expandi-los.",
+  "workStyle.choice.autonomous.visibility":
+    "Recolhe os detalhes das ferramentas, com uma prévia compacta do raciocínio.",
   "session.cloud.import.title": "Importar da nuvem",
   "session.cloud.import.placeholder": "ID da sessão, URL ou comando kilo import",
   "session.cloud.import.button": "Importar",
@@ -1204,6 +1205,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sincronizar com idioma da interface",
   "settings.commitMessage.language.description": "Escolha qual idioma usar para as mensagens de commit geradas por AI:",
 
+  "settings.display.preview.title": "Prévia",
+  "settings.display.presets.title": "Predefinições de exibição",
+  "settings.display.presets.description": "Altera as opções de exibição abaixo, não as permissões. Salve para aplicar.",
+  "settings.display.preview.model": "Modelo de exemplo",
+  "settings.display.preview.prompt": "Remova os espaços extras da saudação e verifique os testes.",
+  "settings.display.preview.reasoning":
+    "**Verifique a saudação.** A função deve produzir a mesma saudação para um nome simples e para um nome com espaços extras em qualquer das extremidades. Vou manter a assinatura da função e o formato da saudação existentes e alterar apenas como o nome entra na string retornada.\n\nPara uma entrada como `  Ada  `, os espaços indesejados pertencem à entrada, não ao modelo da saudação. Aparar a saudação completa deixaria espaços ao lado do nome. Portanto, a operação de apara precisa acontecer antes de o nome ser inserido.\n\nVou consultar a documentação de strings para confirmar que `trim()` remove espaços em branco das duas extremidades e retorna uma nova string. Ela deve deixar a entrada original inalterada. Não é necessário usar expressão regular, outra dependência nem uma função auxiliar separada para essa alteração.\n\nOs espaços dentro de um nome devem permanecer intactos. Um nome como `Ada Lovelace` não deve virar `AdaLovelace`, e o uso de maiúsculas e minúsculas não deve mudar. Uma entrada vazia ou composta apenas por espaços não exige uma nova saudação padrão como parte desta correção pontual.\n\nA alteração pode ficar na expressão de retorno usando `name.trim()` onde o modelo atualmente usa `name`. Vou preservar a pontuação ao redor e o espaço intencional após a saudação. Isso mantém o diff pequeno e facilita a revisão do comportamento.\n\nPor fim, vou executar `bun test greeting.test.ts` e verificar os dois resultados. O caso do nome com espaços deve confirmar que os espaços extras são removidos, enquanto o caso do nome simples protege a saída existente. Vou relatar a alteração e os resultados dos testes somente após o comando terminar.",
+  "settings.display.preview.shell": "Verifique o teste da saudação",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] remove espaços extras\n[pass] preserva um nome simples\n\n2 testes aprovados",
+  "settings.display.preview.query": "Aparo de strings",
+  "settings.display.preview.result": "trim() remove espaços das duas extremidades de uma string.",
+  "settings.display.preview.answer": "Saudação atualizada para remover espaços extras. Os dois testes passam.",
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",
   "settings.display.fontSize.title": "Tamanho da fonte",
@@ -1239,7 +1253,7 @@ export const dict = {
     "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
   "settings.display.autoApprovalReason.description":
-    "Mostra uma linha nas chamadas de ferramentas explicando por que foram aprovadas automaticamente (regra correspondente, padrão do agente, modo YOLO, etc.).",
+    "Mostra por que uma chamada de ferramenta foi aprovada automaticamente, como uma regra de permissão correspondente ou um padrão do agente.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

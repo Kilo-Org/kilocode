@@ -248,7 +248,7 @@ export const dict = {
   "ui.approval.source.agent.default": "dall'agente",
   "ui.approval.source.global": "dalla configurazione globale",
   "ui.approval.source.project": "dalla configurazione del progetto",
-  "ui.approval.source.yolo": "dalla modalità di approvazione automatica (YOLO)",
+  "ui.approval.source.yolo": "dalla modalità di approvazione automatica",
   "ui.approval.source.session": "da una regola di approvazione automatica della sessione",
   "ui.approval.source.default": "per impostazione predefinita",
   "ui.approval.outsideWorkspace": "(fuori dall'area di lavoro: {{file}})",
@@ -463,14 +463,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo si mette in pausa e ti mostra il suo piano mentre lavora.",
   "workStyle.choice.human-in-the-loop.permissions": "Chiede conferma prima di modificare file o eseguire comandi.",
   "workStyle.choice.human-in-the-loop.bash": "Chiede l'autorizzazione per ogni comando del terminale.",
-  "workStyle.choice.human-in-the-loop.visibility":
-    "Mostra tutti i dettagli della conversazione, incluso il ragionamento.",
+  "workStyle.choice.human-in-the-loop.visibility": "Espande ragionamento, comandi e modifiche per la revisione.",
   "workStyle.choice.autonomous.eyebrow": "Meno interruzioni",
   "workStyle.choice.autonomous.title": "Autonomia elevata",
   "workStyle.choice.autonomous.description": "Meno interruzioni e un'interfaccia semplificata.",
   "workStyle.choice.autonomous.permissions": "Modifica file ed esegue comandi nel workspace senza chiedere conferma.",
   "workStyle.choice.autonomous.bash": "Può eseguire comandi nel terminale del workspace senza approvazione.",
-  "workStyle.choice.autonomous.visibility": "I dettagli restano compressi finché non li espandi.",
+  "workStyle.choice.autonomous.visibility":
+    "Comprime i dettagli degli strumenti, con un'anteprima compatta del ragionamento.",
   "session.cloud.import.title": "Importa sessione",
   "session.cloud.import.placeholder": "ID sessione, URL o comando kilo import",
   "session.cloud.import.button": "Importa",
@@ -1053,6 +1053,21 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sincronizzazione con la lingua dell'interfaccia utente",
   "settings.commitMessage.language.description": "Scegli quale lingua usare per i messaggi di commit generati da AI:",
 
+  "settings.display.preview.title": "Anteprima",
+  "settings.display.presets.title": "Preset di visualizzazione",
+  "settings.display.presets.description":
+    "Modifica le opzioni di visualizzazione seguenti, non le autorizzazioni. Salva per applicare.",
+  "settings.display.preview.model": "Modello di esempio",
+  "settings.display.preview.prompt": "Rimuovi gli spazi superflui dal saluto e controlla i test.",
+  "settings.display.preview.reasoning":
+    "**Controlla il saluto.** La funzione dovrebbe produrre lo stesso saluto per un nome semplice e per un nome con spazi superflui a entrambe le estremità. Mantengo la firma della funzione e il formato del saluto esistenti e cambio solo il modo in cui il nome entra nella stringa restituita.\n\nPer un input come `  Ada  `, gli spazi indesiderati appartengono all'input, non al modello del saluto. Tagliare il saluto completo lascerebbe spazi accanto al nome. L'operazione di taglio deve quindi avvenire prima dell'inserimento del nome.\n\nControllerò la documentazione sulle stringhe per confermare che `trim()` rimuove gli spazi bianchi da entrambe le estremità e restituisce una nuova stringa. Dovrebbe lasciare invariato l'input originale. Per questa modifica non servono un'espressione regolare, un'altra dipendenza o una funzione di supporto separata.\n\nGli spazi all'interno di un nome devono rimanere intatti. Un nome come `Ada Lovelace` non deve diventare `AdaLovelace` e la sua combinazione di maiuscole e minuscole non deve cambiare. Un input vuoto o composto solo da spazi non richiede un nuovo saluto di ripiego nell'ambito di questa correzione mirata.\n\nLa modifica può restare nell'espressione di ritorno usando `name.trim()` dove il modello attualmente usa `name`. Preserverò la punteggiatura circostante e lo spazio intenzionale dopo il saluto. Così il diff resta piccolo e il comportamento facile da verificare.\n\nInfine eseguirò `bun test greeting.test.ts` e controllerò entrambi i risultati. Il caso con il nome riempito di spazi dovrebbe confermare che gli spazi superflui vengono rimossi, mentre il caso con il nome semplice protegge l'output esistente. Riporterò la modifica e i risultati dei test solo dopo il completamento del comando.",
+  "settings.display.preview.shell": "Controlla il test del saluto",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] rimuove gli spazi superflui\n[pass] preserva un nome semplice\n\n2 test superati",
+  "settings.display.preview.query": "Taglio delle stringhe",
+  "settings.display.preview.result": "trim() rimuove gli spazi da entrambe le estremità di una stringa.",
+  "settings.display.preview.answer":
+    "Saluto aggiornato per rimuovere gli spazi superflui. Entrambi i test vengono superati.",
   "settings.display.username.title": "Nome utente",
   "settings.display.username.description": "Nome utente personalizzato mostrato nelle conversazioni",
   "settings.display.fontSize.title": "Dimensione font",
@@ -1086,7 +1101,7 @@ export const dict = {
     "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",
   "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
-    "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",
+    "Mostra perché una chiamata a uno strumento è stata approvata automaticamente, ad esempio una regola di autorizzazione corrispondente o un valore predefinito dell'agente.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -313,7 +313,7 @@ export const dict = {
   "ui.approval.source.agent.default": "od strane agenta",
   "ui.approval.source.global": "globalnom konfiguracijom",
   "ui.approval.source.project": "konfiguracijom projekta",
-  "ui.approval.source.yolo": "režimom automatskog odobravanja (YOLO)",
+  "ui.approval.source.yolo": "režimom automatskog odobravanja",
   "ui.approval.source.session": "pravilom automatskog odobravanja sesije",
   "ui.approval.source.default": "podrazumevano",
   "ui.approval.outsideWorkspace": "(izvan vašeg radnog prostora: {{file}})",
@@ -624,13 +624,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo zastaje i prikazuje vam svoj plan tokom rada.",
   "workStyle.choice.human-in-the-loop.permissions": "Traži dozvolu prije uređivanja datoteka ili pokretanja komandi.",
   "workStyle.choice.human-in-the-loop.bash": "Traži dozvolu za svaku terminalsku komandu.",
-  "workStyle.choice.human-in-the-loop.visibility": "Prikazuje sve detalje razgovora, uključujući zaključivanje.",
+  "workStyle.choice.human-in-the-loop.visibility": "Proširuje zaključivanje, naredbe i izmjene radi pregleda.",
   "workStyle.choice.autonomous.eyebrow": "Manje prekida",
   "workStyle.choice.autonomous.title": "Visoka autonomija",
   "workStyle.choice.autonomous.description": "Manje prekida i pojednostavljen interfejs.",
   "workStyle.choice.autonomous.permissions": "Uređuje datoteke i pokreće komande u radnom prostoru bez pitanja.",
   "workStyle.choice.autonomous.bash": "Može pokretati terminalske komande u radnom prostoru bez odobrenja.",
-  "workStyle.choice.autonomous.visibility": "Detalji ostaju sažeti dok ih ne proširite.",
+  "workStyle.choice.autonomous.visibility": "Sažima detalje alata, uz kompaktan pregled zaključivanja.",
   "session.cloud.import.title": "Uvezi iz oblaka",
   "session.cloud.import.placeholder": "ID sesije, URL ili kilo import naredba",
   "session.cloud.import.button": "Uvezi",
@@ -1195,6 +1195,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sinkronizacija sa jezikom korisničkog sučelja",
   "settings.commitMessage.language.description": "Izaberite koji jezik koristiti za poruke koje generiše AI:",
 
+  "settings.display.preview.title": "Pregled",
+  "settings.display.presets.title": "Preseti prikaza",
+  "settings.display.presets.description": "Mijenja opcije prikaza ispod, ne dozvole. Sačuvajte da primijenite.",
+  "settings.display.preview.model": "Primjer modela",
+  "settings.display.preview.prompt": "Uklonite dodatne razmake iz pozdrava i provjerite testove.",
+  "settings.display.preview.reasoning":
+    "**Provjerite pozdrav.** Funkcija bi trebalo da proizvede isti pozdrav za obično ime i ime sa dodatnim razmacima na oba kraja. Zadržat ću postojeći potpis funkcije i format pozdrava, a promijeniti samo način na koji ime ulazi u vraćeni string.\n\nZa unos kao što je `  Ada  `, neželjeni razmaci pripadaju unosu, a ne predlošku pozdrava. Podrezivanje dovršenog pozdrava ostavilo bi razmake pored imena. Operacija podrezivanja zato mora da se dogodi prije nego što se ime umetne.\n\nProvjerit ću dokumentaciju o stringovima da potvrdim da `trim()` uklanja razmake sa oba kraja i vraća novi string. Trebalo bi da ostavi originalni unos nepromijenjenim. Za ovu promjenu nije potreban regularni izraz, dodatna zavisnost ni zasebna pomoćna funkcija.\n\nRazmaci unutar imena moraju ostati netaknuti. Ime kao što je `Ada Lovelace` ne bi trebalo da postane `AdaLovelace`, a velika i mala slova ne bi trebalo da se mijenjaju. Prazan unos ili unos koji sadrži samo razmake ne zahtijeva novi zadani pozdrav u okviru ove ciljane ispravke.\n\nPromjena može ostati u izrazu za vraćanje korištenjem `name.trim()` tamo gdje predložak trenutno koristi `name`. Zadržat ću okolnu interpunkciju i namjerni razmak nakon pozdrava. To čuva mali diff i olakšava provjeru ponašanja.\n\nNa kraju ću pokrenuti `bun test greeting.test.ts` i provjeriti oba rezultata. Slučaj sa dopunjenim imenom trebalo bi da potvrdi da se dodatni razmaci uklanjaju, dok slučaj sa običnim imenom štiti postojeći izlaz. Promjenu i rezultate testova prijavit ću tek nakon što se naredba završi.",
+  "settings.display.preview.shell": "Provjerite test pozdrava",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] uklanja dodatne razmake\n[pass] čuva obično ime\n\n2 testa prošla",
+  "settings.display.preview.query": "Podrezivanje stringova",
+  "settings.display.preview.result": "trim() uklanja razmake sa oba kraja stringa.",
+  "settings.display.preview.answer": "Pozdrav je ažuriran da uklanja dodatne razmake. Oba testa prolaze.",
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.fontSize.title": "Veličina fonta",
@@ -1229,7 +1242,7 @@ export const dict = {
     "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",
   "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
   "settings.display.autoApprovalReason.description":
-    "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
+    "Prikazuje zašto je poziv alata automatski odobren, kao što je odgovarajuće pravilo dozvole ili zadana vrijednost agenta.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -312,7 +312,7 @@ export const dict = {
   "ui.approval.source.agent.default": "af agenten",
   "ui.approval.source.global": "af din globale konfiguration",
   "ui.approval.source.project": "af projektkonfigurationen",
-  "ui.approval.source.yolo": "af automatisk godkendelse (YOLO)",
+  "ui.approval.source.yolo": "af automatisk godkendelse",
   "ui.approval.source.session": "af en session-autogodkendelsesregel",
   "ui.approval.source.default": "som standard",
   "ui.approval.outsideWorkspace": "(uden for dit arbejdsområde: {{file}})",
@@ -622,13 +622,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Spørger om tilladelse, før filer redigeres eller kommandoer køres.",
   "workStyle.choice.human-in-the-loop.bash": "Spørger om tilladelse til alle terminalkommandoer.",
-  "workStyle.choice.human-in-the-loop.visibility": "Viser alle samtaledetaljer, herunder ræsonnement.",
+  "workStyle.choice.human-in-the-loop.visibility": "Udvider ræsonnement, kommandoer og redigeringer til gennemgang.",
   "workStyle.choice.autonomous.eyebrow": "Færre afbrydelser",
   "workStyle.choice.autonomous.title": "Høj autonomi",
   "workStyle.choice.autonomous.description": "Færre afbrydelser og en strømlinet brugerflade.",
   "workStyle.choice.autonomous.permissions": "Redigerer filer og kører kommandoer i arbejdsområdet uden at spørge.",
   "workStyle.choice.autonomous.bash": "Kan køre terminalkommandoer i arbejdsområdet uden godkendelse.",
-  "workStyle.choice.autonomous.visibility": "Detaljerne forbliver foldet sammen, indtil du folder dem ud.",
+  "workStyle.choice.autonomous.visibility":
+    "Klapper værktøjsdetaljer sammen, med en kompakt forhåndsvisning af ræsonnementet.",
   "session.cloud.import.title": "Importér fra skyen",
   "session.cloud.import.placeholder": "Sessions-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importér",
@@ -1190,6 +1191,20 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Vælg hvilket sprog der skal bruges til AI-genererede commit-meddelelser:",
 
+  "settings.display.preview.title": "Forhåndsvisning",
+  "settings.display.presets.title": "Visningsforudindstillinger",
+  "settings.display.presets.description":
+    "Ændrer visningsindstillingerne nedenfor, ikke tilladelser. Gem for at anvende.",
+  "settings.display.preview.model": "Eksempelmodel",
+  "settings.display.preview.prompt": "Fjern overflødige mellemrum fra hilsenen, og kontroller testene.",
+  "settings.display.preview.reasoning":
+    "**Kontroller hilsenen.** Funktionen bør give den samme hilsen for et almindeligt navn og et navn med overflødige mellemrum i begge ender. Jeg bevarer den eksisterende funktionssignatur og hilsensformat og ændrer kun, hvordan navnet indgår i den returnerede streng.\n\nFor et input som `  Ada  ` hører de uønskede mellemrum til inputtet, ikke til hilsenskabelonen. Hvis man trimmer den færdige hilsen, vil der stå mellemrum ved siden af navnet. Trim-operationen skal derfor ske, før navnet indsættes.\n\nJeg vil kontrollere strengdokumentationen for at bekræfte, at `trim()` fjerner mellemrum i begge ender og returnerer en ny streng. Den bør lade det oprindelige input være uændret. Der er ikke brug for et regulært udtryk, en ekstra afhængighed eller en separat hjælpefunktion til denne ændring.\n\nMellemrum inde i et navn skal forblive intakte. Et navn som `Ada Lovelace` bør ikke blive til `AdaLovelace`, og dets store og små bogstaver bør ikke ændres. Et tomt input eller et input med kun mellemrum kræver ikke en ny standardhilsen som en del af denne målrettede rettelse.\n\nÆndringen kan blive i returudtrykket ved at bruge `name.trim()` der, hvor skabelonen i øjeblikket bruger `name`. Jeg bevarer tegnsætningen omkring og det bevidste mellemrum efter hilsenen. Det holder diffen lille og gør adfærden nem at gennemgå.\n\nTil sidst kører jeg `bun test greeting.test.ts` og kontrollerer begge resultater. Tilfældet med det udfyldte navn bør bekræfte, at overflødige mellemrum fjernes, mens tilfældet med det almindelige navn beskytter det eksisterende output. Jeg rapporterer først ændringen og testresultaterne, når kommandoen er fuldført.",
+  "settings.display.preview.shell": "Kontroller hilsentesten",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fjerner overflødige mellemrum\n[pass] bevarer et almindeligt navn\n\n2 tests bestået",
+  "settings.display.preview.query": "Trimning af strenge",
+  "settings.display.preview.result": "trim() fjerner mellemrum i begge ender af en streng.",
+  "settings.display.preview.answer": "Hilsenen er opdateret til at fjerne overflødige mellemrum. Begge tests består.",
   "settings.display.username.title": "Brugernavn",
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
@@ -1222,7 +1237,7 @@ export const dict = {
     "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",
   "settings.display.autoApprovalReason.title": "Vis grund til automatisk godkendelse",
   "settings.display.autoApprovalReason.description":
-    "Viser en linje ved værktøjskald, der forklarer, hvorfor de blev automatisk godkendt (matchende regel, agent-standard, YOLO-tilstand osv.).",
+    "Viser, hvorfor et værktøjskald blev automatisk godkendt, f.eks. en matchende tilladelsesregel eller en agentstandard.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

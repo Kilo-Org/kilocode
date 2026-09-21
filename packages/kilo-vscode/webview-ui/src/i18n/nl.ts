@@ -315,7 +315,7 @@ export const dict = {
   "ui.approval.source.agent.default": "door de agent",
   "ui.approval.source.global": "door je globale configuratie",
   "ui.approval.source.project": "door de projectconfiguratie",
-  "ui.approval.source.yolo": "door de automatische goedkeuringsmodus (YOLO)",
+  "ui.approval.source.yolo": "door de automatische goedkeuringsmodus",
   "ui.approval.source.session": "door een sessie-automatische-goedkeuringsregel",
   "ui.approval.source.default": "standaard",
   "ui.approval.outsideWorkspace": "(buiten je werkruimte: {{file}})",
@@ -575,14 +575,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Vraagt toestemming voordat bestanden worden bewerkt of opdrachten worden uitgevoerd.",
   "workStyle.choice.human-in-the-loop.bash": "Vraagt toestemming voor elke terminalopdracht.",
-  "workStyle.choice.human-in-the-loop.visibility": "Toont alle gespreksdetails, inclusief de redenering.",
+  "workStyle.choice.human-in-the-loop.visibility": "Vouwt redenering, opdrachten en bewerkingen uit ter controle.",
   "workStyle.choice.autonomous.eyebrow": "Minder onderbrekingen",
   "workStyle.choice.autonomous.title": "Hoge autonomie",
   "workStyle.choice.autonomous.description": "Minder onderbrekingen, gestroomlijnde interface.",
   "workStyle.choice.autonomous.permissions":
     "Bewerkt bestanden en voert opdrachten in de werkruimte uit zonder toestemming te vragen.",
   "workStyle.choice.autonomous.bash": "Kan terminalopdrachten in de werkruimte zonder goedkeuring uitvoeren.",
-  "workStyle.choice.autonomous.visibility": "Details blijven ingeklapt totdat je ze uitvouwt.",
+  "workStyle.choice.autonomous.visibility": "Vouwt tool-details in, met een compacte preview van de redenering.",
   "session.cloud.import.title": "Importeer uit de cloud",
   "session.cloud.import.placeholder": "Sessie-ID, URL, of kilo import commando",
   "session.cloud.import.button": "Importeren",
@@ -1163,6 +1163,21 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Kies welke taal je wilt gebruiken voor AI-gegenereerde commitberichten:",
 
+  "settings.display.preview.title": "Voorbeeld",
+  "settings.display.presets.title": "Weergavepresets",
+  "settings.display.presets.description":
+    "Wijzigt de weergaveopties hieronder, niet de machtigingen. Sla op om toe te passen.",
+  "settings.display.preview.model": "Voorbeeldmodel",
+  "settings.display.preview.prompt": "Verwijder overtollige spaties uit de begroeting en controleer de tests.",
+  "settings.display.preview.reasoning":
+    "**Controleer de begroeting.** De functie moet dezelfde begroeting opleveren voor een eenvoudige naam en een naam met overtollige spaties aan beide uiteinden. Ik behoud de bestaande functiesignatuur en het begroetingsformaat en wijzig alleen hoe de naam in de geretourneerde tekenreeks terechtkomt.\n\nBij een invoer zoals `  Ada  ` horen de ongewenste spaties bij de invoer, niet bij de begroetingssjabloon. Als je de voltooide begroeting zou trimmen, blijven er spaties naast de naam staan. De trim-bewerking moet dus plaatsvinden voordat de naam wordt ingevoegd.\n\nIk controleer de documentatie over tekenreeksen om te bevestigen dat `trim()` witruimte aan beide uiteinden verwijdert en een nieuwe tekenreeks retourneert. De oorspronkelijke invoer moet ongewijzigd blijven. Voor deze wijziging is geen reguliere expressie, extra afhankelijkheid of aparte hulpfunctie nodig.\n\nSpaties binnen een naam moeten intact blijven. Een naam zoals `Ada Lovelace` mag niet `AdaLovelace` worden, en de letterkast mag niet veranderen. Een lege invoer of invoer met alleen witruimte vereist geen nieuwe standaardbegroeting als onderdeel van deze gerichte correctie.\n\nDe wijziging kan in de return-expressie blijven door `name.trim()` te gebruiken waar de sjabloon nu `name` gebruikt. Ik behoud de omliggende leestekens en de bewuste spatie na de begroeting. Zo blijft de diff klein en is het gedrag makkelijk te controleren.\n\nTen slotte voer ik `bun test greeting.test.ts` uit en controleer beide resultaten. Het geval met de opgevulde naam moet bevestigen dat overtollige spaties worden verwijderd, terwijl het geval met de eenvoudige naam de bestaande uitvoer beschermt. Ik meld de wijziging en de testresultaten pas nadat de opdracht is voltooid.",
+  "settings.display.preview.shell": "Controleer de begroetingstest",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] verwijdert overtollige spaties\n[pass] behoudt een eenvoudige naam\n\n2 tests geslaagd",
+  "settings.display.preview.query": "Tekenreeksen trimmen",
+  "settings.display.preview.result": "trim() verwijdert spaties aan beide uiteinden van een tekenreeks.",
+  "settings.display.preview.answer":
+    "De begroeting is bijgewerkt om overtollige spaties te verwijderen. Beide tests slagen.",
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.fontSize.title": "Lettergrootte",
@@ -1197,7 +1212,7 @@ export const dict = {
     "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",
   "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
   "settings.display.autoApprovalReason.description":
-    "Toont een regel bij tool-aanroepen die uitlegt waarom ze automatisch zijn goedgekeurd (overeenkomende regel, agentstandaard, YOLO-modus, enz.).",
+    "Toont waarom een tool-aanroep automatisch is goedgekeurd, zoals een overeenkomende machtigingsregel of een agentstandaard.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

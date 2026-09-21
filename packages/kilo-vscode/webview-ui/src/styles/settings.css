@@ -1,3 +1,87 @@
+.settings-display {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@container (min-width: 1050px) {
+  .settings-display {
+    grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
+  }
+
+  .settings-session-preview {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.settings-display-controls {
+  min-width: 0;
+}
+
+.settings-display-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 16px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.settings-display-presets-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.settings-display-presets-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-display-presets-description {
+  font-size: var(--font-size-small);
+  color: var(--text-weak-base);
+}
+
+.settings-session-preview {
+  min-width: 0;
+  border: 1px solid var(--border-weak-base);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background-base);
+}
+
+.settings-session-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.settings-session-preview-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin: 0;
+}
+
+.settings-session-preview-body {
+  padding: 16px;
+  height: min(640px, 65vh);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.settings-session-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* Settings save bar */
 .settings-save-bar-wrap {
   display: flex;

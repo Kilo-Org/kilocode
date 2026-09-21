@@ -298,7 +298,7 @@ export const dict = {
   "ui.approval.source.agent.default": "由代理",
   "ui.approval.source.global": "由你的全局配置",
   "ui.approval.source.project": "由项目配置",
-  "ui.approval.source.yolo": "由自动批准（YOLO）模式",
+  "ui.approval.source.yolo": "由自动批准模式",
   "ui.approval.source.session": "由会话自动批准规则",
   "ui.approval.source.default": "默认",
   "ui.approval.outsideWorkspace": "（工作区之外：{{file}}）",
@@ -596,13 +596,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo 会在工作过程中暂停并向你展示其计划。",
   "workStyle.choice.human-in-the-loop.permissions": "编辑文件或运行命令前会征求你的许可。",
   "workStyle.choice.human-in-the-loop.bash": "运行所有终端命令时请求权限",
-  "workStyle.choice.human-in-the-loop.visibility": "显示完整的对话详情，包括推理过程。",
+  "workStyle.choice.human-in-the-loop.visibility": "展开推理、命令和编辑以供审查。",
   "workStyle.choice.autonomous.eyebrow": "减少打扰",
   "workStyle.choice.autonomous.title": "高度自主",
   "workStyle.choice.autonomous.description": "减少打扰，界面更简洁。",
   "workStyle.choice.autonomous.permissions": "无需询问即可在工作区中编辑文件和运行命令。",
   "workStyle.choice.autonomous.bash": "可以在工作区中无需批准即可运行终端命令。",
-  "workStyle.choice.autonomous.visibility": "详情会保持折叠，直到你将其展开。",
+  "workStyle.choice.autonomous.visibility": "折叠工具详情，并显示精简的推理预览。",
   "session.cloud.import.title": "从云端导入",
   "session.cloud.import.placeholder": "会话 ID、URL 或 kilo import 命令",
   "session.cloud.import.button": "导入",
@@ -1122,6 +1122,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "跟随界面语言",
   "settings.commitMessage.language.description": "选择用于 AI 生成 commit message 的语言：",
 
+  "settings.display.preview.title": "预览",
+  "settings.display.presets.title": "显示预设",
+  "settings.display.presets.description": "更改下方的显示选项，而非权限。保存后生效。",
+  "settings.display.preview.model": "示例模型",
+  "settings.display.preview.prompt": "去除问候语中的多余空格，并检查测试。",
+  "settings.display.preview.reasoning":
+    "**检查问候语。** 该函数应为普通姓名和两端带多余空格的姓名生成相同的问候语。我会保留现有的函数签名和问候语格式，只更改姓名进入所返回字符串的方式。\n\n对于 `  Ada  ` 这样的输入，不需要的空格属于输入，而不属于问候语模板。如果对完整的问候语执行 trim，空格会留在姓名旁边。因此，trim 操作需要在插入姓名之前进行。\n\n我会查阅字符串文档，确认 `trim()` 会移除两端的空白并返回新字符串。它应保持原输入不变。此更改不需要正则表达式、额外的依赖或单独的辅助函数。\n\n姓名内部的空格必须保持不变。像 `Ada Lovelace` 这样的姓名不应变成 `AdaLovelace`，其字母大小写也不应改变。空输入或仅含空白的输入不需要在本次针对性修复中新增回退问候语。\n\n可以使用 `name.trim()` 替换模板当前使用的 `name`，从而将更改保留在 return 表达式中。我会保留周围的标点以及问候语后面有意保留的空格。这样 diff 保持较小，行为也易于审查。\n\n最后，我会运行 `bun test greeting.test.ts` 并检查两项结果。带空格的姓名用例应确认多余空格已被移除，而普通姓名用例可保护现有输出。我会在命令完成后才报告更改和测试结果。",
+  "settings.display.preview.shell": "检查问候语测试",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] 去除多余空格\n[pass] 保留普通姓名\n\n2 项测试通过",
+  "settings.display.preview.query": "字符串 trim",
+  "settings.display.preview.result": "trim() 会移除字符串两端的空格。",
+  "settings.display.preview.answer": "已更新问候语以去除多余空格。两项测试均通过。",
   "settings.display.username.title": "用户名",
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.fontSize.title": "字体大小",
@@ -1152,8 +1165,7 @@ export const dict = {
   "settings.display.tokenThroughput.description":
     "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
   "settings.display.autoApprovalReason.title": "显示自动批准原因",
-  "settings.display.autoApprovalReason.description":
-    "在工具调用中显示一行说明其被自动批准的原因（匹配的规则、代理默认值、YOLO 模式等）。",
+  "settings.display.autoApprovalReason.description": "显示工具调用被自动批准的原因，例如匹配的权限规则或代理默认值。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
