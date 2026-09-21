@@ -478,6 +478,68 @@
 
 ## [Unreleased]
 
+## [7.1.7-rc.3] - 2026-09-21
+
+### Added
+- feat(cli): link GitLab merge requests and Bitbucket pull requests by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14195
+- feat(cli): log remote session start and end by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14214
+- feat(agent-manager): run worktree-independent slash commands from new worktree prompt by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14249
+- feat(agent-manager): add @model, @past-chats and @worktrees mentions to New Worktree prompt by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14251
+- feat: label prompts Kilo sends on the user's behalf by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14282
+- feat(vscode): show scheduled wakeup status in Agent Manager by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14292
+- feat(vscode): reintroduce automatic session cleanup by @vkeerthivikram in https://github.com/Kilo-Org/kilocode/pull/14054
+- feat(agent-manager): create and clone projects from the sidebar by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14301
+- feat(vscode): load older sessions on demand in history by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14344
+- feat(vscode): preview display settings with a live sample session by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14346
+- feat(cli): report what semantic_search actually searched by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/14335
+- feat(agent-manager): pin session tabs by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/13979
+- feat(agent-manager): support keyboard-only diff review by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14349
+- feat(vscode): persist diff viewer unified/split style by @BambinoSK in https://github.com/Kilo-Org/kilocode/pull/14322
+- feat(jetbrains): add background agents and subagent avatars by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14311
+- feat(jetbrains): polish progress and create actions by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14365
+
+### Fixed
+- fix(vscode): keep Agent Manager .kilo out of git in subdirectory workspaces by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14274
+- fix(vscode): recover stalled permission approvals by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14277
+- fix(vscode): release tool animations on unmount to stop transcript leak by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14280
+- fix(cli): keep agent-switch reminders in sync with the selected agent by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14279
+- fix(cli): stop denying read-only bash commands with inert operators by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14284
+- fix(cli): remove vestigial KILO_EXPERIMENTAL_PLAN_MODE flag by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14283
+- fix(vscode): retry terminated backend connection errors by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14286
+- fix(cli): trigger auto-compaction at the configured context threshold by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/13340
+- fix(vscode): keep the right backing when a paste chip is deleted by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14333
+- fix(i18n): translate session cleanup progress messages by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14343
+- fix(cli): preserve dollar-prefixed placeholders in project markdown by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14345
+- fix(vscode): anchor markdown review comments to the right list item by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14324
+- fix(vscode): stop background-project session spinners from leaking by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14348
+- fix(cli): stop repeating the MCP GET stream probe on a non-SSE response by @grandmaster451 in https://github.com/Kilo-Org/kilocode/pull/14216
+- fix(cli): support Bedrock encrypted reasoning by @jezdez in https://github.com/Kilo-Org/kilocode/pull/14351
+- fix(ui): use a standard pushpin icon for pinned session tabs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14354
+- fix(jetbrains): stop one slow gh lookup from blanking PR badges by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14305
+- fix(jetbrains): make worktree runs use the worktree's logs and npm configs by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14306
+- fix: retry dropped permission replies by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14360
+
+### Changed
+- release(jetbrains): v7.1.7-rc.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14266
+- Closes #13972 — fix(docs): add redirects for legacy paths and root llms.txt by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14171
+- test(vscode): fold taskBackground coverage into hydration test by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14288
+- test(vscode): use shared fixture runner in worktree-finish test by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14291
+- test(vscode): dedupe childID coverage by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14290
+- test(vscode): share the spec open helper by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14289
+- chore: remove small dead leftovers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14293
+- refactor(vscode): remove write-only browser automation state by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14300
+- refactor(agent-manager): remove dead project route api by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14297
+- refactor(vscode): remove dead message types and test-only helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14299
+- refactor(agent-manager): remove unused local comment variant by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14298
+- docs: document the Kilo Memory feature by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14304
+- docs: auto-sync other with merged PRs (through 2026-09-19) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14276
+- docs: auto-sync gateway with merged PRs (through 2026-09-19) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14131
+- docs: correct README agent list and --auto description by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14303
+- refactor(vscode): drive the session preview with paint frames by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14352
+- Opencode Merge v1.18.14…v1.18.15 by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13002
+- OpenCode Merge v1.18.16…v1.18.18 by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13368
+
+
 ## [7.1.7-rc.2] - 2026-09-17
 
 ### Added
