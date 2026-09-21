@@ -141,3 +141,37 @@ export function createDiffPanelFocus(opts: {
     },
   }
 }
+
+/**
+ * Wire the focus controller to the Agent Manager shell. Grouping the callbacks
+ * here keeps the component call site short and the file within its line cap.
+ */
+export function createAppDiffPanelFocus(deps: {
+  isOpen: () => boolean
+  isReviewActive: () => boolean
+  openSide: () => void
+  closeSide: () => void
+  closeHistory: () => void
+  closeReview: (focus: boolean) => void
+  focusPrompt: () => void
+  hideReview: () => void
+  clearTerminal: () => void
+  track: (action: string) => void
+}) {
+  return createDiffPanelFocus({
+    isOpen: deps.isOpen,
+    open: (focus) => {
+      deps.openSide()
+      deps.closeHistory()
+      if (deps.isReviewActive()) deps.closeReview(!focus)
+    },
+    close: deps.closeSide,
+    closeHistory: deps.closeHistory,
+    focusPrompt: deps.focusPrompt,
+    revealPrompt: () => {
+      deps.hideReview()
+      deps.clearTerminal()
+    },
+    track: deps.track,
+  })
+}

@@ -228,7 +228,7 @@ import {
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
-import { createDiffPanelFocus } from "./diff-panel-focus"
+import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { usePendingCreate } from "./pending-create"
 import { defaultBase as projectDefaultBase } from "./project/default-base"
 import { createBrowserPanel } from "./BrowserPanel"
@@ -571,20 +571,16 @@ const AgentManagerContent: Component = () => {
     }
     requestChatFocus()
   }
-  const diffPanels = createDiffPanelFocus({
+  const diffPanels = createAppDiffPanelFocus({
     isOpen: () => diffOpen() && !reviewActive(),
-    open: (focus) => {
-      panels.open(SidePanel.Diff)
-      closeHistory()
-      if (reviewActive()) closeReviewTab(!focus)
-    },
-    close: () => panels.close(SidePanel.Diff),
+    isReviewActive: reviewActive,
+    openSide: () => panels.open(SidePanel.Diff),
+    closeSide: () => panels.close(SidePanel.Diff),
     closeHistory,
+    closeReview: (focus) => closeReviewTab(focus),
     focusPrompt: requestChatFocus,
-    revealPrompt: () => {
-      setReviewActive(false)
-      terms.setActiveId(undefined)
-    },
+    hideReview: () => setReviewActive(false),
+    clearTerminal: () => terms.setActiveId(undefined),
     track: (action) => metrics.track("side_review", "tab_toolbar", { action }),
   })
   createEffect(
