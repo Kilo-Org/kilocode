@@ -101,6 +101,39 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, scroll.verticalScrollBarPolicy)
     }
 
+    fun `test task glyph shows the neutral identity before the child session id is known`() {
+        val view = view(task(sessionId = null))
+
+        assertNotNull(glyph(view).icon)
+    }
+
+    fun `test different child sessions get different generated avatars`() {
+        val a = view(task(sessionId = "ses_aaa"))
+        val b = view(task(sessionId = "ses_bbb"))
+
+        assertNotSame(glyph(a).icon, glyph(b).icon)
+    }
+
+    fun `test avatar settles to the same static glyph once a running task finishes`() {
+        val view = view(running())
+        val runningIcon = glyph(view).icon
+
+        view.update(running().also { it.state = ToolExecState.COMPLETED })
+        val doneIcon = glyph(view).icon
+        assertNotSame(runningIcon, doneIcon)
+
+        // Re-applying the same terminal state reuses the retained static icon.
+        view.update(running().also { it.state = ToolExecState.COMPLETED })
+        assertSame(doneIcon, glyph(view).icon)
+    }
+
+    fun `test a supplied avatar color resolver changes the identity for the same child session`() {
+        val default = view(task(sessionId = "ses_colored"))
+        val colored = view(task(sessionId = "ses_colored"), avatarColor = { 3 })
+
+        assertNotSame(glyph(default).icon, glyph(colored).icon)
+    }
+
     fun `test child tool titles use target color`() {
         val view = view(task(children = listOf(child("c1", "read"), child("c2", "grep", ToolExecState.ERROR))))
 
@@ -305,8 +338,12 @@ class TaskToolViewTest : BasePlatformTestCase() {
         tool: Tool,
         onOpen: ((String, String) -> Unit)? = null,
         promote: BackgroundPromote? = null,
-    ): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen, onPromoteBackgroundAgent = promote)
+        avatarColor: (String) -> Int? = { null },
+    ): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen, onPromoteBackgroundAgent = promote, avatarColor = avatarColor)
         .also { views.add(it) }
+
+    /** The task card's leading generated-avatar glyph: the one icon-only, text-less header label. */
+    private fun glyph(view: TaskToolView) = descendants(view).filterIsInstance<JBLabel>().first { it.text.isNullOrBlank() && it.icon != null }
 
     /** A still-running foreground task — the only state "Continue in background" applies to. */
     private fun running(background: Boolean = false) = task().also {

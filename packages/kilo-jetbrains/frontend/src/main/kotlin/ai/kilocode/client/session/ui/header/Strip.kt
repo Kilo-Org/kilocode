@@ -3,7 +3,10 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -52,9 +55,12 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
     private val row = BorderLayoutPanel().apply {
         isOpaque = false
         add(summary, BorderLayout.WEST)
-        add(actions, BorderLayout.EAST)
+        add(actions.align(HAlign.RIGHT, VAlign.CENTER), BorderLayout.EAST)
     }
     private var body: JComponent? = null
+
+    /** Todo bodies remain horizontal; background-agent rows opt into width-tracking vertical scroll. */
+    protected open val vertical = false
 
     /** Current style snapshot, kept for subclasses that recompute a color outside [applyStyle] (e.g. on [update]). */
     protected var style: SessionEditorStyle = SessionEditorStyle.current()
@@ -95,7 +101,7 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
     @RequiresEdt
     protected fun expand(): Boolean {
         if (expanded()) return false
-        val content = body ?: Scroller(createBody()).also { body = it }
+        val content = body ?: Scroller(createBody(), vertical).also { body = it }
         add(content)
         arrow.icon = AllIcons.General.ArrowDown
         return true
@@ -149,30 +155,49 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
 }
 
 /**
- * Horizontal-only scroll host for a strip body, so a long to-do line or agent title stays reachable
- * instead of being clipped by the tool window width.
+ * Scroll host for a strip body. Todo strips use the horizontal default, so a long to-do line stays
+ * reachable instead of being clipped by the tool window width. Background-agent rows opt into
+ * [vertical] scrolling instead: the body tracks the viewport width (see
+ * `BackgroundAgentStrip.Body`), and the vertical bar caps how many rows show before scrolling so the
+ * trailing action button never leaves the viewport.
  *
- * The overlapping scrollbar floats over the content rather than taking its own row, so an expanded
- * strip's height never jumps when the bar appears. Preferred width is reported as zero — the wide
- * content must not widen the header, and the strip's `BoxLayout.Y_AXIS` parent stretches the pane to
- * the available width via the unbounded maximum. This is the same sizing shape
+ * In horizontal mode the overlapping scrollbar floats over the content rather than taking its own
+ * row, so an expanded strip's height never jumps when the bar appears. Preferred width is reported as
+ * zero — the wide content must not widen the header, and the strip's `BoxLayout.Y_AXIS` parent
+ * stretches the pane to the available width via the unbounded maximum. This is the same sizing shape
  * `MdViewHybrid.sizeCodePane` uses for scrollable code blocks.
+ *
+ * In vertical mode the scrollbar takes its own column (not overlapping, so it cannot cover the action
+ * button) and height is left to the viewport's actual preferred/maximum size instead of being pinned.
  */
-private class Scroller(view: JComponent) : JBScrollPane(view) {
+private class Scroller(view: JComponent, private val vertical: Boolean) : JBScrollPane(view) {
     init {
         border = JBUI.Borders.empty()
         viewportBorder = JBUI.Borders.empty()
         isOpaque = false
         viewport.isOpaque = false
-        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
-        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
-        setOverlappingScrollBar(true)
-        verticalScrollBar.preferredSize = JBUI.emptySize()
+        horizontalScrollBarPolicy = if (vertical) {
+            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        } else {
+            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        }
+        verticalScrollBarPolicy = if (vertical) {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        } else {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+        }
+        setOverlappingScrollBar(!vertical)
+        if (!vertical) verticalScrollBar.preferredSize = JBUI.emptySize()
     }
 
-    override fun getPreferredSize() = Dimension(0, super.getPreferredSize().height)
+    // In vertical mode, preferred/minimum width come from the viewport's own scrollable-size contract
+    // (`BackgroundAgentStrip.Body.getPreferredScrollableViewportSize`, capped to five rows), rather
+    // than being forced to zero. Both modes still pin the maximum height to the preferred height so
+    // the strip's `BoxLayout.Y_AXIS` parent never stretches it taller than its content calls for, and
+    // both stretch to the full available width via an unbounded maximum width.
+    override fun getPreferredSize() = if (vertical) super.getPreferredSize() else Dimension(0, super.getPreferredSize().height)
 
-    override fun getMinimumSize() = Dimension(0, preferredSize.height)
+    override fun getMinimumSize() = if (vertical) super.getMinimumSize() else Dimension(0, preferredSize.height)
 
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
 }

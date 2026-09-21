@@ -276,20 +276,14 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         )
     }
 
-    fun `test cancelled agent shows a blank glyph sized like the other status icons`() {
+    fun `test cancelled agent shows no status glyph and reclaims its slot`() {
         val strip = strip()
 
-        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
-        click(strip.rowPanel())
-        val done = strip.rowStatusIcon("job1")!!
-
         strip.update(listOf(agent("job1", BackgroundAgentStatus.CANCELLED)))
-        val cancelled = strip.rowStatusIcon("job1")!!
+        click(strip.rowPanel())
 
-        // No glyph for a cancelled agent, but the slot keeps its width so titles stay aligned.
-        assertTrue(cancelled is EmptyIcon)
-        assertEquals(done.iconWidth, cancelled.iconWidth)
-        assertEquals(done.iconHeight, cancelled.iconHeight)
+        assertNull(strip.rowStatusIcon("job1"))
+        assertFalse(strip.rowStatusGlyphVisible("job1"))
     }
 
     fun `test error and completed agents keep their status glyphs`() {
@@ -301,24 +295,163 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         assertFalse(strip.rowStatusIcon("job1") is EmptyIcon)
     }
 
-    fun `test body scrolls horizontally without widening the header`() {
+    fun `test running agent hides the redundant terminal status glyph`() {
+        val strip = strip()
+
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        click(strip.rowPanel())
+
+        assertFalse(strip.rowStatusGlyphVisible("job1"))
+
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
+
+        assertTrue(strip.rowStatusGlyphVisible("job1"))
+    }
+
+    fun `test different agents get different generated avatars`() {
+        val strip = strip()
+
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.RUNNING, session = "ses_a"),
+                agent("job2", BackgroundAgentStatus.RUNNING, session = "ses_b"),
+            ),
+        )
+        click(strip.rowPanel())
+
+        assertNotSame(strip.rowAvatarIcon("job1"), strip.rowAvatarIcon("job2"))
+    }
+
+    fun `test avatar swaps from running to static when the agent finishes, then stays retained`() {
+        val strip = strip()
+
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        click(strip.rowPanel())
+        val running = strip.rowAvatarIcon("job1")
+
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
+        val done = strip.rowAvatarIcon("job1")
+        assertNotSame(running, done)
+
+        // Re-applying the same terminal status reuses the retained static icon.
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
+        assertSame(done, strip.rowAvatarIcon("job1"))
+    }
+
+    fun `test waiting for input keeps the agent avatar animated, not a blank glyph`() {
+        val strip = strip()
+
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING, waiting = true)))
+        click(strip.rowPanel())
+
+        assertFalse(strip.rowAvatarIcon("job1") is EmptyIcon)
+    }
+
+    fun `test a custom avatar color resolver changes the generated identity`() {
+        val colored = strip(avatarColor = { 3 })
+        colored.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        click(colored.rowPanel())
+
+        val hashed = strip()
+        hashed.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        click(hashed.rowPanel())
+
+        assertNotSame(colored.rowAvatarIcon("job1"), hashed.rowAvatarIcon("job1"))
+    }
+
+    fun `test body scrolls vertically and tracks the viewport width instead of widening the header`() {
         val strip = strip()
 
         strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING, title = "A".repeat(400))))
         click(strip.rowPanel())
         val scroll = strip.bodyComponent() as JBScrollPane
 
-        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, scroll.horizontalScrollBarPolicy)
-        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, scroll.verticalScrollBarPolicy)
-        // A very long title must not push the header wider than its container.
-        assertEquals(0, scroll.preferredSize.width)
-        assertEquals(0, scroll.minimumSize.width)
-        assertTrue(scroll.maximumSize.width > 0)
-        // Height still tracks the content so the expanded strip is not clipped vertically.
-        assertEquals(scroll.preferredSize.height, scroll.maximumSize.height)
-        assertTrue(scroll.preferredSize.height > 0)
-        // The content itself stays at its full width inside the viewport, so it can be scrolled to.
-        assertTrue(scroll.viewport.view.preferredSize.width > JBUI.scale(400))
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, scroll.horizontalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, scroll.verticalScrollBarPolicy)
+        assertTrue(scroll.viewport.view is javax.swing.Scrollable)
+        assertTrue((scroll.viewport.view as javax.swing.Scrollable).getScrollableTracksViewportWidth())
+
+        // A very long title must not push the row (or the header) wider than the viewport gives it.
+        // (Its unconstrained *preferred* width still reports the full title — that is ordinary Swing
+        // behavior for an unclipped label — so this only asserts the actual, laid-out width.)
+        val body = scroll.viewport.view as JComponent
+        body.setSize(JBUI.scale(400), body.preferredSize.height)
+        body.doLayout()
+        val row = strip.agentRowPanel("job1")!!
+        assertEquals(body.width - body.insets.left - body.insets.right, row.width)
+    }
+
+    fun `test a long title does not push the trailing action past the row's east edge`() {
+        val strip = strip()
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING, title = "A".repeat(400))))
+        click(strip.rowPanel())
+
+        val body = (strip.bodyComponent() as JBScrollPane).viewport.view as JComponent
+        body.setSize(JBUI.scale(400), body.preferredSize.height)
+        layoutTree(body)
+        val row = strip.agentRowPanel("job1")!!
+        val action = strip.rowActionButton("job1")!!
+        val actionRight = javax.swing.SwingUtilities.convertPoint(action, action.width, 0, row).x
+
+        assertTrue(actionRight <= row.width)
+        assertTrue(actionRight > row.width - JBUI.scale(60))
+    }
+
+    fun `test icon, title, and action are vertically centered on the row`() {
+        val strip = strip()
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        click(strip.rowPanel())
+
+        val body = (strip.bodyComponent() as JBScrollPane).viewport.view as JComponent
+        body.setSize(JBUI.scale(400), body.preferredSize.height)
+        layoutTree(body)
+        val row = strip.agentRowPanel("job1")!!
+
+        val avatarCenterY = componentCenterY(strip.rowAvatarComponent("job1")!!, row)
+        val actionCenterY = componentCenterY(strip.rowActionButton("job1")!!, row)
+        val rowCenterY = row.height / 2
+
+        assertTrue(Math.abs(rowCenterY - avatarCenterY) <= 1)
+        assertTrue(Math.abs(rowCenterY - actionCenterY) <= 1)
+    }
+
+    fun `test five rows fit before the strip scrolls, a sixth does not`() {
+        val strip = strip()
+        strip.update((1..6).map { agent("job$it", BackgroundAgentStatus.RUNNING) })
+        click(strip.rowPanel())
+
+        // `JViewport.preferredSize` does not consult `Scrollable`; only `JScrollPane`'s own layout
+        // (`ScrollPaneLayout`) does, which is what actually caps the expanded strip's height.
+        val scroll = strip.bodyComponent() as JBScrollPane
+        val viewportHeight = scroll.preferredSize.height
+        val body = scroll.viewport.view as JComponent
+        body.setSize(body.preferredSize.width, body.preferredSize.height)
+        body.doLayout()
+
+        val fifthBottom = strip.agentRowPanel("job5")!!.let { it.y + it.height }
+        val sixth = strip.agentRowPanel("job6")!!
+
+        // The fifth row fits entirely within the capped viewport height; the sixth row's bottom
+        // edge extends past it (a few pixels of it may still peek into the shared bottom padding),
+        // so it is not fully visible without scrolling.
+        assertTrue(fifthBottom <= viewportHeight)
+        assertTrue(sixth.y + sixth.height > viewportHeight)
+        assertTrue(body.preferredSize.height > viewportHeight)
+    }
+
+    private fun componentCenterY(component: Component, ancestor: JComponent): Int =
+        javax.swing.SwingUtilities.convertPoint(component, component.width / 2, component.height / 2, ancestor).y
+
+    /**
+     * `Container.doLayout()` only positions direct children; it does not cascade into their own
+     * layout managers the way `validate()` would. Geometry assertions that reach past the immediate
+     * child (e.g. a row's own avatar/action inside its `BorderLayout`) need every level laid out
+     * top-down, since each level's layout depends on the size its parent just assigned it.
+     */
+    private fun layoutTree(component: Component) {
+        if (component !is java.awt.Container) return
+        component.doLayout()
+        component.components.forEach { layoutTree(it) }
     }
 
     fun `test repeated identical updates do not repaint the strip`() {
@@ -434,7 +567,8 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         onCancel: (String) -> Unit = {},
         onCancelAll: (List<String>) -> Unit = {},
         onDismiss: (Set<String>) -> Unit = {},
-    ) = BackgroundAgentStrip(readonly, onOpen, onCancel, onCancelAll, onDismiss)
+        avatarColor: (String) -> Int? = { null },
+    ) = BackgroundAgentStrip(readonly, onOpen, onCancel, onCancelAll, onDismiss, avatarColor)
 
     private fun agent(
         job: String,

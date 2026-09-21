@@ -43,6 +43,8 @@ class TurnView(
     private val deleteQueued: ((String) -> Unit)? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
     private val onPromoteBackgroundAgent: BackgroundPromote? = null,
+    /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
+    private val avatarColor: (String) -> Int? = { null },
 ) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
@@ -82,7 +84,7 @@ class TurnView(
     fun addMessage(msg: Message): MessageView {
         val view = MessageView(
             msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert, fork,
-            onOpenSubagent, onPromoteBackgroundAgent,
+            onOpenSubagent, onPromoteBackgroundAgent, avatarColor,
         ).also {
             it.setDiffOpener(openDiff, sessionId)
         }

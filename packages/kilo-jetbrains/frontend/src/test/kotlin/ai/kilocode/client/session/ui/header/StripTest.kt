@@ -10,6 +10,7 @@ import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
 
 /**
  * Base-class coverage for [Strip], the shared chrome behind [TodoStrip] and [BackgroundAgentStrip].
@@ -79,19 +80,46 @@ class StripTest : BasePlatformTestCase() {
         assertEquals(JBUI.scale(900), scroll.viewport.view.preferredSize.width)
     }
 
-    fun `test both strips share the same scroller shape`() {
+    fun `test todo strip scrolls horizontally, background-agent strip scrolls vertically`() {
         val todo = TodoStrip()
         val agents = BackgroundAgentStrip(false, { _, _ -> }, {}, {}, {})
 
         click(todo.rowPanel())
         click(agents.rowPanel())
 
-        assertTrue(todo.bodyComponent() is JBScrollPane)
-        assertTrue(agents.bodyComponent() is JBScrollPane)
-        assertEquals(
-            (todo.bodyComponent() as JBScrollPane).horizontalScrollBarPolicy,
-            (agents.bodyComponent() as JBScrollPane).horizontalScrollBarPolicy,
-        )
+        val todoScroll = todo.bodyComponent() as JBScrollPane
+        val agentsScroll = agents.bodyComponent() as JBScrollPane
+
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, todoScroll.horizontalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, todoScroll.verticalScrollBarPolicy)
+
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, agentsScroll.horizontalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, agentsScroll.verticalScrollBarPolicy)
+    }
+
+    fun `test the shared summary actions cluster stays vertically centered at the east edge`() {
+        val strip = TestStrip()
+        val action = JLabel("action")
+        strip.addAction(action)
+        strip.rowComponent().setSize(400, 40)
+        layoutTree(strip.rowComponent())
+
+        val rowCenterY = strip.rowComponent().height / 2
+        val actionCenterY = SwingUtilities.convertPoint(action, action.width / 2, action.height / 2, strip.rowComponent()).y
+
+        assertTrue(Math.abs(rowCenterY - actionCenterY) <= 1)
+    }
+
+    /**
+     * `Container.doLayout()` only positions direct children; it does not cascade into their own
+     * layout managers the way `validate()` would. The actions cluster sits two `Align`/`Stack`
+     * levels below `rowComponent()`, so reaching its actual position needs every level laid out
+     * top-down, since each level's layout depends on the size its parent just assigned it.
+     */
+    private fun layoutTree(component: Component) {
+        if (component !is JComponent) return
+        component.doLayout()
+        component.components.forEach { layoutTree(it) }
     }
 
     fun `test starts hidden until its owner reports content`() {
@@ -157,5 +185,9 @@ class StripTest : BasePlatformTestCase() {
         fun toggleNow() = toggle()
 
         fun reveal(visible: Boolean) = syncVisible(visible)
+
+        fun addAction(action: Component) {
+            actions.next(action)
+        }
     }
 }

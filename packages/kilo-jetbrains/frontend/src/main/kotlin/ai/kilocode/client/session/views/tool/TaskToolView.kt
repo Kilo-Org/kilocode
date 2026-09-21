@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.AgentAvatar
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
@@ -44,6 +45,8 @@ class TaskToolView(
     private val selection: SessionSelection? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
     private val onPromoteBackgroundAgent: BackgroundPromote? = null,
+    /** Sibling color slot for the task's child session's generated avatar. See [AgentAvatar]. */
+    private val avatarColor: (String) -> Int? = { null },
     private val parts: ToolParts = toolParts(tool),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
 ) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }, { footer }), UiDataProvider, ApprovalReasonTarget, SessionCopyTarget {
@@ -53,6 +56,12 @@ class TaskToolView(
     private var item = tool
     private var style = SessionEditorStyle.current()
     private val rows = LinkedHashMap<String, Row>()
+    // Recreated only when the child session id or its resolved sibling color changes; a state-only
+    // change (pending/running/completed/error) just swaps between these two retained icons.
+    private var avatarId = ""
+    private var avatarColorSlot: Int? = null
+    private var avatarStatic = AgentAvatar.static(avatarId, avatarColorSlot)
+    private var avatarRunning = AgentAvatar.running(avatarId, avatarColorSlot)
     private var following = false
     private var collapsed = false
     private var popup: HeaderPopupBody? = null
@@ -167,8 +176,7 @@ class TaskToolView(
         var changed = false
         changed = syncExpandable(item.childTools.isNotEmpty()) || changed
         changed = setVisible(parts.state, item.childTools.isEmpty()) || changed
-        changed = setIcon(parts.glyph, icon(item)) || changed
-        changed = setForeground(parts.glyph, color(item)) || changed
+        changed = syncAvatar() || changed
         changed = setText(parts.title, agentTitle(item)) || changed
         changed = setText(parts.sub, summary(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
@@ -177,6 +185,26 @@ class TaskToolView(
         changed = setVisible(promoteButton, canPromote(item)) || changed
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    /**
+     * Generated per-subagent avatar (see [AgentAvatar]): the neutral unknown glyph before
+     * `childSessionId` is known, then a stable shape/hue keyed by that id. Running/pending shows the
+     * pulsing variant; completed/error settle on the same static glyph. Never tints through
+     * `parts.glyph.foreground` — the identity's color is baked into the icon itself.
+     */
+    @RequiresEdt
+    private fun syncAvatar(): Boolean {
+        val id = item.childSessionId ?: ""
+        val colorSlot = if (id.isEmpty()) null else avatarColor(id)
+        if (id != avatarId || colorSlot != avatarColorSlot) {
+            avatarId = id
+            avatarColorSlot = colorSlot
+            avatarStatic = AgentAvatar.static(id, colorSlot)
+            avatarRunning = AgentAvatar.running(id, colorSlot)
+        }
+        val running = item.state == ToolExecState.PENDING || item.state == ToolExecState.RUNNING
+        return setIcon(parts.glyph, if (running) avatarRunning else avatarStatic)
     }
 
     /**

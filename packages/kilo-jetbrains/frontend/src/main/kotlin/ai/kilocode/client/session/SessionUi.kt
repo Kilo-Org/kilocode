@@ -1152,7 +1152,8 @@ class SessionUi(
 
     @RequiresEdt
     private fun openSubagent(sessionId: String, title: String) {
-        service<SubagentTitleCache>().put(sessionId, title)
+        val color = AgentAvatarIdentity.palette(controller.model.childSessions())[sessionId]
+        service<SubagentTitleCache>().put(sessionId, title, color)
         ensureSubagentSessionEditorKind()
         project.service<KiloVfsManager>().open(
             SubagentSessionEditorKind.ID,

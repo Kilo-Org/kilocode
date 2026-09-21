@@ -76,6 +76,9 @@ class SessionHeaderPanel(
         onCancel = controller::cancelBackgroundAgent,
         onCancelAll = { jobs -> jobs.forEach(controller::cancelBackgroundAgent) },
         onDismiss = controller::dismissBackgroundAgents,
+        // Same source as the foreground task card's palette (all child sessions, not just the
+        // currently visible background rows), so a promoted agent keeps its hue.
+        avatarColor = { id -> ai.kilocode.client.session.AgentAvatarIdentity.palette(controller.model.childSessions())[id] },
     )
     private val todoStrip = TodoStrip()
     private val compact = HoverIcon().apply {

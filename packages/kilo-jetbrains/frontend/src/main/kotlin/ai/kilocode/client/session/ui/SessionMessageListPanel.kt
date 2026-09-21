@@ -311,10 +311,20 @@ class SessionMessageListPanel(
         return after != before
     }
 
+    /**
+     * Sibling color slot for a child session's generated avatar (see
+     * [ai.kilocode.client.session.AgentAvatar]), recomputed from the model's current child spawn
+     * order on each lookup rather than cached, so a foreground task card and a promoted
+     * background-agent row read the same hue without any extra invalidation bookkeeping. Cheap: only
+     * called from task card `sync()`, never from icon paint or animation frames.
+     */
+    private fun avatarColor(childSessionId: String): Int? =
+        ai.kilocode.client.session.AgentAvatarIdentity.palette(model.childSessions())[childSessionId]
+
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent).also {
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor).also {
             it.setDiffOpener(openDiff, sessionId)
         }
         turnViews[turn.id] = tv
@@ -386,7 +396,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent).also {
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor).also {
                 it.setDiffOpener(openDiff, sessionId)
             }
             turnViews[turn.id] = tv
