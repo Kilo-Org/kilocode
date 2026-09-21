@@ -228,6 +228,7 @@ import {
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
+import { createDiffPanelFocus } from "./diff-panel-focus"
 import { usePendingCreate } from "./pending-create"
 import { defaultBase as projectDefaultBase } from "./project/default-base"
 import { createBrowserPanel } from "./BrowserPanel"
@@ -570,6 +571,22 @@ const AgentManagerContent: Component = () => {
     }
     requestChatFocus()
   }
+  const diffPanels = createDiffPanelFocus({
+    isOpen: () => diffOpen() && !reviewActive(),
+    open: (focus) => {
+      panels.open(SidePanel.Diff)
+      closeHistory()
+      if (reviewActive()) closeReviewTab(!focus)
+    },
+    close: () => panels.close(SidePanel.Diff),
+    closeHistory,
+    focusPrompt: requestChatFocus,
+    revealPrompt: () => {
+      setReviewActive(false)
+      terms.setActiveId(undefined)
+    },
+    track: (action) => metrics.track("side_review", "tab_toolbar", { action }),
+  })
   createEffect(
     on(
       () => terms.focusedId(),
@@ -1273,9 +1290,7 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "showTerminal") {
         if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
-        panels.toggle(SidePanel.Diff)
-        closeHistory()
-        if (reviewActive()) closeReviewTab()
+        diffPanels.toggleCommand()
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") showNewWorktreeDialog()
@@ -1347,6 +1362,7 @@ const AgentManagerContent: Component = () => {
     // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
     const deleteKeyHandler = (e: KeyboardEvent) => {
       if (e.key !== "Delete" && e.key !== "Backspace") return
+      if (diffPanels.isFocusTarget(e.target)) return
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
       const sel = selection()
@@ -1355,15 +1371,11 @@ const AgentManagerContent: Component = () => {
       confirmDeleteWorktree(sel)
     }
     window.addEventListener("keydown", deleteKeyHandler)
+    onCleanup(diffPanels.listen())
     onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
-
     // Pointer movement repairs a lost keyup before hover actions are revealed.
     const stopModifier = modifier.watch(window, isMac, setHeld)
-
-    // When the panel regains focus (e.g. returning from terminal), focus the prompt
-    // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
-    // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
-    // focus leaves the webview before the overlay closes).
+    // Recover focus and clear stale Kobalte modal styles when returning to the webview.
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
@@ -1748,16 +1760,17 @@ const AgentManagerContent: Component = () => {
     terms.setActiveId(undefined)
     setReviewOpenForContext(sel, true)
     setReviewActive(true)
+    diffPanels.focusReview()
   }
 
   // Deferred close: flip signal immediately for instant UI feedback,
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
-  const closeReviewTab = () => {
+  const closeReviewTab = (focus = true) => {
     freezeTabs()
     setReviewActive(false)
     setReviewOpenForSelection(false)
-    tabFocus.restore()
+    if (focus) tabFocus.restore()
   }
 
   const reviewDiffs = createMemo(() => {
@@ -2207,16 +2220,6 @@ const AgentManagerContent: Component = () => {
     confirmDeleteWorktree(sel)
   }
 
-  /** The Local/worktrees/sessions body of the active project. */
-  const toggleDiffPanel = () => {
-    metrics.track("side_review", "tab_toolbar", {
-      action: diffOpen() && !reviewActive() ? "close" : "open",
-    })
-    panels.toggle(SidePanel.Diff)
-    closeHistory()
-    if (reviewActive()) closeReviewTab()
-  }
-
   const renderTabById = (id: string) =>
     renderTab(id, {
       terms,
@@ -2409,7 +2412,7 @@ const AgentManagerContent: Component = () => {
           onConfigureRun={configureRunScript}
           diffOpen={diffOpen}
           reviewActive={reviewActive}
-          onToggleDiff={toggleDiffPanel}
+          onToggleDiff={diffPanels.toggleToolbar}
           {...browser.tabs}
           onToggleBrowser={metrics.click("browser", "tab_toolbar", browser.tabs.onToggleBrowser, () => ({
             action: browser.tabs.browserOpen() ? "close" : "open",
@@ -2642,7 +2645,7 @@ const AgentManagerContent: Component = () => {
                       markdownRender={markdown.render()}
                       onMarkdownRenderChange={markdown.update}
                       onSendClick={() => metrics.track("send_review_comments", "side_review")}
-                      onClose={metrics.click("side_review_close", "side_review", () => panels.close(SidePanel.Diff))}
+                      onClose={metrics.click("side_review_close", "side_review", diffPanels.closePanel)}
                       onExpand={
                         selection() !== null
                           ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })

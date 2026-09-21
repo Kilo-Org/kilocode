@@ -3,6 +3,58 @@ const nonText = new Set(["button", "checkbox", "file", "hidden", "image", "radio
 export const hasPopup = (root: ParentNode = document): boolean =>
   root.querySelector(".popup-selector[data-expanded]") !== null
 
+/**
+ * Marker for a scroll region that owns keyboard focus, such as the diff
+ * viewport. Delayed prompt focus recovery must not steal focus from it.
+ */
+export const FOCUS_REGION_ATTRIBUTE = "data-focus-region"
+
+/** Whether the element sits inside a keyboard focus region. */
+export const ownsFocusRegion = (el: Element | null | undefined = document.activeElement): boolean =>
+  !!el && typeof el.closest === "function" && el.closest(`[${FOCUS_REGION_ATTRIBUTE}]`) !== null
+
+/** Whether the element itself is a keyboard focus region. */
+export const isFocusRegion = (el: Element | null | undefined): boolean =>
+  !!el && typeof el.matches === "function" && el.matches(`[${FOCUS_REGION_ATTRIBUTE}]`)
+
+/** Release a viewport or its inner scroller without changing native editor behavior. */
+export function releaseFocusRegion(event: PointerEvent, doc: Document = document): void {
+  const active = doc.activeElement
+  const region = active?.closest(`[${FOCUS_REGION_ATTRIBUTE}]`)
+  if (!region || event.composedPath().includes(region)) return
+  let target = active
+  while (target?.shadowRoot?.activeElement) target = target.shadowRoot.activeElement
+  if (target && !isTextControl(target)) (target as HTMLElement).blur()
+}
+
+/** Route paste from non-editable surfaces without taking paste away from another editor. */
+export const isPromptPaste = (event: ClipboardEvent): boolean =>
+  !event.defaultPrevented &&
+  !hasPopup() &&
+  !event.composedPath().some((node) => node instanceof Element && (isTextControl(node) || node.closest(".xterm")))
+
+/** Check writability without visibility, since review can cover the intended prompt. */
+export const isWritablePrompt = (prompt: HTMLTextAreaElement | undefined): prompt is HTMLTextAreaElement =>
+  !!prompt?.isConnected && !prompt.readOnly && !prompt.disabled && prompt.getAttribute("aria-disabled") !== "true"
+
+export function pasteToPrompt(
+  event: ClipboardEvent,
+  prompt: HTMLTextAreaElement | undefined,
+  paste: (event: ClipboardEvent) => void,
+): void {
+  if (!isPromptPaste(event) || !isWritablePrompt(prompt) || !prompt.getClientRects().length) return
+  if (prompt.closest('[inert], [aria-hidden="true"]')) return
+  prompt.focus({ preventScroll: true })
+  if (prompt.ownerDocument.activeElement !== prompt) return
+  paste(event)
+  if (event.defaultPrevented) return
+  const text = event.clipboardData?.getData("text/plain")
+  if (!text) return
+  event.preventDefault()
+  // Keep native undo for text, while reusing the normal image and large-paste handlers above.
+  prompt.ownerDocument.execCommand("insertText", false, text)
+}
+
 /** Keep prompt focus across OS window deactivation without stealing other controls. */
 export function createHold(opts: {
   target: () => HTMLElement | undefined

@@ -4775,6 +4775,36 @@ body.am-wt-dragging-active * {
   scroll-padding-top: 8px;
 }
 
+.am-diff-viewport {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Keep the frame above all scroll contents without reserving layout space. */
+.am-diff-viewport > .am-diff-content,
+.am-diff-viewport > .am-review-diff {
+  position: relative;
+  z-index: 0;
+}
+
+.am-diff-viewport:has(> [data-focus-region]:focus)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--border-focus);
+  pointer-events: none;
+}
+
+.am-diff-content:focus-within,
+.am-review-diff:focus-within {
+  outline: none;
+}
+
 .am-review-diff-content[data-component="session-review"] {
   height: auto;
   contain: none;

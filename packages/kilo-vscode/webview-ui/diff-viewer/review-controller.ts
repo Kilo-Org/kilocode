@@ -432,6 +432,7 @@ export function createReviewView(
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
   const [focused, setFocused] = createSignal<string>()
   const focus = createRemoteFocus(root, setFocused, { root: scroller, to: (offset) => virtualizer()?.scrollTo(offset) })
+  const focusViewport = () => (scroller() ? reviewFocus(scroller) : reviewFocus(root))
   const handles = new Map<string, DiffHandle>()
   const reveal = (file: string) => {
     const diff = props.diffs.find((item) => item.file === file)
@@ -459,7 +460,7 @@ export function createReviewView(
     composer: () => props.composer ?? local,
     key: () => props.sessionKey,
     preserveScroll: createReviewScrollPreserver(rows, virtualizer),
-    focus: () => reviewFocus(root),
+    focus: focusViewport,
     label: t,
     activeTerminalId: () => props.activeTerminalId,
     active: () => props.active !== false,
@@ -509,9 +510,6 @@ export function createReviewView(
       },
     ),
   )
-  const handleRootMouseDown = (event: MouseEvent) => {
-    if (!keepsNativeFocus(event.target)) reviewFocus(root)
-  }
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return
     if (keepsNativeFocus(event.target) || props.canComment === false || !comments().length) return
@@ -534,7 +532,6 @@ export function createReviewView(
     pinned,
     render,
     request,
-    handleRootMouseDown,
     handleKeyDown,
     commentsByFile: review.commentsByFile,
     handleGutterClick: review.handleGutterClick,
