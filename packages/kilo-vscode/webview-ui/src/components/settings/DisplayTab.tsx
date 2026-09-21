@@ -32,6 +32,13 @@ const MCP_OPTIONS: LayoutOption[] = [
   { value: "collapsed", labelKey: "settings.display.mcpTool.collapsed" },
 ]
 
+const DISPLAY_DEFAULTS = {
+  terminal_command_display: "expanded",
+  code_edit_display: "collapsed",
+  mcp_tool_display: "collapsed",
+  showAutoApprovalReason: true,
+} as const
+
 const REASONING_OPTIONS: LayoutOption[] = [
   { value: "expanded", labelKey: "settings.display.reasoningDisplay.expanded" },
   { value: "preview", labelKey: "settings.display.reasoningDisplay.preview" },
@@ -46,10 +53,12 @@ const DisplayTab: Component = () => {
     const preset = getDisplayPreset(style)
     return (
       display.reasoningDisplay() === preset.config.reasoning_display &&
-      (config().terminal_command_display ?? "expanded") === preset.config.terminal_command_display &&
-      (config().code_edit_display ?? "collapsed") === preset.config.code_edit_display &&
-      (config().mcp_tool_display ?? "collapsed") === preset.config.mcp_tool_display &&
-      Boolean(settings().showAutoApprovalReason ?? true) === preset.settings.showAutoApprovalReason
+      (config().terminal_command_display ?? DISPLAY_DEFAULTS.terminal_command_display) ===
+        preset.config.terminal_command_display &&
+      (config().code_edit_display ?? DISPLAY_DEFAULTS.code_edit_display) === preset.config.code_edit_display &&
+      (config().mcp_tool_display ?? DISPLAY_DEFAULTS.mcp_tool_display) === preset.config.mcp_tool_display &&
+      Boolean(settings().showAutoApprovalReason ?? DISPLAY_DEFAULTS.showAutoApprovalReason) ===
+        preset.settings.showAutoApprovalReason
     )
   }
   const apply = (style: WorkStyle) => {
@@ -145,7 +154,7 @@ const DisplayTab: Component = () => {
           description={language.t("settings.display.autoApprovalReason.description")}
         >
           <Switch
-            checked={Boolean(settings()["showAutoApprovalReason"] ?? true)}
+            checked={Boolean(settings()["showAutoApprovalReason"] ?? DISPLAY_DEFAULTS.showAutoApprovalReason)}
             onChange={(checked: boolean) => updateSetting("showAutoApprovalReason", checked)}
             hideLabel
           >
@@ -180,13 +189,15 @@ const DisplayTab: Component = () => {
         >
           <Select
             options={TERMINAL_OPTIONS}
-            current={TERMINAL_OPTIONS.find((o) => o.value === (config().terminal_command_display ?? "expanded"))}
+            current={TERMINAL_OPTIONS.find(
+              (o) => o.value === (config().terminal_command_display ?? DISPLAY_DEFAULTS.terminal_command_display),
+            )}
             value={(o) => o.value}
             label={(o) => language.t(o.labelKey)}
             onSelect={(o) => {
               if (!o) return
               const next = o.value as TerminalCommandDisplay
-              if (next === (config().terminal_command_display ?? "expanded")) return
+              if (next === (config().terminal_command_display ?? DISPLAY_DEFAULTS.terminal_command_display)) return
               updateConfig({ terminal_command_display: next })
             }}
             variant="secondary"
@@ -201,13 +212,15 @@ const DisplayTab: Component = () => {
         >
           <Select
             options={CODE_EDIT_OPTIONS}
-            current={CODE_EDIT_OPTIONS.find((o) => o.value === (config().code_edit_display ?? "collapsed"))}
+            current={CODE_EDIT_OPTIONS.find(
+              (o) => o.value === (config().code_edit_display ?? DISPLAY_DEFAULTS.code_edit_display),
+            )}
             value={(o) => o.value}
             label={(o) => language.t(o.labelKey)}
             onSelect={(o) => {
               if (!o) return
               const next = o.value as CodeEditDisplay
-              if (next === (config().code_edit_display ?? "collapsed")) return
+              if (next === (config().code_edit_display ?? DISPLAY_DEFAULTS.code_edit_display)) return
               updateConfig({ code_edit_display: next })
             }}
             variant="secondary"
@@ -223,13 +236,15 @@ const DisplayTab: Component = () => {
         >
           <Select
             options={MCP_OPTIONS}
-            current={MCP_OPTIONS.find((o) => o.value === (config().mcp_tool_display ?? "collapsed"))}
+            current={MCP_OPTIONS.find(
+              (o) => o.value === (config().mcp_tool_display ?? DISPLAY_DEFAULTS.mcp_tool_display),
+            )}
             value={(o) => o.value}
             label={(o) => language.t(o.labelKey)}
             onSelect={(o) => {
               if (!o) return
               const next = o.value as McpToolDisplay
-              if (next === (config().mcp_tool_display ?? "collapsed")) return
+              if (next === (config().mcp_tool_display ?? DISPLAY_DEFAULTS.mcp_tool_display)) return
               updateConfig({ mcp_tool_display: next })
             }}
             variant="secondary"
