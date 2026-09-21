@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.AgentAvatar
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
@@ -17,7 +18,9 @@ import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
 import java.awt.Color
+import java.awt.image.BufferedImage
 import javax.swing.JComponent
+import javax.swing.Icon
 import javax.swing.ScrollPaneConstants
 
 @Suppress("UnstableApiUsage")
@@ -104,14 +107,14 @@ class TaskToolViewTest : BasePlatformTestCase() {
     fun `test task glyph shows the neutral identity before the child session id is known`() {
         val view = view(task(sessionId = null))
 
-        assertNotNull(glyph(view).icon)
+        assertPixelsEqual(AgentAvatar.static(""), glyph(view).icon)
     }
 
     fun `test different child sessions get different generated avatars`() {
         val a = view(task(sessionId = "ses_aaa"))
         val b = view(task(sessionId = "ses_bbb"))
 
-        assertNotSame(glyph(a).icon, glyph(b).icon)
+        assertFalse(pixels(glyph(a).icon).contentEquals(pixels(glyph(b).icon)))
     }
 
     fun `test avatar settles to the same static glyph once a running task finishes`() {
@@ -128,10 +131,12 @@ class TaskToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test a supplied avatar color resolver changes the identity for the same child session`() {
-        val default = view(task(sessionId = "ses_colored"))
-        val colored = view(task(sessionId = "ses_colored"), avatarColor = { 3 })
+        val id = "ses_child"
+        val default = view(task(sessionId = id))
+        val colored = view(task(sessionId = id), avatarColor = { 3 })
 
-        assertNotSame(glyph(default).icon, glyph(colored).icon)
+        assertPixelsEqual(AgentAvatar.static(id, 3), glyph(colored).icon)
+        assertFalse(pixels(glyph(default).icon).contentEquals(pixels(glyph(colored).icon)))
     }
 
     fun `test child tool titles use target color`() {
@@ -407,5 +412,20 @@ class TaskToolViewTest : BasePlatformTestCase() {
     private fun assertColor(expected: Color, actual: Color?) {
         assertNotNull(actual)
         assertEquals(expected.rgb, actual!!.rgb)
+    }
+
+    private fun assertPixelsEqual(expected: Icon, actual: Icon) {
+        assertTrue(pixels(expected).contentEquals(pixels(actual)))
+    }
+
+    private fun pixels(icon: Icon): IntArray {
+        val image = BufferedImage(icon.iconWidth, icon.iconHeight, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            icon.paintIcon(null, g, 0, 0)
+        } finally {
+            g.dispose()
+        }
+        return image.getRGB(0, 0, image.width, image.height, null, 0, image.width)
     }
 }

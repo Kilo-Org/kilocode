@@ -190,14 +190,12 @@ private class Scroller(view: JComponent, private val vertical: Boolean) : JBScro
         if (!vertical) verticalScrollBar.preferredSize = JBUI.emptySize()
     }
 
-    // In vertical mode, preferred/minimum width come from the viewport's own scrollable-size contract
-    // (`BackgroundAgentStrip.Body.getPreferredScrollableViewportSize`, capped to five rows), rather
-    // than being forced to zero. Both modes still pin the maximum height to the preferred height so
-    // the strip's `BoxLayout.Y_AXIS` parent never stretches it taller than its content calls for, and
-    // both stretch to the full available width via an unbounded maximum width.
-    override fun getPreferredSize() = if (vertical) super.getPreferredSize() else Dimension(0, super.getPreferredSize().height)
+    // Width is always supplied by the strip's parent, never by an unclipped title inside the
+    // viewport. In vertical mode `BackgroundAgentStrip.Body` tracks that viewport width; its
+    // scrollable preferred size only decides the capped five-row height.
+    override fun getPreferredSize() = Dimension(0, super.getPreferredSize().height)
 
-    override fun getMinimumSize() = if (vertical) super.getMinimumSize() else Dimension(0, preferredSize.height)
+    override fun getMinimumSize() = Dimension(0, preferredSize.height)
 
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
 }

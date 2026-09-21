@@ -274,9 +274,9 @@ class BackgroundAgentStrip(
         val avatar = JBLabel()
 
         /**
-         * Terminal-state glyph next to the status text: success/error icon, or a blank glyph sized to
-         * match for cancelled. Hidden while running — the avatar's own pulse already shows activity,
-         * so a second spinner would be redundant.
+         * Terminal-state glyph next to the status text: success/error only. Hidden while running or
+         * cancelled, reclaiming the slot; the running avatar already shows activity and cancellation
+         * is not an error condition.
          */
         val statusGlyph = JBLabel()
         val title = JBLabel()

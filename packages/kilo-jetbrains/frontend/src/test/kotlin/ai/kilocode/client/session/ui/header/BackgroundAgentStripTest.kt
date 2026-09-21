@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.header
 
+import ai.kilocode.client.session.AgentAvatar
 import ai.kilocode.client.session.background.BackgroundAgent
 import ai.kilocode.client.session.background.BackgroundAgentStatus
 import ai.kilocode.client.session.background.BackgroundAgents
@@ -10,6 +11,8 @@ import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
+import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.RepaintManager
 import javax.swing.ScrollPaneConstants
@@ -348,15 +351,17 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
     }
 
     fun `test a custom avatar color resolver changes the generated identity`() {
+        val id = "ses_child"
         val colored = strip(avatarColor = { 3 })
-        colored.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        colored.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED, session = id)))
         click(colored.rowPanel())
 
         val hashed = strip()
-        hashed.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        hashed.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED, session = id)))
         click(hashed.rowPanel())
 
-        assertNotSame(colored.rowAvatarIcon("job1"), hashed.rowAvatarIcon("job1"))
+        assertPixelsEqual(AgentAvatar.static(id, 3), colored.rowAvatarIcon("job1")!!)
+        assertFalse(pixels(hashed.rowAvatarIcon("job1")!!).contentEquals(pixels(colored.rowAvatarIcon("job1")!!)))
     }
 
     fun `test body scrolls vertically and tracks the viewport width instead of widening the header`() {
@@ -370,6 +375,8 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, scroll.verticalScrollBarPolicy)
         assertTrue(scroll.viewport.view is javax.swing.Scrollable)
         assertTrue((scroll.viewport.view as javax.swing.Scrollable).getScrollableTracksViewportWidth())
+        assertEquals(0, scroll.preferredSize.width)
+        assertEquals(0, scroll.minimumSize.width)
 
         // A very long title must not push the row (or the header) wider than the viewport gives it.
         // (Its unconstrained *preferred* width still reports the full title — that is ordinary Swing
@@ -580,5 +587,20 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
 
     private fun click(component: Component) {
         component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
+    }
+
+    private fun assertPixelsEqual(expected: Icon, actual: Icon) {
+        assertTrue(pixels(expected).contentEquals(pixels(actual)))
+    }
+
+    private fun pixels(icon: Icon): IntArray {
+        val image = BufferedImage(icon.iconWidth, icon.iconHeight, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            icon.paintIcon(null, g, 0, 0)
+        } finally {
+            g.dispose()
+        }
+        return image.getRGB(0, 0, image.width, image.height, null, 0, image.width)
     }
 }
