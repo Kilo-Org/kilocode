@@ -1,3 +1,4 @@
+import * as AutoGuardRuntime from "@/kilocode/autoguard/observation"
 import { constants, type BigIntStats } from "node:fs"
 import { open, realpath, stat, type FileHandle } from "node:fs/promises"
 import { Readable } from "node:stream"
@@ -89,7 +90,10 @@ export namespace KiloReadObject {
       catch: failure,
     })
     return Effect.acquireUseRelease(
-      acquire,
+      AutoGuardRuntime.check().pipe(
+        Effect.andThen(acquire),
+        Effect.tap(() => AutoGuardRuntime.event("execution_started", { boundary: "file_open", path: info.target })),
+      ),
       (handle) =>
         Effect.gen(function* () {
           const opened = yield* Effect.tryPromise({
@@ -137,7 +141,11 @@ export namespace KiloReadObject {
             await handle.close()
           },
           catch: failure,
-        }),
+        }).pipe(
+          Effect.tap(() =>
+            AutoGuardRuntime.event("execution_finished", { boundary: "file_open", path: info.target, success: true }),
+          ),
+        ),
     )
   }
 }
