@@ -14,7 +14,7 @@ interface SessionPaging {
  * within its line cap.
  */
 export function createSessionPaging(
-  post: (message: { type: "loadMoreSessions" }) => void,
+  post: (message: { type: "loadSessions"; more?: boolean }) => void,
   connected: () => boolean,
 ): SessionPaging {
   const [hasMore, setHasMore] = createSignal(false)
@@ -22,7 +22,7 @@ export function createSessionPaging(
   const loadMore = () => {
     if (!connected() || !hasMore() || loadingMore()) return
     setLoadingMore(true)
-    post({ type: "loadMoreSessions" })
+    post({ type: "loadSessions", more: true })
   }
   const finish = (more: boolean) => {
     setHasMore(more)

@@ -1293,10 +1293,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           })
           break
         case "loadSessions":
-          this.handleLoadSessions().catch((e) => console.error("[Kilo New] handleLoadSessions failed:", e))
-          break
-        case "loadMoreSessions":
-          this.handleLoadMoreSessions().catch((e) => console.error("[Kilo New] handleLoadMoreSessions failed:", e))
+          this.handleLoadSessions(message.more === true).catch((e) =>
+            console.error("[Kilo New] handleLoadSessions failed:", e),
+          )
           break
         case "requestSessionModelUsage":
           void this.fetchAndSendSessionModelUsage(message.sessionID, message.requestID)
@@ -2475,34 +2474,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Handle loading all sessions.
    */
-  private async handleLoadSessions(): Promise<void> {
+  private async handleLoadSessions(more = false): Promise<void> {
     const revision = ++this.sessionRefreshRevision
     const scope = this.opts.projectQualifier?.()?.projectId
-    if (scope !== undefined) this.projectID = undefined
+    if (!more && scope !== undefined) this.projectID = undefined
     const ctx = this.getSessionRefreshContext(revision)
     try {
-      const resolved = await loadSessionsUtil(ctx)
-      if (resolved && scope === this.opts.projectQualifier?.()?.projectId) this.projectID = resolved
+      if (more) {
+        await loadMoreSessionsUtil(ctx)
+      } else {
+        const resolved = await loadSessionsUtil(ctx)
+        if (resolved && scope === this.opts.projectQualifier?.()?.projectId) this.projectID = resolved
+      }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to load sessions:", error)
-      this.postMessage({
-        type: "error",
-        message: getErrorMessage(error) || "Failed to load sessions",
-      })
-    }
-    this.pendingSessionRefresh = ctx.pendingSessionRefresh
-  }
-
-  /**
-   * Append the next page of older sessions to the history list.
-   */
-  private async handleLoadMoreSessions(): Promise<void> {
-    const revision = ++this.sessionRefreshRevision
-    const ctx = this.getSessionRefreshContext(revision)
-    try {
-      await loadMoreSessionsUtil(ctx)
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to load more sessions:", error)
+      if (!more) {
+        this.postMessage({
+          type: "error",
+          message: getErrorMessage(error) || "Failed to load sessions",
+        })
+      }
     }
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }

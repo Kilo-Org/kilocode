@@ -1059,9 +1059,9 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
   })
 
   it("handleLoadSessions delegates to loadSessionsUtil", () => {
-    const start = provider.indexOf("private async handleLoadSessions()")
+    const start = provider.indexOf("private async handleLoadSessions(")
     expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
-    const snippet = provider.slice(start, start + 400)
+    const snippet = provider.slice(start, start + 700)
     expect(snippet, "must call loadSessionsUtil").toContain("loadSessionsUtil")
   })
 

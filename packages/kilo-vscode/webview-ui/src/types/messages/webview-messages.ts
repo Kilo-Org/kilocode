@@ -121,10 +121,7 @@ export interface LoadMessagesRequest {
 
 export interface LoadSessionsRequest {
   type: "loadSessions"
-}
-
-export interface LoadMoreSessionsRequest {
-  type: "loadMoreSessions"
+  more?: boolean
 }
 
 export interface RequestSessionModelUsageMessage {
@@ -1637,7 +1634,6 @@ export type WebviewMessage =
   | ClearSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
-  | LoadMoreSessionsRequest
   | RequestSessionModelUsageMessage
   | RequestCloudSessionsMessage
   | RequestGitRemoteUrlMessage
