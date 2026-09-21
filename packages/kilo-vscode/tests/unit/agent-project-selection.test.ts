@@ -73,12 +73,21 @@ function setup(
     contexts,
     enabled: () => opts.enabled ?? true,
     pickFolder: async () => undefined,
+    onboarding: {
+      input: async () => undefined,
+      confirm: async () => false,
+      cloneRepository: async () => undefined,
+      isTrusted: () => true,
+      notify: () => {},
+    },
     activate: (ctx) => calls.activate.push(ctx.id),
     expand: (ctx) => calls.expand.push(ctx.id),
     push: () => calls.push++,
     error: (message) => calls.error.push(message),
     ready: readyImpl,
     selected: (target) => calls.selected.push(target.kind === "local" ? target.projectId : target.kind),
+    post: () => {},
+    openSettings: () => {},
     log: () => {},
   }
   return { contexts, deps, calls, extra }

@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Помилка або втрата з'єднання.",
   "session.activity.retry": "Автоматична повторна спроба.",
   "session.activity.busy": "Виконується.",
+  "session.activity.scheduled": "Очікування запланованого пробудження.",
   "session.activity.done": "Хід завершено.",
   "session.activity.idle": "Не запущено.",
 
@@ -313,7 +314,7 @@ export const dict = {
   "ui.approval.source.agent.default": "агентом",
   "ui.approval.source.global": "вашою глобальною конфігурацією",
   "ui.approval.source.project": "конфігурацією проєкту",
-  "ui.approval.source.yolo": "режимом автосхвалення (YOLO)",
+  "ui.approval.source.yolo": "режимом автосхвалення",
   "ui.approval.source.session": "правилом автосхвалення сесії",
   "ui.approval.source.default": "за замовчуванням",
   "ui.approval.outsideWorkspace": "(за межами вашого робочого простору: {{file}})",
@@ -548,6 +549,7 @@ export const dict = {
   "session.tabs.switcher.current": "Поточна",
   "session.tabs.switcher.pending": "Нова",
   "session.tabs.switcher.busy": "Працює",
+  "session.tabs.switcher.scheduled": "Заплановано",
   "session.tab.local": "Локальний",
   "session.tab.cloud": "Хмарний",
   "session.tab.worktree": "Робоче дерево",
@@ -571,13 +573,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo призупиняється та показує свій план у процесі роботи.",
   "workStyle.choice.human-in-the-loop.permissions": "Запитує дозвіл перед редагуванням файлів або виконанням команд.",
   "workStyle.choice.human-in-the-loop.bash": "Запитує дозвіл на кожну команду термінала.",
-  "workStyle.choice.human-in-the-loop.visibility": "Показує всі деталі розмови, зокрема хід міркувань.",
+  "workStyle.choice.human-in-the-loop.visibility": "Розгортає міркування, команди та зміни для перевірки.",
   "workStyle.choice.autonomous.eyebrow": "Менше переривань",
   "workStyle.choice.autonomous.title": "Висока автономність",
   "workStyle.choice.autonomous.description": "Менше переривань, спрощений інтерфейс.",
   "workStyle.choice.autonomous.permissions": "Редагує файли та виконує команди в робочому просторі без дозволу.",
   "workStyle.choice.autonomous.bash": "Може виконувати команди термінала в робочому просторі без схвалення.",
-  "workStyle.choice.autonomous.visibility": "Деталі залишаються згорнутими, доки ви їх не розгорнете.",
+  "workStyle.choice.autonomous.visibility":
+    "Згортає деталі інструментів, з компактним попереднім переглядом міркувань.",
   "session.cloud.import.title": "Імпортувати з хмари",
   "session.cloud.import.placeholder": "Ідентифікатор сесії, URL або команда kilo import",
   "session.cloud.import.button": "Імпортувати",
@@ -1075,6 +1078,28 @@ export const dict = {
   "settings.checkpoints.enable.title": "Увімкнути знімки",
   "settings.checkpoints.enable.description":
     "Створювати контрольні точки перед редагуванням файлів, щоб мати можливість відновити попередні стани",
+  "settings.autoCleanup.enable.title": "Увімкнути автоматичне очищення сесій",
+  "settings.autoCleanup.enable.description":
+    "Автоматично видаляє стару історію сесій після визначеної кількості днів, в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері, а не лише в цьому вікні. Запущені сесії та сесії з нещодавнім форком ніколи не видаляються. Видалення необоротне.",
+  "settings.autoCleanup.defaultRetention.title": "Зберігати сесії (днів)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Як довго зберігається історія сесій до видалення автоматичним очищенням.",
+  "settings.autoCleanup.lastRun.title": "Останнє очищення",
+  "settings.autoCleanup.lastRun.never": "Ніколи не запускалося",
+  "settings.autoCleanup.result":
+    "{{date}}: видалено {{deleted}} із {{scanned}} сесій ({{active}} активних пропущено, {{failed}} невдалих) за {{seconds}} с",
+  "settings.autoCleanup.starting": "Запуск очищення сесій...",
+  "settings.autoCleanup.error.status": "Статус очищення сесій тимчасово недоступний. Повторна спроба...",
+  "settings.autoCleanup.error.timeout":
+    "Очікування статусу очищення. Серверна частина відповідає довше, ніж очікувалося.",
+  "settings.autoCleanup.error.run":
+    "Не вдалося підтвердити завершення очищення сесій. Перевірте результат останнього очищення перед повторною спробою.",
+  "settings.autoCleanup.progress.scanning": "Сканування сесій: оброблено {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Видалення сесій: оброблено {{processed}}/{{total}} (видалено {{deleted}}, невдалих {{failed}})",
+  "settings.autoCleanup.runNow": "Запустити очищення зараз",
+  "settings.autoCleanup.runNow.confirm":
+    "Безповоротно видалити застарілі сесії в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері?",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
@@ -1124,6 +1149,20 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Виберіть, яку мову використовувати для повідомлень, створених штучним інтелектом:",
 
+  "settings.display.preview.title": "Попередній перегляд",
+  "settings.display.presets.title": "Пресети відображення",
+  "settings.display.presets.description":
+    "Змінює параметри відображення нижче, а не дозволи. Збережіть, щоб застосувати.",
+  "settings.display.preview.model": "Приклад моделі",
+  "settings.display.preview.prompt": "Приберіть зайві пробіли з привітання та перевірте тести.",
+  "settings.display.preview.reasoning":
+    "**Перевірте привітання.** Функція має видавати однакове привітання для звичайного імені та імені із зайвими пробілами з обох боків. Я збережу наявну сигнатуру функції та формат привітання і зміню лише те, як ім'я потрапляє у повернений рядок.\n\nДля вхідних даних на кшталт `  Ada  ` небажані пробіли належать вхідним даним, а не шаблону привітання. Обрізання готового привітання залишило б пробіли поряд з іменем. Тому операцію обрізання потрібно виконати до підстановки імені.\n\nЯ перевірю документацію щодо рядків, щоб підтвердити, що `trim()` видаляє пробільні символи з обох боків і повертає новий рядок. Вона має залишити початкові вхідні дані без змін. Для цієї зміни не потрібні регулярний вираз, додаткова залежність чи окрема допоміжна функція.\n\nПробіли всередині імені мають залишитися незмінними. Ім'я на кшталт `Ada Lovelace` не повинно стати `AdaLovelace`, і регістр літер не повинен змінюватися. Порожні вхідні дані або дані лише з пробілів не потребують нового привітання за замовчуванням у межах цього точкового виправлення.\n\nЗміна може залишитися у виразі повернення, якщо використати `name.trim()` там, де шаблон зараз використовує `name`. Я збережу навколишню пунктуацію та навмисний пробіл після привітання. Так diff залишиться малим, а поведінку буде легко перевірити.\n\nНарешті я виконаю `bun test greeting.test.ts` і перевірю обидва результати. Випадок із доповненим іменем має підтвердити, що зайві пробіли видаляються, а випадок зі звичайним іменем захищає наявний вивід. Я повідомлю про зміну та результати тестів лише після завершення команди.",
+  "settings.display.preview.shell": "Перевірте тест привітання",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] видаляє зайві пробіли\n[pass] зберігає звичайне ім'я\n\n2 тести пройдено",
+  "settings.display.preview.query": "Обрізання рядків",
+  "settings.display.preview.result": "trim() видаляє пробіли з обох боків рядка.",
+  "settings.display.preview.answer": "Привітання оновлено, щоб прибирати зайві пробіли. Обидва тести проходять.",
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.fontSize.title": "Розмір шрифту",
@@ -1158,7 +1197,7 @@ export const dict = {
     "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
   "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
   "settings.display.autoApprovalReason.description":
-    "Показує рядок біля викликів інструментів, що пояснює, чому їх автоматично схвалено (відповідне правило, стандартне значення агента, режим YOLO тощо).",
+    "Показує, чому виклик інструмента схвалено автоматично, наприклад через відповідне правило дозволів або стандартне значення агента.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1330,8 +1369,6 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Зберегти локально",
-  "diffViewer.comment.sendToAgent": "Надіслати агенту",
   "diffViewer.comment.postToGithub": "Опублікувати на GitHub",
   "diffViewer.comment.loadFailed": "Не вдалося завантажити зміни пул-реквесту.",
   "diffViewer.comment.unavailable": "Цей рядок недоступний у поточному знімку пул-реквесту.",

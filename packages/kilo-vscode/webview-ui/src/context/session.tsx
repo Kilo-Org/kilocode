@@ -54,6 +54,7 @@ import type {
   ToolPart,
 } from "../types/messages"
 import { agentProject, isStaleAgentSession } from "./session-project"
+import { createSessionPaging, mergeSessionsLoaded } from "./session-paging"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
   computeStatus,
@@ -86,6 +87,7 @@ import { PartStash } from "./part-stash"
 import { isolate, mergeOptimisticPart, mergeOptimisticParts, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { createFrameQueue, streamMessage } from "./frame-queue"
+import { handleWakeupMessage, wakeups } from "./session-wakeup"
 import { state as todoState } from "./todo-revert"
 import { preserveVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
@@ -103,13 +105,12 @@ import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { createPreferenceLoader } from "./session-preference-loader"
-import { activities, type Activity } from "../utils/session-activity"
+import { activities, blockedSessionIds, type Activity } from "../utils/session-activity"
 import { hold, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
-
 // Store structure for messages and parts
 interface SessionStore {
   sessions: Record<string, SessionInfo>
@@ -224,6 +225,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const [loading, setLoading] = createSignal(false)
   const [loaded, setLoaded] = createSignal<Set<string>>(new Set())
+  const paging = createSessionPaging(
+    (msg) => vscode.postMessage(msg),
+    () => server.isConnected(),
+  )
   const [pages, setPages] = createStore<Record<string, MessagePageState>>({})
 
   // Parts stash: holds parts from messagesLoaded outside the reactive store
@@ -855,6 +860,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleStreamMessage(message: ExtensionMessage): boolean {
+    if (handleWakeupMessage(message)) return true
     if (!streamMessage(message)) return false
     if (message.type === "partUpdated") {
       handlePartUpdated(message.sessionID, message.messageID, message.part, message.delta)
@@ -971,7 +977,7 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionsLoaded":
-        handleSessionsLoaded(message.sessions, message.preserveSessionIds)
+        handleSessionsLoaded(message.sessions, message.preserveSessionIds, message.append, message.hasMore)
         break
 
       case "sessionUpdated":
@@ -1856,11 +1862,10 @@ export const SessionProvider: ParentComponent = (props) => {
           parents: lineage().parents,
           statuses: statusMap,
           outcomes: closeMap,
-          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false)].map(
-            (item) => item.sessionID,
-          ),
+          blocked: blockedSessionIds(permissions(), questions()),
           submitting: Object.keys(submissionMap),
           suggested: suggestions().map((item) => item.sessionID),
+          scheduled: Object.keys(wakeups()),
           disconnected: disconnected(),
         }),
       ),
@@ -1898,29 +1903,15 @@ export const SessionProvider: ParentComponent = (props) => {
     resetTodos(session.id, next)
   }
 
-  function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[]) {
-    const ids = new Set(loaded.map((s) => s.id))
-    for (const id of ids) freshSessions.delete(id)
-    const kept = new Set([...(preserve ?? []), ...freshSessions])
-    batch(() => {
-      // Reconcile: remove sessions not in the loaded list to prevent stale
-      // entries from other projects accumulating in the store.
-      // Sessions whose worktree directories failed to list are preserved —
-      // their absence is transient, not a real deletion.
-      setStore(
-        "sessions",
-        produce((sessions) => {
-          for (const id of Object.keys(sessions)) {
-            if (id.startsWith("cloud:")) continue
-            if (kept?.has(id)) continue
-            if (!ids.has(id)) delete sessions[id]
-          }
-        }),
-      )
-      for (const s of loaded) {
-        setStore("sessions", s.id, s)
-      }
+  function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[], append?: boolean, hasMore?: boolean) {
+    mergeSessionsLoaded({
+      loaded,
+      preserve,
+      append,
+      fresh: freshSessions,
+      setSessions: (updater) => setStore("sessions", produce(updater)),
     })
+    paging.finish(hasMore ?? false)
   }
 
   function handleSessionDeleted(sessionID: string) {
@@ -2201,6 +2192,7 @@ export const SessionProvider: ParentComponent = (props) => {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ): boolean {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -2233,6 +2225,7 @@ export const SessionProvider: ParentComponent = (props) => {
         files,
         review,
         browserFeedback,
+        injectedTitle,
       })
       return true
     }
@@ -2264,6 +2257,7 @@ export const SessionProvider: ParentComponent = (props) => {
       review,
       browserFeedback,
       agentManagerContext: context,
+      injectedTitle,
     })
     return true
   }
@@ -3057,6 +3051,9 @@ export const SessionProvider: ParentComponent = (props) => {
     createSession,
     clearCurrentSession,
     loadSessions,
+    loadMoreSessions: paging.loadMore,
+    sessionsHasMore: paging.hasMore,
+    sessionsLoadingMore: paging.loadingMore,
     loadOlderMessages,
     selectSession,
     scrollBottomID,

@@ -156,6 +156,7 @@ import {
   promotePendingDraftDiscard,
 } from "../src/utils/draft-store"
 import { applyTabOrder, firstOrderedTitle } from "./tab-order"
+import { createTabPersistence } from "./tab-persistence"
 import { createTabDrag } from "./tab-drag"
 import { createTabOrderSync } from "./tab-order-sync"
 import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
@@ -186,7 +187,7 @@ import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
 import { createWorktreeDiffs, diffDataKey, wireDiffId } from "./worktree-diffs"
-import { createWorktreeReferences } from "./worktree-references"
+import { createWorktreeMentionReferences as createMentionRefs } from "./worktree-references"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { createReviewComposers } from "./review-composers"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -228,6 +229,7 @@ import {
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
+import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { usePendingCreate } from "./pending-create"
 import { defaultBase as projectDefaultBase } from "./project/default-base"
 import { createBrowserPanel } from "./BrowserPanel"
@@ -570,6 +572,18 @@ const AgentManagerContent: Component = () => {
     }
     requestChatFocus()
   }
+  const diffPanels = createAppDiffPanelFocus({
+    isOpen: () => diffOpen() && !reviewActive(),
+    isReviewActive: reviewActive,
+    openSide: () => panels.open(SidePanel.Diff),
+    closeSide: () => panels.close(SidePanel.Diff),
+    closeHistory,
+    closeReview: (focus) => closeReviewTab(focus),
+    focusPrompt: requestChatFocus,
+    hideReview: () => setReviewActive(false),
+    clearTerminal: () => terms.setActiveId(undefined),
+    track: (action) => metrics.track("side_review", "tab_toolbar", { action }),
+  })
   createEffect(
     on(
       () => terms.focusedId(),
@@ -710,16 +724,13 @@ const AgentManagerContent: Component = () => {
   const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
   let pendingNewSection = false
 
-  const persistTabOrder = (key: string, order: string[]) => {
-    const durable = order.filter((id) => id !== REVIEW_TAB_ID && !isTerminalTabId(id))
-    vscode.postMessage({ type: "agentManager.setTabOrder", key, order: durable })
-  }
+  const tabState = createTabPersistence(registry.active, selection, REVIEW_TAB_ID, (m) => vscode.postMessage(m))
   const tabOrderSync = createTabOrderSync({
     LOCAL,
     REVIEW_TAB_ID,
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
-    persist: persistTabOrder,
+    persist: tabState.persistOrder,
     localSessionIDs,
     sessions: session.sessions,
     managedSessions,
@@ -831,12 +842,14 @@ const AgentManagerContent: Component = () => {
     managed: managedSessions,
     locals: localSet,
   })
-  const references = createWorktreeReferences(vscode, registry.active, projectSessionsLive.current, selection)
+  const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
 
   /** Session ids shown in the project-scoped history view (every session of the project). */
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
     if (!pid || !multiProject()) return undefined
+    // Active project sessions come from the paged shared store, not the capped snapshot.
+    if (pid === currentProjectId()) return undefined
     const sessions = projectSessionsLive()[pid]
     if (!sessions) return new Set<string>()
     return new Set(sessions.filter(isKnownRootSession).map((s) => s.id))
@@ -1273,9 +1286,7 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "showTerminal") {
         if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
-        panels.toggle(SidePanel.Diff)
-        closeHistory()
-        if (reviewActive()) closeReviewTab()
+        diffPanels.toggleCommand()
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") showNewWorktreeDialog()
@@ -1347,6 +1358,7 @@ const AgentManagerContent: Component = () => {
     // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
     const deleteKeyHandler = (e: KeyboardEvent) => {
       if (e.key !== "Delete" && e.key !== "Backspace") return
+      if (diffPanels.isFocusTarget(e.target)) return
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
       const sel = selection()
@@ -1355,15 +1367,11 @@ const AgentManagerContent: Component = () => {
       confirmDeleteWorktree(sel)
     }
     window.addEventListener("keydown", deleteKeyHandler)
+    onCleanup(diffPanels.listen())
     onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
-
     // Pointer movement repairs a lost keyup before hover actions are revealed.
     const stopModifier = modifier.watch(window, isMac, setHeld)
-
-    // When the panel regains focus (e.g. returning from terminal), focus the prompt
-    // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
-    // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
-    // focus leaves the webview before the overlay closes).
+    // Recover focus and clear stale Kobalte modal styles when returning to the webview.
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
@@ -1748,16 +1756,17 @@ const AgentManagerContent: Component = () => {
     terms.setActiveId(undefined)
     setReviewOpenForContext(sel, true)
     setReviewActive(true)
+    diffPanels.focusReview()
   }
 
   // Deferred close: flip signal immediately for instant UI feedback,
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
-  const closeReviewTab = () => {
+  const closeReviewTab = (focus = true) => {
     freezeTabs()
     setReviewActive(false)
     setReviewOpenForSelection(false)
-    tabFocus.restore()
+    if (focus) tabFocus.restore()
   }
 
   const reviewDiffs = createMemo(() => {
@@ -1812,6 +1821,7 @@ const AgentManagerContent: Component = () => {
         activeProjectId={activeProjectId()}
         defaultBase={defaultBase}
         onCreate={creation.schedule}
+        worktrees={dialogRefs}
       />
     ))
   }
@@ -2127,10 +2137,11 @@ const AgentManagerContent: Component = () => {
     review: { id: REVIEW_TAB_ID, open: reviewOpen, title: () => t("session.tab.review") },
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
+    ...tabState.drag,
     setLocal: setLocalSessionIDs,
     terms,
     namespace: nsKey,
-    persist: persistTabOrder,
+    persist: tabState.persistOrder,
   })
   const tabIds = drag.ids
   const tabScroll = useTabScroll(tabIds, visibleTabId)
@@ -2206,16 +2217,6 @@ const AgentManagerContent: Component = () => {
     confirmDeleteWorktree(sel)
   }
 
-  /** The Local/worktrees/sessions body of the active project. */
-  const toggleDiffPanel = () => {
-    metrics.track("side_review", "tab_toolbar", {
-      action: diffOpen() && !reviewActive() ? "close" : "open",
-    })
-    panels.toggle(SidePanel.Diff)
-    closeHistory()
-    if (reviewActive()) closeReviewTab()
-  }
-
   const renderTabById = (id: string) =>
     renderTab(id, {
       terms,
@@ -2242,6 +2243,7 @@ const AgentManagerContent: Component = () => {
       sessionMiddleClick: handleTabMouseDown,
       sessionClose: handleCloseTab,
       sessionFork: handleForkSession,
+      ...tabState.tab,
       onTabKey: tabFocus.key,
       reviewLabel: t("session.tab.review"),
       reviewTooltip: t("command.review.toggle"),
@@ -2408,7 +2410,7 @@ const AgentManagerContent: Component = () => {
           onConfigureRun={configureRunScript}
           diffOpen={diffOpen}
           reviewActive={reviewActive}
-          onToggleDiff={toggleDiffPanel}
+          onToggleDiff={diffPanels.toggleToolbar}
           {...browser.tabs}
           onToggleBrowser={metrics.click("browser", "tab_toolbar", browser.tabs.onToggleBrowser, () => ({
             action: browser.tabs.browserOpen() ? "close" : "open",
@@ -2641,7 +2643,7 @@ const AgentManagerContent: Component = () => {
                       markdownRender={markdown.render()}
                       onMarkdownRenderChange={markdown.update}
                       onSendClick={() => metrics.track("send_review_comments", "side_review")}
-                      onClose={metrics.click("side_review_close", "side_review", () => panels.close(SidePanel.Diff))}
+                      onClose={metrics.click("side_review_close", "side_review", diffPanels.closePanel)}
                       onExpand={
                         selection() !== null
                           ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })

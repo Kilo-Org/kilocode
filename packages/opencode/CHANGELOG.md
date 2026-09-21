@@ -1,5 +1,42 @@
 # @kilocode/cli
 
+## 7.7.6
+
+### Patch Changes
+
+- [#13340](https://github.com/Kilo-Org/kilocode/pull/13340) [`f3d6d09`](https://github.com/Kilo-Org/kilocode/commit/f3d6d0947a30216fade139615205bfe1a093f0f4) Thanks [@rakshith1928](https://github.com/rakshith1928)! - Fix auto-compaction triggering far below the configured context threshold. The threshold now applies to the context window shown in the UI and is anchored to provider-reported token usage plus newly added content, instead of an inflated estimate of the whole payload on models with separate input limits. New system prompts and tool schemas are counted even when a provider report is available, and cancelled responses or reports that omit input usage no longer leave later content uncounted. On models whose input limit is smaller than their context window, the reserved input safety buffer can still trigger compaction before a high configured percentage is reached.
+
+- [#14351](https://github.com/Kilo-Org/kilocode/pull/14351) [`a7d1596`](https://github.com/Kilo-Org/kilocode/commit/a7d1596339f236654898762a8db0b6adaeabfc50) Thanks [@jezdez](https://github.com/jezdez)! - Support encrypted reasoning from OpenAI models accessed through Amazon Bedrock.
+
+- [#14282](https://github.com/Kilo-Org/kilocode/pull/14282) [`d0475a6`](https://github.com/Kilo-Org/kilocode/commit/d0475a6f5ca7081a0fbc117b73d79e6adf913d95) - Label prompts that Kilo sends on your behalf, such as worktree updates from base, expanded slash commands, and editor or terminal code actions, with a "Sent by Kilo" header. Long prompts collapse to their first paragraph with a "Show prompt" toggle to inspect the full text, and reverting or editing a turn restores the command instead of the full template.
+
+- [#14216](https://github.com/Kilo-Org/kilocode/pull/14216) [`5c366fa`](https://github.com/Kilo-Org/kilocode/commit/5c366fa5097a8e87db744ffc580ace3c551d1f46) Thanks [@grandmaster451](https://github.com/grandmaster451)! - Stop MCP server requests from repeating once per second when the server answers the optional GET stream probe with a body that is not an event stream. The response is now reported as "no stream on this endpoint", which the MCP client treats as supported.
+
+- [#14345](https://github.com/Kilo-Org/kilocode/pull/14345) [`02353b0`](https://github.com/Kilo-Org/kilocode/commit/02353b0c959c5596db0576c3227f47cb7d1a8209) - Project skills, agents, commands, and instruction files that contain `${env:...}` or `${file:...}` placeholders now load instead of failing with an environment reference error. The placeholders stay literal there, while project JSON config still rejects them.
+
+- [#14283](https://github.com/Kilo-Org/kilocode/pull/14283) [`18c0384`](https://github.com/Kilo-Org/kilocode/commit/18c03848a5f7d6231626b76b1ed86525faa82d51) - Always include the saved plan file hint when switching from Plan to Code, and remove the vestigial `KILO_EXPERIMENTAL_PLAN_MODE` flag.
+
+- [#14335](https://github.com/Kilo-Org/kilocode/pull/14335) [`be871f3`](https://github.com/Kilo-Org/kilocode/commit/be871f3867da8a4f85ce3b473312ede389edafa3) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Report what `semantic_search` actually covered. It names the indexed root it searched, and an empty result now says whether the index was complete, still building, disabled, or failed, so a miss is no longer mistaken for code that does not exist.
+
+## 7.7.5
+
+### Patch Changes
+
+- [#14279](https://github.com/Kilo-Org/kilocode/pull/14279) [`cfc786a`](https://github.com/Kilo-Org/kilocode/commit/cfc786a0f014ed22c660455e6f6da25677231cec) - Keep the model's behaviour in sync with the selected agent after switching. Every agent change now adds one reminder that names the previous and current agent and states whether the current agent may modify files, based on its configured permissions. This covers built-in, custom, and organization agents, and fixes Ask still trying to edit files after switching from Code back to Ask.
+
+- [#14284](https://github.com/Kilo-Org/kilocode/pull/14284) [`bab87b4`](https://github.com/Kilo-Org/kilocode/commit/bab87b4abe6c05aa44e0cc6332422fc7bff56017) - Stop denying read-only bash commands in Ask, Plan, and Explore modes when a shell operator is only literal text, such as `grep "=>"`, `rg "foo|bar"`, or `cat <<'EOF'` bodies, or when output is discarded with `2>/dev/null` or `2>&1`. Real file redirects, pipes, chaining, and command substitution are still denied.
+
+- Updated dependencies [[`d8eaefd`](https://github.com/Kilo-Org/kilocode/commit/d8eaefdf1d84fa6779c8cb1634ef516948d76f06)]:
+  - @kilocode/sdk@7.7.5
+  - @kilocode/plugin@7.7.5
+  - @opencode-ai/tui@7.7.5
+  - @opencode-ai/ui@7.7.5
+  - @kilocode/kilo-gateway@7.7.5
+  - @kilocode/kilo-indexing@7.7.5
+  - @kilocode/plugin-atomic-chat@7.7.5
+  - @opencode-ai/server@7.7.5
+  - @kilocode/kilo-telemetry@7.7.5
+
 ## 7.7.4
 
 ### Patch Changes

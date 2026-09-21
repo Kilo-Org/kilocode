@@ -13,6 +13,7 @@ import { MarketplaceNotifier } from "./services/marketplace/notifier"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
+import { retention } from "./services/task-cleanup/retention"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
@@ -100,6 +101,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const remoteService = new RemoteStatusService()
   context.subscriptions.push(remoteService)
   connectionService.setRemoteService(remoteService)
+
+  // Daily trigger for the backend-owned session retention pass (Settings → Checkpoints)
+  const cleanup = retention(connectionService, context)
+  cleanup.start()
+  context.subscriptions.push({ dispose: () => cleanup.dispose() })
 
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
@@ -580,7 +586,11 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!input) return
       await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
       await provider.waitForReady()
-      provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
+      provider.postMessage({
+        type: "triggerTask",
+        text: `Generate a terminal command: ${input}`,
+        injectedTitle: "Generate terminal command",
+      })
     }),
     vscode.commands.registerCommand("kilo-code.new.toggleRemote", () => {
       remoteService.toggle().catch((err) => console.error("[Kilo New] toggleRemote command failed:", err))

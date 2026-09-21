@@ -186,6 +186,12 @@ export interface SessionStatusMessage {
   next?: number
 }
 
+export interface SessionWakeupMessage {
+  type: "sessionWakeup"
+  sessionID: string
+  pending: number
+}
+
 export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
@@ -293,6 +299,8 @@ export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
   sessions: SessionInfo[]
   preserveSessionIds?: string[]
+  append?: boolean
+  hasMore?: boolean
 }
 
 export interface CloudSessionsLoadedMessage {
@@ -428,6 +436,8 @@ export interface AppendReviewCommentsToTerminalMessage {
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ProfileDataMessage {
@@ -803,6 +813,31 @@ export interface TimelineSettingLoadedMessage {
   visible: boolean
 }
 
+export interface AutoCleanupLastResult {
+  at: number
+  scanned: number
+  deleted: number
+  skippedActive: number
+  failed: number
+  durationMs: number
+}
+
+export interface AutoCleanupStateLoadedMessage {
+  type: "autoCleanupStateLoaded"
+  last: AutoCleanupLastResult | null
+  requestID?: string
+  pending?: boolean
+  error?: "status" | "timeout" | "run"
+  progress?: {
+    phase: "scanning" | "deleting"
+    total: number
+    processed: number
+    deleted: number
+    failed: number
+    skippedActive: number
+  }
+}
+
 export interface ThroughputSettingLoadedMessage {
   type: "throughputSettingLoaded"
   visible: boolean
@@ -915,6 +950,7 @@ export interface AgentManagerStateMessage {
    */
   orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number; sized?: boolean }[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -952,6 +988,13 @@ export interface AgentManagerProjectsMessage {
   type: "agentManager.projects"
   multiProject: boolean
   projects: AgentProjectSnapshot[]
+}
+
+// Default (or picked) parent folder for the new-project dialog
+export interface AgentManagerProjectParentMessage {
+  type: "agentManager.projectParent"
+  /** Omitted when the user cancelled the native folder picker. */
+  parent?: string
 }
 
 export interface AgentManagerSelectionActivatedMessage {
@@ -1378,6 +1421,11 @@ export interface DiffViewerMarkdownRenderMessage {
   render: boolean
 }
 
+export interface DiffViewerInitialDiffStyleMessage {
+  type: "diffViewer.initialDiffStyle"
+  style: "unified" | "split"
+}
+
 export interface DiffViewerInitialFileMessage {
   type: "diffViewer.initialFile"
   file?: string
@@ -1625,6 +1673,7 @@ export type ExtensionMessage =
   | PartsUpdatedMessage
   | PartRemovedMessage
   | SessionStatusMessage
+  | SessionWakeupMessage
   | SessionTurnClosedMessage
   | SessionErrorMessage
   | PermissionRequestMessage
@@ -1697,6 +1746,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | OSNotificationTestResultMessage
   | TimelineSettingLoadedMessage
+  | AutoCleanupStateLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
@@ -1713,6 +1763,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
+  | AgentManagerProjectParentMessage
   | AgentManagerSelectionActivatedMessage
   | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage
@@ -1781,6 +1832,7 @@ export type ExtensionMessage =
   | DiffViewerRevertFileResultMessage
   | DiffViewerDiffFileMessage
   | DiffViewerMarkdownRenderMessage
+  | DiffViewerInitialDiffStyleMessage
   | DiffViewerInitialFileMessage
   | DiffViewerInitialMarkdownMessage
   | SetAvailableSourcesMessage

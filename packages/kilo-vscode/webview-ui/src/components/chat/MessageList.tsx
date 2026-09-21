@@ -61,6 +61,7 @@ import {
 import { PromptRail } from "./PromptRail"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail"
 import { onTimelineHighlight, type TimelineHighlight } from "../../utils/timeline/highlight"
+import { escapeRegExp } from "../../utils/escape-regexp"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
 import { rowSearchText, type SearchTextRange } from "./transcript-search-text"
@@ -190,7 +191,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     try {
       let pattern = query
       if (!regex) {
-        pattern = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        pattern = escapeRegExp(query)
       }
       if (wholeWord) {
         // Unicode-aware boundary: plain `\b` only treats ASCII letters/
