@@ -64,11 +64,19 @@ const quote = (text: string) => `"${text.replaceAll('"', '\\"')}"`
 const glob = (file: string) =>
   process.platform === "win32" ? FSUtil.normalizePathPattern(file) : file.replaceAll("\\", "/")
 const variants = (dir: string) => {
-  if (process.platform !== "win32") return [dir]
+  if (process.platform !== "win32") return [{ pattern: dir, rooted: false }]
   const full = FSUtil.normalizePath(dir)
   const slash = full.replaceAll("\\", "/")
-  const root = slash.replace(/^[A-Za-z]:/, "")
-  return Array.from(new Set([full, slash, root, root.toLowerCase()]))
+  // Git Bash/MSYS spells the same drive as `/c/...`, which `FSUtil.windowsPath` converts back to a
+  // drive-qualified path. A rooted, drive-less `/Users/...` belongs to the current drive instead.
+  const msys = slash.replace(/^([A-Za-z]):/, (_, letter: string) => `/${letter.toLowerCase()}`)
+  const driveLess = slash.replace(/^[A-Za-z]:/, "")
+  // Only an actual drive-letter strip yields a drive-less spelling; a UNC root is unchanged.
+  const rooted = new Set(driveLess === slash ? [] : [driveLess, driveLess.toLowerCase()])
+  return Array.from(new Set([full, slash, msys, msys.toLowerCase(), ...rooted])).map((pattern) => ({
+    pattern,
+    rooted: rooted.has(pattern),
+  }))
 }
 const config = path.resolve(Global.Path.config)
 const configFile = path.join(config, "hello.txt")
@@ -196,17 +204,29 @@ describe("external_directory allow config protection", () => {
     ),
   )
 
-  for (const pattern of variants(configGlob)) {
+  const drive = path.parse(configGlob).root.toLowerCase()
+  const cwd = path.parse(process.cwd()).root.toLowerCase()
+  for (const { pattern, rooted } of variants(configGlob)) {
+    // A rooted, drive-less spelling belongs to the current drive, so it is only protected when the
+    // global config root lives on that drive. MSYS and drive-qualified spellings name the drive.
+    const expected = rooted ? drive === cwd : true
     test(`detects unknown bash external_directory requests for global config paths [${pattern}]`, () => {
+      const classification = ConfigProtection.classify(
+        {
+          permission: "external_directory",
+          patterns: [pattern],
+          metadata: { command: `rm ${quote(configFile)}` },
+        },
+        config,
+      )
+      expect(classification.candidate).toBe(expected)
+      if (!expected) return
+      expect(classification.external).toBe(true)
       expect(
-        ConfigProtection.classify(
-          {
-            permission: "external_directory",
-            patterns: [pattern],
-            metadata: { command: `rm ${quote(configFile)}` },
-          },
-          config,
-        ).candidate,
+        ConfigProtection.verdict(classification, {
+          global: { require_approval_for_config_edits: true },
+          project: { require_approval_for_config_edits: false },
+        }).protect,
       ).toBe(true)
     })
   }

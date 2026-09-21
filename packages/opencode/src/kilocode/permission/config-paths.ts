@@ -198,7 +198,10 @@ export namespace ConfigProtection {
       .split(/[\\/]+/)
       .filter((part) => part.length > 0)
     const dirs: boolean[] = []
-    let current = root
+    // Normalize only the root's separators (`/` -> `\` on Windows) so `joinRaw` never produces a
+    // two-separator root like `/\Users`. Input components stay raw, keeping `..` and symlink
+    // application in the physical walk below.
+    let current = path.normalize(root)
     let i = 0
     while (i < parts.length) {
       const name = parts[i++]
