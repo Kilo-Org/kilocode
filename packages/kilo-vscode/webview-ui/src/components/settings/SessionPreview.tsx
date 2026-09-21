@@ -1,4 +1,4 @@
-import { createMemo, createSignal, createUniqueId, onCleanup, onMount, Show, type Component } from "solid-js"
+import { createMemo, createUniqueId, onCleanup, onMount, Show, type Component } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 import type { AssistantMessage as Message, Part, ToolPart, UserMessage } from "@kilocode/sdk/v2"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
@@ -14,12 +14,6 @@ const SessionPreview: Component = () => {
   const { config, settings } = useConfig()
   const display = useDisplay()
   const language = useLanguage()
-  const [revision, setRevision] = createSignal(0)
-  let elapsed = 0
-  const replay = () => {
-    elapsed = 0
-    setRevision((value) => value + 1)
-  }
   const reasoning = () => resolveReasoningDisplay(config())
   const throughput = () => Boolean(settings().showTokenThroughput ?? true)
   const approval = () => Boolean(settings().showAutoApprovalReason ?? true)
@@ -28,7 +22,6 @@ const SessionPreview: Component = () => {
   )
   const fixture = createMemo(() => {
     // Tool defaults are captured on mount. Refresh IDs for those drafts, never for streaming ticks.
-    revision()
     defaults()
     const id = `settings-preview-${createUniqueId()}`
     const stamp = 1_700_000_000_000
@@ -152,26 +145,24 @@ const SessionPreview: Component = () => {
   const Playback: Component<{ sample: ReturnType<typeof fixture> }> = (props) => {
     const sample = props.sample
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
-    const [state, setState] = createStore(previewFrame(sample, elapsed, motion.matches))
+    const [state, setState] = createStore(previewFrame(sample, 0, motion.matches))
     let body: HTMLDivElement | undefined
     let content: HTMLDivElement | undefined
     let following = true
     onMount(() => {
-      const timer = window.setInterval(() => {
-        if (document.hidden) return
-        elapsed += 50
-        if (elapsed >= previewDuration) {
-          replay()
-          return
-        }
-        setState(reconcile(previewFrame(sample, elapsed, motion.matches)))
-      }, 50)
+      // Drive playback from paint frames so the loop stays in step with rendering
+      // and pauses on its own when the panel is not being painted.
+      const start = performance.now()
+      let raf = requestAnimationFrame(function tick(now) {
+        raf = requestAnimationFrame(tick)
+        setState(reconcile(previewFrame(sample, (now - start) % previewDuration, motion.matches)))
+      })
       const observer = new ResizeObserver(() => {
         if (following && body) body.scrollTop = body.scrollHeight
       })
       if (content) observer.observe(content)
       onCleanup(() => {
-        window.clearInterval(timer)
+        cancelAnimationFrame(raf)
         observer.disconnect()
       })
     })
