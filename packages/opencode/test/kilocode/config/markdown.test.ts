@@ -79,3 +79,17 @@ test("confines project markdown substitutions while preserving trusted substitut
     else process.env[name] = prior
   }
 })
+
+test("keeps resolving dollar-prefixed placeholders in trusted markdown", async () => {
+  const name = "KILO_MARKDOWN_TRUSTED_DOLLAR_TEST"
+  const prior = process.env[name]
+  process.env[name] = "environment secret"
+
+  try {
+    const env = await KilocodeMarkdown.substitute(`\${env:${name}}`, "/tmp/trusted.md", { trusted: true })
+    expect(env).toBe("$environment secret")
+  } finally {
+    if (prior === undefined) delete process.env[name]
+    else process.env[name] = prior
+  }
+})

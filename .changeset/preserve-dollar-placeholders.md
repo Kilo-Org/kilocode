@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Preserve dollar-prefixed environment and file placeholders in project Markdown.
+Load untrusted project Markdown, such as skills, that contains `${env:...}` or `${file:...}` placeholders instead of rejecting it as invalid frontmatter or rewriting the placeholders.

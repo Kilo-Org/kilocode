@@ -77,8 +77,9 @@ export async function substitute(input: SubstituteInput) {
     }
   }
   // kilocode_change end
-  // kilocode_change start - preserve dollar-prefixed placeholders; leave commented tokens literal; reject server credentials
-  let text = input.text.replace(/(?<!\$)\{env:([^}]+)\}/g, (match, varName, offset: number) => {
+  // kilocode_change start - untrusted text must not resolve dollar-prefixed placeholders; leave commented tokens literal; reject server credentials
+  const envPattern = trusted ? /\{env:([^}]+)\}/g : /(?<!\$)\{env:([^}]+)\}/g
+  let text = input.text.replace(envPattern, (match, varName, offset: number) => {
     if (commented(input.text, offset)) return match
     if (!ConfigVariableGuard.env(varName)) {
       throw new InvalidError({ path: source(input), message: `blocked environment reference: "{env:${varName}}"` })
@@ -87,7 +88,7 @@ export async function substitute(input: SubstituteInput) {
     return (input.env?.[varName] ?? process.env[varName]) || ""
   })
 
-  const fileMatches = Array.from(text.matchAll(/(?<!\$)\{file:[^}]+\}/g)) // kilocode_change
+  const fileMatches = Array.from(text.matchAll(trusted ? /\{file:[^}]+\}/g : /(?<!\$)\{file:[^}]+\}/g)) // kilocode_change
   if (!fileMatches.length) return text
 
   const configDir = dir(input)
