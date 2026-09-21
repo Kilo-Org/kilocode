@@ -93,7 +93,7 @@ describe("Identifier.ascending", () => {
   })
 
   test("the counter does not overflow into the timestamp field", () => {
-    // More ids in one millisecond than the 12-bit counter can hold (0xfff).
+    // More ids in one millisecond than the wall-clock counter can hold (0x7ff).
     setClock(realNow())
     const ids = Array.from({ length: 4_200 }, () => Identifier.ascending("part"))
 
@@ -184,5 +184,78 @@ describe("Identifier prefix handling", () => {
   test("rejects a given id whose prefix does not match", () => {
     const given = Identifier.ascending("message")
     expect(() => Identifier.ascending("session", given)).toThrow()
+  })
+})
+
+/**
+ * The counter occupies the low 12 bits of the packed ordering key. Its top bit
+ * tags the minting path, so the wall-clock and explicit ranges never overlap.
+ */
+const COUNTER_MASK = 0xfffn
+const EXPLICIT_COUNTER_MIN = 0x800n
+
+describe("Identifier.create counter partitioning", () => {
+  test("a null timestamp behaves like an absent one", () => {
+    const base = realNow()
+    setClock(base)
+    const before = Identifier.ascending("message")
+
+    // A value the type system believes is `number | undefined` but that is null
+    // at runtime, which is what deserialized JSON yields and what the original
+    // `timestamp ?? Date.now()` tolerated. Routing it to the explicit branch
+    // instead makes BigInt(null) throw.
+    const restored: { timestamp?: number } = JSON.parse('{"timestamp":null}')
+    const withNull = Identifier.create("tool", "ascending", restored.timestamp)
+
+    expect(seq(withNull)).toBeGreaterThan(seq(before))
+  })
+
+  test("wall-clock and explicit ids draw from disjoint counter ranges", () => {
+    // Disjoint ranges are strictly stronger than probing one collision case:
+    // they make it impossible for the two paths to pack the same
+    // (timestamp << 12 | counter) ordering key at any millisecond.
+    const base = realNow()
+    setClock(base)
+
+    for (let i = 0; i < 64; i++) {
+      expect(seq(Identifier.ascending("message")) & COUNTER_MASK).toBeLessThan(EXPLICIT_COUNTER_MIN)
+      expect(seq(Identifier.create("tool", "ascending", base)) & COUNTER_MASK).toBeGreaterThanOrEqual(
+        EXPLICIT_COUNTER_MIN,
+      )
+    }
+  })
+
+  test("an explicit id never re-issues a wall-clock ordering key in the same millisecond", () => {
+    const base = realNow()
+    setClock(base)
+
+    const keys = new Set<bigint>()
+    for (let i = 0; i < 256; i++) {
+      keys.add(seq(Identifier.ascending("message")))
+      keys.add(seq(Identifier.create("tool", "ascending", base)))
+    }
+
+    expect(keys.size).toBe(512)
+  })
+
+  test("the explicit counter stays inside its own range as it wraps", () => {
+    const keys = Array.from({ length: 2_100 }, () => seq(Identifier.create("tool", "ascending", 8_000)) & COUNTER_MASK)
+
+    for (const key of keys) {
+      expect(key).toBeGreaterThanOrEqual(EXPLICIT_COUNTER_MIN)
+      expect(key).toBeLessThanOrEqual(COUNTER_MASK)
+    }
+
+    // 2048 slots, so a full cycle is distinct before it has to repeat.
+    expect(new Set(keys.slice(0, 2_048)).size).toBe(2_048)
+  })
+
+  test("revisiting an earlier explicit timestamp does not repeat its counters", () => {
+    const first = seq(Identifier.create("tool", "ascending", 9_000))
+    Identifier.create("tool", "ascending", 10_000)
+    Identifier.ascending("message")
+    const second = seq(Identifier.create("tool", "ascending", 9_000))
+
+    expect(second).not.toBe(first)
   })
 })

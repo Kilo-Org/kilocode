@@ -20,12 +20,21 @@ const LENGTH = 26
 let lastTimestamp = 0
 let counter = 0
 // kilocode_change start - supporting state for the monotonic guard in create().
+//
 // The 12 hex digits after the prefix encode (timestamp << 12 | counter), so the
-// counter field is exactly 12 bits wide.
-const COUNTER_MAX = 0xfff
-// Explicit-timestamp callers keep their own counter so that they cannot perturb
-// the wall-clock sequence tracked by lastTimestamp/counter.
-let explicitCounter = 0
+// counter field is exactly 12 bits wide. Its top bit tags which path minted the
+// id, keeping the two paths' ordering keys disjoint by construction: the
+// wall-clock path draws from 0x000-0x7ff, an explicit timestamp from
+// 0x800-0xfff. One shared counter cannot do that job, because the wall-clock
+// path resets it whenever the millisecond advances, and an explicit caller may
+// hand back a timestamp that reset has already moved past.
+const WALL_COUNTER_MAX = 0x7ff
+const EXPLICIT_COUNTER_MIN = 0x800
+const EXPLICIT_COUNTER_MAX = 0xfff
+// Free-running, and deliberately not reset when the given timestamp changes:
+// resetting would hand a caller that revisits an earlier timestamp the very
+// counters it already used at that timestamp.
+let explicitCounter = EXPLICIT_COUNTER_MAX
 // kilocode_change end
 
 export function ascending(prefix: keyof typeof prefixes, given?: string) {
@@ -57,6 +66,42 @@ function randomBase62(length: number): string {
   return result
 }
 
+// kilocode_change start - the two ordering-key sources behind create().
+
+// Wall-clock path, clamped to the highest timestamp already issued so a
+// backwards clock cannot mint an id that sorts before one already handed out.
+function wallSlot() {
+  const wall = Date.now()
+  const clamped = wall > lastTimestamp ? wall : lastTimestamp
+
+  if (clamped !== lastTimestamp) {
+    lastTimestamp = clamped
+    counter = 0
+  }
+  counter++
+
+  if (counter > WALL_COUNTER_MAX) {
+    // More than WALL_COUNTER_MAX ids inside one millisecond. Borrow the next
+    // millisecond rather than letting the counter run into the explicit range
+    // and then the timestamp field, so the watermark stays consistent with what
+    // has been issued.
+    lastTimestamp = clamped + 1
+    counter = 1
+  }
+
+  return { timestamp: lastTimestamp, counter }
+}
+
+// Explicit-timestamp path. The value is caller-supplied and deliberately
+// deterministic (tests, backfill, migration), so it is used verbatim: neither
+// clamped nor allowed to move the watermark. Moving the watermark would let one
+// far-future timestamp pin every later id in the process to that value.
+function explicitSlot(timestamp: number) {
+  explicitCounter = explicitCounter >= EXPLICIT_COUNTER_MAX ? EXPLICIT_COUNTER_MIN : explicitCounter + 1
+  return { timestamp, counter: explicitCounter }
+}
+// kilocode_change end
+
 export function create(prefix: string, direction: "descending" | "ascending", timestamp?: number): string {
   // kilocode_change start - guard against a backwards system clock.
   //
@@ -69,41 +114,17 @@ export function create(prefix: string, direction: "descending" | "ascending", ti
   // Sessions, messages and parts are persisted and replayed in ID order, so such
   // an ID silently reorders a conversation.
   //
-  // Clamp the wall-clock path to the highest timestamp already issued. An
-  // explicit timestamp argument is caller-supplied and deliberately deterministic
-  // (tests, backfill, migration), so it is neither clamped nor allowed to move
-  // the watermark; otherwise a single call with a far-future timestamp would pin
-  // every later ID in the process to that value.
-  let currentTimestamp: number
-  let currentCounter: number
+  // Known limitation: the watermark is process-local and starts at 0, so a
+  // rewind spanning a restart is not covered. The first ids minted after such a
+  // restart use the rewound wall time and can still sort before ids already
+  // persisted. Closing that would mean seeding the watermark from stored state,
+  // which this synchronous, dependency-free generator cannot reach.
+  //
+  // `!= null` rather than `!== undefined`, so an explicit null keeps the
+  // wall-clock behaviour the previous `timestamp ?? Date.now()` gave it.
+  const slot = timestamp != null ? explicitSlot(timestamp) : wallSlot()
 
-  if (timestamp !== undefined) {
-    currentTimestamp = timestamp
-    explicitCounter = explicitCounter >= COUNTER_MAX ? 1 : explicitCounter + 1
-    currentCounter = explicitCounter
-  } else {
-    const wall = Date.now()
-    currentTimestamp = wall > lastTimestamp ? wall : lastTimestamp
-
-    if (currentTimestamp !== lastTimestamp) {
-      lastTimestamp = currentTimestamp
-      counter = 0
-    }
-    counter++
-
-    if (counter > COUNTER_MAX) {
-      // More than COUNTER_MAX ids inside one millisecond. Borrow the next
-      // millisecond rather than letting the counter overflow into the timestamp
-      // field, so the watermark stays consistent with what has been issued.
-      lastTimestamp = currentTimestamp + 1
-      currentTimestamp = lastTimestamp
-      counter = 1
-    }
-
-    currentCounter = counter
-  }
-
-  let now = BigInt(currentTimestamp) * BigInt(0x1000) + BigInt(currentCounter)
+  let now = BigInt(slot.timestamp) * BigInt(0x1000) + BigInt(slot.counter)
   // kilocode_change end
 
   now = direction === "descending" ? ~now : now
