@@ -37,16 +37,11 @@ export async function fetchSessionPage(
     ),
   )
   const items = result.data ?? []
-  // When a proxy strips x-next-cursor but the page is full, synthesize the
-  // cursor from the oldest item so "load more" keeps working.
-  const header = result.response.headers.get("x-next-cursor")
-  const parsed = header == null ? undefined : Number(header)
-  const cursor =
-    parsed != null && Number.isFinite(parsed)
-      ? parsed
-      : items.length >= limit && items.length > 0
-        ? items[items.length - 1]!.time.updated
-        : undefined
+  // Use the server cursor as-is. An empty or non-positive header is ignored so
+  // a blank value cannot restart paging from the first page.
+  const header = result.response.headers.get("x-next-cursor")?.trim()
+  const parsed = header ? Number(header) : undefined
+  const cursor = parsed != null && Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
   return { sessions: items, cursor }
 }
 

@@ -378,6 +378,36 @@ describe("KiloProvider pending session refresh", () => {
     expect(ctx.page?.hasMore).toBe(false)
   })
 
+  it("does not post a partial list when the workspace listing fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_wt", "/worktree"]]),
+      listSessionPage: async (dir) => {
+        if (dir === "/repo") throw new Error("workspace offline")
+        return { sessions: [{ id: "ses_wt", projectID: "p", time: { created: 1, updated: 1 } }] as never }
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await expect(loadSessions(ctx)).rejects.toThrow("workspace offline")
+    expect(sent).toEqual([])
+  })
+
+  it("clears load-more when there is nothing left to page", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      page: createSessionPageState(),
+      listSessionPage: async () => ({ sessions: [] }),
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadMoreSessions(ctx)
+
+    expect(sent).toEqual([{ type: "sessionsLoaded", sessions: [], append: true, hasMore: false }])
+  })
+
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const { calls, fn } = createListSessions()
     const ctx = createContext()

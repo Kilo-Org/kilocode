@@ -230,7 +230,7 @@ const SessionList: Component<SessionListProps> = (props) => {
           </>
         )}
       </List>
-      <Show when={props.sessionIds === undefined && session.sessionsHasMore()}>
+      <Show when={props.sessionIds?.() === undefined && session.sessionsHasMore()}>
         <div class="session-list-load-more">
           <Button
             variant="ghost"

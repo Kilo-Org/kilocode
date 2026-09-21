@@ -293,18 +293,21 @@ function sessionDirs(ctx: SessionRefreshContext): string[] {
 async function listPages(
   list: (dir: string, cursor?: number) => Promise<SessionPage>,
   targets: Array<{ dir: string; cursor?: number }>,
+  fatal?: string,
 ) {
   const failed = new Set<string>()
+  let cause: unknown
   const results = await Promise.all(
     targets.map((target) =>
       list(target.dir, target.cursor).catch((err: unknown) => {
         console.error(`[Kilo] Failed to list sessions for ${target.dir}:`, err)
         failed.add(target.dir)
+        if (target.dir === fatal) cause = err
         return undefined
       }),
     ),
   )
-  return { results, failed }
+  return { results, failed, cause }
 }
 
 /**
@@ -320,22 +323,33 @@ async function loadPage(ctx: SessionRefreshContext, more: boolean): Promise<stri
     if (!more && ctx.connectionState !== "connecting") {
       ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
     }
+    if (more) ctx.postMessage({ type: "sessionsLoaded", sessions: [], append: true, hasMore: false })
     return
   }
   if (!more) ctx.pendingSessionRefresh = false
 
   const page = ctx.page ?? (ctx.page = createSessionPageState())
+  const fatal = more ? undefined : ctx.workspaceDirectory
   const targets = more
     ? [...page.dirs.entries()].filter(([, entry]) => entry.more).map(([dir, entry]) => ({ dir, cursor: entry.cursor }))
     : sessionDirs(ctx).map((dir) => ({ dir }))
   if (more && targets.length === 0) {
     page.hasMore = false
+    // Nothing left to page, so clear the load-more spinner in the webview.
+    ctx.postMessage({ type: "sessionsLoaded", sessions: [], append: true, hasMore: false })
     return
   }
   if (!more) page.dirs = new Map()
 
-  const { results, failed } = await listPages(list, targets)
+  const { results, failed, cause } = await listPages(list, targets, fatal)
   if (ctx.isCurrent && !ctx.isCurrent()) return
+
+  // A failed workspace listing is fatal: posting a partial list would make the
+  // webview reconcile away root history it still holds. Let the caller surface
+  // the error instead.
+  if (fatal !== undefined && failed.has(fatal)) {
+    throw cause ?? new Error("Failed to list workspace sessions")
+  }
 
   const batches: Session[][] = []
   targets.forEach((target, index) => {

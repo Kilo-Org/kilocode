@@ -3,10 +3,10 @@ import { fetchSessionPage, mergeSessions, SESSION_PAGE_LIMIT } from "../../src/k
 
 type Item = { id: string; time: { updated: number } }
 
-function client(data: Item[], cursor?: number) {
+function client(data: Item[], header?: string) {
   const calls: Array<Record<string, unknown>> = []
   const headers = new Headers()
-  if (cursor != null) headers.set("x-next-cursor", String(cursor))
+  if (header !== undefined) headers.set("x-next-cursor", header)
   return {
     calls,
     experimental: {
@@ -22,7 +22,7 @@ function client(data: Item[], cursor?: number) {
 
 describe("fetchSessionPage", () => {
   it("requests one page for the directory and returns the header cursor", async () => {
-    const api = client([{ id: "ses_1", time: { updated: 10 } }], 7)
+    const api = client([{ id: "ses_1", time: { updated: 10 } }], "7")
     const page = await fetchSessionPage(api as never, { dir: "/repo" })
 
     expect(api.calls).toEqual([
@@ -31,18 +31,15 @@ describe("fetchSessionPage", () => {
     expect(page.cursor).toBe(7)
   })
 
-  it("synthesizes a cursor when the header is missing but the page is full", async () => {
-    const data = Array.from({ length: SESSION_PAGE_LIMIT }, (_, index) => ({
-      id: `ses_${index}`,
-      time: { updated: 100 - index },
-    }))
-    const api = client(data)
-    const page = await fetchSessionPage(api as never, { dir: "/repo", cursor: 500 })
+  it("ignores an empty or non-positive cursor header", async () => {
+    const empty = client([{ id: "ses_1", time: { updated: 10 } }], "")
+    expect((await fetchSessionPage(empty as never, { dir: "/repo" })).cursor).toBeUndefined()
 
-    expect(page.cursor).toBe(100 - (SESSION_PAGE_LIMIT - 1))
+    const zero = client([{ id: "ses_1", time: { updated: 10 } }], "0")
+    expect((await fetchSessionPage(zero as never, { dir: "/repo" })).cursor).toBeUndefined()
   })
 
-  it("returns no cursor when the header is missing and the page is partial", async () => {
+  it("returns no cursor when the header is missing", async () => {
     const api = client([{ id: "ses_1", time: { updated: 10 } }])
     const page = await fetchSessionPage(api as never, { dir: "/repo" })
 
