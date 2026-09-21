@@ -128,12 +128,12 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.25"/><path d="M7 8h.01M13 8h.01M7 12c.9 1.2 2 1.8 3 1.8s2.1-.6 3-1.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
   },
   pin: {
-    viewBox: "0 0 20 20",
-    path: `<path d="M10 13.75V17.5M7.5 7.5V4.375A.625.625 0 0 1 8.125 3.75a1.25 1.25 0 0 0 0-2.5h3.75a1.25 1.25 0 0 0 0 2.5.625.625 0 0 1 .625.625V7.5a2.5 2.5 0 0 0 1.382 2.236l1.113.557a1.25 1.25 0 0 1 .693 1.118v.464a.625.625 0 0 1-.625.625H5.062a.625.625 0 0 1-.625-.625v-.464a1.25 1.25 0 0 1 .694-1.118l1.112-.557A2.5 2.5 0 0 0 7.5 7.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+    viewBox: "0 0 24 24",
+    path: `<path d="M9.5 14.5L3 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.00007 9.48528L14.1925 18.6777L15.8895 16.9806L15.4974 13.1944L21.0065 8.5211L15.1568 2.67141L10.4834 8.18034L6.69713 7.78823L5.00007 9.48528Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
   "pin-filled": {
-    viewBox: "0 0 20 20",
-    path: `<path d="M10 13.75V17.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M7.5 7.5V4.375A.625.625 0 0 1 8.125 3.75a1.25 1.25 0 0 1 0-2.5h3.75a1.25 1.25 0 0 0 0 2.5.625.625 0 0 1 .625.625V7.5a2.5 2.5 0 0 0 1.382 2.236l1.113.557a1.25 1.25 0 0 1 .693 1.118v.464a.625.625 0 0 1-.625.625H5.062a.625.625 0 0 1-.625-.625v-.464a1.25 1.25 0 0 1 .694-1.118l1.112-.557A2.5 2.5 0 0 0 7.5 7.5Z" fill="currentColor"/>`,
+    viewBox: "0 0 24 24",
+    path: `<path d="M9.5 14.5L3 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.00007 9.48528L14.1925 18.6777L15.8895 16.9806L15.4974 13.1944L21.0065 8.5211L15.1568 2.67141L10.4834 8.18034L6.69713 7.78823L5.00007 9.48528Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
 }
 
