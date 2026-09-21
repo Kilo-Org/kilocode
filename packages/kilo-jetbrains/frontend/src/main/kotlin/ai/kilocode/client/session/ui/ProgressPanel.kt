@@ -8,9 +8,13 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.ShimmerLabel
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.Disposable
@@ -22,7 +26,8 @@ import java.awt.Color
 
 /**
  * Progress footer rendered at the bottom of the session transcript while the
- * agent is working.
+ * agent is working. The spinner, status text, and elapsed counter sit in one
+ * horizontally centered row.
  *
  * Reacts to [SessionModelEvent.StateChanged]:
  * - [SessionState.Busy] → shows an animated spinner and [SessionState.Busy.text]
@@ -52,7 +57,7 @@ class ProgressPanel(
     // without losing — or over-counting — the turn's active working time.
     private var accrued = 0L
     private var began: Long? = null
-    private val label = JBLabel().apply {
+    private val label = ShimmerLabel().apply {
         foreground = style.editorForeground
     }
     private val elapsed = JBLabel().apply {
@@ -72,12 +77,13 @@ class ProgressPanel(
         )
         applyStyle(SessionEditorStyle.current())
 
-        addToLeft(
+        addToCenter(
             Stack(StackAxis.HORIZONTAL, UiStyle.Gap.md())
                 .next(spinner)
-                .next(label),
+                .next(label)
+                .next(elapsed)
+                .align(HAlign.CENTER, VAlign.CENTER),
         )
-        addToRight(elapsed)
         Disposer.register(parent) { tick.stop() }
 
         model.addListener(parent) { event ->
@@ -103,6 +109,7 @@ class ProgressPanel(
                 spinner.isVisible = true
                 label.text = state.text
                 label.foreground = style.editorForeground
+                label.isShimmering = true
                 resume()
                 showProgress()
             }
@@ -110,6 +117,7 @@ class ProgressPanel(
                 spinner.isVisible = true
                 label.text = retryText(state)
                 label.foreground = UiStyle.Colors.warningLabelForeground()
+                label.isShimmering = false
                 resume()
                 showProgress()
             }
@@ -117,17 +125,20 @@ class ProgressPanel(
                 spinner.isVisible = false
                 label.text = state.message.ifBlank { KiloBundle.message("session.status.offline") }
                 label.foreground = UiStyle.Colors.errorLabelForeground()
+                label.isShimmering = false
                 resume()
                 showProgress()
             }
             // Waiting on the user: the turn is still active, so keep the banked
             // time but stop the clock and hide the footer, same as idle.
             is SessionState.AwaitingPermission, is SessionState.AwaitingQuestion, is SessionState.Reverting -> {
+                label.isShimmering = false
                 pause()
                 hideProgress()
             }
             // Turn boundaries: the next turn starts its own counter at zero.
             else -> {
+                label.isShimmering = false
                 reset()
                 hideProgress()
             }
