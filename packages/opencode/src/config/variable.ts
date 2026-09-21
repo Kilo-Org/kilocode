@@ -54,7 +54,7 @@ export async function substitute(input: SubstituteInput) {
   // scoped form, so it is rejected outright; {file:} is allowed but confined to fileScope.root below.
   const trusted = input.trusted ?? false
   if (!trusted) {
-    const active = Array.from(input.text.matchAll(/\{env:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
+    const active = Array.from(input.text.matchAll(/(?<!\$)\{env:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
     if (active) {
       throw new InvalidError({
         path: source(input),
@@ -65,7 +65,9 @@ export async function substitute(input: SubstituteInput) {
     // scope we cannot enforce that bound, so we reject rather than read unrestricted. In-root file references are
     // still allowed when a scope is supplied (the normal project path); this only guards a caller that omitted it.
     if (!input.fileScope) {
-      const file = Array.from(input.text.matchAll(/\{file:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
+      const file = Array.from(input.text.matchAll(/(?<!\$)\{file:[^}]+\}/g)).find(
+        (m) => !commented(input.text, m.index),
+      )
       if (file) {
         throw new InvalidError({
           path: source(input),
@@ -75,8 +77,8 @@ export async function substitute(input: SubstituteInput) {
     }
   }
   // kilocode_change end
-  let text = input.text.replace(/\{env:([^}]+)\}/g, (match, varName, offset: number) => {
-    // kilocode_change start - leave commented tokens literal; reject server credentials
+  // kilocode_change start - preserve dollar-prefixed placeholders; leave commented tokens literal; reject server credentials
+  let text = input.text.replace(/(?<!\$)\{env:([^}]+)\}/g, (match, varName, offset: number) => {
     if (commented(input.text, offset)) return match
     if (!ConfigVariableGuard.env(varName)) {
       throw new InvalidError({ path: source(input), message: `blocked environment reference: "{env:${varName}}"` })
@@ -85,7 +87,7 @@ export async function substitute(input: SubstituteInput) {
     return (input.env?.[varName] ?? process.env[varName]) || ""
   })
 
-  const fileMatches = Array.from(text.matchAll(/\{file:[^}]+\}/g))
+  const fileMatches = Array.from(text.matchAll(/(?<!\$)\{file:[^}]+\}/g)) // kilocode_change
   if (!fileMatches.length) return text
 
   const configDir = dir(input)
