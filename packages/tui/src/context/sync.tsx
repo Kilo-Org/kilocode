@@ -291,7 +291,10 @@ export const {
           break
         case "permission.replied": {
           terminal.add(event.properties.requestID) // kilocode_change - a replied ask is terminal: a stale list must not resurrect it
-          if (terminal.size > 512) terminal.delete(terminal.values().next().value) // kilocode_change
+          if (terminal.size > 512) {
+            const oldest = terminal.values().next().value // kilocode_change
+            if (oldest != null) terminal.delete(oldest) // kilocode_change
+          }
           const requests = store.permission[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -341,7 +344,10 @@ export const {
         case "question.replied":
         case "question.rejected": {
           terminal.add(event.properties.requestID) // kilocode_change - a settled question is terminal: a stale list must not resurrect it
-          if (terminal.size > 512) terminal.delete(terminal.values().next().value) // kilocode_change
+          if (terminal.size > 512) {
+            const oldest = terminal.values().next().value // kilocode_change
+            if (oldest != null) terminal.delete(oldest) // kilocode_change
+          }
           const requests = store.question[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
