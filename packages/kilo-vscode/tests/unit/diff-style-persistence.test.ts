@@ -2,8 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import { getUserDiffStyle, setUserDiffStyle } from "../../src/review-settings"
 
-// Stateful configuration mock: getUserDiffStyle reads `inspect`, setUserDiffStyle
-// writes via `update`, so the test backs both with one in-memory store.
+// Stateful configuration mock: getUserDiffStyle reads the effective value via
+// `get` (workspace overrides win), setUserDiffStyle writes via `update`, so the
+// test backs both with one in-memory store plus an optional workspace layer.
 const store: Record<string, unknown> = {}
 const original = vscode.workspace.getConfiguration
 
@@ -13,9 +14,10 @@ function installConfig(values: Record<string, unknown> = {}, workspace: Record<s
   ;(vscode.workspace as unknown as { getConfiguration: typeof vscode.workspace.getConfiguration }).getConfiguration =
     () =>
       ({
-        get: <T>(key: string, fallback?: T) => (key in store ? (store[key] as T) : fallback),
+        get: <T>(key: string, fallback?: T) =>
+          key in workspace ? (workspace[key] as T) : key in store ? (store[key] as T) : fallback,
         inspect: (key: string) =>
-          key in store ? { globalValue: store[key], workspaceValue: workspace[key] } : undefined,
+          key in store || key in workspace ? { globalValue: store[key], workspaceValue: workspace[key] } : undefined,
         update: async (key: string, value: unknown) => {
           store[key] = value
         },
@@ -46,10 +48,10 @@ describe("diff style persistence", () => {
     expect(getUserDiffStyle()).toBeUndefined()
   })
 
-  test("getUserDiffStyle reads the global layer, not workspace-local overrides", () => {
-    // Global split, workspace-local unified: only the global layer may win,
-    // matching the inspect().globalValue read.
+  test("getUserDiffStyle reads the effective value, so workspace overrides win", () => {
+    // Global split, workspace-local unified: the scope-aware read must let the
+    // workspace override win, matching how the other Kilo settings are read.
     installConfig({ "diff.style": "split" }, { "diff.style": "unified" })
-    expect(getUserDiffStyle()).toBe("split")
+    expect(getUserDiffStyle()).toBe("unified")
   })
 })
