@@ -2,7 +2,18 @@ import { expect, test } from "bun:test"
 import type { TerminalCapabilities } from "@opentui/core"
 import type { Part, ToolPart } from "@kilocode/sdk/v2"
 import { testRender } from "@opentui/solid"
-import { ImageAttachment, imageProtocol, isImageMime, isRenderableImageUrl, toolImages } from "../../src/kilocode/image"
+import { mkdtempSync, rmSync, truncateSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { pathToFileURL } from "node:url"
+import {
+  ImageAttachment,
+  imageMode,
+  imageProtocol,
+  isImageMime,
+  isRenderableImageUrl,
+  toolImages,
+} from "../../src/kilocode/image"
 
 const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAJElEQVR4nGO4oxH1Hx+WI4AZRg0YHgacACrEg+UI4FEDhoUBALHOTh9Q7QLnAAAAAElFTkSuQmCC"
@@ -209,6 +220,80 @@ test("image attachment falls back to a placeholder for undecodable data", async 
       expect(app.captureCharFrame()).toContain("[Image: broken.png]")
     } finally {
       app.renderer.destroy()
+    }
+  })
+})
+
+test("image mode resolves per terminal platform", () => {
+  expect(imageMode(caps({ kitty_graphics: true }), false, "auto")).toBe("kitty")
+  expect(imageMode(caps({ sixel: true }), true, "auto")).toBe("sixel")
+  expect(imageMode(caps({ sixel: true }), false, "auto")).toBe(null)
+  expect(imageMode(caps({ kitty_graphics: true, multiplexer: "tmux" }), false, "auto")).toBe(null)
+  expect(imageMode(caps({ kitty_graphics: true, multiplexer: "screen" }), false, "auto")).toBe(null)
+  expect(imageMode(caps({ kitty_graphics: true, multiplexer: "zellij" }), false, "auto")).toBe("kitty")
+  expect(imageMode(null, false, "auto")).toBe(null)
+  expect(imageMode(caps({ kitty_graphics: true }), false, "blocks")).toBe("blocks")
+  expect(imageMode(caps(), false, "kitty")).toBe("kitty")
+  expect(imageMode(caps({ kitty_graphics: true, multiplexer: "tmux" }), false, "sixel")).toBe("sixel")
+})
+
+test("image attachment reads a local file through a file url", async () => {
+  await withProtocol("blocks", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kilo-image-"))
+    try {
+      const file = join(dir, "local.png")
+      writeFileSync(file, Buffer.from(PNG.slice(PNG.indexOf(",") + 1), "base64"))
+      const app = await testRender(
+        () => <ImageAttachment url={pathToFileURL(file).href} mime="image/png" filename="local.png" />,
+        { width: 60, height: 40 },
+      )
+      try {
+        const frame = await app.waitForFrame((value) => /[\u2580\u2584\u2588]/.test(value), { maxPasses: 400 })
+        expect(frame).toContain("local.png")
+      } finally {
+        app.renderer.destroy()
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+test("image attachment rejects a directory or oversized file url", async () => {
+  await withProtocol(undefined, async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kilo-image-"))
+    try {
+      const big = join(dir, "big.png")
+      writeFileSync(big, "")
+      truncateSync(big, 21 * 1024 * 1024)
+
+      const folder = await testRender(
+        () => <ImageAttachment url={pathToFileURL(dir).href} mime="image/png" filename="folder.png" />,
+        { width: 60, height: 10 },
+      )
+      try {
+        await folder.flush()
+        await settle()
+        await folder.flush()
+        expect(folder.captureCharFrame()).toContain("[Image: folder.png]")
+      } finally {
+        folder.renderer.destroy()
+      }
+
+      const large = await testRender(
+        () => <ImageAttachment url={pathToFileURL(big).href} mime="image/png" filename="big.png" />,
+        { width: 60, height: 10 },
+      )
+      try {
+        await large.flush()
+        await settle()
+        await large.flush()
+        expect(large.captureCharFrame()).toContain("[Image: big.png]")
+      } finally {
+        large.renderer.destroy()
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
     }
   })
 })

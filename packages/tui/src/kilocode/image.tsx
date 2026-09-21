@@ -30,6 +30,22 @@ export function isRenderableImageUrl(url: string | undefined) {
   return url.startsWith("data:") && url.includes(";base64,")
 }
 
+// Pure platform/terminal capability matrix, separated so it can be tested
+// without a renderer. Auto-detection never selects the low-fidelity half-block
+// renderer; unsupported terminals get a text placeholder instead.
+export function imageMode(
+  caps: TerminalCapabilities | null,
+  hasResolution: boolean,
+  requested: Protocol = imageProtocol(),
+): Protocol | null {
+  if (requested !== "auto") return requested
+  if (!caps) return null
+  if (caps.multiplexer === "tmux" || caps.multiplexer === "screen") return null
+  if (caps.kitty_graphics) return "kitty"
+  if (caps.sixel && hasResolution) return "sixel"
+  return null
+}
+
 function decode(url: string) {
   if (url.startsWith("file://")) {
     try {
@@ -79,16 +95,9 @@ export function ImageAttachment(props: {
   // Resolve the drawable protocol. Auto-detection never selects the half-block
   // renderer, so unsupported terminals get a text placeholder instead of a
   // low-resolution fake image.
-  const mode = createMemo((): Protocol | null => {
-    const override = imageProtocol()
-    if (override !== "auto") return override
+  const mode = createMemo(() => {
     dims().width // re-resolve after a resize, when pixel resolution may arrive
-    const value = caps()
-    if (!value) return null
-    if (value.multiplexer === "tmux" || value.multiplexer === "screen") return null
-    if (value.kitty_graphics) return "kitty"
-    if (value.sixel && renderer.resolution) return "sixel"
-    return null
+    return imageMode(caps(), Boolean(renderer.resolution))
   })
 
   // Decode once per source URL. Resizes must not re-read the payload.
