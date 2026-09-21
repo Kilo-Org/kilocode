@@ -1100,6 +1100,15 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Nooit uitgevoerd",
   "settings.autoCleanup.result":
     "{{date}}: {{deleted}} van {{scanned}} sessies verwijderd ({{active}} actief overgeslagen, {{failed}} mislukt) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Sessieopschoning wordt gestart...",
+  "settings.autoCleanup.error.status":
+    "De status van de sessieopschoning is tijdelijk niet beschikbaar. Opnieuw proberen...",
+  "settings.autoCleanup.error.timeout": "Wachten op de opschoningsstatus. De backend doet er langer over dan verwacht.",
+  "settings.autoCleanup.error.run":
+    "Kon niet bevestigen dat de sessieopschoning is voltooid. Controleer het resultaat van de laatste opschoning voordat je het opnieuw probeert.",
+  "settings.autoCleanup.progress.scanning": "Sessies scannen: {{processed}}/{{total}} verwerkt",
+  "settings.autoCleanup.progress.deleting":
+    "Sessies verwijderen: {{processed}}/{{total}} verwerkt ({{deleted}} verwijderd, {{failed}} mislukt)",
   "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
   "settings.autoCleanup.runNow.confirm":
     "Verlopen sessies definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",

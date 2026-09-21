@@ -1067,6 +1067,13 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "从未运行",
   "settings.autoCleanup.result":
     "{{date}}：删除了 {{scanned}} 个会话中的 {{deleted}} 个（跳过 {{active}} 个运行中，{{failed}} 个失败），用时 {{seconds}} 秒",
+  "settings.autoCleanup.starting": "正在启动会话清理...",
+  "settings.autoCleanup.error.status": "会话清理状态暂时不可用。正在重试...",
+  "settings.autoCleanup.error.timeout": "正在等待清理状态。后端响应时间超出预期。",
+  "settings.autoCleanup.error.run": "无法确认会话清理是否已完成。请在重试前检查上次清理结果。",
+  "settings.autoCleanup.progress.scanning": "正在扫描会话：已处理 {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "正在删除会话：已处理 {{processed}}/{{total}}（已删除 {{deleted}} 个，失败 {{failed}} 个）",
   "settings.autoCleanup.runNow": "立即运行清理",
   "settings.autoCleanup.runNow.confirm": "永久删除这台机器上所有项目和所有 Kilo 客户端中已过期的会话？",
   "settings.context.autoCompaction.title": "自动压缩",
