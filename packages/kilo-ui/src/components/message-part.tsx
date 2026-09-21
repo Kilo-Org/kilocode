@@ -14,6 +14,7 @@ import {
 } from "solid-js"
 import stripAnsi from "strip-ansi"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
+import { getSharedHighlighter } from "@pierre/diffs"
 import { createStore } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
 import {
@@ -59,7 +60,7 @@ import { ToolApprovalProvider, resolveToolApproval, useToolApproval } from "./to
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
-import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
+import { bashLineUpdate, busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
 export { useGrowIn } from "./tool-utils"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
@@ -2659,13 +2660,71 @@ function BashCopyButton(props: { value: () => string; label: string }) {
   )
 }
 
+// Streaming bash output is highlighted incrementally. Only the trailing lines
+// that changed since the previous chunk are tokenized and patched into the
+// existing highlighted block. Rebuilding the whole block on every chunk forced a
+// full transcript re-layout per chunk, which dominated streaming cost.
+const BASH_OUTPUT_LANG = "log"
+
+let bashHighlighter: ReturnType<typeof getSharedHighlighter> | undefined
+
+const loadBashHighlighter = () => {
+  // Drop a rejected promise so a later chunk can retry instead of caching the failure.
+  bashHighlighter ??= getSharedHighlighter({ themes: ["Kilo"], langs: [] }).catch((err) => {
+    bashHighlighter = undefined
+    throw err
+  })
+  return bashHighlighter
+}
+
+async function highlightBashFragment(text: string): Promise<string | undefined> {
+  try {
+    const highlighter = await loadBashHighlighter()
+    if (!highlighter.getLoadedLanguages().includes(BASH_OUTPUT_LANG)) {
+      await highlighter.loadLanguage(BASH_OUTPUT_LANG)
+    }
+    const html = highlighter.codeToHtml(text, { lang: BASH_OUTPUT_LANG, theme: "Kilo", tabindex: false })
+    const probe = document.createElement("div")
+    probe.innerHTML = html
+    return probe.querySelector("code")?.innerHTML
+  } catch (err) {
+    console.warn("Bash output highlight failed", err)
+    return undefined
+  }
+}
+
 function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
   const data = useData()
   const i18n = useI18n()
   const cmdState = { signal: { aborted: false } }
-  const outState = { signal: { aborted: false } }
   let cmdRef: HTMLDivElement | undefined
   let outRef: HTMLDivElement | undefined
+  let renderedLines: string[] = []
+  let version = 0
+
+  const paintOutput = async (container: HTMLDivElement, out: string, id: number) => {
+    const lines = out.split("\n")
+    const { start, skip } = bashLineUpdate(renderedLines, lines)
+    if (skip) return
+    const inner = await highlightBashFragment(lines.slice(start).join("\n"))
+    if (id !== version || !container.isConnected) return
+    if (inner === undefined) {
+      renderedLines = []
+      container.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
+      return
+    }
+    const code = container.querySelector("code")
+    if (!code) {
+      container.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${inner}</code></pre>`
+      renderedLines = lines
+      return
+    }
+    while (code.childNodes.length > start * 2) code.removeChild(code.lastChild!)
+    const tail = code.lastChild
+    const separator = code.childNodes.length > 0 && !(tail?.nodeType === Node.TEXT_NODE && tail.textContent === "\n") ? "\n" : ""
+    code.insertAdjacentHTML("beforeend", separator + inner)
+    renderedLines = lines
+  }
 
   createEffect(() => {
     cmdState.signal.aborted = true
@@ -2679,19 +2738,22 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
   })
 
   createEffect(() => {
-    outState.signal.aborted = true
-    if (!props.active) return
+    const active = props.active
     const out = props.output
-    if (!outRef || !out) return
-    const signal = { aborted: false }
-    outState.signal = signal
-    outRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
-    void deferredHighlight(outRef, undefined, signal)
+    const container = outRef
+    if (!container) return
+    if (!active || !out) {
+      version++
+      renderedLines = []
+      if (!out) container.innerHTML = ""
+      return
+    }
+    void paintOutput(container, out, ++version)
   })
 
   onCleanup(() => {
     cmdState.signal.aborted = true
-    outState.signal.aborted = true
+    version++
   })
 
   const openInEditor = () => {
