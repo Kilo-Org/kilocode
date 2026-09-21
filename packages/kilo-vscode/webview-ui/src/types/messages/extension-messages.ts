@@ -1413,6 +1413,11 @@ export interface DiffViewerMarkdownRenderMessage {
   render: boolean
 }
 
+export interface DiffViewerInitialDiffStyleMessage {
+  type: "diffViewer.initialDiffStyle"
+  style: "unified" | "split"
+}
+
 export interface DiffViewerInitialFileMessage {
   type: "diffViewer.initialFile"
   file?: string
@@ -1817,6 +1822,7 @@ export type ExtensionMessage =
   | DiffViewerRevertFileResultMessage
   | DiffViewerDiffFileMessage
   | DiffViewerMarkdownRenderMessage
+  | DiffViewerInitialDiffStyleMessage
   | DiffViewerInitialFileMessage
   | DiffViewerInitialMarkdownMessage
   | SetAvailableSourcesMessage
