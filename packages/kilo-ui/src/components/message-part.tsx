@@ -2693,6 +2693,13 @@ async function highlightBashFragment(text: string): Promise<string | undefined> 
   }
 }
 
+// A processed block is identified by the absence of `code[data-lang]`, the same
+// way deferredHighlight's replacement drops it. This block is highlighted in
+// place, so drop the marker once its spans are in.
+function markBashHighlighted(container: HTMLElement) {
+  container.querySelector("code")?.removeAttribute("data-lang")
+}
+
 function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
   const data = useData()
   const i18n = useI18n()
@@ -2715,17 +2722,24 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
     if (inner === undefined) {
       renderedLines = []
       container.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
+      markBashHighlighted(container)
       return
     }
     const code = container.querySelector("code")
     if (!code) {
       container.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${inner}</code></pre>`
+      markBashHighlighted(container)
       // Record only what was actually rendered. A later chunk then rebuilds the
       // missing prefix instead of patching lines that are not in the DOM.
       renderedLines = lines.slice(start)
       return
     }
-    while (code.children.length > start) code.removeChild(code.lastChild!)
+    if (start === 0) {
+      // Full render: drop everything, including a plain-text fallback block.
+      code.textContent = ""
+    } else {
+      while (code.children.length > start) code.removeChild(code.lastChild!)
+    }
     const tail = code.lastChild
     const separator = code.childNodes.length > 0 && !(tail?.nodeType === Node.TEXT_NODE && tail.textContent === "\n") ? "\n" : ""
     code.insertAdjacentHTML("beforeend", separator + inner)
