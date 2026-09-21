@@ -245,6 +245,7 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
         // kilocode_change start - keep protected asks visible; clear only what was settled
         const kept = new Map<string, PermissionRequest>()
         for (const request of [...Object.values(store.permission).flat(), ...permissions]) {
+          if (terminal.has(request.id)) continue
           if (!temporaryPermission(request)) continue
           kept.set(request.id, request)
         }

@@ -362,3 +362,51 @@ test("auto mode stores a protected ask delivered by SSE instead of replying", as
     app.renderer.destroy()
   }
 })
+
+test("auto mode does not resurrect a protected ask answered during refetch", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  let resolveSecond!: (value: PermissionRequest[]) => void
+  const second = new Promise<PermissionRequest[]>((resolve) => {
+    resolveSecond = resolve
+  })
+  let seen = 0
+  const replies: string[] = []
+  const { app, emit, sync } = await mount(
+    (url) => {
+      const match = url.pathname.match(/^\/permission\/([^/]+)\/reply$/)
+      if (match) {
+        replies.push(match.at(1) ?? "")
+        return json(true)
+      }
+      if (url.pathname === "/permission") {
+        seen += 1
+        return seen === 1 ? json([]) : second.then((data) => json(data))
+      }
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+    { auto: true },
+  )
+
+  try {
+    sync.set("permission", { [childID]: [protectedPermission("per_protected")] })
+    const hydrate = sync.session.sync(childID)
+    await wait(() => seen === 2)
+    emit(
+      wrap({
+        id: "evt_replied",
+        type: "permission.replied",
+        properties: { sessionID: childID, requestID: "per_protected", reply: "once" },
+      }),
+    )
+    await wait(() => (sync.data.permission[childID] ?? []).length === 0)
+    resolveSecond([protectedPermission("per_protected")])
+    await hydrate
+
+    expect(sync.data.permission[childID]).toBeUndefined()
+    expect(replies).not.toContain("per_protected")
+  } finally {
+    app.renderer.destroy()
+  }
+})
