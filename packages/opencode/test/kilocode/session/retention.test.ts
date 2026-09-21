@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
+import { eq, inArray } from "drizzle-orm"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database } from "@opencode-ai/core/database/database"
@@ -10,10 +11,14 @@ import { ProjectV2 } from "@opencode-ai/core/project"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import { AbsolutePath } from "@opencode-ai/core/schema"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { Config } from "../../../src/config/config"
+import { Session } from "../../../src/session/session"
 import { SessionID, MessageID, PartID } from "../../../src/session/schema"
 import { KiloSessionRetention } from "../../../src/kilocode/session/retention"
+import { RetentionStatus } from "../../../src/kilocode/server/httpapi/groups/kilocode"
 import { testInstanceStoreLayer } from "../../fixture/fixture"
-import { testEffect } from "../../lib/effect"
+import { awaitWithTimeout, testEffect } from "../../lib/effect"
 
 const env = Layer.mergeAll(
   LayerNode.compile(
@@ -22,8 +27,23 @@ const env = Layer.mergeAll(
   testInstanceStoreLayer,
 )
 const dbIt = testEffect(env)
+const runIt = testEffect(
+  LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node, CrossSpawnSpawner.node])),
+)
+const enabled = Layer.mock(Config.Service, {
+  get: () => Effect.succeed({ retention: { enabled: true, maxAgeDays: 30 } }),
+})
 
 const NOW = 1_700_000_000_000
+
+it("retention HTTP status accepts idle and individual-session progress", () => {
+  const decode = Schema.decodeUnknownSync(RetentionStatus)
+  const policy = { enabled: true, maxAgeDays: 30 }
+  expect(decode({ policy })).toEqual({ policy })
+  const progress = { phase: "deleting" as const, total: 10, processed: 4, deleted: 3, failed: 1, skippedActive: 2 }
+  expect(decode({ policy, progress })).toEqual({ policy, progress })
+  expect(() => decode({ policy, progress: { ...progress, deleted: -1 } })).toThrow()
+})
 
 function session(
   id: string,
@@ -182,7 +202,7 @@ describe("shouldRun", () => {
 
 const seed = Effect.fn("retention-test.seed")(function* (input: {
   directory: string
-  rows: Array<{ id: string; updated: number; message?: number; part?: number }>
+  rows: Array<{ id: string; parent?: string; updated: number; message?: number; part?: number }>
 }) {
   const { db } = yield* Database.Service
   const project = ProjectV2.ID.make(`proj_retention_${crypto.randomUUID()}`)
@@ -204,6 +224,7 @@ const seed = Effect.fn("retention-test.seed")(function* (input: {
     .values(
       input.rows.map((row) => ({
         id: SessionID.make(row.id),
+        parent_id: row.parent ? SessionID.make(row.parent) : undefined,
         project_id: project,
         slug: row.id,
         directory: input.directory,
@@ -258,8 +279,281 @@ dbIt.live("busySessions flags sessions with recent message or part activity", ()
         { id: old, updated: now - 40 * KiloSessionRetention.DAY_MS, message: now - 40 * KiloSessionRetention.DAY_MS },
       ],
     })
-    const busy = yield* KiloSessionRetention.busySessions(now)
+    const busy = yield* KiloSessionRetention.busySessions(now, [fresh, old])
     expect(busy.has(fresh)).toBe(true)
     expect(busy.has(old)).toBe(false)
+  }),
+)
+
+dbIt.live("run skips history queries without age candidates and includes scanning in duration", () =>
+  Effect.gen(function* () {
+    expect(Database.path()).toBe(":memory:")
+    const { db } = yield* Database.Service
+    const now = Date.now()
+    const parent = `ses_retention_parent_${crypto.randomUUID()}`
+    yield* seed({
+      directory: "/tmp/retention-no-candidates",
+      rows: [
+        { id: parent, updated: now - 40 * KiloSessionRetention.DAY_MS },
+        { id: `ses_retention_fresh_${crypto.randomUUID()}`, parent, updated: now },
+      ],
+    })
+    yield* db.run("DROP TABLE part").pipe(Effect.orDie)
+    yield* db.run("DROP TABLE message").pipe(Effect.orDie)
+    const config = Layer.mock(Config.Service, {
+      get: () => Effect.sleep(20).pipe(Effect.as({ retention: { enabled: true, maxAgeDays: 30 } })),
+    })
+    const sessions = Layer.mock(Session.Service, { remove: () => Effect.die("no session should be removed") })
+    const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(Layer.merge(config, sessions)))
+    expect(outcome.ran).toBe(true)
+    if (!outcome.ran) return
+    expect(outcome.result).toMatchObject({ scanned: 2, deleted: 0, failed: 0, skippedActive: 0 })
+    expect(outcome.result.durationMs).toBeGreaterThanOrEqual(15)
+  }),
+)
+
+runIt.live("candidate probes preserve cross-project descendant and busy-parent selection", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const now = Date.now()
+    const old = now - 40 * KiloSessionRetention.DAY_MS
+    const ids = Array.from({ length: 9 }, () => SessionID.make(`ses_retention_${crypto.randomUUID()}`))
+    const [grand, parent, child, busy, idle, fresh, expired, ancestor, recent] = ids
+    yield* seed({
+      directory: "/tmp/retention-ancestors",
+      rows: [
+        { id: grand, updated: old },
+        { id: busy, updated: old, message: now },
+        { id: fresh, updated: now, message: now },
+        { id: ancestor, updated: old },
+      ],
+    })
+    yield* seed({
+      directory: "/tmp/retention-children",
+      rows: [
+        { id: parent, parent: grand, updated: old },
+        { id: idle, parent: busy, updated: old },
+        { id: expired, parent: fresh, updated: old },
+        { id: recent, parent: ancestor, updated: now, message: now },
+      ],
+    })
+    yield* seed({
+      directory: "/tmp/retention-grandchild",
+      rows: [{ id: child, parent, updated: old, message: old, part: now }],
+    })
+    const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(enabled))
+    expect(outcome.ran && outcome.result).toMatchObject({ scanned: 9, deleted: 2, failed: 0, skippedActive: 4 })
+    const rows = yield* db.select({ id: SessionTable.id }).from(SessionTable).all().pipe(Effect.orDie)
+    expect(rows.map((row) => row.id).sort()).toEqual(ids.filter((id) => id !== idle && id !== expired).sort())
+  }),
+)
+
+dbIt.live("busy probes ignore unrelated recent sessions and yield to event-loop work", () =>
+  Effect.gen(function* () {
+    const now = Date.now()
+    const ids = Array.from({ length: 65 }, () => `ses_retention_probe_${crypto.randomUUID()}`)
+    const outside = `ses_retention_outside_${crypto.randomUUID()}`
+    yield* seed({
+      directory: "/tmp/retention-probes",
+      rows: [...ids, outside].map((id) => ({
+        id,
+        updated: now - 40 * KiloSessionRetention.DAY_MS,
+        message: now,
+      })),
+    })
+    let ticks = 0
+    const timer = yield* Effect.acquireRelease(
+      Effect.sync(() =>
+        setInterval(() => {
+          ticks++
+        }, 0),
+      ),
+      (timer) => Effect.sync(() => clearInterval(timer)),
+    )
+    const busy = yield* KiloSessionRetention.busySessions(now, ids)
+    clearInterval(timer)
+    expect(busy).toEqual(new Set(ids))
+    expect(busy.has(outside)).toBe(false)
+    expect(ticks).toBeGreaterThanOrEqual(2)
+  }),
+)
+
+runIt.live("run counts individual cascaded sessions and sweeps children in another project", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const parent = `ses_retention_parent_${crypto.randomUUID()}`
+    const child = `ses_retention_child_${crypto.randomUUID()}`
+    const foreign = `ses_retention_foreign_${crypto.randomUUID()}`
+    const fresh = SessionID.make(`ses_retention_fresh_${crypto.randomUUID()}`)
+    const busy = SessionID.make(`ses_retention_busy_${crypto.randomUUID()}`)
+    const now = Date.now()
+    const updated = now - 40 * KiloSessionRetention.DAY_MS
+    yield* seed({
+      directory: "/tmp/retention-cascade",
+      rows: [
+        { id: parent, updated },
+        { id: child, parent, updated },
+        { id: fresh, updated: now },
+        { id: busy, updated, message: now },
+      ],
+    })
+    yield* seed({ directory: "/tmp/retention-foreign", rows: [{ id: foreign, parent, updated }] })
+    const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(enabled))
+    expect(outcome.ran).toBe(true)
+    if (!outcome.ran) return
+    expect(outcome.result).toMatchObject({ scanned: 5, deleted: 3, failed: 0, skippedActive: 1 })
+    const rows = yield* db.select({ id: SessionTable.id }).from(SessionTable).all().pipe(Effect.orDie)
+    expect(rows.map((row) => row.id).sort()).toEqual([busy, fresh].sort())
+    expect(yield* KiloSessionRetention.readState()).toEqual(outcome.result)
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+  }),
+)
+
+dbIt.live("progress observes children while root removal is pending and verifies swallowed failures", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const parent = SessionID.make(`ses_retention_parent_${crypto.randomUUID()}`)
+    const child = SessionID.make(`ses_retention_child_${crypto.randomUUID()}`)
+    const failed = SessionID.make(`ses_retention_failed_${crypto.randomUUID()}`)
+    const updated = Date.now() - 40 * KiloSessionRetention.DAY_MS
+    yield* seed({
+      directory: "/tmp/retention-progress",
+      rows: [
+        { id: parent, updated },
+        { id: child, parent, updated },
+        { id: failed, updated },
+      ],
+    })
+    const reached = yield* Deferred.make<void>()
+    const resume = yield* Deferred.make<void>()
+    const sessions = Layer.mock(Session.Service, {
+      remove: (id) =>
+        Effect.gen(function* () {
+          if (id === failed) return // Session.remove can return without removing the row.
+          if (id === parent) {
+            yield* db.delete(SessionTable).where(eq(SessionTable.id, child)).run().pipe(Effect.orDie)
+            yield* Deferred.succeed(reached, undefined)
+            yield* Deferred.await(resume)
+          }
+          yield* db.delete(SessionTable).where(eq(SessionTable.id, id)).run().pipe(Effect.orDie)
+        }),
+    })
+    const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(enabled, sessions)),
+      Effect.forkChild,
+    )
+    yield* awaitWithTimeout(Deferred.await(reached), "root removal did not reach child pause")
+    expect(yield* KiloSessionRetention.readProgress()).toEqual({
+      phase: "deleting",
+      total: 3,
+      processed: 1,
+      deleted: 1,
+      failed: 0,
+      skippedActive: 0,
+    })
+    yield* Deferred.succeed(resume, undefined)
+    const outcome = yield* Fiber.join(fiber)
+    expect(outcome.ran && outcome.result).toMatchObject({ deleted: 2, failed: 1 })
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+    const rows = yield* db
+      .select({ id: SessionTable.id })
+      .from(SessionTable)
+      .where(inArray(SessionTable.id, [parent, child, failed]))
+      .all()
+      .pipe(Effect.orDie)
+    expect(rows.map((row) => row.id)).toEqual([failed])
+  }),
+)
+
+runIt.live("run verifies actual Session.remove failures instead of counting returned calls", () =>
+  Effect.gen(function* () {
+    expect(Database.path()).toBe(":memory:")
+    const { db } = yield* Database.Service
+    const id = SessionID.make(`ses_retention_failed_${crypto.randomUUID()}`)
+    yield* seed({
+      directory: "/tmp/retention-failed",
+      rows: [{ id, updated: Date.now() - 40 * KiloSessionRetention.DAY_MS }],
+    })
+    yield* db
+      .run("CREATE TRIGGER retention_fail BEFORE DELETE ON session BEGIN SELECT RAISE(ABORT, 'retention failure'); END")
+      .pipe(Effect.orDie)
+    const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(enabled),
+      Effect.ensuring(db.run("DROP TRIGGER retention_fail").pipe(Effect.orDie)),
+    )
+    expect(outcome.ran && outcome.result).toMatchObject({ deleted: 0, failed: 1 })
+    const row = yield* db
+      .select({ id: SessionTable.id })
+      .from(SessionTable)
+      .where(eq(SessionTable.id, id))
+      .get()
+      .pipe(Effect.orDie)
+    expect(row?.id).toBe(id)
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+  }),
+)
+
+dbIt.live("run serializes duplicates and clears progress on failure and interruption", () =>
+  Effect.gen(function* () {
+    const reached = yield* Deferred.make<void>()
+    const blocked = Layer.mock(Config.Service, {
+      get: () => Deferred.succeed(reached, undefined).pipe(Effect.andThen(Effect.never)),
+    })
+    const sessions = Layer.mock(Session.Service, { remove: () => Effect.void })
+    const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(blocked, sessions)),
+      Effect.forkChild,
+    )
+    yield* awaitWithTimeout(Deferred.await(reached), "scan did not start")
+    expect(yield* KiloSessionRetention.readProgress()).toEqual({
+      phase: "scanning",
+      total: 0,
+      processed: 0,
+      deleted: 0,
+      failed: 0,
+      skippedActive: 0,
+    })
+    let calls = 0
+    const broken = Layer.mock(Config.Service, {
+      get: () =>
+        Effect.sync(() => {
+          calls++
+        }).pipe(Effect.andThen(Effect.die("scan failed"))),
+    })
+    const duplicate = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(broken, sessions)),
+      Effect.exit,
+      Effect.forkChild({ startImmediately: true }),
+    )
+    expect(calls).toBe(0)
+    yield* Fiber.interrupt(fiber)
+    const exit = yield* awaitWithTimeout(Fiber.join(duplicate), "interrupted run did not release its lock")
+    expect(calls).toBe(1)
+    expect(Exit.isFailure(exit)).toBe(true)
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+  }),
+)
+
+dbIt.live("run clears deleting progress after interruption without replacing the previous result", () =>
+  Effect.gen(function* () {
+    const id = `ses_retention_abort_${crypto.randomUUID()}`
+    yield* seed({
+      directory: "/tmp/retention-abort",
+      rows: [{ id, updated: Date.now() - 40 * KiloSessionRetention.DAY_MS }],
+    })
+    const previous = yield* KiloSessionRetention.readState()
+    const reached = yield* Deferred.make<void>()
+    const sessions = Layer.mock(Session.Service, {
+      remove: () => Deferred.succeed(reached, undefined).pipe(Effect.andThen(Effect.never)),
+    })
+    const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(enabled, sessions)),
+      Effect.forkChild,
+    )
+    yield* awaitWithTimeout(Deferred.await(reached), "deletion did not start")
+    expect((yield* KiloSessionRetention.readProgress())?.phase).toBe("deleting")
+    yield* Fiber.interrupt(fiber)
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+    expect(yield* KiloSessionRetention.readState()).toEqual(previous)
   }),
 )

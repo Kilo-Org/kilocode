@@ -540,8 +540,9 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     })
 
     const retentionStatus = Effect.fn("KilocodeHttpApi.retentionStatus")(function* () {
+      const progress = yield* KiloSessionRetention.readProgress()
       const last = yield* KiloSessionRetention.readState()
-      return { ...(yield* retentionActive()), ...(last ? { last } : {}) }
+      return { ...(yield* retentionActive()), ...(last ? { last } : {}), ...(progress ? { progress } : {}) }
     })
 
     const retentionRun = Effect.fn("KilocodeHttpApi.retentionRun")(function* (ctx: {

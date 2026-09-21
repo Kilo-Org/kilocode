@@ -523,10 +523,12 @@ export interface RequestTimelineSettingMessage {
 
 export interface RequestAutoCleanupStateMessage {
   type: "requestAutoCleanupState"
+  requestID: string
 }
 
 export interface RunAutoCleanupNowMessage {
   type: "runAutoCleanupNow"
+  requestID: string
 }
 
 export interface RequestThroughputSettingMessage {

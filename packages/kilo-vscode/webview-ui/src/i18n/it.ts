@@ -983,19 +983,19 @@ export const dict = {
   "settings.checkpoints.enable.title": "Abilita snapshot",
   "settings.checkpoints.enable.description":
     "Crea checkpoint prima delle modifiche ai file così puoi ripristinare stati precedenti",
-  "settings.autoCleanup.enable.title": "Abilita pulizia automatica delle attività",
+  "settings.autoCleanup.enable.title": "Abilita pulizia automatica delle sessioni",
   "settings.autoCleanup.enable.description":
-    "Elimina automaticamente la vecchia cronologia delle attività dopo un numero fisso di giorni — in tutti i progetti e in tutti i client Kilo di questo computer, non solo in questa finestra. Le attività in esecuzione e quelle con un fork recente non vengono mai eliminate. L'eliminazione è permanente.",
-  "settings.autoCleanup.defaultRetention.title": "Conserva attività per (giorni)",
+    "Elimina automaticamente la vecchia cronologia delle sessioni dopo un numero fisso di giorni, in tutti i progetti e in tutti i client Kilo di questo computer, non solo in questa finestra. Le sessioni in esecuzione e quelle con un fork recente non vengono mai eliminate. L'eliminazione è permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Conserva sessioni per (giorni)",
   "settings.autoCleanup.defaultRetention.description":
-    "Per quanto tempo viene conservata la cronologia delle attività prima che la pulizia automatica la elimini.",
+    "Per quanto tempo viene conservata la cronologia delle sessioni prima che la pulizia automatica la elimini.",
   "settings.autoCleanup.lastRun.title": "Ultima pulizia",
   "settings.autoCleanup.lastRun.never": "Mai eseguita",
   "settings.autoCleanup.result":
-    "{{date}}: eliminate {{deleted}} di {{scanned}} attività ({{active}} attive ignorate, {{failed}} non riuscite) in {{seconds}}s",
+    "{{date}}: eliminate {{deleted}} di {{scanned}} sessioni ({{active}} attive ignorate, {{failed}} non riuscite) in {{seconds}}s",
   "settings.autoCleanup.runNow": "Esegui pulizia ora",
   "settings.autoCleanup.runNow.confirm":
-    "Eliminare definitivamente le attività scadute in tutti i progetti e in tutti i client Kilo di questo computer?",
+    "Eliminare definitivamente le sessioni scadute in tutti i progetti e in tutti i client Kilo di questo computer?",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
   "settings.context.compaction.title": "Compattazione",

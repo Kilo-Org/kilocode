@@ -1117,19 +1117,19 @@ export const dict = {
     "Предотвращение повторных идентичных действий. Срабатывает, когда один и тот же вызов инструмента повторяется с идентичными входными данными.",
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
-  "settings.autoCleanup.enable.title": "Включить автоматическую очистку задач",
+  "settings.autoCleanup.enable.title": "Включить автоматическую очистку сессий",
   "settings.autoCleanup.enable.description":
-    "Автоматически удаляет старую историю задач по истечении заданного числа дней — во всех проектах и во всех клиентах Kilo на этом компьютере, а не только в этом окне. Запущенные задачи и задачи с недавним форком никогда не удаляются. Удаление необратимо.",
-  "settings.autoCleanup.defaultRetention.title": "Хранить задачи (дней)",
+    "Автоматически удаляет старую историю сессий по истечении заданного числа дней, во всех проектах и во всех клиентах Kilo на этом компьютере, а не только в этом окне. Запущенные сессии и сессии с недавним форком никогда не удаляются. Удаление необратимо.",
+  "settings.autoCleanup.defaultRetention.title": "Хранить сессии (дней)",
   "settings.autoCleanup.defaultRetention.description":
-    "Как долго хранится история задач до удаления автоматической очисткой.",
+    "Как долго хранится история сессий до удаления автоматической очисткой.",
   "settings.autoCleanup.lastRun.title": "Последняя очистка",
   "settings.autoCleanup.lastRun.never": "Никогда не запускалась",
   "settings.autoCleanup.result":
-    "{{date}}: удалено {{deleted}} из {{scanned}} задач ({{active}} активных пропущено, {{failed}} с ошибкой) за {{seconds}} с",
+    "{{date}}: удалено {{deleted}} из {{scanned}} сессий ({{active}} активных пропущено, {{failed}} с ошибкой) за {{seconds}} с",
   "settings.autoCleanup.runNow": "Запустить очистку сейчас",
   "settings.autoCleanup.runNow.confirm":
-    "Безвозвратно удалить устаревшие задачи во всех проектах и во всех клиентах Kilo на этом компьютере?",
+    "Безвозвратно удалить устаревшие сессии во всех проектах и во всех клиентах Kilo на этом компьютере?",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
   "settings.context.compaction.title": "Сжатие",

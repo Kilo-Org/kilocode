@@ -809,6 +809,17 @@ export interface AutoCleanupLastResult {
 export interface AutoCleanupStateLoadedMessage {
   type: "autoCleanupStateLoaded"
   last: AutoCleanupLastResult | null
+  requestID?: string
+  pending?: boolean
+  error?: "status" | "timeout" | "run"
+  progress?: {
+    phase: "scanning" | "deleting"
+    total: number
+    processed: number
+    deleted: number
+    failed: number
+    skippedActive: number
+  }
 }
 
 export interface ThroughputSettingLoadedMessage {

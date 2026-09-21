@@ -128,6 +128,16 @@ export const RetentionStatus = Schema.Struct({
     maxAgeDays: Schema.Number,
   }),
   last: Schema.optional(RetentionState),
+  progress: Schema.optional(
+    Schema.Struct({
+      phase: Schema.Literals(["scanning", "deleting"]),
+      total: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      processed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      deleted: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      failed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      skippedActive: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    }),
+  ),
 })
 
 export const KilocodePaths = {

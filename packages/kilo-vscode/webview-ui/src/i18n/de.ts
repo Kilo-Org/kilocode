@@ -1142,19 +1142,19 @@ export const dict = {
   "settings.checkpoints.enable.title": "Snapshots aktivieren",
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
-  "settings.autoCleanup.enable.title": "Automatische Aufgabenbereinigung aktivieren",
+  "settings.autoCleanup.enable.title": "Automatische Sitzungsbereinigung aktivieren",
   "settings.autoCleanup.enable.description":
-    "Löscht alten Aufgabenverlauf automatisch nach einer festen Anzahl von Tagen — in allen Projekten und allen Kilo-Clients auf diesem Rechner, nicht nur in diesem Fenster. Laufende Aufgaben und Aufgaben mit jungem Fork werden nie gelöscht. Die Löschung ist dauerhaft.",
-  "settings.autoCleanup.defaultRetention.title": "Aufgaben aufbewahren (Tage)",
+    "Löscht alten Sitzungsverlauf automatisch nach einer festen Anzahl von Tagen, in allen Projekten und allen Kilo-Clients auf diesem Rechner, nicht nur in diesem Fenster. Laufende Sitzungen und Sitzungen mit jungem Fork werden nie gelöscht. Die Löschung ist dauerhaft.",
+  "settings.autoCleanup.defaultRetention.title": "Sitzungen aufbewahren (Tage)",
   "settings.autoCleanup.defaultRetention.description":
-    "Wie lange der Aufgabenverlauf aufbewahrt wird, bevor die automatische Bereinigung ihn löscht.",
+    "Wie lange der Sitzungsverlauf aufbewahrt wird, bevor die automatische Bereinigung ihn löscht.",
   "settings.autoCleanup.lastRun.title": "Letzte Bereinigung",
   "settings.autoCleanup.lastRun.never": "Nie ausgeführt",
   "settings.autoCleanup.result":
-    "{{date}}: {{deleted}} von {{scanned}} Aufgaben gelöscht ({{active}} aktiv übersprungen, {{failed}} fehlgeschlagen) in {{seconds}}s",
+    "{{date}}: {{deleted}} von {{scanned}} Sitzungen gelöscht ({{active}} aktiv übersprungen, {{failed}} fehlgeschlagen) in {{seconds}}s",
   "settings.autoCleanup.runNow": "Bereinigung jetzt ausführen",
   "settings.autoCleanup.runNow.confirm":
-    "Abgelaufene Aufgaben endgültig in allen Projekten und allen Kilo-Clients auf diesem Rechner löschen?",
+    "Abgelaufene Sitzungen endgültig in allen Projekten und allen Kilo-Clients auf diesem Rechner löschen?",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
   "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
   "settings.context.compaction.title": "Komprimierung",

@@ -13,6 +13,14 @@ export interface RetentionResult {
 export interface RetentionStatus {
   policy: { enabled: boolean; maxAgeDays: number }
   last: RetentionResult | null
+  progress?: {
+    phase: "scanning" | "deleting"
+    total: number
+    processed: number
+    deleted: number
+    failed: number
+    skippedActive: number
+  }
 }
 
 const DAY_MS = 86_400_000
@@ -33,6 +41,11 @@ const STATE_KEY = "taskCleanup.lastResult"
 export class RetentionService {
   private timer?: ReturnType<typeof setTimeout>
   private disposed = false
+  private pending = 0
+
+  get running(): boolean {
+    return this.pending > 0
+  }
 
   constructor(
     private readonly connection: KiloConnectionService,
@@ -82,19 +95,33 @@ export class RetentionService {
    * connected; the backend itself refuses to run when the policy is disabled.
    */
   async run(force: boolean): Promise<RetentionStatus | null> {
-    const client = this.connection.getClient()
-    const directory = this.directory()
-    const response = await client.kilocode.retention.run(
-      { ...(directory ? { directory } : {}), force },
-      { throwOnError: true },
-    )
-    return this.normalize(response.data)
+    this.pending++
+    try {
+      const client = this.connection.getClient()
+      const directory = this.directory()
+      const response = await client.kilocode.retention.run(
+        { ...(directory ? { directory } : {}), force },
+        { throwOnError: true },
+      )
+      return this.normalize(response.data)
+    } finally {
+      this.pending--
+    }
   }
 
   async status(): Promise<RetentionStatus | null> {
     const client = this.connection.getClient()
     const directory = this.directory()
-    const response = await client.kilocode.retention.status(directory ? { directory } : {}, { throwOnError: true })
+    const signal = AbortSignal.timeout(10_000)
+    const response = await client.kilocode.retention
+      .status(directory ? { directory } : {}, {
+        throwOnError: true,
+        signal,
+      })
+      .catch((error: unknown) => {
+        // Some fetch implementations replace the timeout reason with AbortError.
+        throw signal.aborted ? signal.reason : error
+      })
     return this.normalize(response.data)
   }
 

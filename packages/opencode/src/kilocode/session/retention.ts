@@ -1,5 +1,5 @@
-import { Effect } from "effect"
-import { gt, inArray } from "drizzle-orm"
+import { Cause, Effect, Semaphore } from "effect"
+import { and, eq, gt, inArray } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { Global } from "@opencode-ai/core/global"
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
@@ -50,6 +50,62 @@ export namespace KiloSessionRetention {
     failed: number
     durationMs: number
   }
+
+  export interface Progress {
+    phase: "scanning" | "deleting"
+    total: number
+    processed: number
+    deleted: number
+    failed: number
+    skippedActive: number
+  }
+
+  const lock = Semaphore.makeUnsafe(1)
+  let current:
+    | {
+        phase: Progress["phase"]
+        total: number
+        pending: Set<SessionID>
+        failed: Set<SessionID>
+        skippedActive: number
+      }
+    | undefined
+
+  // Sample only outstanding candidate IDs when polled, not the entire database
+  // after each removal. This also observes children during a long root cascade.
+  export const readProgress = Effect.fn("KiloSessionRetention.readProgress")(function* () {
+    const state = current
+    if (!state) return undefined
+    if (state.phase === "deleting") {
+      const { db } = yield* Database.Service
+      const ids = [...state.pending]
+      for (let start = 0; start < ids.length; start += 500) {
+        const chunk = ids.slice(start, start + 500)
+        const rows = yield* db
+          .select({ id: SessionTable.id })
+          .from(SessionTable)
+          .where(inArray(SessionTable.id, chunk))
+          .all()
+          .pipe(Effect.orDie)
+        const remaining = new Set(rows.map((row) => row.id))
+        for (const id of chunk) {
+          if (remaining.has(id)) continue
+          state.pending.delete(id)
+          state.failed.delete(id)
+        }
+      }
+    }
+    if (current !== state) return undefined
+    const deleted = state.total - state.pending.size
+    return {
+      phase: state.phase,
+      total: state.total,
+      processed: deleted + state.failed.size,
+      deleted,
+      failed: state.failed.size,
+      skippedActive: state.skippedActive,
+    } satisfies Progress
+  })
 
   export type Outcome = { ran: false; reason: "disabled" | "recent" } | { ran: true; result: State }
 
@@ -149,27 +205,41 @@ export namespace KiloSessionRetention {
   }
 
   /**
-   * Sessions with recent message or part writes in the shared database — busy
-   * from this process or any other client on the machine.
+   * Candidate sessions with recent writes from any client on the machine.
+   * Probe session-leading indexes instead of scanning all message/part history.
    */
-  export const busySessions = Effect.fn("KiloSessionRetention.busySessions")(function* (now: number) {
+  export const busySessions = Effect.fn("KiloSessionRetention.busySessions")(function* (
+    now: number,
+    ids: Iterable<string>,
+  ) {
     const { db } = yield* Database.Service
     const cutoff = now - BUSY_WINDOW_MS
     const busy = new Set<string>()
-    const messages = yield* db
-      .select({ session: MessageTable.session_id })
-      .from(MessageTable)
-      .where(gt(MessageTable.time_created, cutoff))
-      .all()
-      .pipe(Effect.orDie)
-    for (const row of messages) busy.add(row.session)
-    const parts = yield* db
-      .select({ session: PartTable.session_id })
-      .from(PartTable)
-      .where(gt(PartTable.time_updated, cutoff))
-      .all()
-      .pipe(Effect.orDie)
-    for (const row of parts) busy.add(row.session)
+    let count = 0
+    for (const id of ids) {
+      // SQLite is synchronous. Let status/health requests run between batches.
+      if (count++ % 32 === 0) yield* Effect.sleep("1 millis")
+      const session = SessionID.make(id)
+      const message = yield* db
+        .select({ id: MessageTable.id })
+        .from(MessageTable)
+        .where(and(eq(MessageTable.session_id, session), gt(MessageTable.time_created, cutoff)))
+        .limit(1)
+        .get()
+        .pipe(Effect.orDie)
+      if (message) {
+        busy.add(id)
+        continue
+      }
+      const part = yield* db
+        .select({ id: PartTable.id })
+        .from(PartTable)
+        .where(and(eq(PartTable.session_id, session), gt(PartTable.time_updated, cutoff)))
+        .limit(1)
+        .get()
+        .pipe(Effect.orDie)
+      if (part) busy.add(id)
+    }
     return busy
   })
 
@@ -190,82 +260,118 @@ export namespace KiloSessionRetention {
     })
   })
 
-  export const run = Effect.fn("KiloSessionRetention.run")(function* (input: { force?: boolean } = {}) {
-    const config = yield* Config.Service
-    const active = policy(yield* config.get())
-    const now = Date.now()
-    const previous = yield* readState()
-    const gate = shouldRun(active, input, previous, now)
-    if (!gate.ok) return { ran: false, reason: gate.reason }
+  export const run = Effect.fn("KiloSessionRetention.run")(
+    function* (input: { force?: boolean } = {}) {
+      const started = Date.now()
+      const progress = (current = {
+        phase: "scanning" as Progress["phase"],
+        total: 0,
+        pending: new Set<SessionID>(),
+        failed: new Set<SessionID>(),
+        skippedActive: 0,
+      })
+      const config = yield* Config.Service
+      const active = policy(yield* config.get())
+      const now = Date.now()
+      const previous = yield* readState()
+      const gate = shouldRun(active, input, previous, now)
+      if (!gate.ok) return { ran: false as const, reason: gate.reason }
 
-    const { db } = yield* Database.Service
-    const rows = yield* db
-      .select({ id: SessionTable.id, parent: SessionTable.parent_id, updated: SessionTable.time_updated })
-      .from(SessionTable)
-      .all()
-      .pipe(Effect.orDie)
-
-    const recent = yield* busySessions(now)
-    const memory = yield* SessionStatus.busyAll()
-    const busy = new Set<string>([...recent, ...memory])
-
-    const mapped: Row[] = rows.map((row) => ({
-      id: row.id,
-      parentID: row.parent ?? undefined,
-      updated: row.updated ?? now,
-    }))
-    const started = Date.now()
-    const { expired, roots, skipped } = expiredRoots(mapped, {
-      maxAgeDays: active.maxAgeDays,
-      busy,
-      now,
-    })
-
-    const sessions = yield* Session.Service
-    let deleted = 0
-    let failed = 0
-    for (const id of roots) {
-      const done = yield* sessions.remove(SessionID.make(id)).pipe(
-        Effect.map(() => true),
-        Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
-      )
-      if (done) deleted++
-      else failed++
-    }
-    // Children stored in another project are not covered by the parent's
-    // cascade — sweep whatever expired rows are still present. NotFound here
-    // means an earlier cascade already removed the row. Chunked because a
-    // machine with retention off for a while can expire thousands at once.
-    const expiredIds = [...expired].map((id) => SessionID.make(id))
-    const chunkSize = 500
-    for (let start = 0; start < expiredIds.length; start += chunkSize) {
-      const chunk = expiredIds.slice(start, start + chunkSize)
-      const leftover = yield* db
-        .select({ id: SessionTable.id })
+      const { db } = yield* Database.Service
+      const rows = yield* db
+        .select({ id: SessionTable.id, parent: SessionTable.parent_id, updated: SessionTable.time_updated })
         .from(SessionTable)
-        .where(inArray(SessionTable.id, chunk))
         .all()
         .pipe(Effect.orDie)
-      for (const row of leftover) {
-        const done = yield* sessions.remove(SessionID.make(row.id)).pipe(
-          Effect.map(() => true),
-          Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
-        )
-        if (done) deleted++
-        else failed++
-      }
-    }
 
-    const result: State = {
-      at: started,
-      scanned: mapped.length,
-      deleted,
-      skippedActive: skipped.length,
-      failed,
-      durationMs: Date.now() - started,
-    }
-    yield* writeState(result)
-    log.info("retention pass complete", { ...result })
-    return { ran: true as const, result }
-  })
+      const mapped: Row[] = rows.map((row) => ({
+        id: row.id,
+        parentID: row.parent ?? undefined,
+        updated: row.updated ?? now,
+      }))
+      // Select by age first so unrelated fresh sessions never require history
+      // probes. The second pass still propagates busy descendants to ancestors.
+      const candidates = expiredRoots(mapped, { maxAgeDays: active.maxAgeDays, busy: new Set(), now })
+      const recent = yield* busySessions(now, candidates.expired)
+      const memory = yield* SessionStatus.busyAll()
+      const busy = new Set<string>([...recent, ...memory])
+      const { expired, roots, skipped } = expiredRoots(mapped, {
+        maxAgeDays: active.maxAgeDays,
+        busy,
+        now,
+      })
+
+      progress.total = expired.size
+      progress.pending = new Set([...expired].map((id) => SessionID.make(id)))
+      progress.skippedActive = skipped.length
+      progress.phase = "deleting"
+
+      const sessions = yield* Session.Service
+      const remove = Effect.fn("KiloSessionRetention.remove")(function* (id: SessionID, final: boolean) {
+        yield* sessions.remove(id).pipe(
+          Effect.catchCause((cause) => {
+            if (Cause.hasInterrupts(cause)) return Effect.interrupt
+            return Effect.sync(() => {
+              log.error("retention removal failed", { id, cause })
+            })
+          }),
+        )
+        // Session.remove can swallow failures. Only a missing row is success.
+        const row = yield* db
+          .select({ id: SessionTable.id })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, id))
+          .get()
+          .pipe(Effect.orDie)
+        if (!row) {
+          progress.pending.delete(id)
+          progress.failed.delete(id)
+          return
+        }
+        if (final && progress.pending.has(id)) progress.failed.add(id)
+      })
+      for (const id of roots) yield* remove(SessionID.make(id), false)
+      // Children stored in another project are not covered by the parent's
+      // cascade — sweep whatever expired rows are still present. NotFound here
+      // means an earlier cascade already removed the row. Chunked because a
+      // machine with retention off for a while can expire thousands at once.
+      const expiredIds = [...progress.pending]
+      const chunkSize = 500
+      for (let start = 0; start < expiredIds.length; start += chunkSize) {
+        const chunk = expiredIds.slice(start, start + chunkSize)
+        const leftover = yield* db
+          .select({ id: SessionTable.id })
+          .from(SessionTable)
+          .where(inArray(SessionTable.id, chunk))
+          .all()
+          .pipe(Effect.orDie)
+        for (const row of leftover) {
+          yield* remove(row.id, true)
+        }
+      }
+
+      yield* readProgress()
+      const result: State = {
+        at: started,
+        scanned: mapped.length,
+        deleted: progress.total - progress.pending.size,
+        skippedActive: skipped.length,
+        failed: progress.pending.size,
+        durationMs: Date.now() - started,
+      }
+      yield* writeState(result)
+      log.info("retention pass complete", { ...result })
+      return { ran: true as const, result }
+    },
+    (effect, _input: { force?: boolean } = {}) =>
+      lock.withPermit(
+        effect.pipe(
+          Effect.ensuring(
+            Effect.sync(() => {
+              current = undefined
+            }),
+          ),
+        ),
+      ),
+  )
 }

@@ -1130,19 +1130,19 @@ export const dict = {
     "Prevenir ações idênticas repetidas. Acionado quando a mesma chamada de ferramenta se repete com entrada idêntica.",
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
-  "settings.autoCleanup.enable.title": "Ativar limpeza automática de tarefas",
+  "settings.autoCleanup.enable.title": "Ativar limpeza automática de sessões",
   "settings.autoCleanup.enable.description":
-    "Exclui automaticamente o histórico de tarefas antigo após um número fixo de dias — em todos os projetos e em todos os clientes Kilo desta máquina, não apenas nesta janela. Tarefas em execução e tarefas com fork recente nunca são excluídas. A exclusão é permanente.",
-  "settings.autoCleanup.defaultRetention.title": "Manter tarefas por (dias)",
+    "Exclui automaticamente o histórico de sessões antigo após um número fixo de dias, em todos os projetos e em todos os clientes Kilo desta máquina, não apenas nesta janela. Sessões em execução e sessões com fork recente nunca são excluídas. A exclusão é permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Manter sessões por (dias)",
   "settings.autoCleanup.defaultRetention.description":
-    "Por quanto tempo o histórico de tarefas é mantido antes da limpeza automática excluí-lo.",
+    "Por quanto tempo o histórico de sessões é mantido antes da limpeza automática excluí-lo.",
   "settings.autoCleanup.lastRun.title": "Última limpeza",
   "settings.autoCleanup.lastRun.never": "Nunca executada",
   "settings.autoCleanup.result":
-    "{{date}}: excluídas {{deleted}} de {{scanned}} tarefas ({{active}} ativas ignoradas, {{failed}} falharam) em {{seconds}}s",
+    "{{date}}: excluídas {{deleted}} de {{scanned}} sessões ({{active}} ativas ignoradas, {{failed}} falharam) em {{seconds}}s",
   "settings.autoCleanup.runNow": "Executar limpeza agora",
   "settings.autoCleanup.runNow.confirm":
-    "Excluir permanentemente as tarefas expiradas em todos os projetos e em todos os clientes Kilo desta máquina?",
+    "Excluir permanentemente as sessões expiradas em todos os projetos e em todos os clientes Kilo desta máquina?",
   "settings.context.autoCompaction.title": "Compactação automática",
   "settings.context.autoCompaction.description": "Compactar automaticamente o contexto antes que atinja o limite",
   "settings.context.compaction.title": "Compactação",

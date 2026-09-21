@@ -1101,19 +1101,27 @@ export const dict = {
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
-  "settings.autoCleanup.enable.title": "Enable automatic task cleanup",
+  "settings.autoCleanup.enable.title": "Enable automatic session cleanup",
   "settings.autoCleanup.enable.description":
-    "Automatically delete old task history after a fixed number of days — across all projects and every Kilo client on this machine, not just this window. Running tasks and tasks with a recent fork are never deleted. Deletion is permanent.",
-  "settings.autoCleanup.defaultRetention.title": "Keep tasks for (days)",
+    "Automatically delete old session history after a fixed number of days across all projects and every Kilo client on this machine, not just this window. Running sessions and sessions with a recent fork are never deleted. Deletion is permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Keep sessions for (days)",
   "settings.autoCleanup.defaultRetention.description":
-    "How long task history is kept before automatic cleanup deletes it.",
+    "How long session history is kept before automatic cleanup deletes it.",
   "settings.autoCleanup.lastRun.title": "Last cleanup",
   "settings.autoCleanup.lastRun.never": "Never run",
   "settings.autoCleanup.result":
-    "{{date}}: deleted {{deleted}} of {{scanned}} tasks ({{active}} active skipped, {{failed}} failed) in {{seconds}}s",
+    "{{date}}: deleted {{deleted}} of {{scanned}} sessions ({{active}} active skipped, {{failed}} failed) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Starting session cleanup...",
+  "settings.autoCleanup.error.status": "Session cleanup status is temporarily unavailable. Retrying...",
+  "settings.autoCleanup.error.timeout": "Waiting for cleanup status. The backend is taking longer than expected.",
+  "settings.autoCleanup.error.run":
+    "Could not confirm session cleanup completed. Check the last cleanup result before trying again.",
+  "settings.autoCleanup.progress.scanning": "Scanning sessions: {{processed}}/{{total}} processed",
+  "settings.autoCleanup.progress.deleting":
+    "Deleting sessions: {{processed}}/{{total}} processed ({{deleted}} deleted, {{failed}} failed)",
   "settings.autoCleanup.runNow": "Run Cleanup Now",
   "settings.autoCleanup.runNow.confirm":
-    "Permanently delete expired tasks across all projects and every Kilo client on this machine?",
+    "Permanently delete expired sessions across all projects and every Kilo client on this machine?",
 
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",

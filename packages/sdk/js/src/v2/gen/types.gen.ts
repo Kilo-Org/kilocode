@@ -17707,6 +17707,14 @@ export type KilocodeRetentionStatusResponses = {
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
+    progress?: {
+      phase: "scanning" | "deleting"
+      total: number
+      processed: number
+      deleted: number
+      failed: number
+      skippedActive: number
+    }
   }
 }
 
@@ -17749,6 +17757,14 @@ export type KilocodeRetentionRunResponses = {
       skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    progress?: {
+      phase: "scanning" | "deleting"
+      total: number
+      processed: number
+      deleted: number
+      failed: number
+      skippedActive: number
     }
   }
 }

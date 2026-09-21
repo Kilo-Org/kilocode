@@ -1,4 +1,5 @@
-import { Component, For, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, For, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -8,7 +9,8 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import type { AutoCleanupLastResult, ExtensionMessage } from "../../types/messages"
+import type { AutoCleanupStateLoadedMessage, ExtensionMessage } from "../../types/messages"
+import { CleanupPoll } from "./cleanup"
 import SettingsRow from "./SettingsRow"
 
 const DAY_FIELDS = [{ key: "maxAgeDays", name: "defaultRetention", fallback: 30 }] as const
@@ -22,24 +24,31 @@ const CheckpointsTab: Component = () => {
   const language = useLanguage()
   const vscode = useVSCode()
   const dialog = useDialog()
-  const [last, setLast] = createSignal<AutoCleanupLastResult | null>(null)
-  const [running, setRunning] = createSignal(false)
+  const [state, setState] = createSignal<AutoCleanupStateLoadedMessage>({ type: "autoCleanupStateLoaded", last: null })
+  const [pending, setPending] = createSignal(false)
+  const running = () => pending() || Boolean(state().progress)
+  const poll = new CleanupPoll(vscode.postMessage, (message, pending) => {
+    setState(message)
+    setPending(pending)
+  })
 
   onMount(() => {
-    vscode.postMessage({ type: "requestAutoCleanupState" })
+    poll.start()
   })
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "autoCleanupStateLoaded") {
-      setLast(message.last)
-      setRunning(false)
+      poll.receive(message)
     }
   })
-  onCleanup(unsubscribe)
+  onCleanup(() => {
+    unsubscribe()
+    poll.dispose()
+  })
 
   const policy = () => config().retention ?? {}
   const enabled = () => Boolean(policy().enabled)
   const lastText = () => {
-    const run = last()
+    const run = state().last
     if (!run) return language.t("settings.autoCleanup.lastRun.never")
     return language.t("settings.autoCleanup.result", {
       date: new Date(run.at).toLocaleString(),
@@ -48,6 +57,17 @@ const CheckpointsTab: Component = () => {
       failed: String(run.failed),
       active: String(run.skippedActive),
       seconds: String(Math.max(0.1, Math.round(run.durationMs / 100) / 10)),
+    })
+  }
+
+  const progressText = () => {
+    const progress = state().progress
+    if (!progress) return language.t("settings.autoCleanup.starting")
+    return language.t(`settings.autoCleanup.progress.${progress.phase}`, {
+      processed: String(progress.processed),
+      total: String(progress.total),
+      deleted: String(progress.deleted),
+      failed: String(progress.failed),
     })
   }
 
@@ -75,8 +95,9 @@ const CheckpointsTab: Component = () => {
               size="large"
               onClick={() => {
                 dialog.close()
-                setRunning(true)
-                vscode.postMessage({ type: "runAutoCleanupNow" })
+                setState((state) => ({ ...state, error: undefined }))
+                setPending(true)
+                poll.execute()
               }}
             >
               {language.t("settings.autoCleanup.runNow")}
@@ -142,9 +163,18 @@ const CheckpointsTab: Component = () => {
             disabled={running() || isDirty() || !enabled()}
             onClick={confirmRun}
           >
+            <Show when={running()}>
+              <Spinner />
+            </Show>
             {language.t("settings.autoCleanup.runNow")}
           </Button>
         </SettingsRow>
+        <div role="status" aria-live="polite" aria-atomic="true">
+          <Show when={running()}>{progressText()}</Show>
+          <Show when={state().error}>
+            {(error) => <div>{language.t(`settings.autoCleanup.error.${error()}`)}</div>}
+          </Show>
+        </div>
       </Card>
     </div>
   )

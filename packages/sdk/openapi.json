@@ -17113,6 +17113,37 @@
                       },
                       "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
                       "additionalProperties": false
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "phase": {
+                          "type": "string",
+                          "enum": ["scanning", "deleting"]
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "processed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "deleted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "skippedActive": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": ["phase", "total", "processed", "deleted", "failed", "skippedActive"],
+                      "additionalProperties": false
                     }
                   },
                   "required": ["policy"],
@@ -17349,6 +17380,37 @@
                         }
                       },
                       "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
+                      "additionalProperties": false
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "phase": {
+                          "type": "string",
+                          "enum": ["scanning", "deleting"]
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "processed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "deleted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "skippedActive": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": ["phase", "total", "processed", "deleted", "failed", "skippedActive"],
                       "additionalProperties": false
                     }
                   },
@@ -35730,6 +35792,9 @@
                 "type": "boolean"
               },
               "task_model_selection": {
+                "type": "boolean"
+              },
+              "code_mode": {
                 "type": "boolean"
               },
               "speech_to_text_model": {
