@@ -1,13 +1,14 @@
-import { imageInfo } from "@opentui/core"
+import { imageInfo, type TerminalCapabilities } from "@opentui/core"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { readFileSync } from "node:fs"
+import type { Part } from "@kilocode/sdk/v2"
+import { readFileSync, statSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { createMemo, createSignal, onCleanup, Show } from "solid-js"
+import { createMemo, createSignal, For, onCleanup, Show } from "solid-js"
 
 const MAX_COLS = 72
 const MAX_ROWS = 24
-const MIN_COLS = 12
 const GUTTER = 6
+const MAX_FILE_BYTES = 20 * 1024 * 1024
 
 type Protocol = "auto" | "kitty" | "sixel" | "blocks"
 
@@ -32,7 +33,10 @@ export function isRenderableImageUrl(url: string | undefined) {
 function decode(url: string) {
   if (url.startsWith("file://")) {
     try {
-      return new Uint8Array(readFileSync(fileURLToPath(url)))
+      const path = fileURLToPath(url)
+      const stat = statSync(path)
+      if (!stat.isFile() || stat.size > MAX_FILE_BYTES) return undefined
+      return new Uint8Array(readFileSync(path))
     } catch {
       return undefined
     }
@@ -67,12 +71,8 @@ export function ImageAttachment(props: {
   const renderer = useRenderer()
   const dims = useTerminalDimensions()
   const [caps, setCaps] = createSignal(renderer.capabilities)
-  const [resolution, setResolution] = createSignal(renderer.resolution)
 
-  const sync = () => {
-    setCaps(renderer.capabilities)
-    setResolution(renderer.resolution)
-  }
+  const sync = (value: TerminalCapabilities) => setCaps(value)
   renderer.on("capabilities", sync)
   onCleanup(() => renderer.off("capabilities", sync))
 
@@ -82,59 +82,132 @@ export function ImageAttachment(props: {
   const mode = createMemo((): Protocol | null => {
     const override = imageProtocol()
     if (override !== "auto") return override
+    dims().width // re-resolve after a resize, when pixel resolution may arrive
     const value = caps()
     if (!value) return null
     if (value.multiplexer === "tmux" || value.multiplexer === "screen") return null
     if (value.kitty_graphics) return "kitty"
-    if (value.sixel && resolution()) return "sixel"
+    if (value.sixel && renderer.resolution) return "sixel"
     return null
   })
 
-  const size = createMemo(() => {
+  // Decode once per source URL. Resizes must not re-read the payload.
+  const data = createMemo(() => {
     const bytes = decode(props.url)
     if (!bytes) return undefined
-    let meta
     try {
-      meta = imageInfo(bytes)
+      const meta = imageInfo(bytes)
+      if (!meta.width || !meta.height) return undefined
+      return { bytes, width: meta.width, height: meta.height }
     } catch {
       return undefined
     }
-    if (!meta.width || !meta.height) return undefined
+  })
+
+  const size = createMemo(() => {
+    const value = data()
+    if (!value) return undefined
     const aspect = fallbackAspect(renderer)
-    const available = Math.max(MIN_COLS, Math.min(props.maxCols ?? MAX_COLS, dims().width - GUTTER))
+    const available = Math.max(1, Math.min(props.maxCols ?? MAX_COLS, dims().width - GUTTER))
     let cols = available
-    let rows = cols * (meta.height / meta.width) / aspect
+    let rows = cols * (value.height / value.width) / aspect
     const maxRows = props.maxRows ?? MAX_ROWS
     if (rows > maxRows) {
       rows = maxRows
-      cols = rows * aspect * (meta.width / meta.height)
+      cols = rows * aspect * (value.width / value.height)
     }
     return {
-      bytes,
-      width: meta.width,
-      height: meta.height,
+      ...value,
       cols: Math.max(1, Math.round(cols)),
       rows: Math.max(1, Math.round(rows)),
     }
   })
 
-  const placeholder = (value: { width: number; height: number }) => {
-    const label = props.filename ?? props.mime ?? "image"
-    return `[Image: ${label} ${value.width}x${value.height}]`
+  const label = () => props.filename ?? props.mime ?? "image"
+
+  const caption = (cols: number) => {
+    const name = props.filename ?? ""
+    const max = Math.max(1, cols)
+    if (name.length <= max) return name
+    return `${name.slice(0, Math.max(1, max - 3))}...`
   }
 
   return (
-    <Show when={size()}>
-      {(value) => (
-        <box flexDirection="column" paddingLeft={props.paddingLeft ?? 0}>
-          <Show when={mode()} fallback={<text fg="#888888">{placeholder(value())}</text>}>
-            <image source={value().bytes} fit="fit" protocol={mode()!} width={value().cols} height={value().rows} />
-          </Show>
-          <Show when={props.filename && mode()}>
-            <text fg="#888888">{props.filename}</text>
-          </Show>
-        </box>
-      )}
+    <Show when={data()} fallback={<text fg="#888888">{`[Image: ${label()}]`}</text>}>
+      <Show when={size()}>
+        {(value) => (
+          <box flexDirection="column" paddingLeft={props.paddingLeft ?? 0}>
+            <Show
+              when={mode()}
+              fallback={<text fg="#888888">{`[Image: ${label()} ${value().width}x${value().height}]`}</text>}
+            >
+              <image source={value().bytes} fit="fit" protocol={mode()!} width={value().cols} height={value().rows} />
+            </Show>
+            <Show when={props.filename && mode()}>
+              <text fg="#888888">{caption(value().cols)}</text>
+            </Show>
+          </box>
+        )}
+      </Show>
+    </Show>
+  )
+}
+
+export type AttachmentLike = {
+  type?: string
+  mime?: string
+  url?: string
+  filename?: string
+}
+
+export function imageAttachments<T extends AttachmentLike>(parts: readonly T[]) {
+  return parts.filter(
+    (x): x is T & { url: string } =>
+      x.type === "file" && isImageMime(x.mime) && isRenderableImageUrl(x.url),
+  )
+}
+
+export function toolImages(part: Part) {
+  if (part.type !== "tool") return []
+  if (part.state.status !== "completed") return []
+  return imageAttachments(part.state.attachments ?? [])
+}
+
+export function ImageList(props: {
+  parts: readonly AttachmentLike[]
+  direction?: "row" | "column"
+  gap?: number
+  paddingTop?: number
+  paddingBottom?: number
+  paddingLeft?: number
+  marginTop?: number
+  maxCols?: number
+  maxRows?: number
+}) {
+  const images = createMemo(() => imageAttachments(props.parts))
+  return (
+    <Show when={images().length}>
+      <box
+        flexDirection={props.direction ?? "column"}
+        flexWrap={props.direction === "row" ? "wrap" : undefined}
+        gap={props.gap ?? 1}
+        paddingTop={props.paddingTop ?? 0}
+        paddingBottom={props.paddingBottom ?? 0}
+        paddingLeft={props.paddingLeft ?? 0}
+        marginTop={props.marginTop ?? 0}
+      >
+        <For each={images()}>
+          {(file) => (
+            <ImageAttachment
+              url={file.url}
+              mime={file.mime}
+              filename={file.filename}
+              maxCols={props.maxCols}
+              maxRows={props.maxRows}
+            />
+          )}
+        </For>
+      </box>
     </Show>
   )
 }

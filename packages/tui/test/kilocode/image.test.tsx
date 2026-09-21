@@ -1,11 +1,52 @@
 import { expect, test } from "bun:test"
+import type { TerminalCapabilities } from "@opentui/core"
 import type { Part, ToolPart } from "@kilocode/sdk/v2"
 import { testRender } from "@opentui/solid"
-import { ImageAttachment, imageProtocol, isImageMime, isRenderableImageUrl } from "../../src/kilocode/image"
-import { toolImages } from "../../src/routes/session"
+import { ImageAttachment, imageProtocol, isImageMime, isRenderableImageUrl, toolImages } from "../../src/kilocode/image"
 
 const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAJElEQVR4nGO4oxH1Hx+WI4AZRg0YHgacACrEg+UI4FEDhoUBALHOTh9Q7QLnAAAAAElFTkSuQmCC"
+
+function caps(overrides: Partial<TerminalCapabilities> = {}): TerminalCapabilities {
+  return {
+    kitty_keyboard: false,
+    kitty_graphics: false,
+    rgb: true,
+    ansi256: true,
+    unicode: "unicode",
+    sgr_pixels: false,
+    color_scheme_updates: false,
+    explicit_width: false,
+    scaled_text: false,
+    sixel: false,
+    focus_tracking: false,
+    sync: false,
+    bracketed_paste: true,
+    hyperlinks: true,
+    osc52: false,
+    osc52_support: "unsupported",
+    notifications: false,
+    explicit_cursor_positioning: false,
+    remote: false,
+    multiplexer: "none",
+    terminal: { name: "test", version: "0", from_xtversion: false },
+    ...overrides,
+  }
+}
+
+function withProtocol<T>(value: string | undefined, run: () => Promise<T>) {
+  const original = process.env.KILO_IMAGE_PROTOCOL
+  if (value === undefined) delete process.env.KILO_IMAGE_PROTOCOL
+  else process.env.KILO_IMAGE_PROTOCOL = value
+  return run().finally(() => {
+    if (original === undefined) delete process.env.KILO_IMAGE_PROTOCOL
+    else process.env.KILO_IMAGE_PROTOCOL = original
+  })
+}
+
+async function settle() {
+  await new Promise((resolve) => setTimeout(resolve, 50))
+}
 
 test("image mime detection excludes svg text attachments", () => {
   expect(isImageMime("image/png")).toBe(true)
@@ -85,9 +126,7 @@ test("tool images select only completed image attachments with renderable urls",
 })
 
 test("image attachment renders pixels when a protocol is forced", async () => {
-  const original = process.env.KILO_IMAGE_PROTOCOL
-  process.env.KILO_IMAGE_PROTOCOL = "blocks"
-  try {
+  await withProtocol("blocks", async () => {
     const app = await testRender(() => <ImageAttachment url={PNG} mime="image/png" filename="pixel.png" />, {
       width: 60,
       height: 40,
@@ -99,23 +138,18 @@ test("image attachment renders pixels when a protocol is forced", async () => {
     } finally {
       app.renderer.destroy()
     }
-  } finally {
-    if (original === undefined) delete process.env.KILO_IMAGE_PROTOCOL
-    else process.env.KILO_IMAGE_PROTOCOL = original
-  }
+  })
 })
 
 test("image attachment shows a placeholder when the terminal cannot draw images", async () => {
-  const original = process.env.KILO_IMAGE_PROTOCOL
-  delete process.env.KILO_IMAGE_PROTOCOL
-  try {
+  await withProtocol(undefined, async () => {
     const app = await testRender(() => <ImageAttachment url={PNG} mime="image/png" filename="pixel.png" />, {
       width: 60,
       height: 20,
     })
     try {
       await app.flush()
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await settle()
       await app.flush()
       const frame = app.captureCharFrame()
       expect(frame).toContain("[Image: pixel.png 16x16]")
@@ -123,23 +157,75 @@ test("image attachment shows a placeholder when the terminal cannot draw images"
     } finally {
       app.renderer.destroy()
     }
-  } finally {
-    if (original === undefined) delete process.env.KILO_IMAGE_PROTOCOL
-    else process.env.KILO_IMAGE_PROTOCOL = original
-  }
+  })
 })
 
-test("image attachment ignores data that is not a decodable image", async () => {
-  const app = await testRender(
-    () => <ImageAttachment url="data:image/png;base64,bm90IGFuIGltYWdl" filename="broken.png" />,
-    { width: 60, height: 10 },
-  )
-  try {
-    await app.flush()
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    await app.flush()
-    expect(app.captureCharFrame()).not.toContain("broken.png")
-  } finally {
-    app.renderer.destroy()
-  }
+test("image attachment draws when the terminal reports kitty graphics", async () => {
+  await withProtocol(undefined, async () => {
+    const app = await testRender(() => <ImageAttachment url={PNG} mime="image/png" filename="pixel.png" />, {
+      width: 60,
+      height: 20,
+    })
+    try {
+      app.renderer.emit("capabilities", caps({ kitty_graphics: true }))
+      await app.flush()
+      await settle()
+      await app.flush()
+      expect(app.captureCharFrame()).not.toContain("[Image:")
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+})
+
+test("image attachment keeps the placeholder inside a multiplexer", async () => {
+  await withProtocol(undefined, async () => {
+    const app = await testRender(() => <ImageAttachment url={PNG} mime="image/png" filename="pixel.png" />, {
+      width: 60,
+      height: 20,
+    })
+    try {
+      app.renderer.emit("capabilities", caps({ kitty_graphics: true, multiplexer: "tmux" }))
+      await app.flush()
+      await settle()
+      await app.flush()
+      expect(app.captureCharFrame()).toContain("[Image: pixel.png 16x16]")
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+})
+
+test("image attachment falls back to a placeholder for undecodable data", async () => {
+  await withProtocol(undefined, async () => {
+    const app = await testRender(
+      () => <ImageAttachment url="data:image/png;base64,bm90IGFuIGltYWdl" filename="broken.png" />,
+      { width: 60, height: 10 },
+    )
+    try {
+      await app.flush()
+      await settle()
+      await app.flush()
+      expect(app.captureCharFrame()).toContain("[Image: broken.png]")
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+})
+
+test("image attachment falls back to a placeholder for a missing file", async () => {
+  await withProtocol(undefined, async () => {
+    const app = await testRender(
+      () => <ImageAttachment url="file:///nonexistent/kilo-inline-image.png" mime="image/png" filename="gone.png" />,
+      { width: 60, height: 10 },
+    )
+    try {
+      await app.flush()
+      await settle()
+      await app.flush()
+      expect(app.captureCharFrame()).toContain("[Image: gone.png]")
+    } finally {
+      app.renderer.destroy()
+    }
+  })
 })
