@@ -124,7 +124,7 @@ internal class AgentBehaviorContent(
             }.apply { border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm()) })
         }
         // Own group below the sub-page links, matching AdvancedSettingsUi's separator-per-group idiom.
-        rows.row(TitledSeparator(KiloBundle.message("settings.agentBehavior.swarm.title")))
+        rows.row(TitledSeparator(KiloBundle.message("settings.agentBehavior.extended.title")))
         rows.row(SettingsRow(
             KiloBundle.message("settings.agentBehavior.swarm.enabled"),
             KiloBundle.message("settings.agentBehavior.swarm.description"),

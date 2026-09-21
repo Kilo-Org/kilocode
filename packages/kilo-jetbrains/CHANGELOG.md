@@ -478,6 +478,18 @@
 
 ## [Unreleased]
 
+## [7.1.7-rc.3] - 2026-09-21
+
+### Added
+
+- Added unique avatars for subagents and a background agents strip in the session header.
+- Show scheduled/progress polish for session actions with a shimmering progress footer.
+
+### Fixed
+
+- Stopped a slow `gh` lookup from blanking PR badges.
+- Made worktree runs use the worktree's own logs and npm configs.
+
 ## [7.1.7-rc.2] - 2026-09-17
 
 ### Added

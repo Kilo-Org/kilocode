@@ -17,6 +17,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import java.awt.Component
 import java.awt.Container
+import javax.swing.SwingUtilities
+import kotlin.math.abs
 
 /**
  * Verifies [ProgressPanel] show/hide behaviour driven by direct [SessionModel]
@@ -135,17 +137,21 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertEquals("1h 1m 22s", panel.elapsedText())
     }
 
-    fun `test elapsed time is right aligned`() {
+    fun `test footer content is horizontally centered`() {
         val clock = FakeClock()
         replace(clock)
 
         model.setState(SessionState.Busy("Thinking"))
         panel.setSize(300, panel.preferredSize.height)
-        panel.doLayout()
+        layout(panel)
 
-        val time = labels(panel).first { it.text == "0s" }
+        val bounds = labels(panel)
+            .filter { it.isVisible }
+            .map { SwingUtilities.convertRectangle(it.parent, it.bounds, panel) }
+        val left = bounds.minOf { it.x }
+        val right = bounds.maxOf { it.x + it.width }
 
-        assertEquals(panel.width - panel.insets.right, time.x + time.width)
+        assertTrue("footer row must be centered within one layout pixel", abs(panel.width - left - right) <= 1)
     }
 
     fun `test elapsed time continues across visible progress states and stops when hidden`() {
@@ -306,6 +312,13 @@ class ProgressPanelTest : BasePlatformTestCase() {
             if (child is Container) items.addAll(components(child))
         }
         return items
+    }
+
+    private fun layout(root: Container) {
+        root.doLayout()
+        for (child in root.components) {
+            if (child is Container) layout(child)
+        }
     }
 
     private class FakeClock : UiTimerSource {

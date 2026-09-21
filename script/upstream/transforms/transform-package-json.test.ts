@@ -70,6 +70,12 @@ test("fixRepository preserves Kilo package links", () => {
   ])
 })
 
+test("mergeWithNewestVersions preserves an absent dependency section", () => {
+  const changes: string[] = []
+  expect(mergeWithNewestVersions(undefined, undefined, changes, "peerDependencies")).toBeUndefined()
+  expect(changes).toEqual([])
+})
+
 test("fixScripts removes upstream-only dead scripts from root", () => {
   const pkg: Record<string, unknown> = {
     scripts: {

@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
  *
  * [order] is the board's participant order (`main` first, then child sessions in spawn order — see
  * `ai.kilocode.client.session.model.SessionModel.childSessions`), used to give each participant a
- * stable, distinct avatar via [BoardAvatars].
+ * stable, distinct avatar via [avatars].
  */
 internal class SessionBoardDialog(
     parent: Component,
@@ -59,6 +59,7 @@ internal class SessionBoardDialog(
 ) : DialogWrapper(parent, false) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val avatars = BoardAvatars(order)
     private var disposed = false
     private var loading = false
     private var board: SessionBoardDto? = null
@@ -262,7 +263,7 @@ internal class SessionBoardDialog(
             key = message.id,
             title = "$from \u2192 $to",
             description = message.body.replace("\n", " "),
-            icon = BoardAvatars.icon(message.from, order),
+            icon = avatars.icon(message.from),
             badges = listOf(ActiveListBadge(message.type)),
             participant = message.from,
             participantLabel = message.fromLabel,
