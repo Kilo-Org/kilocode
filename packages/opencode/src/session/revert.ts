@@ -73,19 +73,13 @@ const layer = Layer.effect(
       // kilocode_change start
       // A fresh snapshot only preserves the state needed for redo. File restoration
       // is possible only when the historical turn retained checkpoint data.
-      const index = all.findIndex((msg) => msg.info.id === rev.messageID)
-      const range = index < 0 ? [] : all.slice(index)
-      // A delegated task records its edits in its own session, so collect those too and keep the
-      // whole set in edit order, which is what makes the earliest snapshot win the file dedup.
-      // The revert point travels as a message time: ids are handed out by several code paths and
-      // do not order chronologically, so `all` is sliced by position and descendants by time.
-      const since = index < 0 ? undefined : all[index]?.info.time.created
-      const ordered =
-        since == null
-          ? { patches: [], files: [] }
-          : yield* KiloSessionRevert.ordered(sessions, input.sessionID, since, all)
+      // A delegated task records its edits in its own session, so collect those too: the whole set
+      // is ordered chronologically, which is what lets the earliest snapshot win the file dedup,
+      // and the merged message list is what the revert summary reads for its file list.
+      const ordered = yield* KiloSessionRevert.ordered(sessions, input.sessionID, rev.messageID, all)
       patches.length = 0
       patches.push(...ordered.patches)
+      const range = ordered.messages
       const checkpoint = patches.length > 0
       rev.workspace = checkpoint
         ? "restored"
@@ -143,12 +137,7 @@ const layer = Layer.effect(
       if (!session.revert) return session
       // kilocode_change start - preserve the reverted workspace if redo cannot complete
       const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
-      const index = all.findIndex((msg) => msg.info.id === session.revert.messageID)
-      const since = index < 0 ? undefined : all[index]?.info.time.created
-      const found =
-        since == null
-          ? { patches: [], files: [] }
-          : yield* KiloSessionRevert.ordered(sessions, input.sessionID, since, all)
+      const found = yield* KiloSessionRevert.ordered(sessions, input.sessionID, session.revert.messageID, all)
       const files = [...new Set([...KiloSessionRevert.files(all, session.revert), ...found.files])]
       const baseline = files.length > 0 ? yield* snap.track() : undefined
       if (files.length > 0 && !baseline) {

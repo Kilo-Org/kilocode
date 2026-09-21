@@ -31,7 +31,7 @@ export namespace KiloSessionRevert {
 
   /**
    * Patch parts recorded by the session and its descendants, ordered by the time of the message
-   * that recorded them.
+   * that recorded them, plus the messages at or after the revert point merged in the same order.
    *
    * A delegated task runs in its own session with its own processor, so its edits land in patch
    * parts there. A child that keeps working after the parent's step window closed — a background
@@ -46,31 +46,46 @@ export namespace KiloSessionRevert {
    * Message time is the ordering key, not the message id: ids are handed out by several code paths
    * and do not sort chronologically, which is why `SessionRevert` resolves its own boundaries by
    * position instead of by id.
+   *
+   * The merged message list is what the revert summary reads: `SessionSummary.computeDiff` derives
+   * its diff from the `step-start`/`step-finish` snapshots of the messages it is given, so without
+   * the descendant messages a child-only revert restores the files while the revert card still
+   * reports no files at all.
    */
   export const ordered = Effect.fn("KiloSessionRevert.ordered")(function* (
     sessions: Pick<Session.Interface, "children" | "messages">,
     sessionID: SessionID,
-    since: number,
+    from: string,
     messages: MessageV2.WithParts[],
   ) {
+    // The revert point is resolved by position the way `SessionRevert` does it: message ids do not
+    // sort chronologically, so comparing ids would pick the wrong boundary.
+    const index = messages.findIndex((msg) => msg.info.id === from)
+    if (index < 0) return { patches: [], files: [], messages: [] }
+    const since = messages[index]?.info.time.created ?? 0
+
     const own: Entry[] = []
-    for (const msg of messages) {
-      if (msg.info.time.created < since) continue
+    for (const msg of messages.slice(index)) {
       for (const part of msg.parts) {
         if (part.type === "patch") own.push({ at: msg.info.time.created, part })
       }
     }
 
-    const walk = (parent: SessionID): Effect.Effect<{ entries: Entry[]; files: string[] }> =>
+    const walk = (
+      parent: SessionID,
+    ): Effect.Effect<{ entries: Entry[]; files: string[]; messages: MessageV2.WithParts[] }> =>
       Effect.gen(function* () {
         const entries: Entry[] = []
         const files: string[] = []
+        const messages: MessageV2.WithParts[] = []
         for (const kid of yield* sessions.children(parent).pipe(Effect.orDie)) {
           const nested = yield* walk(kid.id)
           entries.push(...nested.entries)
           files.push(...nested.files)
+          messages.push(...nested.messages)
           for (const msg of yield* sessions.messages({ sessionID: kid.id }).pipe(Effect.orDie)) {
             if (msg.info.time.created < since) continue
+            messages.push(msg)
             for (const part of msg.parts) {
               if (part.type !== "patch") continue
               entries.push({ at: msg.info.time.created, part })
@@ -78,14 +93,17 @@ export namespace KiloSessionRevert {
             }
           }
         }
-        return { entries, files }
+        return { entries, files, messages }
       })
 
     const found = yield* walk(sessionID)
     const patches = [...own, ...found.entries]
       .toSorted((left, right) => left.at - right.at)
       .map((entry) => entry.part)
-    return { patches, files: [...new Set(found.files)] }
+    const range = [...messages.slice(index), ...found.messages].toSorted(
+      (left, right) => left.info.time.created - right.info.time.created,
+    )
+    return { patches, files: [...new Set(found.files)], messages: range }
   })
 
   export const apply = Effect.fn("KiloSessionRevert.apply")(function* <A, E, R>(

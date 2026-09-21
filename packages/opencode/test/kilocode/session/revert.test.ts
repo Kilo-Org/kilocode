@@ -774,3 +774,106 @@ describe("sub-agent revert ordering", () => {
     30_000,
   )
 })
+
+describe("sub-agent revert summary", () => {
+  it.live(
+    "reports a child-recorded file in the revert summary",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "child.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate the edit",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+
+          const step = (sessionID: SessionID, edit?: string) =>
+            Effect.gen(function* () {
+              const before = yield* snapshot.track()
+              if (!before) throw new Error("expected snapshot")
+              if (edit) yield* Effect.promise(() => fs.writeFile(file, edit))
+              const after = yield* snapshot.track()
+              if (!after) throw new Error("expected snapshot")
+              const message = yield* sessions.updateMessage({
+                id: MessageID.ascending(),
+                sessionID,
+                role: "assistant",
+                parentID: user.id,
+                mode: "default",
+                agent: "default",
+                path: { cwd: dir, root: dir },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ModelV2.ID.make("test"),
+                providerID,
+                time: { created: Date.now() },
+                finish: "end_turn",
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "step-start",
+                snapshot: before,
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "step-finish",
+                reason: "stop",
+                snapshot: after,
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              })
+              if (!edit) return
+              const patch = yield* snapshot.patch(before)
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "patch",
+                hash: patch.hash,
+                files: patch.files,
+              })
+            })
+
+          // The parent delegates and records no edit of its own, so its own step window ends
+          // before the child writes.
+          yield* step(session.id)
+          yield* step(child.id, "after")
+
+          const result = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect({
+            workspace: result.revert?.workspace,
+            file: yield* Effect.promise(() => fs.readFile(file, "utf8")),
+            files: result.summary?.files,
+            child: result.summary?.diffs?.some((item) => item.file?.endsWith("child.txt")),
+          }).toEqual({ workspace: "restored", file: "before", files: 1, child: true })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
