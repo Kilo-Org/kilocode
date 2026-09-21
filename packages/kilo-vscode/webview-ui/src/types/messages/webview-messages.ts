@@ -121,6 +121,7 @@ export interface LoadMessagesRequest {
 
 export interface LoadSessionsRequest {
   type: "loadSessions"
+  more?: boolean
 }
 
 export interface RequestSessionModelUsageMessage {

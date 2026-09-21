@@ -294,6 +294,8 @@ export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
   sessions: SessionInfo[]
   preserveSessionIds?: string[]
+  append?: boolean
+  hasMore?: boolean
 }
 
 export interface CloudSessionsLoadedMessage {
