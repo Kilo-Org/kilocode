@@ -34438,7 +34438,7 @@
           },
           "vectorStore": {
             "type": "string",
-            "enum": ["lancedb", "qdrant"]
+            "enum": ["lancedb", "qdrant", "milvus"]
           },
           "kilo": {
             "type": "object",
@@ -34552,6 +34552,21 @@
                 "type": "string"
               },
               "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "milvus": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "token": {
+                "type": "string"
+              },
+              "database": {
                 "type": "string"
               }
             },
