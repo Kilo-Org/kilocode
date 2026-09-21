@@ -1519,12 +1519,13 @@ function UserMessage(props: {
       .filter(Boolean)
     return texts.join("\n\n")
   })
-  // kilocode_change - image parts render inline instead of as a file badge
+  // kilocode_change start - image parts render inline instead of as a file badge
   const files = createMemo(() =>
     props.parts.flatMap((x) =>
       x.type === "file" && !(isImageMime(x.mime) && isRenderableImageUrl(x.url)) ? [x] : [],
     ),
   )
+  // kilocode_change end
   const { theme } = useTheme()
   const [hover, setHover] = createSignal(false)
   const queued = createMemo(() => props.pending && props.message.id > props.pending)
@@ -1947,8 +1948,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
 
   return (
     <Show when={!shouldHide()}>
-      {/* kilocode_change start - render images returned by tools as inline terminal graphics */}
+      {/* kilocode_change start */}
       <>
+      {/* kilocode_change end */}
       <Switch>
         <Match when={display() === "bash"}>
           <Shell {...toolprops} />
@@ -2007,6 +2009,7 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
           <GenericTool {...toolprops} />
         </Match>
       </Switch>
+      {/* kilocode_change start - render images returned by tools as inline terminal graphics */}
       <ImageList parts={toolImages(props.part)} direction="column" paddingLeft={3} marginTop={1} />
       </>
       {/* kilocode_change end */}
