@@ -1,5 +1,3 @@
-// kilocode_change - new file
-//
 // EffectFlock serializes the whole snapshot repository across the CLI and extension processes.
 // Git's own `index.lock` is left to git: a command that cannot take it fails with a non-zero exit
 // and says so on stderr, which the call sites log.

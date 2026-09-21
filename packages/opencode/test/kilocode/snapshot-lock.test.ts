@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 import { expect, test } from "bun:test"
 import { Cause, Data, Effect, Exit } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
