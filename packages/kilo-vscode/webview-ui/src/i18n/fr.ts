@@ -1160,6 +1160,15 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Jamais exécuté",
   "settings.autoCleanup.result":
     "{{date}} : {{deleted}} sessions supprimées sur {{scanned}} ({{active}} actives ignorées, {{failed}} échouées) en {{seconds}}s",
+  "settings.autoCleanup.starting": "Démarrage du nettoyage des sessions...",
+  "settings.autoCleanup.error.status":
+    "L'état du nettoyage des sessions est temporairement indisponible. Nouvelle tentative...",
+  "settings.autoCleanup.error.timeout": "En attente de l'état du nettoyage. Le backend prend plus de temps que prévu.",
+  "settings.autoCleanup.error.run":
+    "Impossible de confirmer la fin du nettoyage des sessions. Vérifiez le résultat du dernier nettoyage avant de réessayer.",
+  "settings.autoCleanup.progress.scanning": "Analyse des sessions : {{processed}}/{{total}} traitées",
+  "settings.autoCleanup.progress.deleting":
+    "Suppression des sessions : {{processed}}/{{total}} traitées ({{deleted}} supprimées, {{failed}} échouées)",
   "settings.autoCleanup.runNow": "Lancer le nettoyage maintenant",
   "settings.autoCleanup.runNow.confirm":
     "Supprimer définitivement les sessions expirées dans tous les projets et tous les clients Kilo de cette machine ?",

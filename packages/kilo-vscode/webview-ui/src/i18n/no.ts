@@ -1128,6 +1128,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Aldri kjørt",
   "settings.autoCleanup.result":
     "{{date}}: slettet {{deleted}} av {{scanned}} økter ({{active}} aktive hoppet over, {{failed}} feilet) på {{seconds}}s",
+  "settings.autoCleanup.starting": "Starter opprydding av økter...",
+  "settings.autoCleanup.error.status": "Status for opprydding av økter er midlertidig utilgjengelig. Prøver på nytt...",
+  "settings.autoCleanup.error.timeout": "Venter på oppryddingsstatus. Backend-en tar lengre tid enn forventet.",
+  "settings.autoCleanup.error.run":
+    "Kunne ikke bekrefte at oppryddingen av økter er fullført. Sjekk resultatet av forrige opprydding før du prøver igjen.",
+  "settings.autoCleanup.progress.scanning": "Skanner økter: {{processed}}/{{total}} behandlet",
+  "settings.autoCleanup.progress.deleting":
+    "Sletter økter: {{processed}}/{{total}} behandlet ({{deleted}} slettet, {{failed}} mislyktes)",
   "settings.autoCleanup.runNow": "Kjør opprydding nå",
   "settings.autoCleanup.runNow.confirm":
     "Slett utløpte økter permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",

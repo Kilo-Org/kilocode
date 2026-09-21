@@ -1154,6 +1154,15 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Nie ausgeführt",
   "settings.autoCleanup.result":
     "{{date}}: {{deleted}} von {{scanned}} Sitzungen gelöscht ({{active}} aktiv übersprungen, {{failed}} fehlgeschlagen) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Sitzungsbereinigung wird gestartet...",
+  "settings.autoCleanup.error.status":
+    "Der Status der Sitzungsbereinigung ist vorübergehend nicht verfügbar. Erneuter Versuch...",
+  "settings.autoCleanup.error.timeout": "Warten auf den Bereinigungsstatus. Das Backend benötigt länger als erwartet.",
+  "settings.autoCleanup.error.run":
+    "Der Abschluss der Sitzungsbereinigung konnte nicht bestätigt werden. Prüfe das Ergebnis der letzten Bereinigung, bevor du es erneut versuchst.",
+  "settings.autoCleanup.progress.scanning": "Sitzungen werden durchsucht: {{processed}}/{{total}} verarbeitet",
+  "settings.autoCleanup.progress.deleting":
+    "Sitzungen werden gelöscht: {{processed}}/{{total}} verarbeitet ({{deleted}} gelöscht, {{failed}} fehlgeschlagen)",
   "settings.autoCleanup.runNow": "Bereinigung jetzt ausführen",
   "settings.autoCleanup.runNow.confirm":
     "Abgelaufene Sitzungen endgültig in allen Projekten und allen Kilo-Clients auf diesem Rechner löschen?",

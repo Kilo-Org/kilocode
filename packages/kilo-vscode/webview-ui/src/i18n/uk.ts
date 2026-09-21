@@ -1087,6 +1087,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Ніколи не запускалося",
   "settings.autoCleanup.result":
     "{{date}}: видалено {{deleted}} із {{scanned}} сесій ({{active}} активних пропущено, {{failed}} невдалих) за {{seconds}} с",
+  "settings.autoCleanup.starting": "Запуск очищення сесій...",
+  "settings.autoCleanup.error.status": "Статус очищення сесій тимчасово недоступний. Повторна спроба...",
+  "settings.autoCleanup.error.timeout": "Очікування статусу очищення. Бекенд відповідає довше, ніж очікувалося.",
+  "settings.autoCleanup.error.run":
+    "Не вдалося підтвердити завершення очищення сесій. Перевірте результат останнього очищення, перш ніж повторити спробу.",
+  "settings.autoCleanup.progress.scanning": "Сканування сесій: оброблено {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Видалення сесій: оброблено {{processed}}/{{total}} (видалено {{deleted}}, не вдалося {{failed}})",
   "settings.autoCleanup.runNow": "Запустити очищення зараз",
   "settings.autoCleanup.runNow.confirm":
     "Безповоротно видалити застарілі сесії в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері?",

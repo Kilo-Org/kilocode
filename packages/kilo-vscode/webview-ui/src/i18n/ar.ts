@@ -1100,6 +1100,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "لم يُشغّل أبدًا",
   "settings.autoCleanup.result":
     "{{date}}: تم حذف {{deleted}} من {{scanned}} جلسة ({{active}} نشطة تم تخطيها، {{failed}} فشلت) في {{seconds}} ثانية",
+  "settings.autoCleanup.starting": "جارٍ بدء تنظيف الجلسات...",
+  "settings.autoCleanup.error.status": "حالة تنظيف الجلسات غير متاحة مؤقتًا. جارٍ إعادة المحاولة...",
+  "settings.autoCleanup.error.timeout": "في انتظار حالة التنظيف. يستغرق الخادم وقتًا أطول من المتوقع.",
+  "settings.autoCleanup.error.run":
+    "تعذّر تأكيد اكتمال تنظيف الجلسات. تحقق من نتيجة التنظيف الأخيرة قبل المحاولة مرة أخرى.",
+  "settings.autoCleanup.progress.scanning": "جارٍ فحص الجلسات: تمت معالجة {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "جارٍ حذف الجلسات: تمت معالجة {{processed}}/{{total}} (حُذفت {{deleted}}، فشلت {{failed}})",
   "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف الجلسات المنتهية الصلاحية نهائيًا عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز؟",

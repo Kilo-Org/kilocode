@@ -1129,6 +1129,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Никогда не запускалась",
   "settings.autoCleanup.result":
     "{{date}}: удалено {{deleted}} из {{scanned}} сессий ({{active}} активных пропущено, {{failed}} с ошибкой) за {{seconds}} с",
+  "settings.autoCleanup.starting": "Запуск очистки сессий...",
+  "settings.autoCleanup.error.status": "Статус очистки сессий временно недоступен. Повторная попытка...",
+  "settings.autoCleanup.error.timeout": "Ожидание статуса очистки. Серверная часть отвечает дольше обычного.",
+  "settings.autoCleanup.error.run":
+    "Не удалось подтвердить завершение очистки сессий. Проверьте результат последней очистки, прежде чем повторить попытку.",
+  "settings.autoCleanup.progress.scanning": "Сканирование сессий: обработано {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Удаление сессий: обработано {{processed}}/{{total}} (удалено {{deleted}}, с ошибкой {{failed}})",
   "settings.autoCleanup.runNow": "Запустить очистку сейчас",
   "settings.autoCleanup.runNow.confirm":
     "Безвозвратно удалить устаревшие сессии во всех проектах и во всех клиентах Kilo на этом компьютере?",
