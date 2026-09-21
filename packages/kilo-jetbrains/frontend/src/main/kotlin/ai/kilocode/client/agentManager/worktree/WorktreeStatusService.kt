@@ -5,6 +5,7 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.util.edt
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -47,6 +48,13 @@ class WorktreeStatusService internal constructor(
     private var statsTimer: UiTimer? = null
     private var prTimer: UiTimer? = null
     private var prJob: Job? = null
+    /** In-flight stats/dirty polls, so a slow repository cannot stack fan-outs. See [loadStats]. */
+    private var statsJob: Job? = null
+    private var dirtyJob: Job? = null
+    /** Trailing lookup for a return held back by the spend floor. See [hold]. */
+    private var trail: UiTimer? = null
+    /** Freshness ceiling the held return is waiting to spend, or null when none is held. */
+    private var pending: Long? = null
     private var refs = 0
     private var lastPr = 0L
     private var github = KiloPluginSettings.getGithub()
@@ -66,14 +74,15 @@ class WorktreeStatusService internal constructor(
         // A PR can be merged or closed while the IDE sits in the background, so re-check on
         // activation. The platform publishes both callbacks on the EDT, which is what lets the
         // absence be tracked in plain fields alongside the rest of this service's state.
+        //
+        // Unfiltered on both sides: the absence belongs to the application, not to one frame, so every
+        // open project records it and consumes its own copy on the next activation, whichever frame
+        // reports it. Routing activation on ideFrame.project instead left a project whose frame never
+        // regains focus holding an absence it could never consume, and the frame the platform hands us
+        // can report a null or default project (welcome screen), which matched nothing at all.
         bus.subscribe(ApplicationActivationListener.TOPIC, object : ApplicationActivationListener {
-            override fun applicationActivated(ideFrame: IdeFrame) {
-                if (ideFrame.project !== project) return
-                focus()
-            }
+            override fun applicationActivated(ideFrame: IdeFrame) = focus()
 
-            // Unfiltered: the absence belongs to the application, not to one frame, so every open
-            // project records it and each consumes its own copy when that project is focused again.
             override fun applicationDeactivated(ideFrame: IdeFrame) = away.left()
         })
     }
@@ -114,7 +123,10 @@ class WorktreeStatusService internal constructor(
             return
         }
         val now = timers.now()
-        if (!force && now - lastPr < PR_THROTTLE) return
+        if (!force && now - lastPr < PR_THROTTLE) {
+            LOG.info("worktree PR refresh throttled sinceMs=${now - lastPr}")
+            return
+        }
         lastPr = now
         loadPr(maxAge)
     }
@@ -122,18 +134,100 @@ class WorktreeStatusService internal constructor(
     /**
      * Reloads PR state on return to the IDE, scaled to the absence. A dialog or popup that never took
      * focus out of the IDE reports no absence and costs nothing; a quick window switch takes the
-     * throttled path; a long absence is the case worth paying a full `gh` fan-out for, and is also the
-     * only path that can get past the backend's own PR cache.
+     * throttled path; an absence long enough to have contained an external change is worth paying a
+     * full `gh` fan-out for, and is the only path that can get past the backend's own PR cache.
+     *
+     * The absence decides whether a return *deserves* fresh data; [PR_THROTTLE] decides whether we may
+     * *pay* for it yet. Keeping the two apart is what lets the bar sit at [Away.FRESH] — low enough to
+     * catch a quick trip to a browser — without letting steady window switching multiply a fan-out
+     * that costs several `gh` calls per worktree.
      */
     // Assertion-free: the rest of this service is EDT-confined by the same convention rather than by
     // enforcement, and its public entry points are reached from tests directly.
     @RequiresEdt(generateAssertion = false)
     private fun focus() {
-        val gone = away.back() ?: return
-        // The bar is the throttle this bypasses: a forced return spends a `gh` call per worktree, so
-        // absences shorter than the floor the poll already keeps must not be able to beat it.
-        val max = Away.ceiling(gone, PR_THROTTLE)
-        refreshPr(force = max != null, maxAge = max)
+        val gone = away.back() ?: run {
+            LOG.info("worktree PR focus ignored, no absence to answer")
+            return
+        }
+        // A spent budget carries no PR data and refuses the fan-out anyway, so a return cannot learn
+        // anything by paying for one. The poll stays the single probe that notices the reset.
+        if (ghFlow.value == GhAvailability.RATE_LIMITED) {
+            LOG.info("worktree PR focus skipped, github budget spent goneMs=$gone")
+            return
+        }
+        // Under the bar the absence is window churn: reload, but let the backend answer from cache.
+        val max = Away.ceiling(gone) ?: return refreshPr()
+        hold(max)
+    }
+
+    /**
+     * Records a return that deserves fresh data, then tries to spend it. The record is what makes a
+     * return that cannot run right now survive: the strictest ceiling wins, and the newest return can
+     * never make an earlier one cheaper.
+     */
+    @RequiresEdt(generateAssertion = false)
+    private fun hold(max: Long) {
+        pending = pending?.let { minOf(it, max) } ?: max
+        spend()
+    }
+
+    /**
+     * Spends the held return when nothing stands in the way, and otherwise leaves it held for whichever
+     * trigger clears first — the floor timer, or the completion of the lookup already running.
+     *
+     * Both blockers must hold rather than drop. The spend floor is the cheap case: the request only has
+     * to wait out the rest of the window. The in-flight lookup is the dangerous one, because it may have
+     * started *before* the departure, so its answer can predate the very change the return came back to
+     * see; dropping the request there would leave that stale answer standing until the next [PR_POLL].
+     */
+    @RequiresEdt(generateAssertion = false)
+    private fun spend() {
+        val max = pending ?: return
+        if (project.isDisposed || refs == 0 || !github) {
+            pending = null
+            return
+        }
+        // Re-checked here and not only at focus time: a lookup that landed while the return was held can
+        // report the budget spent, and the fan-out it would pay for is the one GitHub is refusing.
+        if (ghFlow.value == GhAvailability.RATE_LIMITED) {
+            LOG.info("worktree PR focus dropped, github budget spent maxAge=$max")
+            pending = null
+            return
+        }
+        // Its completion calls back here, so the return stays held instead of stacking a second fan-out.
+        if (prJob?.isActive == true) {
+            LOG.info("worktree PR focus held, lookup in flight maxAge=$max")
+            return
+        }
+        val since = timers.now() - lastPr
+        if (since < PR_THROTTLE) {
+            LOG.info("worktree PR focus deferred maxAge=$max sinceMs=$since")
+            arm(PR_THROTTLE - since)
+            return
+        }
+        pending = null
+        trail?.stop()
+        trail = null
+        LOG.info("worktree PR focus resumed maxAge=$max")
+        refreshPr(force = true, maxAge = max)
+    }
+
+    /**
+     * Arms the trailing lookup at the end of the current floor window. Deliberately not a sliding
+     * debounce: a continuing burst must not keep pushing the deadline out, so an already-armed timer is
+     * left alone and the window end stays fixed from the first deferral.
+     */
+    @RequiresEdt(generateAssertion = false)
+    private fun arm(wait: Long) {
+        if (trail?.isRunning() == true) return
+        trail = timers.timer(wait.coerceAtLeast(1).toInt(), repeats = false) { flush() }.also { it.start() }
+    }
+
+    @RequiresEdt(generateAssertion = false)
+    private fun flush() {
+        trail = null
+        spend()
     }
 
     private fun start() {
@@ -147,12 +241,22 @@ class WorktreeStatusService internal constructor(
         debounce?.stop()
         statsTimer?.stop()
         prTimer?.stop()
+        trail?.stop()
         prJob?.cancel()
+        // The stats/dirty guards are what keep polls from stacking, so a job that outlives its last
+        // attach() would make them skip every refresh after the next attach — for the life of the
+        // service if the RPC never returns.
+        statsJob?.cancel()
+        dirtyJob?.cancel()
         generation++
         debounce = null
         statsTimer = null
         prTimer = null
+        trail = null
+        pending = null
         prJob = null
+        statsJob = null
+        dirtyJob = null
     }
 
     /**
@@ -170,6 +274,11 @@ class WorktreeStatusService internal constructor(
             prJob = null
             generation++
             lastPr = 0
+            // A return held from before the toggle has nothing left to ask about, and must not survive
+            // to spend a fan-out once the integration is switched back on.
+            trail?.stop()
+            trail = null
+            pending = null
             prFlow.value = emptyMap()
             ghFlow.value = GhAvailability.OK
             return
@@ -179,12 +288,25 @@ class WorktreeStatusService internal constructor(
         refreshPr(force = true)
     }
 
+    /**
+     * One stats poll at a time.
+     *
+     * The poll interval and the git watchdog used to be close enough that a slow repository could
+     * have several polls in flight at once, each fanning out git processes — which is how a poll ends
+     * up blaming git for a queue the client created.
+     */
     private fun loadStats() {
-        cs.launch {
+        if (statsJob?.isActive == true) {
+            LOG.info("worktree stats refresh skipped, poll in flight")
+            return
+        }
+        statsJob = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().stats(dir) }
-                .onSuccess { dto -> statsFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
-                .onFailure { err -> LOG.warn("worktree stats refresh failed dir=$dir", err) }
+                .onSuccess { dto ->
+                    statsFlow.value = merge(statsFlow.value, dto.items, { it.path }, { it.unavailable }, !dto.unavailable)
+                }
+                .onFailure { err -> LOG.warn("worktree stats refresh failed dir=$dir (previous values kept)", err) }
         }
     }
 
@@ -192,17 +314,23 @@ class WorktreeStatusService internal constructor(
     // synthetic JetBrains Client path in split/remote mode. Pointing the backend at that path makes
     // dirty() answer for a directory that does not exist, which reads as "no local changes".
     private fun loadDirty() {
-        cs.launch {
+        if (dirtyJob?.isActive == true) {
+            LOG.info("worktree dirty refresh skipped, poll in flight")
+            return
+        }
+        dirtyJob = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().dirty(dir) }
-                .onSuccess { dto -> dirtyFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
-                .onFailure { err -> LOG.warn("worktree dirty refresh failed dir=$dir", err) }
+                .onSuccess { dto ->
+                    dirtyFlow.value = merge(dirtyFlow.value, dto.items, { it.path }, { it.unavailable }, !dto.unavailable)
+                }
+                .onFailure { err -> LOG.warn("worktree dirty refresh failed dir=$dir (previous values kept)", err) }
         }
     }
 
     private fun loadPr(maxAge: Long? = null) {
         val gen = ++generation
-        prJob = cs.launch {
+        val job = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge) }
                 .onSuccess { dto ->
@@ -212,11 +340,13 @@ class WorktreeStatusService internal constructor(
                     // publish, or a stale empty result would wipe fresh badges and report a false OK
                     // over a real UNAUTH.
                     if (gen != generation) return@onSuccess
+                    LOG.info("worktree PR refresh done items=${dto.items.size} value=${dto.availability} maxAge=${maxAge ?: "default"}")
                     // A spent GitHub budget carries no pull request data and says nothing about the
                     // pull requests themselves, so the rows keep what they had and the banner explains
                     // why it stopped moving. Publishing the empty list would instead blank every badge
-                    // for up to an hour over something the user cannot act on.
-                    if (dto.availability != GhAvailability.RATE_LIMITED) {
+                    // for up to an hour over something the user cannot act on. A gh that timed out is
+                    // in exactly the same position: it answered nothing about these pull requests.
+                    if (dto.availability != GhAvailability.RATE_LIMITED && dto.availability != GhAvailability.TIMEOUT) {
                         prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
                     }
                     ghFlow.value = dto.availability
@@ -224,5 +354,37 @@ class WorktreeStatusService internal constructor(
                 }
                 .onFailure { err -> LOG.warn("worktree PR refresh failed dir=$dir", err) }
         }
+        prJob = job
+        // Covers every way the lookup can end — answered, failed, cancelled, or returned early on an
+        // unresolved root — so a return held behind it is spent rather than left for the poll. A
+        // superseded generation means a newer lookup already owns the loop and will drain it instead.
+        job.invokeOnCompletion { edt { if (gen == generation) spend() } }
+    }
+
+    /**
+     * Merges a poll result over the previous one, keeping the previous entry wherever the backend
+     * could not measure.
+     *
+     * An unavailable row carries zeros, and publishing those would render a failed poll as a clean
+     * worktree — a badge silently disappearing is worse than a badge being briefly stale. Rows the
+     * backend stopped reporting altogether are dropped, but only when [drop] says the poll itself
+     * answered: the backend also returns an empty list when `git worktree list` fails, and dropping
+     * on that is the same "failed poll renders as clean" bug one level up.
+     */
+    private fun <T> merge(
+        previous: Map<String, T>,
+        items: List<T>,
+        key: (T) -> String,
+        stale: (T) -> Boolean,
+        drop: Boolean,
+    ): Map<String, T> {
+        val next = LinkedHashMap<String, T>(maxOf(items.size, previous.size))
+        if (!drop) next.putAll(previous)
+        for (item in items) {
+            val id = normalizeWorktreePath(key(item))
+            val kept = previous[id]
+            next[id] = if (stale(item) && kept != null) kept else item
+        }
+        return next
     }
 }

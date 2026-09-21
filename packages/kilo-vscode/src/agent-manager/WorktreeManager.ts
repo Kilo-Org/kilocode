@@ -8,13 +8,15 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import { randomUUID } from "crypto"
+import { createHash, randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
+import { BUDGET, isTimeout } from "./command-budget"
+import { WorktreePool, type PoolStart } from "./worktree-pool"
 import {
   parsePRUrl,
   localBranchName,
@@ -25,12 +27,44 @@ import {
   classifyPRError,
   validateGitRef,
   normalizePath,
+  unregisteredWorktree,
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
+import { pathKey } from "./project/paths"
+import { MISSING_GIT } from "./git-errors"
+import { Semaphore } from "./semaphore"
 
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
+const NO_COMMITS_MESSAGE = "This repository has no commits yet. Create an initial commit before using worktrees."
+
+function directory(branch: string): string {
+  // Keep ordinary directory names, but isolate refs that need filesystem escaping.
+  if (
+    /^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,99}$/.test(branch) &&
+    !/^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\.|$)/i.test(branch)
+  ) {
+    return branch
+  }
+  // Hash the original ref to distinguish names that produce the same shortened slug.
+  const slug = sanitizeBranchName(branch) || "branch"
+  const hash = createHash("sha256").update(branch).digest("hex").slice(0, 16)
+  return `${slug}-${hash}`
+}
+
+/** Why a directory under `.kilo/worktrees/` could not be used as a worktree. */
+export type WorktreeProbeReason =
+  /** No `.git` file — a directory that outlived its worktree, e.g. holding only `.kilo-dev/`. */
+  | "leftover"
+  /** Has a `.git` file but git does not track the path. */
+  | "unregistered"
+  /** A pool slot, not a user worktree. */
+  | "pooled"
+  /** git could not answer for this path. */
+  | "probe-failed"
+
+export type WorktreeProbe = { ok: true; info: WorktreeInfo } | { ok: false; path: string; reason: WorktreeProbeReason }
 
 export interface WorktreeInfo {
   branch: string
@@ -68,6 +102,16 @@ export interface CreateWorktreeResult {
   startPointWarning?: string
 }
 
+interface Metadata {
+  sessionId: string
+  parentBranch?: string
+  remote?: string
+  pooled?: boolean
+  owner?: number
+  baseRef?: string
+  baseOid?: string
+}
+
 /**
  * Backward compat: split a possibly-prefixed branch like "origin/main" into
  * `{ branch: "main", remote: "origin" }`. If no slash is found, returns bare branch.
@@ -91,15 +135,45 @@ export class WorktreeManager {
   private readonly ops: GitOps | undefined
   private readonly binary: string
   private readonly log: (msg: string) => void
+  private readonly pool: WorktreePool
+  /** Deferred git bookkeeping from `detachWorktree`, flushed by `settle()`. */
+  private readonly pending = new Set<Promise<void>>()
+  /**
+   * Delay before a claimed slot is replaced. The replacement checkout competes for disk
+   * and CPU with the first prompt of the new session (snapshot seed, backend warm-up),
+   * so it waits until that startup work has normally finished.
+   */
+  rewarmDelay = 8_000
   private migrated = false
+  /**
+   * Gate for discovery fan-out only. Deliberately not the poller semaphore: startup discovery must
+   * not queue behind PR polling, and polling must not stall behind a directory scan.
+   */
+  private readonly scanGate = new Semaphore(4)
 
-  constructor(root: string, log: (msg: string) => void, ops?: GitOps, binary?: string) {
+  constructor(
+    root: string,
+    log: (msg: string) => void,
+    ops?: GitOps,
+    binary?: string,
+    poolSize: number | (() => number) = 1,
+  ) {
     this.root = root
     this.dir = path.join(root, KILO_DIR, "worktrees")
     this.ops = ops
     this.binary = binary ?? ops?.path ?? "git"
     this.git = this.client(root)
     this.log = log
+    this.pool = new WorktreePool({
+      root,
+      dir: this.dir,
+      poolSize,
+      log,
+      client: (cwd) => this.client(cwd),
+      lock: (fn) => this.withGitLock(fn),
+      gitdir: (wtPath) => this.worktreeGitDir(wtPath),
+      start: (base) => this.poolStart(base),
+    })
   }
 
   /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
@@ -124,7 +198,29 @@ export class WorktreeManager {
   private static fetchCache = new Map<string, number>()
   private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
   private gitAvailable = false
+  private probeFailed = false
   private lfsAvailable: boolean | undefined
+  /** When the last negative git-lfs probe ran, so a later install is picked up. */
+  private lfsProbed = 0
+  private static readonly LFS_PROBE_TTL = 300_000
+
+  /** Repository root this manager operates on. */
+  get repo(): string {
+    return this.root
+  }
+
+  /** Absolute `.kilo/worktrees` directory this manager owns. */
+  get worktreesDir(): string {
+    return this.dir
+  }
+
+  /**
+   * True only when a `git --version` probe failed to spawn. Callers use this to decide whether a
+   * downstream `ENOENT` really means "git is missing" instead of "that directory is gone".
+   */
+  get gitProbeFailed(): boolean {
+    return this.probeFailed
+  }
 
   private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
     const key = this.root
@@ -171,6 +267,96 @@ export class WorktreeManager {
     await this.withGitLock(() => this.refreshBase(base))
   }
 
+  /**
+   * Fire-and-forget warm-up of pooled worktrees. Idempotent, at most one warm
+   * in flight, and never blocks callers. `poolSize` 0 disables the pool.
+   */
+  warmPool(base?: string): void {
+    this.pool.warm(base)
+  }
+
+  /** Adopt leftover pooled slots at startup and discard broken ones. */
+  async reconcilePool(): Promise<void> {
+    await this.ensureMigrated()
+    // Exclude before creating anything: a repository that cannot be excluded
+    // must not leave an untracked `.kilo/worktrees` directory behind.
+    await this.ensureGitExclude()
+    await this.ensureDir()
+    return this.pool.reconcile()
+  }
+
+  /** Remove idle pooled slots when the feature is turned off. */
+  async disposePool(): Promise<void> {
+    return this.pool.dispose()
+  }
+
+  private async poolStart(base?: string): Promise<PoolStart> {
+    const branch = base || (await this.defaultBranch())
+    const point = await this.resolveStartPoint(branch)
+    return { ref: point.ref, branch: point.branch, remote: point.remote }
+  }
+
+  /**
+   * Run independent preflight checks in parallel. Validates the requested ref,
+   * confirms commits exist for an explicit base, and resolves LFS and remote.
+   */
+  private async preflight(
+    params: { existingBranch?: string; branchName?: string; baseBranch?: string },
+    requested: string | undefined,
+  ): Promise<{ resolvedRemote: string | undefined }> {
+    // Validate the literal ref first so --branch cannot expand checkout shorthand.
+    const refFormat =
+      requested === undefined
+        ? Promise.resolve()
+        : Promise.all([
+            this.git.raw(["check-ref-format", `refs/heads/${requested}`]),
+            this.git.raw(["check-ref-format", "--branch", requested]),
+          ])
+    // An explicit base branch skips defaultBranch(), so check repository state here.
+    const commit = params.baseBranch ? this.ensureCommit() : Promise.resolve()
+    const [, , usesLfs, resolvedRemote] = await Promise.all([
+      refFormat,
+      commit,
+      this.repoUsesLfs(),
+      this.resolveRemote(),
+    ])
+    if (usesLfs && !(await this.checkLfsAvailable())) {
+      throw new Error(
+        "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS to use this repository.",
+      )
+    }
+    return { resolvedRemote }
+  }
+
+  /** Claim a pooled slot for a new branch and schedule a replacement warm-up. */
+  private async tryClaimPool(
+    branch: string,
+    oid: string,
+    auto: boolean,
+    base?: string,
+  ): Promise<{ path: string; branch: string } | undefined> {
+    const slot = await this.pool.claim(branch, oid, auto)
+    if (!slot) return undefined
+    setTimeout(() => this.pool.warm(base), this.rewarmDelay)
+
+    // Keep the folder name aligned with the branch, as the normal path does.
+    const target = path.join(this.dir, directory(slot.branch))
+    if (target === slot.path || fs.existsSync(target)) {
+      this.log(`Reused pooled worktree: ${slot.path} (branch: ${slot.branch})`)
+      return slot
+    }
+    const moved = await this.git
+      .raw(["worktree", "move", slot.path, target])
+      .then(() => true)
+      .catch((error: unknown) => {
+        this.log(`Pooled worktree move failed, keeping ${slot.path}: ${error}`)
+        return false
+      })
+    const result = moved ? { path: target, branch: slot.branch } : slot
+    this.log(`Reused pooled worktree: ${result.path} (branch: ${result.branch})`)
+    return result
+  }
+
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
     await this.ensureMigrated()
     return this.withGitLock(() => this.renameBranchImpl(worktreePath, current, requested))
@@ -199,17 +385,30 @@ export class WorktreeManager {
   private async ensureGitAvailable(): Promise<void> {
     if (this.gitAvailable) return
     try {
-      await execWithShellEnv(this.binary, ["--version"])
+      // Bounded: an unbounded probe turns a wedged git into a hang with no error to report.
+      await execWithShellEnv(this.binary, ["--version"], { timeout: BUDGET.probe })
       this.gitAvailable = true
+      this.probeFailed = false
     } catch (error) {
       this.gitAvailable = false
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
-        throw new Error(
-          "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
-        )
+        // The probe runs without a cwd, so ENOENT here can only mean the binary is missing.
+        this.probeFailed = true
+        throw new Error(MISSING_GIT)
       }
       throw error
     }
+  }
+
+  private async ensureCommit(): Promise<void> {
+    // Fast path: HEAD resolves to a commit in the common case.
+    const head = await this.git.raw(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"]).catch(() => "")
+    if (head.trim()) return
+
+    // HEAD can be unborn while other refs still hold commits (orphan checkout),
+    // so only treat the repository as empty when no ref has a commit.
+    const any = await this.git.raw(["rev-list", "-n", "1", "--all"]).catch(() => "")
+    if (!any.trim()) throw new Error(NO_COMMITS_MESSAGE)
   }
 
   private async createWorktreeImpl(params: {
@@ -227,17 +426,10 @@ export class WorktreeManager {
         "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
       )
 
-    // Git LFS Pre-flight Check
-    if (await this.repoUsesLfs()) {
-      if (!(await this.checkLfsAvailable())) {
-        throw new Error(
-          "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS to use this repository.",
-        )
-      }
-    }
-
-    await this.ensureDir()
+    const requested = params.existingBranch ?? params.branchName
+    const { resolvedRemote } = await this.preflight(params, requested)
     await this.ensureGitExclude()
+    await this.ensureDir()
 
     // Resolve start point (parent branch + remote)
     let parent: string
@@ -247,14 +439,13 @@ export class WorktreeManager {
     if (params.existingBranch) {
       // Existing branch provided directly — only attach remote when the
       // remote tracking ref actually exists (the branch may be local-only).
-      const remote = await this.resolveRemote()
-      const hasRemoteRef = remote && (await this.refExistsLocally(`${remote}/${params.existingBranch}`))
+      const hasRemoteRef = resolvedRemote && (await this.refExistsLocally(`${resolvedRemote}/${params.existingBranch}`))
       parent = params.existingBranch
-      parentRemote = hasRemoteRef ? remote : undefined
+      parentRemote = hasRemoteRef ? resolvedRemote : undefined
       startPoint = {
         ref: params.existingBranch,
         branch: params.existingBranch,
-        remote: hasRemoteRef ? remote : undefined,
+        remote: hasRemoteRef ? resolvedRemote : undefined,
         source: "local-branch",
       }
     } else {
@@ -272,16 +463,36 @@ export class WorktreeManager {
       parentRemote = startPoint.remote
     }
 
-    let branch = await this.resolveBranch(params)
-    const dirName = branch.replace(/\//g, "-")
-    let worktreePath = path.join(this.dir, dirName)
-
-    await this.prepareWorktreePath(worktreePath, !!params.existingBranch)
-
-    params.onProgress?.("creating", `Creating worktree for ${branch}...`)
-
     // Dereference to commit SHA to prevent upstream tracking for new branches
     const startRef = params.existingBranch ? undefined : `${params.baseRef ?? startPoint.ref}^{commit}`
+
+    // Resolve the pool base commit alongside the branch name; both are read-only.
+    const [resolved, oid] = await Promise.all([
+      this.resolveBranch(params),
+      startRef && this.pool.has() ? this.git.raw(["rev-parse", "--verify", startRef]).then((s) => s.trim()) : undefined,
+    ])
+    let branch = resolved
+
+    const slot = oid
+      ? await this.tryClaimPool(branch, oid, params.branchName === undefined, params.baseBranch)
+      : undefined
+    if (slot) {
+      return {
+        branch: slot.branch,
+        path: slot.path,
+        parentBranch: parent,
+        remote: parentRemote,
+        startPointSource: startPoint.source,
+        startPointWarning: startPoint.warning,
+      }
+    }
+
+    const dirName = directory(branch)
+    let worktreePath = path.join(this.dir, dirName)
+
+    worktreePath = await this.prepareWorktreePath(worktreePath, params.existingBranch)
+
+    params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
     try {
       const args = params.existingBranch
@@ -301,7 +512,7 @@ export class WorktreeManager {
       }
       // Another process may create the branch after resolveBranch checks it.
       branch = await this.resolveBranch(params)
-      const retryDir = branch.replace(/\//g, "-")
+      const retryDir = directory(branch)
       worktreePath = path.join(this.dir, retryDir)
       const retryArgs = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
@@ -354,11 +565,29 @@ export class WorktreeManager {
     return branch
   }
 
-  private async prepareWorktreePath(worktreePath: string, reuse: boolean): Promise<void> {
-    if (!fs.existsSync(worktreePath)) return
-    if (!reuse) throw new Error(`Worktree path already exists: ${worktreePath}`)
+  private async prepareWorktreePath(worktreePath: string, branch?: string): Promise<string> {
+    if (!fs.existsSync(worktreePath)) return worktreePath
+    if (!branch) throw new Error(`Worktree path already exists: ${worktreePath}`)
+    const entries = parseWorktreeList(await this.git.raw(["worktree", "list", "--porcelain"]))
+    // pathKey, not a lexical compare: git reports realpaths, and on a case-insensitive filesystem a
+    // registration only differing in case would read as "this path is free" — then `worktree add`
+    // fails on a directory this function was called to make usable.
+    const registered = new Set(entries.map((entry) => pathKey(entry.path)))
+    const canonical = pathKey(worktreePath)
+    const entry = entries.find((entry) => pathKey(entry.path) === canonical)
+    if (entry && (entry.branch !== branch || entry.detached || entry.bare)) {
+      // A literal branch can match another ref's hashed directory name.
+      const parent = await fs.promises.realpath(path.dirname(worktreePath))
+      for (let suffix = 2; ; suffix++) {
+        const candidate = `${worktreePath}-${suffix}`
+        if (!fs.existsSync(candidate) && !registered.has(pathKey(path.join(parent, path.basename(candidate))))) {
+          return candidate
+        }
+      }
+    }
     this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
     await this.removeWorktreeImpl(worktreePath)
+    return worktreePath
   }
 
   private async resolveBranch(params: {
@@ -376,15 +605,14 @@ export class WorktreeManager {
       .raw(["for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"])
       .then((refs) => refs.trim().split(/\r?\n/).filter(Boolean))
       .catch(() => [] as string[])
-    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
+    const branch = params.branchName ?? generateBranchName(params.prompt || "agent-task", existing)
     return this.availableBranch(branch, existing)
   }
 
   private availableBranch(base: string, existing: string[]): string {
     const branches = new Set(existing)
     const available = (branch: string) => {
-      const dir = path.join(this.dir, branch.replace(/\//g, "-"))
+      const dir = path.join(this.dir, directory(branch))
       return !branches.has(branch) && !fs.existsSync(dir)
     }
     if (available(base)) return base
@@ -410,7 +638,7 @@ export class WorktreeManager {
         )
         return undefined
       })
-      await this.git.raw(workers?.value === null ? ["-c", "checkout.workers=2", ...args] : args)
+      await this.git.raw(workers?.value === null ? ["-c", "checkout.workers=4", ...args] : args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
@@ -440,13 +668,121 @@ export class WorktreeManager {
    * worktree was created despite a non-zero exit code (e.g., hook failure).
    */
   private async worktreeRegistered(wtPath: string): Promise<boolean> {
+    const registered = await this.registeredPaths()
+    return registered?.has(pathKey(wtPath)) ?? false
+  }
+
+  /**
+   * Normalized paths git currently tracks as worktrees, or undefined when the listing failed.
+   *
+   * One call answers "is this directory still a worktree?" for every directory at once, which is
+   * what keeps discovery from spawning a `rev-parse` per directory.
+   */
+  async registeredPaths(): Promise<Set<string> | undefined> {
     try {
       const raw = await this.git.raw(["worktree", "list", "--porcelain"])
-      const normalized = normalizePath(wtPath)
-      return parseWorktreeList(raw).some((e) => normalizePath(e.path) === normalized)
-    } catch {
-      return false
+      return new Set(parseWorktreeList(raw).map((entry) => pathKey(entry.path)))
+    } catch (err) {
+      this.log(`registeredPaths: worktree list failed: ${err}`)
+      return undefined
     }
+  }
+
+  /** Drop git metadata for worktrees whose directory is gone. */
+  async pruneWorktrees(): Promise<void> {
+    await this.withGitLock(async () => {
+      await this.git.raw(["worktree", "prune"]).catch((err: unknown) => {
+        this.log(`pruneWorktrees: prune failed: ${err}`)
+      })
+    })
+  }
+
+  /**
+   * Directory names directly under `.kilo/worktrees/`, excluding in-flight deletions.
+   *
+   * Sorted: `readdir` order is filesystem-dependent (ext4 does not return alphabetical order the way
+   * APFS/HFS+ tend to), and an orphan list that reorders itself between reconciles for no reason a
+   * user can see is confusing in the UI and flaky in tests that assert on it.
+   */
+  async worktreeDirs(): Promise<string[]> {
+    if (!fs.existsSync(this.dir)) return []
+    const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
+    return entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX))
+      .map((e) => e.name)
+      .sort()
+  }
+
+  /**
+   * Re-create a worktree directory that was deleted outside Agent Manager, reusing its branch.
+   *
+   * The branch still holds the work, so this is a recovery rather than a new worktree: same path,
+   * same branch, no new branch created.
+   */
+  async restoreWorktree(worktreePath: string, branch: string): Promise<void> {
+    if (!this.isManagedPath(worktreePath)) {
+      throw new Error(`Refusing to restore a path outside the worktrees directory: ${worktreePath}`)
+    }
+    if (fs.existsSync(worktreePath)) throw new Error(`Path already exists: ${worktreePath}`)
+    validateGitRef(branch, "branch")
+    await this.ensureGitAvailable()
+    await this.withGitLock(async () => {
+      await this.ensureDir()
+      // Prune first: a leftover registration for this path would fail the add. A failed prune is not
+      // fatal, but it is the likely cause of any add failure that follows, so make it visible.
+      await this.git
+        .raw(["worktree", "prune"])
+        .catch((err: unknown) => this.log(`restoreWorktree: prune failed: ${err}`))
+      await this.git.raw(["worktree", "add", worktreePath, branch])
+    })
+    this.log(`Restored worktree ${worktreePath} from branch ${branch}`)
+  }
+
+  /**
+   * Delete a directory under `.kilo/worktrees/` that git no longer tracks.
+   *
+   * Only ever called for a user-confirmed cleanup of an orphaned directory: there is no worktree
+   * left to remove, so this stages the same rename-then-background-reap `detachWorktree` uses
+   * instead of a blocking `fs.rm` — a large `.kilo-dev`/`node_modules` tree cannot freeze the caller.
+   * Guards are identical to the ones `removeWorktree` relies on for a real worktree: a managed-path
+   * check, then a fail-closed `git worktree list` re-check immediately before the rename, because the
+   * worktree pool creates and removes slot checkouts on a timer and a stale webview orphan list must
+   * never be trusted over what git says right now.
+   */
+  async detachOrphanDirectory(target: string): Promise<{ done: Promise<void> }> {
+    if (!this.isManagedPath(target)) {
+      throw new Error(`Refusing to remove a path outside the worktrees directory: ${target}`)
+    }
+    const registered = await this.registeredPaths()
+    if (!registered) {
+      throw new Error(`Refusing to remove a worktree directory while git cannot list worktrees: ${target}`)
+    }
+    if (registered.has(pathKey(target))) {
+      throw new Error(`Refusing to remove a live worktree: ${target}`)
+    }
+    const temp = await this.detach(target)
+    if (!temp) throw new Error(`Refusing to remove ${target}: rename failed`)
+    return { done: this.defer(target, this.reapOrphan(target, temp)) }
+  }
+
+  /**
+   * Background reap for a staged orphan directory, with one reappearance retry.
+   *
+   * A dev backend or the worktree pool can recreate a directory moments after it was renamed away
+   * (e.g. `.kilo-dev` from a running JetBrains dev instance). One retry self-heals that race without
+   * looping forever: anything that survives the retry simply reappears in the next reconcile.
+   */
+  private async reapOrphan(original: string, temp: string): Promise<void> {
+    await fs.promises.rm(temp, RM_OPTS).catch((err: unknown) => {
+      this.log(`Background cleanup failed for ${temp}: ${err}`)
+    })
+    if (!fs.existsSync(original)) return
+    this.log(`Orphaned directory reappeared after removal, retrying once: ${original}`)
+    const retry = await this.detach(original)
+    if (!retry) return
+    await fs.promises.rm(retry, RM_OPTS).catch((err: unknown) => {
+      this.log(`Background cleanup failed for ${retry}: ${err}`)
+    })
   }
 
   /**
@@ -477,13 +813,9 @@ export class WorktreeManager {
       return
     }
 
-    // 1. Atomic rename — makes the worktree instantly invisible to git and pollers.
-    //    rename() is near-instant on the same filesystem (same parent dir guarantees this).
-    const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
-    try {
-      await fs.promises.rename(worktreePath, temp)
-    } catch (err) {
-      this.log(`Rename failed, falling back to force remove: ${worktreePath}: ${err}`)
+    const temp = await this.detach(worktreePath)
+    if (!temp) {
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
       await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch((error: unknown) => {
         this.log(`Git worktree removal failed for ${worktreePath}: ${error}`)
       })
@@ -495,6 +827,64 @@ export class WorktreeManager {
       return
     }
 
+    await this.finishRemoval(worktreePath, temp, branch)
+  }
+
+  /**
+   * Release the pool slot and atomically rename the worktree directory away so git and pollers
+   * stop seeing it instantly. rename() is near-instant on the same filesystem (same parent dir
+   * guarantees this). Returns the temp path, or undefined when the rename failed.
+   */
+  private async detach(worktreePath: string): Promise<string | undefined> {
+    this.pool.release(worktreePath)
+    const temp = path.join(path.dirname(worktreePath), `${TEMP_PREFIX}${randomUUID()}`)
+    return fs.promises.rename(worktreePath, temp).then(
+      () => temp,
+      (err: unknown) => {
+        this.log(`Rename failed for ${worktreePath}: ${err}`)
+        return undefined
+      },
+    )
+  }
+
+  /**
+   * Remove a worktree directory now and finish the git bookkeeping afterwards.
+   *
+   * The rename needs no repo git lock, so deletion stays instant while a pool refill or another
+   * creation holds the lock (a `git worktree add` takes seconds in large repositories). The
+   * returned `done` promise settles once the metadata prune and branch deletion ran under the
+   * lock; it never rejects. Pending bookkeeping is awaited by `settle()` on dispose. Callers that
+   * need the bookkeeping first use `removeWorktree`.
+   */
+  async detachWorktree(worktreePath: string, branch?: string): Promise<{ done: Promise<void> }> {
+    if (!fs.existsSync(worktreePath) || !this.isManagedPath(worktreePath))
+      return { done: this.defer(worktreePath, this.removeWorktree(worktreePath, branch)) }
+
+    const temp = await this.detach(worktreePath)
+    if (!temp) {
+      await this.removeWorktree(worktreePath, branch)
+      return { done: Promise.resolve() }
+    }
+    const done = this.withGitLock(() => this.finishRemoval(worktreePath, temp, branch))
+    return { done: this.defer(worktreePath, done) }
+  }
+
+  /** Track deferred bookkeeping so `settle()` can flush it. Never rejects. */
+  private defer(worktreePath: string, task: Promise<void>): Promise<void> {
+    const tracked = task
+      .catch((err: unknown) => this.log(`Deferred worktree bookkeeping failed for ${worktreePath}: ${err}`))
+      .finally(() => this.pending.delete(tracked))
+    this.pending.add(tracked)
+    return tracked
+  }
+
+  /** Wait for deferred git bookkeeping from `detachWorktree` so a dispose does not orphan branches. */
+  async settle(): Promise<void> {
+    await Promise.all([...this.pending])
+  }
+
+  /** Git bookkeeping after a worktree directory was renamed away. Runs under the git lock. */
+  private async finishRemoval(worktreePath: string, temp: string, branch?: string): Promise<void> {
     // 2. Prune git metadata now that the directory is gone from the expected path
     await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
     this.log(`Removed worktree (rename+prune): ${worktreePath}`)
@@ -536,18 +926,28 @@ export class WorktreeManager {
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
+    const probes = await this.scanWorktrees()
+    return probes.flatMap((probe) => (probe.ok ? [probe.info] : []))
+  }
+
+  /**
+   * Probe every directory under `.kilo/worktrees/`, keeping the reason a directory was skipped.
+   *
+   * Bounded on purpose: this used to fan out one `git rev-parse` per directory in a single
+   * `Promise.all`, so a repository with dozens of leftover directories opened dozens of git
+   * processes at startup — the same storm that makes every command look like it timed out.
+   */
+  async scanWorktrees(): Promise<WorktreeProbe[]> {
     await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
     await markNoIndex(this.dir, this.log)
 
-    const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
+    const names = await this.worktreeDirs()
     this.cleanupOrphanedTempDirs()
-    const results = await Promise.all(
-      entries
-        .filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX))
-        .map((e) => this.worktreeInfo(path.join(this.dir, e.name))),
+    const registered = await this.registeredPaths()
+    return await Promise.all(
+      names.map((name) => this.scanGate.run(() => this.worktreeInfo(path.join(this.dir, name), registered))),
     )
-    return results.filter((info): info is WorktreeInfo => info !== undefined)
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
@@ -560,9 +960,7 @@ export class WorktreeManager {
     this.log(`Wrote metadata for session ${sessionId} to ${worktreePath}`)
   }
 
-  async readMetadata(
-    worktreePath: string,
-  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+  async readMetadata(worktreePath: string): Promise<Metadata | undefined> {
     const current = await this.readCurrentMetadata(worktreePath)
     if (current) return current
 
@@ -574,14 +972,23 @@ export class WorktreeManager {
     return undefined
   }
 
-  private async readCurrentMetadata(
-    worktreePath: string,
-  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+  private async readCurrentMetadata(worktreePath: string): Promise<Metadata | undefined> {
     try {
       const file = await this.gitMetadataPath(worktreePath)
       if (!file) return undefined
       const content = await fs.promises.readFile(file, "utf-8")
-      const data = JSON.parse(content) as { sessionId?: string; parentBranch?: string; remote?: string }
+      const data = JSON.parse(content) as Partial<Metadata>
+      if (data.pooled) {
+        return {
+          sessionId: data.sessionId ?? "",
+          pooled: true,
+          owner: data.owner,
+          baseRef: data.baseRef,
+          baseOid: data.baseOid,
+          parentBranch: data.parentBranch,
+          remote: data.remote,
+        }
+      }
       if (!data.sessionId) return undefined
       return {
         sessionId: data.sessionId,
@@ -602,7 +1009,12 @@ export class WorktreeManager {
 
   private async worktreeGitDir(worktreePath: string): Promise<string | undefined> {
     const gitPath = path.join(worktreePath, ".git")
-    const stat = await fs.promises.stat(gitPath)
+    let stat: fs.Stats
+    try {
+      stat = await fs.promises.stat(gitPath)
+    } catch {
+      return undefined
+    }
     if (stat.isDirectory()) return gitPath
     if (!stat.isFile()) return undefined
 
@@ -612,10 +1024,7 @@ export class WorktreeManager {
     return path.resolve(worktreePath, match[1].trim())
   }
 
-  private async readMetadataFrom(
-    worktreePath: string,
-    dirName: string,
-  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+  private async readMetadataFrom(worktreePath: string, dirName: string): Promise<Metadata | undefined> {
     const dir = path.join(worktreePath, dirName)
 
     // Try metadata.json first (has parentBranch + remote)
@@ -650,8 +1059,7 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const gitDir = await resolveGitDir(this.root)
-    const excludePath = path.join(gitDir, "info", "exclude")
+    const target = await this.excludeTarget()
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
       [".kilo/agent-manager.json", "Kilo Agent Manager state"],
@@ -670,8 +1078,34 @@ export class WorktreeManager {
     ] as const
 
     for (const [entry, comment] of items) {
-      await this.addExcludeEntry(excludePath, entry, comment)
+      await this.addExcludeEntry(target.file, `${target.prefix}${entry}`, comment)
     }
+  }
+
+  /**
+   * Resolve the repository exclude file and the repository-relative path to
+   * this manager's root.
+   *
+   * Git answers both questions for a linked worktree and for a workspace that
+   * is a subdirectory of a repository. `--show-prefix` is already relative and
+   * uses forward slashes, so it avoids symlink mismatches such as macOS
+   * `/var` versus `/private/var`. The anchored ignore patterns then point at
+   * the real `.kilo` directory instead of the repository root.
+   *
+   * `--git-path` is used without `--path-format=absolute`, because older Git
+   * echoes unsupported rev-parse flags to stdout with exit code 0, which would
+   * silently corrupt the path. Its result is relative to this command's cwd,
+   * so it is resolved against this root.
+   *
+   * Failures propagate: callers decide whether to continue without excludes.
+   * There is deliberately no silent fallback, because a guessed prefix would
+   * write ignore patterns anchored to the wrong directory.
+   */
+  private async excludeTarget(): Promise<{ file: string; prefix: string }> {
+    const exclude = (await this.git.raw(["rev-parse", "--git-path", "info/exclude"])).trim()
+    if (!exclude || exclude.startsWith("--")) throw new Error("git rev-parse did not return an exclude path")
+    const prefix = (await this.git.raw(["rev-parse", "--show-prefix"])).trim()
+    return { file: path.resolve(this.root, exclude), prefix }
   }
 
   /**
@@ -695,7 +1129,7 @@ export class WorktreeManager {
     let content = ""
     if (fs.existsSync(excludePath)) {
       content = await fs.promises.readFile(excludePath, "utf-8")
-      if (content.includes(entry)) return
+      if (content.split(/\r?\n/).includes(entry)) return
     }
 
     const pad = content.endsWith("\n") || content === "" ? "" : "\n"
@@ -714,16 +1148,26 @@ export class WorktreeManager {
     await markNoIndex(this.dir, this.log)
   }
 
-  private async worktreeInfo(wtPath: string): Promise<WorktreeInfo | undefined> {
+  /**
+   * Probe one directory. The failure reason is part of the result so callers can tell a leftover
+   * directory from a broken worktree from a git that would not answer.
+   */
+  private async worktreeInfo(wtPath: string, registered?: Set<string>): Promise<WorktreeProbe> {
     const gitFile = path.join(wtPath, ".git")
-    if (!fs.existsSync(gitFile)) return undefined
+    if (!fs.existsSync(gitFile)) return { ok: false, path: wtPath, reason: "leftover" }
 
     try {
       const stat = await fs.promises.stat(gitFile)
-      if (!stat.isFile()) return undefined
+      if (!stat.isFile()) return { ok: false, path: wtPath, reason: "leftover" }
     } catch {
       // .git path inaccessible — not a valid worktree
-      return undefined
+      return { ok: false, path: wtPath, reason: "leftover" }
+    }
+
+    // Cheap and decisive: git already told us which paths it tracks, so a directory missing from
+    // that list is broken and does not deserve a git process of its own.
+    if (registered && !registered.has(pathKey(wtPath))) {
+      return { ok: false, path: wtPath, reason: "unregistered" }
     }
 
     try {
@@ -733,6 +1177,8 @@ export class WorktreeManager {
         fs.promises.stat(wtPath),
         this.readMetadata(wtPath),
       ])
+      // Pooled slots are internal warm-up worktrees, not user sessions.
+      if (meta?.pooled) return { ok: false, path: wtPath, reason: "pooled" }
       // Use persisted metadata if available, fall back to resolveBaseBranch.
       // Backward compat: old metadata may store "origin/main" in parentBranch without
       // a separate remote field. Try to detect this by checking if the prefix is a known remote.
@@ -750,16 +1196,23 @@ export class WorktreeManager {
           return { branch: meta.parentBranch }
         })()) ?? (await this.resolveBaseBranch())
       return {
-        branch: branch.trim(),
-        path: wtPath,
-        parentBranch: base.branch,
-        remote: base.remote,
-        createdAt: stat.birthtimeMs,
-        sessionId: meta?.sessionId,
+        ok: true,
+        info: {
+          branch: branch.trim(),
+          path: wtPath,
+          parentBranch: base.branch,
+          remote: base.remote,
+          createdAt: stat.birthtimeMs,
+          sessionId: meta?.sessionId,
+        },
       }
     } catch (error) {
-      this.log(`Failed to get info for worktree ${wtPath}: ${error}`)
-      return undefined
+      const msg = error instanceof Error ? error.message : String(error)
+      // Downgraded from a bare failure log: an unregistered worktree is an expected state with a
+      // recovery path, not an unexplained error.
+      const reason = unregisteredWorktree(msg) ? "unregistered" : "probe-failed"
+      this.log(`Worktree ${wtPath} unavailable (${reason}): ${msg}`)
+      return { ok: false, path: wtPath, reason }
     }
   }
 
@@ -882,10 +1335,6 @@ export class WorktreeManager {
     return remotes.some((r) => r.name === "origin") ? "origin" : undefined
   }
 
-  async hasOriginRemote(): Promise<boolean> {
-    return (await this.resolveRemote()) !== undefined
-  }
-
   async refExistsLocally(ref: string): Promise<boolean> {
     try {
       await this.git.raw(["rev-parse", "--verify", `${ref}^{commit}`])
@@ -932,12 +1381,15 @@ export class WorktreeManager {
 
   async checkLfsAvailable(): Promise<boolean> {
     if (this.lfsAvailable) return true
+    // A negative verdict expires: installing git-lfs mid-session used to require a window reload.
+    if (this.lfsAvailable === false && Date.now() - this.lfsProbed < WorktreeManager.LFS_PROBE_TTL) return false
     try {
-      await execWithShellEnv(this.binary, ["lfs", "version"], { cwd: this.root, timeout: 5000 })
+      await execWithShellEnv(this.binary, ["lfs", "version"], { cwd: this.root, timeout: BUDGET.probe })
       this.lfsAvailable = true
       return true
     } catch {
       this.lfsAvailable = false
+      this.lfsProbed = Date.now()
       // git-lfs not installed
       return false
     }
@@ -1017,13 +1469,7 @@ export class WorktreeManager {
     }
 
     // Check if this is an empty repo with no commits (unborn branch).
-    // rev-parse --verify HEAD exits non-zero only when HEAD has no target
-    // commit, which is the definitive test for an unborn branch.
-    try {
-      await this.git.raw(["rev-parse", "--verify", "HEAD"])
-    } catch {
-      throw new Error("This repository has no commits yet. Create an initial commit before using worktrees.")
-    }
+    await this.ensureCommit()
 
     throw new Error("Could not determine default branch")
   }
@@ -1113,11 +1559,15 @@ export class WorktreeManager {
           "--json",
           "headRefName,baseRefName,headRepositoryOwner,isCrossRepository,title",
         ],
-        30000,
+        BUDGET.gh,
       )
       return JSON.parse(json) as PRInfo
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      // A killed process flushes no message classifyPRError can read, so without this a `gh` that
+      // hung is reported as an unexplained import failure — the same defect the poller's ladder was
+      // fixed for, on the path a user hits by pasting a PR url.
+      if (isTimeout(error)) throw new Error("GitHub CLI (gh) did not respond in time. Try again.")
       const kind = classifyPRError(msg)
       if (kind === "not_found") throw new Error(`PR #${parsed.number} not found in ${parsed.owner}/${parsed.repo}`)
       if (kind === "gh_missing")

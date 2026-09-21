@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, beforeAll, describe, expect } from "bun:test"
-import { Cause, Deferred, Effect, Exit } from "effect"
+import { Cause, Deferred, Effect, Exit, Schema } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import fs from "fs/promises"
 import path from "path"
@@ -263,6 +263,7 @@ function run(input: {
           variant: seen?.variant,
           model: result.metadata.model,
           metadataVariant: result.metadata.variant,
+          metadata: result.metadata,
         }
       }),
     {
@@ -550,6 +551,23 @@ describe("tool.task model resolution", () => {
           expect(result.variant).toBeUndefined()
           expect(result.model).toEqual(saved)
           expect(result.metadataVariant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
+  it.live("task metadata stays JSON-clean when no variant is selected", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      state: { model: { worker: saved } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.metadataVariant).toBeUndefined()
+          expect("variant" in result.metadata).toBe(false)
+          const decoded = Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Json))(result.metadata)
+          expect("variant" in decoded).toBe(false)
         }),
       ),
     ),

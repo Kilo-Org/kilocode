@@ -24,9 +24,23 @@ import {
 } from "@/kilocode/notebook/protocol"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { MessageID, SessionID } from "@/session/schema"
-import { ApiNotFoundError, InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
+import {
+  ApiNotFoundError,
+  ConflictError,
+  InvalidRequestError,
+  UnknownError,
+} from "@/server/routes/instance/httpapi/errors"
+import { BoardStore } from "@/kilocode/board/store"
+import {
+  MarketplaceInstallPayload,
+  MarketplaceInstallResult,
+  MarketplaceListResult,
+  MarketplaceRemovePayload,
+  MarketplaceRemoveResult,
+} from "@/kilocode/marketplace/schema"
 import { CommandFiles } from "@/kilocode/command-files"
 import { Token } from "@opencode-ai/schema/kilocode/session-drain"
+import { PendingInfo as WakeupPending } from "@opencode-ai/schema/kilocode/wakeup-event"
 
 const root = "/kilocode"
 const Scope = Schema.Literals(["global", "project"])
@@ -64,6 +78,15 @@ export const RemoveSnapshotPayload = Schema.Struct({
   worktree: Schema.String,
 })
 
+export const TeardownWorktreePayload = Schema.Struct({
+  worktree: Schema.String,
+})
+
+export const TeardownWorktreeResult = Schema.Struct({
+  /** True when a loaded backend instance for the worktree was disposed. */
+  disposed: Schema.Boolean,
+})
+
 export const ResumeSessionPayload = Schema.Struct({
   messageID: MessageID,
   snapshotInitialization: Schema.optional(Schema.Literal("wait")),
@@ -71,10 +94,51 @@ export const ResumeSessionPayload = Schema.Struct({
 
 export const DrainSessionPayload = Schema.Struct({ token: Token })
 
+export const SessionBoard = BoardStore.SessionBoard
+export const SessionBoardQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  before: Schema.optional(Schema.String),
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 }))),
+})
+export const ResetSessionBoardPayload = Schema.Struct({
+  revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+})
+
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 export const AgentManagerReplyPayload = Schema.Struct({ result: AgentManagerResult })
 export const AgentManagerRejectPayload = Schema.Struct({ error: AgentManagerFailure })
+
+export const RetentionRunPayload = Schema.Struct({
+  force: Schema.optional(Schema.Boolean),
+})
+
+export const RetentionState = Schema.Struct({
+  at: Schema.Number,
+  scanned: Schema.Number,
+  deleted: Schema.Number,
+  skippedActive: Schema.Number,
+  failed: Schema.Number,
+  durationMs: Schema.Number,
+})
+
+export const RetentionStatus = Schema.Struct({
+  policy: Schema.Struct({
+    enabled: Schema.Boolean,
+    maxAgeDays: Schema.Number,
+  }),
+  last: Schema.optional(RetentionState),
+  progress: Schema.optional(
+    Schema.Struct({
+      phase: Schema.Literals(["scanning", "deleting"]),
+      total: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      processed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      deleted: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      failed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      skippedActive: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    }),
+  ),
+})
 
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
@@ -82,7 +146,12 @@ export const KilocodePaths = {
   removeCommand: `${root}/command/remove`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  marketplaceList: `${root}/marketplace`,
+  marketplaceInstall: `${root}/marketplace/install`,
+  marketplaceRemove: `${root}/marketplace/remove`,
   removeSnapshot: `${root}/snapshot/remove`,
+  teardownWorktree: `${root}/worktree/teardown`,
+  prepareSnapshot: `${root}/snapshot/prepare`,
   providerUsage: `${root}/provider-usage`,
   providerUsageRefresh: `${root}/provider-usage/refresh`,
   notebookList: `${root}/notebook`,
@@ -94,9 +163,14 @@ export const KilocodePaths = {
   sessionModelUsage: `/session/:sessionID/model-usage`,
   resumeSession: `${root}/session/:sessionID/resume`,
   drainSession: `${root}/session/:sessionID/drain`,
+  sessionBoard: `${root}/session/:sessionID/board`,
+  resetSessionBoard: `${root}/session/:sessionID/board/reset`,
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
   backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
+  retentionStatus: `${root}/retention`,
+  retentionRun: `${root}/retention/run`,
+  wakeups: `${root}/wakeups`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -129,6 +203,31 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Wait for session completion",
             description:
               "Wait for active session work and background result delivery, then publish the matching drain acknowledgment.",
+          }),
+        ),
+        HttpApiEndpoint.get("sessionBoard", KilocodePaths.sessionBoard, {
+          params: { sessionID: SessionID },
+          query: SessionBoardQuery,
+          success: described(SessionBoard, "Shared board snapshot"),
+          error: [ApiNotFoundError, InvalidRequestError, ConflictError, UnknownError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.sessionBoard",
+            summary: "Observe a session's shared board",
+            description: "Read stored board messages without changing the board.",
+          }),
+        ),
+        HttpApiEndpoint.post("resetSessionBoard", KilocodePaths.resetSessionBoard, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          payload: ResetSessionBoardPayload,
+          success: described(SessionBoard, "Shared board after reset"),
+          error: [ApiNotFoundError, InvalidRequestError, ConflictError, UnknownError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.resetSessionBoard",
+            summary: "Clear a session's shared board",
+            description: "Clear visible messages without changing conversations or running tasks.",
           }),
         ),
         HttpApiEndpoint.post("heapSnapshot", KilocodePaths.heapSnapshot, {
@@ -189,6 +288,38 @@ export const KilocodeApi = HttpApi.make("kilocode")
               "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
           }),
         ),
+        HttpApiEndpoint.get("marketplaceList", KilocodePaths.marketplaceList, {
+          query: WorkspaceRoutingQuery,
+          success: described(MarketplaceListResult, "Marketplace catalog and installed metadata"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.list",
+            summary: "List marketplace items",
+            description: "Fetch marketplace catalog items and detect the items installed for the routed workspace.",
+          }),
+        ),
+        HttpApiEndpoint.post("marketplaceInstall", KilocodePaths.marketplaceInstall, {
+          query: WorkspaceRoutingQuery,
+          payload: MarketplaceInstallPayload,
+          success: described(MarketplaceInstallResult, "Marketplace install result"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.install",
+            summary: "Install a marketplace item",
+            description: "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+          }),
+        ),
+        HttpApiEndpoint.post("marketplaceRemove", KilocodePaths.marketplaceRemove, {
+          query: WorkspaceRoutingQuery,
+          payload: MarketplaceRemovePayload,
+          success: described(MarketplaceRemoveResult, "Marketplace removal result"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.remove",
+            summary: "Remove a marketplace item",
+            description: "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
+          }),
+        ),
         HttpApiEndpoint.post("removeSnapshot", KilocodePaths.removeSnapshot, {
           query: WorkspaceRoutingQuery,
           payload: RemoveSnapshotPayload,
@@ -199,6 +330,33 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.removeSnapshot",
             summary: "Remove a snapshot repository",
             description: "Remove the snapshot repository for an already deleted Agent Manager worktree.",
+          }),
+        ),
+        HttpApiEndpoint.post("teardownWorktree", KilocodePaths.teardownWorktree, {
+          query: WorkspaceRoutingQuery,
+          payload: TeardownWorktreePayload,
+          success: described(TeardownWorktreeResult, "Worktree backend teardown result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.teardownWorktree",
+            summary: "Tear down backend state for a managed worktree",
+            description:
+              "Kill the PTYs rooted in an Agent Manager worktree and dispose its backend instance when one is loaded, without booting an instance for the directory.",
+          }),
+        ),
+        HttpApiEndpoint.post("prepareSnapshot", KilocodePaths.prepareSnapshot, {
+          query: WorkspaceRoutingQuery,
+          success: described(
+            Schema.Struct({ prepared: Schema.Boolean, durationMs: Schema.Number }),
+            "Snapshot repository preparation result",
+          ),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.snapshot.prepare",
+            summary: "Prepare a snapshot repository",
+            description:
+              "Initialize and seed snapshots for the routed directory without creating a session or tracking ref.",
           }),
         ),
         HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {
@@ -339,6 +497,40 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.backgroundJob.promote",
             summary: "Promote background job",
             description: "Continue one foreground subagent in the background.",
+          }),
+        ),
+        HttpApiEndpoint.get("wakeups", KilocodePaths.wakeups, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(WakeupPending), "Pending wakeups for the routed directory"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.wakeups",
+            summary: "List pending wakeups",
+            description:
+              "List the sessions that hold scheduled wakeups in the routed directory, with each session's pending count.",
+          }),
+        ),
+        HttpApiEndpoint.get("retentionStatus", KilocodePaths.retentionStatus, {
+          query: WorkspaceRoutingQuery,
+          success: described(RetentionStatus, "Session retention policy and last run"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.retention.status",
+            summary: "Get session retention status",
+            description:
+              "Read the machine-wide session retention policy and the state of the most recent cleanup pass.",
+          }),
+        ),
+        HttpApiEndpoint.post("retentionRun", KilocodePaths.retentionRun, {
+          query: WorkspaceRoutingQuery,
+          payload: RetentionRunPayload,
+          success: described(RetentionStatus, "Retention pass outcome"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.retention.run",
+            summary: "Run session retention",
+            description:
+              "Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.",
           }),
         ),
       )

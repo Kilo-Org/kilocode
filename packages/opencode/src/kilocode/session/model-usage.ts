@@ -83,6 +83,7 @@ export namespace ModelUsage {
         sessionIDs.map((id) => sql`${id}`),
         sql`,`,
       )})
+        AND json_valid(part.data)
         AND json_extract(part.data, '$.type') = 'step-finish'
         AND json_extract(message.data, '$.role') = 'assistant'
     )

@@ -491,7 +491,7 @@ describe("kilocode indexing config", () => {
   test("ignores retired experimental flags in existing configs", async () => {
     await using tmp = await tmpdir({ git: true })
     await writeConfig(tmp.path, {
-      experimental: { semantic_indexing: true, codebase_search: true, batch_tool: true },
+      experimental: { semantic_indexing: true, codebase_search: true, shared_agent_board: false, batch_tool: true },
     })
 
     await provideTestInstance({
@@ -501,6 +501,8 @@ describe("kilocode indexing config", () => {
         expect(config.experimental?.batch_tool).toBe(true)
         expect(config.experimental).not.toHaveProperty("semantic_indexing")
         expect(config.experimental).not.toHaveProperty("codebase_search")
+        expect(config.experimental).not.toHaveProperty("shared_agent_board")
+        expect(config.shared_agent_board).toBeUndefined()
       },
     })
   })
@@ -1035,8 +1037,7 @@ describe("project plugin dependencies", () => {
       await writeConfig(path.join(dir, ".kilo"), { username: "kilo" })
       const calls: Array<{ dir: string; name?: string }> = []
       const npm = Layer.mock(Npm.Service)({
-        install: (dir, input) =>
-          Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(Effect.asVoid),
+        install: (dir, input) => Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(Effect.asVoid),
         add: () => Effect.die("not implemented"),
         which: () => Effect.succeed(undefined),
       })
@@ -1100,8 +1101,7 @@ describe("project plugin dependencies", () => {
       await Filesystem.write(path.join(config, "local.ts"), "export default {}")
       const calls: Array<{ dir: string; name?: string }> = []
       const npm = Layer.mock(Npm.Service)({
-        install: (dir, input) =>
-          Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(Effect.asVoid),
+        install: (dir, input) => Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(Effect.asVoid),
         add: () => Effect.die("not implemented"),
         which: () => Effect.succeed(undefined),
       })

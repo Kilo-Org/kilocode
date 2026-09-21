@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, onCleanup, Show } from "solid-js"
+import { batch, createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js"
 import type { Component } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
@@ -8,11 +8,13 @@ import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { File } from "@kilocode/kilo-ui/file"
-import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Button } from "@kilocode/kilo-ui/button"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "./FullScreenDiffView"
-import { mergeWorktreeDiffs } from "./diff-state"
+import { mergeWorktreeDiffs, resolveDiffFile } from "./diff-state"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { ConfigProvider } from "../src/context/config"
@@ -21,14 +23,22 @@ import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { BranchInfo, ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../src/diff/sources/types"
 import type { DiffViewerNotice } from "../src/types/messages/extension-messages"
+import type { PRComment } from "../agent-manager/pr/pr-types"
+import { reviewRequest } from "../agent-manager/pr/pr-review-request"
+import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
+import { createPRDiffs } from "./pr-diff"
+import { DiffViewerNotice as DiffViewerNoticeBanner } from "./DiffViewerNotice"
+import { notice as noticeFor } from "./review-setup"
+
+// Compare only the PR identity. Ref-only refreshes must not clear local comments.
+function samePR(a: PRTarget | undefined, b: PRTarget | undefined) {
+  return a?.projectId === b?.projectId && a?.prNumber === b?.prNumber && a?.prUrl === b?.prUrl
+}
+import { createDiffCommentForms } from "../agent-manager/pr/diff-comment-forms"
 import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
 import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
 import { SpeechToTextModelsProvider } from "../src/context/speech-to-text-models"
-
-const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
-  "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
-}
 
 type DiffStyle = "unified" | "split"
 
@@ -40,7 +50,15 @@ const DiffViewerContent: Component = () => {
   const [diffs, setDiffs] = createSignal<WorktreeFileDiff[]>([])
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
+  const [context, setContext] = createSignal("")
+  const [remote, setRemote] = createSignal<PRComment[]>([])
+  const [target, setTarget] = createSignal<PRTarget>()
+  const [threads, setThreads] = createSignal<string[]>([])
+  const [focus, setFocus] = createSignal<{ id: string; file: string }>()
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  // Remembered style pushed by the host (diffViewer.initialDiffStyle); used
+  // when the source or PR identity changes so a persisted choice survives.
+  const [savedDiffStyle, setSavedDiffStyle] = createSignal<DiffStyle>()
   const [markdown, setMarkdown] = createSignal(false)
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
   const [loadingFiles, setLoadingFiles] = createSignal<Set<string>>(new Set())
@@ -56,6 +74,28 @@ const DiffViewerContent: Component = () => {
   const [isAuto, setIsAuto] = createSignal(true)
   const [currentBranch, setCurrentBranch] = createSignal<string | undefined>(undefined)
   const [branchesLoading, setBranchesLoading] = createSignal(false)
+  const [prMode, setPRMode] = createSignal(false)
+  const [prSnapshot, setPRSnapshot] = createSignal<PRDiffSnapshot>()
+  const [prLoading, setPRLoading] = createSignal(false)
+  const [prError, setPRError] = createSignal<string>()
+  let prKey = ""
+  let prRequestId = ""
+
+  const prDiffs = createMemo(() => {
+    const snapshot = prSnapshot()
+    return snapshot ? createPRDiffs(snapshot) : []
+  })
+  const activeDiffs = () => (prMode() ? prDiffs() : diffs())
+  const activeLoading = () => (prMode() ? prLoading() : loading())
+  const noLoadingFiles = new Set<string>()
+  const activeLoadingFiles = () => (prMode() ? noLoadingFiles : loadingFiles())
+  const forms = createDiffCommentForms({
+    target,
+    snapshot: prSnapshot,
+    diffs: activeDiffs,
+    worktree: () => "diff",
+    canPublish: () => prMode(),
+  })
 
   const isWorkspaceSource = () => {
     const id = currentSourceId()
@@ -64,11 +104,7 @@ const DiffViewerContent: Component = () => {
     return desc?.type === "workspace"
   }
 
-  const noticeText = () => {
-    const n = notice()
-    if (!n) return ""
-    return t(NOTICE_KEYS[n])
-  }
+  const noticeText = () => noticeFor(t, notice())
 
   const markReverting = (file: string, active: boolean) => {
     setReverting((prev) => {
@@ -104,7 +140,96 @@ const DiffViewerContent: Component = () => {
     }
   }
 
+  // Clear all PR-specific state so a new source, target, or request starts clean.
+  const resetPR = () => {
+    prKey = ""
+    prRequestId = ""
+    setPRSnapshot(undefined)
+    setPRLoading(false)
+    setPRError(undefined)
+    setPRMode(false)
+  }
+
+  const requestPRFiles = (next: PRTarget | undefined) => {
+    if (!next) {
+      resetPR()
+      return
+    }
+    const key = JSON.stringify(next)
+    if (prKey === key && (prLoading() || prSnapshot())) return
+    prKey = key
+    const requestId = crypto.randomUUID()
+    prRequestId = requestId
+    setPRSnapshot(undefined)
+    setPRLoading(true)
+    setPRError(undefined)
+    reviewRequest({ ...next, type: "agentManager.loadPRFiles", requestId }, vscode.postMessage, (result) => {
+      if (prKey !== key || prRequestId !== requestId) return
+      if (result.type !== "agentManager.loadPRFilesResult") return
+      if (!result.success || !result.snapshot) {
+        setPRLoading(false)
+        setPRError(result.error || t("diffViewer.comment.loadFailed"))
+        return
+      }
+      setPRSnapshot(result.snapshot)
+      setPRLoading(false)
+    })
+  }
+
+  const togglePRMode = () => {
+    if (!prSnapshot()) {
+      requestPRFiles(target())
+      return
+    }
+    setComments([])
+    setPRMode((value) => !value)
+  }
+
   const unsubscribe = vscode.onMessage((msg) => {
+    if (msg.type === "diffViewer.context") {
+      if (context() === msg.key) return
+      batch(() => {
+        setContext(msg.key)
+        setDiffs([])
+        setComments([])
+        setRemote([])
+        setTarget(undefined)
+        setThreads([])
+        setFocus(undefined)
+        setInitialFile(undefined)
+        setLoadingFiles(new Set<string>())
+        setReverting(new Set<string>())
+        setBranches([])
+        setDefaultBranch("")
+        setAutoBase(undefined)
+        setCurrentBase(undefined)
+        setCurrentBranch(undefined)
+        setIsAuto(true)
+        resetPR()
+      })
+      return
+    }
+    if (msg.type === "diffViewer.prComments") {
+      // Only clear local comments when the PR identity changes. Ref-only
+      // refreshes (a push or rebase) must keep unsent comments.
+      const changed = !samePR(target(), msg.target)
+      batch(() => {
+        setRemote(msg.comments)
+        setTarget(msg.target)
+        setThreads(msg.threads ?? [])
+        if (changed) {
+          setComments([])
+          setDiffStyle(savedDiffStyle() ?? "unified")
+          setPRMode(false)
+        }
+      })
+      requestPRFiles(msg.target)
+      return
+    }
+    if (msg.type === "diffViewer.focusComment") {
+      setFocus({ id: msg.id, file: msg.file })
+      return
+    }
     if (msg.type === "diffViewer.diffs") {
       // Preserve cached `before`/`after` across polls so summarized polling
       // updates don't clobber loaded detail. Mirrors the agent manager's
@@ -116,10 +241,8 @@ const DiffViewerContent: Component = () => {
     }
 
     if (msg.type === "diffViewer.diffFile") {
+      setDiffs((prev) => resolveDiffFile(prev, msg.file, msg.diff))
       markLoadingFile(msg.file, false)
-      const fresh = msg.diff
-      if (!fresh) return
-      setDiffs((prev) => prev.map((entry) => (entry.file === fresh.file ? fresh : entry)))
       return
     }
 
@@ -137,6 +260,13 @@ const DiffViewerContent: Component = () => {
       setMarkdown(msg.render)
       return
     }
+    if (msg.type === "diffViewer.initialDiffStyle") {
+      if (msg.style === "unified" || msg.style === "split") {
+        setSavedDiffStyle(msg.style)
+        setDiffStyle(msg.style)
+      }
+      return
+    }
     if ((msg as { type: string; file?: string }).type === "diffViewer.initialFile") {
       setInitialFile((msg as { file?: string }).file)
       return
@@ -146,8 +276,11 @@ const DiffViewerContent: Component = () => {
       return
     }
     if (msg.type === "setAvailableSources") {
-      setAvailableSources(msg.descriptors)
-      setCurrentSourceId(msg.currentId)
+      batch(() => {
+        setAvailableSources(msg.descriptors)
+        setCurrentSourceId(msg.currentId)
+        setLoadingFiles(new Set<string>())
+      })
       return
     }
 
@@ -175,6 +308,8 @@ const DiffViewerContent: Component = () => {
 
   const selectSource = (id: string) => {
     if (id === currentSourceId()) return
+    setFocus(undefined)
+    setInitialFile(undefined)
     post({ type: "selectSource", id })
   }
 
@@ -186,21 +321,24 @@ const DiffViewerContent: Component = () => {
     on(currentSourceId, (id, prev) => {
       if (prev === undefined || id === prev) return
       setComments([])
-      setDiffStyle("unified")
+      setDiffStyle(savedDiffStyle() ?? "unified")
       setReverting(new Set<string>())
-      setLoadingFiles(new Set<string>())
       setNotice(undefined)
+      setPRError(undefined)
+      setPRMode(false)
     }),
   )
 
   // Fetch branches whenever the active source becomes the workspace one. The
   // extension owns the override state so we ask on every transition rather
   // than caching here.
-  createEffect(() => {
-    if (!isWorkspaceSource()) return
-    setBranchesLoading(true)
-    post({ type: "diffViewer.requestBranches" })
-  })
+  createEffect(
+    on([context, isWorkspaceSource], ([, visible]) => {
+      if (!visible) return
+      setBranchesLoading(true)
+      post({ type: "diffViewer.requestBranches" })
+    }),
+  )
 
   const onBaseBranchSelect = (branch: string | undefined) => {
     // Optimistically reflect the new selection so the trigger label updates
@@ -230,41 +368,72 @@ const DiffViewerContent: Component = () => {
           currentId={currentSourceId()}
           onSelect={selectSource}
           accessory={
-            <Show when={isWorkspaceSource()}>
-              <BaseBranchPicker
-                branches={branches()}
-                loading={branchesLoading()}
-                defaultBranch={defaultBranch()}
-                autoBase={autoBase()}
-                currentBase={currentBase()}
-                isAuto={isAuto()}
-                currentBranch={currentBranch()}
-                onSelect={onBaseBranchSelect}
-              />
-            </Show>
+            <div class="diff-pr-controls">
+              <Show when={isWorkspaceSource() && !prMode()}>
+                <BaseBranchPicker
+                  branches={branches()}
+                  loading={branchesLoading()}
+                  defaultBranch={defaultBranch()}
+                  autoBase={autoBase()}
+                  currentBase={currentBase()}
+                  isAuto={isAuto()}
+                  currentBranch={currentBranch()}
+                  onSelect={onBaseBranchSelect}
+                />
+              </Show>
+              <Show when={target()}>
+                {(pr) => (
+                  <Show when={isWorkspaceSource()}>
+                    <span class="diff-pr-context" title={pr().prUrl}>
+                      {t("diffViewer.comment.prContext", { number: pr().prNumber })}
+                    </span>
+                    <IconButton
+                      icon="external-link"
+                      size="small"
+                      variant="ghost"
+                      label={t("diffViewer.comment.openPR")}
+                      onClick={() => post({ type: "openExternal", url: pr().prUrl })}
+                    />
+                    <Button
+                      size="small"
+                      variant={prMode() ? "primary" : "secondary"}
+                      disabled={prLoading() && !prSnapshot()}
+                      onClick={togglePRMode}
+                    >
+                      <Show when={prLoading()}>
+                        <Spinner />
+                      </Show>
+                      {prMode() ? t("diffViewer.comment.localChanges") : t("diffViewer.comment.prChanges")}
+                    </Button>
+                  </Show>
+                )}
+              </Show>
+            </div>
           }
         />
       </Show>
-      <Show when={noticeText()}>
-        <div class="diff-viewer-notice" role="status">
-          <span class="diff-viewer-notice-icon">
-            <Icon name="warning" size="small" />
-          </span>
-          <span class="diff-viewer-notice-text">{noticeText()}</span>
-        </div>
-      </Show>
+      <DiffViewerNoticeBanner text={noticeText()} role="status" />
+      <DiffViewerNoticeBanner text={prError()} role="alert" />
       <FullScreenDiffView
-        diffs={diffs()}
-        loading={loading()}
-        loadingFiles={loadingFiles()}
-        onRequestDiff={requestDiffFile}
-        sessionKey={currentSourceId() ?? "local"}
+        diffs={activeDiffs()}
+        loading={activeLoading()}
+        loadingFiles={activeLoadingFiles()}
+        onRequestDiff={prMode() ? undefined : requestDiffFile}
+        sessionKey={`${context()}\0${currentSourceId() ?? "local"}\0${prMode() ? "pr" : "local"}`}
+        worktreeId="diff"
+        remoteComments={remote()}
+        remoteTarget={(comment) => (threads().includes(comment.threadId) ? target() : undefined)}
+        applySuggestions={false}
+        focusedComment={focus()}
         comments={comments()}
         onCommentsChange={setComments}
         onSendAll={() => {}}
+        commentForm={forms.mount}
+        commentsGithub={forms.github}
         diffStyle={diffStyle()}
         onDiffStyleChange={(style) => {
           setDiffStyle(style)
+          setSavedDiffStyle(style)
           post({ type: "diffViewer.setDiffStyle", style })
         }}
         markdownRender={markdown()}
@@ -272,8 +441,8 @@ const DiffViewerContent: Component = () => {
           setMarkdown(render)
           post({ type: "diffViewer.setMarkdownRender", render })
         }}
-        onOpenFile={(relativePath) => {
-          post({ type: "openFile", filePath: relativePath })
+        onOpenFile={(relativePath, line) => {
+          post({ type: "openFile", filePath: relativePath, line })
         }}
         initialFile={initialFile()}
         onRevertFile={(file) => {
@@ -281,7 +450,7 @@ const DiffViewerContent: Component = () => {
           post({ type: "diffViewer.revertFile", file })
         }}
         revertingFiles={reverting()}
-        canRevert={capabilities()?.revert ?? true}
+        canRevert={!prMode() && (capabilities()?.revert ?? true)}
         canComment={capabilities()?.comments ?? true}
         onClose={() => {
           post({ type: "diffViewer.close" })

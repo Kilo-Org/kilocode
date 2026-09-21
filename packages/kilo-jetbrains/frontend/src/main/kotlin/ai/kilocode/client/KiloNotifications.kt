@@ -34,6 +34,14 @@ object KiloNotifications {
         notification.notify(project)
     }
 
+    fun warning(project: Project?, title: String, content: String? = null) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(GROUP)
+            ?.createNotification(title, content ?: "", NotificationType.WARNING)
+            ?: Notification(GROUP, title, content ?: "", NotificationType.WARNING)
+        notification.notify(project)
+    }
+
     fun info(title: String, content: String? = null) {
         val project = ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
         info(project, title, content)

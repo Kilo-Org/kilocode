@@ -2,6 +2,7 @@
 
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.app.KiloBackendActivityManager
 import ai.kilocode.backend.app.KiloBackendChatManager
@@ -21,6 +22,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionChangeDto
@@ -91,6 +93,14 @@ class KiloSessionRpcApiImpl internal constructor(
         val session = workspaces.get(directory).createSession()
         log.info("create session: id=${session.id}, directory=$directory")
         return session
+    }
+
+    override suspend fun fork(id: String, directory: String, messageId: String?): SessionDto {
+        app.requireReady()
+        log.info("${ChatLogSummary.sid(id)} kind=fork dir=${ChatLogSummary.dir(directory)} message=${messageId != null}")
+        val forked = withContext(Dispatchers.IO) { sessions.fork(id, directory, messageId) }
+        withContext(Dispatchers.IO) { ForkHandoff.record(chat, forked.id, directory) }
+        return forked
     }
 
     override suspend fun get(id: String, directory: String): SessionDto {
@@ -316,6 +326,14 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> =
         ready { chat.pendingQuestions(directory) }
+
+    // ------ shared agent board ------
+
+    override suspend fun sessionBoard(sessionID: String, directory: String, before: String?, limit: Int?): SessionBoardDto =
+        ready { withContext(Dispatchers.IO) { sessions.sessionBoard(sessionID, directory, before, limit) } }
+
+    override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? =
+        ready { withContext(Dispatchers.IO) { sessions.resetSessionBoard(sessionID, directory, revision) } }
 
     private suspend fun <T> ready(block: suspend () -> T): T {
         app.requireReady()

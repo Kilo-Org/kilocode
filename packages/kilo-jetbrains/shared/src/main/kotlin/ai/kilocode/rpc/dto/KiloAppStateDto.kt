@@ -71,6 +71,8 @@ data class ConfigDto(
     val mcp: Map<String, McpConfigDto> = emptyMap(),
     val agent: Map<String, AgentConfigDto> = emptyMap(),
     val permission: PermissionConfigDto? = null,
+    /** Kilo Swarm. Null means unset, which the CLI treats as enabled. */
+    val shared_agent_board: Boolean? = null,
 )
 
 @Serializable
@@ -131,6 +133,8 @@ data class ConfigPatchDto(
     val mcp: Map<String, McpConfigDto?>? = null,
     val agents: Map<String, AgentConfigPatchDto> = emptyMap(),
     val permission: PermissionConfigDto? = null,
+    /** Kilo Swarm. Always written as an explicit boolean, matching the VS Code toggle. */
+    val shared_agent_board: Boolean? = null,
 )
 
 @Serializable
@@ -209,7 +213,6 @@ data class KiloAppStateDto(
     val downloadPercent: Int? = null,
     val downloadVersion: String? = null,
     val downloadPlatform: String? = null,
-    val warnings: List<ConfigWarningDto> = emptyList(),
     val config: ConfigDto? = null,
     val profile: ProfileDto? = null,
     val migration: LegacyMigrationDetectionDto? = null,

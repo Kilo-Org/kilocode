@@ -377,6 +377,32 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("main", "feature/x", "release/1.0"), controller.branches)
     }
 
+    fun `test the controller resolves the origin repo slug without a reload`() {
+        rpc.originSlug = "Kilo-Org/kilocode"
+
+        val controller = controller()
+        flush()
+
+        // The New Worktree dialog can open before any reload runs, so construction alone has to arm
+        // the cross-repo check.
+        assertEquals("Kilo-Org/kilocode", controller.origin)
+    }
+
+    fun `test reload caches the origin repo slug`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val controller = controller()
+        // Let the construction-time lookup settle while there is no slug to find, so the assertion
+        // below can only be satisfied by reload() assigning it.
+        flush()
+        assertNull(controller.origin)
+        rpc.originSlug = "Kilo-Org/kilocode"
+
+        controller.reload()
+        flush()
+
+        assertEquals("Kilo-Org/kilocode", controller.origin)
+    }
+
     fun `test base branches exclude branches checked out in worktrees`() {
         rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
@@ -467,6 +493,21 @@ class WorktreeControllerTest : BasePlatformTestCase() {
                 it.first == "Continue in Worktree" && it.second["surface"] == "sidebar" && it.second["session"] == "true"
             },
         )
+    }
+
+    fun `test move reports the caller's surface on the telemetry event`() {
+        // Reuses "test move without a session..."'s no-session DONE event (no `session` field) so
+        // this leaves nothing in the app-level PendingWorktreeSession service for another test in
+        // this file to trip over.
+        val done = WorktreeDto("/wt/moved-surface", "moved-surface", "moved-surface", "/wt/moved-surface")
+        rpc.moveScript = listOf(MoveProgressDto(MoveStage.DONE, worktree = done))
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        val controller = controller(telemetry = { name, props -> events += name to props })
+
+        ApplicationManager.getApplication().invokeAndWait { controller.move("ses_source", "/repo", "worktree_editor") }
+        flush()
+
+        assertTrue(events.any { it.first == "Continue in Worktree" && it.second["surface"] == "worktree_editor" })
     }
 
     fun `test move without a session transfers changes and skips forking`() {

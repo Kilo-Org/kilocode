@@ -86,7 +86,7 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
         triggerProps={{
           type: "button",
           icon: "magnifying-glass",
-          size: "normal",
+          size: "small",
           variant: "ghost",
           class: "search-menu-trigger",
           "aria-label": props.labels.search,
@@ -130,15 +130,7 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
                           state={item.state}
                           spinner="search-menu-spinner"
                           idle={
-                            <Show
-                              when={item.kind !== "local"}
-                              fallback={
-                                <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                  <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-                                  <path d="M6 16.5H14M10 13.5V16.5" stroke="currentColor" />
-                                </svg>
-                              }
-                            >
+                            <Show when={item.kind !== "local"} fallback={<Icon name="local" size="small" />}>
                               <Icon name={item.kind === "worktree" ? "branch" : "speech-bubble"} size="small" />
                             </Show>
                           }

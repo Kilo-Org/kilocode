@@ -81,6 +81,21 @@ export const Info = Schema.Struct({
     description:
       "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.",
   }),
+  // kilocode_change start - machine-wide session retention policy, owned by the backend
+  retention: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Enable automatic deletion of old sessions across all projects and every Kilo client on this machine. Defaults to false; deletion is permanent.",
+      }),
+      maxAgeDays: Schema.optional(Schema.Number).annotate({
+        description: "Days a session is kept before retention deletes it. Defaults to 30, minimum 1.",
+      }),
+    }),
+  ).annotate({
+    description: "Machine-wide session retention. Evaluated by the backend; clients only trigger runs.",
+  }),
+  // kilocode_change end
   plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPluginV1.Spec))),
   share: Schema.optional(Schema.Literals(["manual", "auto", "disabled"])).annotate({
     description:
@@ -107,7 +122,14 @@ export const Info = Schema.Struct({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
-    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
+    description:
+      "@deprecated Use 'reasoning_display' field instead. Automatically collapse reasoning blocks after the agent finishes writing them",
+  }),
+  reasoning_display: Schema.optional(Schema.Literals(["expanded", "preview", "headline"])).annotate({
+    description: "Controls how reasoning blocks are displayed in the VS Code chat UI",
+  }),
+  shared_agent_board: Schema.optional(Schema.Boolean).annotate({
+    description: "Share a board between a main session and its task subagents, including nested subagents",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
   console: Schema.optional(
@@ -307,14 +329,22 @@ export const Info = Schema.Struct({
       task_model_selection: Schema.optional(Schema.Boolean).annotate({
         description: "Allow task subagents to select a model, provider, and reasoning effort",
       }),
+      code_mode: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Route MCP tool calls through a confined JavaScript runtime with on-demand tool discovery instead of exposing every MCP tool directly",
+      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
+      speech_to_text_base_url: Schema.optional(Schema.String).annotate({
+        description:
+          "Base URL of an OpenAI-compatible transcription API to use instead of the Kilo Gateway, for example https://api.openai.com/v1",
+      }),
+      speech_to_text_api_key: Schema.optional(Schema.String).annotate({
+        description: "API key sent as a bearer token to the custom speech-to-text base URL",
+      }),
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({
         description: "Enable telemetry. Set to false to opt-out.",
-      }),
-      shared_agent_board: Schema.optional(Schema.Boolean).annotate({
-        description: "Share discoveries between the main agent and subagents within one session",
       }),
       // kilocode_change end
       primary_tools: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({

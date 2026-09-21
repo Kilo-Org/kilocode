@@ -68,7 +68,7 @@ There are several ways to switch agents:
 | **Description** | An experienced technical leader and planner who helps design systems and create implementation plans |
 | **Tool Access** | Read-only tools plus restricted file editing (plan files in `.kilo/plans/` only) |
 | **Ideal For** | System design, high-level planning, and architecture discussions |
-| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach |
+| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach. In VS Code, the saved plan opens in the editor when ready for review. |
 
 ### debug
 
@@ -158,3 +158,5 @@ The VSCode extension and CLI do not include a built-in Review agent. Code review
 ## Custom Agents
 
 Create your own specialized assistants by defining tool access, file permissions, and behavior instructions. Custom agents help enforce team standards or create purpose-specific assistants. See [Custom Modes documentation](/docs/customize/custom-modes) for setup instructions.
+
+To keep an agent working toward a single objective across turns, see [Session Goals](/docs/code-with-ai/agents/goals).

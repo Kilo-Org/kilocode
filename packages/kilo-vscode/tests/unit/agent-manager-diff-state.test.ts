@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { diffSizeKey, mergeWorktreeDiffs } from "../../webview-ui/diff-viewer/diff-state"
+import { diffSizeKey, mergeWorktreeDiffs, resolveDiffFile } from "../../webview-ui/diff-viewer/diff-state"
 import {
   EXTREME_DIFF_CHANGED_LINES,
   allOpenFiles,
@@ -42,6 +42,37 @@ describe("diffSizeKey", () => {
 })
 
 describe("agent manager diff state", () => {
+  it.each([undefined, null, diff({})])("marks unavailable detail as failed: %j", (detail) => {
+    const pending = diff({})
+    const other = diff({ file: "other.ts" })
+    const result = resolveDiffFile([pending, other], pending.file, detail)
+
+    expect(result.at(0)).toEqual({ ...pending, failed: true })
+    expect(result.at(1)).toBe(other)
+    expect(pending.failed).toBeUndefined()
+  })
+
+  it("retains failures across unchanged summaries and clears them on successful detail", () => {
+    const failed = diff({ failed: true, patch: "" })
+    const polled = mergeWorktreeDiffs([failed], [diff({})])
+    expect(polled.diffs.at(0)).toBe(failed)
+    expect(polled.stale.size).toBe(0)
+
+    const detail = diff({ before: "old", after: "new", summarized: false })
+    const loaded = resolveDiffFile(polled.diffs, failed.file, detail)
+    expect(loaded.at(0)).toBe(detail)
+    expect(loaded.at(0)?.failed).toBeUndefined()
+    expect(mergeWorktreeDiffs(loaded, [diff({})]).diffs.at(0)).toBe(detail)
+  })
+
+  it("allows fresh content after a failed summary changes without dropping loaded detail on failure", () => {
+    const next = diff({ stamp: "1:2" })
+    expect(mergeWorktreeDiffs([diff({ failed: true })], [next]).diffs.at(0)).toBe(next)
+
+    const loaded = diff({ summarized: false, before: "old", after: "new" })
+    expect(resolveDiffFile([loaded], loaded.file, null).at(0)).toBe(loaded)
+  })
+
   it("preserves loaded detail and patch when summary metadata is unchanged", () => {
     const prev = [diff({ summarized: false, before: "old\n", after: "new\n", patch: "@@ -1 +1 @@\n-old\n+new\n" })]
     const next = [diff({ summarized: true })]
@@ -95,7 +126,7 @@ describe("agent manager diff state", () => {
     expect(result.stale).toEqual(new Set(["src/app.ts"]))
   })
 
-  it("opens every diff initially", () => {
+  it("opens reviewable diffs initially while keeping generated files collapsed", () => {
     expect(
       initialOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
@@ -104,7 +135,7 @@ describe("agent manager diff state", () => {
         diff({ file: "assets/banner.png", kind: "image", summarized: true, additions: 0 }),
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
-    ).toEqual(["src/app.ts", "node_modules/pkg/index.js", "src/huge.ts"])
+    ).toEqual(["src/app.ts", "src/huge.ts"])
 
     const many = Array.from({ length: 26 }, (_, i) => diff({ file: `src/${i}.ts` }))
     expect(initialOpenFiles(many)).toHaveLength(26)
@@ -154,6 +185,14 @@ describe("agent manager diff state", () => {
     expect(reconcileOpenFiles(current, ["src/app.ts"], ["src/app.ts"])).toEqual({
       open: ["src/app.ts", "src/new.ts"],
       known: ["src/app.ts", "src/new.ts"],
+    })
+  })
+
+  it("keeps newly arriving generated files collapsed", () => {
+    const current = [diff({ file: "src/app.ts" }), diff({ file: "src/generated.ts", generatedLike: true })]
+    expect(reconcileOpenFiles(current, ["src/app.ts"], ["src/app.ts"])).toEqual({
+      open: ["src/app.ts"],
+      known: ["src/app.ts", "src/generated.ts"],
     })
   })
 

@@ -1,0 +1,116 @@
+import { expect, test, type Page } from "@playwright/test"
+import { open } from "./helpers/prompt-input"
+
+async function observe(page: Page, block = false) {
+  const trace = await page.evaluateHandle((block) => {
+    const events: KeyboardEvent[] = []
+    const forwarded: KeyboardEvent[] = []
+    window.addEventListener("keydown", (event) => {
+      if (event.key.length !== 1) return
+      forwarded.push(event)
+      if (block) event.preventDefault()
+    })
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key.length === 1) events.push(event)
+      },
+      true,
+    )
+    return { events, forwarded }
+  }, block)
+  return () =>
+    trace.evaluate((state) => ({
+      prevented: state.events.splice(0).map((event) => event.defaultPrevented),
+      forwarded: state.forwarded.splice(0).map((event) => event.key),
+    }))
+}
+
+test("undo and redo are applied locally and never reach the host", async ({ page }) => {
+  const input = await open(page)
+  await input.pressSequentially("Draft text")
+  await expect(input).toHaveValue("Draft text")
+  const read = await observe(page, true)
+
+  await input.press("ControlOrMeta+z")
+  await expect(input).toHaveValue("")
+  expect(await read()).toEqual({ prevented: [true], forwarded: [] })
+
+  await input.press("ControlOrMeta+Shift+Z")
+  await expect(input).toHaveValue("Draft text")
+  expect(await read()).toEqual({ prevented: [true], forwarded: [] })
+})
+
+test("non-Latin layouts match the undo chord by keyCode", async ({ page }) => {
+  const input = await open(page)
+  await input.pressSequentially("Draft text")
+  await expect(input).toHaveValue("Draft text")
+  const read = await observe(page, true)
+
+  await input.evaluate((element) => {
+    const event = new KeyboardEvent("keydown", {
+      key: "ז",
+      code: "KeyZ",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    Object.defineProperty(event, "keyCode", { get: () => 90 })
+    element.dispatchEvent(event)
+  })
+  await expect(input).toHaveValue("")
+  expect(await read()).toEqual({ prevented: [true], forwarded: [] })
+})
+
+test("only supported history chords are cancelled, other text shortcuts forward", async ({ page }) => {
+  const input = await open(page)
+  await input.pressSequentially("Draft text")
+  const read = await observe(page)
+
+  for (const modifier of ["Control", "Meta"]) {
+    for (const chord of ["z", "Shift+Z", "y"]) {
+      await input.press(`${modifier}+${chord}`)
+      expect(await read(), `${modifier}+${chord}`).toEqual({ prevented: [true], forwarded: [] })
+    }
+    for (const chord of ["c", "x", "v", "Alt+z", "Alt+Shift+Z", "Alt+y", "Shift+Y"]) {
+      await input.dispatchEvent("keydown", {
+        key: chord.split("+").at(-1),
+        ctrlKey: modifier === "Control",
+        metaKey: modifier === "Meta",
+        altKey: chord.includes("Alt"),
+        shiftKey: chord.includes("Shift"),
+      })
+      expect(await read(), `${modifier}+${chord}`).toEqual({
+        prevented: [false],
+        forwarded: [chord.split("+").at(-1)],
+      })
+    }
+  }
+})
+
+test("enhanced prompt undo restores the original without reaching the host", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "acquireVsCodeApi", {
+      value: () => ({
+        getState: () => undefined,
+        setState: () => undefined,
+        postMessage: (message: { type: string; requestId?: string }) => {
+          if (message.type !== "enhancePrompt") return
+          window.postMessage(
+            { type: "enhancePromptResult", requestId: message.requestId, text: "Enhanced draft" },
+            window.origin,
+          )
+        },
+      }),
+    })
+  })
+  const input = await open(page)
+  await input.pressSequentially("Original draft")
+  await page.getByRole("button", { name: "Enhance prompt", exact: true }).click()
+  await expect(input).toHaveValue("Enhanced draft")
+  const read = await observe(page, true)
+
+  await input.press("ControlOrMeta+z")
+  await expect(input).toHaveValue("Original draft")
+  expect(await read()).toEqual({ prevented: [true], forwarded: [] })
+})

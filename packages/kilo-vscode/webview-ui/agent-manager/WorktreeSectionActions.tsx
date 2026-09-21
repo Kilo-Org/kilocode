@@ -7,6 +7,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { WorktreeCreate, type WorktreeCreateProps } from "./ProjectActions"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { SidebarSearchItem } from "./sidebar-search"
+import { CaffeinationButton } from "./CaffeinationButton"
 import { label } from "../src/utils/session-activity"
 
 interface WorktreeSectionActionsProps extends WorktreeCreateProps {
@@ -18,7 +19,6 @@ interface WorktreeSectionActionsProps extends WorktreeCreateProps {
   onShortcuts: () => void
   onSettings: () => void
   onHistory: () => void
-  onHelp: () => void
 }
 
 export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (props) => (
@@ -52,6 +52,9 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
           onClick={props.onShortcuts}
         />
       </TooltipKeybind>
+    </Show>
+    <CaffeinationButton t={props.t} />
+    <Show when={props.git}>
       <Tooltip value={props.t("session.showHistory")} placement="bottom">
         <IconButton
           icon="history"
@@ -59,15 +62,6 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
           variant="ghost"
           aria-label={props.t("session.showHistory")}
           onClick={props.onHistory}
-        />
-      </Tooltip>
-      <Tooltip value={props.t("agentManager.intro.reopen")} placement="bottom">
-        <IconButton
-          icon="help"
-          size="small"
-          variant="ghost"
-          aria-label={props.t("agentManager.intro.reopen")}
-          onClick={props.onHelp}
         />
       </Tooltip>
       <IconButton

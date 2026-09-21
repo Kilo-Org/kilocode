@@ -7,6 +7,8 @@ import { SearchField } from "../../components/SearchField"
 import { text } from "../../shared/utils"
 import { ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { type Capability, type ModelField, useModelSettings } from "./state/models"
+import "../../styles/models.css"
+import "../../styles/resolved.css"
 
 function money(n: number) {
   if (n === 0) return "$0.00"

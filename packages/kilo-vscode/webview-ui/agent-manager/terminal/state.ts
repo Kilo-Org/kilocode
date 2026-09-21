@@ -873,7 +873,9 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
 
   const closeActive = () => {
     const id = deps.state.activeId()
-    if (!id) return false
+    // The active id is shared across contexts; only close a terminal owned by
+    // the currently selected worktree so Cmd+W can reach its fallback.
+    if (!id || !deps.state.current().some((term) => term.id === id)) return false
     closeTerminal(id)
     return true
   }

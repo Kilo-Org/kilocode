@@ -2,6 +2,7 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -9,23 +10,68 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 
+/**
+ * Budgets for `gh` reads.
+ *
+ * [GH_READ_TIMEOUT_MS] bounds an ordinary lookup; [GH_PROBE_TIMEOUT_MS] bounds the selector-less
+ * `gh pr view`, which has been observed hanging indefinitely inside a worktree. Both replace a single
+ * 30s budget that let one hanging command occupy a poll slot for an entire poll interval.
+ */
+internal const val GH_READ_TIMEOUT_MS = 10_000
+internal const val GH_PROBE_TIMEOUT_MS = 5_000
+
 /** Result of running a `git`/`gh` command. */
-internal data class CmdOut(val exit: Int, val stdout: String, val stderr: String) {
+internal data class CmdOut(
+    val exit: Int,
+    val stdout: String,
+    val stderr: String,
+    /** True when the process was killed for exceeding its timeout, so [exit] `-1` reads as a real
+     * failure reason instead of an unexplained one. */
+    val timeout: Boolean = false,
+) {
     val ok get() = exit == 0
 }
 
 /** PR for one checkout, plus the gh availability observed while resolving it. */
-internal data class PrLookup(val pr: WorktreePrDto? = null, val availability: GhAvailability = GhAvailability.OK)
+internal data class PrLookup(
+    val pr: WorktreePrDto? = null,
+    val availability: GhAvailability = GhAvailability.OK,
+    /**
+     * The pull request's GraphQL node id, which addresses the follow-up review-thread query. Empty when
+     * no PR was found or when `gh` answered without one.
+     */
+    val node: String = "",
+)
 
 /** Scalar fields every supported `gh` release and token can answer. */
-internal const val PR_FIELDS = "number,state,isDraft,url,title"
+internal const val PR_FIELDS = "id,number,state,isDraft,url,title"
 
 /**
- * [PR_FIELDS] plus the review verdict and CI rollup. Both are GraphQL sub-queries rather than scalars,
- * so an older `gh` rejects the field names outright and a restricted token is refused the data. See
+ * [PR_FIELDS] plus the review verdict, the CI rollup, and mergeability. None of the three is a plain
+ * column on the pull request — two are GraphQL sub-queries and the third is computed on demand — so an
+ * older `gh` rejects the field names outright and a restricted token is refused the data. See
  * [richRefusal] for how that is detected and [PrResolver] for the fallback.
+ *
+ * Mergeability rides this list rather than [PR_FIELDS] deliberately: it costs nothing extra here, and a
+ * `gh` old enough to refuse the CI rollup should not lose the pull request itself over a conflict marker.
  */
-internal const val PR_RICH_FIELDS = "$PR_FIELDS,reviewDecision,statusCheckRollup"
+internal const val PR_RICH_FIELDS = "$PR_FIELDS,reviewDecision,statusCheckRollup,mergeable"
+
+/**
+ * Review-conversation resolution flags for one pull request, addressed by node id.
+ *
+ * `reviewThreads` is GraphQL only — `gh pr view --json reviewThreads` answers `Unknown JSON field` on
+ * every release — so the unresolved count costs a second `gh` invocation whatever this asks for.
+ *
+ * Addressed by node id rather than owner/repo/number so it works on GitHub Enterprise, whose pull request
+ * urls do not match github.com and so cannot be parsed for a repository. `gh api` takes the host from the
+ * checkout it runs in, so the same command serves both.
+ *
+ * Only the flags are requested. Comment bodies, authors, and diff hunks would multiply the payload and the
+ * query's point cost to say nothing a badge shows.
+ */
+internal const val THREADS_QUERY =
+    "query(\$id: ID!) { node(id: \$id) { ... on PullRequest { reviewThreads(first: 100) { totalCount nodes { isResolved } } } } }"
 
 /** Why a `gh pr` command refused [PR_RICH_FIELDS], which decides whether the downgrade may latch. */
 internal enum class RichRefusal {
@@ -47,6 +93,12 @@ internal enum class RichRefusal {
  * org policies answer with a scope or forbidden error.
  */
 internal fun richRefusal(stderr: String): RichRefusal? {
+    // A checkout deleted mid-poll fails before `gh` runs, with `Cannot start a process, the working
+    // directory '...' does not exist` — which the field test below reads as a rejected field name. That
+    // is a race against one directory, not something this `gh` cannot do, and both callers latch on
+    // FIELD: one lost `gh` call would strip review, CI, and conversation state from every worktree in
+    // the IDE until it restarted. Agent Manager deletes worktrees routinely, so it happens for real.
+    if (badDir(stderr)) return null
     val text = stderr.lowercase()
     if (text.contains("unknown json field")) return RichRefusal.FIELD
     if (text.contains("doesn't exist") || text.contains("does not exist")) return RichRefusal.FIELD
@@ -70,7 +122,7 @@ internal fun richRefusal(stderr: String): RichRefusal? {
  * Commands are injected so the strategy ladder is testable without `gh` or network access.
  */
 internal class PrResolver(
-    private val gh: (Path, List<String>) -> CmdOut,
+    private val gh: (Path, List<String>, Int) -> CmdOut,
     private val git: (Path, List<String>) -> CmdOut,
 ) {
     // Volatile because prStatus resolves several checkouts concurrently. Two threads racing to clear it
@@ -78,21 +130,83 @@ internal class PrResolver(
     @Volatile
     private var rich = true
 
+    // Same reasoning as [rich], for the review-thread query.
+    @Volatile
+    private var threads = true
+
     /**
      * Resolves the PR for the checkout at [path] on [branch]. [base] is the repository's base
      * branch; a PR headed by it is not worth a search query, so strategy 3 is skipped there.
      */
     fun resolve(path: String, branch: String, base: String?): PrLookup {
         val dir = Path.of(path).normalize()
-        view(dir, path, null)?.let { return it }
-        view(dir, path, branch)?.let { return it }
-        if (branch == base) return PrLookup()
-        return search(dir, path) ?: PrLookup()
+        return comments(dir, find(dir, path, branch, base))
+    }
+
+    /**
+     * The strategy ladder, answering with the PR alone — no review conversations yet.
+     *
+     * Naming the branch comes first: the selector-less form is the one observed hanging indefinitely
+     * in a worktree, and for an Agent Manager worktree the branch is always known. The selector-less
+     * form still runs afterwards, on a short budget, because it is the only one that resolves a fork
+     * PR through `branch.<name>.merge`.
+     */
+    private fun find(dir: Path, path: String, branch: String, base: String?): PrLookup {
+        val slow = Timeouts()
+        view(dir, path, branch, GH_READ_TIMEOUT_MS, slow)?.let { return it }
+        view(dir, path, null, GH_PROBE_TIMEOUT_MS, slow)?.let { return it }
+        if (branch != base) search(dir, path, slow)?.let { return it }
+        // Nothing answered. A ladder that timed out has not established that there is no PR, so it
+        // must not report one absent — the frontend keeps the previous answer for an unavailable gh.
+        return if (slow.hit) PrLookup(availability = GhAvailability.TIMEOUT) else PrLookup()
+    }
+
+    /** Records whether any strategy in one ladder run exceeded its budget. */
+    private class Timeouts {
+        var hit = false
+    }
+
+    /**
+     * [found], with the pull request's unresolved review-conversation count filled in.
+     *
+     * Only live pull requests pay for it. The query is a process spawn per row per poll, and unresolved
+     * feedback on something already merged or closed is not work anyone is waiting on.
+     *
+     * A spent budget answers nothing about this pull request, and the DTO's default count reads as "every
+     * conversation settled" — so it is reported the way a refused `gh pr view` is, with no PR at all. That
+     * is what lets the frontend's `held` keep the previous answer, count included, instead of blanking a
+     * conversation badge for the best part of an hour over a lookup that never ran.
+     *
+     * Only a rejected field name latches the query off, exactly as [RichRefusal.FIELD] does for review and
+     * CI fields: it is the one failure true of every repository this process sees, so a `gh` that cannot
+     * answer threads costs one call in total rather than one per checkout on every poll. A per-repository
+     * access refusal or a transient failure costs this poll's count and nothing else — one resolver serves
+     * every checkout, so latching on those would strip the badge from every other worktree until the IDE
+     * restarts.
+     */
+    private fun comments(dir: Path, found: PrLookup): PrLookup {
+        val pr = found.pr ?: return found
+        if (pr.state != GhState.OPEN && pr.state != GhState.DRAFT) return found
+        if (!threads || found.node.isEmpty()) return found
+        val out = gh(dir, listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=${found.node}"), GH_READ_TIMEOUT_MS)
+        if (out.ok) return found.copy(pr = pr.copy(comments = parseThreads(out.stdout)))
+        // A killed process flushes no stderr, so neither the rate-limit nor the refusal test below can
+        // see a timeout. Left to fall through it would return `found` with the default count, reading
+        // as "every conversation settled" — the same position as a refusal, so reported the same way.
+        if (out.timeout) return PrLookup(availability = GhAvailability.TIMEOUT)
+        if (rateLimited(out.stderr.lowercase())) return PrLookup(availability = GhAvailability.RATE_LIMITED)
+        if (richRefusal(out.stderr) == RichRefusal.FIELD) {
+            threads = false
+            LOG.info("gh cannot answer review threads, dropping the comment count: ${out.stderr.trim()}")
+            return found
+        }
+        LOG.info("review thread lookup failed, will ask again next poll: ${out.stderr.trim()}")
+        return found
     }
 
     /** Null means "no PR here, keep looking"; a value is terminal (a PR, or gh being unusable). */
-    private fun view(dir: Path, path: String, branch: String?): PrLookup? {
-        val out = query(dir) { fields ->
+    private fun view(dir: Path, path: String, branch: String?, timeoutMs: Int, slow: Timeouts): PrLookup? {
+        val out = query(dir, timeoutMs) { fields ->
             buildList {
                 add("pr")
                 add("view")
@@ -101,8 +215,8 @@ internal class PrResolver(
                 add(fields)
             }
         }
-        if (!out.ok) return unusable(out.stderr)
-        return parsePr(path, out.stdout)?.let { PrLookup(it) }
+        if (!out.ok) return unusable(out, slow)
+        return parsePr(path, out.stdout)?.let { PrLookup(it, node = parsePrNodeId(out.stdout)) }
     }
 
     /**
@@ -115,9 +229,9 @@ internal class PrResolver(
      * for the repository that reported it, so latching would strip review/CI from every other
      * checkout until the IDE restarts.
      */
-    private fun query(dir: Path, command: (String) -> List<String>): CmdOut {
+    private fun query(dir: Path, timeoutMs: Int = GH_READ_TIMEOUT_MS, command: (String) -> List<String>): CmdOut {
         val wanted = if (rich) PR_RICH_FIELDS else PR_FIELDS
-        val out = gh(dir, command(wanted))
+        val out = gh(dir, command(wanted), timeoutMs)
         if (out.ok || wanted == PR_FIELDS) return out
         // A spent budget refuses the scalar form just as readily, so retrying only burns another call.
         if (rateLimited(out.stderr.lowercase())) return out
@@ -126,28 +240,37 @@ internal class PrResolver(
             rich = false
             LOG.info("gh cannot answer review/CI fields, falling back to scalars: ${out.stderr.trim()}")
         }
-        return gh(dir, command(PR_FIELDS))
+        return gh(dir, command(PR_FIELDS), timeoutMs)
     }
 
-    private fun search(dir: Path, path: String): PrLookup? {
+    private fun search(dir: Path, path: String, slow: Timeouts): PrLookup? {
         val head = git(dir, listOf("rev-parse", "HEAD")).stdout.trim()
         if (head.isEmpty()) return null
         val out = query(dir) { fields ->
             listOf("pr", "list", "--state", "all", "--search", "$head is:pr", "--limit", "5", "--json", "$fields,headRefOid")
         }
-        if (!out.ok) return unusable(out.stderr)
+        if (!out.ok) return unusable(out, slow)
         val items = runCatching { json.parseToJsonElement(out.stdout) as? JsonArray }.getOrNull() ?: return null
         for (item in items) {
             val obj = item as? JsonObject ?: continue
             // The search matches commit mentions too, so only an exact head match is our PR.
             if (obj["headRefOid"]?.jsonPrimitive?.content != head) continue
-            parsePr(path, obj.toString())?.let { return PrLookup(it) }
+            val raw = obj.toString()
+            parsePr(path, raw)?.let { return PrLookup(it, node = parsePrNodeId(raw)) }
         }
         return null
     }
 
-    private fun unusable(stderr: String): PrLookup? {
-        val status = prError(stderr)
+    /**
+     * A timed-out lookup is not evidence that the PR does not exist, so it does not end the ladder —
+     * but it is recorded, so a ladder that never answers reports a timeout instead of "no PR".
+     */
+    private fun unusable(out: CmdOut, slow: Timeouts): PrLookup? {
+        if (out.timeout) {
+            slow.hit = true
+            return null
+        }
+        val status = prError(out.stderr)
         return if (status == GhAvailability.OK) null else PrLookup(availability = status)
     }
 }

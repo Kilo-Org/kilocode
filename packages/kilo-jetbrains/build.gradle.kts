@@ -301,6 +301,15 @@ tasks.withType<RunIdeTask> {
     systemProperty("kilo.dev.log.chat.preview.max", preview)
     systemProperty("kilo.dev.storage.isolated", isolated.get().toString())
     systemProperty("kilo.dev.worktree.root", worktreeRoot.get())
+    // Suppress IntelliJ feedback surveys ("Share Your Experience" / "Take Survey" popups) in dev runs.
+    // These are registry keys from platform/feedback; registry values can be overridden with -D<key>=<value>.
+    systemProperty("platform.feedback", "false")
+    systemProperty("csat.survey.enabled", "false")
+    systemProperty("editor.ux.survey.enabled", "false")
+    // Internal mode: enables the Split Mode latency widget and the Internal Actions menu.
+    // Property name is ApplicationManagerEx.IS_INTERNAL_PROPERTY; the embedded JetBrains Client
+    // inherits it from the backend (EmbeddedClientLauncher.passProperties).
+    systemProperty("idea.is.internal", "true")
 }
 
 tasks.named<Delete>("clean") {
