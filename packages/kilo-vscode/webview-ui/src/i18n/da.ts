@@ -1129,6 +1129,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Aldrig kørt",
   "settings.autoCleanup.result":
     "{{date}}: slettede {{deleted}} af {{scanned}} sessioner ({{active}} aktive sprunget over, {{failed}} fejlede) på {{seconds}}s",
+  "settings.autoCleanup.starting": "Starter oprydning af sessioner...",
+  "settings.autoCleanup.error.status": "Status for oprydning af sessioner er midlertidigt utilgængelig. Prøver igen...",
+  "settings.autoCleanup.error.timeout": "Venter på oprydningsstatus. Backend tager længere tid end forventet.",
+  "settings.autoCleanup.error.run":
+    "Kunne ikke bekræfte, at oprydningen af sessioner er fuldført. Kontrollér resultatet af den sidste oprydning, før du prøver igen.",
+  "settings.autoCleanup.progress.scanning": "Scanner sessioner: {{processed}}/{{total}} behandlet",
+  "settings.autoCleanup.progress.deleting":
+    "Sletter sessioner: {{processed}}/{{total}} behandlet ({{deleted}} slettet, {{failed}} fejlede)",
   "settings.autoCleanup.runNow": "Kør oprydning nu",
   "settings.autoCleanup.runNow.confirm":
     "Slet udløbne sessioner permanent på tværs af alle projekter og alle Kilo-klienter på denne maskine?",

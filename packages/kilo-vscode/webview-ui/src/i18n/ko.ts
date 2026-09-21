@@ -1111,6 +1111,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "실행된 적 없음",
   "settings.autoCleanup.result":
     "{{date}}: {{scanned}}개 중 {{deleted}}개 세션 삭제({{active}}개 활성 건너뜀, {{failed}}개 실패), {{seconds}}초",
+  "settings.autoCleanup.starting": "세션 정리를 시작하는 중...",
+  "settings.autoCleanup.error.status": "세션 정리 상태를 일시적으로 확인할 수 없습니다. 다시 시도하는 중...",
+  "settings.autoCleanup.error.timeout": "정리 상태를 기다리는 중입니다. 백엔드 응답이 예상보다 오래 걸리고 있습니다.",
+  "settings.autoCleanup.error.run":
+    "세션 정리 완료를 확인할 수 없습니다. 다시 시도하기 전에 마지막 정리 결과를 확인하세요.",
+  "settings.autoCleanup.progress.scanning": "세션 검색 중: {{processed}}/{{total}}개 처리됨",
+  "settings.autoCleanup.progress.deleting":
+    "세션 삭제 중: {{processed}}/{{total}}개 처리됨({{deleted}}개 삭제, {{failed}}개 실패)",
   "settings.autoCleanup.runNow": "지금 정리 실행",
   "settings.autoCleanup.runNow.confirm":
     "이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트에 걸쳐 만료된 세션을 영구적으로 삭제할까요?",

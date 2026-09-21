@@ -1108,6 +1108,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "ยังไม่เคยรัน",
   "settings.autoCleanup.result":
     "{{date}}: ลบ {{deleted}} จาก {{scanned}} เซสชัน (ข้ามเซสชันที่กำลังทำงาน {{active}} เซสชัน, ล้มเหลว {{failed}}) ใน {{seconds}} วินาที",
+  "settings.autoCleanup.starting": "กำลังเริ่มการล้างเซสชัน...",
+  "settings.autoCleanup.error.status": "ไม่สามารถดูสถานะการล้างเซสชันได้ชั่วคราว กำลังลองใหม่...",
+  "settings.autoCleanup.error.timeout": "กำลังรอสถานะการล้าง ระบบเบื้องหลังใช้เวลานานกว่าที่คาดไว้",
+  "settings.autoCleanup.error.run":
+    "ไม่สามารถยืนยันได้ว่าการล้างเซสชันเสร็จสมบูรณ์ โปรดตรวจสอบผลการล้างล่าสุดก่อนลองอีกครั้ง",
+  "settings.autoCleanup.progress.scanning": "กำลังสแกนเซสชัน: ประมวลผลแล้ว {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "กำลังลบเซสชัน: ประมวลผลแล้ว {{processed}}/{{total}} (ลบแล้ว {{deleted}}, ล้มเหลว {{failed}})",
   "settings.autoCleanup.runNow": "รันการล้างเดี๋ยวนี้",
   "settings.autoCleanup.runNow.confirm":
     "ลบเซสชันที่หมดอายุอย่างถาวรทั่วทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้หรือไม่?",
