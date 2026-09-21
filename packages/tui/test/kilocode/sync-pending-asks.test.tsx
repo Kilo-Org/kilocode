@@ -240,3 +240,51 @@ test("a failed pending list fetch keeps existing asks", async () => {
     app.renderer.destroy()
   }
 })
+
+test("an ask created and answered during the refetch is not resurrected", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  let resolveSecond!: (value: PermissionRequest[]) => void
+  const second = new Promise<PermissionRequest[]>((resolve) => {
+    resolveSecond = resolve
+  })
+  let seen = 0
+  const { app, emit, sync } = await mount(
+    (url) => {
+      if (url.pathname === "/permission") {
+        seen += 1
+        // bootstrap consumes the first list call; the session sync holds the second
+        return seen === 1 ? json([]) : second.then((data) => json(data))
+      }
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+  )
+
+  try {
+    // The store is empty when the refetch snapshots, so the new ask's ID is
+    // absent from the pre-fetch list.
+    const hydrate = sync.session.sync(childID)
+    await wait(() => seen === 2)
+    // The ask is created and answered while the stale list (which still
+    // contains it) is in flight. Wait for each event to land in the store so
+    // the merge below runs after the reply was processed.
+    emit(wrap({ id: "evt_ask", type: "permission.asked", properties: permission("per_1") }))
+    await wait(() => (sync.data.permission[childID] ?? []).length === 1)
+    emit(
+      wrap({
+        id: "evt_replied",
+        type: "permission.replied",
+        properties: { sessionID: childID, requestID: "per_1", reply: "once" },
+      }),
+    )
+    await wait(() => (sync.data.permission[childID] ?? []).length === 0)
+    resolveSecond([permission("per_1")])
+    await hydrate
+
+    // The stale list must not resurrect the answered ask.
+    expect(sync.data.permission[childID]).toBeUndefined()
+  } finally {
+    app.renderer.destroy()
+  }
+})

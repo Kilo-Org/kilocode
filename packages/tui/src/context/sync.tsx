@@ -192,6 +192,7 @@ export const {
       list: T[],
       current: Record<string, T[]>,
       before: Set<string>,
+      settled: Set<string>,
     ): Record<string, T[]> {
       const fresh: Record<string, T[]> = {}
       for (const request of list) (fresh[request.sessionID] ??= []).push(request)
@@ -199,6 +200,7 @@ export const {
       for (const sessionID of new Set([...Object.keys(current), ...Object.keys(fresh)])) {
         const merged = new Map<string, T>()
         for (const request of fresh[sessionID] ?? []) {
+          if (settled.has(request.id)) continue // kilocode_change - answered while the list was in flight
           // skip entries the store already dropped (replied mid-fetch): the stale list resurrects answered asks
           if (before.has(request.id) && !(current[sessionID] ?? []).some((r) => r.id === request.id)) continue
           merged.set(request.id, request)
@@ -226,13 +228,18 @@ export const {
         sdk.client.question.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
       ])
       if (permission.mode === "auto") {
-        for (const request of permissions)
+        for (const request of permissions) {
+          terminal.add(request.id) // kilocode_change - the auto-reply settles this ask
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
+        }
         setStore("permission", reconcile({}))
       } else {
-        setStore("permission", reconcile(mergePending(permissions, store.permission, before.permission)))
+        setStore(
+          "permission",
+          reconcile(mergePending(permissions, store.permission, before.permission, terminal)),
+        )
       }
-      setStore("question", reconcile(mergePending(questions, store.question, before.question)))
+      setStore("question", reconcile(mergePending(questions, store.question, before.question, terminal)))
     }
 
     function strip(message: Message): Message {
@@ -243,6 +250,8 @@ export const {
 
     const fullSyncedSessions = new Set<string>()
     const deleted = new Set<string>() // kilocode_change
+        // kilocode_change - request IDs already replied/rejected; a stale pending list must not resurrect them
+    const terminal = new Set<string>() // kilocode_change
     let syncedWorkspace = project.workspace.current() // kilocode_change
     let vcsVersion = 0 // kilocode_change
     const syncingSessions = new Map<string, Promise<void>>()
@@ -275,11 +284,14 @@ export const {
         case "server.instance.disposed":
           // kilocode_change start
           deleted.clear()
+          terminal.clear()
           setStore("background_process", {})
           // kilocode_change end
           void bootstrap()
           break
         case "permission.replied": {
+          terminal.add(event.properties.requestID) // kilocode_change - a replied ask is terminal: a stale list must not resurrect it
+          if (terminal.size > 512) terminal.delete(terminal.values().next().value) // kilocode_change
           const requests = store.permission[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -296,6 +308,7 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
+          if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
           if (permission.mode === "auto") {
             void sdk.client.permission.reply({
               requestID: request.id,
@@ -327,6 +340,8 @@ export const {
 
         case "question.replied":
         case "question.rejected": {
+          terminal.add(event.properties.requestID) // kilocode_change - a settled question is terminal: a stale list must not resurrect it
+          if (terminal.size > 512) terminal.delete(terminal.values().next().value) // kilocode_change
           const requests = store.question[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -343,6 +358,7 @@ export const {
 
         case "question.asked": {
           const request = event.properties
+          if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
           const requests = store.question[request.sessionID]
           if (!requests) {
             setStore("question", request.sessionID, [request])
