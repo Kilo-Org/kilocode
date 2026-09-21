@@ -400,6 +400,30 @@ describe("handleProjectMessage", () => {
     expect(calls.expand).toEqual([id])
   })
 
+  it("keeps expansion and UI updates when initialization rejects", async () => {
+    const repo = gitRepo()
+    const { deps, registry, calls } = setup()
+    const id = projectIdFor(repo)
+    const err = new Error("State write failed")
+    const logs: unknown[][] = []
+    deps.ready = async (ctx, options) => {
+      expect(ctx.id).toBe(id)
+      expect(options).toEqual({ warm: true })
+      throw err
+    }
+    deps.log = (...args) => logs.push(args)
+    await registry.add({ id, root: repo })
+
+    expect(
+      await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps),
+    ).toBe(true)
+
+    expect(logs).toEqual([["Failed to initialize expanded project:", err]])
+    expect(registry.expanded(id)).toBe(true)
+    expect(calls.expand).toEqual([id])
+    expect(calls.push).toBe(1)
+  })
+
   it("persists project expansion state across registry instances", async () => {
     const repo = gitRepo()
     const { deps, registry, storage, calls } = setup()

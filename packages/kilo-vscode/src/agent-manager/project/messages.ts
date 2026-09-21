@@ -348,7 +348,7 @@ async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDe
   if (expanded) {
     const next = deps.contexts.expand(id)
     if (next) {
-      await deps.ready(next, { warm: true })
+      await deps.ready(next, { warm: true }).catch((err) => deps.log("Failed to initialize expanded project:", err))
       deps.expand(next)
     }
   }
