@@ -158,7 +158,7 @@ afterEach(() => {
 
 describe("session processor retry limit", () => {
   it.live(
-    "stops after two retries with the normalized retryable error",
+    "keeps provider retries alive when the optional retry hook fails",
     () =>
       provideTmpdirProject(
         (dir) =>
@@ -167,6 +167,7 @@ describe("session processor retry limit", () => {
             const test = yield* TestLLM
             const processors = yield* SessionProcessor.Service
             const session = yield* Session.Service
+            const events = yield* EventV2Bridge.Service
 
             // 3 retryable 429 errors + sentinel (should not be reached)
             yield* test.push(Stream.fail(retryable429()))
@@ -202,10 +203,29 @@ describe("session processor retry limit", () => {
             yield* session.updateMessage(msg)
 
             const mdl = model()
+            const hooks = { gate: 0, retry: 0 }
+            const states: number[] = []
+            const off = yield* events.listen((evt) => {
+              if (evt.type !== SessionStatus.Event.Status.type) return Effect.void
+              const data = evt.data as typeof SessionStatus.Event.Status.data.Type
+              if (data.sessionID === chat.id && data.status.type === "retry") states.push(data.status.attempt)
+              return Effect.void
+            })
             const handle = yield* processors.create({
               assistantMessage: msg,
               sessionID: chat.id,
               model: mdl,
+              gate: (effect) =>
+                Effect.sync(() => {
+                  hooks.gate++
+                }).pipe(Effect.andThen(effect)),
+              retry: (info) => {
+                expect(info.error && MessageV2.APIError.isInstance(info.error)).toBe(true)
+                if (info.error && MessageV2.APIError.isInstance(info.error)) expect(info.error.data.statusCode).toBe(429)
+                hooks.retry++
+                if (hooks.retry === 1) throw new Error("synchronous retry hook failure")
+                return Effect.die(new Error("retry hook defect"))
+              },
             })
 
             const input: LLM.StreamInput = {
@@ -225,8 +245,11 @@ describe("session processor retry limit", () => {
 
               expect(result).toBe("stop")
               expect(calls).toBe(3)
+              expect(hooks).toEqual({ gate: 3, retry: 2 })
+              expect(states).toStrictEqual([1, 2])
               expect(handle.message.error).toStrictEqual(expected)
             } finally {
+              yield* off
               delay.mockRestore()
             }
           }),
