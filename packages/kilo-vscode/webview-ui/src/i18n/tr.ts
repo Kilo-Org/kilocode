@@ -1089,6 +1089,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Hiç çalıştırılmadı",
   "settings.autoCleanup.result":
     "{{date}}: {{scanned}} oturumdan {{deleted}} tanesi silindi ({{active}} etkin atlandı, {{failed}} başarısız) {{seconds}} sn içinde",
+  "settings.autoCleanup.starting": "Oturum temizliği başlatılıyor...",
+  "settings.autoCleanup.error.status": "Oturum temizliği durumu geçici olarak kullanılamıyor. Yeniden deneniyor...",
+  "settings.autoCleanup.error.timeout": "Temizlik durumu bekleniyor. Arka uç beklenenden uzun sürüyor.",
+  "settings.autoCleanup.error.run":
+    "Oturum temizliğinin tamamlandığı doğrulanamadı. Yeniden denemeden önce son temizlik sonucunu kontrol edin.",
+  "settings.autoCleanup.progress.scanning": "Oturumlar taranıyor: {{processed}}/{{total}} işlendi",
+  "settings.autoCleanup.progress.deleting":
+    "Oturumlar siliniyor: {{processed}}/{{total}} işlendi ({{deleted}} silindi, {{failed}} başarısız)",
   "settings.autoCleanup.runNow": "Temizliği şimdi çalıştır",
   "settings.autoCleanup.runNow.confirm":
     "Süresi dolmuş oturumlar bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde kalıcı olarak silinsin mi?",
