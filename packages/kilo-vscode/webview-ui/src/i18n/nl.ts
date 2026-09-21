@@ -1101,7 +1101,8 @@ export const dict = {
   "settings.autoCleanup.result":
     "{{date}}: {{deleted}} van {{scanned}} sessies verwijderd ({{active}} actief overgeslagen, {{failed}} mislukt) in {{seconds}}s",
   "settings.autoCleanup.starting": "Sessieopschoning wordt gestart...",
-  "settings.autoCleanup.error.status": "De status van de sessieopschoning is tijdelijk niet beschikbaar. Opnieuw proberen...",
+  "settings.autoCleanup.error.status":
+    "De status van de sessieopschoning is tijdelijk niet beschikbaar. Opnieuw proberen...",
   "settings.autoCleanup.error.timeout": "Wachten op de opschoningsstatus. De backend doet er langer over dan verwacht.",
   "settings.autoCleanup.error.run":
     "Kon niet bevestigen dat de sessieopschoning is voltooid. Controleer het resultaat van de laatste opschoning voordat je het opnieuw probeert.",

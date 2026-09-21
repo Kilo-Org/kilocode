@@ -1116,7 +1116,8 @@ export const dict = {
     "{{date}}: {{deleted}} از {{scanned}} جلسه حذف شد ({{active}} فعال رد شد، {{failed}} ناموفق) در {{seconds}} ثانیه",
   "settings.autoCleanup.starting": "در حال شروع پاکسازی جلسه‌ها...",
   "settings.autoCleanup.error.status": "وضعیت پاکسازی جلسه‌ها موقتاً در دسترس نیست. در حال تلاش مجدد...",
-  "settings.autoCleanup.error.timeout": "در انتظار وضعیت پاکسازی. پاسخ‌دهی بخش پشتیبان بیشتر از حد انتظار طول کشیده است.",
+  "settings.autoCleanup.error.timeout":
+    "در انتظار وضعیت پاکسازی. پاسخ‌دهی بخش پشتیبان بیشتر از حد انتظار طول کشیده است.",
   "settings.autoCleanup.error.run":
     "تکمیل پاکسازی جلسه‌ها تأیید نشد. پیش از تلاش مجدد، نتیجه آخرین پاکسازی را بررسی کنید.",
   "settings.autoCleanup.progress.scanning": "در حال اسکن جلسه‌ها: {{processed}}/{{total}} پردازش شده",

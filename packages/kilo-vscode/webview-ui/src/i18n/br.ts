@@ -1143,7 +1143,8 @@ export const dict = {
   "settings.autoCleanup.result":
     "{{date}}: excluídas {{deleted}} de {{scanned}} sessões ({{active}} ativas ignoradas, {{failed}} falharam) em {{seconds}}s",
   "settings.autoCleanup.starting": "Iniciando a limpeza de sessões...",
-  "settings.autoCleanup.error.status": "O status da limpeza de sessões está temporariamente indisponível. Tentando novamente...",
+  "settings.autoCleanup.error.status":
+    "O status da limpeza de sessões está temporariamente indisponível. Tentando novamente...",
   "settings.autoCleanup.error.timeout": "Aguardando o status da limpeza. O backend está demorando mais que o esperado.",
   "settings.autoCleanup.error.run":
     "Não foi possível confirmar a conclusão da limpeza de sessões. Verifique o resultado da última limpeza antes de tentar novamente.",

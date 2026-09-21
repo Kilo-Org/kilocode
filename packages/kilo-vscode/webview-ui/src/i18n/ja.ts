@@ -1124,7 +1124,8 @@ export const dict = {
     "{{date}}: {{scanned}} 件中 {{deleted}} 件のセッションを削除（{{active}} 件のアクティブをスキップ、{{failed}} 件失敗）、{{seconds}} 秒",
   "settings.autoCleanup.starting": "セッションのクリーンアップを開始しています...",
   "settings.autoCleanup.error.status": "セッションのクリーンアップ状況を一時的に取得できません。再試行しています...",
-  "settings.autoCleanup.error.timeout": "クリーンアップ状況を待機中です。バックエンドの応答に予想以上の時間がかかっています。",
+  "settings.autoCleanup.error.timeout":
+    "クリーンアップ状況を待機中です。バックエンドの応答に予想以上の時間がかかっています。",
   "settings.autoCleanup.error.run":
     "セッションのクリーンアップ完了を確認できませんでした。再試行する前に、前回のクリーンアップ結果を確認してください。",
   "settings.autoCleanup.progress.scanning": "セッションをスキャン中: {{processed}}/{{total}} 件を処理済み",

@@ -1145,8 +1145,10 @@ export const dict = {
   "settings.autoCleanup.result":
     "{{date}}: eliminadas {{deleted}} de {{scanned}} sesiones ({{active}} activas omitidas, {{failed}} fallidas) en {{seconds}}s",
   "settings.autoCleanup.starting": "Iniciando la limpieza de sesiones...",
-  "settings.autoCleanup.error.status": "El estado de la limpieza de sesiones no está disponible temporalmente. Reintentando...",
-  "settings.autoCleanup.error.timeout": "Esperando el estado de la limpieza. El backend está tardando más de lo esperado.",
+  "settings.autoCleanup.error.status":
+    "El estado de la limpieza de sesiones no está disponible temporalmente. Reintentando...",
+  "settings.autoCleanup.error.timeout":
+    "Esperando el estado de la limpieza. El backend está tardando más de lo esperado.",
   "settings.autoCleanup.error.run":
     "No se pudo confirmar que la limpieza de sesiones haya finalizado. Comprueba el resultado de la última limpieza antes de volver a intentarlo.",
   "settings.autoCleanup.progress.scanning": "Analizando sesiones: {{processed}}/{{total}} procesadas",
