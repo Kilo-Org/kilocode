@@ -56,18 +56,16 @@ export namespace KiloCompactionPayloadRecovery {
     agent: Agent.Info
     sessionID: SessionID
     model: Provider.Model
-    prompt: string
+    prompt: (context: string[]) => string
     messages: MessageV2.WithParts[]
     serialize: (message: MessageV2.WithParts) => string
     recovery: MessageV2.WithParts[]
     updateMessage: UpdateMessage
     updatePart: Update
   }) {
-    const buildPrompt = (promptText: string, items: MessageV2.WithParts[]) => {
+    const build = (items: MessageV2.WithParts[]) => {
       const conversation = items.map(input.serialize).filter(Boolean).join("\n\n")
-      return [promptText, conversation ? "The following is the conversation history:" : undefined, conversation]
-        .filter(Boolean)
-        .join("\n\n")
+      return input.prompt(conversation ? [conversation] : [])
     }
 
     const run = Effect.fn("KiloCompactionPayloadRecovery.process")(function* (text: string) {
@@ -87,7 +85,7 @@ export namespace KiloCompactionPayloadRecovery {
       })
     })
 
-    return run(buildPrompt(input.prompt, input.messages)).pipe(
+    return run(build(input.messages)).pipe(
       Effect.flatMap((result) => {
         if (result !== "compact" && (result !== "stop" || !matches(input.processor.message.error))) {
           return Effect.succeed(result)
@@ -100,7 +98,7 @@ export namespace KiloCompactionPayloadRecovery {
           input.processor.message.finish = undefined
           yield* input.updateMessage(input.processor.message)
           yield* strip({ messages: input.recovery, update: input.updatePart })
-          return yield* run(prompt(buildPrompt(input.prompt, input.recovery)))
+          return yield* run(prompt(build(input.recovery)))
         })
       }),
     )
