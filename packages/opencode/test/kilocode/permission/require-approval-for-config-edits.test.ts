@@ -1486,7 +1486,7 @@ describe("require_approval_for_config_edits", () => {
               const other = path.join(os.tmpdir(), `opencode-read-other-${process.pid}-${Date.now()}`)
               yield* Effect.promise(() => fs.mkdir(other, { recursive: true }))
               yield* Effect.promise(() => fs.writeFile(path.join(other, "secret.txt"), "x"))
-              yield* Effect.promise(() => fs.rm(alias, { force: true }))
+              yield* Effect.promise(() => fs.rm(alias, { recursive: true, force: true }))
               yield* Effect.promise(() => fs.symlink(other, alias, link))
 
               const second = yield* assertExternalDirectoryEffect(

@@ -117,8 +117,10 @@ export namespace ConfigProtection {
 
     const expand = (value: string) => {
       const full = path.posix.normalize(value.replaceAll("\\", "/")).toLowerCase()
+      // MSYS/Git Bash spells the same drive as `/c/...`. Keep that as an extra alias instead of
+      // dropping the drive letter, so containment still requires both paths to share a drive.
       const msys = full.replace(/^\/([a-z])(?=\/)/, "$1:")
-      return [full, full.replace(/^[a-z]:/, ""), msys, msys.replace(/^[a-z]:/, "")]
+      return [full, msys]
     }
 
     return Array.from(new Set([...expand(p), ...expand(path.resolve(p))]))
@@ -255,17 +257,6 @@ export namespace ConfigProtection {
     }
   }
 
-  function fallback(p: string): boolean {
-    if (process.platform !== "win32") return false
-    return keys(p).some(
-      (key) =>
-        key.endsWith("/config/kilo") ||
-        key.includes("/config/kilo/") ||
-        key.endsWith("/.config/kilo") ||
-        key.includes("/.config/kilo/"),
-    )
-  }
-
   /** Check if `child` is equal to or nested inside `parent`. */
   function within(child: string, parent: string): boolean {
     const sep = process.platform === "win32" ? "/" : path.sep
@@ -276,7 +267,6 @@ export namespace ConfigProtection {
 
   /** Check if an absolute path is inside a known CLI config directory. */
   export function isAbsolute(filepath: string): boolean {
-    if (fallback(filepath)) return true
     const target = physical(filepath)
 
     // ~/.config/kilo/ (XDG config)
@@ -359,11 +349,15 @@ export namespace ConfigProtection {
    */
   function level(target: string, root: string): Scope {
     const abs = path.isAbsolute(target) ? path.resolve(target) : path.resolve(root, target)
+    // Keep the un-resolved join for the physical walk: `..` must be applied to the already-resolved
+    // physical parent by `canonical()`, not collapsed lexically by `path.resolve` before symlinks
+    // are followed. `abs` stays the lexical spelling for the requested-path classification.
+    const raw = path.isAbsolute(target) ? target : joinRaw(root, target)
     // Global config dirs stay global even when physically inside the project boundary.
-    if (isAbsolute(abs)) return "global"
+    if (isAbsolute(raw)) return "global"
 
     const canonRoot = physical(root)
-    const canon = physical(abs)
+    const canon = physical(raw)
     if (!protectedTarget(target, abs, root, canon, canonRoot)) return "none"
     // A protected target whose physical location is unprovable is neither inside nor outside.
     if (!canon || !canonRoot) return "unproven"

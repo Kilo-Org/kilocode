@@ -7,6 +7,7 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Exit, Fiber, Layer, Option } from "effect"
 import fs from "fs/promises"
+import os from "os"
 import path from "path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
@@ -282,6 +283,51 @@ describe("dangling config symlinks through the real WriteTool", () => {
               ),
             ),
           ).toBe(false)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("prompts when a raw absolute `..` follows an in-project symlink out of the boundary", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(resetGlobal)
+          yield* Effect.promise(() =>
+            fs.writeFile(path.join(dir, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false })),
+          )
+          yield* Effect.promise(() =>
+            fs.writeFile(primary("kilo.json"), JSON.stringify({ require_approval_for_config_edits: true })),
+          )
+          const base = yield* Effect.promise(() => fs.mkdtemp(path.join(os.tmpdir(), "opencode-raw-escape-")))
+          const outside = path.join(base, "outside")
+          yield* Effect.promise(() => fs.mkdir(outside, { recursive: true }))
+          yield* Effect.promise(() =>
+            fs.symlink(outside, path.join(dir, "link"), process.platform === "win32" ? "junction" : "dir"),
+          )
+          // The file tool keeps the absolute spelling; only the kernel applies `..` to the physical
+          // symlink target, so the write would land outside the project without the classification fix.
+          const raw = dir + path.sep + "link" + path.sep + ".." + path.sep + ".kilo" + path.sep + "kilo.json"
+          const physical = path.join(base, ".kilo", "kilo.json")
+          try {
+            expect(
+              ConfigProtection.classify({ permission: "edit", patterns: [raw], metadata: { filepath: raw } }, dir),
+            ).toMatchObject({ candidate: true, external: true, inside: false })
+
+            const result = yield* run("per_raw_escape", raw, '{"username":"raw-escape"}')
+            expect(result.kind).toBe("prompt")
+            expect(Exit.isFailure(result.exit)).toBe(true)
+            expect(
+              yield* Effect.promise(() =>
+                fs.stat(physical).then(
+                  () => true,
+                  () => false,
+                ),
+              ),
+            ).toBe(false)
+          } finally {
+            yield* Effect.promise(() => fs.rm(base, { recursive: true, force: true }))
+          }
         }),
       { git: true },
     ),

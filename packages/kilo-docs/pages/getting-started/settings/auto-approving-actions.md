@@ -289,7 +289,7 @@ Config file edits always require approval by default, even when `edit` or `exter
 - Project `.kilo/` and `.kilocode/` directories at any depth, except `plans/`
 - Global config directories `~/.config/kilo/`, `~/.kilo/`, and `~/.kilocode/`
 
-Protection by filename applies to the root-level `AGENTS.md` and the root-level config files above. A nested `AGENTS.md` or `AGENT.md` is not protected by name alone, but any file inside a project `.kilo/` or `.kilocode/` directory, or inside a global config directory, is still protected by directory, except files in an exempt `plans/` subtree.
+Protection by filename applies to the root-level `AGENTS.md` and the root-level config files above. A nested `AGENTS.md` or `AGENT.md` is not protected by name alone, but any file inside a project `.kilo/` or `.kilocode/` directory is still protected by directory, except files in an exempt `plans/` subtree. The `plans/` exemption is project-only: a `plans/` subtree inside a global config directory (for example `~/.config/kilo/plans/x.md`) is still protected.
 
 Set `require_approval_for_config_edits` to `false` to disable the check. The setting is scoped to where you set it:
 

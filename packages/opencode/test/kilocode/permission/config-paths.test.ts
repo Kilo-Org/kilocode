@@ -704,6 +704,38 @@ describe("ConfigProtection.classify + verdict", () => {
     }
   })
 
+  test("applies `..` after a symlink component in a raw absolute target to the physical parent", async () => {
+    await using tmp = await tmpdir()
+    await using outside = await tmpdir()
+    await fs.symlink(outside.path, path.join(tmp.path, "link"), link)
+    // Build the raw target by string concatenation: path.join would collapse the `..` lexically, but
+    // a file tool passes the absolute spelling through and the kernel applies `..` to `link`'s
+    // physical target (the parent of `outside`), so this lands outside the project.
+    const raw = tmp.path + path.sep + "link" + path.sep + ".." + path.sep + ".kilo" + path.sep + "kilo.json"
+    const on = { require_approval_for_config_edits: true }
+    const off = { require_approval_for_config_edits: false }
+    expect(check(raw, tmp.path, on, off)).toMatchObject({ candidate: true, external: true, protect: true })
+    expect(check(raw, tmp.path, off, on)).toMatchObject({ candidate: true, external: true, protect: false })
+  })
+
+  test("keeps a global config plans subtree under the global policy", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    const plan = path.join(tmp.path, "plans", "plan.md")
+    await fs.mkdir(path.dirname(plan), { recursive: true })
+    try {
+      // The `plans/` exemption is project-only; a global config `plans/` subtree stays protected.
+      expect(check(plan, tmp.path, undefined, { require_approval_for_config_edits: false })).toMatchObject({
+        candidate: true,
+        external: true,
+        protect: true,
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+    }
+  })
+
   test("consults both policies for an unprovable symlink cycle", async () => {
     await using tmp = await tmpdir()
     await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
@@ -781,6 +813,51 @@ describe("ConfigProtection.classify + verdict", () => {
       check(".kilo/missing.json", tmp.path, undefined, { require_approval_for_config_edits: false }),
     ).toMatchObject({ candidate: true, external: false, protect: false })
   })
+})
+
+// These run natively on the Windows CI shard; they cannot be reproduced on POSIX because the drive
+// and MSYS spellings only exist there. The pure `keys()` comparison is the implementation under test.
+describe("ConfigProtection Windows drive containment", () => {
+  test.skipIf(process.platform !== "win32")("keeps a different drive outside the project boundary", () => {
+    const root = "D:\\repo"
+    expect(
+      ConfigProtection.classify({ permission: "edit", patterns: ["C:\\repo\\.kilo\\kilo.json"] }, root),
+    ).toMatchObject({
+      candidate: true,
+      external: true,
+      inside: false,
+    })
+    expect(
+      ConfigProtection.classify({ permission: "edit", patterns: ["D:\\repo\\.kilo\\kilo.json"] }, root),
+    ).toMatchObject({
+      candidate: true,
+      external: false,
+      inside: true,
+    })
+    // MSYS `/d/...` is the same drive as `D:\`, so it stays inside.
+    expect(
+      ConfigProtection.classify({ permission: "edit", patterns: ["/d/repo/.kilo/kilo.json"] }, root),
+    ).toMatchObject({
+      candidate: true,
+      external: false,
+      inside: true,
+    })
+  })
+
+  test.skipIf(process.platform !== "win32")(
+    "does not classify an ordinary project path containing config/kilo as global",
+    () => {
+      const root = "C:\\repo"
+      const generic = "C:\\repo\\config\\kilo\\.kilo\\settings.json"
+      expect(ConfigProtection.isAbsolute(generic)).toBe(false)
+      expect(ConfigProtection.classify({ permission: "edit", patterns: [generic] }, root)).toMatchObject({
+        candidate: true,
+        external: false,
+        inside: true,
+      })
+      expect(ConfigProtection.isAbsolute("C:\\repo\\.kilo\\settings.json")).toBe(false)
+    },
+  )
 })
 
 describe("ConfigProtection.classify", () => {

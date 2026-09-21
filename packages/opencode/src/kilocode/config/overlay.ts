@@ -272,33 +272,32 @@ export namespace KilocodeConfigOverlay {
   }
   // kilocode_change end
 
-  async function load(file: string, fileScope?: ConfigVariable.FileScope, trusted = false): Promise<Config.Info> {
+  async function load(file: string, fileScope?: ConfigVariable.FileScope): Promise<Config.Info> {
     // kilocode_change start - a single unsafe/invalid project config file must not break the settings overlay;
     // untrusted {env:} and out-of-scope {file:} throw InvalidError here, so skip the offending file like the
     // main config loader does rather than failing the whole overlay.
-    return await loadUnsafe(file, fileScope, trusted).catch((err) => {
+    return await loadUnsafe(file, fileScope).catch((err) => {
       log.warn("skipping unreadable project config in overlay", { file, err })
       return {} as Config.Info
     })
   }
 
-  async function loadUnsafe(file: string, fileScope?: ConfigVariable.FileScope, trusted = false): Promise<Config.Info> {
+  async function loadUnsafe(file: string, fileScope?: ConfigVariable.FileScope): Promise<Config.Info> {
     // kilocode_change end
     const text = await Bun.file(file).text()
     // kilocode_change start - remove variable-bearing MCP headers before resolving other project file references
     const parsed = ConfigParse.jsonc(text, file)
-    const sanitized = trusted ? undefined : sanitizeProjectMcpHeaders(parsed, file)
-    const content = JSON.stringify(sanitized ? sanitized.config : parsed) ?? text
+    const sanitized = sanitizeProjectMcpHeaders(parsed, file)
+    const content = JSON.stringify(sanitized.config) ?? text
     const expanded = await ConfigVariable.substitute({
       text: content,
       type: "path",
       path: file,
-      trusted,
       fileScope,
     })
     const next = ConfigParse.jsonc(expanded, file)
     if (!isRecord(next)) return {}
-    for (const warning of sanitized?.warnings ?? []) log.warn(warning.message, { path: warning.path })
+    for (const warning of sanitized.warnings) log.warn(warning.message, { path: warning.path })
     // kilocode_change end
     return ConfigParse.schema(Config.Info, next, file) as Config.Info
   }
