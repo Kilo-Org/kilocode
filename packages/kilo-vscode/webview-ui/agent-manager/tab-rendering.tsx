@@ -90,6 +90,8 @@ export interface TabRenderDeps {
   sessionMiddleClick: (id: string, e: MouseEvent) => void
   sessionClose: (id: string) => void
   sessionFork: (id: string) => void
+  isPinned: (id: string) => boolean
+  togglePinned: (id: string) => void
   onTabKey: (id: string, event: KeyboardEvent) => void
   reviewLabel: string
   reviewTooltip: string
@@ -201,6 +203,8 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
       onClose={() => deps.sessionClose(s.id)}
       onCloseOthers={() => closeOthers(s.id, deps)}
       onFork={pending ? undefined : () => deps.sessionFork(s.id)}
+      pinned={deps.isPinned(s.id)}
+      onTogglePin={pending ? undefined : () => deps.togglePinned(s.id)}
     />
   )
 }

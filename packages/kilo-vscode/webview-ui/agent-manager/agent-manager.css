@@ -361,25 +361,29 @@ html[data-theme="kilo-vscode"]
   margin-right: -4px;
 }
 
-/* Add-project footer. It is a sibling of the scrolling list, so flex layout
+/* Project footer. It is a sibling of the scrolling list, so flex layout
    keeps it visible no matter how many projects are open. The negative side and
-   bottom margins pull it into .am-sidebar's 8px padding so the button sits an
+   bottom margins pull it into .am-sidebar's 8px padding so the buttons sit an
    even 4px from the list above and from the sidebar edges, matching the row
    gutter. */
 .am-projects-footer {
   display: flex;
+  gap: 6px;
   flex-shrink: 0;
   margin: 0 -4px -4px;
   padding: 4px 0 0;
 }
 
-/* Full-width call to action styled like a raised sidebar control: subtle
-   surface, thin border, centered icon and label, and a soft hover lift. */
-.am-projects-footer .am-project-add[data-component="button"] {
+/* Two equal actions always share one row; the label ellipsizes at extreme widths. */
+.am-projects-footer .am-project-create,
+.am-projects-footer .am-project-add {
+  flex: 1 1 0;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
   height: 30px;
-  padding: 0 10px;
+  padding: 0 8px;
+  overflow: hidden;
   border: 1px solid var(--border-weak-base);
   border-radius: var(--radius-sm);
   background: var(--surface-inset-base);
@@ -392,17 +396,90 @@ html[data-theme="kilo-vscode"]
     color 120ms ease;
 }
 
-.am-projects-footer .am-project-add[data-component="button"] [data-component="icon"] {
+.am-projects-footer .am-project-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* New project and clone dialogs share one form layout, mirroring New Worktree. */
+.am-project-dialog {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+[data-component="dialog"]:has(.am-project-dialog) [data-slot="dialog-content"] {
+  width: 480px;
+  max-width: 92vw;
+}
+
+.am-project-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 20px;
+}
+
+.am-project-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-project-dialog-parent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.am-project-dialog-parent .am-nv-name-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.am-project-dialog-content .am-nv-name-input[readonly] {
+  color: var(--text-weak);
+  text-overflow: ellipsis;
+}
+
+.am-project-dialog-browse {
+  flex-shrink: 0;
+  height: 32px;
+}
+
+.am-project-dialog-note {
+  margin: -6px 0 0;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.am-project-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 14px 20px 20px;
+}
+
+.am-projects-footer [data-component="button"] [data-component="icon"] {
   color: inherit;
 }
 
-.am-projects-footer .am-project-add[data-component="button"]:hover:not(:disabled) {
+.am-projects-footer [data-component="button"]:hover:not(:disabled) {
   background: var(--surface-inset-base-hover);
   border-color: var(--border-base);
   color: var(--text-base);
 }
 
-.am-projects-footer .am-project-add[data-component="button"]:active:not(:disabled) {
+.am-projects-footer [data-component="button"]:focus-visible {
+  outline: 1px solid var(--border-focus);
+  outline-offset: -2px;
+}
+
+.am-projects-footer [data-component="button"]:active:not(:disabled) {
   opacity: 0.85;
 }
 
@@ -1802,6 +1879,23 @@ html[data-theme="kilo-vscode"]
 }
 
 .am-tab-icon [data-component="icon"] {
+  color: currentColor;
+}
+
+/* Sits left of the title, next to the activity icon, because that is where the
+   eye lands when scanning the bar. A pinned tab has no close button, so this is
+   the only pin affordance on the tab itself. */
+.am-tab-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.am-tab-pin [data-component="icon"] {
   color: currentColor;
 }
 
@@ -4773,6 +4867,36 @@ body.am-wt-dragging-active * {
   overflow-y: auto;
   overflow-x: hidden;
   scroll-padding-top: 8px;
+}
+
+.am-diff-viewport {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Keep the frame above all scroll contents without reserving layout space. */
+.am-diff-viewport > .am-diff-content,
+.am-diff-viewport > .am-review-diff {
+  position: relative;
+  z-index: 0;
+}
+
+.am-diff-viewport:has(> [data-focus-region]:focus)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--border-focus);
+  pointer-events: none;
+}
+
+.am-diff-content:focus-within,
+.am-review-diff:focus-within {
+  outline: none;
 }
 
 .am-review-diff-content[data-component="session-review"] {

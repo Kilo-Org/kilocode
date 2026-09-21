@@ -1264,6 +1264,14 @@
           "type": "boolean",
           "default": false,
           "description": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
+        },
+        "kilo-code.new.diff.style": {
+          "type": "string",
+          "enum": [
+            "unified",
+            "split"
+          ],
+          "description": "Remembered unified/split choice for Kilo diff viewers. Set automatically the first time you toggle the style in a diff viewer."
         }
       }
     }
