@@ -43,6 +43,22 @@ describe("WorktreeStateManager", () => {
       expect(manager.findWorktreeByPath("/tmp/c")).toBeUndefined()
     })
 
+    it("finds worktree through a symlinked parent and a case variant", () => {
+      // Callers pass paths from git, from the backend, and from VS Code, which do not agree on either:
+      // on macOS /tmp is a symlink to /private/tmp, and the filesystem is case-insensitive. A lexical
+      // compare misses both, and the answer decides which worktree a session or tool call belongs to.
+      const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "am-state-path-")))
+      const nested = path.join(real, "Feature-Dir")
+      fs.mkdirSync(nested)
+      const wt = manager.addWorktree({ branch: "feature", path: nested, parentBranch: "main" })
+
+      expect(manager.findWorktreeByPath(nested)?.id).toBe(wt.id)
+      expect(manager.findWorktreeByPath(path.join(real, "feature-dir"))?.id).toBe(
+        process.platform === "darwin" || process.platform === "win32" ? wt.id : undefined,
+      )
+      fs.rmSync(real, { recursive: true, force: true })
+    })
+
     it("removes worktree and deletes its sessions", () => {
       const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
       manager.addSession("s1", wt.id)
@@ -428,17 +444,6 @@ describe("WorktreeStateManager", () => {
       expect(manager.getTabOrder()["wt-1"]).toEqual(["s2", "s1"])
     })
 
-    it("removes tab order for a key", () => {
-      manager.setTabOrder("wt-1", ["s1"])
-      manager.removeTabOrder("wt-1")
-      expect(manager.getTabOrder()["wt-1"]).toBeUndefined()
-    })
-
-    it("removeTabOrder is a no-op for missing key", () => {
-      manager.removeTabOrder("nonexistent")
-      expect(Object.keys(manager.getTabOrder())).toHaveLength(0)
-    })
-
     it("cleans up tab order when worktree is removed", () => {
       const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
       manager.addSession("s1", wt.id)
@@ -638,50 +643,9 @@ describe("WorktreeStateManager", () => {
     })
   })
 
-  describe("validate", () => {
-    it("removes worktrees whose directories do not exist and prunes their sessions", async () => {
-      const existing = path.join(root, "wt-exists")
-      fs.mkdirSync(existing, { recursive: true })
-
-      manager.addWorktree({ branch: "exists", path: existing, parentBranch: "main" })
-      const gone = manager.addWorktree({ branch: "gone", path: path.join(root, "wt-gone"), parentBranch: "main" })
-      manager.addSession("s1", gone.id)
-
-      await manager.validate(root)
-
-      expect(manager.getWorktrees()).toHaveLength(1)
-      expect(manager.getWorktrees()[0].branch).toBe("exists")
-      // Session removed along with its worktree
-      expect(manager.getSession("s1")).toBeUndefined()
-    })
-
-    it("preserves local sessions and prunes missing worktree references on validate", async () => {
-      const existing = path.join(root, "wt-exists")
-      fs.mkdirSync(existing, { recursive: true })
-
-      const wt = manager.addWorktree({ branch: "exists", path: existing, parentBranch: "main" })
-      manager.addSession("s1", wt.id)
-      manager.addSession("s2", null)
-      manager.addSession("s3", "missing")
-
-      await manager.validate(root)
-
-      expect(manager.getSession("s1")).toBeTruthy()
-      expect(manager.getSession("s2")?.worktreeId).toBeNull()
-      expect(manager.getSession("s3")).toBeUndefined()
-    })
-
-    it("resolves relative paths against root", async () => {
-      const relative = ".kilo/worktrees/test-branch"
-      const absolute = path.join(root, relative)
-      fs.mkdirSync(absolute, { recursive: true })
-
-      manager.addWorktree({ branch: "test", path: relative, parentBranch: "main" })
-      await manager.validate(root)
-
-      expect(manager.getWorktrees()).toHaveLength(1)
-    })
-  })
+  // Worktree-directory validation moved to worktree-reconcile.ts, which classifies rows instead of
+  // deleting them; see tests/unit/worktree-reconcile.test.ts. Session pruning for rows that are
+  // already gone stays covered by the load/apply tests above.
 
   describe("concurrent save serialization", () => {
     it("rapid mutations do not lose data after flush", async () => {

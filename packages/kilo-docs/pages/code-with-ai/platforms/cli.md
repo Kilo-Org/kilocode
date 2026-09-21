@@ -131,13 +131,17 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | Command | Aliases | Description |
 |---|---|---|
 | `/status` | - | View status |
+| `/about` | - | Show version, runtime, configuration paths, and provider details; press `c` to copy diagnostics |
 | `/themes` | - | Switch theme |
 | `/help` | - | Show help |
-| `/reload` | - | Reload config, skills, agents, and commands from disk |
+| `/reload` | - | Reload every instance of the project from disk (config, skills, agents, and commands) |
 | `/editor` | - | Open external editor |
 | `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
+| `/caffeinate` | `/caffenate` | Toggle Keep Awake: prevent system sleep while Kilo sessions run |
 | `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
 | `/exit` | `/quit`, `/q` | Exit the app |
+
+`/reload` reloads every instance of the project, including the main checkout and sibling worktrees. Kilo refuses the reload while any session in the project is running; wait for it to finish or abort it first.
 
 #### Kilo Gateway Commands (when connected)
 
@@ -153,6 +157,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
 | `/review` | Review code changes |
+| `/goal [objective \| pause \| resume \| clear]` | Start, pause, resume, or clear a [session goal](/docs/code-with-ai/agents/goals) |
 
 ### Importing Claude Code and Codex Sessions
 
@@ -193,6 +198,8 @@ CLI attention alerts are disabled by default. Enable and configure them by editi
 
 - Edit `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings.
 - Edit `.kilo/tui.json` (or `tui.jsonc`) for project settings.
+
+For VS Code sounds and notifications, see [Notifications](/docs/getting-started/settings/notifications).
 
 Use the following configuration for attention, desktop notification, sound, and volume controls:
 
@@ -236,13 +243,13 @@ Supported sound names are `default`, `question`, `permission`, `error`, `done`, 
 
 The `attention.sound_pack` setting selects a sound pack registered by a TUI plugin. Setting an arbitrary pack name does not install or load a pack. Per-event file overrides remain the simplest way to customize sounds without a plugin.
 
-There is no notification slash command or command-palette toggle. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration.
+There is no slash command or command-palette toggle for notifications or sounds. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration. Keep Awake is separate and has its own `/caffeinate` command; see [Keep Awake](/docs/getting-started/settings/keep-awake).
 
 ## Slash Commands
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
 
-Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch or to changes from the last assistant turn. Use `/move` to move the current session to another project directory.
+Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch, changes from the last assistant turn, or the last commit (`HEAD` vs `HEAD~1`). Use `/move` to move the current session to another project directory.
 
 The `diff_open` and `session_move` TUI keybindings run the same actions and are unbound by default. Set them under `keybinds` in `tui.jsonc`:
 
@@ -599,7 +606,9 @@ This instructs the AI to proceed without user input.
 
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
-- `1`: Error (initialization or execution failure)
+- `1`: Error (initialization, execution, or request failure)
+
+A run that finishes without an assistant message also exits `1`, reporting `run ended without an assistant message; the model returned no output` on stderr or as a final `error` record with `--format json`. If the prompt request fails, Kilo reports that error instead.
 
 Without `--auto`, a non-interactive run cannot prompt for approval and auto-rejects any permission request it receives. If a run auto-rejected at least one request, it exits `1` with a stderr diagnostic naming the cause, since the task likely did not complete. Pass `--auto` for autonomous use.
 
@@ -677,6 +686,8 @@ Add to `~/.config/kilo/config.json`:
 ### Using Remote Mode
 
 Once enabled, start a CLI session and open [Cloud Agents](https://app.kilo.ai/cloud). Your local session appears in the dashboard. See [Cloud Agent Remote Connections](/docs/code-with-ai/platforms/cloud-agent#remote-connections) for details.
+
+A connected client can start a session in a child folder of the CLI's launch directory, or continue an existing cloud session locally. Requested folders must remain within the launch directory; absolute paths and paths that escape it are rejected.
 
 ### Requirements
 

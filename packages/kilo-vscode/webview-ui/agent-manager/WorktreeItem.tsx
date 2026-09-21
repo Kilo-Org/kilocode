@@ -21,6 +21,92 @@ import { parseBindingTokens } from "./keybind-tokens"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
+type WorktreeHealth = "absent-restorable" | "absent-gone" | "unregistered" | "unavailable"
+type Translate = (key: string, params?: Record<string, string | number>) => string
+
+/**
+ * True for the health states the user can actually act on.
+ *
+ * `unavailable` means the reconcile could not determine health — one failed `git worktree list`
+ * marks every row that way — so it must not render as a warning, must not hide "Update from base",
+ * and above all must not offer the entry-dropping removal actions.
+ */
+export function actionable(health?: WorktreeHealth): boolean {
+  return health !== undefined && health !== "unavailable"
+}
+
+/** Short badge text for an unhealthy worktree. */
+function healthLabel(t: Translate, health: WorktreeHealth): string {
+  return t(`agentManager.worktree.health.${health}`)
+}
+
+/** One sentence explaining the state and what can be done about it. */
+function healthNote(t: Translate, health: WorktreeHealth, branch: string): string {
+  return t(`agentManager.worktree.health.${health}Note`, { branch })
+}
+
+/**
+ * Health details and recovery actions inside the hover card.
+ *
+ * Its own component so the reasons and the actions can grow without pushing the row component past
+ * its complexity budget.
+ */
+const HealthSection: Component<{
+  t: Translate
+  health?: WorktreeHealth
+  branch: string
+  sessions: number
+  onRestore?: () => void
+  onRemoveStale: () => void
+  onRemoveKeepSessions?: () => void
+}> = (props) => {
+  const label = () => (props.health ? healthLabel(props.t, props.health) : props.t("agentManager.worktree.stale"))
+  const note = () =>
+    props.health ? healthNote(props.t, props.health, props.branch) : props.t("agentManager.worktree.staleTooltip")
+  // Keeping the conversations is only meaningful while there are any to keep.
+  const keep = () => props.sessions > 0 && props.onRemoveKeepSessions !== undefined
+  const badge = () => (props.health === "unavailable" ? "help" : "warning")
+  const click = (action?: () => void) => (event: MouseEvent) => {
+    event.stopPropagation()
+    action?.()
+  }
+  return (
+    <>
+      <div class="am-hover-card-divider" />
+      <div class="am-hover-card-row am-hover-card-row-stale">
+        <span class="am-hover-card-row-label">{props.t("agentManager.worktree.stale")}</span>
+        <span class="am-hover-card-row-value am-hover-card-stale-pill" data-health={props.health}>
+          <Icon name={badge()} size="small" />
+          {label()}
+        </span>
+      </div>
+      <div class="am-hover-card-note">{note()}</div>
+      {/* No actions for `unavailable`: nothing is known to be wrong, so there is nothing to fix. */}
+      <Show when={actionable(props.health) || props.health === undefined}>
+        <div class="am-hover-card-actions">
+          <Show when={props.health === "absent-restorable" && props.onRestore}>
+            <Button variant="ghost" size="small" onClick={click(props.onRestore)}>
+              {props.t("agentManager.worktree.restore")}
+            </Button>
+          </Show>
+          <Show
+            when={keep()}
+            fallback={
+              <Button variant="ghost" size="small" onClick={click(props.onRemoveStale)}>
+                {props.t("agentManager.worktree.removeStale")}
+              </Button>
+            }
+          >
+            <Button variant="ghost" size="small" onClick={click(props.onRemoveKeepSessions)}>
+              {props.t("agentManager.worktree.removeKeepSessions")}
+            </Button>
+          </Show>
+        </div>
+      </Show>
+    </>
+  )
+}
+
 interface WorktreeItemProps {
   preview?: boolean
   worktree: WorktreeState
@@ -37,7 +123,21 @@ interface WorktreeItemProps {
   busy: boolean
   activity: Activity
   blocked?: boolean
+  /**
+   * The worktree has a problem the user can act on. Drives the stale styling and hides actions that
+   * need a live directory, so an indeterminate `unavailable` health must not set it — see
+   * {@link actionable}.
+   */
   stale: boolean
+  /**
+   * Why this worktree is unhealthy, when the health reconcile knows. Refines the generic "stale"
+   * badge into something actionable, and decides which recovery actions are offered.
+   */
+  health?: "absent-restorable" | "absent-gone" | "unregistered" | "unavailable"
+  /** Re-create the worktree folder from its surviving branch. */
+  onRestore?: () => void
+  /** Drop the entry but keep its sessions, moving them to Local. */
+  onRemoveKeepSessions?: () => void
   /** 1-indexed shortcut number shown as ⌘2, ⌘3, etc. Pass 0, >9, or undefined to hide. */
   shortcut?: number
   stats?: WorktreeGitStats
@@ -183,6 +283,10 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
       props.activity,
       !props.completed && (props.busy || props.runStatus?.state === "running") ? "busy" : "idle",
     ])
+  /** Any health problem worth surfacing on the row, actionable or merely indeterminate. */
+  const problem = () => props.stale || props.health !== undefined
+  /** `unavailable` is "not checked", so it gets a question mark rather than a warning triangle. */
+  const badge = () => (props.health === "unavailable" ? "help" : "warning")
   const blocked = () =>
     props.completed ||
     props.busy ||
@@ -269,14 +373,18 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 <div class="am-wt-content">
                   {/* Row 1: label + stale badge + stats/hover-actions overlay */}
                   <div class="am-wt-row1">
-                    <Show when={props.stale}>
+                    <Show when={problem()}>
                       <Tooltip
-                        value={t("agentManager.worktree.staleTooltip")}
+                        value={
+                          props.health
+                            ? healthNote(t, props.health, props.worktree.branch)
+                            : t("agentManager.worktree.staleTooltip")
+                        }
                         placement="top"
                         contentClass="am-tooltip-wrap"
                       >
-                        <span class="am-worktree-stale-badge">
-                          <Icon name="warning" size="small" />
+                        <span class="am-worktree-stale-badge" data-health={props.health}>
+                          <Icon name={badge()} size="small" />
                         </span>
                       </Tooltip>
                     </Show>
@@ -534,28 +642,16 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
               <span class="am-hover-card-row-value">{props.sessions}</span>
             </div>
-            <Show when={props.stale}>
-              <div class="am-hover-card-divider" />
-              <div class="am-hover-card-row am-hover-card-row-stale">
-                <span class="am-hover-card-row-label">{t("agentManager.worktree.stale")}</span>
-                <span class="am-hover-card-row-value am-hover-card-stale-pill">
-                  <Icon name="warning" size="small" />
-                  {t("agentManager.worktree.stale")}
-                </span>
-              </div>
-              <div class="am-hover-card-note">{t("agentManager.worktree.staleTooltip")}</div>
-              <div class="am-hover-card-actions">
-                <Button
-                  variant="ghost"
-                  size="small"
-                  onClick={(e: MouseEvent) => {
-                    e.stopPropagation()
-                    props.onRemoveStale()
-                  }}
-                >
-                  {t("agentManager.worktree.removeStale")}
-                </Button>
-              </div>
+            <Show when={problem()}>
+              <HealthSection
+                t={t}
+                health={props.health}
+                branch={props.worktree.branch}
+                sessions={props.sessions}
+                onRestore={props.onRestore}
+                onRemoveStale={props.onRemoveStale}
+                onRemoveKeepSessions={props.onRemoveKeepSessions}
+              />
             </Show>
             <Show when={hasStats(props.stats)}>
               <div class="am-hover-card-divider" />

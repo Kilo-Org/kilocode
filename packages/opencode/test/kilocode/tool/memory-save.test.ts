@@ -110,7 +110,7 @@ describe("kilo_memory_save", () => {
   })
 
   test("defaults mutating memory tool permission to ask", () => {
-    const kilo = KiloAgent.prepare({})
+    const kilo = KiloAgent.prepare({}, { experimentalSharedAgentBoard: false })
 
     expect(Permission.evaluate("kilo_memory_recall", "typed", kilo.defaultsPatch).action).toBe("ask")
     expect(Permission.evaluate("kilo_memory_save", "remember", kilo.defaultsPatch).action).toBe("ask")

@@ -832,6 +832,16 @@ describe("agent_manager tool", () => {
     expect(task?.variant).toBeUndefined()
   })
 
+  test("inherits the invoking variant when the model override resolves to the invoking model", async () => {
+    const task = await publish(runtime, { prompt: "Fix", model: "Shared" }, [
+      message("msg_current", "kilo", "kilo/shared", "low"),
+    ])
+
+    expect(String(task?.model?.providerID)).toBe("kilo")
+    expect(String(task?.model?.modelID)).toBe("kilo/shared")
+    expect(task?.variant).toBe("low")
+  })
+
   test("overrides only the inherited variant when model is omitted", async () => {
     const task = await publish(runtime, { prompt: "Fix", variant: "high" }, [
       message("msg_current", "test", "reasoning/model", "low"),

@@ -73,6 +73,7 @@ export const dict = {
   "session.activity.error": "حدث خطأ أو فُقد الاتصال.",
   "session.activity.retry": "إعادة المحاولة تلقائيًا.",
   "session.activity.busy": "قيد التنفيذ.",
+  "session.activity.scheduled": "في انتظار استيقاظ مجدول.",
   "session.activity.done": "اكتمل الدور.",
   "session.activity.idle": "غير قيد التشغيل.",
 
@@ -197,10 +198,12 @@ export const dict = {
   "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.paste.expand": "انقر لتوسيع النص الملصق",
   "prompt.action.autoApprove.enable": "تفعيل الموافقة التلقائية",
   "prompt.action.autoApprove.disable": "تعطيل الموافقة التلقائية",
   "prompt.action.autoApprove.enabled": "الموافقة التلقائية مفعلة. ستتم الموافقة على طلبات الأذونات تلقائياً.",
   "prompt.action.autoApprove.disabled": "الموافقة التلقائية معطلة. انقر للموافقة على طلبات الأذونات تلقائياً.",
+  "prompt.action.autoApprove.sandboxExcluded": "تُستثنى دائماً مطالبات الخروج من البيئة المعزولة.",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
   "prompt.action.sandbox.enable": "تفعيل sandbox",
@@ -217,11 +220,13 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "مسموح بها",
   "prompt.action.sandbox.unrestricted": "غير مقيّد",
   "prompt.action.sandbox.description.enabled": "تقتصر عمليات الكتابة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "تنطبق قواعد الأذونات والموافقة التلقائية داخل البيئة المعزولة. الأوامر التي يجب أن تخرج منها تسأل دائماً.",
   "prompt.action.sandbox.description.disabled": "انقر لتقييد الكتابة في نظام الملفات والوصول إلى الشبكة.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
-  "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.start": "بدء الإدخال الصوتي",
   "speechToText.tooltip.shortcut":
     "انقر أو اضغط على Cmd/Ctrl+K لبدء التسجيل أو إيقافه؛ اضغط باستمرار أثناء التحدث ثم اتركه لتحويل الكلام إلى نص وإرساله.",
   "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
@@ -261,8 +266,13 @@ export const dict = {
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
-  "notification.permission.titleSandboxEscalation": "السماح بعملية Git خارج البيئة المعزولة؟",
+  "notification.permission.titleSandboxEscalation": "التشغيل خارج البيئة المعزولة؟",
+  "notification.permission.descriptionSandboxEscalation":
+    "يُشغّل هذا الأمر بالكامل مع إزالة قيود نظام الملفات والشبكة، لهذا الأمر فقط. يجب أن يكتب Git في .git، وهو للقراءة فقط داخل البيئة المعزولة ويقع خارج شجرة العمل في worktree مرتبط. لا توافق قواعد سماح Bash والموافقة التلقائية على هذا الطلب تلقائياً أبداً.",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
+  "ui.permission.reject": "رفض",
+  "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
+  "ui.permission.feedbackHint": "Enter للرفض، Esc للإلغاء",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
   "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
   "ui.permission.rule.addToAllowed": "أضف إلى قائمة المسموح",
@@ -311,7 +321,6 @@ export const dict = {
   "sidebar.topBar.newTask": "مهمة جديدة",
   "sidebar.topBar.history": "السجل",
   "sidebar.topBar.agentManager": "مدير الوكلاء",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "المتجر",
   "sidebar.topBar.profile": "الملف الشخصي",
   "sidebar.topBar.settings": "الإعدادات",
@@ -411,6 +420,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "مزود مخصص",
   "settings.providers.connected.environmentDescription": "متصل من متغيرات البيئة الخاصة بك",
   "settings.providers.action.signInChatGPT": "تسجيل الدخول باستخدام ChatGPT",
+  "settings.providers.action.changeApiKey": "تغيير مفتاح API",
   "settings.providers.custom.description": "أضف مزودًا مخصصًا عبر عنوان URL الأساسي.",
   "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
@@ -501,38 +511,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "فشل تحديث الأذونات",
 
-  "settings.permissions.tool.read.title": "قراءة",
   "settings.permissions.tool.read.description": "قراءة ملف (يطابق مسار الملف)",
-  "settings.permissions.tool.edit.title": "تحرير",
   "settings.permissions.tool.edit.description":
     "تعديل الملفات، بما في ذلك التحرير والكتابة والتصحيحات والتحرير المتعدد",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "مطابقة الملفات باستخدام أنماط glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "البحث في محتويات الملف باستخدام التعبيرات العادية",
-  "settings.permissions.tool.list.title": "قائمة",
   "settings.permissions.tool.list.description": "سرد الملفات داخل دليل",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "تشغيل أوامر shell",
-  "settings.permissions.tool.task.title": "مهمة",
   "settings.permissions.tool.task.description": "تشغيل الوكلاء الفرعيين",
-  "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "تحميل مهارة بالاسم",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "تشغيل استعلامات خادم اللغة",
-  "settings.permissions.tool.todoread.title": "قراءة المهام",
   "settings.permissions.tool.todoread.description": "قراءة قائمة المهام",
-  "settings.permissions.tool.todowrite.title": "كتابة المهام",
   "settings.permissions.tool.todowrite.description": "تحديث قائمة المهام",
-  "settings.permissions.tool.webfetch.title": "جلب الويب",
   "settings.permissions.tool.webfetch.description": "جلب محتوى من عنوان URL",
-  "settings.permissions.tool.websearch.title": "بحث الويب",
   "settings.permissions.tool.websearch.description": "البحث في الويب",
-  "settings.permissions.tool.codesearch.title": "بحث الكود",
   "settings.permissions.tool.codesearch.description": "البحث عن كود على الويب",
-  "settings.permissions.tool.external_directory.title": "دليل خارجي",
   "settings.permissions.tool.external_directory.description": "الوصول إلى الملفات خارج دليل المشروع",
-  "settings.permissions.tool.doom_loop.title": "حلقة الموت",
   "settings.permissions.tool.doom_loop.description": "اكتشاف استدعاءات الأدوات المتكررة بمدخلات متطابقة",
 
   "session.delete.title": "حذف الجلسة",
@@ -550,6 +544,7 @@ export const dict = {
   "session.tabs.switcher.current": "الحالي",
   "session.tabs.switcher.pending": "جديد",
   "session.tabs.switcher.busy": "جارٍ العمل",
+  "session.tabs.switcher.scheduled": "مجدولة",
   "session.tab.local": "محلي",
   "session.tab.cloud": "السحابة",
   "session.tab.worktree": "شجرة العمل",
@@ -624,6 +619,7 @@ export const dict = {
   "profile.usage.source.direct": "مباشر",
   "profile.usage.state.stale": "يتم عرض بيانات الاستخدام في آخر تحديث.",
   "profile.usage.state.unavailable": "بيانات الاستخدام غير متوفرة.",
+  "profile.usage.state.empty": "لم يتم الإبلاغ عن أي حدود للاستخدام.",
   "profile.usage.plan.pastDue": "الخطة: الدفع متأخر",
   "profile.usage.plan.canceling": "الخطة: تُلغى في نهاية الفترة",
   "profile.usage.plan.unknown": "الخطة: الحالة غير معروفة",
@@ -821,7 +817,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "المهارات",
 
   "settings.browser.description":
-    "عند التفعيل، يمكن لوكيل الذكاء الاصطناعي التفاعل مع صفحات الويب — التنقل والنقر والكتابة والتقاط لقطات الشاشة. سيتم فتح نافذة Chrome حتى تتمكن من مشاهدة الوكيل أثناء العمل.",
+    "تكوين أتمتة المتصفح المدمجة المدعومة من Playwright. يمكن لـ Kilo التنقل والتفاعل مع صفحات الويب والتقاط لقطات شاشة لها في جلساتك.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
   "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
@@ -872,15 +868,28 @@ export const dict = {
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.imageGeneration.title": "توليد الصور",
   "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "شارك لوحة بين جلسة رئيسية ووكلائها الفرعيين المكلّفين بالمهام، بما يشمل الوكلاء الفرعيين المتداخلين. استخدمها لمحاولات حل متوازية أو أعمال متكاملة، وليس لكل مهمة.",
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",
   "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
   "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "معرّف النموذج الذي يُرسل إلى نقطة النهاية المخصصة للنسخ، مثل whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "عنوان URL الأساسي لتحويل الصوت إلى نص",
+  "settings.models.speechToTextBaseUrl.description":
+    "استخدم واجهة نسخ متوافقة مع OpenAI بدلاً من Kilo Gateway. تُقرأ النماذج من /models ويُرسل الصوت إلى /audio/transcriptions. اتركه فارغًا لاستخدام Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "مفتاح API لتحويل الصوت إلى نص",
+  "settings.models.speechToTextApiKey.description":
+    "رمز Bearer يُرسل إلى عنوان URL الأساسي المخصص للنسخ. يُخزَّن في ملف إعدادات Kilo لديك.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
+    "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text، أو حدد أدناه عنوان URL أساسيًا مخصصًا للنسخ.",
+  "settings.models.speechToText.remoteDescription":
+    "الإدخال الصوتي غير متاح في النوافذ البعيدة. افتح Kilo في نافذة محلية لاستخدام الميكروفون.",
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
@@ -900,7 +909,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
-  "settings.experimental.claudeMigration.title": "ترحيل Claude Code (تجريبي)",
+  "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
   "settings.experimental.multiProject.description":
@@ -1039,6 +1048,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "النموذج",
   "settings.agentBehaviour.workflows.variant": "المتغير",
   "settings.agentBehaviour.workflows.modelDescription": "تجاوز النموذج العام",
+  "settings.experimental.codeMode.title": "استدعاءات الأدوات البرمجية",
+  "settings.experimental.codeMode.description":
+    "يوجّه استدعاءات أدوات MCP عبر بيئة تشغيل JavaScript معزولة مع اكتشاف الأدوات عند الطلب بدلاً من عرض كل أداة MCP مباشرةً. يوفّر السياق عند توصيل العديد من أدوات MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
@@ -1086,6 +1098,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "النموذج المستخدم للضغط التلقائي واليدوي. اتركه فارغاً لاستخدام نموذج الدردشة. تعتمد التكلفة والسرعة وجودة الملخص على النموذج.",
   "settings.context.compactionModel.useChatModel": "استخدام نموذج الدردشة",
+  "settings.context.compactionModel.hint": "لاختيار النموذج المستخدم للضغط، راجع إعدادات النماذج.",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
@@ -1129,9 +1142,12 @@ export const dict = {
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
   "settings.display.fontSize.title": "حجم الخط",
   "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
-  "settings.display.reasoningAutoCollapse.description":
-    "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
+  "settings.display.reasoningDisplay.title": "كتل الاستدلال",
+  "settings.display.reasoningDisplay.description":
+    "اختر كيفية بدء كتل الاستدلال. يعرض موسّعة النص الكامل، ويحدّ معاينة منه إلى معاينة قصيرة قابلة للتمرير، ويعرض عنوان ومؤشر البث فقط حتى تفتحه.",
+  "settings.display.reasoningDisplay.expanded": "موسّعة",
+  "settings.display.reasoningDisplay.preview": "معاينة",
+  "settings.display.reasoningDisplay.headline": "عنوان",
   "settings.display.shiftTabCycle.title": "تبديل جهد الاستدلال باستخدام Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "اضغط على Shift+Tab في حقل إدخال الموجه للتبديل إلى مستوى جهد الاستدلال التالي. عطّل هذا الخيار للاحتفاظ بـ Shift+Tab للتنقل بين عناصر التركيز باستخدام لوحة المفاتيح.",
@@ -1271,6 +1287,16 @@ export const dict = {
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "نشر على GitHub",
+  "diffViewer.comment.loadFailed": "تعذر تحميل تغييرات طلب السحب.",
+  "diffViewer.comment.unavailable": "هذا السطر غير متاح في اللقطة الحالية لطلب السحب.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "فتح طلب السحب",
+  "diffViewer.comment.localChanges": "التغييرات المحلية",
+  "diffViewer.comment.prChanges": "تغييرات PR",
+  "diffViewer.comment.sendToKilo": "إرسال إلى Kilo",
+  "diffViewer.comment.sendToGithub": "إرسال إلى GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "اختيار الوجهة",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 
@@ -1292,5 +1318,11 @@ export const dict = {
   "chat.search.close": "إغلاق البحث",
   "chat.search.invalidRegex": "تعبير عادي غير صالح",
   "chat.search.noResults": "لا توجد نتائج",
+  "settings.experimental.browserAutomation.title": "المتصفح المدمج",
+  "settings.experimental.browserAutomation.description":
+    "عرض معاينات التطبيقات المحلية في Agent Manager وإتاحة أداة browser_open لجلسات Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "استخدام Chrome النظام",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "استخدام Google Chrome المثبّت للمتصفح المدمج. عطّله فقط عند تثبيت متصفح Playwright Chromium متوافق.",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
 }

@@ -3,10 +3,16 @@ import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { LOCAL } from "./navigate"
 import { applyPinnedTabs, applyTabOrder, reorderTabs } from "./tab-order"
 import { isTerminalTabId, type TerminalStateControls } from "./terminal/state"
+import {
+  beginPromptMentionDrop,
+  endPromptMentionDrop,
+  outsideTabBar,
+  sessionDrop,
+} from "../src/utils/prompt-mention-drop"
 
 export function createTabDrag(opts: {
   selection: Accessor<string | null>
-  sessions: Accessor<{ id: string; title?: string }[]>
+  sessions: Accessor<{ id: string; title?: string; updatedAt?: string }[]>
   review: { id: string; open: Accessor<boolean>; title: Accessor<string> }
   order: Accessor<Record<string, string[]>>
   setOrder: Setter<Record<string, string[]>>
@@ -60,9 +66,19 @@ export function createTabDrag(opts: {
     overlay,
     start(event: DragEvent) {
       const id = event.draggable?.id
-      if (typeof id === "string") setDragging(id)
+      if (typeof id !== "string") return
+      setDragging(id)
+      if (isTerminalTabId(id)) {
+        beginPromptMentionDrop({ kind: "terminal" })
+        return
+      }
+      const session = opts.sessions().find((item) => item.id === id)
+      if (session) beginPromptMentionDrop(sessionDrop(session))
     },
     over(event: DragEvent) {
+      // Once the tab is below the bar it is on its way to the prompt, so stop
+      // reordering the tabs under it.
+      if (outsideTabBar(event)) return
       const from = event.draggable?.id
       const to = event.droppable?.id
       if (typeof from !== "string" || typeof to !== "string") return
@@ -89,6 +105,7 @@ export function createTabDrag(opts: {
       if (terminals.length > 0) opts.terms.reorder(opts.namespace(key), terminals)
     },
     end() {
+      endPromptMentionDrop()
       setDragging(undefined)
       const key = opts.selection()
       if (key === null) return

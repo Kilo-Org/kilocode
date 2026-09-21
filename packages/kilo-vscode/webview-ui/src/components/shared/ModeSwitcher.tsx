@@ -7,7 +7,7 @@
  * ModeSwitcher     — thin wrapper wired to session context for chat usage.
  */
 
-import { type Accessor, Component, createSignal, onCleanup, For, Show } from "solid-js"
+import { type Accessor, Component, createEffect, createSignal, onCleanup, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
@@ -42,6 +42,8 @@ export interface ModeSwitcherBaseProps {
   deferDismiss?: boolean
   /** Only respond to picker events from this prompt scope. */
   trigger?: string
+  /** Disable this prompt-scoped selector while a permission owns the prompt. */
+  blocked?: boolean
 }
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
@@ -56,12 +58,19 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   // Listen for slash command trigger
   const onTrigger = (event: Event) => {
     const source = (event as CustomEvent<{ source?: string }>).detail?.source
-    if (source !== props.trigger) return
+    if (source !== props.trigger || props.blocked) return
     slash = true
     openSelected()
   }
-  window.addEventListener("openModePicker", onTrigger)
-  onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
+  createEffect(() => {
+    if (props.blocked) {
+      setOpen(false)
+      slash = false
+      return
+    }
+    window.addEventListener("openModePicker", onTrigger)
+    onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
+  })
 
   const hasAgents = () => props.agents.length > 1
 
@@ -81,6 +90,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const typeahead = createTypeahead(() => props.agents.map(formatAgentLabel))
 
   function openSelected() {
+    if (props.blocked) return
     const idx = props.agents.findIndex((a) => a.name === props.value)
     setFocused(idx >= 0 ? idx : 0)
     typeahead.reset()
@@ -89,6 +99,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
 
   function onOpen(val: boolean) {
     if (val) {
+      if (props.blocked) return
       // A click on the trigger opens without the slash flag.
       slash = false
       openSelected()
@@ -149,7 +160,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}
-        triggerProps={{ variant: "ghost", size: "small" }}
+        triggerProps={{ variant: "ghost", size: "small", disabled: props.blocked }}
         trigger={
           <>
             <span class="mode-switcher-trigger-label">{triggerLabel()}</span>
@@ -213,6 +224,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
 
 interface ModeSwitcherProps {
   sessionID?: Accessor<string | undefined>
+  blocked?: boolean
 }
 
 export const ModeSwitcher: Component<ModeSwitcherProps> = (props) => {
@@ -223,6 +235,7 @@ export const ModeSwitcher: Component<ModeSwitcherProps> = (props) => {
     <ModeSwitcherBase
       agents={session.agents()}
       value={session.selectedAgent(id())}
+      blocked={props.blocked}
       onSelect={(name) => {
         session.selectAgent(name, id())
         requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))

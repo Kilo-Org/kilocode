@@ -5,6 +5,7 @@ import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
+import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
 import { GenerateImageTool } from "./generate-image"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
@@ -12,6 +13,7 @@ import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
 import { NotifyUserTool } from "./notify-user"
 import { OpenPlanTool } from "./open-plan"
+import { ScheduleWakeupTool } from "./schedule-wakeup"
 import { SendFileTool } from "./send-file"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -22,6 +24,8 @@ import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
+import { BoardEnabled } from "@/kilocode/board/enabled"
 import { Agent } from "@/agent/agent"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
@@ -87,6 +91,9 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const openPlan = yield* OpenPlanTool
       const send = yield* SendFileTool
+      // Wakeup.Service is provided by Wakeup.node in the tool-registry node graph.
+      const schedule = yield* ScheduleWakeupTool
+      const cancel = yield* CancelWakeupTool
       const board = yield* Effect.all({
         boardRead: BoardReadTool,
         boardPost: BoardPostTool,
@@ -106,6 +113,8 @@ export namespace KiloToolRegistry {
           notify,
           openPlan,
           send,
+          schedule,
+          cancel,
           ...board,
         }
       const tools = yield* Effect.all({
@@ -126,6 +135,8 @@ export namespace KiloToolRegistry {
         notify,
         openPlan,
         send,
+        schedule,
+        cancel,
         ...board,
         ...tools,
       }
@@ -148,6 +159,8 @@ export namespace KiloToolRegistry {
       notify: Tool.Info
       openPlan?: Tool.Info
       send: Tool.Info
+      schedule?: Tool.Info
+      cancel?: Tool.Info
       boardRead?: Tool.Info
       goalReport?: Tool.Info
       boardPost?: Tool.Info
@@ -172,6 +185,8 @@ export namespace KiloToolRegistry {
         send: Tool.init(tools.send),
       })
       const openPlan = tools.openPlan ? yield* Tool.init(tools.openPlan) : undefined
+      const schedule = tools.schedule ? yield* Tool.init(tools.schedule) : undefined
+      const cancel = tools.cancel ? yield* Tool.init(tools.cancel) : undefined
       const report = tools.goalReport ? { goalReport: yield* Tool.init(tools.goalReport) } : {}
       const board =
         tools.boardRead && tools.boardPost
@@ -195,6 +210,8 @@ export namespace KiloToolRegistry {
         ...notebooks,
         semantic,
         openPlan,
+        schedule,
+        cancel,
         notify: base.notify,
         send: base.send,
       }
@@ -260,6 +277,8 @@ export namespace KiloToolRegistry {
       notify: Tool.Def
       openPlan?: Tool.Def
       send: Tool.Def
+      schedule?: Tool.Def
+      cancel?: Tool.Def
       boardRead?: Tool.Def
       goalReport?: Tool.Def
       boardPost?: Tool.Def
@@ -272,22 +291,24 @@ export namespace KiloToolRegistry {
         image_generation?: boolean
         native_notebook_tools?: boolean
         task_model_selection?: boolean
-        shared_agent_board?: boolean
       }
+      shared_agent_board?: boolean
     },
+    flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">,
   ): Tool.Def[] {
+    const enabled = BoardEnabled.on(cfg, flags)
     return [
       ...(tools.goalReport ? [tools.goalReport] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
-      ...(cfg.experimental?.shared_agent_board === true && tools.boardRead && tools.boardPost
-        ? [tools.boardRead, tools.boardPost]
-        : []),
+      ...(enabled && tools.boardRead && tools.boardPost ? [tools.boardRead, tools.boardPost] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,
       tools.recall,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.schedule ? [tools.schedule] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cancel ? [tools.cancel] : []),
       ...(Flag.KILO_CLIENT === "vscode" || cfg.experimental?.task_model_selection === true
         ? [tools.managerModels]
         : []),

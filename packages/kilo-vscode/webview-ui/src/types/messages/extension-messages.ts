@@ -19,7 +19,8 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
-import type { PRMergeResult } from "../../../../src/shared/pr-comment-actions"
+import type { CodeContext } from "../../../../src/shared/code-context"
+import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
@@ -178,6 +179,12 @@ export interface SessionStatusMessage {
   attempt?: number
   message?: string
   next?: number
+}
+
+export interface SessionWakeupMessage {
+  type: "sessionWakeup"
+  sessionID: string
+  pending: number
 }
 
 export interface SessionTurnClosedMessage {
@@ -376,6 +383,11 @@ export interface AppendChatBoxMessage {
   browser?: BrowserReference
 }
 
+export interface AppendChatContextMessage {
+  type: "appendChatContext"
+  context: CodeContext
+}
+
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewCommentEntry[]
@@ -415,6 +427,8 @@ export interface AppendReviewCommentsToTerminalMessage {
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ProfileDataMessage {
@@ -514,6 +528,10 @@ export interface ImageModelsLoadedMessage {
 export interface SpeechToTextModelsLoadedMessage {
   type: "speechToTextModelsLoaded"
   models: SpeechToTextModelDef[]
+  source: "gateway" | "custom"
+  // Producer instance id. A new epoch means a restarted host, not a stale reply.
+  epoch: string
+  seq: number
 }
 
 export interface ProvidersLoadedMessage {
@@ -795,6 +813,11 @@ export interface AutoApprovalReasonSettingLoadedMessage {
   visible: boolean
 }
 
+export interface PushFixesSettingLoadedMessage {
+  type: "pushFixesSettingLoaded"
+  enabled: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -879,6 +902,18 @@ export interface AgentManagerStateMessage {
   sessions: ManagedSessionState[]
   sections?: SectionState[]
   staleWorktreeIds?: string[]
+  /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
+  worktreeHealth?: Record<string, "absent-restorable" | "absent-gone" | "unregistered" | "unavailable">
+  /**
+   * Directories under `.kilo/worktrees/` that no worktree claims.
+   *
+   * `broken` still holds a git checkout, so it can contain work that exists nowhere else; `leftover`
+   * is a bare directory. The notice says which, because the two do not deserve the same warning.
+   *
+   * `sized` is set once the size pass is done with a folder; without `bytes` it means the folder
+   * could not be measured, which is how the UI knows to stop saying it is still calculating.
+   */
+  orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number; sized?: boolean }[]
   tabOrder?: Record<string, string[]>
   pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
@@ -923,6 +958,15 @@ export interface AgentManagerProjectsMessage {
 export interface AgentManagerSelectionActivatedMessage {
   type: "agentManager.selectionActivated"
   target: AgentManagerSidebarTarget
+}
+
+/** Host request to select a managed session and scroll its chat to the latest message. */
+export interface AgentManagerRevealSessionMessage {
+  type: "agentManager.revealSession"
+  projectId: string
+  /** Absent when the session lives in the project's Local tabs. */
+  worktreeId?: string
+  sessionId: string
 }
 
 export interface AgentManagerProjectSessionsMessage {
@@ -1088,10 +1132,11 @@ export interface FavoritesLoadedMessage {
   favorites: ModelSelection[]
 }
 
-// Per-mode model selections loaded from model.json (extension → webview)
+// Preferred and per-mode model selections loaded from persisted state (extension → webview)
 export interface ModelSelectionsLoadedMessage {
   type: "modelSelectionsLoaded"
   selections: Record<string, ModelSelection>
+  preferred?: ModelSelection & { variant?: string }
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1257,6 +1302,9 @@ export interface AgentManagerSendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -1578,6 +1626,7 @@ export type ExtensionMessage =
   | PartsUpdatedMessage
   | PartRemovedMessage
   | SessionStatusMessage
+  | SessionWakeupMessage
   | SessionTurnClosedMessage
   | SessionErrorMessage
   | PermissionRequestMessage
@@ -1652,6 +1701,7 @@ export type ExtensionMessage =
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
+  | PushFixesSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
@@ -1666,6 +1716,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage
+  | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage
   | AgentManagerRunStatusMessage
   | AgentManagerCaffeinationMessage
@@ -1679,6 +1730,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
+  | AppendChatContextMessage
   | AppendReviewCommentsMessage
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
@@ -1706,6 +1758,7 @@ export type ExtensionMessage =
   | AgentManagerPRErrorMessage
   | AgentManagerCommentReactionResultMessage
   | PRMergeResult
+  | PRReviewResult
   | AgentManagerTerminalCreatedMessage
   | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage

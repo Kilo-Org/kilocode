@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "پیشوند شاخه",
   "agentManager.settings.branchPrefix.description":
     "پیشوند شاخه‌هایی که در همه پروژه‌ها خودکار نام‌گذاری می‌شوند، برای مثال feature/. برای نام‌های صریح شاخه‌ها اعمال نمی‌شود. برای نداشتن پیشوند، خالی بگذارید.",
+  "agentManager.settings.worktreePool.title": "آماده‌سازی از پیش worktreeها",
+  "agentManager.settings.worktreePool.description":
+    "یک worktree آماده را در پس‌زمینه فراهم کنید تا نشست‌های جدید Agent Manager سریع‌تر شروع شوند. برای هر پروژه باز، یک checkout روی دیسک فضای اضافی مصرف می‌کند.",
   "agentManager.settings.project.title": "پروژه",
   "agentManager.settings.project.description":
     "repository موردنظر را انتخاب کنید تا تنظیمات worktree آن را ویرایش کنید.",
@@ -49,9 +52,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "قبل از شروع agent در یک worktree جدید اجرا شود.",
   "agentManager.settings.setupScript.create": "ایجاد script",
   "agentManager.settings.setupScript.edit": "ویرایش script",
-  "agentManager.project.add": "افزودن پروژه",
+  "agentManager.project.add": "افزودن پروژه...",
   "agentManager.project.remove": "حذف از Agent Manager",
   "agentManager.project.missing": "مخزن یافت نشد",
+  "agentManager.project.settings": "تنظیمات پروژه",
   "agentManager.project.restricted":
     "فضای کاری فعلی VS Code شما پوشه اصلی یا ریشه سیستم فایل است. برای استفاده از Agent Manager، یک پوشه پروژه مشخص را در VS Code باز کنید.",
   "agentManager.notGitRepo": "این یک مخزن git نیست",
@@ -140,6 +144,11 @@ export const dict = {
     "این مخزن از Git LFS استفاده می‌کند، اما git-lfs یافت نشد. لطفاً Git LFS را نصب کنید.",
   "agentManager.setup.error.no_commits":
     "این مخزن هنوز هیچ کامیتی ندارد. قبل از استفاده از Worktree، یک کامیت اولیه ایجاد کنید.",
+  "agentManager.setup.error.worktree_missing":
+    "پوشه این worktree دیگر وجود ندارد. آن را از شاخه‌اش بازیابی کنید یا worktree را حذف کنید.",
+  "agentManager.setup.error.worktree_unregistered":
+    "گیت دیگر این پوشه را به‌عنوان worktree پیگیری نمی‌کند. آن را حذف کنید و worktree جدیدی بسازید.",
+  "agentManager.setup.error.git_timeout": "Git به‌موقع پاسخ نداد. بررسی کنید که مخزن در دسترس است و دوباره تلاش کنید.",
   "agentManager.shortcuts.title": "میانبرهای صفحه‌کلید",
   "agentManager.shortcuts.category.sidebar": "نوار کناری",
   "agentManager.shortcuts.category.tabs": "تب‌ها",
@@ -238,6 +247,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "ارسال همه به چت ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "ارسال {{count}} مورد به GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "ارسال به دلیل خطای GitHub متوقف شد: {{error}}",
   "agentManager.review.inlineCount": "نظرات محلی ({{count}})",
   "agentManager.review.prCount": "نظرات PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} فایل",
@@ -312,6 +323,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "منسوخ",
   "agentManager.pr.comment.sent": "ارسال شد",
   "agentManager.pr.comment.copy": "کپی نظر",
+  "agentManager.pr.comment.copyLink": "کپی پیوند نظر",
   "agentManager.pr.comment.openOnGitHub": "باز کردن در GitHub",
   "agentManager.pr.comment.showInDiff": "نمایش در diff",
   "agentManager.pr.comment.unplaced": "نظرات خارج از diff فعلی",
@@ -421,7 +433,7 @@ export const dict = {
     "حالت بیدار نگه داشتن رایانه برای عامل‌های Kilo فعال است؛ برای غیرفعال کردن کلیک کنید",
   "agentManager.caffeination.active": "رایانه هنگام کار عامل‌های Kilo بیدار نگه داشته می‌شود",
   "agentManager.caffeination.unavailable": "حالت بیدار نگه داشتن رایانه در این پلتفرم در دسترس نیست",
-  "agentManager.browser.title": "مرورگر",
+  "agentManager.browser.title": "مرورگر یکپارچه",
   "agentManager.browser.url": "URL برنامه محلی",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "باز کردن",
@@ -430,7 +442,7 @@ export const dict = {
   "agentManager.browser.inspect": "انتخاب عنصر",
   "agentManager.browser.devtoolsTitle": "ابزارهای توسعه",
   "agentManager.browser.empty": "برای پیش‌نمایش، یک برنامه محلی را باز کنید.",
-  "agentManager.browser.noSession": "ابتدا یک جلسه Agent Manager را انتخاب کنید.",
+  "agentManager.browser.noSession": "برای مرور یک برنامه محلی، یک جلسه در Agent Manager شروع یا انتخاب کنید.",
   "agentManager.browser.screenshotAlt": "صفحه فعلی مرورگر",
   "agentManager.browser.errors": "مشکلات مرورگر: {{count}}",
   "agentManager.browser.diagnostics": "عیب‌یابی مرورگر",
@@ -465,4 +477,47 @@ export const dict = {
   "agentManager.intro.guide": "راهنما را بخوانید",
   "agentManager.intro.dismiss": "رد کردن مقدمه",
   "agentManager.intro.reopen": "Agent Manager چگونه کار می‌کند",
+  "agentManager.worktree.health.absent-restorable": "پوشه حذف شده است",
+  "agentManager.worktree.health.absent-restorableNote":
+    "پوشه نیست، اما شاخه {{branch}} هنوز وجود دارد. آن را بازیابی کنید تا کار در اینجا ادامه یابد.",
+  "agentManager.worktree.health.absent-gone": "پوشه و شاخه حذف شده‌اند",
+  "agentManager.worktree.health.absent-goneNote":
+    "نه پوشه و نه شاخه دیگر وجود ندارند. برای مرتب‌سازی مدخل را حذف کنید؛ نشست‌ها زیر «محلی» نگه داشته می‌شوند.",
+  "agentManager.worktree.health.unregistered": "worktree گیت نیست",
+  "agentManager.worktree.health.unregisteredNote":
+    "پوشه وجود دارد، اما گیت دیگر آن را به‌عنوان worktree پیگیری نمی‌کند و وضعیتش خواندنی نیست.",
+  "agentManager.worktree.health.unavailable": "وضعیت در دسترس نیست",
+  "agentManager.worktree.health.unavailableNote":
+    "Git یا GitHub CLI به‌موقع پاسخ نداد. بررسی این worktree موقتاً متوقف شد و دوباره تلاش می‌شود.",
+  "agentManager.worktree.restore": "بازیابی worktree",
+  "agentManager.worktree.removeKeepSessions": "حذف با نگه‌داشتن نشست‌ها",
+  "agentManager.orphans.resolve": "حل…",
+  "agentManager.orphans.summaryCount": "{{count}} پوشه باقی‌مانده worktree",
+  "agentManager.orphans.summarySize": "{{count}} پوشه باقی‌مانده worktree · {{size}}",
+  "agentManager.orphans.calculating": "در حال محاسبه حجم…",
+  "agentManager.orphans.sizeUnknown": "نامشخص",
+  "agentManager.orphans.dialogTitle": "پوشه‌های باقی‌مانده worktree",
+  "agentManager.orphans.helpIntro":
+    "Kilo هر worktree‌ای که می‌سازد را داخل پوشه .kilo/worktrees همین مخزن نگه می‌دارد. پوشه‌های زیر در همان پوشه قرار دارند، اما git هیچ‌کدام را به عنوان worktree فهرست نمی‌کند، بنابراین دیگر چیزی از آن‌ها استفاده نمی‌کند.",
+  "agentManager.orphans.helpCheckout":
+    "پوشه‌ای که به‌عنوان دارای checkout گیت علامت خورده است، همچنان یک ورودی .git در خود دارد و ممکن است کار commit‌نشده داشته باشد. این پوشه‌ها انتخاب‌نشده باقی می‌مانند؛ پیش از حذف، یکی را باز کنید و بررسی کنید.",
+  "agentManager.orphans.helpCauses":
+    "باقی‌مانده‌ها معمولاً از حذفی که نیمه‌کاره مانده، worktree‌ای که بیرون از Kilo حذف شده، یا ابزاری که پس از حذف پوشه در آن نوشته است به وجود می‌آیند. حذف‌هایی که هنوز در حال اجرا هستند اینجا فهرست نمی‌شوند.",
+  "agentManager.orphans.helpDelete":
+    "حذف، پوشه‌های انتخاب‌شده را برای همیشه از دیسک پاک می‌کند و آن‌ها را به سبد بازیافت نمی‌فرستد. هیچ شاخه و هیچ worktree فعالی دست‌کاری نمی‌شود. حجم‌ها نشان می‌دهند هر پوشه در این لحظه چه مقدار فضای دیسک را اشغال کرده است.",
+  "agentManager.orphans.helpMore": "نمایش بیشتر",
+  "agentManager.orphans.helpLess": "نمایش کمتر",
+  "agentManager.orphans.columnPath": "مسیر",
+  "agentManager.orphans.columnSize": "حجم",
+  "agentManager.orphans.columnContents": "محتوا",
+  "agentManager.orphans.checkoutWarning": "شامل یک checkout گیت است",
+  "agentManager.orphans.footerSelected": "{{count}} انتخاب‌شده · {{size}}",
+  "agentManager.orphans.footerCheckouts": "{{count}} هنوز شامل checkout گیت هستند",
+  "agentManager.orphans.reveal": "نمایش در سیستم‌عامل",
+  "agentManager.orphans.revealMac": "نمایش در Finder",
+  "agentManager.orphans.revealWindows": "نمایش در Explorer",
+  "agentManager.orphans.revealLinux": "نمایش در فایل‌ها",
+  "agentManager.orphans.deleteButton": "حذف {{count}} پوشه ({{size}})",
+  "agentManager.orphans.cancel": "لغو",
+  "agentManager.error.title": "خطای Agent Manager",
 }

@@ -1,4 +1,4 @@
-import type { InstallMarketplaceItemOptions, MarketplaceFilters, MarketplaceItem } from "../marketplace"
+import type { InstallMarketplaceItemOptions, MarketplaceItem } from "../marketplace"
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
@@ -37,6 +37,8 @@ export interface SendMessageRequest {
   browserFeedback?: BrowserFeedbackData
   agentManagerContext?: string
   contextDirectory?: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ResumeSessionRequest {
@@ -97,6 +99,7 @@ export interface PermissionResponseRequest {
   response: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  feedback?: string
 }
 
 export interface CreateSessionRequest {
@@ -156,6 +159,8 @@ export interface ImportAndSendMessage {
   browserFeedback?: BrowserFeedbackData
   command?: string
   commandArgs?: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface LoginRequest {
@@ -322,10 +327,6 @@ export interface OpenAdvancedWorktreeRequest {
   type: "openAdvancedWorktree"
 }
 
-export interface OpenKiloClawRequest {
-  type: "openKiloClaw"
-}
-
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -340,6 +341,7 @@ export interface RequestCommandsMessage {
 
 export interface SendCommandRequest {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string
@@ -659,16 +661,6 @@ export interface UnsyncSessionRequest {
   scope?: "task" | "inspector"
 }
 
-// Agent Manager worktree messages
-export interface CreateWorktreeSessionRequest {
-  type: "agentManager.createWorktreeSession"
-  text: string
-  providerID?: string
-  modelID?: string
-  agent?: string
-  files?: FileAttachment[]
-}
-
 export interface TelemetryRequest {
   type: "telemetry"
   event: string
@@ -696,6 +688,29 @@ export interface RemoveStaleWorktreeRequest {
   type: "agentManager.removeStaleWorktree"
   projectId?: string
   worktreeId: string
+  /** Move the worktree's sessions to Local instead of dropping them with the entry. */
+  keepSessions?: boolean
+}
+
+// Re-create a worktree folder that was deleted outside Agent Manager, from its branch
+export interface RestoreWorktreeRequest {
+  type: "agentManager.restoreWorktree"
+  projectId?: string
+  worktreeId: string
+}
+
+// Delete folders under .kilo/worktrees that no worktree claims
+export interface CleanOrphanDirectoriesRequest {
+  type: "agentManager.cleanOrphanDirectories"
+  projectId?: string
+  paths: string[]
+}
+
+// Reveal an orphaned directory in the OS file manager
+export interface RevealPathRequest {
+  type: "agentManager.revealPath"
+  projectId?: string
+  path: string
 }
 
 // Promote a session: create a worktree and move the session into it
@@ -980,6 +995,9 @@ export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
   projectId?: string
   text?: string
+  // When set, the first prompt runs this server command instead of `text`.
+  command?: string
+  arguments?: string
   name?: string
   versions: number
   providerID?: string
@@ -1474,12 +1492,13 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Per-mode model selection persistence (webview → extension)
+// Explicit preferred and per-mode model selection persistence (webview → extension)
 export interface PersistModelSelectionRequest {
   type: "persistModelSelection"
   agent: string
   providerID: string
   modelID: string
+  variant?: string
 }
 
 export interface RequestModelSelectionsMessage {
@@ -1545,11 +1564,6 @@ export interface FetchMarketplaceDataMessage {
   type: "fetchMarketplaceData"
 }
 
-export interface FilterMarketplaceItemsMessage {
-  type: "filterMarketplaceItems"
-  filters: MarketplaceFilters
-}
-
 export interface InstallMarketplaceItemMessage {
   type: "installMarketplaceItem"
   mpItem: MarketplaceItem
@@ -1611,7 +1625,6 @@ export type WebviewMessage =
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
-  | OpenKiloClawRequest
   | OpenFileRequest
   | ValidateFilesRequest
   | CancelLoginRequest
@@ -1681,12 +1694,14 @@ export type WebviewMessage =
   | SettingsTabChangedMessage
   | SyncSessionRequest
   | UnsyncSessionRequest
-  | CreateWorktreeSessionRequest
   | RequestNotificationsMessage
   | DismissNotificationMessage
   | CreateWorktreeRequest
   | DeleteWorktreeRequest
   | RemoveStaleWorktreeRequest
+  | RestoreWorktreeRequest
+  | CleanOrphanDirectoriesRequest
+  | RevealPathRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
   | OpenSessionLocallyRequest
@@ -1782,7 +1797,6 @@ export type WebviewMessage =
   | SetSandboxDefaultMessage
   | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
-  | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage
   | RemoveInstalledMarketplaceItemMessage
   | DismissAgentMigrationBannerMessage

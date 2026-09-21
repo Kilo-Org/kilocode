@@ -97,8 +97,7 @@ internal class ActiveListView(
             if (hit != null) return hit.tooltip?.takeIf { it.isNotBlank() }
             if (!cfg.description || !cfg.tooltip) return null
             val note = item.tooltip?.takeIf { it.isNotBlank() } ?: return null
-            val text = note.lines().joinToString("<br>") { XmlStringUtil.escapeString(it) }
-            return XmlStringUtil.wrapInHtml(text)
+            return UiStyle.Text.tipLines(note.lines())
         }
     }.apply {
         selectionMode = cfg.selection

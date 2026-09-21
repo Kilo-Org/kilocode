@@ -20,7 +20,7 @@ import {
   reviewEditSpeechKey,
 } from "../../webview-ui/diff-viewer/review-annotations"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
-import { parseReview, partReview, reviewMetadata } from "../../src/shared/review-comments"
+import { parseReview, partReview } from "../../src/shared/review-comments"
 
 function diff(file: string, before: string, after: string): WorktreeFileDiff {
   return { file, before, after, additions: 1, deletions: 0 }
@@ -177,14 +177,14 @@ describe("review message metadata", () => {
   const review = { version: 1 as const, comments }
 
   it("round-trips review comments and extracts the visible body", () => {
-    expect(partReview(reviewMetadata(review), content)).toEqual({
+    expect(partReview({ kilo: { review } }, content)).toEqual({
       data: review,
       body: "Please address this feedback.",
     })
   })
 
   it("extracts an empty body from a review-only message", () => {
-    expect(partReview(reviewMetadata(review), formatReviewCommentsMarkdown(comments))?.body).toBe("")
+    expect(partReview({ kilo: { review } }, formatReviewCommentsMarkdown(comments))?.body).toBe("")
   })
 
   it("rejects malformed review comments", () => {

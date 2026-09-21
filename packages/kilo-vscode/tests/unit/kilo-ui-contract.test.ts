@@ -339,9 +339,47 @@ describe("Expanded tool motion and typography (source)", () => {
     expect(cap).not.toContain("data-streaming")
   })
 
+  it("renders the headline mode as a header-only block that opens on demand", () => {
+    expect(reasoning).toContain(`data-headline={headline() ? "" : undefined}`)
+    expect(reasoning).toContain(`const mode = () => props.reasoningDisplay ?? "expanded"`)
+    expect(reasoning).toContain(`const capped = () => mode() === "preview"`)
+    expect(reasoning).toContain(`const headline = () => mode() === "headline"`)
+    expect(reasoning).toContain("const trackable = () => capped() || headline()")
+    expect(reasoning).toContain(`if (headline() && !open()) return reasoningSummary(view().body)`)
+  })
+
+  it("derives the open state through reasoningOpenState and re-derives when the mode resolves", () => {
+    expect(reasoning).toContain("reasoningOpenState(")
+    expect(reasoning).toContain("const seed = () => derive() || !!props.forceOpen")
+    expect(reasoning).toContain("const [open, setOpen] = createSignal(seed())")
+    expect(reasoning).toContain("if (userOpened.has(id) || userCollapsed.has(id)) return")
+    expect(reasoning).toContain("setOpen(derive())")
+  })
+
   it("does not smooth streaming reasoning scroll updates", () => {
     const css = fs.readFileSync(KILO_MESSAGE_PART_CSS_FILE, "utf-8")
     expect(css).not.toContain("scroll-behavior: smooth")
+  })
+
+  it("re-anchors the capped viewport to the bottom once the block settles", () => {
+    // A Markdown rebuild on the streaming flip or a fresh remount resizes the
+    // body after done(), when nothing resumes the streaming animation loop.
+    // The resize callback must snap synchronously, only while capped and only
+    // when the user has not scrolled away.
+    expect(reasoning).toContain("if (!capped() || scrolled || !ref) return")
+    expect(reasoning).toContain("ref.scrollTop = bottom()")
+    expect(reasoning).toContain("const bottom = () => (ref ? Math.max(0, ref.scrollHeight - ref.clientHeight) : 0)")
+    expect(reasoning).toMatch(/if \(!done\(\)\) \{[^}]*follow = requestAnimationFrame\(tick\)/)
+  })
+
+  it("settles encrypted reasoning summaries once the stream moved past them", () => {
+    // Encrypted reasoning items only set time.end on their summaries when the
+    // whole item finishes, so the transcript settles them from the part order.
+    expect(reasoning).toContain("if (props.settled) return true")
+    const src = fs.readFileSync(ASSISTANT_MESSAGE_FILE, "utf-8")
+    expect(src).toContain("if (props.message.time.completed) return true")
+    expect(src).toContain("return index >= 0 && index < all.length - 1")
+    expect(src).toContain("settled={settled()}")
   })
 })
 
@@ -383,9 +421,14 @@ describe("AssistantMessage visible row contract (source)", () => {
     expect(parts).toContain('part.state.status === "completed" && !!ToolRegistry.render(part.tool)')
   })
 
-  it("filters pending questions until their dock request exists", () => {
-    expect(src).toContain('part.state.status !== "pending" && part.state.status !== "running"')
-    expect(src).toContain('matchToolRequest(part, "question", session.questions())')
+  it("holds a resolving question dock until its tool part completes", () => {
+    // The backend publishes question.replied before the tool part completes, so
+    // dropping the row the moment the request disappears collapsed the
+    // transcript for a frame. The dock now stays mounted while the part is busy.
+    expect(src).toContain(
+      'const liveQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))',
+    )
+    expect(src).toContain("liveQuestion() ?? (questionBusy(part) ? heldQuestion() : undefined)")
   })
 
   it("filters completed synthetic text and redaction-only reasoning", () => {
@@ -395,6 +438,15 @@ describe("AssistantMessage visible row contract (source)", () => {
 
   it("uses the plan exit card only when plan metadata is renderable", () => {
     expect(src).toContain("if (!planExitInfo(part)) return")
+  })
+
+  it("keeps reasoning parts out of the wrapper grow-in clip", () => {
+    // The reasoning header and body bleed 6px past the wrapper, so a grow-in
+    // clip trims their sides while the text streams and releases them when it
+    // stops, resizing the block at the end of the stream.
+    const live = src.match(/const live =[\s\S]*?useGrowIn\(/)?.[0] ?? ""
+    expect(live).toContain('part.type === "text" && !!part.time && !part.time.end')
+    expect(live).not.toContain('part.type === "reasoning"')
   })
 
   it("uses the native recall tool without a separate memory badge", () => {
@@ -517,5 +569,39 @@ describe("Collapsed deferred tool details contract (source)", () => {
     expect(block).toMatch(/if \(open\(\) \|\| pending\(\) \|\| props\.forceOpen\) setMounted\(true\)/)
     expect(block).toContain("hasDetails")
     expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
+  })
+})
+
+describe("Deferred tool card remount contract (source)", () => {
+  const wrapper = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/basic-tool.tsx"), "utf-8")
+  const scroll = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/hooks/create-auto-scroll.tsx"), "utf-8")
+
+  it("mounts a remembered-open deferred card with its body in the same frame", () => {
+    // Otherwise every virtualizer remount of an expanded diff paints a
+    // collapsed frame, then grows by the full diff height and the pinned
+    // transcript jumps (and can loop through the virtualizer's range).
+    expect(wrapper).toContain("const defer = () => props.defer && !(remount && initial())")
+    // The memory is separate from the user preference map: a display setting
+    // or search forceOpen must not become a durable per-card open state.
+    expect(wrapper).toContain("if (initial() && !props.forceOpen) remember(id)")
+    expect(wrapper).not.toContain("writeToolOpen(key(), true)")
+    // Remembering must happen after the remount check, or an initially-open
+    // card would skip deferral on its very first mount too.
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeGreaterThan(-1)
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeLessThan(
+      wrapper.indexOf("remember(id)"),
+    )
+  })
+
+  it("keeps the bottom independent of the working state", () => {
+    // A session waiting on a permission reports idle while its transcript
+    // still changes; corrections must not be gated on `active()`.
+    const scrollHandler = scroll.slice(scroll.indexOf("const handleScroll"), scroll.indexOf("const onContentResize"))
+    expect(scrollHandler).not.toContain("if (active()) bottom()")
+    const viewport = scroll.slice(scroll.indexOf("const onViewportResize"), scroll.indexOf("// Effects"))
+    // The post-click grace window must not block a resize re-pin, but a gesture
+    // in progress must still be protected.
+    expect(viewport).not.toContain("isRecent()")
+    expect(viewport).toContain("userActivity.isDragging()")
   })
 })

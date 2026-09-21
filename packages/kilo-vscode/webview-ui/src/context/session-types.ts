@@ -24,6 +24,7 @@ import type {
   ToolPart,
 } from "../types/messages"
 import type { Activity } from "../utils/session-activity"
+import type { Timing } from "./session-timing"
 import type { MessageMutation } from "./session-utils"
 
 export interface SessionContextValue {
@@ -40,7 +41,7 @@ export interface SessionContextValue {
   statusInfo: Accessor<SessionStatusInfo>
   closeReason: Accessor<SessionCloseReason | undefined>
   statusText: Accessor<string | undefined>
-  busySince: Accessor<number | undefined>
+  busyTiming: Accessor<Timing | undefined>
   submitting: Accessor<boolean>
   canResume: Accessor<boolean>
   resume: () => void
@@ -111,6 +112,10 @@ export interface SessionContextValue {
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
+  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
+  preferencesReady: Accessor<boolean>
+  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
+  trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
@@ -146,6 +151,7 @@ export interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
+  variantPreference: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
@@ -177,6 +183,7 @@ export interface SessionContextValue {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ) => boolean
   sendCommand: (
     command: string,
@@ -188,6 +195,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+    projectId?: string,
   ) => boolean
   abort: () => void
   compact: () => void
@@ -196,7 +204,8 @@ export interface SessionContextValue {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
-  ) => void
+    feedback?: string,
+  ) => boolean
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
   closeQuestion: (requestID: string) => void

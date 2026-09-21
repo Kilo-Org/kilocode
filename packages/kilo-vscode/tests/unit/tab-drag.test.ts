@@ -34,7 +34,11 @@ function scene(init: { sessions: string[]; order?: string[]; pinned?: string[] }
     persist: (key, next) => persisted.push({ key, order: [...next] }),
     persistPinned: () => {},
   })
-  const move = (from: string, to: string) => drag.over({ draggable: { id: from }, droppable: { id: to } } as never)
+  const move = (from: string, to: string) =>
+    drag.over({
+      draggable: { id: from, transformed: { center: { y: 0 } }, layout: { bottom: 100 } },
+      droppable: { id: to },
+    } as never)
   /** What the bar shows for the current signal state. */
   const shown = () =>
     applyPinnedTabs(

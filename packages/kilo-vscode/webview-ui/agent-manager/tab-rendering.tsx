@@ -16,6 +16,7 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { SortableTab, SortableReviewTab } from "./sortable-tab"
 import type { TerminalStateControls } from "./terminal"
 import { isTerminalTabId, renderTerminalTab } from "./terminal"
+import { closeOthers } from "./close-others"
 import type { SessionInfo } from "../src/types/messages"
 import type { Activity } from "../src/utils/session-activity"
 import { parseBindingTokens } from "./keybind-tokens"
@@ -206,28 +207,6 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
       onTogglePin={pending ? undefined : () => deps.togglePinned(s.id)}
     />
   )
-}
-
-function closeOthers(target: string, deps: TabRenderDeps) {
-  for (const id of deps.tabIds()) {
-    if (id === target) continue
-    if (isTerminalTabId(id)) {
-      deps.closeTerminal(id)
-      continue
-    }
-    if (id === deps.REVIEW_TAB_ID) {
-      deps.closeReview()
-      continue
-    }
-    // Pinned tabs survive Close Others, the same way they do in VS Code.
-    if (deps.isPinned(id)) continue
-    deps.sessionClose(id)
-  }
-  if (isTerminalTabId(target)) {
-    deps.activateTerminal(target)
-    return
-  }
-  deps.selectSessionTab(target, deps.isPending(target))
 }
 
 // Terminal-specific renderers (layer + add button) live in `./terminal/render.tsx`

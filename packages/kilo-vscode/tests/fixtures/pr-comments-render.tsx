@@ -7,6 +7,7 @@ const reactions: WebviewMessage[] = []
 const replies: Record<string, unknown>[] = []
 const mutations: Record<string, unknown>[] = []
 const settings: Record<string, unknown>[] = []
+const copied: WebviewMessage[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
@@ -62,6 +63,7 @@ Object.assign(globalThis, {
       if ((message as { type: string }).type === "agentManager.replyComment") replies.push(message)
       if ((message as { type: string }).type === "agentManager.mutateComment") mutations.push(message)
       if (message.type === "updateSetting") settings.push(message)
+      if (message.type === "agentManager.copyToClipboard") copied.push(message)
     },
     getState: () => undefined,
     setState: () => undefined,
@@ -126,6 +128,7 @@ const [comments, setComments] = createSignal({
       body: "comment body survives Pierre rendering",
       file: "packages/kilo-ui/src/components/file.tsx",
       line: 14,
+      url: "https://github.com/example/repo/pull/42#discussion_r1",
       resolved: false,
       outdated: false,
       createdAt: Date.now() - 5 * 60 * 1000,
@@ -201,6 +204,19 @@ const reactionCount = (button: HTMLButtonElement) => button.querySelector(".am-p
 const pickerTrigger = () => root.querySelector('.am-pr-reactions [data-component="icon-button"]')
 assert.equal(reactionCount(addReaction!), "2")
 assert.ok(pickerTrigger(), "reaction picker trigger is rendered")
+
+// The open card copies its GitHub permalink next to the markdown copy.
+const openCard = root.querySelector('[data-thread-id="PRRT_open"]')
+assert.ok(openCard, "open thread card is rendered")
+const copyLink = openCard.querySelector<HTMLButtonElement>('button[aria-label="Copy comment link"]')
+assert.ok(copyLink, "copy link control is rendered")
+copyLink.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(copied.at(-1), {
+  type: "agentManager.copyToClipboard",
+  text: "https://github.com/example/repo/pull/42#discussion_r1",
+})
+
 addReaction!.click()
 await window.happyDOM.waitUntilComplete()
 assert.deepEqual(reactions[0], {
@@ -990,13 +1006,23 @@ assert.equal(jumps, 0)
 const pushButton = second.querySelector<HTMLButtonElement>(".am-pr-panel-mode")
 assert.ok(pushButton)
 assert.equal(pushButton.getAttribute("aria-pressed"), "true")
+assert.equal(pushButton.hasAttribute("data-active"), true)
+assert.equal(pushButton.disabled, false)
 pushButton.click()
 await window.happyDOM.waitUntilComplete()
 assert.deepEqual(settings.at(-1), { type: "updateSetting", key: "agentManager.pushFixes", value: false })
 assert.equal(pushButton.getAttribute("aria-pressed"), "false")
+assert.equal(pushButton.hasAttribute("data-active"), false)
+assert.equal(pushButton.disabled, false)
 pushButton.click()
 await window.happyDOM.waitUntilComplete()
+assert.deepEqual(settings.at(-1), { type: "updateSetting", key: "agentManager.pushFixes", value: true })
 assert.equal(pushButton.getAttribute("aria-pressed"), "true")
+assert.equal(pushButton.hasAttribute("data-active"), true)
+post({ type: "pushFixesSettingLoaded", enabled: false })
+await window.happyDOM.waitUntilComplete()
+assert.equal(pushButton.getAttribute("aria-pressed"), "false")
+assert.equal(pushButton.hasAttribute("data-active"), false)
 const snippet = {
   patch:
     '@@ -396,0 +414,7 @@\n+                      size="small"\n+                      class="session-goal-trigger"\n+                      disabled={props.readonly}\n+                      aria-label={language.t("session.goal.label")}\n+                    >\n+                      <Icon name="chevron-down" size="small" />\n+                      <span>',

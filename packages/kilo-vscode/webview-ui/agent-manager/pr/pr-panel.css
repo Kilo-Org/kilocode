@@ -89,10 +89,16 @@
 }
 
 /* Fix mode is on: the VS Code toggled-control look, distinct from ghost hover. */
-.am-pr-panel-actions [data-active="true"] {
+.am-pr-panel-actions .am-pr-panel-mode[aria-pressed="true"] {
   background: var(--vscode-inputOption-activeBackground, color-mix(in srgb, var(--vscode-foreground) 14%, transparent));
   color: var(--vscode-inputOption-activeForeground, var(--vscode-foreground));
   box-shadow: inset 0 0 0 1px var(--vscode-inputOption-activeBorder, transparent);
+}
+
+/* Keep the off state visibly different from the enabled push mode. */
+.am-pr-panel-actions .am-pr-panel-mode[aria-pressed="false"] {
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.72;
 }
 
 .am-pr-panel-body-wrap {
@@ -640,6 +646,76 @@
   flex: 1;
 }
 
+/* The same editor fits between diff lines without a second card or toolbar. */
+.am-pr-comment-composer[data-inline] {
+  padding: 0;
+  gap: 4px;
+  width: 100%;
+  font-family: var(--vscode-font-family, sans-serif);
+}
+
+.am-pr-comment-composer[data-inline] [data-slot="comment-editor"] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.am-pr-comment-composer[data-inline]
+  [data-component="input"][data-variant="normal"]
+  [data-slot="input-wrapper"]:focus-within:not(:has([data-readonly])) {
+  outline: none;
+}
+
+.am-pr-comment-composer[data-inline] [data-slot="comment-preview"],
+.am-pr-comment-composer[data-inline] [data-component="input"][data-variant="normal"] textarea[data-slot="input-input"] {
+  min-height: 56px;
+  font-family: inherit;
+}
+
+.am-pr-comment-composer[data-inline] .am-pr-comment-actions {
+  padding: 4px 0 0;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.am-pr-comment-composer[data-inline] [data-slot="comment-actions-gap"] {
+  flex: 1;
+  order: 1;
+}
+
+.am-pr-comment-composer[data-inline] [data-action="cancel"],
+.am-pr-comment-composer[data-inline] [data-action="discard"] {
+  order: 2;
+}
+
+.am-pr-comment-composer[data-inline] [data-action="submit"] {
+  order: 3;
+}
+
+.am-pr-comment-composer[data-inline] [data-action="send"] {
+  order: 4;
+}
+
+/* The unified diff composer keeps Save/Cancel on the left and the send action on the right. */
+.am-pr-comment-composer[data-action="diff"] [data-action="save"],
+.am-pr-comment-composer[data-action="diff"] [data-action="cancel"] {
+  order: 0;
+}
+
+.am-pr-comment-composer[data-action="diff"] [data-slot="comment-actions-gap"] {
+  order: 1;
+}
+
+.am-pr-comment-composer[data-action="diff"] [data-action="preview"],
+.am-pr-comment-composer[data-action="diff"] [data-action="write"] {
+  order: 2;
+}
+
+.am-pr-comment-composer[data-action="diff"] .am-split-button,
+.am-pr-comment-composer[data-action="diff"] [data-action="send-kilo"] {
+  order: 3;
+}
+
 .am-pr-reactions {
   gap: 3px;
   flex-wrap: wrap;
@@ -1083,7 +1159,16 @@
 }
 
 .am-pr-merge-footer .am-split-button {
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.am-pr-merge-footer .am-split-button[data-variant="primary"]:hover:not([data-disabled]) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--surface-brand-base) 35%, transparent);
 }
 
 .am-pr-merge-controls {
@@ -1114,6 +1199,12 @@
   width: 12px;
   height: 12px;
   margin-right: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-pr-merge-footer .am-split-button {
+    transition: none;
+  }
 }
 
 .am-pr-merge-confirm {

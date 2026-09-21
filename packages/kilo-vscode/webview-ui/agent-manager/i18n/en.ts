@@ -40,6 +40,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Branch prefix",
   "agentManager.settings.branchPrefix.description":
     "Prefix for automatically named branches in all projects, for example feature/. Does not apply to explicit branch names. Leave empty for no prefix.",
+  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
   "agentManager.settings.project.title": "Project",
   "agentManager.settings.project.description": "Choose the repository whose worktree settings you want to edit.",
   "agentManager.settings.project.empty": "No Agent Manager projects are available.",
@@ -47,9 +50,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Run before an agent starts in a new worktree.",
   "agentManager.settings.setupScript.create": "Create script",
   "agentManager.settings.setupScript.edit": "Edit script",
-  "agentManager.project.add": "Add project",
+  "agentManager.project.add": "Add project...",
   "agentManager.project.remove": "Remove from Agent Manager",
   "agentManager.project.missing": "Repository not found",
+  "agentManager.project.settings": "Project settings",
   "agentManager.project.restricted":
     "Your current VS Code workspace is your home folder or a filesystem root. Open a specific project folder in VS Code to use Agent Manager.",
   "agentManager.notGitRepo": "Not a git repository",
@@ -65,6 +69,49 @@ export const dict = {
   "agentManager.worktree.stale": "Stale",
   "agentManager.worktree.staleTooltip": "Missing on disk or no longer tracked by git worktree",
   "agentManager.worktree.removeStale": "Remove stale worktree",
+  // Health states say what is actually wrong, and each one names the fix it allows.
+  "agentManager.worktree.health.absent-restorable": "Folder deleted",
+  "agentManager.worktree.health.absent-restorableNote":
+    "The folder is gone, but branch {{branch}} still exists. Restore it to keep working here.",
+  "agentManager.worktree.health.absent-gone": "Folder and branch deleted",
+  "agentManager.worktree.health.absent-goneNote":
+    "Neither the folder nor the branch exists anymore. Remove the entry to tidy up; sessions are kept under Local.",
+  "agentManager.worktree.health.unregistered": "Not a git worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "The folder exists, but git no longer tracks it as a worktree. Its status cannot be read.",
+  "agentManager.worktree.health.unavailable": "Status unavailable",
+  "agentManager.worktree.health.unavailableNote":
+    "Git or GitHub CLI did not answer in time. Polling is paused for this worktree and will retry.",
+  "agentManager.worktree.restore": "Restore worktree",
+  "agentManager.worktree.removeKeepSessions": "Remove, keep sessions",
+  "agentManager.orphans.resolve": "Resolve…",
+  "agentManager.orphans.summaryCount": "{{count}} leftover worktree folder(s)",
+  "agentManager.orphans.summarySize": "{{count}} leftover worktree folder(s) · {{size}}",
+  "agentManager.orphans.calculating": "calculating size…",
+  "agentManager.orphans.sizeUnknown": "unknown",
+  "agentManager.orphans.dialogTitle": "Leftover worktree folders",
+  "agentManager.orphans.helpIntro":
+    "Kilo keeps every worktree it creates inside the .kilo/worktrees folder of this repository. The folders below are in that folder, but git does not list any of them as a worktree, so nothing is using them anymore.",
+  "agentManager.orphans.helpCheckout":
+    "A folder flagged as containing a git checkout still has a .git entry inside and may hold uncommitted work. Those are left unselected, so open one and check it before you delete it.",
+  "agentManager.orphans.helpCauses":
+    "Leftovers usually come from a deletion that was interrupted, a worktree removed outside Kilo, or a tool that wrote into the folder after it was removed. Deletions that are still running are not listed here.",
+  "agentManager.orphans.helpDelete":
+    "Deleting removes the selected folders from disk for good, without going through the Trash. No branch and no active worktree is touched. Sizes are what each folder takes up on disk right now.",
+  "agentManager.orphans.helpMore": "Show more",
+  "agentManager.orphans.helpLess": "Show less",
+  "agentManager.orphans.columnPath": "Path",
+  "agentManager.orphans.columnSize": "Size",
+  "agentManager.orphans.columnContents": "Contents",
+  "agentManager.orphans.checkoutWarning": "contains a git checkout",
+  "agentManager.orphans.footerSelected": "{{count}} selected · {{size}}",
+  "agentManager.orphans.footerCheckouts": "{{count}} still contain a git checkout",
+  "agentManager.orphans.reveal": "Reveal in OS",
+  "agentManager.orphans.revealMac": "Show in Finder",
+  "agentManager.orphans.revealWindows": "Show in Explorer",
+  "agentManager.orphans.revealLinux": "Show in Files",
+  "agentManager.orphans.deleteButton": "Delete {{count}} folders ({{size}})",
+  "agentManager.orphans.cancel": "Cancel",
   "agentManager.worktree.doubleClickRename": "Double-click to rename",
   "agentManager.worktree.versions": "{{count}} versions",
   "agentManager.worktree.advancedOptions": "Advanced worktree options",
@@ -128,6 +175,7 @@ export const dict = {
   "agentManager.terminal.openInVscode": "VS Code terminal",
   "agentManager.terminal.openInPanel": "Agent Manager panel",
   "agentManager.terminal.errorTitle": "Terminal error",
+  "agentManager.error.title": "Agent Manager error",
 
   "agentManager.setup.failed": "Worktree setup failed",
   "agentManager.setup.settingUp": "Setting up worktree",
@@ -138,6 +186,12 @@ export const dict = {
     "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS.",
   "agentManager.setup.error.no_commits":
     "This repository has no commits yet. Create an initial commit before using worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "This worktree's folder no longer exists. Restore it from its branch, or remove the worktree.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git no longer tracks this folder as a worktree. Remove it and create a new worktree.",
+  "agentManager.setup.error.git_timeout":
+    "Git did not answer in time. Check that the repository is reachable and try again.",
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",
   "agentManager.shortcuts.category.tabs": "Tabs",
@@ -235,6 +289,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Send all to chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} to GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Stopped at a GitHub error: {{error}}",
   "agentManager.review.inlineCount": "Local comments ({{count}})",
   "agentManager.review.prCount": "PR comments ({{count}})",
   "agentManager.review.fileCount": "{{count}} files",
@@ -309,6 +365,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Outdated",
   "agentManager.pr.comment.sent": "Sent",
   "agentManager.pr.comment.copy": "Copy comment",
+  "agentManager.pr.comment.copyLink": "Copy comment link",
   "agentManager.pr.comment.openOnGitHub": "Open on GitHub",
   "agentManager.pr.comment.showInDiff": "Show in diff",
   "agentManager.pr.comment.unplaced": "Comments outside the current diff",
@@ -401,7 +458,7 @@ export const dict = {
   "agentManager.documents.preview": "Preview document",
   "agentManager.documents.source": "Show source",
   "agentManager.documents.comments": "{{count}} comments",
-  "agentManager.browser.title": "Browser",
+  "agentManager.browser.title": "Integrated Browser",
   "agentManager.browser.url": "Local application URL",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Open",
@@ -410,7 +467,7 @@ export const dict = {
   "agentManager.browser.refresh": "Refresh browser",
   "agentManager.browser.close": "Close browser",
   "agentManager.browser.empty": "Open a local application to preview it here.",
-  "agentManager.browser.noSession": "Select an Agent Manager session first.",
+  "agentManager.browser.noSession": "Start or select a session in Agent Manager to browse a local application.",
   "agentManager.browser.screenshotAlt": "Current browser page",
   "agentManager.browser.errors": "Browser issues: {{count}}",
   "agentManager.browser.diagnostics": "Browser diagnostics",

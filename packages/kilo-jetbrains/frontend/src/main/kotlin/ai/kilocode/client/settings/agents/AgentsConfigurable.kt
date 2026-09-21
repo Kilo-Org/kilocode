@@ -8,10 +8,12 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.model.ModelText
+import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
+import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -45,7 +47,7 @@ import kotlinx.coroutines.withContext
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
-class AgentsConfigurable : AgentBehaviorConfigurableBase<JComponent>() {
+class AgentsConfigurable : DirectoryReadyConfigurable<JComponent>() {
     override fun getId(): String = ID
     override fun getDisplayName(): String = KiloBundle.message("settings.agentBehavior.agents.displayName")
     override fun create(cs: CoroutineScope, dir: String): JComponent = AgentsSettingsUi(cs, dir)
@@ -101,6 +103,8 @@ internal class AgentsSettingsUi(
     }
 
     override fun extraActions(): List<AnAction> = listOf(addAction())
+
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_agents"))
 
     override fun toolbarRight(): JComponent = Stack.horizontal(UiStyle.Gap.sm())
         .next(JBLabel(KiloBundle.message("settings.agentBehavior.agents.default")))

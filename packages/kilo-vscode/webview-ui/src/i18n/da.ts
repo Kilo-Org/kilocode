@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Fejl eller mistet forbindelse.",
   "session.activity.retry": "Prøver automatisk igen.",
   "session.activity.busy": "I gang.",
+  "session.activity.scheduled": "Venter på en planlagt vækning.",
   "session.activity.done": "Tur afsluttet.",
   "session.activity.idle": "Kører ikke.",
 
@@ -201,12 +202,14 @@ export const dict = {
   "prompt.action.send.recording": "Transskriber og send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Forbedr prompt",
+  "prompt.paste.expand": "Klik for at udvide den indsatte tekst",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkendelse",
   "prompt.action.autoApprove.disable": "Deaktiver automatisk godkendelse",
   "prompt.action.autoApprove.enabled":
     "Automatisk godkendelse er aktiveret. Tilladelsesanmodninger godkendes automatisk.",
   "prompt.action.autoApprove.disabled":
     "Automatisk godkendelse er deaktiveret. Klik for at godkende tilladelsesanmodninger automatisk.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox-eskaleringsanmodninger er altid udelukket.",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
   "prompt.action.sandbox.enable": "Aktivér sandbox",
@@ -224,11 +227,13 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Tilladt",
   "prompt.action.sandbox.unrestricted": "Ubegrænset",
   "prompt.action.sandbox.description.enabled": "Skrivning er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.description.escalation":
+    "Tilladelsesregler og automatisk godkendelse gælder i sandkassen. Kommandoer, der skal forlade den, spørger altid.",
   "prompt.action.sandbox.description.disabled": "Klik for at begrænse skriveadgang til filsystemet og netværksadgang.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
-  "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.start": "Start stemmeinput",
   "speechToText.tooltip.shortcut":
     "Tryk på knappen eller brug Cmd/Ctrl+K til at starte eller stoppe optagelsen; hold knappen nede, mens du taler, og slip den for at transskribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med at tale.",
@@ -268,8 +273,13 @@ export const dict = {
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
-  "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
+  "notification.permission.titleSandboxEscalation": "Kør uden for sandkassen?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Dette kører hele kommandoen uden begrænsninger for filsystem og netværk, kun for denne kommando. Git skal skrive til .git, som er skrivebeskyttet i sandkassen og ligger uden for worktreet i et linket worktree. Bash-tilladelsesregler og automatisk godkendelse godkender aldrig denne anmodning automatisk.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
+  "ui.permission.reject": "Afvis",
+  "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
+  "ui.permission.feedbackHint": "Enter for at afvise, Esc for at annullere",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
   "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
   "ui.permission.rule.addToAllowed": "Tilføj til tilladelseslisten",
@@ -318,7 +328,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Ny Opgave",
   "sidebar.topBar.history": "Historik",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Markedsplads",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Indstillinger",
@@ -462,6 +471,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Brugerdefineret udbyder",
   "settings.providers.connected.environmentDescription": "Forbundet fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Log ind med ChatGPT",
+  "settings.providers.action.changeApiKey": "Skift API-nøgle",
   "settings.providers.custom.description": "Tilføj en brugerdefineret udbyder via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodel",
   "settings.providers.subagentModel.description":
@@ -553,38 +563,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Kunne ikke opdatere tilladelser",
 
-  "settings.permissions.tool.read.title": "Læs",
   "settings.permissions.tool.read.description": "Læsning af en fil (matcher filstien)",
-  "settings.permissions.tool.edit.title": "Rediger",
   "settings.permissions.tool.edit.description":
     "Ændre filer, herunder redigeringer, skrivninger, patches og multi-redigeringer",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Match filer ved hjælp af glob-mønstre",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Søg i filindhold ved hjælp af regulære udtryk",
-  "settings.permissions.tool.list.title": "Liste",
   "settings.permissions.tool.list.description": "List filer i en mappe",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Kør shell-kommandoer",
-  "settings.permissions.tool.task.title": "Opgave",
   "settings.permissions.tool.task.description": "Start underagenter",
-  "settings.permissions.tool.skill.title": "Færdighed",
   "settings.permissions.tool.skill.description": "Indlæs en færdighed efter navn",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Kør sprogserverforespørgsler",
-  "settings.permissions.tool.todoread.title": "Læs To-do",
   "settings.permissions.tool.todoread.description": "Læs to-do listen",
-  "settings.permissions.tool.todowrite.title": "Skriv To-do",
   "settings.permissions.tool.todowrite.description": "Opdater to-do listen",
-  "settings.permissions.tool.webfetch.title": "Webhentning",
   "settings.permissions.tool.webfetch.description": "Hent indhold fra en URL",
-  "settings.permissions.tool.websearch.title": "Websøgning",
   "settings.permissions.tool.websearch.description": "Søg på nettet",
-  "settings.permissions.tool.codesearch.title": "Kodesøgning",
   "settings.permissions.tool.codesearch.description": "Søg kode på nettet",
-  "settings.permissions.tool.external_directory.title": "Ekstern mappe",
   "settings.permissions.tool.external_directory.description": "Få adgang til filer uden for projektmappen",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Opdag gentagne værktøjskald med identisk input",
 
   "session.delete.title": "Slet session",
@@ -602,6 +596,7 @@ export const dict = {
   "session.tabs.switcher.current": "Aktuel",
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Arbejder",
+  "session.tabs.switcher.scheduled": "Planlagt",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbejdstræ",
@@ -677,6 +672,7 @@ export const dict = {
   "profile.usage.source.direct": "Direkte",
   "profile.usage.state.stale": "Viser de senest opdaterede forbrugsdata.",
   "profile.usage.state.unavailable": "Forbrugsdata er ikke tilgængelige.",
+  "profile.usage.state.empty": "Ingen forbrugsgrænser rapporteret.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling forfalden",
   "profile.usage.plan.canceling": "Abonnement: Opsiges ved periodens udgang",
   "profile.usage.plan.unknown": "Abonnement: Status ukendt",
@@ -840,7 +836,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Færdigheder",
 
   "settings.browser.description":
-    "Når aktiveret kan AI-agenten interagere med websider — navigere, klikke, skrive og tage skærmbilleder. Et Chrome-vindue åbnes, så du kan se agenten arbejde.",
+    "Konfigurér indbygget browserautomatisering drevet af Playwright. Kilo kan navigere, interagere med og tage skærmbilleder af websider i dine sessioner.",
   "settings.browser.enable.title": "Aktivér browserautomatisering",
   "settings.browser.enable.description": "Registrér Playwright MCP-serveren hos CLI-backend'en.",
   "settings.browser.systemChrome.title": "Brug system-Chrome",
@@ -895,15 +891,28 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Del et board mellem en hovedsession og dens underagenter til opgaveløsning, herunder indlejrede underagenter. Brug det til parallelle løsningsforsøg eller arbejdsopgaver, der supplerer hinanden, ikke til alle opgaver.",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
   "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Model-id, der sendes til dit eget transskriptionsendpoint, for eksempel whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Tale til tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Brug en OpenAI-kompatibel transskriptions-API i stedet for Kilo Gateway. Modeller læses fra /models, og lyd sendes til /audio/transcriptions. Lad feltet stå tomt for at bruge Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Tale til tekst-API-nøgle",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token, der sendes til den egne transskriptions-basis-URL. Gemmes i din Kilo-konfigurationsfil.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
+    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text, eller angiv en egen transskriptions-basis-URL nedenfor.",
+  "settings.models.speechToText.remoteDescription":
+    "Stemmeinput er ikke tilgængelig i fjernvinduer. Åbn Kilo i et lokalt vindue for at bruge mikrofonen.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
@@ -923,7 +932,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code-migrering (Eksperimentel)",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
   "settings.experimental.multiProject.description":
@@ -1063,6 +1072,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "model",
   "settings.agentBehaviour.workflows.variant": "variant",
   "settings.agentBehaviour.workflows.modelDescription": "Global modeloverskrivelse",
+  "settings.experimental.codeMode.title": "Programmatiske værktøjskald",
+  "settings.experimental.codeMode.description":
+    "Ruter MCP-værktøjskald gennem en afgrænset JavaScript-runtime med behovsbaseret værktøjsregistrering i stedet for at eksponere hvert MCP-værktøj direkte. Sparer kontekst, når mange MCP-værktøjer er forbundet.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
@@ -1114,6 +1126,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model, der bruges til automatisk og manuel komprimering. Lad feltet være tomt for at bruge chatmodellen. Omkostninger, hastighed og kvaliteten af opsummeringen afhænger af modellen.",
   "settings.context.compactionModel.useChatModel": "Brug chatmodel",
+  "settings.context.compactionModel.hint":
+    "For at vælge hvilken model der bruges til komprimering, se Modelindstillinger.",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
@@ -1158,9 +1172,12 @@ export const dict = {
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
-  "settings.display.reasoningAutoCollapse.description":
-    "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
+  "settings.display.reasoningDisplay.title": "Ræsonnementsblokke",
+  "settings.display.reasoningDisplay.description":
+    "Vælg, hvordan ræsonnementsblokke starter. Foldet ud viser hele teksten, Forhåndsvisning begrænser den til en kort rulbar forhåndsvisning, og Overskrift viser kun titlen og streamingindikatoren, indtil du åbner den.",
+  "settings.display.reasoningDisplay.expanded": "Foldet ud",
+  "settings.display.reasoningDisplay.preview": "Forhåndsvisning",
+  "settings.display.reasoningDisplay.headline": "Overskrift",
   "settings.display.shiftTabCycle.title": "Skift ræsonnementsindsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Tryk på Shift+Tab i et promptindtastningsfelt for at skifte til næste niveau af ræsonnementsindsats. Deaktivér for at beholde Shift+Tab til tastaturnavigation af fokus.",
@@ -1300,6 +1317,16 @@ export const dict = {
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "Udgiv på GitHub",
+  "diffViewer.comment.loadFailed": "Kunne ikke indlæse ændringerne i pull requesten.",
+  "diffViewer.comment.unavailable": "Denne linje er ikke tilgængelig i det aktuelle snapshot af pull requesten.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Åbn PR",
+  "diffViewer.comment.localChanges": "Lokale ændringer",
+  "diffViewer.comment.prChanges": "PR-ændringer",
+  "diffViewer.comment.sendToKilo": "Send til Kilo",
+  "diffViewer.comment.sendToGithub": "Send til GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Vælg destination",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 
@@ -1321,5 +1348,11 @@ export const dict = {
   "chat.search.close": "Luk søgning",
   "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
   "chat.search.noResults": "Ingen resultater",
+  "settings.experimental.browserAutomation.title": "Integreret browser",
+  "settings.experimental.browserAutomation.description":
+    "Vis forhåndsvisninger af lokale applikationer i Agent Manager, og gør værktøjet browser_open tilgængeligt for Agent Manager-sessioner.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Brug system-Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Brug den installerede Google Chrome til den integrerede browser. Deaktivér kun, når en kompatibel Playwright Chromium-browser allerede er installeret.",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
 }

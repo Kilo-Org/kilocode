@@ -27,7 +27,7 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
       <div class="am-sidebar-header-main">
         <Show when={props.onToggle}>
           <IconButton
-            icon={props.expanded ? "chevron-down" : "chevron-right"}
+            icon="chevron-right"
             variant="ghost"
             size="small"
             class="am-sidebar-header-toggle"

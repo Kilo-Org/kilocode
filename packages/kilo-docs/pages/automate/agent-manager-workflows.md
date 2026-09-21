@@ -169,9 +169,10 @@ Layer review in before asking a teammate:
 - **`/review`** — slash command, AI review of staged, unstaged, and untracked changes in the worktree when run without arguments. Good as a last pass before committing.
 - **`/review uncommitted [guidance]`** — explicitly review uncommitted changes, optionally focusing the review with guidance.
 - **`/review branch [base] [guidance]`** — review the whole branch vs. its detected or specified base, with optional guidance.
+- **`/review worktree [guidance]`** - review committed, staged, unstaged, and untracked changes against the worktree's recorded parent branch. Available only in Agent Manager managed worktree sessions.
 - **`/review <commit-hash>` or `/review <PR URL or number>`** — review a specific commit or pull request.
 - **`kilo review` in CI** — automated PR review. See [Code Reviews](/docs/automate/code-reviews/overview) for the setup.
-- **Human review** — push the branch from the session terminal and `gh pr create`. The PR badge appears on the worktree and stays in sync with CI and reviews.
+- **Human review** — push the branch from the session terminal and `gh pr create`. The PR badge appears on the worktree and stays in sync with CI and reviews. Review, comment on, and merge the pull request from the internal PR panel; see [Reviewing a pull request](/docs/automate/agent-manager#reviewing-a-pull-request).
 
 A typical sequence: self-review in the diff panel → `/review` → push → CI review → teammate review.
 
@@ -198,11 +199,7 @@ Three ways, pick based on how much collaboration the change needs:
 
 ### Parent branch → worktree
 
-When the parent branch moves ahead, ask the agent from the worktree's session:
-
-> Merge the latest `origin/main` into this branch and resolve any conflicts. Do not use `git stash`.
-
-Save this as a reusable slash command if you do it often.
+When the parent branch moves ahead, run `/update-from-base` in the managed worktree's chat. It asks the agent to fetch and merge the saved base, preserving uncommitted edits without Git stash. The [Push Pull Request Fixes](/docs/automate/agent-manager#push-pull-request-fixes) setting controls whether it is also asked to push after checks pass. See [Update from the base branch](/docs/automate/agent-manager#update-from-the-base-branch) for details.
 
 {% callout type="danger" %}
 **Never use `git stash` inside a worktree.** Stashes live in the shared `.git` directory that every worktree points at, so a stash made in one worktree can be popped in another — crossing uncommitted changes between agents. Use a WIP commit or a temporary branch instead.
@@ -216,7 +213,7 @@ The Agent Manager is good at conflict resolution when you give it context. A low
 
 ### When several worktrees finish at once
 
-Merge the most foundational one first. Then, in each remaining worktree, ask the agent to pull the updated parent branch in (same prompt as above) before merging. The agent handles the merge direction and only escalates conflicts it cannot resolve.
+Merge the most foundational one first. Then run `/update-from-base` in each remaining worktree before merging it. Give the agent context when a conflict needs a decision about the intended behavior.
 
 ## Hygiene
 

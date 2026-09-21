@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Grenpræfiks",
   "agentManager.settings.branchPrefix.description":
     "Præfiks for automatisk navngivne grene i alle projekter, for eksempel feature/. Gælder ikke eksplicitte grennavne. Lad feltet være tomt for intet præfiks.",
+  "agentManager.settings.worktreePool.title": "Forvarm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Forbered et klart worktree i baggrunden, så nye Agent Manager-sessioner starter hurtigere. Bruger ekstra diskplads til ét checkout pr. åbent projekt.",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description": "Vælg det repository, hvis worktree-indstillinger du vil redigere.",
   "agentManager.settings.project.empty": "Der er ingen tilgængelige projekter i Agent Manager.",
@@ -48,9 +51,10 @@ export const dict = {
   "agentManager.settings.setupScript.description": "Kør, før en agent starter i et nyt worktree.",
   "agentManager.settings.setupScript.create": "Opret script",
   "agentManager.settings.setupScript.edit": "Rediger script",
-  "agentManager.project.add": "Tilføj projekt",
+  "agentManager.project.add": "Tilføj projekt...",
   "agentManager.project.remove": "Fjern fra Agent Manager",
   "agentManager.project.missing": "Repository ikke fundet",
+  "agentManager.project.settings": "Projektindstillinger",
   "agentManager.project.restricted":
     "Dit aktuelle VS Code-arbejdsområde er din hjemmemappe eller filsystemets rod. Åbn en specifik projektmappe i VS Code for at bruge Agent Manager.",
   "agentManager.notGitRepo": "Ikke et git-repository",
@@ -137,6 +141,11 @@ export const dict = {
     "Dette repository bruger Git LFS, men git-lfs blev ikke fundet. Installer venligst Git LFS.",
   "agentManager.setup.error.no_commits":
     "Dette repository har ingen commits endnu. Opret et indledende commit før du bruger worktrees.",
+  "agentManager.setup.error.worktree_missing":
+    "Mappen til dette worktree findes ikke længere. Gendan den fra dens branch, eller fjern worktreet.",
+  "agentManager.setup.error.worktree_unregistered":
+    "Git sporer ikke længere denne mappe som worktree. Fjern den og opret et nyt worktree.",
+  "agentManager.setup.error.git_timeout": "Git svarede ikke i tid. Kontrollér, at repositoryet kan nås, og prøv igen.",
   "agentManager.shortcuts.title": "Tastaturgenveje",
   "agentManager.shortcuts.category.sidebar": "Sidebjælke",
   "agentManager.shortcuts.category.tabs": "Faner",
@@ -235,6 +244,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Send alt til chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} til GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Afsendelsen blev stoppet på grund af en GitHub-fejl: {{error}}",
   "agentManager.review.inlineCount": "Lokale kommentarer ({{count}})",
   "agentManager.review.prCount": "PR-kommentarer ({{count}})",
   "agentManager.review.fileCount": "{{count}} filer",
@@ -309,6 +320,7 @@ export const dict = {
   "agentManager.pr.comment.outdated": "Forældet",
   "agentManager.pr.comment.sent": "Sendt",
   "agentManager.pr.comment.copy": "Kopiér kommentar",
+  "agentManager.pr.comment.copyLink": "Kopiér kommentarlink",
   "agentManager.pr.comment.openOnGitHub": "Åbn på GitHub",
   "agentManager.pr.comment.showInDiff": "Vis i diff",
   "agentManager.pr.comment.unplaced": "Kommentarer uden for den aktuelle diff",
@@ -420,7 +432,7 @@ export const dict = {
   "agentManager.caffeination.active": "Holder computeren vågen, mens Kilo-agenterne arbejder",
   "agentManager.caffeination.unavailable":
     "Tilstanden til at holde computeren vågen er ikke tilgængelig på denne platform",
-  "agentManager.browser.title": "Browser",
+  "agentManager.browser.title": "Integreret browser",
   "agentManager.browser.url": "URL til lokal applikation",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Åbn",
@@ -429,7 +441,7 @@ export const dict = {
   "agentManager.browser.refresh": "Opdater browser",
   "agentManager.browser.close": "Luk browser",
   "agentManager.browser.empty": "Åbn en lokal applikation for at få vist en forhåndsvisning her.",
-  "agentManager.browser.noSession": "Vælg først en session i Agent Manager.",
+  "agentManager.browser.noSession": "Start eller vælg en session i Agent Manager for at gennemse en lokal applikation.",
   "agentManager.browser.screenshotAlt": "Aktuel browserside",
   "agentManager.browser.errors": "Browserproblemer: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnostik",
@@ -465,4 +477,47 @@ export const dict = {
   "agentManager.intro.guide": "Læs guiden",
   "agentManager.intro.dismiss": "Spring introduktion over",
   "agentManager.intro.reopen": "Sådan fungerer Agent Manager",
+  "agentManager.worktree.health.absent-restorable": "Mappe slettet",
+  "agentManager.worktree.health.absent-restorableNote":
+    "Mappen er væk, men branchen {{branch}} findes stadig. Gendan den for at arbejde videre her.",
+  "agentManager.worktree.health.absent-gone": "Mappe og branch slettet",
+  "agentManager.worktree.health.absent-goneNote":
+    "Hverken mappen eller branchen findes længere. Fjern posten for at rydde op; sessioner bevares under Lokal.",
+  "agentManager.worktree.health.unregistered": "Ikke et git-worktree",
+  "agentManager.worktree.health.unregisteredNote":
+    "Mappen findes, men git sporer den ikke længere som worktree. Dens status kan ikke læses.",
+  "agentManager.worktree.health.unavailable": "Status utilgængelig",
+  "agentManager.worktree.health.unavailableNote":
+    "Git eller GitHub CLI svarede ikke i tid. Forespørgsler for dette worktree er sat på pause og prøves igen.",
+  "agentManager.worktree.restore": "Gendan worktree",
+  "agentManager.worktree.removeKeepSessions": "Fjern, behold sessioner",
+  "agentManager.orphans.resolve": "Løs…",
+  "agentManager.orphans.summaryCount": "{{count}} efterladt(e) worktree-mappe(r)",
+  "agentManager.orphans.summarySize": "{{count}} efterladt(e) worktree-mappe(r) · {{size}}",
+  "agentManager.orphans.calculating": "beregner størrelse…",
+  "agentManager.orphans.sizeUnknown": "ukendt",
+  "agentManager.orphans.dialogTitle": "Efterladte worktree-mapper",
+  "agentManager.orphans.helpIntro":
+    "Kilo gemmer alle worktrees, den opretter, i mappen .kilo/worktrees i dette repository. Mapperne nedenfor ligger i den mappe, men git viser ingen af dem som et worktree, så der er ikke længere noget, der bruger dem.",
+  "agentManager.orphans.helpCheckout":
+    "En mappe, der er markeret som indeholdende et git-checkout, har stadig en .git-post indeni og kan indeholde arbejde, der ikke er committet. Sådanne mapper er ikke valgt, så åbn en af dem og tjek den, før du sletter den.",
+  "agentManager.orphans.helpCauses":
+    "Efterladte mapper skyldes typisk en sletning, der blev afbrudt, et worktree, der blev fjernet uden om Kilo, eller et værktøj, der skrev i mappen, efter at den blev fjernet. Sletninger, der stadig kører, vises ikke her.",
+  "agentManager.orphans.helpDelete":
+    "Sletning fjerner de valgte mapper permanent fra disken uden om Papirkurven. Ingen branch og intet aktivt worktree bliver berørt. Størrelserne er den plads, hver mappe fylder på disken lige nu.",
+  "agentManager.orphans.helpMore": "Vis mere",
+  "agentManager.orphans.helpLess": "Vis mindre",
+  "agentManager.orphans.columnPath": "Sti",
+  "agentManager.orphans.columnSize": "Størrelse",
+  "agentManager.orphans.columnContents": "Indhold",
+  "agentManager.orphans.checkoutWarning": "indeholder et git-checkout",
+  "agentManager.orphans.footerSelected": "{{count}} valgt · {{size}}",
+  "agentManager.orphans.footerCheckouts": "{{count}} indeholder stadig et git-checkout",
+  "agentManager.orphans.reveal": "Vis i systemet",
+  "agentManager.orphans.revealMac": "Vis i Finder",
+  "agentManager.orphans.revealWindows": "Vis i Stifinder",
+  "agentManager.orphans.revealLinux": "Vis i Filer",
+  "agentManager.orphans.deleteButton": "Slet {{count}} mapper ({{size}})",
+  "agentManager.orphans.cancel": "Annuller",
+  "agentManager.error.title": "Agent Manager-fejl",
 }

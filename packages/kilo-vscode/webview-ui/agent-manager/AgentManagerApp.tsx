@@ -33,7 +33,6 @@ import type {
   RunStatus,
   PRStatus,
   AgentManagerPRStatusMessage,
-  AgentManagerPRErrorMessage,
   AgentManagerProjectsMessage,
   AgentProjectSnapshot,
   ManagedSessionState,
@@ -80,6 +79,7 @@ import { createModeRouter } from "./mode-router"
 import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
+import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
@@ -143,6 +143,7 @@ import {
   addPendingTab as addLocalPendingTab,
   nextTabAfterClose,
   openSessionTab,
+  pruneClosed,
   reconcileTrackedTabs,
   replacePendingTab,
   restoreTrackedTabs,
@@ -154,7 +155,8 @@ import {
   isPendingSend,
   promotePendingDraftDiscard,
 } from "../src/utils/draft-store"
-import { applyTabOrder, firstOrderedTitle, togglePinnedTab } from "./tab-order"
+import { applyTabOrder, firstOrderedTitle } from "./tab-order"
+import { createTabPersistence } from "./tab-persistence"
 import { createTabDrag } from "./tab-drag"
 import { createTabOrderSync } from "./tab-order-sync"
 import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
@@ -180,11 +182,12 @@ import { useTabScroll } from "./tab-scroll"
 import { DiffPanelCache } from "./DiffPanelCache"
 import { createPRNavigation, PRPanelHost } from "./pr/PRPanelHost"
 import { createPRReview } from "./pr/review"
+import { createPRDiffCommentState } from "./pr/diff-comment-state"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
 import { createWorktreeDiffs, diffDataKey, wireDiffId } from "./worktree-diffs"
-import { createWorktreeReferences } from "./worktree-references"
+import { createWorktreeMentionReferences as createMentionRefs } from "./worktree-references"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { createReviewComposers } from "./review-composers"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -207,7 +210,7 @@ import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { DiffScopeControls } from "../diff-viewer/DiffScopeControls"
 import { scopeCapabilities } from "./diff-scope-state"
 import { createDiffReviewScope } from "./diff-review-scope"
-import { initialMessage, seedInitialVariant } from "./initial-message"
+import { dispatchInitialPrompt, seedInitialVariant } from "./initial-message"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
@@ -303,6 +306,7 @@ const AgentManagerContent: Component = () => {
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
   })
+  onCleanup(session.trackScopes(registry.scopes))
   const defaultBase = (id: string) =>
     projectDefaultBase(registry.ensure(id), id === activeProjectId(), repoDetectedBranch())
   const localSessionIDs = () => registry.active().tabs.ids()
@@ -310,6 +314,19 @@ const AgentManagerContent: Component = () => {
   /** Remove a session ID from the local tab (no-op if absent). */
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
+  // Local sessions the user closed while a host state push can still list them.
+  // Keyed per project so switching projects cannot prune another project's
+  // suppression entry. Kept until the host stops tracking the id so a stale push
+  // cannot resurrect the tab; see `restoreTrackedTabs` in the state handler.
+  const closedLocals = new Map<string, Set<string>>()
+  const closedSet = () => {
+    const key = currentProjectId() ?? "single"
+    const existing = closedLocals.get(key)
+    if (existing) return existing
+    const set = new Set<string>()
+    closedLocals.set(key, set)
+    return set
+  }
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const sidebar = createSidebarCollapse(vscode, { initial: persisted?.sidebarCollapsed })
   const sidebarCollapsed = sidebar.collapsed
@@ -694,32 +711,13 @@ const AgentManagerContent: Component = () => {
   const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
   let pendingNewSection = false
 
-  const persistTabOrder = (key: string, order: string[]) => {
-    const durable = order.filter((id) => id !== REVIEW_TAB_ID && !isTerminalTabId(id))
-    vscode.postMessage({ type: "agentManager.setTabOrder", key, order: durable })
-  }
-  const pinnedTabs = () => registry.active().pinnedTabs()
-  const setPinnedTabs: Setter<Record<string, string[]>> = (v) => registry.active().setPinnedTabs(v)
-  const persistPinnedTabs = (key: string, ids: string[]) => {
-    vscode.postMessage({ type: "agentManager.setPinnedTabs", key, ids })
-  }
-  const isTabPinned = (id: string) => {
-    const key = selection()
-    return key !== null && (pinnedTabs()[key] ?? []).includes(id)
-  }
-  const toggleTabPinned = (id: string) => {
-    const key = selection()
-    if (key === null) return
-    const next = togglePinnedTab(pinnedTabs()[key], id)
-    setPinnedTabs((prev) => ({ ...prev, [key]: next }))
-    persistPinnedTabs(key, next)
-  }
+  const tabState = createTabPersistence(registry.active, selection, REVIEW_TAB_ID, (m) => vscode.postMessage(m))
   const tabOrderSync = createTabOrderSync({
     LOCAL,
     REVIEW_TAB_ID,
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
-    persist: persistTabOrder,
+    persist: tabState.persistOrder,
     localSessionIDs,
     sessions: session.sessions,
     managedSessions,
@@ -738,6 +736,7 @@ const AgentManagerContent: Component = () => {
     return id
   }
   const placeLocal = (id: string, pending: string | undefined, active: string | undefined) => {
+    closedSet().delete(id)
     const existing = localSessionIDs().includes(id)
     const next = pending
       ? replacePendingTab({ ids: localSessionIDs(), active }, pending, id)
@@ -747,7 +746,7 @@ const AgentManagerContent: Component = () => {
     if (!pending && !existing) tabOrderSync.append(LOCAL, id)
     if (pending && pending === active) setActivePendingId(undefined)
   }
-  const focusLocalSession = (id: string) => {
+  const focusLocalSession = (id: string, scrollToBottom = false) => {
     const pending = activePendingId()
     const replace = pending && localSessionIDs().includes(pending) ? pending : undefined
     placeLocal(id, replace, replace)
@@ -755,7 +754,7 @@ const AgentManagerContent: Component = () => {
     terms.setActiveId(undefined)
     setReviewActive(false)
     setSelection(LOCAL)
-    session.selectSession(id)
+    session.selectSession(id, { scrollToBottom })
     requestChatFocus()
   }
   persistLocalTabs({
@@ -830,7 +829,7 @@ const AgentManagerContent: Component = () => {
     managed: managedSessions,
     locals: localSet,
   })
-  const references = createWorktreeReferences(vscode, registry.active, projectSessionsLive.current, selection)
+  const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
 
   /** Session ids shown in the project-scoped history view (every session of the project). */
   const historySessionIds = createMemo(() => {
@@ -1103,13 +1102,13 @@ const AgentManagerContent: Component = () => {
     return true
   }
 
-  const focusManagedSession = (worktreeId: string, sid: string) => {
+  const focusManagedSession = (worktreeId: string, sid: string, scrollToBottom = false) => {
     selectWorktree(worktreeId)
     closeHistory()
     terms.setActiveId(undefined)
     setActivePendingId(undefined)
     setReviewActive(false)
-    session.selectSession(sid)
+    session.selectSession(sid, { scrollToBottom })
     requestChatFocus()
     return true
   }
@@ -1203,12 +1202,16 @@ const AgentManagerContent: Component = () => {
       if (ms?.worktreeId) setSelection(ms.worktreeId)
     }
     // Restore local session IDs from persisted state (sessions with no worktreeId)
+    const tracked = trackedSessionInventory(state.sessions, session.sessions())
+    const closed = closedSet()
+    pruneClosed(closed, state.sessions)
     const restored = restoreTrackedTabs(
-      trackedSessionInventory(state.sessions, session.sessions()),
+      tracked,
       localSessionIDs(),
       state.tabOrder?.[LOCAL],
       isPending,
       applyTabOrder,
+      closed,
     )
     if (restored) setLocalSessionIDs(restored)
     if (switched === "switched" && needsLocalDraft(localSessionIDs(), terms.forSelection(nsKey(LOCAL)))) addPendingTab()
@@ -1531,6 +1534,12 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
+      if (msg.type === "agentManager.revealSession") {
+        if (currentProjectId() !== msg.projectId) return
+        if (msg.worktreeId) focusManagedSession(msg.worktreeId, msg.sessionId, true)
+        else focusLocalSession(msg.sessionId, true)
+        return
+      }
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.state") preserveSidebarScroll(() => stateHandlers.state(msg))
       stateHandlers.browser(msg)
@@ -1572,10 +1581,7 @@ const AgentManagerContent: Component = () => {
         seedInitialVariant(session, ev)
 
         // Only send a message if there's text — otherwise just clear busy state
-        const init = initialMessage(ev)
-        if (init) {
-          session.submit(init)
-        }
+        dispatchInitialPrompt(session, ev)
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
         if (ev.worktreeId) {
@@ -1613,15 +1619,7 @@ const AgentManagerContent: Component = () => {
         managedSession: focusManagedSession,
       })
 
-      if (msg.type === "agentManager.prError") {
-        if (!isCurrent(msg, currentProjectId())) return
-        const ev = msg as AgentManagerPRErrorMessage
-        showToast({
-          variant: "error",
-          title: t(`agentManager.pr.error.${ev.error}.title`),
-          description: t(`agentManager.pr.error.${ev.error}.description`),
-        })
-      }
+      if (reportFailure(msg, { toast: showToast, t, project: currentProjectId() }) === "stale") return
 
       if (projectLive.apply(msg)) return
     })
@@ -1709,6 +1707,17 @@ const AgentManagerContent: Component = () => {
       setReviewActive(false)
       panels.open(SidePanel.Diff)
     },
+  })
+  const prDiffComments = createPRDiffCommentState({
+    post: vscode.postMessage,
+    onMessage: vscode.onMessage,
+    project: activeProjectId,
+    statuses: prStatuses,
+  })
+  createEffect(() => {
+    const ctx = diffCtx()
+    if (!ctx || (!diffOpen() && !reviewActive())) return
+    prDiffComments.load(ctx)
   })
   createEffect(() => {
     const panel = diffOpen()
@@ -1801,6 +1810,7 @@ const AgentManagerContent: Component = () => {
         activeProjectId={activeProjectId()}
         defaultBase={defaultBase}
         onCreate={creation.schedule}
+        worktrees={dialogRefs}
       />
     ))
   }
@@ -1998,6 +2008,7 @@ const AgentManagerContent: Component = () => {
     }
     forgetSessionFocus(sessionId)
     if (pending || localSet().has(sessionId)) {
+      if (!pending) closedSet().add(sessionId)
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
     }
     if (pending) {
@@ -2115,13 +2126,11 @@ const AgentManagerContent: Component = () => {
     review: { id: REVIEW_TAB_ID, open: reviewOpen, title: () => t("session.tab.review") },
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
-    pinned: pinnedTabs,
-    setPinned: setPinnedTabs,
+    ...tabState.drag,
     setLocal: setLocalSessionIDs,
     terms,
     namespace: nsKey,
-    persist: persistTabOrder,
-    persistPinned: persistPinnedTabs,
+    persist: tabState.persistOrder,
   })
   const tabIds = drag.ids
   const tabScroll = useTabScroll(tabIds, visibleTabId)
@@ -2233,8 +2242,7 @@ const AgentManagerContent: Component = () => {
       sessionMiddleClick: handleTabMouseDown,
       sessionClose: handleCloseTab,
       sessionFork: handleForkSession,
-      isPinned: isTabPinned,
-      togglePinned: toggleTabPinned,
+      ...tabState.tab,
       onTabKey: tabFocus.key,
       reviewLabel: t("session.tab.review"),
       reviewTooltip: t("command.review.toggle"),
@@ -2354,6 +2362,12 @@ const AgentManagerContent: Component = () => {
             busy={(id) => busyWorktrees().has(id)}
             blocked={activity.blocked}
             isStaleWorktree={(id) => staleWorktreeIds().has(id)}
+            worktreeHealth={(id) => registry.active().worktreeHealth()[id]}
+            orphanDirectories={() => registry.active().orphanDirectories()}
+            onRestoreWorktree={(id) => vscode.postMessage({ type: "agentManager.restoreWorktree", worktreeId: id })}
+            onRemoveStaleKeepSessions={(id) =>
+              vscode.postMessage({ type: "agentManager.removeStaleWorktree", worktreeId: id, keepSessions: true })
+            }
             shortcutMap={shortcutMap}
             worktreeStats={worktreeStats}
             prStatuses={prStatuses}
@@ -2615,6 +2629,10 @@ const AgentManagerContent: Component = () => {
                       }
                       remoteComments={remote.comments}
                       remoteTarget={remote.target}
+                      prTarget={prDiffComments.target}
+                      prSnapshot={prDiffComments.snapshot}
+                      prLoading={prDiffComments.loading}
+                      prError={prDiffComments.error}
                       focusedComment={remote.focus}
                       composer={composers.get}
                       lead={() => diffScopeControls(true)}
@@ -2724,6 +2742,10 @@ const AgentManagerContent: Component = () => {
                   sessionKey={`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`}
                   projectId={activeProjectId()}
                   worktreeId={diffCtx()}
+                  prTarget={prDiffComments.target(diffCtx())}
+                  prSnapshot={prDiffComments.snapshot(diffCtx())}
+                  prLoading={prDiffComments.loading(diffCtx())}
+                  prError={prDiffComments.error(diffCtx())}
                   notice={diffNotice()}
                   lead={diffScopeControls(false)}
                   canRevert={scopeCapabilities(review.scope()).revert}

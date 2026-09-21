@@ -7,6 +7,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.todo.TodoListPanel
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
@@ -42,6 +43,9 @@ class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
     private val readonly: Boolean = false,
+    /** Whether the shared agent board icon should show, re-derived on every [update]. */
+    private val boardVisible: () -> Boolean = { false },
+    private val onShowBoard: () -> Unit = {},
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -74,6 +78,13 @@ class SessionHeaderPanel(
         toolTipText = KiloBundle.message("session.header.compact.description")
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
+    }
+    private val board = HoverIcon().apply {
+        icon = SessionViewIcons.bubble
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+        toolTipText = KiloBundle.message("session.board.tooltip")
+        accessibleContext.accessibleName = KiloBundle.message("session.board.tooltip")
+        addActionListener { onShowBoard() }
     }
     private val expand = JBLabel().apply {
         border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
@@ -117,6 +128,8 @@ class SessionHeaderPanel(
         .next(cost)
         .gap(UiStyle.Gap.xl())
         .next(context)
+        .gap(UiStyle.Gap.sm())
+        .next(board)
         .gap(UiStyle.Gap.sm())
         .next(compact)
     private val tokens = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
@@ -261,6 +274,7 @@ class SessionHeaderPanel(
 
         compact.isVisible = !readonly
         compact.isEnabled = !readonly && header.canCompact
+        board.isVisible = boardVisible()
         val appended = timeline.setItems(header.timeline)
         sizeTimeline()
         if (viewport.isVisible != timeline.isVisible) viewport.isVisible = timeline.isVisible
@@ -348,6 +362,8 @@ class SessionHeaderPanel(
     internal fun todoListPanel() = todoList
 
     internal fun compactButton() = compact
+
+    internal fun boardButton() = board
 
     internal fun rightPanel() = right
 

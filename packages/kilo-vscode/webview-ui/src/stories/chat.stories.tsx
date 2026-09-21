@@ -46,7 +46,8 @@ import type {
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { feedbackMetadata, formatBrowserFeedback } from "../../../src/shared/browser-feedback"
-import { reviewMetadata } from "../../../src/shared/review-comments"
+import { PUSH_INSTRUCTION } from "../../../src/shared/review-comments"
+import { injectedMetadata } from "../../../src/shared/injected-prompt"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -225,7 +226,7 @@ export const ChatViewSessionDockStability: Story = {
       status,
       statusInfo: () => ({ type: status() }),
       statusText: () => (busy() ? labels[step() % labels.length] : undefined),
-      busySince: () => (busy() ? Date.now() - 2000 : undefined),
+      busyTiming: () => (busy() ? { active: 2000, since: Date.now() } : undefined),
       submitting: () => busy(),
       isSubmitting: () => busy(),
       messages: () => [{ id: "msg-001" }] as any[],
@@ -273,7 +274,7 @@ function reviewMessage(comments: ReviewCommentEntry[]) {
       messageID: message.id,
       type: "text",
       text: `${prefix}\n\nPlease address these review comments.`,
-      metadata: reviewMetadata({ version: 1, comments }),
+      metadata: { kilo: { review: { version: 1, comments } } },
     },
   ]
   return <VscodeUserMessage message={message} parts={parts} />
@@ -425,6 +426,91 @@ export const UserMessageBrowserFeedback: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+/**
+ * Builds the user message a prompt Kilo composed produces. `title` marks the
+ * part through `metadata.kilo.injected`; without a title the body itself is
+ * inspected, which is how the pull request fix instruction is recognised.
+ */
+function injectedMessage(text: string, title?: string) {
+  const id = `injected-user-message-${title ?? "body"}`
+  const message: Message = {
+    id,
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: `${id}-part`,
+      sessionID: SESSION_ID,
+      messageID: id,
+      type: "text",
+      text,
+      metadata: title ? injectedMetadata(title) : undefined,
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
+function InjectedStory(props: { text: string; title?: string }) {
+  return (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>{injectedMessage(props.text, props.title)}</div>
+    </StoryProviders>
+  )
+}
+
+const REVIEW_TEMPLATE_BODY = [
+  "You are Kilo Code, an expert code reviewer focused on high-confidence security, performance, business logic, deploy safety, duplication, and dead-code findings.",
+  "",
+  "During the initial review phase, your role is advisory: provide clear, actionable feedback but DO NOT modify any files.",
+  "",
+  "Report each finding with a file and line reference.",
+].join("\n")
+
+/** Long marked prompt with blank-line paragraphs: collapses to the first paragraph. */
+export const UserMessageInjectedCommand: Story = {
+  name: "User message — injected slash command",
+  render: () => <InjectedStory text={REVIEW_TEMPLATE_BODY} title="/review worktree" />,
+}
+
+/** Short marked prompt: shows the header and the full text, no toggle. */
+export const UserMessageInjectedShort: Story = {
+  name: "User message — injected short prompt",
+  render: () => (
+    <InjectedStory text="Update the current branch from its saved base branch main." title="Update from main" />
+  ),
+}
+
+/**
+ * Long marked prompt with no blank-line paragraph. The first paragraph is the
+ * whole body, so it must render in full with no fade or toggle.
+ */
+export const UserMessageInjectedSingleParagraph: Story = {
+  name: "User message — injected single paragraph",
+  render: () => (
+    <InjectedStory
+      text={
+        "Step one of the instructions.\nStep two of the instructions.\nStep three of the instructions.\nStep four of the instructions.\nStep five of the instructions."
+      }
+      title="/demo"
+    />
+  ),
+}
+
+/** Auto-sent pull request fix: the body is only the push instruction. */
+export const UserMessagePushAutoSent: Story = {
+  name: "User message — auto-sent PR fix",
+  render: () => <InjectedStory text={PUSH_INSTRUCTION} />,
+}
+
+/** User text with the push instruction prepended: user text visible, instruction behind the toggle. */
+export const UserMessagePushMixed: Story = {
+  name: "User message — user text with added PR push",
+  render: () => <InjectedStory text={`${PUSH_INSTRUCTION}\n\nPlease also rename the helper.`} />,
 }
 
 /**
@@ -909,12 +995,14 @@ export const MessageListLayoutCorrection: Story = {
   render: () => {
     const [output, setOutput] = createSignal("Initial streamed response.")
     const [status, setStatus] = createSignal<"idle" | "busy">("busy")
+    // Simulates the composer or a dock growing below the transcript.
+    const [spacer, setSpacer] = createSignal(0)
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       status,
       statusInfo: () => ({ type: status() }),
       statusText: () => (status() === "busy" ? "Thinking…" : undefined),
-      busySince: () => (status() === "busy" ? Date.now() - 2000 : undefined),
+      busyTiming: () => (status() === "busy" ? { active: 2000, since: Date.now() } : undefined),
       messages: () => correctionMessages,
       userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
       getParts: (id: string) => {
@@ -954,8 +1042,12 @@ export const MessageListLayoutCorrection: Story = {
               >
                 Toggle status
               </button>
+              <button type="button" data-testid="grow-viewport-spacer" onClick={() => setSpacer((v) => v + 160)}>
+                Grow spacer
+              </button>
             </div>
             <ChatView />
+            <div data-testid="viewport-spacer" style={{ height: `${spacer()}px`, "flex-shrink": "0" }} />
           </div>
         </SessionContext.Provider>
       </StoryProviders>
@@ -1162,6 +1254,9 @@ const headerMessages: Message[] = [
     mode: "default",
     agent: "code",
     path: { cwd: "/project", root: "/project" },
+    // Real token counts, so the header renders its loaded state rather than the
+    // loading skeletons.
+    tokens: { input: 21_300, output: 58, reasoning: 1_200, cache: { read: 3_100, write: 0 } },
   },
 ]
 const headerParts: Record<string, Part[]> = {
@@ -1285,6 +1380,7 @@ export const TaskHeaderWithTodos: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       messages: () => headerMessages,
+      visibleMessages: () => headerMessages,
       currentSession: () => ({
         id: SESSION_ID,
         title: "Task: Can you use the update_todo_list tool to create a CLI interface implementation?",
@@ -1295,6 +1391,41 @@ export const TaskHeaderWithTodos: Story = {
       getParts: (id: string) => headerParts[id] ?? [],
       contextUsage: () => ({ tokens: 34300, percentage: 17 }),
       costBreakdown: () => [{ label: "Session", cost: 0.64 }],
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TaskHeaderSkeleton: Story = {
+  name: "TaskHeader — loading, first turn",
+  render: () => {
+    const message: Message = {
+      id: headerUserID,
+      sessionID: SESSION_ID,
+      role: "user",
+      content: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+      createdAt: new Date(headerNow).toISOString(),
+      time: { created: headerNow },
+    }
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => [message],
+      visibleMessages: () => [message],
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+        createdAt: new Date(headerNow).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getParts: () => [],
     }
     return (
       <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
@@ -1324,6 +1455,8 @@ export const TaskHeaderBackgroundAgents1280: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID }),
       messages: () => headerMessages,
+      visibleMessages: () => headerMessages,
+      getParts: (id: string) => headerParts[id] ?? [],
       currentSession: () => ({
         id: SESSION_ID,
         title: "Investigate request size limits",
@@ -1365,6 +1498,8 @@ export const TaskHeaderWithTodosAllDone: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
       messages: () => [{ id: "msg-001" }] as any[],
+      visibleMessages: () => headerMessages,
+      getParts: (id: string) => headerParts[id] ?? [],
       currentSession: () => ({
         id: SESSION_ID,
         title: "Writing poems about the team",
@@ -1634,7 +1769,7 @@ function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
 export const BoardClosed: Story = {
   name: "Board, header button",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} />
     </StoryProviders>
   ),
@@ -1643,7 +1778,7 @@ export const BoardClosed: Story = {
 export const BoardEmpty: Story = {
   name: "Board, hidden when empty",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={{ ...swarm, messages: [] }} />
     </StoryProviders>
   ),
@@ -1652,7 +1787,7 @@ export const BoardEmpty: Story = {
 export const BoardOpen: Story = {
   name: "Board, messages",
   render: () => (
-    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+    <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} open />
     </StoryProviders>
   ),

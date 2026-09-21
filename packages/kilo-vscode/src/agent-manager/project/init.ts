@@ -7,7 +7,10 @@
  * land before the persisted state file is read.
  */
 
+import * as fs from "fs"
 import { restoreWorktrees } from "../state-recovery"
+import { reconcileWorktrees, summarize, type WorktreeHealthReport } from "../worktree-reconcile"
+import { trackOrphanSizes } from "../orphans/sizing"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./route"
@@ -92,8 +95,75 @@ export async function initContextState(
         await state.flush()
       }
     }
-    return { ok: true, refsFixed: loaded.refsFixed }
+
+    // Disk → state recovery above only ever adds rows. This pass is the other direction: classify
+    // what is already tracked, prune what git can drop, and clear rows that cannot lose anything.
+    const health = await reconcileProject(ctx, log)
+    if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
+    if (health && health.dropped.length > 0) await state.flush()
+    // Adopt or clean leftover pooled slots, then pre-warm one off the click path.
+    void manager
+      .reconcilePool()
+      .then(() => manager.warmPool())
+      .catch((err) => log("Failed to reconcile worktree pool:", err))
+    return { ok: true, refsFixed: loaded.refsFixed, health }
   })
+}
+
+/**
+ * Reconcile state rows, git registrations, and directories for one project, storing the verdict on
+ * the context so pollers can skip worktrees that cannot answer.
+ *
+ * Failure here is never fatal: a project whose health is unknown keeps working, it just does not
+ * get self-healing until the next pass.
+ */
+export async function reconcileProject(
+  ctx: ProjectContext,
+  log: (...args: unknown[]) => void,
+): Promise<WorktreeHealthReport | undefined> {
+  const manager = ctx.worktreeManager()
+  const state = ctx.stateManager()
+  const report = await reconcileWorktrees({
+    root: ctx.root,
+    dir: manager.worktreesDir,
+    rows: () => state.getWorktrees().map((wt) => ({ id: wt.id, path: wt.path, branch: wt.branch })),
+    sessions: (id) => state.getSessions(id).length,
+    registered: () => manager.registeredPaths(),
+    dirs: () => manager.worktreeDirs(),
+    exists: (target) =>
+      fs.promises.access(target).then(
+        () => true,
+        () => false,
+      ),
+    branchExists: (branch) => manager.branchExists(branch),
+    prune: () => manager.pruneWorktrees(),
+    drop: (id) => state.removeWorktree(id),
+    log: (msg) => log(msg),
+  }).catch((err: unknown) => {
+    log("Failed to reconcile worktree health:", err)
+    return undefined
+  })
+  if (!report) return undefined
+  ctx.report = report
+  log(`worktree health: ${summarize(report)}`)
+  trackOrphanSizes(ctx, report.orphans, log)
+  return report
+}
+
+/** Counts only — no paths and no branch names, which are user content. */
+export function healthMetrics(report: WorktreeHealthReport): Record<string, number | boolean> {
+  const counts: Record<string, number | boolean> = {
+    worktrees: report.entries.length,
+    orphans: report.orphans.length,
+    dropped: report.dropped.length,
+    pruned: report.pruned,
+    degraded: report.degraded,
+  }
+  for (const entry of report.entries) {
+    const key = entry.health
+    counts[key] = ((counts[key] as number | undefined) ?? 0) + 1
+  }
+  return counts
 }
 
 /** Register explicit Local/worktree routes for every persisted project session. */

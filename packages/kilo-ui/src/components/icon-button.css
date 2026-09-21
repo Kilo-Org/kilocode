@@ -30,7 +30,6 @@
     opacity: 0.8;
   }
 
-  &[data-variant="ghost"][aria-expanded="true"],
   &[data-variant="ghost"][data-expanded],
   &[data-variant="ghost"][data-active],
   &[data-variant="ghost"][data-selected] {

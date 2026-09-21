@@ -1,5 +1,5 @@
 import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
-import { splitProps } from "solid-js"
+import { Show, splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
   "circle-x-outline": {
@@ -99,6 +99,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 20 20",
     path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor"/><circle cx="10" cy="10" r="4.5" stroke="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/>`,
   },
+  clock: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.25"/><path d="M10 5.75V10L13.25 11.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
   local: {
     viewBox: "0 0 20 20",
     path: `<rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor"/><path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square"/><path d="M10 13.5V16.5" stroke="currentColor"/>`,
@@ -141,31 +145,38 @@ export interface IconProps extends Omit<Props, "name"> {
 
 export function Icon(props: IconProps) {
   const [local, others] = splitProps(props, ["name", "size", "class", "classList"])
-  if (!((local.name as Name) in icons)) {
-    return (
-      <Upstream
-        {...others}
-        name={local.name as Props["name"]}
-        size={local.size}
-        class={local.class}
-        classList={local.classList}
-      />
-    )
-  }
+  // Read the table reactively: `name` can switch between a kilo-ui icon and an
+  // upstream icon after mount (for example PR badge status changes).
+  const icon = () => icons[local.name as Name]
   return (
-    <div data-component="icon" data-size={local.size || "normal"}>
-      <svg
-        classList={{
-          ...local.classList,
-          [local.class ?? ""]: !!local.class,
-        }}
-        data-slot="icon-svg"
-        fill="none"
-        viewBox={icons[local.name as Name].viewBox}
-        innerHTML={icons[local.name as Name].path}
-        aria-hidden="true"
-        {...others}
-      />
-    </div>
+    <Show
+      when={icon()}
+      fallback={
+        <Upstream
+          {...others}
+          name={local.name as Props["name"]}
+          size={local.size}
+          class={local.class}
+          classList={local.classList}
+        />
+      }
+    >
+      {(entry) => (
+        <div data-component="icon" data-size={local.size || "normal"}>
+          <svg
+            classList={{
+              ...local.classList,
+              [local.class ?? ""]: !!local.class,
+            }}
+            data-slot="icon-svg"
+            fill="none"
+            viewBox={entry().viewBox}
+            innerHTML={entry().path}
+            aria-hidden="true"
+            {...others}
+          />
+        </div>
+      )}
+    </Show>
   )
 }

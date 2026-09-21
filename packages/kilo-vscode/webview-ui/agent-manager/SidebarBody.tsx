@@ -23,12 +23,18 @@ import { LOCAL, adjacentHint } from "./navigate"
 import { applyTabOrder, reorderTabs } from "./tab-order"
 import { buildTopLevelItems, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
 import { createWorktreeCompletion } from "./worktree-completion"
-import { sectionAwareDetector } from "./section-dnd"
+import { worktreeDropReference } from "./worktree-references"
+import { beginPromptMentionDrop, endPromptMentionDrop } from "../src/utils/prompt-mention-drop"
+import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { OrphanNotice } from "./orphans/OrphanNotice"
+import { OrphanDialog } from "./orphans/OrphanDialog"
+import type { OrphanDirectory } from "./project/store"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
-import { WorktreeItem } from "./WorktreeItem"
+import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
@@ -83,6 +89,14 @@ export interface SidebarBodyProps {
   busy: (id: string) => boolean
   blocked: (id: string) => boolean
   isStaleWorktree: (id: string) => boolean
+  /** Why an unhealthy worktree is unhealthy, when known. */
+  worktreeHealth?: (id: string) => "absent-restorable" | "absent-gone" | "unregistered" | "unavailable" | undefined
+  /** Leftover folders under `.kilo/worktrees/` that no worktree claims. */
+  orphanDirectories?: () => OrphanDirectory[]
+  /** Restore a deleted worktree folder from its branch. */
+  onRestoreWorktree?: (id: string) => void
+  /** Drop the entry but move its sessions to Local. */
+  onRemoveStaleKeepSessions?: (id: string) => void
   shortcutMap: () => Map<string, number>
   worktreeStats: () => Record<string, WorktreeGitStats>
   prStatuses: () => Record<string, PRStatus | null>
@@ -102,8 +116,24 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
     buildTopLevelItems(props.sections(), ungrouped(), sorted(), props.sidebarWorktreeOrder()),
   )
   const vscode = useVSCode()
+  const dialog = useDialog()
   const updateBase = useBaseUpdate()
+  const openOrphanDialog = () =>
+    dialog.show(() => (
+      <OrphanDialog
+        orphans={props.orphanDirectories?.() ?? []}
+        onReveal={(path) => vscode.postMessage({ type: "agentManager.revealPath", path })}
+        onDelete={(paths) => {
+          vscode.postMessage({ type: "agentManager.cleanOrphanDirectories", paths })
+          dialog.close()
+        }}
+        onClose={() => dialog.close()}
+      />
+    ))
   const localState = () => props.activityFor(null)
+  // Captured at worktree drag start so a release outside the sidebar, or a drop
+  // on the prompt, can undo a reorder applied while passing over sibling rows.
+  let origin: string[] | undefined
 
   return (
     <>
@@ -207,6 +237,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
           }
         />
         <div class="am-worktree-list">
+          <OrphanNotice orphans={props.orphanDirectories?.() ?? []} onResolve={openOrphanDialog} />
           <Show when={props.worktreesLoaded() && props.sessionsLoaded()} fallback={<WorktreeSkeleton />}>
             <Show when={!props.isGitRepo()}>
               <div class="am-not-git-notice">
@@ -250,10 +281,31 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
 
                 const onWtDragStart = (event: DragEvent) => {
                   const id = event.draggable?.id
-                  if (typeof id === "string") props.setDraggingWorktree(id)
+                  if (typeof id === "string") {
+                    props.setDraggingWorktree(id)
+                    origin = props.sidebarWorktreeOrder()
+                    const wt = sorted().find((item) => item.id === id)
+                    if (wt) {
+                      beginPromptMentionDrop({
+                        kind: "worktree",
+                        worktree: worktreeDropReference(
+                          wt,
+                          props.worktreeLabel(wt),
+                          props
+                            .managedSessions()
+                            .filter((session) => session.worktreeId === wt.id)
+                            .map((session) => ({ id: session.id })),
+                          wt.id === props.selection() || props.isStaleWorktree(wt.id) || props.busy(wt.id),
+                        ),
+                      })
+                    }
+                  }
                   document.body.classList.add("am-wt-dragging-active")
                 }
                 const onWtDragOver = (event: DragEvent) => {
+                  // Once the card leaves the sidebar it is on its way to the
+                  // prompt, so stop reordering the list under it.
+                  if (outsideSidebar(event.draggable)) return
                   const from = event.draggable?.id
                   const to = event.droppable?.id
                   if (typeof from !== "string" || typeof to !== "string") return
@@ -267,10 +319,21 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                   })
                 }
                 const onWtDragEnd = (event: DragEvent) => {
+                  const handled = endPromptMentionDrop()
                   const from = event.draggable?.id
                   const to = event.droppable?.id
                   props.setDraggingWorktree(undefined)
                   document.body.classList.remove("am-wt-dragging-active")
+                  // A drop on the prompt inserts a mention. Do not also move the
+                  // worktree to whatever section happens to be under the pointer.
+                  // Both this path and an outside release undo the pass-over
+                  // reorder so the sidebar matches the persisted order.
+                  if (handled || outsideSidebar(event.draggable)) {
+                    if (origin) props.setSidebarWorktreeOrder(() => origin!)
+                    origin = undefined
+                    return
+                  }
+                  origin = undefined
                   if (typeof from === "string" && typeof to === "string" && secIds().has(to)) {
                     props.moveToSection([from], to)
                     return
@@ -321,7 +384,8 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 busy={props.busy(wt.id)}
                                 activity={props.activityFor(wt.id)}
                                 blocked={props.blocked(wt.id)}
-                                stale={props.isStaleWorktree(wt.id)}
+                                stale={props.isStaleWorktree(wt.id) || actionable(props.worktreeHealth?.(wt.id))}
+                                health={props.worktreeHealth?.(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}
                                 navHint={navHint()}
@@ -358,6 +422,12 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 onCommitRename={() => commitRename(wt.id)}
                                 onCancelRename={cancelRename}
                                 onRemoveStale={() => props.confirmRemoveStaleWorktree(wt.id)}
+                                onRestore={props.onRestoreWorktree ? () => props.onRestoreWorktree?.(wt.id) : undefined}
+                                onRemoveKeepSessions={
+                                  props.onRemoveStaleKeepSessions
+                                    ? () => props.onRemoveStaleKeepSessions?.(wt.id)
+                                    : undefined
+                                }
                                 onUpdateBase={() =>
                                   updateBase(
                                     wt.id,

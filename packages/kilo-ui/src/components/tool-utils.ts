@@ -8,22 +8,49 @@ import {
   clearMaskStyles,
   COLLAPSIBLE_SPRING,
   GROW_SPRING,
+  settle,
   WIPE_MASK,
 } from "./motion"
 
 export const TEXT_RENDER_THROTTLE_MS = 100
+export const STREAMING_TEXT_RENDER_THROTTLE_MS = 16
 
-export function createThrottledValue(getValue: () => string) {
+export function createThrottledValue(getValue: () => string, getInterval: () => number = () => TEXT_RENDER_THROTTLE_MS) {
   const [value, setValue] = createSignal(getValue())
   let timeout: ReturnType<typeof setTimeout> | undefined
+  let pending: string | undefined
   let last = 0
+  let previous = getInterval()
+
+  const flush = () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = undefined
+    }
+    if (pending === undefined) return
+    last = Date.now()
+    setValue(pending)
+    pending = undefined
+  }
 
   createEffect(() => {
     const next = getValue()
+    const wait = getInterval()
     const now = Date.now()
 
-    const remaining = TEXT_RENDER_THROTTLE_MS - (now - last)
+    // When the cadence slows (streaming -> settled), flush the pending tail now
+    // instead of waiting out the longer interval.
+    const slowed = wait > previous
+    previous = wait
+    if (slowed && timeout) {
+      pending = next
+      flush()
+      return
+    }
+
+    const remaining = wait - (now - last)
     if (remaining <= 0) {
+      pending = undefined
       if (timeout) {
         clearTimeout(timeout)
         timeout = undefined
@@ -32,12 +59,9 @@ export function createThrottledValue(getValue: () => string) {
       setValue(next)
       return
     }
+    pending = next
     if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => {
-      last = Date.now()
-      setValue(next)
-      timeout = undefined
-    }, remaining)
+    timeout = setTimeout(flush, remaining)
   })
 
   onCleanup(() => {
@@ -178,8 +202,8 @@ export function useCollapsible(options: {
 
   onCleanup(() => {
     ++gen
-    heightAnim?.stop()
-    fadeAnim?.stop()
+    settle(heightAnim)
+    settle(fadeAnim)
   })
 }
 
@@ -239,7 +263,7 @@ export function useGrowIn(el: () => HTMLElement | undefined, enabled: boolean) {
   onCleanup(() => {
     ++gen
     obs?.disconnect()
-    height?.stop()
+    settle(height)
     const node = el()
     if (node) clear(node)
   })
@@ -331,6 +355,7 @@ export function useRowWipe(opts: {
         cancelAnimationFrame(frame)
         clear()
       }
+      settle(anim)
     })
   })
 }
@@ -378,6 +403,13 @@ export function useToolFade(
       frame = undefined
       const node = ref()
       if (!node) return
+      // A node outside the document never finishes a Web Animation, and the
+      // pending animation keeps the node and its owner tree alive. Show it as is.
+      if (!node.isConnected) {
+        clearFadeStyles(node)
+        if (mask) clearMaskStyles(node)
+        return
+      }
 
       anim = wipe
         ? mask
@@ -400,6 +432,6 @@ export function useToolFade(
 
   onCleanup(() => {
     if (frame !== undefined) cancelAnimationFrame(frame)
-    anim?.stop()
+    settle(anim)
   })
 }
