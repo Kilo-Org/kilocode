@@ -1,6 +1,7 @@
 import {
+  FOCUS_REGION_ATTRIBUTE,
   isPromptPaste,
-  isWritablePrompt,
+  isReachablePrompt,
   ownsFocusRegion,
   isTextControl,
   isFocusRegion,
@@ -8,8 +9,14 @@ import {
 } from "../src/utils/focus"
 import { DIFF_PANEL_SCROLLER, REVIEW_SCROLLER, diffToggleIntent, focusDiffScroller } from "./diff-focus"
 
-/** Whether a delete key target sits inside a diff viewport. */
-const isDiffFocusTarget = (target: EventTarget | null): boolean => ownsFocusRegion(target as Element | null)
+/** Diff surfaces whose chrome must not arm or confirm worktree deletion. */
+const DIFF_DELETE_GUARD = `[${FOCUS_REGION_ATTRIBUTE}], .am-diff-panel, .am-review-layout`
+
+/** Whether a delete key target sits inside a diff surface. */
+const isDiffFocusTarget = (target: EventTarget | null): boolean => {
+  const el = target as Element | null
+  return !!el && typeof el.closest === "function" && el.closest(DIFF_DELETE_GUARD) !== null
+}
 
 /** Diff panel focus lifecycle for the Changes toggle and its viewport. */
 export function createDiffPanelFocus(opts: {
@@ -110,7 +117,7 @@ export function createDiffPanelFocus(opts: {
     const prompt = doc().querySelector<HTMLTextAreaElement>(
       ".am-chat-wrapper:not(.am-chat-wrapper-hidden) textarea.prompt-input",
     )
-    if (!isWritablePrompt(prompt ?? undefined)) return
+    if (!isReachablePrompt(prompt ?? undefined)) return
     focusToken++
     opts.closeHistory()
     opts.revealPrompt?.()

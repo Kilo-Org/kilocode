@@ -37,13 +37,20 @@ export const isPromptPaste = (event: ClipboardEvent): boolean =>
 export const isWritablePrompt = (prompt: HTMLTextAreaElement | undefined): prompt is HTMLTextAreaElement =>
   !!prompt?.isConnected && !prompt.readOnly && !prompt.disabled && prompt.getAttribute("aria-disabled") !== "true"
 
+/**
+ * Whether the prompt can receive a paste once it is revealed. Visibility is
+ * excluded because review covers the prompt before the paste reveals it, but an
+ * inert or aria-hidden prompt stays unreachable and must not be revealed.
+ */
+export const isReachablePrompt = (prompt: HTMLTextAreaElement | undefined): prompt is HTMLTextAreaElement =>
+  isWritablePrompt(prompt) && prompt.closest('[inert], [aria-hidden="true"]') === null
+
 export function pasteToPrompt(
   event: ClipboardEvent,
   prompt: HTMLTextAreaElement | undefined,
   paste: (event: ClipboardEvent) => void,
 ): void {
-  if (!isPromptPaste(event) || !isWritablePrompt(prompt) || !prompt.getClientRects().length) return
-  if (prompt.closest('[inert], [aria-hidden="true"]')) return
+  if (!isPromptPaste(event) || !isReachablePrompt(prompt) || !prompt.getClientRects().length) return
   prompt.focus({ preventScroll: true })
   if (prompt.ownerDocument.activeElement !== prompt) return
   paste(event)

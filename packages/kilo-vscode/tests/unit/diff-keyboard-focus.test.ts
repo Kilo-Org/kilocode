@@ -339,6 +339,13 @@ describe("diff panel focus controller", () => {
       expect(paste().defaultPrevented).toBe(true)
       expect(calls).toEqual(["history", "reveal", "paste"])
       calls.length = 0
+      for (const attr of ["inert", "aria-hidden"]) {
+        if (attr === "inert") chat.setAttribute("inert", "")
+        else chat.setAttribute("aria-hidden", "true")
+        expect(paste().defaultPrevented).toBe(false)
+        expect(calls).toEqual([])
+        chat.removeAttribute(attr)
+      }
       for (const selector of ["input", ".xterm"]) {
         expect(paste(doc.querySelector(selector)!).defaultPrevented).toBe(false)
         expect(calls).toEqual([])
@@ -377,6 +384,26 @@ describe("diff panel focus controller", () => {
     })
     return { doc, scroller, prompt, calls, controller, setOpen: (value: boolean) => (open = value) }
   }
+
+  it("guards delete keys inside diff viewports and their surrounding chrome", () => {
+    const { doc, scroller, controller } = setup()
+    const panel = doc.querySelector(".am-diff-panel-cache-active")!
+    panel.className = "am-diff-panel"
+    const header = doc.createElement("button")
+    panel.append(header)
+    const review = doc.createElement("div")
+    review.className = "am-review-layout"
+    const reviewHeader = doc.createElement("button")
+    review.append(reviewHeader)
+    doc.body.append(review)
+    const outside = doc.createElement("button")
+    doc.body.append(outside)
+    expect(controller.isFocusTarget(scroller)).toBe(true)
+    expect(controller.isFocusTarget(header)).toBe(true)
+    expect(controller.isFocusTarget(reviewHeader)).toBe(true)
+    expect(controller.isFocusTarget(outside)).toBe(false)
+    expect(controller.isFocusTarget(null)).toBe(false)
+  })
 
   it("opens and focuses the viewport from the shortcut", () => {
     const { doc, scroller, calls, controller } = setup()
