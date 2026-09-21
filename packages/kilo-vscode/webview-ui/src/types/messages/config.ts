@@ -53,6 +53,7 @@ export interface ExperimentalConfig {
   image_generation?: boolean
   image_generation_model?: string
   task_model_selection?: boolean
+  code_mode?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
   speech_to_text_base_url?: string
@@ -138,6 +139,11 @@ export type CodeEditDisplay = "expanded" | "collapsed"
 export type McpToolDisplay = "expanded" | "collapsed"
 export type ReasoningDisplay = "expanded" | "preview" | "headline"
 
+export interface RetentionConfig {
+  enabled?: boolean
+  maxAgeDays?: number
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -155,6 +161,7 @@ export interface Config {
   instructions?: string[]
   skills?: SkillsConfig
   snapshot?: boolean
+  retention?: RetentionConfig
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay
@@ -181,4 +188,5 @@ export interface FeatureFlags {
   indexing: boolean
   sandboxControls: boolean
   backgroundSubagents: boolean
+  speechToText: boolean
 }

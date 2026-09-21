@@ -17,6 +17,7 @@ import {
   parseRawOids,
   showBlob,
   showBlobBytes,
+  stamp,
   summarize,
   type FileEntry,
 } from "./git-status"
@@ -28,11 +29,6 @@ export const STAGED_DESCRIPTOR: DiffSourceDescriptor = {
   type: "staged",
   group: "Git",
   capabilities: { revert: false, comments: true },
-}
-
-function stamp(entry: FileEntry, before: string, after: string): FileEntry {
-  if (!imageMime(entry.file)) return entry
-  return { ...entry, stamp: `${entry.status}:${before}:${after}` }
 }
 
 export interface StagedDiffSourceOptions {

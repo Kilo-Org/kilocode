@@ -81,6 +81,21 @@ export const Info = Schema.Struct({
     description:
       "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.",
   }),
+  // kilocode_change start - machine-wide session retention policy, owned by the backend
+  retention: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Enable automatic deletion of old sessions across all projects and every Kilo client on this machine. Defaults to false; deletion is permanent.",
+      }),
+      maxAgeDays: Schema.optional(Schema.Number).annotate({
+        description: "Days a session is kept before retention deletes it. Defaults to 30, minimum 1.",
+      }),
+    }),
+  ).annotate({
+    description: "Machine-wide session retention. Evaluated by the backend; clients only trigger runs.",
+  }),
+  // kilocode_change end
   plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPluginV1.Spec))),
   share: Schema.optional(Schema.Literals(["manual", "auto", "disabled"])).annotate({
     description:
@@ -288,8 +303,9 @@ export const Info = Schema.Struct({
         description: "Enable pruning of old tool outputs (default: true)",
       }),
       tail_turns: Schema.optional(NonNegativeInt).annotate({
+        // kilocode_change - Kilo pins an unset tail_turns to 2 turns, so the description must state the cap
         description:
-          "Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)",
+          "Maximum number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction. By default at most 2 turns are kept, further limited by the preserved token budget.", // kilocode_change
       }),
       preserve_recent_tokens: Schema.optional(NonNegativeInt).annotate({
         description: "Maximum number of tokens from recent turns to preserve verbatim after compaction",
@@ -313,6 +329,10 @@ export const Info = Schema.Struct({
       }),
       task_model_selection: Schema.optional(Schema.Boolean).annotate({
         description: "Allow task subagents to select a model, provider, and reasoning effort",
+      }),
+      code_mode: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Route MCP tool calls through a confined JavaScript runtime with on-demand tool discovery instead of exposing every MCP tool directly",
       }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",

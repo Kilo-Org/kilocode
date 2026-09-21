@@ -72,6 +72,7 @@ export const dict = {
   "session.activity.error": "Errore o connessione persa.",
   "session.activity.retry": "Nuovo tentativo automatico.",
   "session.activity.busy": "In corso.",
+  "session.activity.scheduled": "In attesa di una riattivazione programmata.",
   "session.activity.done": "Turno completato.",
   "session.activity.idle": "Non in esecuzione.",
   "command.session.new": "Nuova sessione",
@@ -187,6 +188,7 @@ export const dict = {
     "L'approvazione automatica è abilitata. Le richieste di autorizzazione saranno approvate automaticamente.",
   "prompt.action.autoApprove.disabled":
     "L'approvazione automatica è disabilitata. Fai clic per approvare automaticamente le richieste di autorizzazione.",
+  "prompt.action.autoApprove.sandboxExcluded": "Le richieste di escalation della sandbox sono sempre escluse.",
   "prompt.action.enhanceDescription":
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
@@ -207,7 +209,9 @@ export const dict = {
   "notification.permission.title": "Autorizzazione richiesta",
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
   "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Consentire l'operazione Git al di fuori della sandbox?",
+  "notification.permission.titleSandboxEscalation": "Eseguire fuori dalla sandbox?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Questo esegue l'intero comando senza le restrizioni di filesystem e rete, solo per questo comando. Git deve scrivere in .git, che è di sola lettura nella sandbox e si trova fuori dall'albero di lavoro in un worktree collegato. Le regole di autorizzazione Bash e l'approvazione automatica non approvano mai automaticamente questa richiesta.",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.reject": "Rifiuta",
   "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
@@ -243,7 +247,7 @@ export const dict = {
   "ui.approval.source.agent.default": "dall'agente",
   "ui.approval.source.global": "dalla configurazione globale",
   "ui.approval.source.project": "dalla configurazione del progetto",
-  "ui.approval.source.yolo": "dalla modalità di approvazione automatica (YOLO)",
+  "ui.approval.source.yolo": "dalla modalità di approvazione automatica",
   "ui.approval.source.session": "da una regola di approvazione automatica della sessione",
   "ui.approval.source.default": "per impostazione predefinita",
   "ui.approval.outsideWorkspace": "(fuori dall'area di lavoro: {{file}})",
@@ -403,37 +407,21 @@ export const dict = {
   "settings.config.source.projectOpencode": "Config legacy progetto .opencode",
   "settings.models.title": "Modelli",
   "settings.permissions.toast.updateFailed.title": "Aggiornamento autorizzazioni non riuscito",
-  "settings.permissions.tool.read.title": "Lettura (Read)",
   "settings.permissions.tool.read.description": "Legge un file (corrisponde al percorso file)",
-  "settings.permissions.tool.edit.title": "Modifica (Edit)",
   "settings.permissions.tool.edit.description": "Modifica file, incluse edits, writes, patches e multi-edits",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Trova file tramite pattern glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Cerca contenuti file tramite espressione regolare",
-  "settings.permissions.tool.list.title": "Elenco (List)",
   "settings.permissions.tool.list.description": "Elenca i file in una cartella",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Esegue comandi shell",
-  "settings.permissions.tool.task.title": "Task",
   "settings.permissions.tool.task.description": "Avvia sub-agent",
-  "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "Carica skill per nome",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Esegue query language server",
-  "settings.permissions.tool.todoread.title": "Lettura to-do (Todo Read)",
   "settings.permissions.tool.todoread.description": "Legge la lista to-do",
-  "settings.permissions.tool.todowrite.title": "Scrittura to-do (Todo Write)",
   "settings.permissions.tool.todowrite.description": "Scrive la lista to-do",
-  "settings.permissions.tool.webfetch.title": "Web fetch (Web Fetch)",
   "settings.permissions.tool.webfetch.description": "Recupera contenuti da una pagina web",
-  "settings.permissions.tool.websearch.title": "Ricerca web (Web Search)",
   "settings.permissions.tool.websearch.description": "Cerca sul web",
-  "settings.permissions.tool.codesearch.title": "Ricerca codice (Code Search)",
   "settings.permissions.tool.codesearch.description": "Cerca codice sul web",
-  "settings.permissions.tool.external_directory.title": "Directory esterna",
   "settings.permissions.tool.external_directory.description": "Accede a file fuori dalla directory del progetto",
-  "settings.permissions.tool.doom_loop.title": "Loop ripetuto (Doom Loop)",
   "settings.permissions.tool.doom_loop.description": "Rileva chiamate tool ripetute con input identico",
   "session.delete.title": "Elimina sessione",
   "session.delete.confirm": 'Eliminare la sessione "{{name}}"?',
@@ -450,6 +438,7 @@ export const dict = {
   "session.tabs.switcher.current": "Corrente",
   "session.tabs.switcher.pending": "Nuova",
   "session.tabs.switcher.busy": "In corso",
+  "session.tabs.switcher.scheduled": "Programmato",
   "session.tab.local": "Locale",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Albero di lavoro",
@@ -473,14 +462,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo si mette in pausa e ti mostra il suo piano mentre lavora.",
   "workStyle.choice.human-in-the-loop.permissions": "Chiede conferma prima di modificare file o eseguire comandi.",
   "workStyle.choice.human-in-the-loop.bash": "Chiede l'autorizzazione per ogni comando del terminale.",
-  "workStyle.choice.human-in-the-loop.visibility":
-    "Mostra tutti i dettagli della conversazione, incluso il ragionamento.",
+  "workStyle.choice.human-in-the-loop.visibility": "Espande ragionamento, comandi e modifiche per la revisione.",
   "workStyle.choice.autonomous.eyebrow": "Meno interruzioni",
   "workStyle.choice.autonomous.title": "Autonomia elevata",
   "workStyle.choice.autonomous.description": "Meno interruzioni e un'interfaccia semplificata.",
   "workStyle.choice.autonomous.permissions": "Modifica file ed esegue comandi nel workspace senza chiedere conferma.",
   "workStyle.choice.autonomous.bash": "Può eseguire comandi nel terminale del workspace senza approvazione.",
-  "workStyle.choice.autonomous.visibility": "I dettagli restano compressi finché non li espandi.",
+  "workStyle.choice.autonomous.visibility":
+    "Comprime i dettagli degli strumenti, con un'anteprima compatta del ragionamento.",
   "session.cloud.import.title": "Importa sessione",
   "session.cloud.import.placeholder": "ID sessione, URL o comando kilo import",
   "session.cloud.import.button": "Importa",
@@ -628,7 +617,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nuova Attività",
   "sidebar.topBar.history": "Cronologia",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profilo",
   "sidebar.topBar.settings": "Impostazioni",
@@ -851,10 +839,15 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Consentita",
   "prompt.action.sandbox.unrestricted": "Senza restrizioni",
   "prompt.action.sandbox.description.enabled": "Le scritture sono limitate alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Le regole di autorizzazione e l'approvazione automatica si applicano all'interno della sandbox. I comandi che devono uscirne chiedono sempre.",
   "prompt.action.sandbox.description.disabled":
     "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
+  "settings.experimental.codeMode.title": "Chiamate programmatiche agli strumenti",
+  "settings.experimental.codeMode.description":
+    "Instrada le chiamate agli strumenti MCP attraverso un runtime JavaScript confinato con rilevamento degli strumenti su richiesta, invece di esporre direttamente ogni strumento MCP. Risparmia contesto quando sono connessi molti strumenti MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",
@@ -992,6 +985,29 @@ export const dict = {
   "settings.checkpoints.enable.title": "Abilita snapshot",
   "settings.checkpoints.enable.description":
     "Crea checkpoint prima delle modifiche ai file così puoi ripristinare stati precedenti",
+  "settings.autoCleanup.enable.title": "Abilita pulizia automatica delle sessioni",
+  "settings.autoCleanup.enable.description":
+    "Elimina automaticamente la vecchia cronologia delle sessioni dopo un numero fisso di giorni, in tutti i progetti e in tutti i client Kilo di questo computer, non solo in questa finestra. Le sessioni in esecuzione e quelle con un fork recente non vengono mai eliminate. L'eliminazione è permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Conserva sessioni per (giorni)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Per quanto tempo viene conservata la cronologia delle sessioni prima che la pulizia automatica la elimini.",
+  "settings.autoCleanup.lastRun.title": "Ultima pulizia",
+  "settings.autoCleanup.lastRun.never": "Mai eseguita",
+  "settings.autoCleanup.result":
+    "{{date}}: eliminate {{deleted}} di {{scanned}} sessioni ({{active}} attive ignorate, {{failed}} non riuscite) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Avvio della pulizia delle sessioni...",
+  "settings.autoCleanup.error.status":
+    "Lo stato della pulizia delle sessioni è temporaneamente non disponibile. Nuovo tentativo...",
+  "settings.autoCleanup.error.timeout":
+    "In attesa dello stato della pulizia. Il backend sta impiegando più tempo del previsto.",
+  "settings.autoCleanup.error.run":
+    "Impossibile confermare il completamento della pulizia delle sessioni. Controlla il risultato dell'ultima pulizia prima di riprovare.",
+  "settings.autoCleanup.progress.scanning": "Analisi delle sessioni: {{processed}}/{{total}} elaborate",
+  "settings.autoCleanup.progress.deleting":
+    "Eliminazione delle sessioni: {{processed}}/{{total}} elaborate ({{deleted}} eliminate, {{failed}} non riuscite)",
+  "settings.autoCleanup.runNow": "Esegui pulizia ora",
+  "settings.autoCleanup.runNow.confirm":
+    "Eliminare definitivamente le sessioni scadute in tutti i progetti e in tutti i client Kilo di questo computer?",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
   "settings.context.compaction.title": "Compattazione",
@@ -1036,6 +1052,21 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sincronizzazione con la lingua dell'interfaccia utente",
   "settings.commitMessage.language.description": "Scegli quale lingua usare per i messaggi di commit generati da AI:",
 
+  "settings.display.preview.title": "Anteprima",
+  "settings.display.presets.title": "Preset di visualizzazione",
+  "settings.display.presets.description":
+    "Modifica le opzioni di visualizzazione seguenti, non le autorizzazioni. Salva per applicare.",
+  "settings.display.preview.model": "Modello di esempio",
+  "settings.display.preview.prompt": "Rimuovi gli spazi superflui dal saluto e controlla i test.",
+  "settings.display.preview.reasoning":
+    "**Controlla il saluto.** La funzione dovrebbe produrre lo stesso saluto per un nome semplice e per un nome con spazi superflui a entrambe le estremità. Mantengo la firma della funzione e il formato del saluto esistenti e cambio solo il modo in cui il nome entra nella stringa restituita.\n\nPer un input come `  Ada  `, gli spazi indesiderati appartengono all'input, non al modello del saluto. Tagliare il saluto completo lascerebbe spazi accanto al nome. L'operazione di taglio deve quindi avvenire prima dell'inserimento del nome.\n\nControllerò la documentazione sulle stringhe per confermare che `trim()` rimuove gli spazi bianchi da entrambe le estremità e restituisce una nuova stringa. Dovrebbe lasciare invariato l'input originale. Per questa modifica non servono un'espressione regolare, un'altra dipendenza o una funzione di supporto separata.\n\nGli spazi all'interno di un nome devono rimanere intatti. Un nome come `Ada Lovelace` non deve diventare `AdaLovelace` e la sua combinazione di maiuscole e minuscole non deve cambiare. Un input vuoto o composto solo da spazi non richiede un nuovo saluto di ripiego nell'ambito di questa correzione mirata.\n\nLa modifica può restare nell'espressione di ritorno usando `name.trim()` dove il modello attualmente usa `name`. Preserverò la punteggiatura circostante e lo spazio intenzionale dopo il saluto. Così il diff resta piccolo e il comportamento facile da verificare.\n\nInfine eseguirò `bun test greeting.test.ts` e controllerò entrambi i risultati. Il caso con il nome riempito di spazi dovrebbe confermare che gli spazi superflui vengono rimossi, mentre il caso con il nome semplice protegge l'output esistente. Riporterò la modifica e i risultati dei test solo dopo il completamento del comando.",
+  "settings.display.preview.shell": "Controlla il test del saluto",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] rimuove gli spazi superflui\n[pass] preserva un nome semplice\n\n2 test superati",
+  "settings.display.preview.query": "Taglio delle stringhe",
+  "settings.display.preview.result": "trim() rimuove gli spazi da entrambe le estremità di una stringa.",
+  "settings.display.preview.answer":
+    "Saluto aggiornato per rimuovere gli spazi superflui. Entrambi i test vengono superati.",
   "settings.display.username.title": "Nome utente",
   "settings.display.username.description": "Nome utente personalizzato mostrato nelle conversazioni",
   "settings.display.fontSize.title": "Dimensione font",
@@ -1069,7 +1100,7 @@ export const dict = {
     "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",
   "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
-    "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",
+    "Mostra perché una chiamata a uno strumento è stata approvata automaticamente, ad esempio una regola di autorizzazione corrispondente o un valore predefinito dell'agente.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1192,8 +1223,6 @@ export const dict = {
     "File modificati da Kilo durante la sessione corrente, basati su snapshot per turno. Si resetta quando inizi una nuova sessione.",
   "diffViewer.group.session": "Sessione",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Salva in locale",
-  "diffViewer.comment.sendToAgent": "Invia all'agente",
   "diffViewer.comment.postToGithub": "Pubblica su GitHub",
   "diffViewer.comment.loadFailed": "Impossibile caricare le modifiche della pull request.",
   "diffViewer.comment.unavailable": "Questa riga non è disponibile nell'istantanea attuale della pull request.",
@@ -1252,6 +1281,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Abilita e accedi al provider Kilo per usare Da voce a testo, oppure imposta di seguito un URL di base di trascrizione personalizzato.",
+  "settings.models.speechToText.remoteDescription":
+    "L'input vocale non è disponibile nelle finestre remote. Apri Kilo in una finestra locale per usare il microfono.",
   "settings.models.speechToTextModel.title": "Modello Da voce a testo",
   "settings.models.speechToTextModel.description": "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
 

@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "エラーまたは接続切断。",
   "session.activity.retry": "自動的に再試行中。",
   "session.activity.busy": "進行中。",
+  "session.activity.scheduled": "予約されたウェイクアップを待機しています。",
   "session.activity.done": "ターン完了。",
   "session.activity.idle": "実行されていません。",
 
@@ -206,6 +207,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
   "prompt.action.autoApprove.disabled": "自動承認が無効です。クリックすると権限リクエストを自動的に承認します。",
+  "prompt.action.autoApprove.sandboxExcluded": "サンドボックスからの脱出プロンプトは常に対象外です。",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
@@ -224,6 +226,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "許可",
   "prompt.action.sandbox.unrestricted": "制限なし",
   "prompt.action.sandbox.description.enabled": "書き込みはプロジェクトおよびKiloディレクトリ内に制限されます。",
+  "prompt.action.sandbox.description.escalation":
+    "許可ルールと自動承認はサンドボックス内で適用されます。サンドボックスから出る必要があるコマンドは常に確認します。",
   "prompt.action.sandbox.description.disabled":
     "クリックすると、ファイルシステムへの書き込みとネットワークアクセスを制限します。",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -269,7 +273,9 @@ export const dict = {
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
-  "notification.permission.titleSandboxEscalation": "サンドボックス外での Git 操作を許可しますか？",
+  "notification.permission.titleSandboxEscalation": "サンドボックス外で実行しますか？",
+  "notification.permission.descriptionSandboxEscalation":
+    "このコマンドに限り、ファイルシステムとネットワークの制限を外してコマンド全体を実行します。Git は .git に書き込む必要があります。.git はサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.reject": "拒否",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
@@ -305,7 +311,7 @@ export const dict = {
   "ui.approval.source.agent.default": "エージェントによって",
   "ui.approval.source.global": "グローバル設定によって",
   "ui.approval.source.project": "プロジェクト設定によって",
-  "ui.approval.source.yolo": "自動承認（YOLO）モードによって",
+  "ui.approval.source.yolo": "自動承認モードによって",
   "ui.approval.source.session": "セッションの自動承認ルールによって",
   "ui.approval.source.default": "デフォルトで",
   "ui.approval.outsideWorkspace": "（ワークスペース外：{{file}}）",
@@ -322,7 +328,6 @@ export const dict = {
   "sidebar.topBar.newTask": "新規タスク",
   "sidebar.topBar.history": "履歴",
   "sidebar.topBar.agentManager": "エージェントマネージャー",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "マーケットプレイス",
   "sidebar.topBar.profile": "プロフィール",
   "sidebar.topBar.settings": "設定",
@@ -554,37 +559,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "権限の更新に失敗しました",
 
-  "settings.permissions.tool.read.title": "読み込み",
   "settings.permissions.tool.read.description": "ファイルの読み込み (ファイルパスに一致)",
-  "settings.permissions.tool.edit.title": "編集",
   "settings.permissions.tool.edit.description": "ファイルの変更（編集、書き込み、パッチ、複数編集を含む）",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Globパターンを使用したファイルの一致",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "正規表現を使用したファイル内容の検索",
-  "settings.permissions.tool.list.title": "リスト",
   "settings.permissions.tool.list.description": "ディレクトリ内のファイル一覧表示",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "シェルコマンドの実行",
-  "settings.permissions.tool.task.title": "タスク",
   "settings.permissions.tool.task.description": "サブエージェントの起動",
-  "settings.permissions.tool.skill.title": "スキル",
   "settings.permissions.tool.skill.description": "名前によるスキルの読み込み",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "言語サーバークエリの実行",
-  "settings.permissions.tool.todoread.title": "Todo読み込み",
   "settings.permissions.tool.todoread.description": "Todoリストの読み込み",
-  "settings.permissions.tool.todowrite.title": "Todo書き込み",
   "settings.permissions.tool.todowrite.description": "Todoリストの更新",
-  "settings.permissions.tool.webfetch.title": "ウェブ取得",
   "settings.permissions.tool.webfetch.description": "URLからコンテンツを取得",
-  "settings.permissions.tool.websearch.title": "ウェブ検索",
   "settings.permissions.tool.websearch.description": "ウェブを検索",
-  "settings.permissions.tool.codesearch.title": "コード検索",
   "settings.permissions.tool.codesearch.description": "ウェブ上のコードを検索",
-  "settings.permissions.tool.external_directory.title": "外部ディレクトリ",
   "settings.permissions.tool.external_directory.description": "プロジェクトディレクトリ外のファイルへのアクセス",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "同一入力による繰り返しのツール呼び出しを検出",
 
   "session.delete.title": "セッションの削除",
@@ -602,6 +591,7 @@ export const dict = {
   "session.tabs.switcher.current": "現在",
   "session.tabs.switcher.pending": "新規",
   "session.tabs.switcher.busy": "作業中",
+  "session.tabs.switcher.scheduled": "予約済み",
   "session.tab.local": "ローカル",
   "session.tab.cloud": "クラウド",
   "session.tab.worktree": "ワークツリー",
@@ -625,13 +615,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kiloは作業中に一時停止し、計画を表示します。",
   "workStyle.choice.human-in-the-loop.permissions": "ファイルの編集やコマンドの実行前に許可を求めます。",
   "workStyle.choice.human-in-the-loop.bash": "すべてのターミナルコマンド実行時に許可を求める",
-  "workStyle.choice.human-in-the-loop.visibility": "推論を含む会話の詳細をすべて表示します。",
+  "workStyle.choice.human-in-the-loop.visibility": "確認できるように、推論、コマンド、編集を展開します。",
   "workStyle.choice.autonomous.eyebrow": "中断を少なく",
   "workStyle.choice.autonomous.title": "高い自律性",
   "workStyle.choice.autonomous.description": "中断を減らし、インターフェースを簡素化します。",
   "workStyle.choice.autonomous.permissions": "確認なしでワークスペース内のファイルを編集し、コマンドを実行します。",
   "workStyle.choice.autonomous.bash": "ワークスペース内で承認なしにターミナルコマンドを実行できます。",
-  "workStyle.choice.autonomous.visibility": "詳細は展開するまで折りたたまれたままです。",
+  "workStyle.choice.autonomous.visibility": "ツールの詳細を折りたたみ、推論をコンパクトにプレビューします。",
   "session.cloud.import.title": "クラウドからインポート",
   "session.cloud.import.placeholder": "セッションID、URL、またはkilo importコマンド",
   "session.cloud.import.button": "インポート",
@@ -915,6 +905,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインするか、下でカスタム文字起こしベース URL を設定してください。",
+  "settings.models.speechToText.remoteDescription":
+    "音声入力はリモートウィンドウでは利用できません。マイクを使用するには、ローカルウィンドウで Kilo を開いてください。",
   "settings.models.speechToTextModel.title": "音声認識モデル",
   "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
@@ -1075,6 +1067,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "モデル",
   "settings.agentBehaviour.workflows.variant": "バリアント",
   "settings.agentBehaviour.workflows.modelDescription": "グローバルモデルの上書き",
+  "settings.experimental.codeMode.title": "プログラムによるツール呼び出し",
+  "settings.experimental.codeMode.description":
+    "各 MCP ツールを直接公開する代わりに、オンデマンドのツール検出を備えた隔離された JavaScript ランタイム経由で MCP ツール呼び出しをルーティングします。多数の MCP ツールが接続されている場合にコンテキストを節約します。",
   "settings.sandboxing.enabled.title": "サンドボックス",
   "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
@@ -1118,6 +1113,27 @@ export const dict = {
     "繰り返し同一のアクションを防止。同じツール呼び出しが同一の入力で繰り返されたときにトリガーされます。",
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
+  "settings.autoCleanup.enable.title": "自動セッションクリーンアップを有効化",
+  "settings.autoCleanup.enable.description":
+    "決まった日数が経過すると古いセッション履歴を自動削除します。対象はこのマシン上のすべてのプロジェクトとすべての Kilo クライアントで、このウィンドウだけではありません。実行中のセッションや最近フォークを持つセッションは決して削除されません。削除は元に戻せません。",
+  "settings.autoCleanup.defaultRetention.title": "セッションを保持する期間（日数）",
+  "settings.autoCleanup.defaultRetention.description": "自動クリーンアップがセッション履歴を削除するまでの保持期間。",
+  "settings.autoCleanup.lastRun.title": "前回のクリーンアップ",
+  "settings.autoCleanup.lastRun.never": "未実行",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}} 件中 {{deleted}} 件のセッションを削除（{{active}} 件のアクティブをスキップ、{{failed}} 件失敗）、{{seconds}} 秒",
+  "settings.autoCleanup.starting": "セッションのクリーンアップを開始しています...",
+  "settings.autoCleanup.error.status": "セッションのクリーンアップ状況を一時的に取得できません。再試行しています...",
+  "settings.autoCleanup.error.timeout":
+    "クリーンアップ状況を待機中です。バックエンドの応答に予想以上の時間がかかっています。",
+  "settings.autoCleanup.error.run":
+    "セッションのクリーンアップ完了を確認できませんでした。再試行する前に、前回のクリーンアップ結果を確認してください。",
+  "settings.autoCleanup.progress.scanning": "セッションをスキャン中: {{processed}}/{{total}} 件を処理済み",
+  "settings.autoCleanup.progress.deleting":
+    "セッションを削除中: {{processed}}/{{total}} 件を処理済み（{{deleted}} 件削除、{{failed}} 件失敗）",
+  "settings.autoCleanup.runNow": "今すぐクリーンアップを実行",
+  "settings.autoCleanup.runNow.confirm":
+    "このマシン上のすべてのプロジェクトとすべての Kilo クライアントにわたる、削除対象の古いセッションを完全に削除しますか？",
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",
@@ -1165,6 +1181,20 @@ export const dict = {
   "settings.commitMessage.language.sync": "UI言語と同期",
   "settings.commitMessage.language.description": "AIが生成するコミットメッセージに使用する言語を選択:",
 
+  "settings.display.preview.title": "プレビュー",
+  "settings.display.presets.title": "表示プリセット",
+  "settings.display.presets.description":
+    "下の表示オプションを変更します。権限は変更しません。適用するには保存してください。",
+  "settings.display.preview.model": "サンプルモデル",
+  "settings.display.preview.prompt": "挨拶から余分な空白を削除し、テストを確認してください。",
+  "settings.display.preview.reasoning":
+    "**挨拶を確認します。** この関数は、通常の名前と両端に余分な空白がある名前に対して、同じ挨拶を生成する必要があります。既存の関数シグネチャと挨拶の形式は維持し、名前が返り値の文字列に入る方法だけを変更します。\n\n`  Ada  ` のような入力では、不要な空白は入力に属し、挨拶のテンプレートには属しません。完成した挨拶をトリムすると、名前の隣に空白が残ってしまいます。したがって、トリム操作は名前を挿入する前に行う必要があります。\n\n文字列のドキュメントを確認し、`trim()` が両端の空白を削除して新しい文字列を返すことを確かめます。元の入力は変更されないはずです。この変更に正規表現、追加の依存関係、別のヘルパーは必要ありません。\n\n名前の中の空白はそのままにしておく必要があります。`Ada Lovelace` のような名前が `AdaLovelace` になってはならず、大文字と小文字も変わってはいけません。空の入力や空白だけの入力には、この限定的な修正の一環として新しいフォールバックの挨拶は必要ありません。\n\nテンプレートが現在 `name` を使っている箇所で `name.trim()` を使うことで、変更を return 式の中に収められます。周囲の句読点と挨拶の後の意図的な空白は維持します。これにより差分が小さくなり、動作を確認しやすくなります。\n\n最後に `bun test greeting.test.ts` を実行し、両方の結果を確認します。空白付きの名前のケースでは余分な空白が削除されることを確認し、通常の名前のケースでは既存の出力を保護します。変更とテスト結果は、コマンドが完了してから報告します。",
+  "settings.display.preview.shell": "挨拶のテストを確認する",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] 余分な空白を削除する\n[pass] 通常の名前を保持する\n\n2件のテストに合格",
+  "settings.display.preview.query": "文字列のトリミング",
+  "settings.display.preview.result": "trim() は文字列の両端から空白を削除します。",
+  "settings.display.preview.answer": "挨拶を更新して余分な空白を削除しました。両方のテストに合格しました。",
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
@@ -1198,7 +1228,7 @@ export const dict = {
     "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",
   "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
   "settings.display.autoApprovalReason.description":
-    "ツール呼び出しが自動承認された理由（一致したルール、エージェントのデフォルト、YOLOモードなど）を示す行を表示します。",
+    "ツール呼び出しが自動承認された理由（一致する権限ルールやエージェントのデフォルトなど）を表示します。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1314,8 +1344,6 @@ export const dict = {
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "ローカルに保存",
-  "diffViewer.comment.sendToAgent": "エージェントに送信",
   "diffViewer.comment.postToGithub": "GitHubに投稿",
   "diffViewer.comment.loadFailed": "プルリクエストの変更を読み込めませんでした。",
   "diffViewer.comment.unavailable": "この行は現在のプルリクエストのスナップショットでは利用できません。",

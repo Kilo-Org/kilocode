@@ -3,14 +3,32 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, onMount, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
+import {
+  createSignal,
+  createEffect,
+  createMemo,
+  on,
+  onMount,
+  For,
+  Index,
+  onCleanup,
+  Show,
+  untrack,
+  type Component,
+} from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { createHold, hasPopup, hasTextSelection, isTextControl } from "../../utils/focus"
+import {
+  createHold,
+  hasPopup,
+  hasTextSelection,
+  isTextControl,
+  ownsFocusRegion,
+  pasteToPrompt,
+} from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
@@ -102,6 +120,7 @@ import {
   partFeedback,
   type BrowserReference,
 } from "../../../../src/shared/browser-feedback"
+import { partInjected } from "../../../../src/shared/injected-prompt"
 import { formatCodeContexts, mergeCodeContexts, type CodeContext } from "../../../../src/shared/code-context"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
@@ -250,7 +269,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return rest === "unassigned" ? undefined : rest
   }
   const hasGit = () => server.gitInstalled()
-  const modelKeys = () => new Set(provider.models().map((model) => `${model.providerID}/${model.id}`))
+  const modelKeys = createMemo(() => new Set(provider.models().map((model) => `${model.providerID}/${model.id}`)))
   const mention = useFileMention(vscode, sid, hasGit, props.worktrees, modelKeys)
   // Picking the `@` model entry reuses the shared model selector: it is
   // mounted hidden and opened through its programmatic-open event. The mention
@@ -299,7 +318,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const boxKey = () => props.boxId ?? "prompt:default"
-  const blockedHelpId = () => `${boxKey().replace(/[^a-zA-Z0-9_-]/g, "-")}-blocked-help`
   const rawKey = () =>
     sessionDraftKey(session.currentSessionID()) ??
     pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
@@ -609,10 +627,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       preEnhancePastes = null
       history.reset()
       if (textareaRef) {
-        textareaRef.value = draft
-        // Reset height then adjust
-        textareaRef.style.height = "auto"
-        textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+        if (textareaRef.value !== draft) textareaRef.value = draft
+        adjustHeight()
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
@@ -635,7 +651,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const parts = session.getParts(m.id)
         return parts
           .filter((part): part is TextPart => part.type === "text")
-          .map((part) => partFeedback(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, ""))
+          .map((part) => {
+            const injected = partInjected(part.metadata)
+            if (injected) return injected.title.startsWith("/") ? injected.title : ""
+            return partFeedback(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, "")
+          })
           .join("")
       })
       history.seed(texts)
@@ -645,19 +665,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Focus textarea when any part of the app requests it
   const onFocusPrompt = (event: Event) => {
+    const force = event instanceof CustomEvent && event.detail?.force === true
     const defer = () =>
       event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
-    const ownsFocus = () => {
+    const ownsFocus = (explicit = false) => {
       const active = document.activeElement
-      return hasPopup() || (active !== textareaRef && isTextControl(active)) || hasTextSelection()
+      return (
+        (!explicit && ownsFocusRegion(active)) ||
+        hasPopup() ||
+        (active !== textareaRef && isTextControl(active)) ||
+        hasTextSelection()
+      )
     }
-    const focus = () => {
-      if (defer() || ownsFocus()) return
+    const focus = (explicit = false) => {
+      if (defer() || ownsFocus(explicit)) return
       const ref = textareaRef
       if (!ref) return
       ref.focus({ preventScroll: true })
     }
-    focus()
+    focus(force)
     if (!(event instanceof CustomEvent) || !event.detail?.restore) return
     const restore = () => {
       if (defer() || ownsFocus()) return
@@ -764,7 +790,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       globalConfig(),
     )
   const isDisabled = () => !server.isConnected() || locked() || goal.pending()
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates(), features().speechToText)
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () =>
     text().trim().length > 0 ||
@@ -1139,7 +1165,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "triggerTask") {
       if (isDisabled()) return
       const sel = session.selected(sid())
-      session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
+      session.sendMessage(
+        message.text,
+        sel?.providerID,
+        sel?.modelID,
+        undefined,
+        undefined,
+        ctx(),
+        undefined,
+        undefined,
+        undefined,
+        message.injectedTitle,
+      )
     }
 
     if (message.type === "sendMessageFailed") {
@@ -1162,6 +1199,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "action" && message.action === "restoreInput") {
       if (hasPopup()) return
       const active = document.activeElement
+      if (ownsFocusRegion(active)) return
       if (active && active !== textareaRef && isTextControl(active)) return
       textareaRef?.focus({ preventScroll: true })
     }
@@ -1247,6 +1285,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const adjustHeight = () => {
     if (!textareaRef) return
     textareaRef.style.height = "auto"
+    // Empty drafts use rows=1 and the CSS minimum without forcing layout.
+    if (!textareaRef.value) return
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
   }
 
@@ -1275,15 +1315,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       syncHighlightScroll()
     })
   }
+  const onPaste = (event: ClipboardEvent) => pasteToPrompt(event, textareaRef, handlePaste)
+  window.addEventListener("paste", onPaste)
+  onCleanup(() => window.removeEventListener("paste", onPaste))
 
   const handleInput = (e: InputEvent) => {
     const target = e.target as HTMLTextAreaElement
     if (readonly()) {
       target.value = text()
+      paste.afterInput()
       return
     }
     const val = target.value
     setText(val)
+    // setText has reconciled by here, so the span this edit recorded is spent.
+    paste.afterInput()
     preEnhanceText = null
     preEnhancePastes = null
     adjustHeight()
@@ -2097,6 +2143,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             classList={{ "prompt-input--disabled": !server.isConnected() || readonly() }}
             placeholder={placeholder()}
             value={text()}
+            onBeforeInput={(e) => paste.beforeInput(e, textareaRef)}
             onInput={handleInput}
             onKeyDown={(e) => {
               if (speechDown(e)) return
@@ -2160,11 +2207,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Tooltip>
           </Show>
           <Tooltip
-            value={
-              autoApprove()
-                ? language.t("prompt.action.autoApprove.enabled")
-                : language.t("prompt.action.autoApprove.disabled")
-            }
+            value={`${language.t(
+              autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+            )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
             placement="top"
             openDelay={0}
           >

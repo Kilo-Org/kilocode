@@ -150,6 +150,7 @@ interface StateMessage {
   /** Directories under `.kilo/worktrees/` that no worktree claims. Never removed automatically. */
   orphanDirectories?: OrphanDirectory[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -181,6 +182,13 @@ interface ProjectsMessage {
 interface SelectionActivatedMessage {
   type: "agentManager.selectionActivated"
   target: SidebarTarget
+}
+
+/** Default (or picked) parent folder for the new-project dialog. */
+interface ProjectParentMessage {
+  type: "agentManager.projectParent"
+  /** Omitted when the user cancelled the native folder picker. */
+  parent?: string
 }
 
 interface ProjectSessionsMessage {
@@ -309,6 +317,9 @@ interface SendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -513,6 +524,7 @@ export type AgentManagerOutMessage =
   | StateMessage
   | ProjectsMessage
   | SelectionActivatedMessage
+  | ProjectParentMessage
   | ProjectSessionsMessage
   | ErrorOutMessage
   | SessionAddedMessage
@@ -570,6 +582,31 @@ interface RequestProjectsIn {
 /** Add a repository as a project via the host folder picker. */
 interface AddProjectIn {
   type: "agentManager.addProject"
+}
+
+/** Create a local project in the given parent folder. */
+interface CreateProjectIn {
+  type: "agentManager.createProject"
+  parent: string
+  name: string
+}
+
+/** Clone a repository into the given parent folder. */
+interface CloneProjectIn {
+  type: "agentManager.cloneProject"
+  url: string
+  parent: string
+}
+
+/** Request the default parent folder for a new project. */
+interface RequestProjectParentIn {
+  type: "agentManager.requestProjectParent"
+}
+
+/** Pick a parent folder through the native folder picker. */
+interface PickProjectParentIn {
+  type: "agentManager.pickProjectParent"
+  defaultPath?: string
 }
 
 /** Remove a project from the catalog. Never deletes repository data. */
@@ -631,6 +668,13 @@ interface CleanOrphanDirectoriesIn {
   type: "agentManager.cleanOrphanDirectories"
   projectId?: string
   paths: string[]
+}
+
+/** Reveal an orphaned directory in the OS file manager. */
+interface RevealPathIn {
+  type: "agentManager.revealPath"
+  projectId?: string
+  path: string
 }
 
 interface PromoteSessionIn {
@@ -735,6 +779,9 @@ interface CreateMultiVersionIn {
   type: "agentManager.createMultiVersion"
   projectId?: string
   text?: string
+  /** Server command to execute as the first prompt instead of `text`. */
+  command?: string
+  arguments?: string
   name?: string
   versions?: number
   providerID?: string
@@ -775,6 +822,12 @@ interface SetTabOrderIn {
   type: "agentManager.setTabOrder"
   key: string
   order: string[]
+}
+
+interface SetPinnedTabsIn {
+  type: "agentManager.setPinnedTabs"
+  key: string
+  ids: string[]
 }
 
 interface SetWorktreeOrderIn {
@@ -996,6 +1049,7 @@ interface SendMessageIn {
 
 interface SendCommandIn {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string
@@ -1191,6 +1245,10 @@ export type AgentManagerInMessage =
   | CreateWorktreeIn
   | RequestProjectsIn
   | AddProjectIn
+  | CreateProjectIn
+  | CloneProjectIn
+  | RequestProjectParentIn
+  | PickProjectParentIn
   | RemoveProjectIn
   | SelectProjectIn
   | ActivateSelectionIn
@@ -1200,6 +1258,7 @@ export type AgentManagerInMessage =
   | RemoveStaleWorktreeIn
   | RestoreWorktreeIn
   | CleanOrphanDirectoriesIn
+  | RevealPathIn
   | PromoteSessionIn
   | OpenLocallyIn
   | OpenSessionLocallyIn
@@ -1225,6 +1284,7 @@ export type AgentManagerInMessage =
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
+  | SetPinnedTabsIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetSidebarCollapsedIn

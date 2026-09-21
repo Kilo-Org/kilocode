@@ -11,6 +11,7 @@ import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/d
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KiloSessionTitle } from "@/kilocode/session/title" // kilocode_change
 import { SessionTranscript } from "@/kilocode/session/transcript" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
@@ -317,19 +318,10 @@ export const layer = Layer.effect(
       if (input.session.parentID) return
       if (!Session.isDefaultTitle(input.session.title)) return
 
-      const real = (m: SessionV1.WithParts) =>
-        m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic)
-      const idx = input.history.findIndex(real)
-      if (idx === -1) return
-      if (input.history.filter(real).length !== 1) return
-
-      const context = input.history.slice(0, idx + 1)
-      const firstUser = context[idx]
-      if (!firstUser || firstUser.info.role !== "user") return
-      const firstInfo = firstUser.info
-
-      const subtasks = firstUser.parts.filter((p): p is SessionV1.SubtaskPart => p.type === "subtask")
-      const onlySubtasks = subtasks.length > 0 && firstUser.parts.every((p) => p.type === "subtask")
+      // kilocode_change start - Kilo defers titles and owns the context policy
+      const built = KiloSessionTitle.build(input.history)
+      if (!built) return
+      // kilocode_change end
 
       const ag = yield* agents.get("title")
       if (!ag) return
@@ -337,22 +329,17 @@ export const layer = Layer.effect(
         ? yield* provider.getModel(ag.model.providerID, ag.model.modelID)
         : ((yield* provider.getSmallModel(input.providerID)) ??
           (yield* provider.getModel(input.providerID, input.modelID)))
-      const msgs = onlySubtasks
-        ? [{ role: "user" as const, content: subtasks.map((p) => p.prompt).join("\n") }]
-        : yield* MessageV2.toModelMessagesEffect(context, mdl).pipe(
-            Effect.provideService(Database.Service, database), // kilocode_change - provide the migrated message store
-          )
       const text = yield* llm
         .stream({
           agent: ag,
-          user: firstInfo,
+          user: built.user,
           system: [],
           small: true,
           tools: {},
           model: mdl,
           sessionID: KiloSessionPrompt.titleID(input.session.id), // kilocode_change - isolate title requests from the agent task
           retries: 2,
-          messages: [{ role: "user", content: "Generate a title for this conversation:\n" }, ...msgs],
+          messages: built.messages,
         })
         .pipe(
           Stream.filter(LLMEvent.is.textDelta),
@@ -1638,13 +1625,6 @@ export const layer = Layer.effect(
         }
 
         step++
-        if (step === 1)
-          yield* title({
-            session,
-            modelID: lastUser.model.modelID,
-            providerID: lastUser.model.providerID,
-            history: msgs,
-          }).pipe(Effect.ignore, Effect.forkIn(scope))
 
         const model = yield* getModel(lastUser.model.providerID, lastUser.model.modelID, sessionID)
         const task = tasks.pop()
@@ -1874,15 +1854,12 @@ export const layer = Layer.effect(
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
-            // kilocode_change start - feed the provider-reported context size from the last finished
-            // turn into the output-token cap, so image/vision input is measured by the provider
-            // rather than by encoded payload bytes (see KiloLLM.capOutputTokens). Summary messages
-            // are skipped like in the isOverflow check above: their reported input reflects the
-            // pre-compaction history, not the trimmed context of the next request.
-            reportedContextTokens:
-              lastFinished && lastFinished.summary !== true
-                ? KiloSessionOverflow.count(lastFinished.tokens)
-                : undefined,
+            // kilocode_change start - provider-reported context size feeds the output-token cap
+            // (see KiloLLM.capOutputTokens); summaries and trailing unfinished assistants invalidate it.
+            reportedContextTokens: KiloSessionOverflow.baseline({
+              assistant: lastAssistant,
+              finished: lastFinished,
+            }),
             // kilocode_change end
           })
 
@@ -2006,6 +1983,8 @@ export const layer = Layer.effect(
       }
 
       yield* compaction.prune({ sessionID, reason: "normal" }).pipe(Effect.ignore, Effect.forkIn(scope))
+      // kilocode_change - Kilo defers session titles; see kilocode/session/title.ts
+      yield* KiloSessionTitle.deferred({ sessionID, scope, sessions, database, generate: title }).pipe(Effect.ignore)
       return yield* lastAssistant(sessionID)
     })
 
@@ -2443,7 +2422,10 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       const templateParts = yield* resolvePromptParts(template)
-      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry
+      // kilocode_change start - mark review commands for completion telemetry and label the expanded template for clients
+      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command)
+      KiloSessionProcessor.markCommand(templateParts, input.command, input.arguments)
+      // kilocode_change end
       const inputFiles = new Set(
         input.parts?.filter((part) => new URL(part.url).protocol === "file:").map((part) => fileURLToPath(part.url)),
       )

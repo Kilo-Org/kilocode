@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.7.2",
+  "version": "7.7.6",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -118,12 +118,6 @@
         "icon": "$(organization)"
       },
       {
-        "command": "kilo-code.new.kiloClawOpen",
-        "title": "KiloClaw",
-        "category": "Kilo Code",
-        "icon": "$(comment-discussion)"
-      },
-      {
         "command": "kilo-code.new.marketplaceButtonClicked",
         "title": "Marketplace",
         "category": "Kilo Code",
@@ -156,11 +150,6 @@
         "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
         "title": "Agent Manager",
         "icon": "$(organization)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
-        "title": "KiloClaw",
-        "icon": "$(comment-discussion)"
       },
       {
         "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
@@ -506,10 +495,6 @@
           "when": "false"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
-          "when": "false"
-        },
-        {
           "command": "kilo-code.new.agentManager.advancedWorktree",
           "when": "false"
         },
@@ -543,23 +528,18 @@
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
+          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
           "group": "navigation@3",
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
+          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
           "group": "navigation@4",
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
-          "group": "navigation@5",
-          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
-        },
-        {
           "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
-          "group": "navigation@6",
+          "group": "navigation@5",
           "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
         }
       ],
@@ -1132,7 +1112,7 @@
         "kilo-code.new.autoApprove.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically."
+          "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically. Sandbox escalation prompts are always excluded."
         },
         "kilo-code.new.maxCost": {
           "type": "number",
@@ -1284,6 +1264,14 @@
           "type": "boolean",
           "default": false,
           "description": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
+        },
+        "kilo-code.new.diff.style": {
+          "type": "string",
+          "enum": [
+            "unified",
+            "split"
+          ],
+          "description": "Remembered unified/split choice for Kilo diff viewers. Set automatically the first time you toggle the style in a diff viewer."
         }
       }
     }

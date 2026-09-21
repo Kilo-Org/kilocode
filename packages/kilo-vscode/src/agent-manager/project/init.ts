@@ -10,6 +10,7 @@
 import * as fs from "fs"
 import { restoreWorktrees } from "../state-recovery"
 import { reconcileWorktrees, summarize, type WorktreeHealthReport } from "../worktree-reconcile"
+import { trackOrphanSizes } from "../orphans/sizing"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./route"
@@ -67,8 +68,12 @@ export function unregisterProjectRoutes(ctx: ProjectContext, sessions: ProjectSe
 export async function initContextState(
   ctx: ProjectContext,
   log: (...args: unknown[]) => void,
+  opts?: { warm?: boolean },
 ): Promise<ProjectInitResult> {
-  return ctx.ensureReady(async (generation) => {
+  // Cached hydration is read-only with respect to the pool. User activation can request warming explicitly.
+  const warm = opts?.warm === true || (opts?.warm !== false && ctx.lifecycle === "cold")
+  const generation = ctx.generation
+  const result = await ctx.ensureReady(async (generation) => {
     const manager = ctx.worktreeManager()
     const state = ctx.stateManager()
     await manager.ensureGitExclude().catch((err) => log("Failed to update git exclude:", err))
@@ -100,13 +105,10 @@ export async function initContextState(
     const health = await reconcileProject(ctx, log)
     if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
     if (health && health.dropped.length > 0) await state.flush()
-    // Adopt or clean leftover pooled slots, then pre-warm one off the click path.
-    void manager
-      .reconcilePool()
-      .then(() => manager.warmPool())
-      .catch((err) => log("Failed to reconcile worktree pool:", err))
     return { ok: true, refsFixed: loaded.refsFixed, health }
   })
+  if (warm && result.ok && result.current && ctx.isCurrent(generation)) ctx.warmPool()
+  return result
 }
 
 /**
@@ -145,6 +147,7 @@ export async function reconcileProject(
   if (!report) return undefined
   ctx.report = report
   log(`worktree health: ${summarize(report)}`)
+  trackOrphanSizes(ctx, report.orphans, log)
   return report
 }
 

@@ -6,6 +6,7 @@
  */
 
 import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+import { permissionSettled, respondToPermission } from "@kilocode/sdk/permission"
 import { isNotFoundError } from "./not-found"
 
 export type RecoverablePermission = PermissionRequest
@@ -90,54 +91,31 @@ export async function handlePermissionResponse(
   const action = async (): Promise<PermissionResponseResult> => {
     if (!dir) return { kind: "error" }
 
-    if (approvedAlways.length > 0 || deniedAlways.length > 0) {
-      const saveResult = await client.permission
-        .saveAlwaysRules(
-          {
-            requestID: permissionId,
-            directory: dir,
-            approvedAlways,
-            deniedAlways,
-          },
-          { throwOnError: true },
-        )
-        .then(() => "ok" as const)
-        .catch((error: unknown) => {
-          if (isNotFoundError(error)) return "stale" as const
-          console.error("[Kilo New] KiloProvider: Failed to save always-rules:", error)
-          return "error" as const
-        })
-      if (saveResult === "stale") {
+    const { error, saved } = await respondToPermission(client, {
+      requestID: permissionId,
+      directory: dir,
+      reply: response,
+      approvedAlways,
+      deniedAlways,
+      message: feedback,
+    })
+    if (error) {
+      if (isNotFoundError(error)) {
         ctx.clearPermissionDirectory(permissionId)
         void fetchAndSendPendingPermissions(ctx)
         return { kind: "stale" }
       }
-      if (saveResult === "error") return { kind: "error" }
+      // An aborted rule save may still complete on the server. If the request
+      // is no longer pending it was applied, so report stale instead of
+      // letting the user retry with a decision that could conflict with it.
+      if (saved && (await permissionSettled(client, dir, permissionId))) {
+        ctx.clearPermissionDirectory(permissionId)
+        void fetchAndSendPendingPermissions(ctx)
+        return { kind: "stale" }
+      }
+      console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+      return { kind: "error" }
     }
-
-    const replyResult = await client.permission
-      .reply(
-        {
-          requestID: permissionId,
-          reply: response,
-          directory: dir,
-          interactive: true,
-          ...(feedback ? { message: feedback } : {}),
-        },
-        { throwOnError: true },
-      )
-      .then(() => "ok" as const)
-      .catch((error: unknown) => {
-        if (isNotFoundError(error)) return "stale" as const
-        console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
-        return "error" as const
-      })
-    if (replyResult === "stale") {
-      ctx.clearPermissionDirectory(permissionId)
-      void fetchAndSendPendingPermissions(ctx)
-      return { kind: "stale" }
-    }
-    if (replyResult !== "ok") return { kind: "error" }
     ctx.clearPermissionDirectory(permissionId)
     return { kind: "resolved", sessionID: target, response }
   }

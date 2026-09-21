@@ -316,12 +316,6 @@ export class GitOps {
     return result.code === 0 ? result.stdout.trim() : ""
   }
 
-  async hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
-    return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
-      .then(() => true)
-      .catch(() => false)
-  }
-
   /**
    * List local branches and `origin/*` remotes sorted by last commit date,
    * with the resolved default branch flagged. Mirrors WorktreeManager's
@@ -652,7 +646,7 @@ export class GitOps {
   execGit(
     args: string[],
     cwd: string,
-    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean },
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean; env?: NodeJS.ProcessEnv },
   ): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }

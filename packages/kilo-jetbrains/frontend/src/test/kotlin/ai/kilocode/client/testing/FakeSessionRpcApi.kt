@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionShareDto
@@ -380,6 +381,31 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> {
         assertNotEdt("pendingQuestions")
         return pendingQuestionList.toList()
+    }
+
+    // ------ shared agent board ------
+
+    /** The board returned by [sessionBoard] and, unless [resetSessionBoardReturnsConflict], by [resetSessionBoard]. */
+    var board = SessionBoardDto(ownerSessionID = "ses_test", revision = 1, messages = emptyList(), hasMore = false)
+    var sessionBoardThrows: Exception? = null
+    var resetSessionBoardReturnsConflict = false
+    var resetSessionBoardThrows: Exception? = null
+    val sessionBoardCalls = mutableListOf<Triple<String, String?, Int?>>()
+    val resetSessionBoardCalls = mutableListOf<Pair<String, Int>>()
+
+    override suspend fun sessionBoard(sessionID: String, directory: String, before: String?, limit: Int?): SessionBoardDto {
+        assertNotEdt("sessionBoard")
+        sessionBoardThrows?.let { throw it }
+        sessionBoardCalls.add(Triple(sessionID, before, limit))
+        return board
+    }
+
+    override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? {
+        assertNotEdt("resetSessionBoard")
+        resetSessionBoardThrows?.let { throw it }
+        resetSessionBoardCalls.add(sessionID to revision)
+        if (resetSessionBoardReturnsConflict) return null
+        return board
     }
 
     private fun key(part: String, name: String, url: String): String {

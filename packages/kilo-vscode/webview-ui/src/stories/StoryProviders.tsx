@@ -284,6 +284,9 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
+    loadMoreSessions: noop,
+    sessionsHasMore: () => false,
+    sessionsLoadingMore: () => false,
     loadOlderMessages: () => false,
     selectSession: noop,
     // MessageList reads both on mount: `scrollBottomID` must be an accessor
@@ -354,6 +357,7 @@ const ConfigWrapper: ParentComponent<{
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
         sandboxControls: props.features?.sandboxControls ?? false,
         backgroundSubagents: props.features?.backgroundSubagents ?? false,
+        speechToText: props.features?.speechToText ?? true,
       }
     })
 

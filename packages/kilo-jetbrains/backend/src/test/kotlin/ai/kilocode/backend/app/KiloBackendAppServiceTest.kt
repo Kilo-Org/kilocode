@@ -250,6 +250,25 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `update config patches shared_agent_board and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(
+            shared_agent_board = true,
+        ))
+
+        assertEquals(
+            "{\"shared_agent_board\":true}",
+            mock.lastConfigPatchBody,
+        )
+        val cfg = appStateDto(state).config
+        assertEquals(true, cfg?.shared_agent_board)
+        assertEquals(true, svc.config?.shared_agent_board)
+    }
+
+    @Test
     fun `ready dto maps model config`() = runBlocking {
         mock.config = """{"model":"openai/gpt","agent":{"plan":{"model":"anthropic/claude","variant":"high"}}}"""
         val svc = create()

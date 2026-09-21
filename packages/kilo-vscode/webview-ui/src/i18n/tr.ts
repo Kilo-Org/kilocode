@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Hata veya bağlantı kaybı.",
   "session.activity.retry": "Otomatik olarak yeniden deneniyor.",
   "session.activity.busy": "Devam ediyor.",
+  "session.activity.scheduled": "Zamanlanmış bir uyandırmayı bekliyor.",
   "session.activity.done": "Tur tamamlandı.",
   "session.activity.idle": "Çalışmıyor.",
 
@@ -207,6 +208,7 @@ export const dict = {
   "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
   "prompt.action.autoApprove.enabled": "Otomatik onay etkin. İzin istekleri otomatik olarak onaylanacak.",
   "prompt.action.autoApprove.disabled": "Otomatik onay devre dışı. İzin isteklerini otomatik onaylamak için tıklayın.",
+  "prompt.action.autoApprove.sandboxExcluded": "Korumalı alan yükseltme istemleri her zaman hariç tutulur.",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
   "prompt.action.sandbox.enable": "Sandbox'ı etkinleştir",
@@ -223,6 +225,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "İzin verildi",
   "prompt.action.sandbox.unrestricted": "Kısıtlanmamış",
   "prompt.action.sandbox.description.enabled": "Yazma işlemleri proje ve Kilo dizinleriyle sınırlıdır.",
+  "prompt.action.sandbox.description.escalation":
+    "İzin kuralları ve otomatik onay korumalı alan içinde geçerlidir. Korumalı alandan çıkması gereken komutlar her zaman sorar.",
   "prompt.action.sandbox.description.disabled":
     "Dosya sistemi yazma işlemlerini ve ağ erişimini kısıtlamak için tıklayın.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -268,8 +272,9 @@ export const dict = {
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
-  "notification.permission.titleSandboxEscalation":
-    "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
+  "notification.permission.titleSandboxEscalation": "Korumalı alan dışında çalıştırılsın mı?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Bu, tüm komutu dosya sistemi ve ağ kısıtlamaları kaldırılmış olarak yalnızca bu komut için çalıştırır. Git, korumalı alanda salt okunur olan ve bağlı bir worktree'de worktree dışında kalan .git dosyasına yazmalıdır. Bash izin kuralları ve otomatik onay bu istemi hiçbir zaman otomatik olarak onaylamaz.",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.reject": "Reddet",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
@@ -305,7 +310,7 @@ export const dict = {
   "ui.approval.source.agent.default": "aracı tarafından",
   "ui.approval.source.global": "genel yapılandırmanız tarafından",
   "ui.approval.source.project": "proje yapılandırması tarafından",
-  "ui.approval.source.yolo": "otomatik onay (YOLO) modu tarafından",
+  "ui.approval.source.yolo": "otomatik onay modu tarafından",
   "ui.approval.source.session": "bir oturum otomatik onay kuralı tarafından",
   "ui.approval.source.default": "varsayılan olarak",
   "ui.approval.outsideWorkspace": "(çalışma alanınızın dışında: {{file}})",
@@ -323,7 +328,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Yeni Görev",
   "sidebar.topBar.history": "Geçmiş",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Ayarlar",
@@ -508,37 +512,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "İzinler güncellenemedi",
 
-  "settings.permissions.tool.read.title": "Oku",
   "settings.permissions.tool.read.description": "Bir dosyayı okuma (dosya yoluyla eşleşir)",
-  "settings.permissions.tool.edit.title": "Düzenle",
   "settings.permissions.tool.edit.description": "Düzenleme, yazma, yama ve çoklu düzenleme dahil dosyaları değiştir",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Glob kalıpları kullanarak dosyaları eşle",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Düzenli ifadeler kullanarak dosya içerikleri ara",
-  "settings.permissions.tool.list.title": "Listele",
   "settings.permissions.tool.list.description": "Bir dizindeki dosyaları listele",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Kabuk komutları çalıştır",
-  "settings.permissions.tool.task.title": "Görev",
   "settings.permissions.tool.task.description": "Alt ajanlar başlat",
-  "settings.permissions.tool.skill.title": "Beceri",
   "settings.permissions.tool.skill.description": "Ada göre bir beceri yükle",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Dil sunucusu sorguları çalıştır",
-  "settings.permissions.tool.todoread.title": "Görev Oku",
   "settings.permissions.tool.todoread.description": "Görev listesini oku",
-  "settings.permissions.tool.todowrite.title": "Görev Yaz",
   "settings.permissions.tool.todowrite.description": "Görev listesini güncelle",
-  "settings.permissions.tool.webfetch.title": "Web Getir",
   "settings.permissions.tool.webfetch.description": "Bir URL'den içerik getir",
-  "settings.permissions.tool.websearch.title": "Web Ara",
   "settings.permissions.tool.websearch.description": "Web'de ara",
-  "settings.permissions.tool.codesearch.title": "Kod Ara",
   "settings.permissions.tool.codesearch.description": "Web'de kod ara",
-  "settings.permissions.tool.external_directory.title": "Harici Dizin",
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
-  "settings.permissions.tool.doom_loop.title": "Sonsuz Döngü",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
 
   "session.delete.title": "Oturumu sil",
@@ -556,6 +544,7 @@ export const dict = {
   "session.tabs.switcher.current": "Geçerli",
   "session.tabs.switcher.pending": "Yeni",
   "session.tabs.switcher.busy": "Çalışıyor",
+  "session.tabs.switcher.scheduled": "Zamanlandı",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Çalışma ağacı",
@@ -581,14 +570,16 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Dosyaları düzenlemeden veya komutları çalıştırmadan önce izin ister.",
   "workStyle.choice.human-in-the-loop.bash": "Her terminal komutunu çalıştırmadan önce izin ister.",
-  "workStyle.choice.human-in-the-loop.visibility": "Akıl yürütme dahil tüm konuşma ayrıntılarını gösterir.",
+  "workStyle.choice.human-in-the-loop.visibility":
+    "İnceleme için akıl yürütmeyi, komutları ve düzenlemeleri genişletir.",
   "workStyle.choice.autonomous.eyebrow": "Daha az kesinti",
   "workStyle.choice.autonomous.title": "Yüksek özerklik",
   "workStyle.choice.autonomous.description": "Daha az kesinti, daha sade bir arayüz.",
   "workStyle.choice.autonomous.permissions":
     "Çalışma alanındaki dosyaları izin istemeden düzenler ve komutları çalıştırır.",
   "workStyle.choice.autonomous.bash": "Çalışma alanında terminal komutlarını onay almadan çalıştırabilir.",
-  "workStyle.choice.autonomous.visibility": "Ayrıntılar siz genişletene kadar daraltılmış olarak kalır.",
+  "workStyle.choice.autonomous.visibility":
+    "Araç ayrıntılarını daraltır, akıl yürütmeyi kompakt bir önizleme olarak gösterir.",
   "session.cloud.import.title": "Buluttan içe aktar",
   "session.cloud.import.placeholder": "Oturum kimliği, URL veya kilo import komutu",
   "session.cloud.import.button": "İçe Aktar",
@@ -911,6 +902,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın ya da aşağıda kendi transkripsiyon temel URL'nizi ayarlayın.",
+  "settings.models.speechToText.remoteDescription":
+    "Sesli giriş uzak pencerelerde kullanılamaz. Mikrofonu kullanmak için Kilo'yu yerel bir pencerede açın.",
   "settings.models.speechToTextModel.title": "Sesten metne modeli",
   "settings.models.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.nativeNotebookTools.title": "Yerel Not Defteri Araçları",
@@ -949,6 +942,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Pasif",
   "settings.experimental.remote.hint": "Geçiş yapmak için sohbette /remote kullanın",
   "settings.experimental.toolToggles": "Araç Açma/Kapatma",
+  "settings.experimental.codeMode.title": "Programatik Araç Çağrıları",
+  "settings.experimental.codeMode.description":
+    "MCP araç çağrılarını, her MCP aracını doğrudan sunmak yerine isteğe bağlı araç keşfiyle sınırlandırılmış bir JavaScript çalışma zamanı üzerinden yönlendirir. Çok sayıda MCP aracı bağlıyken bağlam tasarrufu sağlar.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Agent shell komutlarını, proje ve Kilo durum dizinlerine yazmaları kısıtlanan işletim sistemi düzeyinde bir sandbox içinde çalıştırın",
@@ -1083,6 +1079,27 @@ export const dict = {
   "settings.checkpoints.enable.title": "Anlık Görüntüleri Etkinleştir",
   "settings.checkpoints.enable.description":
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
+  "settings.autoCleanup.enable.title": "Otomatik oturum temizliğini etkinleştir",
+  "settings.autoCleanup.enable.description":
+    "Belirli bir gün sayısından sonra eski oturum geçmişini otomatik olarak siler, bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde, yalnızca bu pencerede değil. Şu anda çalışan oturumlar ve yeni çatallaması olan oturumlar asla silinmez. Silme kalıcıdır.",
+  "settings.autoCleanup.defaultRetention.title": "Oturumları saklama süresi (gün)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Otomatik temizlik, oturum geçmişini silmeden önce ne kadar süreyle saklanır.",
+  "settings.autoCleanup.lastRun.title": "Son temizlik",
+  "settings.autoCleanup.lastRun.never": "Hiç çalıştırılmadı",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}} oturumdan {{deleted}} tanesi silindi ({{active}} etkin atlandı, {{failed}} başarısız) {{seconds}} sn içinde",
+  "settings.autoCleanup.starting": "Oturum temizliği başlatılıyor...",
+  "settings.autoCleanup.error.status": "Oturum temizliği durumu geçici olarak kullanılamıyor. Yeniden deneniyor...",
+  "settings.autoCleanup.error.timeout": "Temizlik durumu bekleniyor. Arka uç beklenenden uzun sürüyor.",
+  "settings.autoCleanup.error.run":
+    "Oturum temizliğinin tamamlandığı doğrulanamadı. Yeniden denemeden önce son temizlik sonucunu kontrol edin.",
+  "settings.autoCleanup.progress.scanning": "Oturumlar taranıyor: {{processed}}/{{total}} işlendi",
+  "settings.autoCleanup.progress.deleting":
+    "Oturumlar siliniyor: {{processed}}/{{total}} işlendi ({{deleted}} silindi, {{failed}} başarısız)",
+  "settings.autoCleanup.runNow": "Temizliği şimdi çalıştır",
+  "settings.autoCleanup.runNow.confirm":
+    "Süresi dolmuş oturumlar bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde kalıcı olarak silinsin mi?",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
@@ -1132,6 +1149,21 @@ export const dict = {
   "settings.commitMessage.language.description":
     "AI tarafından oluşturulan commit mesajları için hangi dili kullanacağınızı seçin:",
 
+  "settings.display.preview.title": "Önizleme",
+  "settings.display.presets.title": "Görüntüleme ön ayarları",
+  "settings.display.presets.description":
+    "Aşağıdaki görüntüleme seçeneklerini değiştirir, izinleri değil. Uygulamak için kaydedin.",
+  "settings.display.preview.model": "Örnek model",
+  "settings.display.preview.prompt": "Selamlamadaki fazla boşlukları kaldırın ve testleri kontrol edin.",
+  "settings.display.preview.reasoning":
+    "**Selamlamayı kontrol et.** İşlev, düz bir ad ve iki ucunda fazla boşluk bulunan bir ad için aynı selamlamayı üretmelidir. Mevcut işlev imzasını ve selamlama biçimini koruyacağım ve yalnızca adın döndürülen dizeye nasıl girdiğini değiştireceğim.\n\n`  Ada  ` gibi bir girdide istenmeyen boşluklar girdiye aittir, selamlama şablonuna değil. Tamamlanmış selamlamayı kırpmak, adın yanında boşluk bırakırdı. Bu nedenle kırpma işlemi, ad eklenmeden önce yapılmalıdır.\n\n`trim()` işlevinin her iki uçtaki boşlukları kaldırdığını ve yeni bir dize döndürdüğünü doğrulamak için dize belgelerini kontrol edeceğim. Özgün girdiyi değiştirmeden bırakmalıdır. Bu değişiklik için düzenli ifade, ek bağımlılık veya ayrı bir yardımcı işleve gerek yoktur.\n\nBir adın içindeki boşluklar bozulmadan kalmalıdır. `Ada Lovelace` gibi bir ad `AdaLovelace` olmamalı ve büyük/küçük harf durumu değişmemelidir. Boş veya yalnızca boşluk içeren bir girdi, bu odaklı düzeltmenin parçası olarak yeni bir yedek selamlama gerektirmez.\n\nDeğişiklik, şablonun şu anda `name` kullandığı yerde `name.trim()` kullanılarak return ifadesinde kalabilir. Çevredeki noktalama işaretlerini ve selamlamadan sonraki kasıtlı boşluğu koruyacağım. Bu, diff'i küçük tutar ve davranışın incelenmesini kolaylaştırır.\n\nSon olarak `bun test greeting.test.ts` komutunu çalıştıracağım ve iki sonucu da kontrol edeceğim. Boşluklu ad durumu fazla boşlukların kaldırıldığını doğrulamalı, düz ad durumu ise mevcut çıktıyı korumalıdır. Değişikliği ve test sonuçlarını yalnızca komut tamamlandıktan sonra bildireceğim.",
+  "settings.display.preview.shell": "Selamlama testini kontrol et",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fazla boşlukları kaldırır\n[pass] düz bir adı korur\n\n2 test geçti",
+  "settings.display.preview.query": "Dize kırpma",
+  "settings.display.preview.result": "trim() bir dizenin her iki ucundaki boşlukları kaldırır.",
+  "settings.display.preview.answer":
+    "Selamlama, fazla boşlukları kaldıracak şekilde güncellendi. Her iki test de geçiyor.",
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
@@ -1166,7 +1198,7 @@ export const dict = {
     "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
-    "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
+    "Bir araç çağrısının neden otomatik olarak onaylandığını gösterir; örneğin eşleşen bir izin kuralı veya aracı varsayılanı.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1337,8 +1369,6 @@ export const dict = {
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Yerel olarak kaydet",
-  "diffViewer.comment.sendToAgent": "Ajana gönder",
   "diffViewer.comment.postToGithub": "GitHub'da paylaş",
   "diffViewer.comment.loadFailed": "Çekme isteğindeki değişiklikler yüklenemedi.",
   "diffViewer.comment.unavailable": "Bu satır, çekme isteğinin mevcut anlık görüntüsünde bulunmuyor.",

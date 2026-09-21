@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Błąd lub utrata połączenia.",
   "session.activity.retry": "Automatyczne ponawianie próby.",
   "session.activity.busy": "W toku.",
+  "session.activity.scheduled": "Oczekiwanie na zaplanowane przebudzenie.",
   "session.activity.done": "Tura zakończona.",
   "session.activity.idle": "Nie działa.",
 
@@ -208,6 +209,7 @@ export const dict = {
     "Automatyczne zatwierdzanie jest włączone. Prośby o uprawnienia będą zatwierdzane automatycznie.",
   "prompt.action.autoApprove.disabled":
     "Automatyczne zatwierdzanie jest wyłączone. Kliknij, aby automatycznie zatwierdzać prośby o uprawnienia.",
+  "prompt.action.autoApprove.sandboxExcluded": "Żądania wyjścia z sandboxa są zawsze wykluczone.",
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
   "prompt.action.indexing": "Ustawienia indeksowania",
@@ -226,6 +228,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Dozwolona",
   "prompt.action.sandbox.unrestricted": "Nieograniczony",
   "prompt.action.sandbox.description.enabled": "Zapisy są ograniczone do katalogów projektu i Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Reguły uprawnień i automatyczne zatwierdzanie obowiązują wewnątrz sandboxa. Polecenia, które muszą go opuścić, zawsze pytają.",
   "prompt.action.sandbox.description.disabled": "Kliknij, aby ograniczyć zapisy w systemie plików i dostęp do sieci.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Kliknij, aby ograniczyć zapisy w systemie plików. Ustawienia sandboxa nadal zezwalają na dostęp do sieci.",
@@ -270,7 +274,9 @@ export const dict = {
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Zezwolić na operację Git poza piaskownicą?",
+  "notification.permission.titleSandboxEscalation": "Uruchomić poza sandboxem?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Spowoduje to uruchomienie całego polecenia bez ograniczeń systemu plików i sieci, tylko dla tego polecenia. Git musi zapisywać w .git, który jest tylko do odczytu w sandboxie i znajduje się poza drzewem roboczym w połączonym worktree. Reguły zezwoleń Bash i automatyczne zatwierdzanie nigdy nie zatwierdzają tego żądania automatycznie.",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.reject": "Odrzuć",
   "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",
@@ -306,7 +312,7 @@ export const dict = {
   "ui.approval.source.agent.default": "przez agenta",
   "ui.approval.source.global": "przez konfigurację globalną",
   "ui.approval.source.project": "przez konfigurację projektu",
-  "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania (YOLO)",
+  "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania",
   "ui.approval.source.session": "przez regułę automatycznego zatwierdzania sesji",
   "ui.approval.source.default": "domyślnie",
   "ui.approval.outsideWorkspace": "(poza obszarem roboczym: {{file}})",
@@ -323,7 +329,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Nowe Zadanie",
   "sidebar.topBar.history": "Historia",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Ustawienia",
@@ -517,37 +522,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Nie udało się zaktualizować uprawnień",
 
-  "settings.permissions.tool.read.title": "Odczyt",
   "settings.permissions.tool.read.description": "Odczyt pliku (pasuje do ścieżki pliku)",
-  "settings.permissions.tool.edit.title": "Edycja",
   "settings.permissions.tool.edit.description": "Modyfikacja plików, w tym edycje, zapisy, łatki i multi-edycje",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Dopasowywanie plików za pomocą wzorców glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Przeszukiwanie zawartości plików za pomocą wyrażeń regularnych",
-  "settings.permissions.tool.list.title": "Lista",
   "settings.permissions.tool.list.description": "Wyświetlanie listy plików w katalogu",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Uruchamianie poleceń powłoki",
-  "settings.permissions.tool.task.title": "Zadanie",
   "settings.permissions.tool.task.description": "Uruchamianie pod-agentów",
-  "settings.permissions.tool.skill.title": "Umiejętność",
   "settings.permissions.tool.skill.description": "Ładowanie umiejętności według nazwy",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Uruchamianie zapytań serwera językowego",
-  "settings.permissions.tool.todoread.title": "Odczyt Todo",
   "settings.permissions.tool.todoread.description": "Odczyt listy zadań",
-  "settings.permissions.tool.todowrite.title": "Zapis Todo",
   "settings.permissions.tool.todowrite.description": "Aktualizacja listy zadań",
-  "settings.permissions.tool.webfetch.title": "Pobieranie z sieci",
   "settings.permissions.tool.webfetch.description": "Pobieranie zawartości z adresu URL",
-  "settings.permissions.tool.websearch.title": "Wyszukiwanie w sieci",
   "settings.permissions.tool.websearch.description": "Przeszukiwanie sieci",
-  "settings.permissions.tool.codesearch.title": "Wyszukiwanie kodu",
   "settings.permissions.tool.codesearch.description": "Przeszukiwanie kodu w sieci",
-  "settings.permissions.tool.external_directory.title": "Katalog zewnętrzny",
   "settings.permissions.tool.external_directory.description": "Dostęp do plików poza katalogiem projektu",
-  "settings.permissions.tool.doom_loop.title": "Zapętlenie",
   "settings.permissions.tool.doom_loop.description": "Wykrywanie powtarzających się wywołań narzędzi (doom loop)",
 
   "session.delete.title": "Usuń sesję",
@@ -565,6 +554,7 @@ export const dict = {
   "session.tabs.switcher.current": "Bieżąca",
   "session.tabs.switcher.pending": "Nowa",
   "session.tabs.switcher.busy": "Pracuje",
+  "session.tabs.switcher.scheduled": "Zaplanowano",
   "session.tab.local": "Lokalny",
   "session.tab.cloud": "Chmura",
   "session.tab.worktree": "Drzewo robocze",
@@ -588,14 +578,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo wstrzymuje pracę i pokazuje swój plan w trakcie działania.",
   "workStyle.choice.human-in-the-loop.permissions": "Prosi o zgodę przed edycją plików lub uruchomieniem poleceń.",
   "workStyle.choice.human-in-the-loop.bash": "Prosi o pozwolenie na każde polecenie terminala.",
-  "workStyle.choice.human-in-the-loop.visibility": "Wyświetla wszystkie szczegóły rozmowy, w tym tok rozumowania.",
+  "workStyle.choice.human-in-the-loop.visibility": "Rozwija rozumowanie, polecenia i zmiany do przeglądu.",
   "workStyle.choice.autonomous.eyebrow": "Mniej przerw",
   "workStyle.choice.autonomous.title": "Wysoka autonomia",
   "workStyle.choice.autonomous.description": "Mniej przerw i uproszczony interfejs.",
   "workStyle.choice.autonomous.permissions":
     "Edytuje pliki i uruchamia polecenia w przestrzeni roboczej bez pytania o zgodę.",
   "workStyle.choice.autonomous.bash": "Może uruchamiać polecenia terminala w przestrzeni roboczej bez zatwierdzenia.",
-  "workStyle.choice.autonomous.visibility": "Szczegóły pozostają zwinięte, dopóki ich nie rozwiniesz.",
+  "workStyle.choice.autonomous.visibility": "Zwieja szczegóły narzędzi, z kompaktowym podglądem rozumowania.",
   "session.cloud.import.title": "Importuj z chmury",
   "session.cloud.import.placeholder": "ID sesji, URL lub polecenie kilo import",
   "session.cloud.import.button": "Importuj",
@@ -878,6 +868,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Włącz i zaloguj się do dostawcy Kilo, aby korzystać ze Speech to Text, albo ustaw poniżej własny bazowy adres URL transkrypcji.",
+  "settings.models.speechToText.remoteDescription":
+    "Wprowadzanie głosowe nie jest dostępne w zdalnych oknach. Otwórz Kilo w lokalnym oknie, aby użyć mikrofonu.",
   "settings.models.speechToTextModel.title": "Model mowy na tekst",
   "settings.models.speechToTextModel.description":
     "Wybierz model transkrypcji Kilo Gateway dla wprowadzania głosowego.",
@@ -1081,6 +1073,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "model",
   "settings.agentBehaviour.workflows.variant": "wariant",
   "settings.agentBehaviour.workflows.modelDescription": "Globalne nadpisanie modelu",
+  "settings.experimental.codeMode.title": "Programmatyczne wywołania narzędzi",
+  "settings.experimental.codeMode.description":
+    "Kieruje wywołania narzędzi MCP przez odizolowane środowisko uruchomieniowe JavaScript z wykrywaniem narzędzi na żądanie, zamiast udostępniać każde narzędzie MCP bezpośrednio. Oszczędza kontekst, gdy podłączonych jest wiele narzędzi MCP.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
@@ -1129,6 +1124,28 @@ export const dict = {
     "Zapobieganie powtarzaniu tych samych akcji. Uruchamiane, gdy to samo wywołanie narzędzia powtarza się z identycznymi danymi wejściowymi.",
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
+  "settings.autoCleanup.enable.title": "Włącz automatyczne czyszczenie sesji",
+  "settings.autoCleanup.enable.description":
+    "Automatycznie usuwa starą historię sesji po określonej liczbie dni, we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze, nie tylko w tym oknie. Uruchomione sesje i sesje z niedawnym forkiem nigdy nie są usuwane. Usunięcie jest trwałe.",
+  "settings.autoCleanup.defaultRetention.title": "Przechowuj sesje (dni)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Jak długo przechowywana jest historia sesji, zanim automatyczne czyszczenie ją usunie.",
+  "settings.autoCleanup.lastRun.title": "Ostatnie czyszczenie",
+  "settings.autoCleanup.lastRun.never": "Nigdy nie uruchomiono",
+  "settings.autoCleanup.result":
+    "{{date}}: usunięto {{deleted}} z {{scanned}} sesji ({{active}} aktywnych pominięto, {{failed}} nie powiodło się) w {{seconds}}s",
+  "settings.autoCleanup.starting": "Uruchamianie czyszczenia sesji...",
+  "settings.autoCleanup.error.status": "Stan czyszczenia sesji jest chwilowo niedostępny. Ponawianie próby...",
+  "settings.autoCleanup.error.timeout":
+    "Oczekiwanie na stan czyszczenia. Backend potrzebuje więcej czasu niż oczekiwano.",
+  "settings.autoCleanup.error.run":
+    "Nie udało się potwierdzić zakończenia czyszczenia sesji. Sprawdź wynik ostatniego czyszczenia przed ponowną próbą.",
+  "settings.autoCleanup.progress.scanning": "Skanowanie sesji: przetworzono {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Usuwanie sesji: przetworzono {{processed}}/{{total}} (usunięto {{deleted}}, nie powiodło się {{failed}})",
+  "settings.autoCleanup.runNow": "Uruchom czyszczenie teraz",
+  "settings.autoCleanup.runNow.confirm":
+    "Trwale usunąć wygasłe sesje we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze?",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
   "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
   "settings.context.compaction.title": "Kompaktowanie",
@@ -1177,6 +1194,20 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Wybierz, jaki język używać do wiadomości generowanych przez sztuczną inteligencję:",
 
+  "settings.display.preview.title": "Podgląd",
+  "settings.display.presets.title": "Presety wyświetlania",
+  "settings.display.presets.description":
+    "Zmienia poniższe opcje wyświetlania, a nie uprawnienia. Zapisz, aby zastosować.",
+  "settings.display.preview.model": "Model przykładowy",
+  "settings.display.preview.prompt": "Usuń nadmiarowe spacje z powitania i sprawdź testy.",
+  "settings.display.preview.reasoning":
+    "**Sprawdź powitanie.** Funkcja powinna zwracać to samo powitanie dla zwykłej nazwy i nazwy z nadmiarowymi spacjami na obu końcach. Zachowam istniejącą sygnaturę funkcji i format powitania, a zmienię tylko sposób, w jaki nazwa trafia do zwracanego ciągu.\n\nW przypadku danych wejściowych takich jak `  Ada  ` niechciane spacje należą do danych wejściowych, a nie do szablonu powitania. Przycięcie gotowego powitania pozostawiłoby spacje obok nazwy. Operacja przycinania musi więc nastąpić przed wstawieniem nazwy.\n\nSprawdzę dokumentację ciągów, aby potwierdzić, że `trim()` usuwa białe znaki z obu końców i zwraca nowy ciąg. Powinna pozostawić oryginalne dane wejściowe bez zmian. Do tej zmiany nie jest potrzebne wyrażenie regularne, dodatkowa zależność ani osobna funkcja pomocnicza.\n\nSpacje wewnątrz nazwy muszą pozostać nienaruszone. Nazwa taka jak `Ada Lovelace` nie powinna stać się `AdaLovelace`, a wielkość liter nie powinna się zmieniać. Puste dane wejściowe lub dane zawierające tylko spacje nie wymagają nowego powitania zastępczego w ramach tej ukierunkowanej poprawki.\n\nZmiana może pozostać w wyrażeniu zwracającym dzięki użyciu `name.trim()` tam, gdzie szablon obecnie używa `name`. Zachowam otaczającą interpunkcję i celową spację po powitaniu. Dzięki temu diff pozostaje mały, a zachowanie łatwe do sprawdzenia.\n\nNa koniec uruchomię `bun test greeting.test.ts` i sprawdzę oba wyniki. Przypadek z uzupełnioną nazwą powinien potwierdzić, że nadmiarowe spacje są usuwane, a przypadek ze zwykłą nazwą chroni istniejące dane wyjściowe. Zmianę i wyniki testów zgłoszę dopiero po zakończeniu polecenia.",
+  "settings.display.preview.shell": "Sprawdź test powitania",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] usuwa nadmiarowe spacje\n[pass] zachowuje zwykłą nazwę\n\n2 testy zaliczone",
+  "settings.display.preview.query": "Przycinanie ciągów",
+  "settings.display.preview.result": "trim() usuwa spacje z obu końców ciągu.",
+  "settings.display.preview.answer": "Zaktualizowano powitanie, aby usuwało nadmiarowe spacje. Oba testy przechodzą.",
   "settings.display.username.title": "Nazwa użytkownika",
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.fontSize.title": "Rozmiar czcionki",
@@ -1211,7 +1242,7 @@ export const dict = {
     "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",
   "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
   "settings.display.autoApprovalReason.description":
-    "Pokazuje wiersz przy wywołaniach narzędzi wyjaśniający, dlaczego zostały automatycznie zatwierdzone (dopasowana reguła, wartość domyślna agenta, tryb YOLO itp.).",
+    "Pokazuje, dlaczego wywołanie narzędzia zostało automatycznie zatwierdzone, na przykład pasująca reguła uprawnień lub wartość domyślna agenta.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1327,8 +1358,6 @@ export const dict = {
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Zapisz lokalnie",
-  "diffViewer.comment.sendToAgent": "Wyślij do agenta",
   "diffViewer.comment.postToGithub": "Opublikuj na GitHubie",
   "diffViewer.comment.loadFailed": "Nie udało się wczytać zmian pull requesta.",
   "diffViewer.comment.unavailable": "Ten wiersz nie jest dostępny w bieżącej migawce pull requesta.",

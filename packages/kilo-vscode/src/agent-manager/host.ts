@@ -10,6 +10,7 @@
 
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
+import type { PRMergeMethod } from "./types"
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -132,7 +133,20 @@ export interface Host {
   dirtyFiles(): string[]
 
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
-  pickFolder(): Promise<string | undefined>
+  pickFolder(opts?: { defaultPath?: string; title?: string }): Promise<string | undefined>
+
+  input(opts: {
+    title: string
+    prompt?: string
+    value?: string
+    validate?: (value: string) => string | undefined
+  }): Promise<string | undefined>
+
+  /** Show a native modal confirmation. Dismissal means no. */
+  confirm(message: string, action: string): Promise<boolean>
+
+  /** Clone without changing workspace membership; return the verified checkout path. */
+  cloneRepository(url: string, parent: string): Promise<string | undefined>
 
   /** Whether the experimental multi-project Agent Manager mode is enabled. */
   multiProject(): boolean
@@ -151,8 +165,8 @@ export interface Host {
   writeProjects(value: unknown): Promise<void>
 
   /** Read and persist the user's last PR merge method per repository. */
-  getPRMergeMethod?(repo: string): "merge" | "squash" | "rebase" | undefined
-  savePRMergeMethod?(repo: string, method: "merge" | "squash" | "rebase"): Promise<void>
+  getPRMergeMethod?(repo: string): PRMergeMethod | undefined
+  savePRMergeMethod?(repo: string, method: PRMergeMethod): Promise<void>
 
   unregisterProjectRoutes(projectId: string): void
 
@@ -169,6 +183,15 @@ export interface Host {
 
   /** Show an error notification. */
   showError(msg: string): void
+
+  /** Show an info, warning, or error notification. */
+  notify(kind: "info" | "warning" | "error", msg: string): void
+
+  /** Reveal a path in the OS file manager. A no-op (logged) on a remote workspace. */
+  revealInOS(path: string): void
+
+  /** Run a cancellable background task behind a progress notification. */
+  withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T>
 
   /** Open a text document in an editor (e.g. setup script). */
   openDocument(path: string): Promise<void>

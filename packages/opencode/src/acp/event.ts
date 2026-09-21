@@ -1,6 +1,7 @@
 import type { AgentSideConnection } from "@agentclientprotocol/sdk"
 import type {
   Event,
+  EventMessageUpdated, // kilocode_change
   EventMessagePartDelta,
   EventMessagePartUpdated,
   KiloClient,
@@ -40,7 +41,10 @@ export class Subscription {
   private readonly abort = new AbortController()
   private readonly shellSnapshots = new Map<string, string>()
   private readonly toolStarts = new Set<string>()
+  private readonly connectionWaiters = new Set<() => void>()
+  private readonly idleWaiters = new Map<string, Set<ReturnType<typeof turn>>>() // kilocode_change
   private readonly permission: ACPPermission.Handler
+  private connected = false
   private started = false
 
   constructor(
@@ -63,12 +67,55 @@ export class Subscription {
 
   stop() {
     this.abort.abort()
+    this.disconnected()
+    for (const resolve of this.connectionWaiters) resolve()
+    this.connectionWaiters.clear()
+  }
+
+  async runUntilIdle<A>(sessionId: string, request: () => Promise<A>) {
+    await this.waitUntilConnected()
+    // kilocode_change start - correlate idle waiter with the request's response message
+    const waiter = turn()
+    const waiters = this.idleWaiters.get(sessionId) ?? new Set()
+    waiters.add(waiter)
+    this.idleWaiters.set(sessionId, waiters)
+
+    try {
+      void waiter.promise.catch(() => {})
+      const response = await request()
+      const id = (response as { data?: { info?: { id?: string } } }).data?.info?.id
+      waiter.target(id ?? (await this.latest(sessionId)))
+      if (this.connected) {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          await Promise.race([
+            waiter.promise,
+            new Promise<void>((resolve) => {
+              timer = setTimeout(resolve, 60_000)
+            }),
+          ]).catch(() => {})
+        } finally {
+          if (timer) clearTimeout(timer)
+        }
+      }
+      return response
+    } finally {
+      waiters.delete(waiter)
+      if (waiters.size === 0) this.idleWaiters.delete(sessionId)
+    }
+    // kilocode_change end
   }
 
   async handle(event: Event) {
     switch (event.type) {
+      case "session.status":
+        if (event.properties.status.type === "idle") this.idle(event.properties.sessionID)
+        return
       case "permission.asked":
         this.permission.handle(event)
+        return
+      case "message.updated":
+        this.message(event) // kilocode_change - correlate idle with this response message
         return
       case "message.part.updated":
         return this.handlePartUpdated(event)
@@ -115,18 +162,80 @@ export class Subscription {
 
   private async run() {
     while (!this.abort.signal.aborted) {
-      const events = (await this.input.sdk.global.event({
-        signal: this.abort.signal,
-      })) as GlobalEventStream
-
-      for await (const event of events.stream) {
-        if (this.abort.signal.aborted) return
-        if (!event.payload) continue
-        await this.handle(event.payload).catch(() => {})
-      }
+      await this.consume().catch(() => {})
+      this.disconnected()
       if (!this.abort.signal.aborted) await new Promise((resolve) => setTimeout(resolve, 1000))
     }
   }
+
+  private async consume() {
+    const events = (await this.input.sdk.global.event({
+      signal: this.abort.signal,
+    })) as GlobalEventStream
+    this.connected = true
+    for (const resolve of this.connectionWaiters) resolve()
+    this.connectionWaiters.clear()
+
+    for await (const event of events.stream) {
+      if (this.abort.signal.aborted) return
+      if (!event.payload) continue
+      await this.handle(event.payload).catch(() => {})
+    }
+  }
+
+  // kilocode_change start
+  private async waitUntilConnected(timeoutMs = 5000) {
+    if (this.connected) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        new Promise<void>((resolve) => this.connectionWaiters.add(resolve)),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs)
+        }),
+      ])
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+  // kilocode_change end
+
+  private disconnected() {
+    if (!this.connected) return
+    this.connected = false
+    const error = new Error("ACP event stream disconnected")
+    for (const waiters of this.idleWaiters.values()) {
+      for (const waiter of waiters) waiter.reject(error)
+    }
+    this.idleWaiters.clear()
+  }
+
+  private idle(sessionId: string) {
+    const waiters = this.idleWaiters.get(sessionId)
+    if (!waiters) return
+    for (const waiter of waiters) waiter.idle() // kilocode_change
+  }
+
+  // kilocode_change start
+  private async latest(sessionId: string) {
+    const session = await Effect.runPromise(this.input.session.tryGet(sessionId))
+    if (!session) throw new Error(`Missing ACP session: ${sessionId}`)
+    const response = await this.input.sdk.session.messages(
+      { sessionID: sessionId, directory: session.cwd, limit: 1 },
+      { throwOnError: true },
+    )
+    const message = response.data.at(-1)
+    if (!message) throw new Error(`Missing ACP response message: ${sessionId}`)
+    return message.info.id
+  }
+
+  private message(event: EventMessageUpdated) {
+    const sessionId = event.properties.sessionID
+    const waiters = this.idleWaiters.get(sessionId)
+    if (!waiters) return
+    for (const waiter of waiters) waiter.message(event.properties.info.id)
+  }
+  // kilocode_change end
 
   private async handlePartUpdated(event: EventMessagePartUpdated) {
     const part = event.properties.part
@@ -338,5 +447,58 @@ export class Subscription {
     this.shellSnapshots.delete(toolCallId)
   }
 }
+
+function signal() {
+  const state: {
+    resolve: () => void
+    reject: (reason?: unknown) => void
+  } = {
+    resolve: () => {},
+    reject: () => {},
+  }
+  const promise = new Promise<void>((resolve, reject) => {
+    state.resolve = resolve
+    state.reject = reject
+  })
+  return {
+    promise,
+    resolve: () => state.resolve(),
+    reject: (reason?: unknown) => state.reject(reason),
+  }
+}
+
+// kilocode_change start
+function turn() {
+  const state = {
+    seq: 0,
+    idle: 0,
+    target: undefined as string | undefined,
+    seen: new Map<string, number>(),
+  }
+  const done = signal()
+  const check = () => {
+    if (!state.target) return
+    const seen = state.seen.get(state.target)
+    if (seen === undefined || state.idle <= seen) return
+    done.resolve()
+  }
+  return {
+    promise: done.promise,
+    reject: done.reject,
+    target(id: string) {
+      state.target = id
+      check()
+    },
+    message(id: string) {
+      state.seen.set(id, ++state.seq)
+      check()
+    },
+    idle() {
+      state.idle = ++state.seq
+      check()
+    },
+  }
+}
+// kilocode_change end
 
 export * as ACPEvent from "./event"

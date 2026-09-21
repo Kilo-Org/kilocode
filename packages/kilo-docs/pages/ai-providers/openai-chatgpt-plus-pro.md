@@ -50,6 +50,15 @@ Then set your default model to one of the OpenAI Codex models available in Kilo 
 {% /tab %}
 {% /tabs %}
 
+## Checking your Codex usage
+
+When you are signed in with ChatGPT, Kilo reports your Codex quota alongside your other connected providers:
+
+- **VS Code:** open the **Profile** view and find the **Plans & usage** section.
+- **CLI:** run `/usage` (aliases `/plans` and `/quota`) and press `ctrl+r` to refresh.
+
+Codex shows its plan and each usage window — for example, a five-hour and a weekly limit — with the percentage used and the reset time. The **Manage** link opens your Codex usage settings at chatgpt.com. If your ChatGPT sign-in has expired, you can reconnect from the provider settings.
+
 ## Tips and Notes
 
 - **Subscription Required:** You need an active ChatGPT Plus or Pro subscription. This provider won't work with free ChatGPT accounts. [Codex is included](https://developers.openai.com/codex/pricing/) in ChatGPT Plus, Pro, Business, Edu, and Enterprise plans. See [OpenAI's ChatGPT plans](https://chatgpt.com/pricing/) for more information.

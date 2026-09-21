@@ -28,6 +28,7 @@ import { reviewRequest } from "../agent-manager/pr/pr-review-request"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { createPRDiffs } from "./pr-diff"
 import { DiffViewerNotice as DiffViewerNoticeBanner } from "./DiffViewerNotice"
+import { notice as noticeFor } from "./review-setup"
 
 // Compare only the PR identity. Ref-only refreshes must not clear local comments.
 function samePR(a: PRTarget | undefined, b: PRTarget | undefined) {
@@ -38,10 +39,6 @@ import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
 import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
 import { SpeechToTextModelsProvider } from "../src/context/speech-to-text-models"
-
-const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
-  "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
-}
 
 type DiffStyle = "unified" | "split"
 
@@ -59,6 +56,9 @@ const DiffViewerContent: Component = () => {
   const [threads, setThreads] = createSignal<string[]>([])
   const [focus, setFocus] = createSignal<{ id: string; file: string }>()
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  // Remembered style pushed by the host (diffViewer.initialDiffStyle); used
+  // when the source or PR identity changes so a persisted choice survives.
+  const [savedDiffStyle, setSavedDiffStyle] = createSignal<DiffStyle>()
   const [markdown, setMarkdown] = createSignal(false)
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
   const [loadingFiles, setLoadingFiles] = createSignal<Set<string>>(new Set())
@@ -104,11 +104,7 @@ const DiffViewerContent: Component = () => {
     return desc?.type === "workspace"
   }
 
-  const noticeText = () => {
-    const n = notice()
-    if (!n) return ""
-    return t(NOTICE_KEYS[n])
-  }
+  const noticeText = () => noticeFor(t, notice())
 
   const markReverting = (file: string, active: boolean) => {
     setReverting((prev) => {
@@ -223,7 +219,7 @@ const DiffViewerContent: Component = () => {
         setThreads(msg.threads ?? [])
         if (changed) {
           setComments([])
-          setDiffStyle("unified")
+          setDiffStyle(savedDiffStyle() ?? "unified")
           setPRMode(false)
         }
       })
@@ -262,6 +258,13 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.markdownRender") {
       setMarkdown(msg.render)
+      return
+    }
+    if (msg.type === "diffViewer.initialDiffStyle") {
+      if (msg.style === "unified" || msg.style === "split") {
+        setSavedDiffStyle(msg.style)
+        setDiffStyle(msg.style)
+      }
       return
     }
     if ((msg as { type: string; file?: string }).type === "diffViewer.initialFile") {
@@ -318,7 +321,7 @@ const DiffViewerContent: Component = () => {
     on(currentSourceId, (id, prev) => {
       if (prev === undefined || id === prev) return
       setComments([])
-      setDiffStyle("unified")
+      setDiffStyle(savedDiffStyle() ?? "unified")
       setReverting(new Set<string>())
       setNotice(undefined)
       setPRError(undefined)
@@ -430,6 +433,7 @@ const DiffViewerContent: Component = () => {
         diffStyle={diffStyle()}
         onDiffStyleChange={(style) => {
           setDiffStyle(style)
+          setSavedDiffStyle(style)
           post({ type: "diffViewer.setDiffStyle", style })
         }}
         markdownRender={markdown()}

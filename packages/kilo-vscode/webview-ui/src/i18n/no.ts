@@ -77,6 +77,7 @@ export const dict = {
   "session.activity.error": "Feil eller tilkobling brutt.",
   "session.activity.retry": "Prøver automatisk på nytt.",
   "session.activity.busy": "Pågår.",
+  "session.activity.scheduled": "Venter på en planlagt vekking.",
   "session.activity.done": "Runde fullført.",
   "session.activity.idle": "Kjører ikke.",
 
@@ -211,6 +212,7 @@ export const dict = {
     "Automatisk godkjenning er aktivert. Tillatelsesforespørsler godkjennes automatisk.",
   "prompt.action.autoApprove.disabled":
     "Automatisk godkjenning er deaktivert. Klikk for å godkjenne tillatelsesforespørsler automatisk.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox-eskaleringsforespørsler er alltid ekskludert.",
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
@@ -229,6 +231,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Tillatt",
   "prompt.action.sandbox.unrestricted": "Ubegrenset",
   "prompt.action.sandbox.description.enabled": "Skrivetilgang er begrenset til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.description.escalation":
+    "Tillatelsesregler og automatisk godkjenning gjelder inne i sandkassen. Kommandoer som må forlate den, spør alltid.",
   "prompt.action.sandbox.description.disabled":
     "Klikk for å begrense skrivetilgang til filsystemet og nettverkstilgang.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
@@ -276,7 +280,9 @@ export const dict = {
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "Tillate Git-operasjon utenfor sandkassen?",
+  "notification.permission.titleSandboxEscalation": "Kjør utenfor sandkassen?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Dette kjører hele kommandoen uten begrensninger for filsystem og nettverk, kun for denne kommandoen. Git må skrive til .git, som er skrivebeskyttet i sandkassen og ligger utenfor arbeidstreet i et koblet worktree. Bash-tillatelsesregler og automatisk godkjenning godkjenner aldri denne forespørselen automatisk.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.reject": "Avvis",
   "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
@@ -312,7 +318,7 @@ export const dict = {
   "ui.approval.source.agent.default": "av agenten",
   "ui.approval.source.global": "av den globale konfigurasjonen",
   "ui.approval.source.project": "av prosjektkonfigurasjonen",
-  "ui.approval.source.yolo": "av automatisk godkjenning (YOLO)",
+  "ui.approval.source.yolo": "av automatisk godkjenning",
   "ui.approval.source.session": "av en økt-autogodkjenningsregel",
   "ui.approval.source.default": "som standard",
   "ui.approval.outsideWorkspace": "(utenfor arbeidsområdet ditt: {{file}})",
@@ -329,7 +335,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Ny Oppgave",
   "sidebar.topBar.history": "Historikk",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Markedsplass",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Innstillinger",
@@ -521,38 +526,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Kunne ikke oppdatere tillatelser",
 
-  "settings.permissions.tool.read.title": "Les",
   "settings.permissions.tool.read.description": "Lesing av en fil (matcher filbanen)",
-  "settings.permissions.tool.edit.title": "Rediger",
   "settings.permissions.tool.edit.description":
     "Endre filer, inkludert redigeringer, skriving, patcher og multi-redigeringer",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Match filer ved hjelp av glob-mønstre",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Søk i filinnhold ved hjelp av regulære uttrykk",
-  "settings.permissions.tool.list.title": "Liste",
   "settings.permissions.tool.list.description": "List filer i en mappe",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Kjør shell-kommandoer",
-  "settings.permissions.tool.task.title": "Oppgave",
   "settings.permissions.tool.task.description": "Start underagenter",
-  "settings.permissions.tool.skill.title": "Ferdighet",
   "settings.permissions.tool.skill.description": "Last en ferdighet etter navn",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Kjør språkserverforespørsler",
-  "settings.permissions.tool.todoread.title": "Les gjøremål",
   "settings.permissions.tool.todoread.description": "Les gjøremålslisten",
-  "settings.permissions.tool.todowrite.title": "Skriv gjøremål",
   "settings.permissions.tool.todowrite.description": "Oppdater gjøremålslisten",
-  "settings.permissions.tool.webfetch.title": "Webhenting",
   "settings.permissions.tool.webfetch.description": "Hent innhold fra en URL",
-  "settings.permissions.tool.websearch.title": "Websøk",
   "settings.permissions.tool.websearch.description": "Søk på nettet",
-  "settings.permissions.tool.codesearch.title": "Kodesøk",
   "settings.permissions.tool.codesearch.description": "Søk etter kode på nettet",
-  "settings.permissions.tool.external_directory.title": "Ekstern mappe",
   "settings.permissions.tool.external_directory.description": "Få tilgang til filer utenfor prosjektmappen",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Oppdager gjentatte verktøykall med identisk input",
 
   "session.delete.title": "Slett sesjon",
@@ -570,6 +559,7 @@ export const dict = {
   "session.tabs.switcher.current": "Gjeldende",
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Jobber",
+  "session.tabs.switcher.scheduled": "Planlagt",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbeidstre",
@@ -593,13 +583,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo tar pause og viser deg planen sin mens den arbeider.",
   "workStyle.choice.human-in-the-loop.permissions": "Ber om tillatelse før filer redigeres eller kommandoer kjøres.",
   "workStyle.choice.human-in-the-loop.bash": "Ber om tillatelse til alle terminalkommandoer.",
-  "workStyle.choice.human-in-the-loop.visibility": "Viser alle samtaledetaljer, inkludert resonnering.",
+  "workStyle.choice.human-in-the-loop.visibility": "Utvider resonnering, kommandoer og redigeringer for gjennomgang.",
   "workStyle.choice.autonomous.eyebrow": "Færre avbrudd",
   "workStyle.choice.autonomous.title": "Høy autonomi",
   "workStyle.choice.autonomous.description": "Færre avbrudd og et strømlinjeformet grensesnitt.",
   "workStyle.choice.autonomous.permissions": "Redigerer filer og kjører kommandoer i arbeidsområdet uten å spørre.",
   "workStyle.choice.autonomous.bash": "Kan kjøre terminalkommandoer i arbeidsområdet uten godkjenning.",
-  "workStyle.choice.autonomous.visibility": "Detaljene forblir skjult til du utvider dem.",
+  "workStyle.choice.autonomous.visibility":
+    "Slår sammen verktøydetaljer, med en kompakt forhåndsvisning av resonneringen.",
   "session.cloud.import.title": "Importer fra skyen",
   "session.cloud.import.placeholder": "Økt-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importer",
@@ -882,6 +873,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text, eller angi en egen transkripsjons-basis-URL nedenfor.",
+  "settings.models.speechToText.remoteDescription":
+    "Taleinndata er ikke tilgjengelig i eksterne vinduer. Åpne Kilo i et lokalt vindu for å bruke mikrofonen.",
   "settings.models.speechToTextModel.title": "Tale-til-tekst-modell",
   "settings.models.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
@@ -1080,6 +1073,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "modell",
   "settings.agentBehaviour.workflows.variant": "variant",
   "settings.agentBehaviour.workflows.modelDescription": "Global modelloverstyring",
+  "settings.experimental.codeMode.title": "Programmatiske verktøykall",
+  "settings.experimental.codeMode.description":
+    "Ruter MCP-verktøykall gjennom en avgrenset JavaScript-runtime med behovsstyrt verktøyoppdagelse i stedet for å eksponere hvert MCP-verktøy direkte. Sparer kontekst når mange MCP-verktøy er tilkoblet.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
@@ -1123,6 +1119,27 @@ export const dict = {
     "Forhindre gjentatte identiske handlinger. Utløses når det samme verktøyanropet gjentas med identisk inndata.",
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
+  "settings.autoCleanup.enable.title": "Aktiver automatisk opprydding av økter",
+  "settings.autoCleanup.enable.description":
+    "Sletter gammel økthistorikk automatisk etter et fast antall dager, på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen, ikke bare i dette vinduet. Kjørende økter og økter med nylig forgrening slettes aldri. Sletting er permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Behold økter i (dager)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Hvor lenge økthistorikk beholdes før automatisk opprydding sletter den.",
+  "settings.autoCleanup.lastRun.title": "Siste opprydding",
+  "settings.autoCleanup.lastRun.never": "Aldri kjørt",
+  "settings.autoCleanup.result":
+    "{{date}}: slettet {{deleted}} av {{scanned}} økter ({{active}} aktive hoppet over, {{failed}} feilet) på {{seconds}}s",
+  "settings.autoCleanup.starting": "Starter opprydding av økter...",
+  "settings.autoCleanup.error.status": "Status for opprydding av økter er midlertidig utilgjengelig. Prøver igjen...",
+  "settings.autoCleanup.error.timeout": "Venter på oppryddingsstatus. Bakenden bruker lengre tid enn forventet.",
+  "settings.autoCleanup.error.run":
+    "Kunne ikke bekrefte at oppryddingen av økter er fullført. Kontroller resultatet av siste opprydding før du prøver igjen.",
+  "settings.autoCleanup.progress.scanning": "Skanner økter: {{processed}}/{{total}} behandlet",
+  "settings.autoCleanup.progress.deleting":
+    "Sletter økter: {{processed}}/{{total}} behandlet ({{deleted}} slettet, {{failed}} feilet)",
+  "settings.autoCleanup.runNow": "Kjør opprydding nå",
+  "settings.autoCleanup.runNow.confirm":
+    "Slett utløpte økter permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",
@@ -1171,6 +1188,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sync med UI-språk",
   "settings.commitMessage.language.description": "Velg hvilket språk du skal bruke for AI-genererte commit-meldinger:",
 
+  "settings.display.preview.title": "Forhåndsvisning",
+  "settings.display.presets.title": "Visningsforhåndsinnstillinger",
+  "settings.display.presets.description": "Endrer visningsalternativene nedenfor, ikke tillatelser. Lagre for å bruke.",
+  "settings.display.preview.model": "Eksempelmodell",
+  "settings.display.preview.prompt": "Fjern overflødige mellomrom fra hilsenen, og kontroller testene.",
+  "settings.display.preview.reasoning":
+    "**Kontroller hilsenen.** Funksjonen bør gi samme hilsen for et vanlig navn og et navn med overflødige mellomrom i begge ender. Jeg beholder den eksisterende funksjonssignaturen og hilsenformatet og endrer bare hvordan navnet kommer inn i den returnerte strengen.\n\nFor en inndata som `  Ada  ` tilhører de uønskede mellomrommene inndataene, ikke hilsenmalen. Hvis man trimmer den ferdige hilsenen, vil det stå mellomrom ved siden av navnet. Trim-operasjonen må derfor skje før navnet settes inn.\n\nJeg vil sjekke strengdokumentasjonen for å bekrefte at `trim()` fjerner mellomrom i begge ender og returnerer en ny streng. Den bør la den opprinnelige inndataene være uendret. Det er ikke behov for et regulært uttrykk, en ekstra avhengighet eller en egen hjelpefunksjon for denne endringen.\n\nMellomrom inne i et navn må forbli intakte. Et navn som `Ada Lovelace` bør ikke bli `AdaLovelace`, og store og små bokstaver bør ikke endres. En tom inndata eller inndata med bare mellomrom krever ikke en ny standardhilsen som en del av denne målrettede rettelsen.\n\nEndringen kan bli i returuttrykket ved å bruke `name.trim()` der malen for tiden bruker `name`. Jeg bevarer tegnsettingen rundt og det bevisste mellomrommet etter hilsenen. Det holder diffen liten og gjør oppførselen lett å gjennomgå.\n\nTil slutt kjører jeg `bun test greeting.test.ts` og kontrollerer begge resultatene. Tilfellet med det utfylte navnet bør bekrefte at overflødige mellomrom fjernes, mens tilfellet med det vanlige navnet beskytter den eksisterende utdataene. Jeg rapporterer først endringen og testresultatene når kommandoen er fullført.",
+  "settings.display.preview.shell": "Kontroller hilsentesten",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fjerner overflødige mellomrom\n[pass] bevarer et vanlig navn\n\n2 tester bestått",
+  "settings.display.preview.query": "Trimming av strenger",
+  "settings.display.preview.result": "trim() fjerner mellomrom i begge ender av en streng.",
+  "settings.display.preview.answer": "Hilsenen er oppdatert for å fjerne overflødige mellomrom. Begge testene består.",
   "settings.display.username.title": "Brukernavn",
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
@@ -1205,7 +1235,7 @@ export const dict = {
     "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
   "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
   "settings.display.autoApprovalReason.description":
-    "Viser en linje ved verktøykall som forklarer hvorfor de ble automatisk godkjent (samsvarende regel, agentstandard, YOLO-modus osv.).",
+    "Viser hvorfor et verktøykall ble automatisk godkjent, for eksempel en samsvarende tillatelsesregel eller en agentstandard.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1318,8 +1348,6 @@ export const dict = {
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Lagre lokalt",
-  "diffViewer.comment.sendToAgent": "Send til agent",
   "diffViewer.comment.postToGithub": "Publiser på GitHub",
   "diffViewer.comment.loadFailed": "Kunne ikke laste inn endringene i pull requesten.",
   "diffViewer.comment.unavailable":

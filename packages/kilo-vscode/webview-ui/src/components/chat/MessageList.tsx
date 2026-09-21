@@ -19,7 +19,6 @@ import {
   onCleanup,
 } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
@@ -28,6 +27,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { WelcomeEmptyState } from "./WelcomeEmptyState"
 import { TranscriptRowView } from "./TranscriptRow"
+import { createRowHandoff } from "./transcript-row-handoff"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
@@ -61,6 +61,7 @@ import {
 import { PromptRail } from "./PromptRail"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail"
 import { onTimelineHighlight, type TimelineHighlight } from "../../utils/timeline/highlight"
+import { escapeRegExp } from "../../utils/escape-regexp"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
 import { rowSearchText, type SearchTextRange } from "./transcript-search-text"
@@ -190,7 +191,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     try {
       let pattern = query
       if (!regex) {
-        pattern = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        pattern = escapeRegExp(query)
       }
       if (wholeWord) {
         // Unicode-aware boundary: plain `\b` only treats ASCII letters/
@@ -463,13 +464,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // the growing assistant suffix whose measurements would produce visible jumps.
   const partition = createMemo(() => partitionRows(rows(), direct()))
   const tail = createMemo(() => partition().direct.map((row) => row.key))
-  const lookup = createMemo(() => new Map(partition().direct.map((row) => [row.key, row])))
+  const lookup = createMemo(() => new Map(rows().map((row) => [row.key, row])))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
   // Virtua keys its items by identity. Row objects are rebuilt whenever turn
   // meta changes (live flag at completion, copy anchor), which would remount
   // every row of the turn at the 260px estimate and bounce the transcript.
   // Feed it the stable keys and resolve the row reactively, like the tail.
-  const virtual = createMemo(() => new Map(partition().virtual.map((row) => [row.key, row])))
   const indexes = createMemo(() => new Map(keys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
 
@@ -807,24 +807,31 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   onCleanup(() => save(session.currentSessionID()))
 
-  // The virtualizer and the live tail render the same row props. Keep one
-  // definition so the two paths cannot drift.
-  const Row: Component<{ row: TranscriptRow; index?: number }> = (entry) => (
-    <TranscriptRowView
-      row={entry.row}
-      index={entry.index}
-      onSelectSession={props.onSelectSession}
-      isSessionOpen={props.isSessionOpen}
-      onForkMessage={props.onForkMessage}
-      onEditMessage={props.onEditMessage}
-      queuedDisabled={props.queuedDisabled}
-      editDisabled={props.editDisabled}
-      highlight={highlight}
-      activeSearch={activeKey() === entry.row.key}
-      readonly={props.readonly}
-      interactivePrompts={props.interactivePrompts}
-    />
-  )
+  const handoff = createRowHandoff()
+  const Row: Component<{ id: string }> = (entry) => {
+    const key = entry.id
+    const initial: TranscriptRow = lookup().get(key)!
+    return handoff(`${initial.message.sessionID}:${key}`, () => {
+      // A removed row can outlive its map entry until the handoff cleanup.
+      const row = createMemo<TranscriptRow>((prev) => lookup().get(key) ?? prev, initial)
+      return (
+        <TranscriptRowView
+          row={row()}
+          index={indexes().get(key)}
+          onSelectSession={props.onSelectSession}
+          isSessionOpen={props.isSessionOpen}
+          onForkMessage={props.onForkMessage}
+          onEditMessage={props.onEditMessage}
+          queuedDisabled={props.queuedDisabled}
+          editDisabled={props.editDisabled}
+          highlight={highlight}
+          activeSearch={activeKey() === key}
+          readonly={props.readonly}
+          interactivePrompts={props.interactivePrompts}
+        />
+      ) as HTMLElement
+    })
+  }
 
   return (
     <div class="message-list-container" classList={{ "am-intro-layout": introduction() }}>
@@ -903,10 +910,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     bufferSize={520}
                     itemSize={260}
                   >
-                    {(key, index) => <Row row={virtual().get(key)!} index={index()} />}
+                    {(key) => <Row id={key} />}
                   </Virtualizer>
                 </Show>
-                <For each={tail()}>{(key) => <Row row={lookup().get(key)!} />}</For>
+                <For each={tail()}>{(key) => <Row id={key} />}</For>
               </div>
             </Show>
             <Show when={revert()}>

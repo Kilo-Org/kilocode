@@ -459,8 +459,6 @@ export const kiloScenarios: Scenario[] = [
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))
     .status(401),
-  http.protected.get("/kilo/claw/status", "kilo.claw.status").probe({ path: "/path" }).status(401),
-  http.protected.get("/kilo/claw/chat-credentials", "kilo.claw.chatCredentials").probe({ path: "/path" }).status(401),
   http.protected.get("/kilo/cloud-sessions", "kilo.cloudSessions").probe({ path: "/path" }).status(401),
   http.protected
     .get("/kilo/cloud/session/{id}", "kilo.cloud.session.get")
@@ -739,6 +737,48 @@ export const kiloScenarios: Scenario[] = [
         object(item)
         check(typeof item.sessionID === "string", "wakeup should include a session id")
         check(typeof item.pending === "number" && item.pending > 0, "wakeup should include a positive pending count")
+      }
+    }),
+  http.protected
+    .get("/kilocode/retention", "kilocode.retention.status")
+    .at((ctx) => ({
+      path: "/kilocode/retention",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.policy)
+      check(typeof body.policy.enabled === "boolean", "retention status should include the enabled flag")
+      check(
+        typeof body.policy.maxAgeDays === "number" &&
+          Number.isInteger(body.policy.maxAgeDays) &&
+          body.policy.maxAgeDays >= 1,
+        "retention status should include a whole-day retention window",
+      )
+      if (body.last !== undefined) {
+        object(body.last)
+        check(typeof body.last.at === "number", "last run should include a timestamp")
+        check(typeof body.last.deleted === "number", "last run should include a deleted count")
+        check(typeof body.last.skippedActive === "number", "last run should include a skipped-active count")
+      }
+    }),
+  http.protected
+    .post("/kilocode/retention/run", "kilocode.retention.run")
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/retention/run",
+      headers: ctx.headers(),
+      body: { force: true },
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.policy)
+      check(typeof body.policy.enabled === "boolean", "retention run should echo the policy")
+      if (body.last !== undefined) {
+        object(body.last)
+        check(typeof body.last.scanned === "number", "run result should include a scanned count")
+        check(typeof body.last.failed === "number", "run result should include a failed count")
+        check(typeof body.last.durationMs === "number", "run result should include a duration")
       }
     }),
   http.protected

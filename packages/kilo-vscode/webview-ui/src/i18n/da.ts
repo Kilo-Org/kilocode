@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Fejl eller mistet forbindelse.",
   "session.activity.retry": "Prøver automatisk igen.",
   "session.activity.busy": "I gang.",
+  "session.activity.scheduled": "Venter på en planlagt vækning.",
   "session.activity.done": "Tur afsluttet.",
   "session.activity.idle": "Kører ikke.",
 
@@ -208,6 +209,7 @@ export const dict = {
     "Automatisk godkendelse er aktiveret. Tilladelsesanmodninger godkendes automatisk.",
   "prompt.action.autoApprove.disabled":
     "Automatisk godkendelse er deaktiveret. Klik for at godkende tilladelsesanmodninger automatisk.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox-eskaleringsanmodninger er altid udelukket.",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
   "prompt.action.sandbox.enable": "Aktivér sandbox",
@@ -225,6 +227,8 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Tilladt",
   "prompt.action.sandbox.unrestricted": "Ubegrænset",
   "prompt.action.sandbox.description.enabled": "Skrivning er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.description.escalation":
+    "Tilladelsesregler og automatisk godkendelse gælder i sandkassen. Kommandoer, der skal forlade den, spørger altid.",
   "prompt.action.sandbox.description.disabled": "Klik for at begrænse skriveadgang til filsystemet og netværksadgang.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
@@ -269,7 +273,9 @@ export const dict = {
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
-  "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
+  "notification.permission.titleSandboxEscalation": "Kør uden for sandkassen?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Dette kører hele kommandoen uden begrænsninger for filsystem og netværk, kun for denne kommando. Git skal skrive til .git, som er skrivebeskyttet i sandkassen og ligger uden for worktreet i et linket worktree. Bash-tilladelsesregler og automatisk godkendelse godkender aldrig denne anmodning automatisk.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.reject": "Afvis",
   "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
@@ -305,7 +311,7 @@ export const dict = {
   "ui.approval.source.agent.default": "af agenten",
   "ui.approval.source.global": "af din globale konfiguration",
   "ui.approval.source.project": "af projektkonfigurationen",
-  "ui.approval.source.yolo": "af automatisk godkendelse (YOLO)",
+  "ui.approval.source.yolo": "af automatisk godkendelse",
   "ui.approval.source.session": "af en session-autogodkendelsesregel",
   "ui.approval.source.default": "som standard",
   "ui.approval.outsideWorkspace": "(uden for dit arbejdsområde: {{file}})",
@@ -322,7 +328,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Ny Opgave",
   "sidebar.topBar.history": "Historik",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Markedsplads",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Indstillinger",
@@ -558,38 +563,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Kunne ikke opdatere tilladelser",
 
-  "settings.permissions.tool.read.title": "Læs",
   "settings.permissions.tool.read.description": "Læsning af en fil (matcher filstien)",
-  "settings.permissions.tool.edit.title": "Rediger",
   "settings.permissions.tool.edit.description":
     "Ændre filer, herunder redigeringer, skrivninger, patches og multi-redigeringer",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Match filer ved hjælp af glob-mønstre",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Søg i filindhold ved hjælp af regulære udtryk",
-  "settings.permissions.tool.list.title": "Liste",
   "settings.permissions.tool.list.description": "List filer i en mappe",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Kør shell-kommandoer",
-  "settings.permissions.tool.task.title": "Opgave",
   "settings.permissions.tool.task.description": "Start underagenter",
-  "settings.permissions.tool.skill.title": "Færdighed",
   "settings.permissions.tool.skill.description": "Indlæs en færdighed efter navn",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Kør sprogserverforespørgsler",
-  "settings.permissions.tool.todoread.title": "Læs To-do",
   "settings.permissions.tool.todoread.description": "Læs to-do listen",
-  "settings.permissions.tool.todowrite.title": "Skriv To-do",
   "settings.permissions.tool.todowrite.description": "Opdater to-do listen",
-  "settings.permissions.tool.webfetch.title": "Webhentning",
   "settings.permissions.tool.webfetch.description": "Hent indhold fra en URL",
-  "settings.permissions.tool.websearch.title": "Websøgning",
   "settings.permissions.tool.websearch.description": "Søg på nettet",
-  "settings.permissions.tool.codesearch.title": "Kodesøgning",
   "settings.permissions.tool.codesearch.description": "Søg kode på nettet",
-  "settings.permissions.tool.external_directory.title": "Ekstern mappe",
   "settings.permissions.tool.external_directory.description": "Få adgang til filer uden for projektmappen",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Opdag gentagne værktøjskald med identisk input",
 
   "session.delete.title": "Slet session",
@@ -607,6 +596,7 @@ export const dict = {
   "session.tabs.switcher.current": "Aktuel",
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Arbejder",
+  "session.tabs.switcher.scheduled": "Planlagt",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbejdstræ",
@@ -631,13 +621,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Spørger om tilladelse, før filer redigeres eller kommandoer køres.",
   "workStyle.choice.human-in-the-loop.bash": "Spørger om tilladelse til alle terminalkommandoer.",
-  "workStyle.choice.human-in-the-loop.visibility": "Viser alle samtaledetaljer, herunder ræsonnement.",
+  "workStyle.choice.human-in-the-loop.visibility": "Udvider ræsonnement, kommandoer og redigeringer til gennemgang.",
   "workStyle.choice.autonomous.eyebrow": "Færre afbrydelser",
   "workStyle.choice.autonomous.title": "Høj autonomi",
   "workStyle.choice.autonomous.description": "Færre afbrydelser og en strømlinet brugerflade.",
   "workStyle.choice.autonomous.permissions": "Redigerer filer og kører kommandoer i arbejdsområdet uden at spørge.",
   "workStyle.choice.autonomous.bash": "Kan køre terminalkommandoer i arbejdsområdet uden godkendelse.",
-  "workStyle.choice.autonomous.visibility": "Detaljerne forbliver foldet sammen, indtil du folder dem ud.",
+  "workStyle.choice.autonomous.visibility":
+    "Klapper værktøjsdetaljer sammen, med en kompakt forhåndsvisning af ræsonnementet.",
   "session.cloud.import.title": "Importér fra skyen",
   "session.cloud.import.placeholder": "Sessions-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importér",
@@ -921,6 +912,8 @@ export const dict = {
   "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
     "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text, eller angiv en egen transskriptions-basis-URL nedenfor.",
+  "settings.models.speechToText.remoteDescription":
+    "Stemmeinput er ikke tilgængelig i fjernvinduer. Åbn Kilo i et lokalt vindue for at bruge mikrofonen.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
@@ -1080,6 +1073,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "model",
   "settings.agentBehaviour.workflows.variant": "variant",
   "settings.agentBehaviour.workflows.modelDescription": "Global modeloverskrivelse",
+  "settings.experimental.codeMode.title": "Programmatiske værktøjskald",
+  "settings.experimental.codeMode.description":
+    "Ruter MCP-værktøjskald gennem en afgrænset JavaScript-runtime med behovsbaseret værktøjsregistrering i stedet for at eksponere hvert MCP-værktøj direkte. Sparer kontekst, når mange MCP-værktøjer er forbundet.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
@@ -1124,6 +1120,27 @@ export const dict = {
     "Forhindr gentagne identiske handlinger. Udløses, når det samme værktøjskald gentages med identisk input.",
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
+  "settings.autoCleanup.enable.title": "Aktivér automatisk oprydning af sessioner",
+  "settings.autoCleanup.enable.description":
+    "Sletter automatisk gammel sessionshistorik efter et fast antal dage, på tværs af alle projekter og alle Kilo-klienter på denne maskine, ikke kun i dette vindue. Kørende sessioner og sessioner med en nylig forgrening slettes aldrig. Sletning er permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Behold sessioner i (dage)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Hvor længe sessionshistorik bevares, før automatisk oprydning sletter den.",
+  "settings.autoCleanup.lastRun.title": "Sidste oprydning",
+  "settings.autoCleanup.lastRun.never": "Aldrig kørt",
+  "settings.autoCleanup.result":
+    "{{date}}: slettede {{deleted}} af {{scanned}} sessioner ({{active}} aktive sprunget over, {{failed}} fejlede) på {{seconds}}s",
+  "settings.autoCleanup.starting": "Starter oprydning af sessioner...",
+  "settings.autoCleanup.error.status": "Status for oprydning af sessioner er midlertidigt utilgængelig. Prøver igen...",
+  "settings.autoCleanup.error.timeout": "Venter på oprydningsstatus. Backend tager længere tid end forventet.",
+  "settings.autoCleanup.error.run":
+    "Kunne ikke bekræfte, at oprydningen af sessioner er fuldført. Kontrollér resultatet af den sidste oprydning, før du prøver igen.",
+  "settings.autoCleanup.progress.scanning": "Scanner sessioner: {{processed}}/{{total}} behandlet",
+  "settings.autoCleanup.progress.deleting":
+    "Sletter sessioner: {{processed}}/{{total}} behandlet ({{deleted}} slettet, {{failed}} fejlede)",
+  "settings.autoCleanup.runNow": "Kør oprydning nu",
+  "settings.autoCleanup.runNow.confirm":
+    "Slet udløbne sessioner permanent på tværs af alle projekter og alle Kilo-klienter på denne maskine?",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
   "settings.context.compaction.title": "Komprimering",
@@ -1173,6 +1190,20 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Vælg hvilket sprog der skal bruges til AI-genererede commit-meddelelser:",
 
+  "settings.display.preview.title": "Forhåndsvisning",
+  "settings.display.presets.title": "Visningsforudindstillinger",
+  "settings.display.presets.description":
+    "Ændrer visningsindstillingerne nedenfor, ikke tilladelser. Gem for at anvende.",
+  "settings.display.preview.model": "Eksempelmodel",
+  "settings.display.preview.prompt": "Fjern overflødige mellemrum fra hilsenen, og kontroller testene.",
+  "settings.display.preview.reasoning":
+    "**Kontroller hilsenen.** Funktionen bør give den samme hilsen for et almindeligt navn og et navn med overflødige mellemrum i begge ender. Jeg bevarer den eksisterende funktionssignatur og hilsensformat og ændrer kun, hvordan navnet indgår i den returnerede streng.\n\nFor et input som `  Ada  ` hører de uønskede mellemrum til inputtet, ikke til hilsenskabelonen. Hvis man trimmer den færdige hilsen, vil der stå mellemrum ved siden af navnet. Trim-operationen skal derfor ske, før navnet indsættes.\n\nJeg vil kontrollere strengdokumentationen for at bekræfte, at `trim()` fjerner mellemrum i begge ender og returnerer en ny streng. Den bør lade det oprindelige input være uændret. Der er ikke brug for et regulært udtryk, en ekstra afhængighed eller en separat hjælpefunktion til denne ændring.\n\nMellemrum inde i et navn skal forblive intakte. Et navn som `Ada Lovelace` bør ikke blive til `AdaLovelace`, og dets store og små bogstaver bør ikke ændres. Et tomt input eller et input med kun mellemrum kræver ikke en ny standardhilsen som en del af denne målrettede rettelse.\n\nÆndringen kan blive i returudtrykket ved at bruge `name.trim()` der, hvor skabelonen i øjeblikket bruger `name`. Jeg bevarer tegnsætningen omkring og det bevidste mellemrum efter hilsenen. Det holder diffen lille og gør adfærden nem at gennemgå.\n\nTil sidst kører jeg `bun test greeting.test.ts` og kontrollerer begge resultater. Tilfældet med det udfyldte navn bør bekræfte, at overflødige mellemrum fjernes, mens tilfældet med det almindelige navn beskytter det eksisterende output. Jeg rapporterer først ændringen og testresultaterne, når kommandoen er fuldført.",
+  "settings.display.preview.shell": "Kontroller hilsentesten",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fjerner overflødige mellemrum\n[pass] bevarer et almindeligt navn\n\n2 tests bestået",
+  "settings.display.preview.query": "Trimning af strenge",
+  "settings.display.preview.result": "trim() fjerner mellemrum i begge ender af en streng.",
+  "settings.display.preview.answer": "Hilsenen er opdateret til at fjerne overflødige mellemrum. Begge tests består.",
   "settings.display.username.title": "Brugernavn",
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
@@ -1205,7 +1236,7 @@ export const dict = {
     "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",
   "settings.display.autoApprovalReason.title": "Vis grund til automatisk godkendelse",
   "settings.display.autoApprovalReason.description":
-    "Viser en linje ved værktøjskald, der forklarer, hvorfor de blev automatisk godkendt (matchende regel, agent-standard, YOLO-tilstand osv.).",
+    "Viser, hvorfor et værktøjskald blev automatisk godkendt, f.eks. en matchende tilladelsesregel eller en agentstandard.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1322,8 +1353,6 @@ export const dict = {
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Gem lokalt",
-  "diffViewer.comment.sendToAgent": "Send til agent",
   "diffViewer.comment.postToGithub": "Udgiv på GitHub",
   "diffViewer.comment.loadFailed": "Kunne ikke indlæse ændringerne i pull requesten.",
   "diffViewer.comment.unavailable": "Denne linje er ikke tilgængelig i det aktuelle snapshot af pull requesten.",

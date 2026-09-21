@@ -141,6 +141,35 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 
 Valid values are `expanded` and `collapsed`.
 
+### Code Edit and Tool Blocks
+
+Code edit and diff blocks start collapsed. Choose **Expanded** for **Code Edit Blocks** in the Display tab, or set `code_edit_display` in `kilo.jsonc`. MCP and generic tool blocks also start collapsed, controlled by `mcp_tool_display`:
+
+```json
+{
+  "code_edit_display": "expanded",
+  "mcp_tool_display": "expanded"
+}
+```
+
+Both keys accept `expanded` and `collapsed`.
+
+### Work Styles and the Session Preview
+
+Onboarding asks you to pick a work style. The choice sets display defaults and, for **Review first**, permission rules:
+
+- **Review first** expands reasoning, terminal, and code edit blocks, collapses MCP and generic tool blocks, and shows auto-approval reasons. It also allows read-only commands and asks before edits, external directory access, and other commands.
+- **High autonomy** uses a reasoning preview, collapses terminal, code edit, and tool blocks, and hides auto-approval reasons. It leaves permissions unchanged.
+
+Onboarding only fills settings and permission rules that are not already configured, so an existing `kilo.jsonc` or customized settings are preserved.
+
+You can change both choices later:
+
+- **Settings → Display** holds the display options. The **Display presets** buttons apply the same combinations as onboarding, and each option stays individually editable. A looping sample conversation beside the options previews your changes with the same components as a real session, using local data only.
+- **Settings → Auto-Approve** lists the current permission rules and lets you edit them.
+
+Display changes apply as a draft. Click **Save** to keep them or **Discard** to revert.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
@@ -217,7 +246,7 @@ See [Sandboxing](/docs/getting-started/settings/sandboxing) for setup instructio
 
 Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
 
-Kilo Swarm is on by default. Turn it off in the VS Code **Agent Behaviour** settings, or set `shared_agent_board` to `false` in `kilo.jsonc`.
+Kilo Swarm is on by default. Turn it off in the VS Code or JetBrains **Agent Behaviour** settings, or set `shared_agent_board` to `false` in `kilo.jsonc`.
 
 Use it when agents can benefit from discoveries during work:
 
@@ -230,7 +259,7 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
-When a main session has board messages, open the **Board** icon in its task header to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+When a main session has board messages, open the **Board** icon in its task header (VS Code) or session header (JetBrains, which also offers a **View Kilo Swarm** session menu action) to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
 
 ## Experimental Features
 
