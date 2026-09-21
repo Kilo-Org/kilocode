@@ -1091,6 +1091,18 @@ export const dict = {
     "منع الإجراءات المتطابقة المتكررة. يتم تشغيله عندما يتكرر نفس استدعاء الأداة بمدخلات متطابقة.",
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
+  "settings.autoCleanup.enable.title": "تمكين التنظيف التلقائي للجلسات",
+  "settings.autoCleanup.enable.description":
+    "حذف سجل الجلسات القديم تلقائيًا بعد عدد ثابت من الأيام، عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز، وليس هذه النافذة فقط. لا يتم حذف الجلسات قيد التشغيل حاليًا، ولا الجلسات ذات التفرعات الحديثة أبدًا. الحذف نهائي.",
+  "settings.autoCleanup.defaultRetention.title": "الاحتفاظ بالجلسات (أيام)",
+  "settings.autoCleanup.defaultRetention.description": "مدة الاحتفاظ بسجل الجلسات قبل أن يحذفه التنظيف التلقائي.",
+  "settings.autoCleanup.lastRun.title": "التنظيف الأخير",
+  "settings.autoCleanup.lastRun.never": "لم يُشغّل أبدًا",
+  "settings.autoCleanup.result":
+    "{{date}}: تم حذف {{deleted}} من {{scanned}} جلسة ({{active}} نشطة تم تخطيها، {{failed}} فشلت) في {{seconds}} ثانية",
+  "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
+  "settings.autoCleanup.runNow.confirm":
+    "حذف الجلسات المنتهية الصلاحية نهائيًا عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز؟",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",

@@ -1102,6 +1102,18 @@ export const dict = {
     "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
+  "settings.autoCleanup.enable.title": "자동 세션 정리 활성화",
+  "settings.autoCleanup.enable.description":
+    "정해진 일 수가 지나면 오래된 세션 기록을 자동으로 삭제합니다. 이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트가 대상이며 이 창만이 아닙니다. 실행 중인 세션과 최근 분기가 있는 세션은 절대 삭제되지 않습니다. 삭제는 영구적입니다.",
+  "settings.autoCleanup.defaultRetention.title": "세션 보관 기간(일)",
+  "settings.autoCleanup.defaultRetention.description": "자동 정리가 세션 기록을 삭제하기 전까지 보관하는 기간입니다.",
+  "settings.autoCleanup.lastRun.title": "마지막 정리",
+  "settings.autoCleanup.lastRun.never": "실행된 적 없음",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}}개 중 {{deleted}}개 세션 삭제({{active}}개 활성 건너뜀, {{failed}}개 실패), {{seconds}}초",
+  "settings.autoCleanup.runNow": "지금 정리 실행",
+  "settings.autoCleanup.runNow.confirm":
+    "이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트에 걸쳐 만료된 세션을 영구적으로 삭제할까요?",
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",
