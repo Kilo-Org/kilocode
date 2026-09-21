@@ -1306,10 +1306,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const target = e.target as HTMLTextAreaElement
     if (readonly()) {
       target.value = text()
+      paste.afterInput()
       return
     }
     const val = target.value
     setText(val)
+    // setText has reconciled by here, so the span this edit recorded is spent.
+    paste.afterInput()
     preEnhanceText = null
     preEnhancePastes = null
     adjustHeight()
@@ -2123,6 +2126,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             classList={{ "prompt-input--disabled": !server.isConnected() || readonly() }}
             placeholder={placeholder()}
             value={text()}
+            onBeforeInput={(e) => paste.beforeInput(e, textareaRef)}
             onInput={handleInput}
             onKeyDown={(e) => {
               if (speechDown(e)) return
