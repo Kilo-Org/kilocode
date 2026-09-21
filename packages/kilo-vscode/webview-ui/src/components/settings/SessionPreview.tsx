@@ -150,12 +150,23 @@ const SessionPreview: Component = () => {
     let content: HTMLDivElement | undefined
     let following = true
     onMount(() => {
-      // Drive playback from paint frames so the loop stays in step with rendering
-      // and pauses on its own when the panel is not being painted.
-      const start = performance.now()
+      // Paint frames schedule playback, but only painted time counts, so time
+      // spent hidden or occluded does not advance the loop. State updates stay
+      // on the previous 50 ms cadence instead of once per paint frame.
+      const step = 50
+      const limit = 100
+      let painted = 0
+      let applied = 0
+      let last = performance.now()
       let raf = requestAnimationFrame(function tick(now) {
         raf = requestAnimationFrame(tick)
-        setState(reconcile(previewFrame(sample, (now - start) % previewDuration, motion.matches)))
+        const delta = now - last
+        last = now
+        if (document.hidden) return
+        painted += Math.min(delta, limit)
+        if (painted - applied < step) return
+        applied = painted
+        setState(reconcile(previewFrame(sample, painted % previewDuration, motion.matches)))
       })
       const observer = new ResizeObserver(() => {
         if (following && body) body.scrollTop = body.scrollHeight
