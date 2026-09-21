@@ -751,7 +751,7 @@ class KiloWorktreeRpcApiImpl(
                 if (nested.isNotEmpty()) {
                     val names = nested.joinToString("\n") { it.path }
                     LOG.warn("worktree remove rejected: reason=nested path=$path blockers=${nested.joinToString(", ") { it.path }}")
-                    return@lock RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$names")
+                    return@lock RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$names", nestedPaths = nested.map { it.path })
                 }
                 val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
                 // A live IDE frame rooted at the worktree keeps rewriting project files into the

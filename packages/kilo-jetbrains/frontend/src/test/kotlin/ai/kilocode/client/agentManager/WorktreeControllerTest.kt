@@ -282,8 +282,11 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test refused nested remove keeps the row and surfaces the error`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val nestedPath = "/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested"
         rpc.listed += item
-        rpc.removeResult = { _, _, _ -> RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") }
+        rpc.removeResult = { _, _, _ ->
+            RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$nestedPath", nestedPaths = listOf(nestedPath))
+        }
         val controller = controller()
         controller.reload()
         flush()
@@ -296,7 +299,19 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("feature/x", controller.model.getElementAt(0).branch)
         assertNull(controller.progress(item.id))
         assertEquals(listOf(false), rpc.removeForces.toList())
-        assertEquals("Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested", failures.single().error)
+        assertEquals("Delete nested worktrees first:\n$nestedPath", failures.single().error)
+        // nestedPaths must survive the controller's pass-through unchanged, since the panel
+        // reads it directly to build the copy-path/reveal notification actions.
+        assertEquals(listOf(nestedPath), failures.single().nestedPaths)
+    }
+
+    fun `test reveal routes the path to the backend rpc`() {
+        val controller = controller()
+
+        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested")
+        flush()
+
+        assertEquals(listOf("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested"), rpc.revealPaths.toList())
     }
 
     fun `test force remove passes the force flag and drops the row on success`() {

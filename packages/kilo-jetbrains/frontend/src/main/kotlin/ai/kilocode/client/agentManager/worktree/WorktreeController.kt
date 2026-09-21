@@ -274,6 +274,11 @@ class WorktreeController(
         }
     }
 
+    /** Fire-and-forget reveal for a path this controller manages (e.g. a worktree blocking a delete). */
+    fun reveal(path: String) {
+        cs.launch { service.revealPath(path) }
+    }
+
     /**
      * Copies working-tree changes into a new worktree. When [sessionId] is set, the source session is
      * also forked into the worktree; otherwise the opened worktree starts with a fresh session.

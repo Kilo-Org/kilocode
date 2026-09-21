@@ -1202,6 +1202,7 @@ class KiloWorktreeRpcApiImplTest {
 
         assertFalse(result.ok)
         assertTrue(result.error?.contains(old.toString()) == true, "error should name the blocker: ${result.error}")
+        assertEquals(listOf(old.toString()), result.nestedPaths)
         assertTrue(Files.isDirectory(Path.of(parent.path)))
         assertTrue(Files.isDirectory(old))
     }
