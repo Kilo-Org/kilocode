@@ -62,6 +62,7 @@ export class ProjectContext {
   private worktrees: WorktreeManager | undefined
   private setup: SetupScriptService | undefined
   private init: Promise<ProjectInitResult> | undefined
+  private pool: Promise<void> | undefined
   private last: ProjectInitResult | undefined
   private phase: ProjectLifecycle = "cold"
   private version = 0
@@ -128,6 +129,23 @@ export class ProjectContext {
         this.init = undefined
       })
     return this.init
+  }
+
+  /** Start pool maintenance once, independently of cached state initialization. */
+  warmPool(): void {
+    if (this.phase !== "ready" || this.pool) return
+    const generation = this.version
+    const manager = this.worktreeManager()
+    this.pool = manager
+      .reconcilePool()
+      .then(() => {
+        if (this.isCurrent(generation)) return manager.warmPool()
+        this.pool = undefined
+      })
+      .catch((err) => {
+        this.deps.log(`Failed to reconcile worktree pool: ${err}`)
+        this.pool = undefined
+      })
   }
 
   /** Invalidate asynchronous work while keeping loaded repository state reusable. */
@@ -247,6 +265,7 @@ export class ProjectContext {
     this.phase = "disposing"
     disposeOrphanSizes(this)
     await this.init?.catch((err) => this.deps.log(`dispose: initialization failed: ${err}`))
+    await this.pool
     await this.mutation.catch((err) => this.deps.log(`dispose: mutation failed: ${err}`))
     await this.worktrees?.settle().catch((err) => this.deps.log(`dispose: worktree bookkeeping failed: ${err}`))
     await this.state?.flush().catch((err) => this.deps.log(`dispose: state flush failed: ${err}`))

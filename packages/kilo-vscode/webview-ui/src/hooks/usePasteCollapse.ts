@@ -4,11 +4,13 @@ import {
   buildPromptSegments,
   expandPastes,
   findPastePlaceholders,
+  inputSpan,
   isCollapsiblePaste,
   pasteInsertion,
   pastePlaceholder,
   rebasePastes,
   shiftPastes,
+  spanEdit,
   type PasteRange,
   type PromptSegment,
 } from "../components/chat/prompt-input-utils"
@@ -33,6 +35,10 @@ export interface PasteCollapse {
   expand: (id: number, textarea: HTMLTextAreaElement, setText: (value: string) => void, after?: () => void) => boolean
   /** Replace the tracked blocks, e.g. when a saved draft is restored. */
   load: (text: string, texts: readonly string[]) => void
+  /** Record the span a native edit is about to replace, so ranges rebase by it. */
+  beforeInput: (event: InputEvent, textarea: HTMLTextAreaElement | undefined) => void
+  /** Release that span once its edit has landed, whether or not the text moved. */
+  afterInput: () => void
   /** Delete a whole collapsed block on backspace, like a mention token. */
   backspace: (
     event: KeyboardEvent,
@@ -64,10 +70,26 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
   let counter = 0
   let prev = ""
   let pendingArrow: ReturnType<typeof setTimeout> | undefined
+  let pendingSpan: ReturnType<typeof inputSpan>
+
+  const beforeInput = (event: InputEvent, textarea: HTMLTextAreaElement | undefined) => {
+    pendingSpan = inputSpan(event, textarea)
+  }
+
+  // Reconcile spends the span when the edit moves the text; an edit that leaves it
+  // identical reconciles nothing, so release the span here instead.
+  const afterInput = () => {
+    pendingSpan = undefined
+  }
 
   const reconcile = (value: string) => {
+    // A diff cannot tell two identical chips apart, so rebase by the selection the
+    // edit replaced, once the text confirms the span still describes this change.
+    const span = pendingSpan
+    pendingSpan = undefined
+    const edit = span && spanEdit(prev, value, span.start, span.end)
     if (value === prev) return
-    const next = shiftPastes(pastes(), prev, value)
+    const next = edit ? rebasePastes(pastes(), edit.start, edit.end, edit.length) : shiftPastes(pastes(), prev, value)
     prev = value
     setPastes(next)
   }
@@ -281,6 +303,8 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
     paste,
     expand,
     load,
+    beforeInput,
+    afterInput,
     backspace,
     arrow,
     clipboard,

@@ -35,6 +35,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/NewProjectDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/CloneProjectDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectParentField.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
@@ -1045,8 +1048,8 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
    * the pending refresh.
    */
   it("loadSessions sets pendingSessionRefresh when client is null", () => {
-    const start = utils.indexOf("export async function loadSessions")
-    expect(start, "loadSessions must exist in kilo-provider-utils").toBeGreaterThan(-1)
+    const start = utils.indexOf("async function loadPage")
+    expect(start, "loadPage must exist in kilo-provider-utils").toBeGreaterThan(-1)
     const snippet = utils.slice(start, start + 700)
     expect(snippet, "must set pendingSessionRefresh when client missing").toContain("ctx.pendingSessionRefresh = true")
     expect(snippet, "must avoid noisy errors while still connecting").toContain('ctx.connectionState !== "connecting"')
@@ -1056,9 +1059,9 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
   })
 
   it("handleLoadSessions delegates to loadSessionsUtil", () => {
-    const start = provider.indexOf("private async handleLoadSessions()")
+    const start = provider.indexOf("private async handleLoadSessions(")
     expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
-    const snippet = provider.slice(start, start + 400)
+    const snippet = provider.slice(start, start + 700)
     expect(snippet, "must call loadSessionsUtil").toContain("loadSessionsUtil")
   })
 

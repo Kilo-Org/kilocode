@@ -284,6 +284,9 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
+    loadMoreSessions: noop,
+    sessionsHasMore: () => false,
+    sessionsLoadingMore: () => false,
     loadOlderMessages: () => false,
     selectSession: noop,
     // MessageList reads both on mount: `scrollBottomID` must be an accessor

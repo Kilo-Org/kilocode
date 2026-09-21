@@ -133,7 +133,20 @@ export interface Host {
   dirtyFiles(): string[]
 
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
-  pickFolder(): Promise<string | undefined>
+  pickFolder(opts?: { defaultPath?: string; title?: string }): Promise<string | undefined>
+
+  input(opts: {
+    title: string
+    prompt?: string
+    value?: string
+    validate?: (value: string) => string | undefined
+  }): Promise<string | undefined>
+
+  /** Show a native modal confirmation. Dismissal means no. */
+  confirm(message: string, action: string): Promise<boolean>
+
+  /** Clone without changing workspace membership; return the verified checkout path. */
+  cloneRepository(url: string, parent: string): Promise<string | undefined>
 
   /** Whether the experimental multi-project Agent Manager mode is enabled. */
   multiProject(): boolean

@@ -60,7 +60,7 @@
 - <https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://git-scm.com>
-  <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
+  <!-- packages/kilo-vscode/src/agent-manager/git-errors.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
 - <https://github.com/anthropics/claude-code/issues/31375>

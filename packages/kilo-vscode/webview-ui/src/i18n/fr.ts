@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Erreur ou connexion perdue.",
   "session.activity.retry": "Nouvelle tentative automatique.",
   "session.activity.busy": "En cours.",
+  "session.activity.scheduled": "En attente d'un réveil programmé.",
   "session.activity.done": "Tour terminé.",
   "session.activity.idle": "Inactif.",
 
@@ -313,7 +314,7 @@ export const dict = {
   "ui.approval.source.agent.default": "par l'agent",
   "ui.approval.source.global": "par votre configuration globale",
   "ui.approval.source.project": "par la configuration du projet",
-  "ui.approval.source.yolo": "par le mode d'approbation automatique (YOLO)",
+  "ui.approval.source.yolo": "par le mode d'approbation automatique",
   "ui.approval.source.session": "par une règle d'approbation automatique de session",
   "ui.approval.source.default": "par défaut",
   "ui.approval.outsideWorkspace": "(hors de votre espace de travail : {{file}})",
@@ -602,6 +603,7 @@ export const dict = {
   "session.tabs.switcher.current": "Actuel",
   "session.tabs.switcher.pending": "Nouveau",
   "session.tabs.switcher.busy": "En cours",
+  "session.tabs.switcher.scheduled": "Programmé",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbre de travail",
@@ -629,7 +631,7 @@ export const dict = {
     "Demande avant de modifier des fichiers ou d'exécuter des commandes.",
   "workStyle.choice.human-in-the-loop.bash": "L'agent demande l'autorisation pour chaque commande du terminal.",
   "workStyle.choice.human-in-the-loop.visibility":
-    "Affiche tous les détails de la conversation, y compris le raisonnement.",
+    "Déploie le raisonnement, les commandes et les modifications pour examen.",
   "workStyle.choice.autonomous.eyebrow": "Moins d'interruptions",
   "workStyle.choice.autonomous.title": "Autonomie élevée",
   "workStyle.choice.autonomous.description": "Moins d'interruptions et une interface simplifiée.",
@@ -637,7 +639,7 @@ export const dict = {
     "Modifie les fichiers et exécute les commandes dans l'espace de travail sans demander.",
   "workStyle.choice.autonomous.bash":
     "Peut exécuter des commandes dans le terminal de l'espace de travail sans autorisation.",
-  "workStyle.choice.autonomous.visibility": "Les détails restent repliés jusqu'à ce que vous les développiez.",
+  "workStyle.choice.autonomous.visibility": "Replie les détails des outils, avec un aperçu compact du raisonnement.",
   "session.cloud.import.title": "Importer depuis le cloud",
   "session.cloud.import.placeholder": "ID de session, URL ou commande kilo import",
   "session.cloud.import.button": "Importer",
@@ -1149,6 +1151,28 @@ export const dict = {
     "Prévenir les actions identiques répétées. Déclenché lorsque le même appel d'outil se répète avec une entrée identique.",
   "settings.checkpoints.enable.title": "Activer les instantanés",
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
+  "settings.autoCleanup.enable.title": "Activer le nettoyage automatique des sessions",
+  "settings.autoCleanup.enable.description":
+    "Supprime automatiquement l'ancien historique des sessions après un nombre de jours fixe, dans tous les projets et tous les clients Kilo de cette machine, pas seulement dans cette fenêtre. Les sessions en cours et celles avec un fork récent ne sont jamais supprimées. La suppression est définitive.",
+  "settings.autoCleanup.defaultRetention.title": "Conserver les sessions (jours)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Durée de conservation de l'historique des sessions avant sa suppression par le nettoyage automatique.",
+  "settings.autoCleanup.lastRun.title": "Dernier nettoyage",
+  "settings.autoCleanup.lastRun.never": "Jamais exécuté",
+  "settings.autoCleanup.result":
+    "{{date}} : {{deleted}} sessions supprimées sur {{scanned}} ({{active}} actives ignorées, {{failed}} échouées) en {{seconds}}s",
+  "settings.autoCleanup.starting": "Démarrage du nettoyage des sessions...",
+  "settings.autoCleanup.error.status":
+    "L'état du nettoyage des sessions est temporairement indisponible. Nouvelle tentative...",
+  "settings.autoCleanup.error.timeout": "En attente de l'état du nettoyage. Le backend prend plus de temps que prévu.",
+  "settings.autoCleanup.error.run":
+    "Impossible de confirmer que le nettoyage des sessions est terminé. Vérifiez le résultat du dernier nettoyage avant de réessayer.",
+  "settings.autoCleanup.progress.scanning": "Analyse des sessions : {{processed}}/{{total}} traitées",
+  "settings.autoCleanup.progress.deleting":
+    "Suppression des sessions : {{processed}}/{{total}} traitées ({{deleted}} supprimées, {{failed}} échouées)",
+  "settings.autoCleanup.runNow": "Lancer le nettoyage maintenant",
+  "settings.autoCleanup.runNow.confirm":
+    "Supprimer définitivement les sessions expirées dans tous les projets et tous les clients Kilo de cette machine ?",
   "settings.context.autoCompaction.title": "Compaction automatique",
   "settings.context.autoCompaction.description":
     "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",
@@ -1199,6 +1223,21 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Choisissez la langue à utiliser pour les messages de commit générés par l'IA:",
 
+  "settings.display.preview.title": "Aperçu",
+  "settings.display.presets.title": "Préréglages d'affichage",
+  "settings.display.presets.description":
+    "Modifie les options d'affichage ci-dessous, pas les autorisations. Enregistrez pour appliquer.",
+  "settings.display.preview.model": "Modèle d'exemple",
+  "settings.display.preview.prompt": "Supprimez les espaces superflus dans la salutation et vérifiez les tests.",
+  "settings.display.preview.reasoning":
+    "**Vérifiez la salutation.** La fonction doit produire la même salutation pour un nom simple et un nom entouré d'espaces superflus. Je conserve la signature de fonction et le format de salutation existants et ne change que la manière dont le nom entre dans la chaîne renvoyée.\n\nPour une entrée comme `  Ada  `, les espaces indésirables appartiennent à l'entrée, pas au modèle de salutation. Rogner la salutation terminée laisserait des espaces à côté du nom. L'opération de rognage doit donc avoir lieu avant l'insertion du nom.\n\nJe consulterai la documentation sur les chaînes pour confirmer que `trim()` supprime les espaces blancs aux deux extrémités et renvoie une nouvelle chaîne. Elle devrait laisser l'entrée d'origine inchangée. Aucune expression régulière, dépendance supplémentaire ni fonction auxiliaire distincte n'est nécessaire pour cette modification.\n\nLes espaces à l'intérieur d'un nom doivent rester intacts. Un nom comme `Ada Lovelace` ne doit pas devenir `AdaLovelace`, et sa casse ne doit pas changer. Une entrée vide ou composée uniquement d'espaces ne nécessite pas de nouvelle salutation de repli dans le cadre de cette correction ciblée.\n\nLa modification peut rester dans l'expression de retour en utilisant `name.trim()` là où le modèle utilise actuellement `name`. Je préserverai la ponctuation environnante et l'espace intentionnel après la salutation. Cela garde le diff petit et rend le comportement facile à vérifier.\n\nEnfin, j'exécuterai `bun test greeting.test.ts` et vérifierai les deux résultats. Le cas du nom complété par des espaces devrait confirmer que les espaces superflus sont supprimés, tandis que le cas du nom simple protège la sortie existante. Je ne signalerai la modification et les résultats des tests qu'après la fin de la commande.",
+  "settings.display.preview.shell": "Vérifiez le test de salutation",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] supprime les espaces superflus\n[pass] préserve un nom simple\n\n2 tests réussis",
+  "settings.display.preview.query": "Rognage de chaînes",
+  "settings.display.preview.result": "trim() supprime les espaces aux deux extrémités d'une chaîne.",
+  "settings.display.preview.answer":
+    "Mise à jour de la salutation pour supprimer les espaces superflus. Les deux tests réussissent.",
   "settings.display.username.title": "Nom d'utilisateur",
   "settings.display.username.description": "Nom d'utilisateur personnalisé dans les conversations",
   "settings.display.fontSize.title": "Taille de la police",
@@ -1234,7 +1273,7 @@ export const dict = {
     "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
-    "Affiche une ligne sur les appels d'outils expliquant pourquoi ils ont été approuvés automatiquement (règle correspondante, agent par défaut, mode YOLO, etc.).",
+    "Indique pourquoi un appel d'outil a été approuvé automatiquement, par exemple une règle d'autorisation correspondante ou une valeur par défaut d'agent.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1353,8 +1392,6 @@ export const dict = {
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Enregistrer localement",
-  "diffViewer.comment.sendToAgent": "Envoyer à l’agent",
   "diffViewer.comment.postToGithub": "Publier sur GitHub",
   "diffViewer.comment.loadFailed": "Impossible de charger les modifications de la pull request.",
   "diffViewer.comment.unavailable": "Cette ligne n’est pas disponible dans l’instantané actuel de la pull request.",
