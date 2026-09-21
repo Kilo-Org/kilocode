@@ -149,6 +149,7 @@ jobs:
       # kilocode_change start
       - name: Setup Linux sandbox helper
         if: matrix.settings.run && runner.os == 'Linux'
+        timeout-minutes: 5
         uses: ./.github/actions/setup-linux-sandbox
       # kilocode_change end
       - name: Configure git identity
@@ -194,12 +195,18 @@ jobs:
         working-directory: packages/core
         run: bun test test/kilocode/pty-platform.test.ts --timeout 60000
 
-      - name: Run cross-platform PTY route tests
+      - name: Run cross-platform PTY route and TUI smoke tests
         if: matrix.settings.run && matrix.settings.pty
         working-directory: packages/opencode
         run: |
+          bun test test/kilocode/pty-smoke.test.ts --timeout 60000
           bun test test/server/httpapi-pty.test.ts --test-name-pattern "serves Agent Manager regular terminal" --timeout 60000
           bun test test/server/httpapi-v2-pty.test.ts --test-name-pattern "serves Agent Manager script terminal" --timeout 60000
+
+      - name: Run Windows worktree cleanup regression
+        if: matrix.settings.run && matrix.settings.pty && runner.os == 'Windows'
+        working-directory: packages/kilo-vscode
+        run: bun test tests/unit/worktree-manager.test.ts --test-name-pattern "keeps a Windows worktree tracked while a live process locks its directory" --timeout 30000
       # kilocode_change end
       # kilocode_change start - ensure the Darwin profile cannot suppress its own validation
       - name: Validate Darwin CLI test profile
@@ -255,6 +262,7 @@ jobs:
           path: |
             .artifacts/unit/junit.xml
             packages/*/.artifacts/unit/junit.xml
+            packages/opencode/.artifacts/unit/startup.json
       # kilocode_change end
 
   # kilocode_change start
@@ -275,6 +283,7 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Setup Linux sandbox helper
+        timeout-minutes: 5
         uses: ./.github/actions/setup-linux-sandbox
 
       - name: Configure git identity

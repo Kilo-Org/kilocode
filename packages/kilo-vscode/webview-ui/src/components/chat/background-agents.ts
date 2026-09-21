@@ -37,6 +37,20 @@ export interface BackgroundAgent {
   question?: QuestionRequest
 }
 
+export function fitBackgroundAgents(widths: number[], space: number, overflow: number, gap: number): number {
+  const total = widths.reduce((sum, width) => sum + width, 0) + Math.max(0, widths.length - 1) * gap
+  if (total <= space) return widths.length
+  let used = 0
+  let count = 0
+  for (const width of widths) {
+    const next = used + width + (count > 0 ? gap : 0)
+    if (next + gap + overflow > space) break
+    used = next
+    count += 1
+  }
+  return count
+}
+
 export function showBackgroundAgent(agent: BackgroundAgent, hidden: ReadonlySet<string>): boolean {
   return agent.status === "running" || !hidden.has(agent.jobID)
 }
@@ -50,6 +64,18 @@ function meta(part: ToolPart, key: string): unknown {
   const top = part.metadata?.[key]
   if (top !== undefined) return top
   return (part.state as { metadata?: Record<string, unknown> }).metadata?.[key]
+}
+
+/** Child session IDs of Task tool parts. */
+export function taskChildren(tools: ToolPart[]): string[] {
+  const ids: string[] = []
+  for (const part of tools) {
+    if (part.tool !== "task") continue
+    const id = text(meta(part, "sessionId"))
+    if (!id || ids.includes(id)) continue
+    ids.push(id)
+  }
+  return ids
 }
 
 function working(status: SessionStatusInfo | undefined): boolean {

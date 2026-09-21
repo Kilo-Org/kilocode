@@ -6,6 +6,9 @@ import com.intellij.execution.process.CapturingProcessHandler
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption.COPY_ATTRIBUTES
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.fileSize
 
@@ -26,54 +29,63 @@ internal object WorktreeTransfer {
     private const val MAX_FILE = 10L * 1024 * 1024 // 10 MB, same cap as VS Code
     private const val TIMEOUT = 30_000
 
-    /** Read-only snapshot of a working tree. Patch fields point at temp files owned by the caller. */
+    /** Read-only snapshot of a working tree. Patch and untracked paths point at temp files owned by the caller. */
     data class Snapshot(
         val branch: String,
         val head: String,
         val staged: Path?,
         val unstaged: Path?,
-        val untracked: List<String>,
+        val untracked: Map<String, Path>,
+        val storage: Path,
     )
 
     data class ApplyResult(val ok: Boolean, val error: String? = null)
 
     /**
-     * Captures the current git state from [root]. Read-only: [root] is never modified. The returned
-     * snapshot owns temp patch files that the caller must delete via [cleanup] in a `finally`.
+     * Captures the current git state from the worktree containing [dir] without modifying it. The returned
+     * snapshot owns temp files that the caller must delete via [cleanup] in a `finally`.
      */
-    fun capture(root: Path): Snapshot {
-        val branch = git(root, "branch", "--show-current").stdout.trim()
+    fun capture(dir: Path): Snapshot {
+        val resolved = git(dir, "rev-parse", "--show-toplevel")
+        if (!resolved.ok) error("git rev-parse --show-toplevel failed: ${resolved.stderr.trim()}")
+        val root = Path.of(resolved.stdout.trimEnd('\r', '\n').ifEmpty {
+            error("git rev-parse --show-toplevel returned no directory")
+        }).toAbsolutePath().normalize()
+        val current = git(root, "branch", "--show-current")
+        if (!current.ok) error("git branch --show-current failed: ${current.stderr.trim()}")
+        val branch = current.stdout.trim()
         val rev = git(root, "rev-parse", "HEAD")
         if (!rev.ok) error("git rev-parse HEAD failed: ${rev.stderr.trim()}")
         val head = rev.stdout.trim().ifEmpty { error("git rev-parse HEAD returned no commit") }
-        val temps = mutableListOf<Path>()
+        val conflicts = gitLines(root, "ls-files", "--unmerged", "-z")
+            .mapNotNull { it.substringAfter('\t', "").takeIf(String::isNotEmpty) }
+            .distinct()
+        if (conflicts.isNotEmpty()) {
+            error("Resolve merge conflicts before moving to a worktree: ${conflicts.joinToString(", ")}")
+        }
+        val storage = Files.createTempDirectory("kilo-worktree-snapshot")
         try {
-            val unstaged = capturePatch(root, "diff", "--binary")?.also { temps.add(it) }
-            val staged = capturePatch(root, "diff", "--cached", "--binary")?.also { temps.add(it) }
-            val listed = git(root, "ls-files", "--others", "--exclude-standard")
-            if (!listed.ok) error("git ls-files failed: ${listed.stderr.trim()}")
-            val untracked = listed.stdout
-                .lineSequence()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .filter { rel ->
-                    val full = root.resolve(rel).normalize()
-                    if (!full.startsWith(root)) {
-                        LOG.warn("worktree move: skipping untracked file outside root: $rel")
-                        return@filter false
-                    }
-                    val size = runCatching { full.fileSize() }.getOrDefault(0L)
-                    if (size > MAX_FILE) {
-                        LOG.info("worktree move: skipping untracked file $rel: $size bytes exceeds ${MAX_FILE} limit")
-                        false
-                    } else {
-                        true
+            val unstaged = capturePatch(root, storage, "diff", "--binary")
+            val staged = capturePatch(root, storage, "diff", "--cached", "--binary")
+            val untracked = gitLines(root, "ls-files", "--others", "--exclude-standard", "-z")
+                .associateWith { rel ->
+                    runCatching {
+                        val full = root.resolve(rel).normalize()
+                        require(full.startsWith(root)) { "File is outside the source worktree" }
+                        val attrs = Files.readAttributes(full, BasicFileAttributes::class.java)
+                        require(attrs.isRegularFile) { "Not a regular file" }
+                        require(attrs.size() <= MAX_FILE) { "File exceeds the $MAX_FILE byte transfer limit" }
+                        val copy = Files.createTempFile(storage, "file", ".tmp")
+                        Files.copy(full, copy, REPLACE_EXISTING)
+                        require(copy.fileSize() <= MAX_FILE) { "File exceeds the $MAX_FILE byte transfer limit" }
+                        copy
+                    }.getOrElse { err ->
+                        throw IllegalStateException("Failed to capture untracked file $rel: ${err.message}", err)
                     }
                 }
-                .toList()
-            return Snapshot(branch, head, staged, unstaged, untracked)
+            return Snapshot(branch, head, staged, unstaged, untracked, storage)
         } catch (e: Exception) {
-            temps.forEach { Files.deleteIfExists(it) }
+            discard(storage)
             throw e
         }
     }
@@ -82,39 +94,56 @@ internal object WorktreeTransfer {
      * Applies [snapshot] into [target]: staged patch (re-staged), unstaged patch, then untracked
      * file copies. Returns the first failure encountered so the caller can roll the worktree back.
      */
-    fun apply(snapshot: Snapshot, source: Path, target: Path): ApplyResult {
+    fun apply(snapshot: Snapshot, target: Path): ApplyResult {
+        val root = target.toAbsolutePath().normalize()
         snapshot.staged?.let { patch ->
-            val res = git(target, "apply", "--whitespace=nowarn", patch.toString())
+            val res = git(root, "apply", "--index", "--whitespace=nowarn", patch.toString())
             if (!res.ok) {
                 val msg = res.stderr.trim().ifBlank { "Patch did not apply" }
                 LOG.warn("worktree move: staged patch failed: $msg")
                 return ApplyResult(false, "Staged patch failed: $msg")
             }
-            val files = parsePatchFiles(patch)
-            if (files.isNotEmpty()) git(target, "add", "--", *files.toTypedArray())
         }
         snapshot.unstaged?.let { patch ->
-            val res = git(target, "apply", "--whitespace=nowarn", patch.toString())
+            val res = git(root, "apply", "--whitespace=nowarn", patch.toString())
             if (!res.ok) {
                 val msg = res.stderr.trim().ifBlank { "Patch did not apply" }
                 LOG.warn("worktree move: unstaged patch failed: $msg")
                 return ApplyResult(false, "Unstaged patch failed: $msg")
             }
         }
-        for (rel in snapshot.untracked) {
-            runCatching {
-                val src = source.resolve(rel).normalize()
-                val dst = target.resolve(rel).normalize()
+        snapshot.untracked.forEach { (rel, copy) ->
+            val dst = root.resolve(rel).normalize()
+            if (!dst.startsWith(root)) return ApplyResult(false, "Untracked file is outside the target worktree: $rel")
+            val err = runCatching {
                 Files.createDirectories(dst.parent)
-                Files.copy(src, dst)
-            }.onFailure { err -> LOG.warn("worktree move: failed to copy untracked file $rel: ${err.message}", err) }
+                Files.copy(copy, dst, COPY_ATTRIBUTES)
+            }.exceptionOrNull()
+            if (err != null) {
+                LOG.warn("worktree move: failed to write untracked file $rel: ${err.message}", err)
+                return ApplyResult(false, "Failed to write untracked file $rel: ${err.message}")
+            }
         }
         return ApplyResult(true)
     }
 
     fun cleanup(snapshot: Snapshot?) {
         snapshot ?: return
-        listOfNotNull(snapshot.staged, snapshot.unstaged).forEach { Files.deleteIfExists(it) }
+        discard(snapshot.storage)
+    }
+
+    private fun discard(dir: Path) {
+        if (!Files.exists(dir)) return
+        runCatching {
+            Files.walk(dir).use { files -> files.sorted(Comparator.reverseOrder()).forEach(::delete) }
+        }.onFailure { err -> LOG.warn("worktree move: failed to clean up snapshot storage $dir: ${err.message}", err) }
+    }
+
+    private fun delete(file: Path) {
+        if (runCatching { Files.deleteIfExists(file) }.isSuccess) return
+        runCatching { file.toFile().setWritable(true) }
+        runCatching { Files.deleteIfExists(file) }
+            .onFailure { err -> LOG.warn("worktree move: failed to delete $file: ${err.message}", err) }
     }
 
     /**
@@ -127,8 +156,8 @@ internal object WorktreeTransfer {
      * inherits a minimal environment where a bare `git` can be missing. Output is still redirected
      * to a file because decoding stdout would corrupt `--binary` patches.
      */
-    private fun capturePatch(root: Path, vararg args: String): Path? {
-        val file = Files.createTempFile("kilo-worktree-patch", ".diff")
+    private fun capturePatch(root: Path, storage: Path, vararg args: String): Path? {
+        val file = Files.createTempFile(storage, "patch", ".diff")
         val label = "git ${args.joinToString(" ")}"
         try {
             val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(root.toFile())
@@ -154,14 +183,28 @@ internal object WorktreeTransfer {
         }
     }
 
-    /** Extracts target paths from a unified diff's `diff --git a/... b/...` headers. */
-    private fun parsePatchFiles(patch: Path): List<String> {
-        // Read as Latin-1 so every byte maps to a char; header lines stay intact even in binary patches.
-        val header = Regex("^diff --git a/.+ b/(.+)$")
-        return runCatching {
-            Files.readAllLines(patch, StandardCharsets.ISO_8859_1)
-                .mapNotNull { header.find(it)?.groupValues?.get(1) }
-        }.getOrDefault(emptyList())
+    private fun gitLines(root: Path, vararg args: String): List<String> {
+        val file = Files.createTempFile("kilo-worktree-list", ".raw")
+        val label = "git ${args.joinToString(" ")}"
+        try {
+            val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(root.toFile())
+            val proc = cmd.toProcessBuilder()
+                .redirectOutput(file.toFile())
+                .redirectErrorStream(false)
+                .start()
+            val err = proc.errorStream.use { it.readBytes().toString(StandardCharsets.UTF_8) }
+            if (!proc.waitFor(TIMEOUT.toLong(), TimeUnit.MILLISECONDS)) {
+                proc.destroyForcibly()
+                error("$label timed out after ${TIMEOUT}ms")
+            }
+            val exit = proc.exitValue()
+            if (exit != 0) error("$label failed (exit $exit): ${err.trim()}")
+            return String(Files.readAllBytes(file), StandardCharsets.UTF_8)
+                .split('\u0000')
+                .filter { it.isNotEmpty() }
+        } finally {
+            Files.deleteIfExists(file)
+        }
     }
 
     private data class GitResult(val exit: Int, val stdout: String, val stderr: String) {
@@ -170,7 +213,9 @@ internal object WorktreeTransfer {
 
     private fun git(root: Path, vararg args: String): GitResult {
         return try {
-            val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(root.toFile())
+            val cmd = GeneralCommandLine(listOf("git") + args)
+                .withWorkDirectory(root.toFile())
+                .withCharset(StandardCharsets.UTF_8)
             val out = CapturingProcessHandler(cmd).runProcess(TIMEOUT)
             GitResult(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
         } catch (e: Exception) {

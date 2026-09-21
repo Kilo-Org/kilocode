@@ -13,7 +13,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 **Other AI coding vendors** hide their true costs behind opaque subscription models, leaving you wondering what you're actually paying for.
 
-**Kilo Teams** and **Kilo Enterprise** show you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
+**Kilo Teams** and **Kilo Enterprise** show you what each AI request costs. Model inference is charged at provider rates with no markup, and credit purchases have a disclosed 5% payment-processing fee.
 
 ### No Rate Limiting
 

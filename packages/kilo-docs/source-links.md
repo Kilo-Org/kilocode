@@ -15,11 +15,6 @@
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
   <!-- packages/opencode/src/kilocode/kilo-commands.tsx -->
-- <https://app.kilo.ai/claw>
-  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
-  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/UpgradeView.tsx -->
-  <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
-  <!-- packages/opencode/src/kilocode/components/dialog-claw-upgrade.tsx -->
 - <https://app.kilo.ai/config.json>
   <!-- packages/kilo-vscode/src/kilo-provider/config-file.ts -->
   <!-- packages/opencode/src/config/config.ts -->
@@ -42,8 +37,6 @@
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://blog.kilo.ai/p/kilo-gateway-now-supports-byok-20-providers>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx -->
-- <https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live>
-  <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://chatgpt.com/explore/plus>
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://cli.github.com/>
@@ -67,7 +60,7 @@
 - <https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://git-scm.com>
-  <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
+  <!-- packages/kilo-vscode/src/agent-manager/git-errors.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
 - <https://github.com/anthropics/claude-code/issues/31375>
@@ -86,6 +79,9 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceContribute.tsx -->
 - <https://github.com/Kilo-Org/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
+  <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-about.tsx -->
+- <https://github.com/Kilo-Org/kilocode/issues>
+  <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-about.tsx -->
 - <https://github.com/Kilo-Org/kilocode/issues/6986>
   <!-- packages/kilo-vscode/src/agent-manager/constants.ts -->
 - <https://github.com/Kilo-Org/kilocode/issues/9618>
@@ -120,31 +116,31 @@
 - <https://kilo.ai/discord>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
+  <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-about.tsx -->
 - <https://kilo.ai/docs>
   <!-- packages/kilo-vscode/webview-ui/src/hooks/useSlashCommand.ts -->
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/app.tsx -->
+  <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-about.tsx -->
 - <https://kilo.ai/docs/ai-providers/cloudflare>
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://kilo.ai/docs/ai-providers/gemini>
   <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://kilo.ai/docs/ai-providers#custom-provider>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
+- <https://kilo.ai/docs/automate/agent-manager-workflows>
+  <!-- packages/kilo-vscode/webview-ui/agent-manager/intro/AgentManagerIntro.tsx -->
 - <https://kilo.ai/docs/automate/mcp/what-is-mcp>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/github>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
-- <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
-  <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://kilo.ai/docs/customize/marketplace>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
 - <https://kilo.ai/docs/getting-started/settings>
+  <!-- packages/opencode/src/kilocode/config/claude-migration.ts -->
   <!-- packages/opencode/src/kilocode/config/config.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
-- <https://kilo.ai/kiloclaw>
-  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
-  <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
 - <https://kilo.ai/pricing/kilo-pass>
   <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
 - <https://kilo.ai/support>

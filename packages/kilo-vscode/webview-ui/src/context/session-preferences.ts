@@ -1,4 +1,5 @@
 import type { Message, ModelSelection } from "../types/messages"
+import { DEFAULT_VARIANT } from "./session-variant-store"
 
 export interface MessagePrefs {
   agent?: string
@@ -17,7 +18,7 @@ export function resolveMessagePrefs(messages: Message[], names: Set<string>): Me
     }
     if (!prefs.model && msg.role === "user" && msg.model?.providerID && msg.model.modelID) {
       prefs.model = { providerID: msg.model.providerID, modelID: msg.model.modelID }
-      prefs.variant = msg.model.variant
+      prefs.variant = msg.model.variant ?? DEFAULT_VARIANT
     }
     if (prefs.agent && prefs.model) break
   }

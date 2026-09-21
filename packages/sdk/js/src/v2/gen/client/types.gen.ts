@@ -118,8 +118,10 @@ export type RequestResult<
                 error: TError extends Record<string, unknown> ? TError[keyof TError] : TError
               }
           ) & {
-            request: Request
-            response: Response
+            /** request may be undefined, because error may be from building the request object itself */
+            request?: Request
+            /** response may be undefined, because error may be from building the request object itself or from a network error */
+            response?: Response
           }
     >
 

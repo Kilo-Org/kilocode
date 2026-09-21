@@ -92,6 +92,18 @@ test("rejects server credential environment substitutions", async () => {
   ).rejects.toBeInstanceOf(InvalidError)
 })
 
+test("rejects browser broker environment substitutions", async () => {
+  for (const key of ["KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN"]) {
+    await expect(
+      ConfigVariable.substitute({
+        ...trusted,
+        text: `value={env:${key}}`,
+        env: { [key]: "secret" },
+      }),
+    ).rejects.toBeInstanceOf(InvalidError)
+  }
+})
+
 test("continues to substitute ordinary environment variables when trusted", async () => {
   const result = await ConfigVariable.substitute({
     ...trusted,

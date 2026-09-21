@@ -502,7 +502,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         flush()
 
         assertEquals("plan", m.model.agent)
-        assertTrue(rpc.configs.none { it.second.agent == "code" })
+        assertNull(KiloPluginSettings.getAgent())
         assertQuestionReply("q_plan /test [[Continue here]]", rpc.questionReplies)
 
         emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_code", "ses_test", "user").copy(
@@ -514,7 +514,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals("code", m.model.agent)
         assertEquals("anthropic/claude", m.model.model)
         assertFalse(m.model.modelOverride)
-        assertTrue(rpc.configs.none { it.second.agent == "code" })
+        assertNull(KiloPluginSettings.getAgent())
         assertControllerEvents("WorkspaceReady", events)
     }
 
@@ -533,7 +533,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         flush()
 
         assertEquals("plan", m.model.agent)
-        assertTrue(rpc.configs.none { it.second.agent == "code" })
+        assertNull(KiloPluginSettings.getAgent())
         assertQuestionReply("q_plan /test [[Need to adjust scope]]", rpc.questionReplies)
     }
 

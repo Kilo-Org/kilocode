@@ -7,12 +7,12 @@
  */
 export class Semaphore {
   private running = 0
-  private readonly pending: { resolve: () => void; abort?: () => void }[] = []
+  private readonly pending: { resolve: () => void; abort?: () => void; priority: boolean }[] = []
 
   constructor(private readonly limit: number) {}
 
-  async run<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
-    await this.acquire(signal)
+  async run<T>(fn: () => Promise<T>, signal?: AbortSignal, priority = false): Promise<T> {
+    await this.acquire(signal, priority)
     try {
       return await fn()
     } finally {
@@ -20,14 +20,14 @@ export class Semaphore {
     }
   }
 
-  private acquire(signal?: AbortSignal): Promise<void> {
+  private acquire(signal: AbortSignal | undefined, priority: boolean): Promise<void> {
     if (signal?.aborted) return Promise.reject(signal.reason)
     if (this.running < this.limit) {
       this.running++
       return Promise.resolve()
     }
     return new Promise<void>((resolve, reject) => {
-      const item: { resolve: () => void; abort: () => void } = {
+      const item: { resolve: () => void; abort: () => void; priority: boolean } = {
         resolve: () => {
           signal?.removeEventListener("abort", item.abort)
           this.running++
@@ -38,9 +38,15 @@ export class Semaphore {
           if (index !== -1) this.pending.splice(index, 1)
           reject(signal?.reason)
         },
+        priority,
       }
       signal?.addEventListener("abort", item.abort, { once: true })
-      this.pending.push(item)
+      const index = priority ? this.pending.findIndex((entry) => !entry.priority) : -1
+      if (index === -1) {
+        this.pending.push(item)
+        return
+      }
+      this.pending.splice(index, 0, item)
     })
   }
 

@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Agent } from "../../src/agent/agent"
+import { Config } from "../../src/config/config"
 import { AgentManagerModelsTool } from "../../src/kilocode/tool/agent-manager-models"
 import { Provider } from "../../src/provider/provider"
 import { MessageID, SessionID } from "../../src/session/schema"
@@ -52,6 +53,7 @@ const runtime = ManagedRuntime.make(
   Layer.mergeAll(
     AppNodeBuilder.build(Truncate.node),
     AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(Config.node),
     AppNodeBuilder.build(CrossSpawnSpawner.node),
     Layer.mock(Provider.Service, { list: () => Effect.succeed(providers) }),
   ),
@@ -68,13 +70,15 @@ const ctx = {
   ask: () => Effect.void,
 }
 
-function run(params: Record<string, unknown>) {
+function run(params: Record<string, unknown>, selection = false) {
   return runtime.runPromise(
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const tool = yield* Tool.init(yield* AgentManagerModelsTool)
-        return yield* tool.execute(params, ctx)
-      }),
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const tool = yield* Tool.init(yield* AgentManagerModelsTool)
+          return yield* tool.execute(params, ctx)
+        }),
+      { config: { experimental: { task_model_selection: selection } } },
     ).pipe(Effect.scoped),
   )
 }
@@ -84,6 +88,13 @@ function json<T>(value: string): T {
 }
 
 describe("agent_manager_models tool", () => {
+  test("explains Task selection only when the experiment is enabled", async () => {
+    const disabled = await run({ query: "shared" })
+    const enabled = await run({ query: "shared" }, true)
+    expect(json<{ hint: string }>(disabled.output).hint).not.toContain("to task or agent_manager")
+    expect(json<{ hint: string }>(enabled.output).hint).toContain("to task or agent_manager")
+  })
+
   test("returns models grouped by name, capped at 20", async () => {
     const result = await run({})
     const output = json<{ models: Array<{ name: string }>; total: number; nextOffset?: number }>(result.output)

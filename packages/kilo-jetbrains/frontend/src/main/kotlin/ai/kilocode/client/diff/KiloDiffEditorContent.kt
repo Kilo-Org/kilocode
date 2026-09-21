@@ -48,6 +48,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import kotlinx.coroutines.CoroutineScope
@@ -91,6 +92,13 @@ internal fun buildDiffEditor(
 
 internal val DIFF_FILE_KEY: Key<String> = Key.create("kilo.diff.file")
 
+/** Pane labels for a comparison [source]: committed base/HEAD, uncommitted HEAD/working tree, or a session diff's original/modified. */
+internal fun diffLabels(source: String?): Pair<String, String> = when (source) {
+    "branch" -> KiloBundle.message("diff.editor.side.base") to KiloBundle.message("diff.editor.side.head")
+    "local" -> KiloBundle.message("diff.editor.side.head") to KiloBundle.message("diff.editor.side.working")
+    else -> KiloBundle.message("diff.editor.side.original") to KiloBundle.message("diff.editor.side.modified")
+}
+
 internal class DiffEditorView(
     private val project: Project,
     private val params: Map<String, String>,
@@ -106,7 +114,7 @@ internal class DiffEditorView(
     private val outdated = AtomicBoolean(false)
     private val refreshing = AtomicBoolean(false)
     private val tree = buildFileTree(start)
-    private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.pad())
+    private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.PAD)
     private val splitter = OnePixelSplitter(false, 0.25f)
     private val select = Debouncer<Int>(scope, parent) { show(it) }
     private val banner = EditorNotificationPanel(EditorNotificationPanel.Status.Warning).apply {
@@ -205,7 +213,7 @@ internal class DiffEditorView(
     internal fun refresh() {
         if (disposed.get() || project.isDisposed) return
         if (!refreshing.compareAndSet(false, true)) return
-        saveDocuments()
+        if (params["source"] != "branch" && params["source"] != "local") saveDocuments()
         outdated.set(false)
         banner.isVisible = false
         root.revalidate()
@@ -307,12 +315,7 @@ internal class DiffEditorView(
         }
     }
 
-    private fun labels(): Pair<String, String> {
-        if (params["source"] == "branch") {
-            return KiloBundle.message("diff.editor.side.base") to KiloBundle.message("diff.editor.side.current")
-        }
-        return KiloBundle.message("diff.editor.side.original") to KiloBundle.message("diff.editor.side.modified")
-    }
+    private fun labels(): Pair<String, String> = diffLabels(params["source"])
 
     private fun syncTree() {
         if (disposed.get()) return
@@ -426,10 +429,10 @@ private class Debouncer<T>(
     }
 }
 
+/** Centered on both axes, matching the connecting and failed states rendered into the same slot. */
 @RequiresEdt
-internal fun emptyChangesComponent(): JComponent = JPanel(BorderLayout()).apply {
-    add(com.intellij.ui.components.JBLabel(KiloBundle.message("diff.editor.empty")), BorderLayout.CENTER)
-}
+internal fun emptyChangesComponent(): JComponent =
+    Centerizer(JBLabel(KiloBundle.message("diff.editor.empty")), Centerizer.TYPE.BOTH)
 
 private fun buildFileTree(files: List<DiffFileDto>): Tree {
     val tree = DiffTree(buildFileModel(files)).apply {

@@ -5,6 +5,7 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.views.base.GenericView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.question.QuestionResultView
+import ai.kilocode.client.session.views.tool.BoardToolView
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
@@ -67,6 +68,7 @@ object ViewFactory {
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
             EditToolView.canRender(content) -> EditToolView(content, openFile, selection, openDiff, sessionId)
             TaskToolView.canRender(content) -> TaskToolView(content, selection = selection, onOpenSubagent = onOpenSubagent)
+            BoardToolView.canRender(content) -> BoardToolView(content, selection = selection)
             else -> ToolView(content, selection = selection)
         }
         is Compaction -> CompactionView(content)
@@ -125,6 +127,8 @@ object ViewFactory {
         if (view is ToolView && EditToolView.canRender(content)) return true
         if (view is TaskToolView) return !TaskToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view !is TaskToolView && TaskToolView.canRender(content)) return true
+        if (view is BoardToolView) return !BoardToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view is ToolView && BoardToolView.canRender(content)) return true
         if (view is ToolView) return QuestionResultView.canRender(content)
         return false
     }

@@ -54,10 +54,29 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Završeno (prema modelu)",
+  "session.goal.blocked": "Blokirano",
+  "session.goal.restart": "Ponovo pokreni cilj",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Ploča",
+  "task.swarm.refresh": "Osvježi",
+  "task.swarm.reset": "Resetuj ploču",
+  "task.swarm.resetTitle": "Resetovati ovu ploču?",
+  "task.swarm.resetDescription":
+    "Obrisati vidljive poruke? Razgovori i zadaci koji se izvršavaju ostaju nepromijenjeni. Agenti mogu objaviti nove poruke.",
+  "task.swarm.loading": "Učitavanje ploče...",
+  "task.swarm.failed": "Ploču nije moguće učitati ili resetovati. Pokušajte je osvježiti.",
 
   "command.provider.connect": "Poveži provajdera",
+
+  "session.activity.waiting": "Čeka se odgovor ili odobrenje.",
+  "session.activity.error": "Greška ili prekinuta veza.",
+  "session.activity.retry": "Automatski novi pokušaj.",
+  "session.activity.busy": "U toku.",
+  "session.activity.scheduled": "Čeka se zakazano buđenje.",
+  "session.activity.done": "Potez završen.",
+  "session.activity.idle": "Ne radi.",
 
   "command.session.new": "Nova sesija",
   "command.session.show.changes": "Prikaži promjene",
@@ -175,18 +194,23 @@ export const dict = {
   "common.saving": "Čuvanje...",
   "common.default": "Podrazumijevano",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
   "prompt.action.send": "Pošalji",
+  "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
+  "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
   "prompt.action.autoApprove.disable": "Isključi automatsko odobravanje",
   "prompt.action.autoApprove.enabled":
     "Automatsko odobravanje je uključeno. Zahtjevi za dozvole bit će automatski odobreni.",
   "prompt.action.autoApprove.disabled":
     "Automatsko odobravanje je isključeno. Kliknite za automatsko odobravanje zahtjeva za dozvole.",
+  "prompt.action.autoApprove.sandboxExcluded": "Zahtjevi za napuštanje sandboxa uvijek su izuzeti.",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
   "prompt.action.sandbox.enable": "Omogući sandbox",
@@ -204,11 +228,13 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Dozvoljena",
   "prompt.action.sandbox.unrestricted": "Bez ograničenja",
   "prompt.action.sandbox.description.enabled": "Pisanje je ograničeno na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Pravila dozvola i automatsko odobravanje primjenjuju se unutar sandboxa. Komande koje ga moraju napustiti uvijek pitaju.",
   "prompt.action.sandbox.description.disabled": "Kliknite da ograničite pisanje u datotečni sistem i pristup mreži.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
-  "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.start": "Započni glasovni unos",
   "speechToText.tooltip.shortcut":
     "Dodirnite dugme ili pritisnite Cmd/Ctrl+K da pokrenete ili zaustavite snimanje; držite dugme pritisnutim dok govorite, a zatim ga otpustite da biste pretvorili govor u tekst i poslali ga.",
   "speechToText.tooltip.starting": "Pokretanje mikrofona... Sačekajte prije nego što progovorite.",
@@ -248,8 +274,13 @@ export const dict = {
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
-  "notification.permission.titleSandboxEscalation": "Dozvoliti Git operaciju izvan sandboxa?",
+  "notification.permission.titleSandboxEscalation": "Pokrenuti izvan sandboxa?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Ovo izvršava cijelu komandu bez ograničenja datotečnog sistema i mreže, samo za ovu komandu. Git mora pisati u .git, koji je samo za čitanje u sandboxu i nalazi se izvan radnog stabla u povezanom worktreeu. Bash pravila dozvola i automatsko odobravanje nikada ne odobravaju ovaj upit automatski.",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
+  "ui.permission.reject": "Odbij",
+  "ui.permission.feedbackPlaceholder": "Recite Kilu šta da uradi drugačije",
+  "ui.permission.feedbackHint": "Enter za odbijanje, Esc za otkazivanje",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
   "ui.permission.doomLoop.rule": "Nastavi pozive alata {{tool}}",
   "ui.permission.rule.addToAllowed": "Dodaj na listu dozvoljenih",
@@ -281,7 +312,7 @@ export const dict = {
   "ui.approval.source.agent.default": "od strane agenta",
   "ui.approval.source.global": "globalnom konfiguracijom",
   "ui.approval.source.project": "konfiguracijom projekta",
-  "ui.approval.source.yolo": "režimom automatskog odobravanja (YOLO)",
+  "ui.approval.source.yolo": "režimom automatskog odobravanja",
   "ui.approval.source.session": "pravilom automatskog odobravanja sesije",
   "ui.approval.source.default": "podrazumevano",
   "ui.approval.outsideWorkspace": "(izvan vašeg radnog prostora: {{file}})",
@@ -299,7 +330,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Novi Zadatak",
   "sidebar.topBar.history": "Historija",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profil",
   "sidebar.topBar.settings": "Postavke",
@@ -442,6 +472,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Prilagođeni provajder",
   "settings.providers.connected.environmentDescription": "Povezano iz vaših varijabli okruženja",
   "settings.providers.action.signInChatGPT": "Prijavi se putem ChatGPT",
+  "settings.providers.action.changeApiKey": "Promijeni API ključ",
   "settings.providers.custom.description": "Dodaj prilagođeni provajder putem osnovnog URL-a.",
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
@@ -535,38 +566,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Neuspjelo ažuriranje dozvola",
 
-  "settings.permissions.tool.read.title": "Čitanje",
   "settings.permissions.tool.read.description": "Čitanje datoteke (podudara se s putanjom datoteke)",
-  "settings.permissions.tool.edit.title": "Uređivanje",
   "settings.permissions.tool.edit.description":
     "Mijenjanje datoteka, uključujući izmjene, pisanja, patch-eve i multi-izmjene",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Podudaranje datoteka pomoću glob šablona",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Pretraživanje sadržaja datoteka pomoću regularnih izraza",
-  "settings.permissions.tool.list.title": "Lista",
   "settings.permissions.tool.list.description": "Listanje datoteka unutar direktorija",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Pokretanje shell komandi",
-  "settings.permissions.tool.task.title": "Zadatak",
   "settings.permissions.tool.task.description": "Pokretanje pod-agenta",
-  "settings.permissions.tool.skill.title": "Vještina",
   "settings.permissions.tool.skill.description": "Učitaj vještinu po nazivu",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Pokreni upite jezičnog servera",
-  "settings.permissions.tool.todoread.title": "Čitanje liste zadataka",
   "settings.permissions.tool.todoread.description": "Čitanje liste zadataka",
-  "settings.permissions.tool.todowrite.title": "Ažuriranje liste zadataka",
   "settings.permissions.tool.todowrite.description": "Ažuriraj listu zadataka",
-  "settings.permissions.tool.webfetch.title": "Web preuzimanje",
   "settings.permissions.tool.webfetch.description": "Preuzmi sadržaj sa URL-a",
-  "settings.permissions.tool.websearch.title": "Web pretraga",
   "settings.permissions.tool.websearch.description": "Pretražuj web",
-  "settings.permissions.tool.codesearch.title": "Pretraga koda",
   "settings.permissions.tool.codesearch.description": "Pretraži kod na webu",
-  "settings.permissions.tool.external_directory.title": "Vanjski direktorij",
   "settings.permissions.tool.external_directory.description": "Pristup datotekama izvan direktorija projekta",
-  "settings.permissions.tool.doom_loop.title": "Beskonačna petlja",
   "settings.permissions.tool.doom_loop.description": "Otkriva ponovljene pozive alata sa identičnim unosom",
 
   "session.delete.title": "Izbriši sesiju",
@@ -584,6 +599,7 @@ export const dict = {
   "session.tabs.switcher.current": "Trenutno",
   "session.tabs.switcher.pending": "Novo",
   "session.tabs.switcher.busy": "Radi",
+  "session.tabs.switcher.scheduled": "Zakazano",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
   "session.tab.worktree": "Radno stablo",
@@ -607,13 +623,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo zastaje i prikazuje vam svoj plan tokom rada.",
   "workStyle.choice.human-in-the-loop.permissions": "Traži dozvolu prije uređivanja datoteka ili pokretanja komandi.",
   "workStyle.choice.human-in-the-loop.bash": "Traži dozvolu za svaku terminalsku komandu.",
-  "workStyle.choice.human-in-the-loop.visibility": "Prikazuje sve detalje razgovora, uključujući zaključivanje.",
+  "workStyle.choice.human-in-the-loop.visibility": "Proširuje zaključivanje, naredbe i izmjene radi pregleda.",
   "workStyle.choice.autonomous.eyebrow": "Manje prekida",
   "workStyle.choice.autonomous.title": "Visoka autonomija",
   "workStyle.choice.autonomous.description": "Manje prekida i pojednostavljen interfejs.",
   "workStyle.choice.autonomous.permissions": "Uređuje datoteke i pokreće komande u radnom prostoru bez pitanja.",
   "workStyle.choice.autonomous.bash": "Može pokretati terminalske komande u radnom prostoru bez odobrenja.",
-  "workStyle.choice.autonomous.visibility": "Detalji ostaju sažeti dok ih ne proširite.",
+  "workStyle.choice.autonomous.visibility": "Sažima detalje alata, uz kompaktan pregled zaključivanja.",
   "session.cloud.import.title": "Uvezi iz oblaka",
   "session.cloud.import.placeholder": "ID sesije, URL ili kilo import naredba",
   "session.cloud.import.button": "Uvezi",
@@ -658,6 +674,7 @@ export const dict = {
   "profile.usage.source.direct": "Direktno",
   "profile.usage.state.stale": "Prikazuju se posljednji ažurirani podaci o korištenju.",
   "profile.usage.state.unavailable": "Podaci o korištenju nisu dostupni.",
+  "profile.usage.state.empty": "Nisu prijavljena ograničenja korištenja.",
   "profile.usage.plan.pastDue": "Plan: Plaćanje kasni",
   "profile.usage.plan.canceling": "Plan: Otkazuje se na kraju perioda",
   "profile.usage.plan.unknown": "Plan: Status nepoznat",
@@ -742,6 +759,14 @@ export const dict = {
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",
+  "session.goal.label": "Cilj",
+  "prompt.goal.set": "Postavi cilj",
+  "prompt.goal.start": "Pokreni cilj",
+  "session.goal.active": "Aktivan",
+  "session.goal.paused": "Pauziran",
+  "session.goal.pause": "Pauziraj",
+  "session.goal.resume": "Nastavi",
+  "session.goal.clear": "Obriši cilj",
   "session.costAlert.header": "Upozorenje o trošku sesije",
   "session.costAlert.continue": "Nastavi",
   "session.costAlert.question":
@@ -812,7 +837,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Vještine",
 
   "settings.browser.description":
-    "Kada je omogućeno, AI agent može komunicirati s web stranicama — navigirati, klikati, tipkati i snimati ekran. Chrome prozor će se otvoriti kako biste mogli pratiti rad agenta.",
+    "Konfigurirajte ugrađenu automatizaciju preglednika koju pokreće Playwright. Kilo može navigirati, komunicirati sa web stranicama i snimati ekran u vašim sesijama.",
   "settings.browser.enable.title": "Omogući automatizaciju preglednika",
   "settings.browser.enable.description": "Registriraj Playwright MCP server s CLI pozadinom.",
   "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
@@ -839,7 +864,17 @@ export const dict = {
   "settings.notifications.enable.title": "Omogući zvučne obavijesti",
   "settings.notifications.enable.description":
     "Reproduciraj zvukove kada se sesije završe, naiđu na grešku ili trebaju vaš unos",
+  "settings.notifications.workbench.title": "Omogući VS Code obavijesti",
+  "settings.notifications.workbench.description":
+    "Prikaži VS Code obavijesti kada Kilo završi zadatak ili treba vaš unos",
+  "settings.notifications.os.title": "Omogući obavijesti operativnog sistema",
+  "settings.notifications.os.description":
+    "Prikaži izvorna obavještenja operativnog sistema kada Kilo završi zadatak ili treba vaš unos dok VS Code nije aktivan.",
   "settings.notifications.testSound": "Testiraj",
+  "settings.notifications.testOS": "Testiraj",
+  "settings.notifications.testOS.testing": "Slanje testnog obavještenja…",
+  "settings.notifications.testOS.success": "Testno obavještenje je poslano.",
+  "settings.notifications.testOS.error": "Slanje testnog obavještenja nije uspjelo",
   "settings.notifications.sound.default": "Zadano",
   "settings.notifications.sound.system": "Sistem",
   "settings.notifications.sound.description":
@@ -857,12 +892,28 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
+    "Dijelite ploču između glavne sesije i njenih podagenata za zadatke, uključujući ugniježđene podagente. Koristite je za paralelne pokušaje rješavanja problema ili rad na zadacima koji se međusobno nadopunjuju, a ne za svaki zadatak.",
   "settings.experimental.imageGenerationModel.title": "Model slike",
   "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
   "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "ID modela koji se šalje vašoj vlastitoj krajnjoj tački za transkripciju, na primjer whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Osnovni URL za govor u tekst",
+  "settings.models.speechToTextBaseUrl.description":
+    "Koristite API za transkripciju kompatibilan s OpenAI umjesto Kilo Gatewaya. Modeli se čitaju s /models, a zvuk se šalje na /audio/transcriptions. Ostavite prazno da biste koristili Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "API ključ za govor u tekst",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer token koji se šalje na vlastiti osnovni URL za transkripciju. Čuva se u vašoj Kilo konfiguracijskoj datoteci.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text. Speech to Text je trenutno podržan samo uz Kilo Gateway.",
+    "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text ili ispod postavite vlastiti osnovni URL za transkripciju.",
+  "settings.models.speechToText.remoteDescription":
+    "Glasovni unos nije dostupan u udaljenim prozorima. Otvorite Kilo u lokalnom prozoru da biste koristili mikrofon.",
   "settings.models.speechToTextModel.title": "Model govora u tekst",
   "settings.models.speechToTextModel.description": "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.nativeNotebookTools.title": "Izvorni alati za bilježnice",
@@ -882,8 +933,14 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code migracija",
+  "settings.experimental.claudeMigration.description":
+    "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
+  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
+  "settings.experimental.taskModelSelection.description":
+    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -995,6 +1052,9 @@ export const dict = {
     "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
   "settings.agentBehaviour.instructionFiles.description": "Putanje do dodatnih datoteka uputa u sistemskom promptu",
+  "settings.agentBehaviour.pushFixes.title": "Pošalji ispravke pull requesta",
+  "settings.agentBehaviour.pushFixes.description":
+    "Kada agentu pošalješ CI greške ili komentare pregleda iz pull requesta, ili ažuriraš radno stablo iz osnovne grane, zatraži da napravi commit i push kako bi se pull request ažurirao. Upiti za dozvole i dalje važe. Isključi da bi commite radio ručno.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code kompatibilnost",
   "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1014,6 +1074,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "model",
   "settings.agentBehaviour.workflows.variant": "varijanta",
   "settings.agentBehaviour.workflows.modelDescription": "Globalno premošćivanje modela",
+  "settings.experimental.codeMode.title": "Programski pozivi alata",
+  "settings.experimental.codeMode.description":
+    "Usmjerava pozive MCP alata kroz izolirano JavaScript okruženje s otkrivanjem alata na zahtjev umjesto izravnog izlaganja svakog MCP alata. Štedi kontekst kada je povezano mnogo MCP alata.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
@@ -1061,9 +1124,37 @@ export const dict = {
     "Sprečavanje ponavljanja identičnih radnji. Pokreće se kada se isti poziv alata ponovi sa identičnim unosom.",
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
+  "settings.autoCleanup.enable.title": "Omogući automatsko čišćenje sesija",
+  "settings.autoCleanup.enable.description":
+    "Automatski briše staru historiju sesija nakon određenog broja dana, u svim projektima i svim Kilo klijentima na ovom računaru, ne samo u ovom prozoru. Sesije koje su trenutno aktivne i sesije sa nedavnim forkom nikad se ne brišu. Brisanje je trajno.",
+  "settings.autoCleanup.defaultRetention.title": "Zadrži sesije (dana)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Koliko dugo se historija sesija čuva prije automatskog brisanja.",
+  "settings.autoCleanup.lastRun.title": "Posljednje čišćenje",
+  "settings.autoCleanup.lastRun.never": "Nikad pokrenuto",
+  "settings.autoCleanup.result":
+    "{{date}}: obrisano {{deleted}} od {{scanned}} sesija ({{active}} aktivnih preskočeno, {{failed}} neuspjelo) za {{seconds}}s",
+  "settings.autoCleanup.starting": "Pokretanje čišćenja sesija...",
+  "settings.autoCleanup.error.status": "Status čišćenja sesija je privremeno nedostupan. Ponovni pokušaj...",
+  "settings.autoCleanup.error.timeout":
+    "Čekanje na status čišćenja. Pozadinski servis traje duže nego što se očekivalo.",
+  "settings.autoCleanup.error.run":
+    "Nije moguće potvrditi da je čišćenje sesija završeno. Provjerite rezultat posljednjeg čišćenja prije ponovnog pokušaja.",
+  "settings.autoCleanup.progress.scanning": "Pregled sesija: {{processed}}/{{total}} obrađeno",
+  "settings.autoCleanup.progress.deleting":
+    "Brisanje sesija: {{processed}}/{{total}} obrađeno ({{deleted}} obrisano, {{failed}} neuspjelo)",
+  "settings.autoCleanup.runNow": "Pokreni čišćenje sada",
+  "settings.autoCleanup.runNow.confirm":
+    "Trajno obrisati istekle sesije u svim projektima i svim Kilo klijentima na ovom računaru?",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",
+  "settings.context.compactionModel.title": "Model za kompresiju",
+  "settings.context.compactionModel.description":
+    "Model koji se koristi za automatsku i ručnu kompresiju. Ostavite nepostavljeno da biste koristili model za chat. Trošak, brzina i kvalitet sažetka zavise od modela.",
+  "settings.context.compactionModel.useChatModel": "Koristi model za chat",
+  "settings.context.compactionModel.hint":
+    "Da odaberete koji se model koristi za kompresiju, pogledajte postavke Modela.",
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
@@ -1103,13 +1194,29 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sinkronizacija sa jezikom korisničkog sučelja",
   "settings.commitMessage.language.description": "Izaberite koji jezik koristiti za poruke koje generiše AI:",
 
+  "settings.display.preview.title": "Pregled",
+  "settings.display.presets.title": "Preseti prikaza",
+  "settings.display.presets.description": "Mijenja opcije prikaza ispod, ne dozvole. Sačuvajte da primijenite.",
+  "settings.display.preview.model": "Primjer modela",
+  "settings.display.preview.prompt": "Uklonite dodatne razmake iz pozdrava i provjerite testove.",
+  "settings.display.preview.reasoning":
+    "**Provjerite pozdrav.** Funkcija bi trebalo da proizvede isti pozdrav za obično ime i ime sa dodatnim razmacima na oba kraja. Zadržat ću postojeći potpis funkcije i format pozdrava, a promijeniti samo način na koji ime ulazi u vraćeni string.\n\nZa unos kao što je `  Ada  `, neželjeni razmaci pripadaju unosu, a ne predlošku pozdrava. Podrezivanje dovršenog pozdrava ostavilo bi razmake pored imena. Operacija podrezivanja zato mora da se dogodi prije nego što se ime umetne.\n\nProvjerit ću dokumentaciju o stringovima da potvrdim da `trim()` uklanja razmake sa oba kraja i vraća novi string. Trebalo bi da ostavi originalni unos nepromijenjenim. Za ovu promjenu nije potreban regularni izraz, dodatna zavisnost ni zasebna pomoćna funkcija.\n\nRazmaci unutar imena moraju ostati netaknuti. Ime kao što je `Ada Lovelace` ne bi trebalo da postane `AdaLovelace`, a velika i mala slova ne bi trebalo da se mijenjaju. Prazan unos ili unos koji sadrži samo razmake ne zahtijeva novi zadani pozdrav u okviru ove ciljane ispravke.\n\nPromjena može ostati u izrazu za vraćanje korištenjem `name.trim()` tamo gdje predložak trenutno koristi `name`. Zadržat ću okolnu interpunkciju i namjerni razmak nakon pozdrava. To čuva mali diff i olakšava provjeru ponašanja.\n\nNa kraju ću pokrenuti `bun test greeting.test.ts` i provjeriti oba rezultata. Slučaj sa dopunjenim imenom trebalo bi da potvrdi da se dodatni razmaci uklanjaju, dok slučaj sa običnim imenom štiti postojeći izlaz. Promjenu i rezultate testova prijavit ću tek nakon što se naredba završi.",
+  "settings.display.preview.shell": "Provjerite test pozdrava",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] uklanja dodatne razmake\n[pass] čuva obično ime\n\n2 testa prošla",
+  "settings.display.preview.query": "Podrezivanje stringova",
+  "settings.display.preview.result": "trim() uklanja razmake sa oba kraja stringa.",
+  "settings.display.preview.answer": "Pozdrav je ažuriran da uklanja dodatne razmake. Oba testa prolaze.",
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.fontSize.title": "Veličina fonta",
   "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
-  "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
-  "settings.display.reasoningAutoCollapse.description":
-    "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
+  "settings.display.reasoningDisplay.title": "Blokovi razmišljanja",
+  "settings.display.reasoningDisplay.description":
+    "Odaberite kako blokovi razmišljanja počinju. Prošireni prikazuje cijeli tekst, Pregled ga ograničava na kratak pregled s pomicanjem, a Naslov prikazuje samo naslov i indikator strujanja dok ga ne otvorite.",
+  "settings.display.reasoningDisplay.expanded": "Prošireni",
+  "settings.display.reasoningDisplay.preview": "Pregled",
+  "settings.display.reasoningDisplay.headline": "Naslov",
   "settings.display.shiftTabCycle.title": "Promijeni napor razmišljanja pomoću Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pritisnite Shift+Tab u polju za unos upita da pređete na sljedeći nivo napora razmišljanja. Onemogućite ovu opciju kako biste zadržali Shift+Tab za navigaciju fokusom putem tastature.",
@@ -1134,7 +1241,7 @@ export const dict = {
     "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",
   "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
   "settings.display.autoApprovalReason.description":
-    "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
+    "Prikazuje zašto je poziv alata automatski odobren, kao što je odgovarajuće pravilo dozvole ili zadana vrijednost agenta.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1158,58 +1265,16 @@ export const dict = {
   "question.summary": "{{n}} od {{total}} pitanja",
   "common.review": "Pregled",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migriraj sa prethodne verzije",
-  "settings.aboutKiloCode.legacyMigration.title": "Migracija sa prethodne verzije",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrirajte postavke iz prethodne instalacije Kilo Code, uključujući API ključeve provajdera i podrazumijevani model.",
   "settings.aboutKiloCode.rooImport.description": "Uvezite historiju razgovora iz instalacije Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Uvezi sesije iz Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Šta je novo u Kilo Code",
-  "migration.whatsNew.subtitle": "Ponovo smo izgradili ekstenziju na bržem i efikasnijem temelju.",
-  "migration.whatsNew.features.performance.title": "Brže performanse agenta",
-  "migration.whatsNew.features.performance.detail":
-    "Paralelni pozivi alata i podagenti omogućavaju vašem agentu da radi više odjednom — tako trošite manje vremena čekajući, a više isporučujući.",
-  "migration.whatsNew.features.interface.title": "Pojednostavljeni interfejs",
-  "migration.whatsNew.features.interface.detail": "Manje distrakcija, lakše i brže za čitanje.",
-  "migration.whatsNew.features.agentManager.title": "Upravljač agentima",
-  "migration.whatsNew.features.agentManager.detail":
-    "Jedinstveni interfejs za pokretanje više agenata paralelno, svaki na svom worktree-u — pratite napredak, mijenjajte kontekst i pregledajte promjene na jednom mjestu.",
-  "migration.whatsNew.features.foundation.title": "Zajednički temelj",
-  "migration.whatsNew.features.foundation.detail":
-    "Jedno malo, efikasno jezgro kroz sve Kilo proizvode. Poznato iskustvo bez obzira na to kako odaberete raditi.",
-  "migration.whatsNew.blogLink": "Pročitajte cijeli oglas",
-  "migration.whatsNew.docsLink": "Novosti i često postavljana pitanja",
-  "migration.whatsNew.continue": "Nastavi",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrirajte svoje postavke",
-  "migration.migrate.subtitle": "Pronašli smo postavke iz vaše prethodne instalacije. Evo šta možemo prenijeti.",
+  "migration.roo.button": "Uvezi sesije",
+  "migration.roo.empty": "Nisu pronađene sesije iz Roo Code.",
   "migration.migrate.selectLabel": "Odaberite šta želite migrirati",
   "migration.migrate.chatHistory": "Sesije razgovora i historija",
-  "migration.migrate.button": "Migriraj postavke",
-  "migration.migrate.skip": "Preskoči",
-  "migration.migrate.keysDetected": "{{count}} ključeva otkriveno",
-  "migration.migrate.serversConfigured": "{{count}} server(a) konfigurisano",
-  "migration.migrate.modesFound": "{{count}} režim(a) pronađeno",
-  "migration.migrate.nothingToMigrate": "U starim postavkama nije pronađeno ništa za migraciju.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "API ključevi provajdera",
-  "migration.select.mcpServers": "MCP serveri",
-  "migration.select.customModes": "Prilagođeni režimi / Agenti",
-  "migration.select.defaultModel": "Podrazumijevani model",
-  "migration.select.autoApproval": "Automatsko odobravanje",
-  "migration.select.language": "Jezik korisničkog interfejsa",
-  "migration.select.autocomplete": "Postavke automatskog dovršavanja",
 
   // Migrate — completion
   "migration.complete.summary": "Uspješno migrirano {{success}} od {{total}} stavki.",
-  "migration.complete.cleanup": "Ukloni stare podatke postavki",
-  "migration.complete.cleanupDescription":
-    "Ovo uklanja stare postavke iz VS Code pohrane. Nećete moći ponovo pokrenuti ovu migraciju.",
   "migration.complete.done": "Završeno",
   "migration.migrate.sessionsDetected": "Otkrivene {{count}} sesije",
   "migration.error.continue": "Nastavi",
@@ -1243,7 +1308,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Nepoznat datum",
   "migration.sessionFormat.unknown": "Nepoznato",
   "migration.sessionFormat.unknownError": "Nepoznata greška",
-  // legacy-migration end
 
   "error.details.show": "Detalji",
 
@@ -1251,7 +1315,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} zadataka završeno",
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
+  "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
+  "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
@@ -1264,6 +1330,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Otkazano",
   "task.backgroundAgents.status.error": "Greška",
   "task.backgroundAgents.untitled": "Agent u pozadini",
+  "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",
@@ -1291,6 +1358,16 @@ export const dict = {
     "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
   "diffViewer.group.session": "Sesija",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "Objavi na GitHubu",
+  "diffViewer.comment.loadFailed": "Nije moguće učitati izmjene zahtjeva za povlačenje.",
+  "diffViewer.comment.unavailable": "Ovaj red nije dostupan u trenutnom snimku zahtjeva za povlačenje.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Otvori PR",
+  "diffViewer.comment.localChanges": "Lokalne izmjene",
+  "diffViewer.comment.prChanges": "PR izmjene",
+  "diffViewer.comment.sendToKilo": "Pošalji Kilu",
+  "diffViewer.comment.sendToGithub": "Pošalji na GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Odaberi odredište",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
 
@@ -1312,5 +1389,11 @@ export const dict = {
   "chat.search.close": "Zatvori pretragu",
   "chat.search.invalidRegex": "Nevažeći regularni izraz",
   "chat.search.noResults": "Nema rezultata",
+  "settings.experimental.browserAutomation.title": "Integrirani preglednik",
+  "settings.experimental.browserAutomation.description":
+    "Prikažite preglede lokalnih aplikacija u Agent Manageru i omogućite alat browser_open sesijama Agent Managera.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Koristi sistemski Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Koristite instalirani Google Chrome za Integrirani preglednik. Onemogućite samo kada je kompatibilni Playwright Chromium preglednik već instaliran.",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
 }

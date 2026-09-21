@@ -19,7 +19,7 @@ export function createProjectSessionsLive(opts: {
   managed: () => ManagedSessionState[]
   locals: () => Set<string>
 }) {
-  return createMemo(() => {
+  const sessions = createMemo(() => {
     const base = opts.base()
     const pid = opts.pid()
     if (!pid || !opts.enabled()) return base
@@ -40,5 +40,8 @@ export function createProjectSessionsLive(opts: {
       .map((item) => ({ ...item, worktreeId: managed.get(item.id) ?? null }))
     if (extra.length === 0 && merged.every((item, index) => item === pushed[index])) return base
     return { ...base, [pid]: [...merged, ...extra] }
+  })
+  return Object.assign(sessions, {
+    current: () => (opts.enabled() ? (sessions()[opts.pid() ?? ""] ?? []) : opts.store()),
   })
 }

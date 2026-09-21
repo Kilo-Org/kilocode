@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test"
 import { createStore, produce } from "solid-js/store"
-import { isolate, mergeOptimisticPart, mergeParts, sameParts } from "../../webview-ui/src/context/session-parts"
+import {
+  isolate,
+  mergeOptimisticPart,
+  mergeOptimisticParts,
+  mergeParts,
+  sameParts,
+} from "../../webview-ui/src/context/session-parts"
 import type { Part } from "../../webview-ui/src/types/messages"
 
 function text(id: string, value: string, time: { start?: number; end?: number } = {}): Part {
@@ -153,6 +159,83 @@ describe("mergeOptimisticPart", () => {
 
     expect(result.parts.map((part) => part.id)).toEqual(["client-text", "server-file"])
     expect(result.replaced).toBe("client-file")
+  })
+
+  it("keeps queued text when synthetic attachment context arrives first", () => {
+    const current = [text("client-text", "queued prompt"), file("client-file")]
+    const ids = new Set(current.map((part) => part.id))
+    const part: Part = {
+      id: "context",
+      messageID: "m1",
+      type: "text",
+      text: "Attachment context",
+      synthetic: true,
+    }
+    const context = mergeOptimisticPart(current, ids, part)
+
+    expect(context.parts).toEqual([...current, part])
+    expect(context.replaced).toBeUndefined()
+    expect(value(context.parts, "client-text")).toBe("queued prompt")
+
+    const body = { ...part, id: "contents", text: "Attachment contents" }
+    const contents = mergeOptimisticPart(context.parts, ids, body)
+    expect(contents.replaced).toBeUndefined()
+    expect(value(contents.parts, "client-text")).toBe("queued prompt")
+
+    const attachment = mergeOptimisticPart(contents.parts, ids, file("server-file"))
+    expect(attachment.replaced).toBe("client-file")
+    expect(value(attachment.parts, "client-text")).toBe("queued prompt")
+
+    const result = mergeOptimisticPart(attachment.parts, ids, text("server-text", "queued prompt"))
+
+    expect(result.parts).toEqual([text("server-text", "queued prompt"), file("server-file"), part, body])
+    expect(result.replaced).toBe("client-text")
+    expect(current).toEqual([text("client-text", "queued prompt"), file("client-file")])
+  })
+
+  it("preserves unresolved optimistic parts across partial snapshots", () => {
+    const current = [text("client-text", "queued prompt"), file("client-file")]
+    const ids = new Set(current.map((part) => part.id))
+    const context: Part = {
+      id: "context",
+      messageID: "m1",
+      type: "text",
+      text: "Attachment context",
+      synthetic: true,
+    }
+
+    const partial = mergeOptimisticParts(current, ids, [context])
+    expect(partial.parts.map((part) => part.id)).toEqual(["client-text", "client-file", "context"])
+    expect(partial.pending).toEqual(ids)
+    const repeated = mergeOptimisticParts(partial.parts, partial.pending, [context])
+    expect(repeated).toEqual(partial)
+
+    const complete = mergeOptimisticParts(partial.parts, partial.pending, [text("server-text", "queued prompt")])
+    expect(complete.parts.map((part) => part.id)).toEqual(["server-text", "client-file", "context"])
+    expect(complete.pending).toEqual(new Set(["client-file"]))
+
+    const resolved = mergeOptimisticParts(complete.parts, complete.pending, [
+      text("server-text", "queued prompt"),
+      file("server-file"),
+    ])
+    expect(resolved.parts.map((part) => part.id)).toEqual(["server-text", "server-file", "context"])
+    expect(resolved.pending).toEqual(new Set())
+  })
+
+  it("retains confirmed text when a stale prefix resolves the last optimistic attachment", () => {
+    const current = [text("server-text", "queued prompt"), file("client-file")]
+    const result = mergeOptimisticParts(current, new Set(["client-file"]), [file("server-file")])
+
+    expect(result.parts).toEqual([text("server-text", "queued prompt"), file("server-file")])
+    expect(result.pending).toEqual(new Set())
+  })
+
+  it("uses a resolved snapshot as authoritative after optimism retires", () => {
+    const current = [text("client-text", "queued prompt"), file("client-file")]
+    const result = mergeOptimisticParts(current, new Set(), [text("server-text", "server prompt")])
+
+    expect(result.parts).toEqual([text("server-text", "server prompt")])
+    expect(result.pending).toEqual(new Set())
   })
 
   it("keeps streamed deltas independent across session stores", () => {

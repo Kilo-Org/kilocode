@@ -4,10 +4,13 @@
  */
 export const STATE_GATED = new Set<string>([
   "agentManager.createWorktree",
+  "agentManager.updateFromBase",
   "agentManager.promoteSession",
   "agentManager.createMultiVersion",
   "agentManager.deleteWorktree",
   "agentManager.removeStaleWorktree",
+  "agentManager.restoreWorktree",
+  "agentManager.cleanOrphanDirectories",
   "agentManager.openLocally",
   "agentManager.openSessionLocally",
   "agentManager.addSessionToWorktree",
@@ -21,6 +24,7 @@ export const STATE_GATED = new Set<string>([
   "agentManager.importExternalWorktree",
   "agentManager.importAllExternalWorktrees",
   "agentManager.setTabOrder",
+  "agentManager.setPinnedTabs",
   "agentManager.setWorktreeOrder",
   "agentManager.setSessionsCollapsed",
   "agentManager.setSidebarCollapsed",
@@ -33,4 +37,11 @@ export const STATE_GATED = new Set<string>([
   "agentManager.toggleSectionCollapsed",
   "agentManager.moveToSection",
   "agentManager.moveSection",
+  "agentManager.browser.open",
+  "agentManager.browser.refresh",
+  "agentManager.browser.close",
+  "agentManager.browser.state",
+  "agentManager.browser.inspect",
+  "agentManager.browser.input",
+  "agentManager.browser.devtools",
 ])

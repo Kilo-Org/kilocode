@@ -457,6 +457,29 @@ class SessionModelTest : BasePlatformTestCase() {
         assertTrue(events.isEmpty())
     }
 
+    fun `test childSessions returns spawned task child ids in first-appearance order`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task1", "m1", "child_a"))
+        model.updateContent("m1", taskPart("task2", "m1", "child_b"))
+
+        assertEquals(listOf("child_a", "child_b"), model.childSessions())
+    }
+
+    fun `test childSessions rekeys when a task's child session id changes`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child_old"))
+        model.updateContent("m1", taskPart("task", "m1", "child_new"))
+
+        assertEquals(listOf("child_new"), model.childSessions())
+    }
+
+    fun `test childSessions is empty without any task tools`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "completed"))
+
+        assertEquals(emptyList<String>(), model.childSessions())
+    }
+
     fun `test updateContent tool updates rich fields`() {
         model.addMessage(msg("m1", "assistant"))
         model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "pending"))

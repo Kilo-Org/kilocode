@@ -232,4 +232,63 @@ describe("MoveSession", () => {
       expect(yield* Effect.promise(() => fs.readFile(path.join(source, "untracked.txt"), "utf8"))).toBe("unrelated\n")
     }),
   )
+
+  // kilocode_change start - regression test for skipping the source resolve when moveChanges is false
+  it.live("moves a session without transferring changes when moveChanges is false", () =>
+    Effect.gen(function* () {
+      const root = yield* Effect.acquireRelease(
+        Effect.promise(() => tmpdir()),
+        (dir) => Effect.promise(() => dir[Symbol.asyncDispose]()),
+      )
+      yield* Effect.promise(() => initRepo(root.path))
+      const source = abs(yield* Effect.promise(() => fs.realpath(root.path)))
+      const destination = abs(`${root.path}-move-no-changes`)
+      yield* Effect.addFinalizer(() =>
+        Effect.promise(() => fs.rm(destination, { recursive: true, force: true })).pipe(Effect.ignore),
+      )
+      yield* Effect.promise(() => $`git worktree add --detach ${destination} HEAD`.cwd(root.path).quiet())
+      const moved = abs(yield* Effect.promise(() => fs.realpath(destination)))
+      yield* Effect.promise(() => fs.writeFile(path.join(source, "tracked.txt"), "changed\n"))
+      yield* Effect.promise(() => fs.writeFile(path.join(source, "untracked.txt"), "new\n"))
+
+      const projectID = (yield* Project.Service.use((service) => service.resolve(source))).id
+      const sessionID = SessionV2.ID.make("ses_move_no_changes")
+      const { db } = yield* Database.Service
+      yield* db
+        .insert(ProjectTable)
+        .values({ id: projectID, worktree: source, sandboxes: [], time_created: 1, time_updated: 1 })
+        .run()
+        .pipe(Effect.orDie)
+      yield* db
+        .insert(SessionTable)
+        .values({
+          id: sessionID,
+          project_id: projectID,
+          slug: "move-no-changes",
+          directory: source,
+          title: "move no changes",
+          version: "test",
+          time_created: 1,
+          time_updated: 1,
+        })
+        .run()
+        .pipe(Effect.orDie)
+
+      yield* MoveSession.Service.use((service) =>
+        service.moveSession({ sessionID, destination: { directory: moved }, moveChanges: false }),
+      )
+
+      expect(yield* Effect.promise(() => fs.readFile(path.join(source, "tracked.txt"), "utf8"))).toBe("changed\n")
+      expect(yield* Effect.promise(() => Bun.file(path.join(source, "untracked.txt")).exists())).toBe(true)
+      expect(yield* Effect.promise(() => fs.readFile(path.join(moved, "tracked.txt"), "utf8"))).toBe("initial\n")
+      expect(
+        yield* db
+          .select({ directory: SessionTable.directory, path: SessionTable.path })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, sessionID))
+          .get(),
+      ).toEqual({ directory: moved, path: "" })
+    }),
+  )
+  // kilocode_change end
 })

@@ -22,6 +22,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   // ---------------------------------------------------------------------------
 
   let scroll: HTMLElement | undefined
+  let top = 0
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
@@ -73,7 +74,9 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const pause = () => {
-    if (!scroll || store.userScrolled) return
+    if (!scroll) return
+    top = scroll.scrollTop
+    if (store.userScrolled) return
     setStore("userScrolled", true)
     options.onUserInteracted?.()
   }
@@ -91,7 +94,10 @@ export function createAutoScroll(options: AutoScrollOptions) {
     grace: USER_INTERACTION_GRACE_MS,
     // Upward wheel input anywhere in the transcript expresses the user's
     // intent to review earlier content, even when a nested region consumes it.
-    onWheelUp: stop,
+    onUp: stop,
+    // A finished text selection must stay in place until the user scrolls
+    // back to the bottom, otherwise the follow-up pin drops the selection.
+    onSelect: stop,
   })
 
   // ---------------------------------------------------------------------------
@@ -101,13 +107,19 @@ export function createAutoScroll(options: AutoScrollOptions) {
   const handleScroll = () => {
     if (!scroll) return
 
+    const position = scroll.scrollTop
+    const down = position > top
+    top = position
     const input = userActivity.consumeScroll()
     const distance = distanceFromBottom(scroll)
 
     if (!canScroll(scroll)) return
 
     if (distance < threshold()) {
-      if (store.userScrolled && (distance < 2 || !userActivity.isRecent())) setStore("userScrolled", false)
+      if (store.userScrolled && down && (distance < 2 || !userActivity.isRecent())) {
+        userActivity.clear()
+        setStore("userScrolled", false)
+      }
       return
     }
 
@@ -118,8 +130,12 @@ export function createAutoScroll(options: AutoScrollOptions) {
       // the same frame. The shrink makes the browser clamp the pin away, and
       // because the final content size is unchanged no resize entry follows, so
       // the correction has to happen here or the transcript stays parked below
-      // its bottom until the next content update.
-      if (active()) bottom()
+      // its bottom until the next content update. The same applies to the
+      // virtualizer's jump compensation when handed-over rows re-measure: the
+      // scroll event fires before paint, so pinning here hides the jump. This
+      // must not depend on the working state: a session waiting on a permission
+      // reports idle while its transcript still changes.
+      bottom()
       return
     }
 
@@ -154,13 +170,26 @@ export function createAutoScroll(options: AutoScrollOptions) {
     if (store.userScrolled || userActivity.isRecent()) return
     if (!canScroll(scroll)) return
 
+    // While idle (including a pending permission) content still changes: tool
+    // output lands, docks mount. Keep the bottom when the user has not left it,
+    // matching onContentResize so both observers agree.
+    if (!active()) {
+      if (distanceFromBottom(scroll) > threshold()) bottom()
+      return
+    }
+
     follow()
   }
 
+  // A viewport resize (composer growing, a dock mounting, the panel being
+  // resized) is never a scroll gesture, so a recent click must not block the
+  // re-pin. A gesture still in progress is different: a text-selection drag
+  // produces no scroll event, so the resize would otherwise pull the view away
+  // from the selection.
   const onViewportResize = () => {
     if (!scroll) return
     if (!canScroll(scroll)) return
-    if (store.userScrolled || userActivity.isRecent()) return
+    if (store.userScrolled || userActivity.isDragging()) return
     bottom()
   }
 
@@ -187,7 +216,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
       settleTimer = undefined
 
       if (working) {
-        force()
+        follow()
         return
       }
 
@@ -234,6 +263,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
     }
 
     scroll = el
+    top = el?.scrollTop ?? 0
     setStore("scrollRef", el)
 
     if (!el) return

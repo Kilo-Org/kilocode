@@ -1,7 +1,11 @@
+import { EXTREME_DIFF_CHANGED_LINES, MAX_EAGER_DIFF_BYTES } from "@kilocode/kilo-ui/pierre"
 import type { WorktreeFileDiff } from "../src/types/messages"
 
+// Shared with the inline file diff viewer so both agree on what is too large
+// to render eagerly. See packages/kilo-ui/src/pierre/index.ts.
+export { EXTREME_DIFF_CHANGED_LINES }
+
 export const LONG_DIFF_MARKER_FILE_COUNT = 50
-export const EXTREME_DIFF_CHANGED_LINES = 2_000
 
 export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
   return diff.additions + diff.deletions > EXTREME_DIFF_CHANGED_LINES
@@ -10,7 +14,12 @@ export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
 // The outer file-row virtualizer bounds the review DOM. Pierre only needs its
 // nested line virtualizer when a single file is extreme or lacks a hunk patch.
 export function shouldVirtualizeDiff(diff: WorktreeFileDiff): boolean {
-  return !diff.patch || isLargeDiffFile(diff)
+  return (
+    !diff.patch ||
+    isLargeDiffFile(diff) ||
+    diff.before.length > MAX_EAGER_DIFF_BYTES ||
+    diff.after.length > MAX_EAGER_DIFF_BYTES
+  )
 }
 
 export function isDiffExpandable(diff: WorktreeFileDiff): boolean {
@@ -26,8 +35,14 @@ export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
   return diffs.filter(isDiffExpandable).map((diff) => diff.file)
 }
 
+function defaultOpenFiles(diffs: WorktreeFileDiff[]): string[] {
+  return diffs
+    .filter((diff) => diff.kind !== "image" && diff.generatedLike !== true && isDiffExpandable(diff))
+    .map((diff) => diff.file)
+}
+
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
-  return diffs.filter((diff) => diff.kind !== "image" && isDiffExpandable(diff)).map((diff) => diff.file)
+  return defaultOpenFiles(diffs)
 }
 
 export function reconcileOpenFiles(
@@ -38,7 +53,8 @@ export function reconcileOpenFiles(
   const files = expandableOpenFiles(diffs)
   if (!manual) return { open: undefined, known: files }
   const previous = new Set(known)
-  const added = files.filter((file) => !previous.has(file))
+  const defaults = new Set(defaultOpenFiles(diffs))
+  const added = files.filter((file) => !previous.has(file) && defaults.has(file))
   return { open: sanitizeOpenFiles(diffs, [...manual, ...added]), known: files }
 }
 

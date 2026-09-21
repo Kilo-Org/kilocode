@@ -12,6 +12,7 @@ import {
   buildFileAnnotations,
   clearReviewComposer,
   createReviewComposer,
+  labels,
   reviewAnnotationSpeechKey,
   reviewComposerDraft,
   reviewComposerEdit,
@@ -19,7 +20,7 @@ import {
   reviewEditSpeechKey,
 } from "../../webview-ui/diff-viewer/review-annotations"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
-import { parseReview, partReview, reviewMetadata } from "../../src/shared/review-comments"
+import { parseReview, partReview } from "../../src/shared/review-comments"
 
 function diff(file: string, before: string, after: string): WorktreeFileDiff {
   return { file, before, after, additions: 1, deletions: 0 }
@@ -176,14 +177,14 @@ describe("review message metadata", () => {
   const review = { version: 1 as const, comments }
 
   it("round-trips review comments and extracts the visible body", () => {
-    expect(partReview(reviewMetadata(review), content)).toEqual({
+    expect(partReview({ kilo: { review } }, content)).toEqual({
       data: review,
       body: "Please address this feedback.",
     })
   })
 
   it("extracts an empty body from a review-only message", () => {
-    expect(partReview(reviewMetadata(review), formatReviewCommentsMarkdown(comments))?.body).toBe("")
+    expect(partReview({ kilo: { review } }, formatReviewCommentsMarkdown(comments))?.body).toBe("")
   })
 
   it("rejects malformed review comments", () => {
@@ -270,6 +271,84 @@ describe("markdownCommentBlocks", () => {
           { start: 4, end: 4 },
         ],
       },
+    ])
+  })
+
+  it("spans a multi-line item at the end of a list", () => {
+    const result = markdownCommentBlocks("- a\n- b\n  c\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 3,
+        items: [
+          { start: 1, end: 1 },
+          { start: 2, end: 3 },
+        ],
+      },
+    ])
+  })
+
+  it("spans loose list items across the blank lines that separate them", () => {
+    const result = markdownCommentBlocks("- alpha\n\n- beta\n\n- gamma\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 5,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 4 },
+          { start: 5, end: 5 },
+        ],
+      },
+    ])
+  })
+
+  it("spans a multi-line loose list item across its trailing blank line", () => {
+    const result = markdownCommentBlocks("- alpha\n  continued\n\n- beta\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 4,
+        items: [
+          { start: 1, end: 3 },
+          { start: 4, end: 4 },
+        ],
+      },
+    ])
+  })
+
+  it("spans a list item that holds several paragraphs", () => {
+    const result = markdownCommentBlocks("1. one\n\n2. two\n\n   more\n\n3. three\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 7,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 6 },
+          { start: 7, end: 7 },
+        ],
+      },
+    ])
+  })
+
+  it("keeps a loose list clear of the block that follows it", () => {
+    const result = markdownCommentBlocks("- alpha\n\n- beta\n\nAfter\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 3,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 3 },
+        ],
+      },
+      { type: "block", start: 5, end: 5 },
     ])
   })
 
@@ -440,4 +519,20 @@ describe("getFilename", () => {
   it("returns just the filename from a path", () => {
     expect(getFilename("src/components/Button.tsx")).toBe("Button.tsx")
   })
+})
+
+it("shares review action labels and translates line numbers", () => {
+  const value = labels((key, params) => (params ? `${key}:${params.line}` : key))
+  expect(value).toMatchObject({
+    placeholder: "agentManager.review.commentPlaceholder",
+    cancel: "common.cancel",
+    comment: "agentManager.review.commentAction",
+    send: "prompt.action.send",
+    save: "common.save",
+    sendToChat: "agentManager.review.sendToChat",
+    edit: "common.edit",
+    delete: "common.delete",
+  })
+  expect(value.commentOnLine(3)).toBe("agentManager.review.commentOnLine:3")
+  expect(value.editCommentOnLine(7)).toBe("agentManager.review.editCommentOnLine:7")
 })

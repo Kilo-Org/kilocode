@@ -14,6 +14,7 @@ import { Portal } from "solid-js/web"
 import { createDefaultOptions, styleVariables } from "@opencode-ai/ui/pierre"
 import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
 import { Icon } from "@opencode-ai/ui/icon"
+import { attachLineSelectionListeners, readSelectedLineRange } from "../pierre/selection"
 
 const VIRTUALIZE_BYTES = 500_000
 const codeMetrics = {
@@ -568,6 +569,14 @@ export function Code<T>(props: CodeProps<T>) {
     })
   })
 
+  const text = () => {
+    const value = local.file.contents as unknown
+    if (typeof value === "string") return value
+    if (Array.isArray(value)) return value.join("\n")
+    if (value == null) return ""
+    return String(value)
+  }
+
   const applyCommentedLines = (ranges: SelectedLineRange[]) => {
     const root = getRoot()
     if (!root) return
@@ -601,14 +610,6 @@ export function Code<T>(props: CodeProps<T>) {
         annotation.setAttribute("data-comment-selected", "")
       }
     }
-  }
-
-  const text = () => {
-    const value = local.file.contents as unknown
-    if (typeof value === "string") return value
-    if (Array.isArray(value)) return value.join("\n")
-    if (value == null) return ""
-    return String(value)
   }
 
   const lineCount = () => {
@@ -733,42 +734,8 @@ export function Code<T>(props: CodeProps<T>) {
   const updateSelection = () => {
     const root = getRoot()
     if (!root) return
-
-    const selection =
-      (root as unknown as { getSelection?: () => Selection | null }).getSelection?.() ?? window.getSelection()
-    if (!selection || selection.isCollapsed) return
-
-    const domRange =
-      (
-        selection as unknown as {
-          getComposedRanges?: (options?: { shadowRoots?: ShadowRoot[] }) => Range[]
-        }
-      ).getComposedRanges?.({ shadowRoots: [root] })?.[0] ??
-      (selection.rangeCount > 0 ? selection.getRangeAt(0) : undefined)
-
-    const startNode = domRange?.startContainer ?? selection.anchorNode
-    const endNode = domRange?.endContainer ?? selection.focusNode
-    if (!startNode || !endNode) return
-
-    if (!root.contains(startNode) || !root.contains(endNode)) return
-
-    const start = findLineNumber(startNode)
-    const end = findLineNumber(endNode)
-    if (start === undefined || end === undefined) return
-
-    const startSide = findSide(startNode)
-    const endSide = findSide(endNode)
-    const side = startSide ?? endSide
-
-    const selected: SelectedLineRange = {
-      start,
-      end,
-    }
-
-    if (side) selected.side = side
-    if (endSide && side && endSide !== side) selected.endSide = endSide
-
-    setSelectedLines(selected)
+    const selected = readSelectedLineRange(root, findLineNumber, findSide)
+    if (selected) setSelectedLines(selected)
   }
 
   const setSelectedLines = (range: SelectedLineRange | null) => {
@@ -979,19 +946,14 @@ export function Code<T>(props: CodeProps<T>) {
   })
 
   createEffect(() => {
-    if (props.enableLineSelection !== true) return
-
-    container.addEventListener("mousedown", handleMouseDown)
-    container.addEventListener("mousemove", handleMouseMove)
-    window.addEventListener("mouseup", handleMouseUp)
-    document.addEventListener("selectionchange", handleSelectionChange)
-
-    onCleanup(() => {
-      container.removeEventListener("mousedown", handleMouseDown)
-      container.removeEventListener("mousemove", handleMouseMove)
-      window.removeEventListener("mouseup", handleMouseUp)
-      document.removeEventListener("selectionchange", handleSelectionChange)
-    })
+    onCleanup(
+      attachLineSelectionListeners(container, props.enableLineSelection === true, {
+        mousedown: handleMouseDown,
+        mousemove: handleMouseMove,
+        mouseup: handleMouseUp,
+        selectionchange: handleSelectionChange,
+      }),
+    )
   })
 
   onCleanup(() => {

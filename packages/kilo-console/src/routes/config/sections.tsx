@@ -1,20 +1,27 @@
-import type { Component } from "solid-js"
+import { lazy, type Component } from "solid-js"
 import type { IconProps } from "@kilocode/kilo-web-ui/icon"
-import { AgentBuilderRoute, AgentsRoute } from "./AgentsRoute"
-import { CliNotificationsRoute } from "./CliNotificationsRoute"
-import { CliUiRoute } from "./CliUiRoute"
-import { ConsoleUiRoute } from "./ConsoleUiRoute"
-import { FormattersRoute, LspRoute } from "./FormattersRoute"
-import { IndexingRoute } from "./IndexingRoute"
-import { KeybindsRoute } from "./KeybindsRoute"
-import { McpRoute } from "./McpRoute"
-import { ModelsAvailableRoute, ModelsDefaultRoute, ModelsRoute } from "./ModelsRoute"
-import { OverviewRoute } from "./OverviewRoute"
-import { PermissionsRoute } from "./PermissionsRoute"
-import { ProvidersRoute } from "./ProvidersRoute"
-import { ServersRoute } from "./ServersRoute"
-import { SourcesRoute } from "./SourcesRoute"
-import { ToolsRoute } from "./ToolsRoute"
+
+const AgentBuilderRoute = lazy(() => import("./AgentsRoute").then((mod) => ({ default: mod.AgentBuilderRoute })))
+const AgentsRoute = lazy(() => import("./AgentsRoute").then((mod) => ({ default: mod.AgentsRoute })))
+const CliNotificationsRoute = lazy(() =>
+  import("./CliNotificationsRoute").then((mod) => ({ default: mod.CliNotificationsRoute })),
+)
+const CliUiRoute = lazy(() => import("./CliUiRoute").then((mod) => ({ default: mod.CliUiRoute })))
+const ConsoleUiRoute = lazy(() => import("./ConsoleUiRoute").then((mod) => ({ default: mod.ConsoleUiRoute })))
+const FormattersRoute = lazy(() => import("./FormattersRoute").then((mod) => ({ default: mod.FormattersRoute })))
+const LspRoute = lazy(() => import("./FormattersRoute").then((mod) => ({ default: mod.LspRoute })))
+const IndexingRoute = lazy(() => import("./IndexingRoute").then((mod) => ({ default: mod.IndexingRoute })))
+const KeybindsRoute = lazy(() => import("./KeybindsRoute").then((mod) => ({ default: mod.KeybindsRoute })))
+const McpRoute = lazy(() => import("./McpRoute").then((mod) => ({ default: mod.McpRoute })))
+const ModelsAvailableRoute = lazy(() => import("./ModelsRoute").then((mod) => ({ default: mod.ModelsAvailableRoute })))
+const ModelsDefaultRoute = lazy(() => import("./ModelsRoute").then((mod) => ({ default: mod.ModelsDefaultRoute })))
+const ModelsRoute = lazy(() => import("./ModelsRoute").then((mod) => ({ default: mod.ModelsRoute })))
+const OverviewRoute = lazy(() => import("./OverviewRoute").then((mod) => ({ default: mod.OverviewRoute })))
+const PermissionsRoute = lazy(() => import("./PermissionsRoute").then((mod) => ({ default: mod.PermissionsRoute })))
+const ProvidersRoute = lazy(() => import("./ProvidersRoute").then((mod) => ({ default: mod.ProvidersRoute })))
+const ServersRoute = lazy(() => import("./ServersRoute").then((mod) => ({ default: mod.ServersRoute })))
+const SourcesRoute = lazy(() => import("./SourcesRoute").then((mod) => ({ default: mod.SourcesRoute })))
+const ToolsRoute = lazy(() => import("./ToolsRoute").then((mod) => ({ default: mod.ToolsRoute })))
 
 export type ConfigSection = {
   path: string

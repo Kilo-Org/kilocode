@@ -210,6 +210,8 @@ describe("sandbox policy", () => {
       "KILO_CONFIG_DIR",
       "KILO_SERVER_PASSWORD",
       "KILO_SERVER_USERNAME",
+      "KILO_BROWSER_BROKER_URL",
+      "KILO_BROWSER_BROKER_TOKEN",
     ])
     expect(Exit.isFailure(storeWrite)).toBe(true)
     expect(Exit.isFailure(prefWrite)).toBe(true)

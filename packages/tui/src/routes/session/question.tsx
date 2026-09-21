@@ -25,6 +25,7 @@ export function QuestionPrompt(props: {
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
   const tabs = createMemo(() => (single() ? 1 : questions().length + 1)) // questions + confirm tab (no confirm for single select)
   const [tabHover, setTabHover] = createSignal<number | "confirm" | null>(null)
+  const [textareaTarget, setTextareaTarget] = createSignal<TextareaRenderable>()
   const [store, setStore] = createStore({
     tab: 0,
     answers: [] as QuestionAnswer[],
@@ -81,8 +82,7 @@ export function QuestionPrompt(props: {
       })
       return
     }
-    setStore("tab", store.tab + 1)
-    setStore("selected", 0)
+    selectTab(store.tab + 1) // kilocode_change
   }
 
   function toggle(answer: string) {
@@ -102,7 +102,13 @@ export function QuestionPrompt(props: {
 
   function selectTab(index: number) {
     setStore("tab", index)
-    setStore("selected", 0)
+    // kilocode_change start
+    const item = questions().at(index)
+    setStore(
+      "selected",
+      item?.multiple ? 0 : Math.max(0, item?.options.findIndex((option) => option.label === item.default) ?? 0),
+    )
+    // kilocode_change end
   }
 
   function selectOption() {
@@ -129,13 +135,19 @@ export function QuestionPrompt(props: {
   }
 
   onMount(() => {
+    selectTab(0) // kilocode_change
     const popMode = modeStack.push(QUESTION_MODE)
     onCleanup(popMode)
   })
 
   useBindings(() => ({
-    mode: QUESTION_MODE,
+    // kilocode_change start - bind on the focused textarea so edit submit and cancel
+    // win over the global managed textarea input layer and any higher mode, such as
+    // the prompt autocomplete mode. Matches DialogPrompt.
+    target: textareaTarget,
+    priority: 1,
     enabled: store.editing && !confirm(),
+    // kilocode_change end
     commands: [
       {
         name: "prompt.clear",
@@ -432,6 +444,7 @@ export function QuestionPrompt(props: {
                       <textarea
                         ref={(val: TextareaRenderable) => {
                           textarea = val
+                          setTextareaTarget(val)
                           val.traits = { status: "ANSWER" }
                           queueMicrotask(() => {
                             val.focus()

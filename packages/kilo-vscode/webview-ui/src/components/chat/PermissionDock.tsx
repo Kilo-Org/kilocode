@@ -13,6 +13,7 @@ import { Component, For, Show, createEffect, createMemo, createSignal, onCleanup
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
@@ -36,7 +37,13 @@ let rulesExpandedPreference = false
 export const PermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
-  onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
+  onDecide: (
+    permissionID: string,
+    response: "once" | "reject",
+    approvedAlways: string[],
+    deniedAlways: string[],
+    feedback?: string,
+  ) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
@@ -77,10 +84,21 @@ export const PermissionDock: Component<{
   // approved/denied patterns show their saved state immediately.
   const saved = config().permission?.[props.request.toolName]
   const loadState = savedRuleStates(rules(), saved)
-  const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>(loadState)
+  // Saved rules are display-only; only explicit toggles can grant new permissions.
+  const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
+  // Rejecting is a two-step flow: Deny reveals an optional feedback field, then Reject confirms.
+  const [rejecting, setRejecting] = createSignal(false)
+  const [feedback, setFeedback] = createSignal("")
 
   let root!: HTMLDivElement
+  let feedbackRef: HTMLTextAreaElement | undefined
+
+  createEffect(() => {
+    void props.request.id
+    setRejecting(false)
+    setFeedback("")
+  })
 
   const hasRules = () => rules().length > 0 && !skillShell()
 
@@ -104,13 +122,13 @@ export const PermissionDock: Component<{
   }
 
   const toggleRule = (index: number, decision: RuleDecision) => {
-    const current = decisions()[index]
+    const current = decisions()[index] ?? loadState[index] ?? "pending"
     const next = current === decision ? "pending" : decision
     const updated = { ...decisions(), [index]: next }
     setDecisions(updated)
   }
 
-  const decision = (index: number): RuleDecision => decisions()[index] ?? "pending"
+  const decision = (index: number): RuleDecision => decisions()[index] ?? loadState[index] ?? "pending"
 
   const approveTooltip = (index: number) =>
     decision(index) === "approved"
@@ -145,7 +163,21 @@ export const PermissionDock: Component<{
   const submit = (response: "once" | "reject") => {
     if (props.responding) return
     const { approved, denied } = collectRules()
-    props.onDecide(response, approved, denied)
+    props.onDecide(props.request.id, response, approved, denied, response === "reject" ? feedback() : undefined)
+    setRejecting(false)
+    setFeedback("")
+    focusPrompt()
+  }
+
+  const startReject = () => {
+    if (props.responding) return
+    setRejecting(true)
+    requestAnimationFrame(() => feedbackRef?.focus())
+  }
+
+  const cancelReject = () => {
+    setRejecting(false)
+    setFeedback("")
     focusPrompt()
   }
 
@@ -174,9 +206,19 @@ export const PermissionDock: Component<{
     submit(response)
   }
 
+  const escape = (e: KeyboardEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (rejecting()) {
+      cancelReject()
+      return
+    }
+    startReject()
+  }
+
   const onRoot = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
-      handle(e, "reject")
+      escape(e)
       return
     }
   }
@@ -193,11 +235,11 @@ export const PermissionDock: Component<{
     if (skip(e, target)) return
 
     if (e.key === "Escape") {
-      handle(e, "reject")
+      escape(e)
       return
     }
 
-    if (plain(e)) {
+    if (plain(e) && !rejecting()) {
       handle(e, "once")
       return
     }
@@ -247,28 +289,32 @@ export const PermissionDock: Component<{
                         <div data-slot="permission-rule-row" data-decision={decision(index())}>
                           <div data-slot="permission-rule-actions">
                             <Tooltip value={approveTooltip(index())} placement="top">
-                              <button
+                              <IconButton
+                                icon="check-small"
+                                variant="ghost"
+                                size="small"
                                 data-slot="permission-rule-toggle"
-                                data-variant="approve"
+                                tone="success"
                                 data-active={decision(index()) === "approved" ? "" : undefined}
+                                aria-pressed={decision(index()) === "approved"}
                                 disabled={props.responding}
                                 onClick={() => toggleRule(index(), "approved")}
                                 aria-label={approveTooltip(index())}
-                              >
-                                <Icon name="check-small" size="small" />
-                              </button>
+                              />
                             </Tooltip>
                             <Tooltip value={denyTooltip(index())} placement="top">
-                              <button
+                              <IconButton
+                                icon="close-small"
+                                variant="ghost"
+                                size="small"
                                 data-slot="permission-rule-toggle"
-                                data-variant="deny"
+                                tone="danger"
                                 data-active={decision(index()) === "denied" ? "" : undefined}
+                                aria-pressed={decision(index()) === "denied"}
                                 disabled={props.responding}
                                 onClick={() => toggleRule(index(), "denied")}
                                 aria-label={denyTooltip(index())}
-                              >
-                                <Icon name="close-small" size="small" />
-                              </button>
+                              />
                             </Tooltip>
                           </div>
                           <code data-slot="permission-rule" data-wrap={external() ? "" : undefined} title={text(rule)}>
@@ -299,7 +345,18 @@ export const PermissionDock: Component<{
               when={skillShellCommands().length > 0}
               fallback={
                 <>
-                  <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
+                  <Show when={cmdDescription()}>
+                    {(desc) => (
+                      <div data-slot="permission-hint" data-wrap>
+                        {desc()}
+                      </div>
+                    )}
+                  </Show>
+                  <Show when={sandboxEscalation()}>
+                    <div data-slot="permission-hint">
+                      {language.t("notification.permission.descriptionSandboxEscalation")}
+                    </div>
+                  </Show>
                   <Show when={command()}>
                     {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
                   </Show>
@@ -342,29 +399,60 @@ export const PermissionDock: Component<{
           </div>
         </div>
 
+        <Show when={rejecting()}>
+          <div data-slot="permission-feedback">
+            <textarea
+              ref={(el) => (feedbackRef = el)}
+              data-slot="permission-feedback-input"
+              value={feedback()}
+              placeholder={language.t("ui.permission.feedbackPlaceholder")}
+              onInput={(e) => setFeedback(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  cancelReject()
+                  return
+                }
+                // Enter confirms; Shift+Enter keeps the newline for multi-line feedback.
+                if (isEnterKeyCommitNotIme(e) && !e.shiftKey) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  submit("reject")
+                }
+              }}
+            />
+            <div data-slot="permission-feedback-hint">{language.t("ui.permission.feedbackHint")}</div>
+          </div>
+        </Show>
+
         <div data-slot="permission-actions">
-          <Button
-            variant="primary"
-            size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("once", approved, denied)
-            }}
-            disabled={props.responding}
+          <Show
+            when={rejecting()}
+            fallback={
+              <>
+                <Button variant="primary" size="small" onClick={() => submit("once")} disabled={props.responding}>
+                  {language.t("ui.permission.allowOnce")}
+                </Button>
+                <Button variant="ghost" size="small" onClick={startReject} disabled={props.responding}>
+                  {language.t("ui.permission.deny")}
+                </Button>
+              </>
+            }
           >
-            {language.t("ui.permission.allowOnce")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("reject", approved, denied)
-            }}
-            disabled={props.responding}
-          >
-            {language.t("ui.permission.deny")}
-          </Button>
+            <Button
+              variant="primary"
+              size="small"
+              data-slot="permission-reject-confirm"
+              onClick={() => submit("reject")}
+              disabled={props.responding}
+            >
+              {language.t("ui.permission.reject")}
+            </Button>
+            <Button variant="ghost" size="small" onClick={cancelReject} disabled={props.responding}>
+              {language.t("ui.common.cancel")}
+            </Button>
+          </Show>
         </div>
       </DockPrompt>
     </div>

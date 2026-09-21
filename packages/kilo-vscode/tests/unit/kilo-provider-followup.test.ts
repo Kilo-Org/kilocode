@@ -3,15 +3,21 @@ import type { Event, Session } from "@kilocode/sdk/v2/client"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
+const { ProjectRouteService } = await import("../../src/agent-manager/project/route")
 
 type Internals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   trackedSessionIds: Set<string>
+  syncedChildSessions: Set<string>
+  sessionDirectories: Map<string, string>
+  sessionStatusMap: Map<string, string>
+  owners: Map<string, { dir: string; project: string }>
   currentSession: Session | null
   projectID: string | undefined
   isWebviewReady: boolean
   pendingFollowup: { dir: string; time: number } | null
   handleLoadMessages: (sessionID: string) => Promise<void>
+  releaseChildSession: (sessionID: string) => void
   handleEvent: (event: Event, directory?: string) => void
   refreshGitStatus: (directory?: string) => Promise<void>
   refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
@@ -63,18 +69,21 @@ function info(input: { id: string; projectID: string; directory: string }): Sess
 }
 
 function connection() {
-  let filter: ((event: Event) => boolean) | undefined
-  let listener: ((event: Event) => void) | undefined
+  let filter: ((event: Event, directory?: string) => boolean) | undefined
+  let listener: ((event: Event, directory?: string) => void) | undefined
 
   return {
-    emit(event: Event) {
+    emit(event: Event, directory?: string) {
       if (!filter || !listener) throw new Error("expected SSE subscription")
-      if (!filter(event)) return
-      listener(event)
+      if (!filter(event, directory)) return
+      listener(event, directory)
     },
     connect: async () => {},
     getClient: () => ({}) as never,
-    onEventFiltered: (next: (event: Event) => boolean, cb: (event: Event) => void) => {
+    onEventFiltered: (
+      next: (event: Event, directory?: string) => boolean,
+      cb: (event: Event, directory?: string) => void,
+    ) => {
       filter = next
       listener = cb
       return () => undefined
@@ -84,7 +93,6 @@ function connection() {
     onClearPendingPrompts: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
@@ -97,6 +105,8 @@ function connection() {
     resolveEventSessionId: (event: Event) => (event.type === "session.created" ? event.properties.info.id : undefined),
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
+    clearPermissionSession: () => undefined,
+    pruneSession: () => undefined,
   }
 }
 
@@ -107,6 +117,114 @@ function git() {
 }
 
 describe("KiloProvider follow-up sessions", () => {
+  it.each([
+    ["released child", "idle"],
+    ["directory", "idle"],
+    ["directory", "offline"],
+    ["directory", "deleted"],
+    ["route", "idle"],
+    ["route", "offline"],
+    ["route", "deleted"],
+    ["synced child", "idle"],
+    ["synced child", "offline"],
+    ["synced child", "deleted"],
+    ["collision", "idle"],
+    ["collision", "offline"],
+    ["collision", "deleted"],
+  ])("routes inactive-project %s terminal event: %s", async (scope, status) => {
+    const service = connection()
+    let root = "/repo/project-a"
+    const routes = new ProjectRouteService()
+    const provider = new KiloProvider({} as never, service as never, undefined, {
+      rootDirectory: () => root,
+      projectQualifier: () => ({ projectId: root }),
+      routeService: routes,
+    })
+    const internal = provider as unknown as Internals
+    const sent: unknown[] = []
+    const child = "ses-child"
+    internal.webview = {
+      postMessage: async (message: unknown) => {
+        sent.push(message)
+        return true
+      },
+    }
+    internal.syncWebviewState = async () => {}
+    internal.flushPendingSessionRefresh = async () => {}
+    internal.fetchAndSendProviders = async () => {}
+    internal.fetchAndSendAgents = async () => {}
+    internal.fetchAndSendSkills = async () => {}
+    internal.fetchAndSendCommands = async () => {}
+    internal.fetchAndSendConfig = async () => {}
+    internal.fetchAndSendNotifications = async () => {}
+    internal.seedSessionStatusMap = async () => {}
+    internal.sendNotificationSettings = () => {}
+    internal.startStatsPolling = () => {}
+    await internal.initializeConnection()
+
+    if (scope === "route" || scope === "collision") {
+      routes.registerProject(root, root, 1)
+      routes.registerSession({ projectId: root, sessionId: child }, root, 1)
+    }
+    if (scope !== "route") internal.sessionDirectories.set(child, root)
+    if (scope.includes("child")) {
+      internal.owners.set(child, { dir: root, project: root })
+      internal.syncedChildSessions.add(child)
+    }
+    internal.trackedSessionIds.add(child)
+    service.emit({ type: "session.status", properties: { sessionID: child, status: { type: "busy" } } } as Event, root)
+    if (scope === "released child") {
+      internal.releaseChildSession(child)
+      expect(internal.trackedSessionIds.has(child)).toBe(false)
+      expect(internal.sessionDirectories.has(child)).toBe(false)
+      expect(internal.owners.get(child)).toEqual({ dir: "/repo/project-a", project: "/repo/project-a" })
+    }
+    if (!scope.includes("child")) expect(internal.owners.has(child)).toBe(false)
+
+    root = "/repo/project-b"
+    if (scope === "collision") {
+      routes.registerProject(root, root, 1)
+      routes.registerSession({ projectId: root, sessionId: child }, root, 1)
+      internal.sessionDirectories.set(child, root)
+      internal.currentSession = info({ id: child, projectID: root, directory: root })
+    }
+    const event = (
+      status === "deleted"
+        ? { type: "session.deleted", properties: { sessionID: child } }
+        : { type: "session.status", properties: { sessionID: child, status: { type: status } } }
+    ) as Event
+    const count = sent.length
+    service.emit(event, "/repo/project-c")
+    expect(internal.sessionStatusMap.get(child)).toBe("busy")
+    expect(sent).toHaveLength(count)
+    service.emit(
+      { type: "session.status", properties: { sessionID: child, status: { type: "retry", attempt: 1 } } } as Event,
+      "/repo/project-a",
+    )
+    expect(sent).toHaveLength(count)
+    service.emit(event, "/repo/project-a")
+
+    if (scope === "collision") {
+      expect(sent).toHaveLength(count)
+      expect(internal.sessionStatusMap.get(child)).toBe("busy")
+      expect(internal.trackedSessionIds.has(child)).toBe(true)
+      expect(internal.sessionDirectories.get(child)).toBe(root)
+      expect(internal.currentSession?.directory).toBe(root)
+      service.emit(event, root)
+    }
+
+    if (status === "deleted") {
+      expect(internal.trackedSessionIds.has(child)).toBe(false)
+      expect(internal.sessionDirectories.has(child)).toBe(false)
+      expect(sent).toContainEqual({ type: "sessionDeleted", sessionID: child })
+      return
+    }
+    expect(internal.sessionStatusMap.get(child)).toBe(status)
+    expect(sent).toContainEqual({ type: "sessionStatus", sessionID: child, status })
+    if (scope === "released child") expect(internal.owners.has(child)).toBe(false)
+    if (scope === "synced child") expect(internal.syncedChildSessions.has(child)).toBe(true)
+  })
+
   it("scopes shared session events to the active project directory", () => {
     const service = connection()
     const provider = new KiloProvider({} as never, service as never, undefined, {
@@ -166,6 +284,7 @@ describe("KiloProvider follow-up sessions", () => {
         parentID: null,
         revert: null,
         summary: null,
+        goal: null,
       },
     })
   })
@@ -334,6 +453,7 @@ describe("KiloProvider follow-up sessions", () => {
           parentID: null,
           revert: null,
           summary: null,
+          goal: null,
         },
         activate: true,
       },

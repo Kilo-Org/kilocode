@@ -1,16 +1,10 @@
 import { createMemo } from "solid-js"
 import type { Accessor } from "solid-js"
-import type {
-  PermissionRequest,
-  QuestionRequest,
-  SectionState,
-  SessionInfo,
-  SessionStatusInfo,
-  WorktreeState,
-} from "../src/types/messages"
+import type { SectionState, SessionInfo, WorktreeState } from "../src/types/messages"
+import { score, strongest, type Activity } from "../src/utils/session-activity"
 import { LOCAL } from "./navigate"
 
-export type SidebarSearchState = "idle" | "busy" | "retry" | "waiting"
+export type SidebarSearchState = Activity
 
 type SearchItem = {
   key: string
@@ -20,6 +14,7 @@ type SearchItem = {
   search: string
   updatedAt: string
   state: SidebarSearchState
+  busy?: boolean
   visible: boolean
   section?: SectionState
 }
@@ -58,14 +53,12 @@ interface SidebarSearchInput {
   localBranch?: string
   untitled: string
   pending: (id: string) => boolean
-  status: (id: string) => SidebarSearchState
+  activityFor: (id: string) => Activity
   busy: (id: string) => boolean
-  localBusy: boolean
 }
 
 const root = (item: SessionInfo) => !item.parentID
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-const score = (state: SidebarSearchState) => (state === "waiting" ? 3 : state === "idle" ? 0 : 2)
 const newest = (items: SessionInfo[], fallback: string) =>
   items.reduce((latest, item) => (item.updatedAt > latest ? item.updatedAt : latest), fallback)
 
@@ -79,6 +72,7 @@ export function sortSidebarSearch(a: SidebarSearchItem, b: SidebarSearchItem) {
 }
 
 export function buildSidebarSearch(input: SidebarSearchInput): SidebarSearchItem[] {
+  const state = input.activityFor
   const sections = new Map(input.sections.map((item) => [item.id, item]))
   const owned = new Set(input.worktrees.flatMap((item) => item.sessions.map((session) => session.id)))
   const local = input.local.filter((session) => root(session) && !input.pending(session.id) && !owned.has(session.id))
@@ -92,10 +86,10 @@ export function buildSidebarSearch(input: SidebarSearchInput): SidebarSearchItem
     sessionId: session.id,
     location: "local" as const,
     updatedAt: session.updatedAt,
-    state: input.status(session.id),
+    state: state(session.id),
     visible: true,
   }))
-  const localState = local.map((session) => input.status(session.id)).sort((a, b) => score(b) - score(a))[0] ?? "idle"
+  const localState = strongest(local.map((session) => state(session.id)))
   const contexts: SidebarSearchItem[] = [
     {
       key: LOCAL,
@@ -105,7 +99,7 @@ export function buildSidebarSearch(input: SidebarSearchInput): SidebarSearchItem
       meta: input.localBranch ? [input.localBranch] : [],
       search: [input.localLabel, input.localBranch].filter(Boolean).join(" "),
       updatedAt: newest(local, ""),
-      state: input.localBusy && localState === "idle" ? "busy" : localState,
+      state: localState,
       visible: true,
       count: local.length,
     },
@@ -132,13 +126,13 @@ export function buildSidebarSearch(input: SidebarSearchInput): SidebarSearchItem
         location: "worktree",
         worktreeId: wt.id,
         updatedAt: session.updatedAt,
-        state: input.status(session.id),
+        state: state(session.id),
         visible: !section?.collapsed,
         section,
       })
     }
 
-    const state = roots.map((session) => input.status(session.id)).sort((a, b) => score(b) - score(a))[0] ?? "idle"
+    const context = strongest(roots.map((session) => state(session.id)))
     contexts.push({
       key: `worktree:${wt.id}`,
       kind: "worktree",
@@ -150,7 +144,8 @@ export function buildSidebarSearch(input: SidebarSearchInput): SidebarSearchItem
         .join(" "),
       worktreeId: wt.id,
       updatedAt: newest(roots, wt.createdAt),
-      state: input.busy(wt.id) && state === "idle" ? "busy" : state,
+      state: context,
+      busy: input.busy(wt.id),
       visible: !section?.collapsed,
       section,
       count: roots.length,
@@ -168,24 +163,16 @@ interface SidebarSearchDeps {
   localBranch: Accessor<string | undefined>
   selection: Accessor<string | null>
   sessionId: Accessor<string | undefined>
-  statuses: Accessor<Record<string, SessionStatusInfo>>
-  permissions: Accessor<PermissionRequest[]>
-  questions: Accessor<QuestionRequest[]>
+  activityFor: (id: string) => Activity
   label: (worktree: WorktreeState) => string
   sessions: (id: string) => SessionInfo[]
   pending: (id: string) => boolean
   busy: (id: string) => boolean
-  localBusy: Accessor<boolean>
   t: (key: string) => string
 }
 
 export function createSidebarSearch(deps: SidebarSearchDeps) {
   const items = createMemo(() => {
-    const statuses = deps.statuses()
-    const blocked = new Set([
-      ...deps.permissions().map((item) => item.sessionID),
-      ...deps.questions().map((item) => item.sessionID),
-    ])
     return buildSidebarSearch({
       worktrees: deps.worktrees().map((worktree) => ({
         worktree,
@@ -198,13 +185,8 @@ export function createSidebarSearch(deps: SidebarSearchDeps) {
       localBranch: deps.localBranch(),
       untitled: deps.t("agentManager.session.untitled"),
       pending: deps.pending,
-      status: (id) => {
-        if (blocked.has(id)) return "waiting"
-        const status = statuses[id]?.type
-        return status === "busy" || status === "retry" ? status : "idle"
-      },
+      activityFor: deps.activityFor,
       busy: deps.busy,
-      localBusy: deps.localBusy(),
     })
   })
 

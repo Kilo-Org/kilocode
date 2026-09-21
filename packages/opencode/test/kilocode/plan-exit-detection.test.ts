@@ -883,6 +883,26 @@ describe("plan_exit detection", () => {
       expect(text).not.toContain("A fallback plan file exists")
     }))
 
+  test("plan reminders are separated from user text with blank lines", () =>
+    withInstance(async () => {
+      const session = await sessions.create({})
+      const user = userMessage({ sessionID: session.id, agent: "plan", text: "write this to a file:" })
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "plan", options: {} },
+        session,
+        userMessage: user,
+        messages: [user],
+      })
+
+      const parts = user.parts.filter((p): p is MessageV2.TextPart => p.type === "text")
+      expect(parts).toHaveLength(3)
+      expect(parts[0].text).toBe("write this to a file:")
+      for (const part of parts.slice(1)) {
+        expect(part.synthetic).toBe(true)
+        expect(part.text.startsWith("\n\n<system-reminder>")).toBe(true)
+      }
+    }))
+
   test("PlanFollowup.ask shows prompt when plan text is on earlier assistant and last assistant is empty", () =>
     withInstance(async () => {
       const session = await sessions.create({})

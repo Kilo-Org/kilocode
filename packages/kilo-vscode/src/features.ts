@@ -1,5 +1,6 @@
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import type { KiloClient } from "@kilocode/sdk/v2"
+import * as vscode from "vscode"
 
 type PluginSpec = string | [string, Record<string, unknown>]
 
@@ -11,13 +12,19 @@ export type Features = {
   indexing: boolean
   sandboxControls: boolean
   backgroundSubagents: boolean
+  speechToText: boolean
 }
 
-export function configFeatures(config?: ConfigLike | null, backgroundSubagents = false): Features {
+export function configFeatures(
+  config?: ConfigLike | null,
+  backgroundSubagents = false,
+  remote = !!vscode.env.remoteName,
+): Features {
   return {
     indexing: hasIndexingPlugin(config?.plugin ?? []),
     sandboxControls: process.platform !== "win32",
     backgroundSubagents,
+    speechToText: !remote,
   }
 }
 

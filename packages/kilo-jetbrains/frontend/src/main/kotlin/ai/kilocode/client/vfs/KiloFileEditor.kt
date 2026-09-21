@@ -9,15 +9,15 @@ class KiloFileEditor(
     private val project: Project,
     private val file: VirtualFile,
     private val kilo: KiloVirtualFile,
-    private val kind: KiloEditorKind,
+    private val view: KiloEditorView,
 ) : KiloFileEditorBase() {
-    private val ui: JComponent by lazy { kind.createContent(project, kilo, this) }
+    private val ui: JComponent by lazy { view.createContent(project, kilo, this) }
 
     @RequiresEdt
     override fun getComponent(): JComponent = ui
 
-    override fun getPreferredFocusedComponent(): JComponent? = kind.preferredFocus(ui)
-    override fun getName(): String = kind.title(kilo.path.params)
+    override fun getPreferredFocusedComponent(): JComponent? = view.preferredFocus(ui)
+    override fun getName(): String = view.title(kilo.path.params)
     override fun getFile(): VirtualFile = file
     override fun isValid(): Boolean = super.isValid() && kilo.isValid
 

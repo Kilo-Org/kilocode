@@ -14,11 +14,11 @@ import ai.kilocode.jetbrains.api.infrastructure.ClientError
 import ai.kilocode.jetbrains.api.infrastructure.ClientException
 import ai.kilocode.jetbrains.api.infrastructure.ServerError
 import ai.kilocode.jetbrains.api.infrastructure.ServerException
-import ai.kilocode.jetbrains.api.model.ConfigWarnings200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloNotifications200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.jetbrains.api.model.ProviderOauthAuthorizeRequest
 import ai.kilocode.jetbrains.api.model.ProviderOauthCallbackRequest
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
@@ -147,9 +147,6 @@ class KiloBackendAppService private constructor(
     @Volatile var notifications: List<KiloNotifications200ResponseInner> = emptyList()
         private set
 
-    @Volatile var warnings: List<ConfigWarning> = emptyList()
-        private set
-
     suspend fun connect() {
         mutex.withLock {
             val current = _appState.value
@@ -216,15 +213,7 @@ class KiloBackendAppService private constructor(
                     log.info("retry: rerunning migration detection")
                     load()
                 }
-                is KiloAppState.Ready -> {
-                    if (current.data.warnings.isEmpty()) return
-                    log.info("retry: refreshing config warnings")
-                    refreshConfigState()
-                    val next = _appState.value
-                    val warns = (next as? KiloAppState.Ready)?.data?.warnings
-                    if (next is KiloAppState.Ready && warns.isNullOrEmpty()) return
-                    restartConnection("warnings remained after refresh")
-                }
+                is KiloAppState.Ready -> Unit
                 is KiloAppState.Error -> {
                     val load = current.errors.none { it.resource == "connection" }
                     if (load && connection.api != null) {
@@ -232,8 +221,7 @@ class KiloBackendAppService private constructor(
                         val prev = _appState.value
                         load()
                         val next = awaitLoadResult(prev)
-                        val warns = (next as? KiloAppState.Ready)?.data?.warnings
-                        if (next is KiloAppState.Ready && warns.isNullOrEmpty()) return
+                        if (next is KiloAppState.Ready) return
                         restartConnection("state remained problematic after load retry")
                         return
                     }
@@ -304,11 +292,10 @@ class KiloBackendAppService private constructor(
             log.warn("Global config patch: config reload failed after save $summary")
             return (_appState.value as? KiloAppState.Ready) ?: current
         }
-        val warns = fetchWarnings()
         val state = _appState.value
         if (state is KiloAppState.Ready && state.data === current.data && connection.state.value == connected) {
             config = cfg
-            setAppReady(current.data.copy(config = cfg, warnings = warns))
+            setAppReady(current.data.copy(config = cfg))
         }
         log.info("Global config patch: state refreshed $summary")
         return (_appState.value as? KiloAppState.Ready) ?: current
@@ -396,7 +383,6 @@ class KiloBackendAppService private constructor(
                     profile = null
                     config = null
                     notifications = emptyList()
-                    warnings = emptyList()
                     _appState.value = KiloAppState.MigrationRequired(migration)
                     log.info("Application paused — legacy migration required")
                     return@launch
@@ -406,7 +392,6 @@ class KiloBackendAppService private constructor(
                 var cfg: ConfigDto? = null
                 var prof: KiloProfile200Response? = null
                 var notifs: List<KiloNotifications200ResponseInner> = emptyList()
-                var warns: List<ConfigWarning> = emptyList()
 
                 try {
                     withTimeout(loadTimeoutMs) {
@@ -454,8 +439,6 @@ class KiloBackendAppService private constructor(
                         }
                     }
 
-                    warns = fetchWarnings()
-
                     ensureActive()
                     profile = prof
                     config = cfg
@@ -470,7 +453,6 @@ class KiloBackendAppService private constructor(
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
                     captureLoad("Backend Load Completed", start, mapOf(
                         "profileStatus" to if (prof != null) "loaded" else "not_logged_in",
-                        "warningCount" to warns.size.toString(),
                         "migrationRequired" to "false",
                     ))
                     setAppReady(
@@ -478,12 +460,11 @@ class KiloBackendAppService private constructor(
                             profile = prof,
                             config = cfg!!,
                             notifications = notifs,
-                            warnings = warns,
                         )
                     )
                     log.info(
                         "Application snapshot: profile=${if (prof != null) "loaded" else "not_logged_in"} " +
-                            "warnings=${warns.size} notifications=${notifs.size} ${configSummary(cfg)}",
+                            "notifications=${notifs.size} ${configSummary(cfg)}",
                     )
                     log.info("Application started — config, profile, notifications loaded")
                 } catch (e: TimeoutCancellationException) {
@@ -678,42 +659,18 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private suspend fun fetchWarnings(): List<ConfigWarning> {
-        val client = connection.appLoadApi ?: return emptyList()
-        return try {
-            client.configWarnings().map(::warning)
-        } catch (e: Exception) {
-            log.warn("Config warnings fetch failed: ${e.message}", e)
-            emptyList()
-        }
-    }
-
-    private fun warning(w: ConfigWarnings200ResponseInner) = ConfigWarning(
-        path = w.path,
-        message = w.message,
-        detail = w.detail,
-    )
-
     private suspend fun refreshConfigState() {
         val current = _appState.value as? KiloAppState.Ready ?: return
         val connection = connection.state.value as? ConnectionState.Connected ?: return
         val cfg = fetchConfig().value ?: return
-        val warns = fetchWarnings()
         val state = _appState.value
         if (state !is KiloAppState.Ready || state.data !== current.data) return
         if (this.connection.state.value != connection) return
         config = cfg
-        setAppReady(
-            current.data.copy(
-                config = cfg,
-                warnings = warns,
-            )
-        )
+        setAppReady(current.data.copy(config = cfg))
     }
 
     private fun setAppReady(data: AppData) {
-        warnings = data.warnings
-        if (data.warnings.isNotEmpty()) warnAppWarnings(data.warnings)
         _appState.value = KiloAppState.Ready(data, rev.incrementAndGet())
     }
 
@@ -729,20 +686,10 @@ class KiloBackendAppService private constructor(
         log.warn("App error: $text")
     }
 
-    private fun warnAppWarnings(warnings: List<ConfigWarning>) {
-        val text = warnings.joinToString("; ") { warning(it) }
-        log.warn("App warnings: $text")
-    }
-
     private fun error(err: LoadError): String {
         val status = err.status?.let { " status=$it" } ?: ""
         val detail = err.detail?.let { " detail=$it" } ?: ""
         return "${err.resource}$status$detail"
-    }
-
-    private fun warning(warn: ConfigWarning): String {
-        val detail = warn.detail?.let { " detail=$it" } ?: ""
-        return "${warn.path}: ${warn.message}$detail"
     }
 
     private fun configSummary(cfg: ConfigDto): String {
@@ -826,13 +773,13 @@ class KiloBackendAppService private constructor(
                             }
                         }
                         "global.disposed" -> {
-                            logSessionDisposalRisk("global.disposed")
+                            reportDisposal("global.disposed")
                             log.info("SSE global.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
                         }
                         "server.instance.disposed" -> {
-                            logSessionDisposalRisk("server.instance.disposed")
+                            reportDisposal("server.instance.disposed")
                             log.info("SSE server.instance.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
@@ -843,10 +790,22 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private fun logSessionDisposalRisk(event: String) {
+    /**
+     * Warn, and tell every running session that the CLI is about to cancel it.
+     *
+     * Disposing an instance cancels every runner it owns, and the CLI reports that as the same
+     * `MessageAbortedError` a user Stop produces. Naming the cause here is the only way the UI can
+     * tell the difference and explain itself instead of quietly reporting "Stopped".
+     */
+    private fun reportDisposal(event: String) {
         val active = sessions.statuses.value.filterValues { it.type != "idle" }
         if (active.isEmpty()) return
         log.warn("SSE $event while sessions are active; sessions may be cancelled count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
+        // Badged here rather than off the event below, because the reload that follows this restarts the
+        // activity collector and the event could be dropped in the gap. Both still matter: the badge
+        // marks the worktree row, the event lets the open session name its own reason.
+        activity.interrupt(active.keys)
+        chat.interrupt(active.keys, ChatEventDto.SessionInterrupted.RELOAD)
     }
 
     private suspend fun clear() {
@@ -877,7 +836,6 @@ class KiloBackendAppService private constructor(
         profile = null
         config = null
         notifications = emptyList()
-        warnings = emptyList()
         _appState.value = KiloAppState.Disconnected
     }
 

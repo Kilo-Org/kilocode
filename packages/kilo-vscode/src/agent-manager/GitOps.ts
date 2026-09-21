@@ -12,6 +12,8 @@ import {
   type BranchListItem,
 } from "./git-import"
 import type { Semaphore } from "./semaphore"
+import { lines } from "./git-stats-snapshot"
+import { oid } from "../shared/pr-comment-preview"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
@@ -20,7 +22,7 @@ interface GitOpsOptions {
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
   /** Validated Git executable shared by Agent Manager operations. */
-  binary?: GitExecutable
+  binary?: GitExecutable | string
 }
 
 export interface ApplyConflict {
@@ -45,6 +47,7 @@ interface ExecOptions {
   stdin?: string
   timeout?: number
   signal?: AbortSignal
+  priority?: boolean
 }
 
 export interface ExecResult {
@@ -127,9 +130,12 @@ export class GitOps {
   private readonly injected: boolean
   private executableCache: Promise<string> | undefined
   private readonly resolutionCache = new Map<string, { value: string; expires: number }>()
+  private readonly conflictCache = new Map<string, { value: Promise<string[]>; expires: number }>()
   private static readonly CACHE_TTL_MS = 60000
   private static readonly DEFAULT_BRANCH_CACHE_TTL_MS = 10 * 60_000
   private static readonly MAX_CACHE_SIZE = 100
+
+  public readonly path: string
 
   get disposed(): boolean {
     return this.controller.signal.aborted
@@ -138,7 +144,12 @@ export class GitOps {
   constructor(options: GitOpsOptions) {
     this.log = options.log
     this.semaphore = options.semaphore
-    this.binary = options.binary ?? (() => Promise.resolve("git"))
+    const configured = options.binary
+    this.path = typeof configured === "string" ? configured : "git"
+    this.binary =
+      typeof configured === "string"
+        ? () => Promise.resolve(configured)
+        : (configured ?? (() => Promise.resolve("git")))
     this.injected = options.runGit !== undefined
     this.runGit =
       options.runGit ??
@@ -147,6 +158,7 @@ export class GitOps {
         return simpleGit(cwd, {
           abort: this.controller.signal,
           binary,
+          unsafe: { allowUnsafeCustomBinary: binary !== "git" },
         })
           .raw(args)
           .then((out) => out.trim())
@@ -158,6 +170,7 @@ export class GitOps {
       this.controller.abort()
     }
     this.resolutionCache.clear()
+    this.conflictCache.clear()
   }
 
   private getCached(key: string): string | undefined {
@@ -303,12 +316,6 @@ export class GitOps {
     return result.code === 0 ? result.stdout.trim() : ""
   }
 
-  async hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
-    return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
-      .then(() => true)
-      .catch(() => false)
-  }
-
   /**
    * List local branches and `origin/*` remotes sorted by last commit date,
    * with the resolved default branch flagged. Mirrors WorktreeManager's
@@ -379,20 +386,7 @@ export class GitOps {
     if (!untracked) return tracked
 
     const paths = untracked.split("\n").filter((line) => line.trim())
-    const counts = await Promise.all(
-      paths.map(async (p) => {
-        try {
-          const full = nodePath.resolve(cwd, p)
-          const stat = await fs.stat(full)
-          if (stat.size > 1_000_000) return 0
-          const content = await fs.readFile(full, "utf-8")
-          return content.split("\n").length
-        } catch (err) {
-          this.log(`Failed to read untracked file ${p}:`, err)
-          return 0
-        }
-      }),
-    )
+    const counts = await Promise.all(paths.map((file) => lines(nodePath.resolve(cwd, file))))
 
     return {
       files: tracked.files + paths.length,
@@ -589,17 +583,79 @@ export class GitOps {
   }
 
   /**
+   * Conflicting file paths between two commits, computed with `git merge-tree`
+   * so the worktree, index, and stash stay untouched. Missing commits are
+   * fetched first because a conflicting PR head often only exists remotely.
+   */
+  conflicts(cwd: string, remote: string, base: string, head: string): Promise<string[]> {
+    if (!oid(base) || !oid(head)) return Promise.reject(new Error("Invalid pull request commit ID"))
+    if (!/^[A-Za-z0-9._-]+$/.test(remote)) return Promise.reject(new Error("Invalid Git remote"))
+    const key = `${cwd}\u0000${remote}\u0000${base}\u0000${head}`
+    const now = Date.now()
+    const cached = this.conflictCache.get(key)
+    if (cached && cached.expires > now) return cached.value
+    if (cached) this.conflictCache.delete(key)
+    const task = this.computeConflicts(cwd, remote, base, head)
+    if (this.conflictCache.size >= GitOps.MAX_CACHE_SIZE) {
+      let oldestKey: string | undefined
+      let oldestExpiry = Infinity
+      for (const [entryKey, entry] of this.conflictCache) {
+        if (entry.expires < oldestExpiry) {
+          oldestExpiry = entry.expires
+          oldestKey = entryKey
+        }
+      }
+      if (oldestKey) this.conflictCache.delete(oldestKey)
+    }
+    this.conflictCache.set(key, { value: task, expires: now + GitOps.CACHE_TTL_MS })
+    void task.catch(() => {
+      if (this.conflictCache.get(key)?.value === task) this.conflictCache.delete(key)
+    })
+    return task
+  }
+
+  private async computeConflicts(cwd: string, remote: string, base: string, head: string): Promise<string[]> {
+    const missing: string[] = []
+    for (const sha of [base, head]) {
+      const probe = await this.exec(["cat-file", "-e", `${sha}^{commit}`], cwd)
+      if (probe.code !== 0) missing.push(sha)
+    }
+    if (missing.length > 0) {
+      const fetch = await this.exec(["fetch", "--no-tags", remote, "--", ...missing], cwd, {
+        env: nonInteractiveEnv(),
+        timeout: 60_000,
+      })
+      if (fetch.code !== 0) throw new Error(fetch.stderr.trim() || "Failed to fetch pull request commits")
+    }
+    const result = await this.exec(
+      ["-c", "core.quotePath=false", "merge-tree", "--write-tree", "--name-only", base, head],
+      cwd,
+    )
+    if (result.code === 0) return []
+    if (result.code !== 1) throw new Error(result.stderr.trim() || "Failed to compute merge conflicts")
+    return parseConflictPaths(result.stdout)
+  }
+
+  /**
    * Run a git command returning `{code, stdout, stderr}`. Gated by the shared
    * semaphore and respects the dispose abort signal. Never throws — commands
    * with non-zero exit codes resolve normally (nothrow semantics), making this
    * suitable for callers that need to tolerate legitimate failures (e.g.
    * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
    */
-  execGit(args: string[], cwd: string, options?: { stdin?: string; signal?: AbortSignal }): Promise<ExecResult> {
+  execGit(
+    args: string[],
+    cwd: string,
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean; env?: NodeJS.ProcessEnv },
+  ): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }
 
-  execGitBuffer(args: string[], cwd: string, options?: { signal?: AbortSignal }): Promise<ExecBufferResult> {
+  execGitBuffer(
+    args: string[],
+    cwd: string,
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean },
+  ): Promise<ExecBufferResult> {
     return this.execBuffer(args, cwd, options)
   }
 
@@ -609,32 +665,40 @@ export class GitOps {
   }
 
   private async execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
-    if (this.controller.signal.aborted) {
+    if (this.controller.signal.aborted || options?.signal?.aborted) {
       return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
     }
-    const cmd = await this.executable().catch(() => undefined)
-    if (!cmd || this.controller.signal.aborted) {
+    const cmd = await this.executable(options?.signal).catch(() => undefined)
+    if (!cmd || this.controller.signal.aborted || options?.signal?.aborted) {
       return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
     }
     const invoke = () => this.invoke(cmd, args, cwd, options)
-    return this.semaphore ? this.semaphore.run(invoke, options?.signal) : invoke()
+    return this.semaphore ? this.semaphore.run(invoke, options?.signal, options?.priority) : invoke()
   }
 
-  private executable(): Promise<string> {
+  private executable(cancel?: AbortSignal): Promise<string> {
     const signal = this.controller.signal
-    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
+    if (signal.aborted || cancel?.aborted) return Promise.reject(new Error("GitOps disposed"))
 
     return new Promise<string>((resolve, reject) => {
-      const onAbort = () => reject(new Error("GitOps disposed"))
-      signal.addEventListener("abort", onAbort, { once: true })
+      const clear = () => {
+        signal.removeEventListener("abort", abort)
+        cancel?.removeEventListener("abort", abort)
+      }
+      const abort = () => {
+        clear()
+        reject(new Error("GitOps disposed"))
+      }
+      signal.addEventListener("abort", abort, { once: true })
+      cancel?.addEventListener("abort", abort, { once: true })
       const cache = (this.executableCache ??= Promise.resolve().then(() => this.binary()))
       cache.then(
         (value) => {
-          signal.removeEventListener("abort", onAbort)
+          clear()
           resolve(value)
         },
         (err) => {
-          signal.removeEventListener("abort", onAbort)
+          clear()
           if (this.executableCache === cache) this.executableCache = undefined
           reject(err)
         },
@@ -692,4 +756,14 @@ export class GitOps {
       child.kill("SIGTERM")
     })
   }
+}
+
+/** Conflicting paths from `git merge-tree --write-tree --name-only` output. */
+export function parseConflictPaths(output: string): string[] {
+  const files: string[] = []
+  for (const line of output.split(/\r?\n/).slice(1)) {
+    if (!line) break
+    files.push(line)
+  }
+  return files
 }

@@ -141,7 +141,10 @@ const live: Layer.Layer<
           : base.messages
       const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
-      const usage = cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools }) : undefined
+      const usage =
+        cap || preflight
+          ? KiloSessionOverflow.measure({ messages: estimated, tools })
+          : undefined
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,
         messages: estimated,
@@ -158,7 +161,10 @@ const live: Layer.Layer<
           model: input.model,
           usable: usable({ cfg, model: input.model, outputTokenMax: flags.outputTokenMax }), // kilocode_change
           tokens: usage.normalized,
+          tail: usage.tail,
+          overhead: usage.overhead,
           continuation: usage.continuation,
+          reported: input.reportedContextTokens,
         })
       ) {
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
@@ -380,14 +386,11 @@ const live: Layer.Layer<
             l.info("repairing tool call", { tool: failed.toolCall.toolName, repaired: lower }) // kilocode_change
             return { ...failed.toolCall, toolName: lower }
           }
-          return {
-            ...failed.toolCall,
-            input: JSON.stringify({
-              tool: failed.toolCall.toolName,
-              error: failed.error.message,
-            }),
-            toolName: "invalid",
-          }
+          // kilocode_change start - surface the original tool-name error instead of a
+          // repaired call to the hidden "invalid" tool, which activeTools excludes and
+          // therefore fails with a confusing "unavailable tool 'invalid'" error
+          return null
+          // kilocode_change end
         },
         temperature: prepared.params.temperature,
         topP: prepared.params.topP,

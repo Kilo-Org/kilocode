@@ -1,4 +1,5 @@
 import type { IndexingStatus } from "@kilocode/kilo-indexing/status"
+import { zeroID } from "@opencode-ai/core/kilocode/zero-id"
 
 export const INDEXING_WARNING_CODES = ["qdrant.version-incompatible", "qdrant.version-unavailable"] as const
 
@@ -21,7 +22,7 @@ export function parseQdrantWarning(value: unknown): IndexingWarning | undefined 
 }
 
 export function indexingWarningKey(warning: IndexingWarning): string {
-  return `${warning.code}\u0000${warning.message}`
+  return zeroID(warning.code, warning.message)
 }
 
 export function indexingErrorMessage(status: IndexingStatus): string | undefined {

@@ -13,12 +13,14 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -106,12 +108,19 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     protected lateinit var scope: CoroutineScope
     protected lateinit var parent: Disposable
 
+    /** Balloons a controller raised, instead of real IDE notifications. */
+    protected val notifications = mutableListOf<Pair<String, String>>()
+
     override fun setUp() {
         super.setUp()
         rpc = FakeSessionRpcApi()
         appRpc = FakeAppRpcApi()
         projectRpc = FakeWorkspaceRpcApi()
         timers = TestUiTimers()
+        notifications.clear()
+        // Application-level and shared across tests in a fixture, and it now seeds a new session's
+        // mode, so a leftover pick from another test would decide this one's starting agent.
+        KiloPluginSettings.unsetAgent()
 
         coroutines = TestCoroutines()
         scope = coroutines.scope
@@ -127,6 +136,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         try {
             Disposer.dispose(parent)
             coroutines.close()
+            KiloPluginSettings.unsetAgent()
         } finally {
             super.tearDown()
         }
@@ -184,6 +194,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
+            notify = { title, body -> notifications.add(title to body) },
             timers = timers,
             log = log ?: KiloLog.create(SessionController::class.java),
         )
@@ -402,9 +413,11 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         ),
         connected: List<String> = listOf("kilo"),
         defaults: Map<String, String> = emptyMap(),
+        warnings: List<ConfigWarningDto> = emptyList(),
     ) = KiloWorkspaceStateDto(
         status = KiloWorkspaceStatusDto.READY,
         agents = AgentsDto(agents = agents, all = agents, default = default),
         providers = ProvidersDto(providers = providers, connected = connected, defaults = defaults),
+        warnings = warnings,
     )
 }

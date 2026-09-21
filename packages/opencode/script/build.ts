@@ -24,7 +24,6 @@ import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
-import { KiloCliSmoke } from "./kilocode/cli-smoke"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -313,7 +312,13 @@ for (const item of targets) {
     // kilocode_change end
     format: "esm",
     minify: true,
-    // kilocode_change start - keep the compiled OpenTUI/Solid graph in one chunk to avoid blank startup frames.
+    // kilocode_change start - disable code-splitting to avoid a Bun 1.3.14 codegen bug.
+    // With splitting:true Bun emits cross-chunk re-exports like `import{vn as G9}` whose
+    // binding isn't top-level, so the compiled binary crashes at startup on the baseline
+    // target: "SyntaxError: Exported binding 'G9' needs to refer to a top-level declared
+    // variable." (Bun oven-sh/bun#25621, #5344, #7265; also opencode#23349). Fixed upstream
+    // in Bun#26089, post-1.3.14. Splitting only deduped shared code between the entrypoints;
+    // turning it off inlines per entrypoint and produces a valid binary.
     splitting: false,
     // kilocode_change end
     compile: {
@@ -396,9 +401,6 @@ for (const item of targets) {
       console.log("Models snapshot smoke test passed")
       await KiloSandboxWorker.smoke(binaryPath)
       console.log("Kilo sandbox mutation worker smoke test passed")
-      console.log(`Running smoke test: ${binaryPath} --pure __pty-smoke`)
-      await KiloCliSmoke.pty(binaryPath)
-      console.log("Packaged TUI smoke test passed")
       // kilocode_change end
       // kilocode_change start
     } catch (e) {

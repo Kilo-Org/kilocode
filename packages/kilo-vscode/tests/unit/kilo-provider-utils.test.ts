@@ -20,6 +20,7 @@ import type {
   Provider,
   Event,
   EventSessionStatus,
+  EventSessionWakeup,
   EventSessionTurnClose,
   EventSessionError,
   EventSandboxStatusChanged,
@@ -165,7 +166,42 @@ describe("sessionToWebview", () => {
     const result = sessionToWebview(makeSession())
     expect(result.revert).toBeNull()
     expect(result.summary).toBeNull()
+    expect(result.goal).toBeNull()
   })
+
+  it.each([true, false])("projects the saved goal with active=%s", (active) => {
+    const goal = { text: "Fix the failing tests", active }
+    const result = sessionToWebview(makeSession({ metadata: { "kilo.goal": goal, unrelated: "private" } }))
+    expect(result.goal).toEqual(goal)
+    expect(result).not.toHaveProperty("metadata")
+  })
+
+  it("clears the saved goal through JSON serialization and a session merge", () => {
+    const saved = sessionToWebview(makeSession({ metadata: { "kilo.goal": { text: "Fix tests", active: true } } }))
+    const cleared = JSON.parse(JSON.stringify(sessionToWebview(makeSession({ metadata: {} }))))
+    expect({ ...saved, ...cleared }.goal).toBeNull()
+  })
+
+  it.each(["active", "complete", "blocked", "paused"] as const)(
+    "carries %s goal state and report through JSON",
+    (status) => {
+      const goal = {
+        text: "Fix tests",
+        status,
+        active: status === "active",
+        reason: "Reported by the working model, not independently verified.",
+      }
+      const result = sessionToWebview(makeSession({ metadata: { "kilo.goal": goal } }))
+      expect(JSON.parse(JSON.stringify(result)).goal).toEqual(goal)
+    },
+  )
+
+  it.each([null, "text", { text: 1, active: true }, { text: "Goal" }, { text: "Goal", active: "true" }])(
+    "ignores invalid goal metadata %j",
+    (goal) => {
+      expect(sessionToWebview(makeSession({ metadata: { "kilo.goal": goal } })).goal).toBeNull()
+    },
+  )
 
   it("preserves the workspace restoration outcome from a revert response", () => {
     const session = {
@@ -349,6 +385,19 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("maps session.wakeup to sessionWakeup", () => {
+    const event: EventSessionWakeup = {
+      type: "session.wakeup",
+      properties: { sessionID: "sess-1", pending: 2 },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sessionWakeup",
+      sessionID: "sess-1",
+      pending: 2,
+    })
+  })
+
   it("maps sandbox status changes to effective button state", () => {
     const event: EventSandboxStatusChanged = {
       type: "sandbox.status.changed",
@@ -366,14 +415,30 @@ describe("mapSSEEventToWebviewMessage", () => {
     })
   })
 
-  it("maps session.turn.close to its terminal reason", () => {
+  it("maps session.turn.close with its event identity and terminal reason", () => {
     const event: EventSessionTurnClose = {
       id: "evt-turn",
       type: "session.turn.close",
       properties: { sessionID: "sess-1", reason: "interrupted" },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
-    expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", reason: "interrupted" })
+    expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", eventID: "evt-turn", reason: "interrupted" })
+  })
+
+  it("forwards the parent session ID when a child turn closes", () => {
+    const event: EventSessionTurnClose = {
+      id: "evt-child-turn",
+      type: "session.turn.close",
+      properties: { sessionID: "child", parentID: "parent", reason: "completed" },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "child")).toEqual({
+      type: "sessionTurnClosed",
+      sessionID: "child",
+      eventID: "evt-child-turn",
+      reason: "completed",
+      parentID: "parent",
+    })
   })
 
   it("maps session errors with their event identity and message", () => {

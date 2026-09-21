@@ -35,3 +35,19 @@ internal fun hoverTextButton(action: ToolbarButtonAction, tooltip: String? = nul
     accessibleContext.accessibleName = action.text
     addActionListener { action.handler() }
 }
+
+/**
+ * Icon-only sibling of [hoverTextButton]: same margin, insets, and overall height, so an icon-only
+ * action sitting next to labelled ones shares their hover-pill metrics instead of falling back to
+ * the smaller square [toolbarButton] size. The tooltip stands in for the missing label.
+ */
+internal fun hoverIconButton(action: ToolbarButtonAction) = HoverIcon().apply {
+    match = true
+    icon = action.icon
+    margin = JBUI.emptyInsets()
+    border = JBUI.Borders.empty(JBUI.CurrentTheme.Toolbar.toolbarButtonInsets())
+    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+    toolTipText = action.text
+    accessibleContext.accessibleName = action.text
+    addActionListener { action.handler() }
+}

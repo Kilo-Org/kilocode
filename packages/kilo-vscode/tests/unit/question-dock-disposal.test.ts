@@ -8,8 +8,8 @@ const ROOT = path.resolve(import.meta.dir, "../..")
 const WEBVIEW = path.join(ROOT, "webview-ui")
 const FIXTURE = path.join(ROOT, "tests/fixtures/question-dock-disposal.tsx")
 
-describe("QuestionDock disposal", () => {
-  it("does not read a stale callback-form Show accessor", async () => {
+describe("QuestionDock lifecycle", () => {
+  it("preserves text focus and disposes without reading a stale Show accessor", async () => {
     const solid = path.dirname(Bun.resolveSync("solid-js/package.json", WEBVIEW))
     const aliases: Record<string, string> = {
       "solid-js": path.join(solid, "dist/solid.js"),

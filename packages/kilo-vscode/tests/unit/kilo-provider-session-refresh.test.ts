@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test"
-import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
+import {
+  loadSessions,
+  loadMoreSessions,
+  flushPendingSessionRefresh,
+  type SessionRefreshContext,
+} from "../../src/kilo-provider-utils"
+import { createSessionPageState } from "../../src/kilo-provider/session-page"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -13,6 +19,12 @@ type ProviderInternals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   initializeConnection: () => Promise<void>
   handleLoadSessions: () => Promise<void>
+  isWebviewReady: boolean
+  syncWebviewState: (reason: string) => Promise<void>
+  handleMigrationMessage: (message: { type: string }) => boolean
+  seedSessionWakeups: () => Promise<void>
+  handleEvent: (event: unknown, directory?: string) => void
+  wakeupSessions: Set<string>
 }
 
 function deferred<T>() {
@@ -29,6 +41,7 @@ function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefre
     pendingSessionRefresh: false,
     connectionState: "connecting",
     listSessions: null,
+    page: createSessionPageState(),
     sessionDirectories: new Map(),
     workspaceDirectory: "/repo",
     postMessage: (msg: unknown) => sent.push(msg),
@@ -51,9 +64,14 @@ function createClient() {
   return {
     calls,
     session: {
-      list: async (params: { directory: string }) => {
-        calls.push(params.directory)
-        return { data: [] }
+      status: async () => ({ data: {} }),
+    },
+    experimental: {
+      session: {
+        list: async (params: { directory: string }) => {
+          calls.push(params.directory)
+          return { data: [], response: { headers: new Headers() } }
+        },
       },
     },
     provider: {
@@ -72,6 +90,13 @@ function createClient() {
     kilo: {
       notifications: async () => ({ data: [] }),
       profile: async () => ({ data: {} }),
+    },
+    kilocode: {
+      wakeups: async (_params: {
+        directory: string
+      }): Promise<{ data: Array<{ sessionID: string; pending: number }> }> => ({
+        data: [],
+      }),
     },
   }
 }
@@ -93,11 +118,11 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onNotificationDismissed: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
+    getKnownDirectories: () => ["/repo"],
     getServerInfo: () => ({ port: 12345 }),
     getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),
     getConnectionState: () => "connected" as const,
@@ -109,11 +134,45 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
+  it("syncs startup state without reading legacy credentials or exposing legacy actions", async () => {
+    const client = createClient()
+    const connection = createConnection(client)
+    await connection.connect()
+    const reads: string[] = []
+    const ctx = {
+      globalStorageUri: { fsPath: "/storage/kilocode.kilo-code" },
+      globalState: { get: (_key: string, fallback?: unknown) => fallback },
+      secrets: {
+        get: async (key: string) => {
+          reads.push(key)
+          return undefined
+        },
+      },
+    }
+    const provider = new KiloProvider({} as never, connection as never, ctx as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.isWebviewReady = true
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+
+    for (const reason of ["initializeConnection", "sse-connected", "webviewReady"]) {
+      await internal.syncWebviewState(reason)
+    }
+
+    expect(reads).toEqual([])
+    expect(sent).toContainEqual(expect.objectContaining({ type: "ready" }))
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "migrationState" }))
+    for (const type of ["skipLegacyMigration", "clearLegacyData", "finalizeLegacyMigration"]) {
+      expect(internal.handleMigrationMessage({ type })).toBe(false)
+    }
+  })
+
   it("does not let a late listing restore the previous project's identity", async () => {
     const client = createClient()
-    const pending = new Map<string, ReturnType<typeof deferred<{ data: unknown[] }>>>()
-    client.session.list = async (params: { directory: string }) => {
-      const next = deferred<{ data: unknown[] }>()
+    const pending = new Map<string, ReturnType<typeof deferred<{ data: unknown[]; response: { headers: Headers } }>>>()
+    client.experimental.session.list = async (params: { directory: string }) => {
+      const next = deferred<{ data: unknown[]; response: { headers: Headers } }>()
       pending.set(params.directory, next)
       return next.promise as never
     }
@@ -133,10 +192,12 @@ describe("KiloProvider pending session refresh", () => {
 
     pending.get("/repo/b")!.resolve({
       data: [{ id: "ses-b", projectID: "backend-b", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
     })
     await second
     pending.get("/repo/a")!.resolve({
       data: [{ id: "ses-a", projectID: "backend-a", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
     })
     await first
 
@@ -177,7 +238,7 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(project).toBe("project-new")
     expect(sent).toHaveLength(1)
-    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_root", "ses_worktree"])
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_worktree", "ses_root"])
   })
 
   it("does not use legacy worktree sessions as canonical project", async () => {
@@ -245,7 +306,7 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(sent).toHaveLength(1)
     const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
-    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt2"])
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_wt2", "ses_root"])
     expect(msg.preserveSessionIds).toEqual(["ses_wt1"])
   })
 
@@ -283,8 +344,85 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(sent).toHaveLength(1)
     const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
-    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt"])
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_wt", "ses_root"])
     expect(msg.preserveSessionIds).toBeUndefined()
+  })
+
+  it("pages older sessions per directory and appends them", async () => {
+    const sent: unknown[] = []
+    const calls: Array<{ dir: string; cursor?: number }> = []
+    const ctx = createContext({
+      connectionState: "connected",
+      listSessionPage: async (dir, cursor) => {
+        calls.push({ dir, cursor })
+        if (cursor === undefined) {
+          return { sessions: [{ id: "ses_1", projectID: "p", time: { created: 1, updated: 2 } }] as never, cursor: 2 }
+        }
+        return { sessions: [{ id: "ses_old", projectID: "p", time: { created: 1, updated: 1 } }] as never }
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+    expect(ctx.page?.hasMore).toBe(true)
+
+    await loadMoreSessions(ctx)
+
+    expect(calls).toEqual([
+      { dir: "/repo", cursor: undefined },
+      { dir: "/repo", cursor: 2 },
+    ])
+    const appended = sent[1] as { sessions: { id: string }[]; append?: boolean }
+    expect(appended.append).toBe(true)
+    expect(appended.sessions.map((s) => s.id)).toEqual(["ses_old"])
+    expect(ctx.page?.hasMore).toBe(false)
+  })
+
+  it("does not post a partial list when the workspace listing fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_wt", "/worktree"]]),
+      listSessionPage: async (dir) => {
+        if (dir === "/repo") throw new Error("workspace offline")
+        return { sessions: [{ id: "ses_wt", projectID: "p", time: { created: 1, updated: 1 } }] as never }
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await expect(loadSessions(ctx)).rejects.toThrow("workspace offline")
+    expect(sent).toEqual([])
+  })
+
+  it("clears load-more when there is nothing left to page", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      page: createSessionPageState(),
+      listSessionPage: async () => ({ sessions: [] }),
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadMoreSessions(ctx)
+
+    expect(sent).toEqual([{ type: "sessionsLoaded", sessions: [], append: true, hasMore: false }])
+  })
+
+  it("keeps the refresh pending and reports an error when a deferred flush fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      pendingSessionRefresh: true,
+      connectionState: "connected",
+      listSessionPage: async () => {
+        throw new Error("offline")
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await flushPendingSessionRefresh(ctx)
+
+    expect(ctx.pendingSessionRefresh).toBe(true)
+    expect(sent).toContainEqual({ type: "error", message: "offline" })
   })
 
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
@@ -346,5 +484,74 @@ describe("KiloProvider pending session refresh", () => {
     })
 
     expect(errors).toEqual([])
+  })
+
+  it("reconciles a cancelled wakeup to zero after a complete seed", async () => {
+    const client = createClient()
+    client.kilocode.wakeups = async () => ({ data: [{ sessionID: "s1", pending: 2 }] })
+    const connection = createConnection(client)
+    await connection.connect()
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.webview = { postMessage: async (message: unknown) => void sent.push(message) }
+
+    await internal.seedSessionWakeups()
+    expect(sent).toContainEqual({ type: "sessionWakeup", sessionID: "s1", pending: 2 })
+
+    client.kilocode.wakeups = async () => ({ data: [] })
+    await internal.seedSessionWakeups()
+
+    expect(sent).toContainEqual({ type: "sessionWakeup", sessionID: "s1", pending: 0 })
+    expect(internal.wakeupSessions.has("s1")).toBe(false)
+  })
+
+  it("keeps tracked wakeups when one directory fails", async () => {
+    const client = createClient()
+    client.kilocode.wakeups = async () => ({ data: [{ sessionID: "s1", pending: 2 }] })
+    const connection = createConnection(client)
+    connection.getKnownDirectories = () => ["/repo", "/good"]
+    await connection.connect()
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.webview = { postMessage: async (message: unknown) => void sent.push(message) }
+
+    await internal.seedSessionWakeups()
+    expect(internal.wakeupSessions.has("s1")).toBe(true)
+
+    sent.length = 0
+    client.kilocode.wakeups = async (params: { directory: string }) => {
+      if (params.directory === "/good") throw new Error("offline")
+      return { data: [] }
+    }
+    await internal.seedSessionWakeups()
+
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionWakeup", sessionID: "s1", pending: 0 }))
+    expect(internal.wakeupSessions.has("s1")).toBe(true)
+  })
+
+  it("keeps a wakeup scheduled while a complete seed is in flight", async () => {
+    const client = createClient()
+    const pending = deferred<{ data: Array<{ sessionID: string; pending: number }> }>()
+    client.kilocode.wakeups = () => pending.promise
+    const connection = createConnection(client)
+    await connection.connect()
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.webview = { postMessage: async (message: unknown) => void sent.push(message) }
+
+    const seeding = internal.seedSessionWakeups()
+    internal.handleEvent({ type: "session.wakeup", properties: { sessionID: "live", pending: 1 } })
+    pending.resolve({ data: [] })
+    await seeding
+
+    expect(sent).not.toContainEqual({ type: "sessionWakeup", sessionID: "live", pending: 0 })
+    expect(sent).toContainEqual({ type: "sessionWakeup", sessionID: "live", pending: 1 })
+    expect(internal.wakeupSessions.has("live")).toBe(true)
   })
 })

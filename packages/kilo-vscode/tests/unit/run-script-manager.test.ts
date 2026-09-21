@@ -129,6 +129,28 @@ describe("RunScriptManager", () => {
     expect(ctx.manager.all()).toEqual([])
   })
 
+  it("waits for the run process to exit before completing worktree removal", async () => {
+    const ctx = createManager()
+    const gate = deferred<void>()
+    const calls: string[] = []
+    await ctx.manager.start("wt-1", async () => ({
+      stop: async () => {
+        calls.push("stop")
+        await gate.promise
+        calls.push("exit")
+      },
+      dispose: () => calls.push("dispose"),
+    }))
+
+    const removed = ctx.manager.remove("wt-1").then(() => calls.push("removed"))
+    await Promise.resolve()
+    expect(calls).toEqual(["stop"])
+
+    gate.resolve()
+    await removed
+    expect(calls).toEqual(["stop", "exit", "dispose", "removed"])
+  })
+
   it("stops and disposes once when removal races startup", async () => {
     const ctx = createManager()
     const gate = deferred<RunHandle>()

@@ -85,7 +85,7 @@ function inject(msgs: MessageV2.WithParts[], cache: KiloSessionPrompt.EnvCache =
 function blocks(msg: MessageV2.WithParts) {
   return msg.parts.filter(
     (part): part is MessageV2.TextPart =>
-      part.type === "text" && !!part.synthetic && part.text.startsWith("<environment_details>"),
+      part.type === "text" && !!part.synthetic && part.text.trimStart().startsWith("<environment_details>"),
   )
 }
 

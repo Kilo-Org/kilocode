@@ -1,18 +1,23 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.diff.KiloInlineDiffStore
 import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
-import ai.kilocode.client.migration.KiloMigrationService
-import ai.kilocode.client.migration.MigrationUiController
-import ai.kilocode.client.migration.MigrationUiState
-import ai.kilocode.client.migration.ui.MigrationWizardPanel
+import ai.kilocode.client.onboarding.KiloOnboardingService
+import ai.kilocode.client.onboarding.OnboardingController
+import ai.kilocode.client.onboarding.OnboardingStep
+import ai.kilocode.client.onboarding.ui.OnboardingListCard
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -30,6 +35,7 @@ import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
+import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
@@ -43,6 +49,7 @@ import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.attachmentParams
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
+import ai.kilocode.client.agentManager.worktree.GithubIntegrationListener
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
@@ -51,6 +58,7 @@ import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.held
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
@@ -72,11 +80,14 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.BrowserUtil
@@ -87,6 +98,7 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
@@ -108,6 +120,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.datatransfer.StringSelection
 import java.awt.event.HierarchyEvent
 import java.net.URI
 import java.nio.file.Path
@@ -131,9 +144,9 @@ class SessionUi(
     displayMs: Long = SessionController.DISPLAY_DELAY_MS,
     private val manager: SessionManager? = null,
     private val workspaces: KiloWorkspaceService = service(),
-    private val migration: MigrationUiController = service<KiloMigrationService>(),
+    private val onboarding: OnboardingController = service<KiloOnboardingService>(),
     private val timers: UiTimerSource = UiTimers,
-) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider {
+) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
@@ -211,13 +224,19 @@ class SessionUi(
     private lateinit var prompt: PromptPanel
     private lateinit var completion: KiloPromptCompletionProvider
     private lateinit var load: LoadingPanel
-    private lateinit var migrationWizard: MigrationWizardPanel
+    private lateinit var onboardingCard: OnboardingListCard
     private var empty: EmptySessionPanel? = null
+
+    /**
+     * Last observed branch/worktree status. Retained so an empty panel created after the fetch shows
+     * its tip immediately instead of waiting for the next refresh.
+     */
+    private var branch: BranchStatusDto? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
     private val popup = HeaderPopupController(timers)
-    private val readonly: Boolean get() = manager?.readonly == true
+    override val readonly: Boolean get() = manager?.readonly == true
     private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -227,11 +246,10 @@ class SessionUi(
         }
     }
     private var wasBusy = false
-    // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
-    // but never cancel an in-flight user-initiated open.
     private var refreshJob: Job? = null
-    private var openJob: Job? = null
     private var branchJob: Job? = null
+    private var boardJob: Job? = null
+    private var boardHasMessages = false
     private var disposed = false
 
     init {
@@ -242,13 +260,13 @@ class SessionUi(
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
-        bindMigration()
+        bindOnboarding()
         onStateChanged(controller.model.state)
         dock?.let {
             syncDock()
             refreshBranchChanges()
-            refreshBranch()
         }
+        refreshBranch()
         loaded?.let(::finishOpen)
     }
 
@@ -266,14 +284,124 @@ class SessionUi(
 
     internal val blank: Boolean get() = controller.blank
 
-    internal val id: String? get() = controller.id
+    override val id: String? get() = controller.id
 
     internal val cacheKey: String? get() = controller.refKey
 
     internal fun currentStyle() = style
 
+    override val pr: WorktreePrDto? get() = branch?.pr
+
+    override val share: String? get() = controller.model.session?.share?.url
+
+    override val git: Boolean get() = branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
+
+    override val auto: Boolean get() = controller.autoApprove
+
+    /**
+     * Whether this surface offers forking at all. Decided per surface rather than per session, so the
+     * prompt bubbles can carry their fork button from the moment they render; [forkable] adds the
+     * "has a session yet" part that the action menus need.
+     */
+    private val forkSurface: Boolean get() = manager?.supportsFork == true && !readonly
+
+    override val forkable: Boolean get() = forkSurface && controller.id != null
+
+    /**
+     * Whether this session could own a board at all: enabled in config (Swarm is on unless config
+     * explicitly opts out, matching the CLI's `BoardEnabled.resolve`), created, writable, a root
+     * session rather than a subagent, and local rather than cloud — the CLI only serves a board to
+     * its owning top-level local session.
+     */
+    private val boardSurface: Boolean
+        get() {
+            if (readonly) return false
+            if (controller.id == null) return false
+            // Defensive: a still-unimported cloud ref already fails the id check above, because
+            // controller.id only resolves for a local ref. Once imported the session *is* local and
+            // legitimately owns a board, so this rejects only the pre-import window.
+            if (controller.refType == SessionRef.Type.CLOUD) return false
+            if (controller.model.session?.parentID != null) return false
+            return app.state.value.config?.shared_agent_board != false
+        }
+
+    /**
+     * Entry points only appear once the board actually has a message, matching VS Code. The board
+     * lives in the CLI and can be written by subagents whose posts never reach this transcript, so
+     * emptiness cannot be derived locally — [refreshBoard] probes for it.
+     */
+    override val board: Boolean get() = boardSurface && boardHasMessages
+
+    @RequiresEdt
+    override fun setAuto(value: Boolean) {
+        controller.setAutoApprove(value)
+        prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun fork() {
+        forkMessage(null, "session_menu")
+    }
+
+    /** Single fork entry point for this session: the action menus pass no message, a prompt bubble does. */
+    @RequiresEdt
+    private fun forkMessage(messageId: String?, surface: String) {
+        if (!forkable) return
+        val session = controller.id ?: return
+        manager?.forkSession(session, messageId, surface)
+    }
+
+    @RequiresEdt
+    override fun compare() {
+        openBranchChanges()
+    }
+
+    @RequiresEdt
+    override fun startShare() {
+        controller.setShare(true) { url, err -> onShareResult(url, err, on = true) }
+    }
+
+    @RequiresEdt
+    override fun stopShare() {
+        controller.setShare(false) { _, err -> onShareResult(null, err, on = false) }
+    }
+
+    /**
+     * Reports a share toggle. The CLI collapses every refusal into a bare HTTP 500, so the failure
+     * text has to name both plausible causes rather than guessing one.
+     */
+    @RequiresEdt
+    private fun onShareResult(url: String?, err: Throwable?, on: Boolean) {
+        if (err != null) {
+            val key = if (on) "session.share.failed" else "session.unshare.failed"
+            KiloNotifications.error(project, KiloBundle.message(key))
+            return
+        }
+        if (!on) {
+            KiloNotifications.info(project, KiloBundle.message("session.unshare.done"))
+            return
+        }
+        val link = url ?: return
+        CopyPasteManager.getInstance().setContents(StringSelection(link))
+        KiloNotifications.info(
+            project,
+            KiloBundle.message("session.share.done"),
+            link,
+            KiloBundle.message("session.share.open"),
+        ) { BrowserUtil.browse(link) }
+    }
+
     override fun uiDataSnapshot(sink: DataSink) {
         sink[PlatformDataKeys.COPY_PROVIDER] = provider
+        sink[SessionActionsKeys.ACTIONS] = this
+        // The prompt panel is a sibling of the transcript, so its own SendPromptContext only resolves
+        // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
+        // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
+        // PromptPanel authoritative inside its own subtree, and both publish the same instance anyway.
+        if (this::prompt.isInitialized) {
+            sink[PromptDataKeys.SEND] = prompt
+            sink[PromptDataKeys.SELECTORS] = prompt
+        }
     }
 
     @RequiresEdt
@@ -345,12 +473,10 @@ class SessionUi(
         fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
-        migrationWizard = MigrationWizardPanel().apply {
-            onSkip = { migration.skip() }
-            onLater = { migration.later() }
-            onDone = { migration.finish() }
-            onContinueFromError = { migration.finish() }
-            onStart = { sel -> migration.start(sel) }
+        onboardingCard = OnboardingListCard().apply {
+            onLater = { onboarding.later() }
+            onSkipAll = { onboarding.skipAll() }
+            onStart = { onboarding.start() }
         }
 
         account = SessionAccountOverlay(
@@ -400,6 +526,8 @@ class SessionUi(
         outcome = SessionOutcomeView(
             selection = selection,
             focus = focus,
+            retry = if (readonly) null else controller::retry,
+            retryable = controller::canRetry,
         )
         messageBody = SessionMessageListPanel(
             controller.model,
@@ -414,6 +542,7 @@ class SessionUi(
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = if (readonly) null else ::revert,
+            fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
             cancelRevert = if (readonly) null else ::cancelRevert,
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
             banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
@@ -423,12 +552,20 @@ class SessionUi(
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this, readonly)
+        header = SessionHeaderPanel(controller, this, readonly, boardVisible = { board }, onShowBoard = ::showBoard)
         if (!readonly && showBranchDock()) {
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
             val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
-            dock = BranchDock(openDiff = ::openBranchChanges, onMove = move, onNewWorktree = newWorktree)
+            // Editor-tab hosts that show the dock (the worktree editor) report the branch, its PR, and
+            // its changes in their own header at the top of the tab, so their dock is the action row
+            // alone rather than a second place those counts appear.
+            dock = BranchDock(
+                openDiff = ::openBranchChanges,
+                onMove = move,
+                onNewWorktree = newWorktree,
+                header = owner?.hostedInEditorTab != true,
+            )
         }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -509,8 +646,10 @@ class SessionUi(
         root.content.add(sessionContent, BorderLayout.CENTER)
         if (!readonly) {
             // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
-            // readable-width centering used across the transcript.
-            val aligned = if (manager?.hostedInEditorTab == true) {
+            // readable-width centering used across the transcript — for the dock as much as the
+            // prompt, so the strip above the prompt does not run wider than the session it belongs to.
+            val tab = manager?.hostedInEditorTab == true
+            val aligned = if (tab) {
                 prompt.align(
                     HAlign.CENTER,
                     VAlign.FIT,
@@ -520,7 +659,18 @@ class SessionUi(
                 prompt.align(HAlign.FIT, VAlign.FIT)
             }
             val container = Stack.vertical()
-            dock?.let { container.next(it) }
+            dock?.let {
+                val row = if (tab) {
+                    it.align(
+                        HAlign.CENTER,
+                        VAlign.FIT,
+                        maxW = { SessionUiStyle.SessionLayout.readableWidth(it, style.transcriptFont) },
+                    )
+                } else {
+                    it
+                }
+                container.next(row)
+            }
             container.next(aligned)
             bottom = container
             root.content.add(container, BorderLayout.SOUTH)
@@ -538,10 +688,7 @@ class SessionUi(
             prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
             prompt.onReset = { controller.clearModelOverride() }
             prompt.onChange = { scroll.refresh() }
-            prompt.onAutoApproveToggle = { value ->
-                controller.setAutoApprove(value)
-                prompt.setAutoApprove(controller.autoApprove)
-            }
+            prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
@@ -611,6 +758,7 @@ class SessionUi(
                     val panel = manager?.emptyPanel(this, controller)
                         ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
+                    panel.setBranch(branch)
                     scroll.show(panel.view)
                 }
 
@@ -622,6 +770,8 @@ class SessionUi(
                 is SessionControllerEvent.AppChanged -> {
                     if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
+                    // Config carries the Swarm toggle, so the entry points follow it without a restart.
+                    refreshBoard()
                 }
 
                 is SessionControllerEvent.WorkspaceChanged -> {
@@ -646,7 +796,12 @@ class SessionUi(
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
-                is SessionModelEvent.Cleared -> syncDock()
+                is SessionModelEvent.Cleared -> {
+                    syncDock()
+                    // Covers opening a session with an existing board, and this session's own first
+                    // board post; a subagent's post is caught by the busy->idle probe instead.
+                    refreshBoardIfEmpty()
+                }
 
                 is SessionModelEvent.QueueChanged -> Unit
 
@@ -684,34 +839,34 @@ class SessionUi(
         hide.restart()
     }
 
-    private fun bindMigration() {
+    private fun bindOnboarding() {
         cs.launch {
-            migration.state.collect { state ->
+            onboarding.steps.collect { steps ->
                 withContext(Dispatchers.Main) {
-                    applyMigrationState(state)
+                    applyOnboardingSteps(steps)
                 }
             }
         }
     }
 
     @RequiresEdt
-    private fun applyMigrationState(state: MigrationUiState) {
-        when (state) {
-            is MigrationUiState.Hidden -> {
-                if (root.blocker.isVisible) LOG.info("Migration wizard: overlay hidden session=${id ?: cacheKey ?: "new"}")
-                setModalContent(null)
-            }
-            is MigrationUiState.Needed -> {
-                if (!root.blocker.isVisible) LOG.info("Migration wizard: overlay shown session=${id ?: cacheKey ?: "new"} phase=${state.phase}")
-                migrationWizard.update(state)
-                setModalContent(
-                    migrationWizard,
-                    maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
-                ) { migrationWizard.preferredFocusComponent() }
-                migrationWizard.revalidate()
-                migrationWizard.repaint()
-            }
+    private fun applyOnboardingSteps(steps: List<OnboardingStep>) {
+        // Only a blocking step keeps the session dead behind a modal card today — the session
+        // stays interactive while only non-blocking steps are pending. There is currently only one
+        // provider (v5 migration) and it is always blocking, so this always shows when non-empty.
+        if (steps.isEmpty() || steps.none { it.blocking }) {
+            if (root.blocker.isVisible) LOG.info("Onboarding: overlay hidden session=${id ?: cacheKey ?: "new"}")
+            setModalContent(null)
+            return
         }
+        if (!root.blocker.isVisible) LOG.info("Onboarding: overlay shown session=${id ?: cacheKey ?: "new"} steps=${steps.size}")
+        onboardingCard.update(steps)
+        setModalContent(
+            onboardingCard,
+            maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
+        ) { onboardingCard.preferredFocusComponent() }
+        onboardingCard.revalidate()
+        onboardingCard.repaint()
     }
 
     private fun bindStyle() {
@@ -738,6 +893,14 @@ class SessionUi(
                 if (disposed) return@invokeLater
                 if (!this::messageBody.isInitialized) return@invokeLater
                 messageBody.syncApprovalReasons(visible)
+            }
+        })
+        // refreshBranch cancels the in-flight lookup first, so a flip both drops a running gh call
+        // and re-reads the branch without one.
+        bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener {
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                refreshBranch()
             }
         })
     }
@@ -943,6 +1106,38 @@ class SessionUi(
     }
 
     @RequiresEdt
+    override fun showBoard() {
+        openBoard()?.show()
+    }
+
+    /**
+     * Builds the board dialog and binds its lifetime, without showing it. Split from [showBoard] so
+     * the lifetime wiring is one statement both the caller and its test go through; showing a real
+     * window is the only part a test cannot exercise.
+     *
+     * Returns null when the board does not apply to this session.
+     */
+    @RequiresEdt
+    internal fun openBoard(): SessionBoardDialog? {
+        val session = controller.id ?: return null
+        if (!board) return null
+        val order = listOf("main") + controller.model.childSessions()
+        Telemetry.send("Swarm Board Opened", mapOf("sessionId" to session))
+        val dialog = SessionBoardDialog(this, project, session, title(), workspace.directory, order, sessions) { id, label ->
+            openSubagent(id, label ?: id)
+        }
+        // A non-modal dialog outlives show(), so bound it to this session: disposing the dialog's
+        // disposable calls DialogWrapper.dispose(), so closing the session tab closes the board too
+        // instead of leaving a window holding a disposed SessionUi and its coroutine scope.
+        Disposer.register(this, dialog.disposable)
+        // The board can be reset while the dialog is open, which must hide the entry points again,
+        // so re-probe when it closes. Skipped when the session itself is going away, since that path
+        // disposes the dialog too.
+        Disposer.register(dialog.disposable) { if (!disposed) refreshBoard() }
+        return dialog
+    }
+
+    @RequiresEdt
     private fun openSubagent(sessionId: String, title: String) {
         service<SubagentTitleCache>().put(sessionId, title)
         ensureSubagentSessionEditorKind()
@@ -953,43 +1148,50 @@ class SessionUi(
         Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
     }
 
-    /** Badge-only refresh: fetches stats (no patch text) and updates the dock's changes badge. */
+    @RequiresEdt
     private fun refreshBranchChanges() {
         val dock = dock ?: return
+        if (disposed || project.isDisposed) return
+        val local = manager?.supportsMoveToWorktree == true || manager?.supportsNewWorktree == true
         refreshJob?.cancel()
         refreshJob = cs.launch {
-            val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
-                .getOrElse {
-                    if (it is CancellationException) throw it
-                    LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
-                    return@launch
+            launch {
+                val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
+                    .getOrElse {
+                        if (it is CancellationException) throw it
+                        LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
+                        emptyList()
+                    }
+                withContext(Dispatchers.Main) {
+                    if (disposed || project.isDisposed) return@withContext
+                    dock.setChanges(files)
                 }
-            withContext(Dispatchers.Main) {
-                if (disposed || project.isDisposed) return@withContext
-                dock.setChanges(files)
+            }
+            if (local) launch {
+                val files = runCatching { workspaces.localDiff(workspace.directory, patches = false) }
+                    .getOrElse {
+                        if (it is CancellationException) throw it
+                        LOG.warn("local changes refresh failed dir=${workspace.directory}", it)
+                        emptyList()
+                    }
+                withContext(Dispatchers.Main) {
+                    if (disposed || project.isDisposed) return@withContext
+                    dock.setLocal(files)
+                }
             }
         }
     }
 
-    /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
+    /**
+     * Opens the branch diff editor. Reached from the changes badge and from the Compare to Base
+     * context-menu action, so it must not depend on [dock] — hosts that hide the dock still offer the
+     * action. Never cancelled by a background refresh.
+     */
+    @RequiresEdt
     private fun openBranchChanges() {
-        val dock = dock ?: return
-        openJob?.cancel()
-        openJob = cs.launch {
-            val dir = workspace.directory
-            val branch = workspaces.branchName(dir)
-            val files = runCatching { workspaces.branchDiff(dir, patches = false) }
-                .getOrElse {
-                    if (it is CancellationException) throw it
-                    LOG.warn("branch changes open failed dir=$dir", it)
-                    emptyList()
-                }
-            withContext(Dispatchers.Main) {
-                if (disposed || project.isDisposed) return@withContext
-                dock.setChanges(files)
-                openBranchDiff(branch)
-            }
-        }
+        if (disposed || project.isDisposed) return
+        refreshBranchChanges()
+        openBranchDiff()
     }
 
     /** Starts the Move to Worktree flow for the current session through the side-panel manager. */
@@ -999,32 +1201,31 @@ class SessionUi(
     }
 
     @RequiresEdt
-    private fun openBranchDiff(branch: String?) {
-        // No store seeding: the diff editor's fetch recomputes branchDiff authoritatively, so a
-        // re-open or Refresh always reflects the current worktree (and nothing is retained for its life).
-        ensureDiffEditorKind()
-        val dir = workspace.directory
-        val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
-            ?: KiloBundle.message("diff.editor.branch.title")
-        project.service<KiloVfsManager>().open(
-            KiloDiffEditorKind.ID,
-            diffParams("branch", dir, null, title, branch),
-        )
-        Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+    private fun openBranchDiff() {
+        openKiloDiff(project, workspace.directory, KiloDiffComparison.BASE, parent = this)
     }
 
     private fun showBranchDock(): Boolean = manager?.showsBranchDock != false
 
     /**
-     * Refreshes the branch/PR status feeding the dock. Uses the session's own [workspace] directory
-     * (the resolved backend path) — not `project.basePath`, which is a synthetic frontend path in
-     * split mode — so the PR always matches the branch checked out in this session's directory.
+     * Refreshes the branch/PR status. Uses the session's own [workspace] directory (the resolved
+     * backend path) — not `project.basePath`, which is a synthetic frontend path in split mode — so
+     * the PR always matches the branch checked out in this session's directory.
+     *
+     * Runs regardless of [dock] because the context-menu pull-request actions read [branch] too, and
+     * the hosts that hide the dock (Agent Manager worktree session editors) are exactly the ones most
+     * likely to have a PR. Skipped for readonly hosts, which offer no branch-scoped actions worth the
+     * `gh` round-trip.
+     *
+     * With the GitHub integration off, the backend resolves the branch from git alone and returns a
+     * null PR, so the dock keeps working while no `gh` process is spawned.
      */
     private fun refreshBranch() {
-        val dock = dock ?: return
+        if (readonly) return
         branchJob?.cancel()
+        val github = KiloPluginSettings.getGithub()
         branchJob = cs.launch {
-            val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory) }
+            val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory, github) }
                 .getOrElse {
                     if (it is CancellationException) throw it
                     LOG.warn("branch status refresh failed dir=${workspace.directory}", it)
@@ -1032,9 +1233,63 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                dock.setBranch(status)
+                val next = held(status, branch)
+                branch = next
+                dock?.setBranch(next)
+                empty?.setBranch(next)
             }
         }
+    }
+
+    /**
+     * Probes whether this session's shared agent board holds anything, so the board entry points
+     * can hide on an empty board like VS Code's do. Asks for a single message because only the
+     * presence of one matters here.
+     *
+     * Not derivable from the transcript: a subagent's `board_post` is recorded in the subagent's own
+     * session, so the root transcript can stay empty while the board is not. Event-driven only —
+     * see the call sites — never polled.
+     */
+    @RequiresEdt
+    private fun refreshBoard() {
+        if (!boardSurface) {
+            setBoardHasMessages(false)
+            return
+        }
+        val session = controller.id ?: return
+        boardJob?.cancel()
+        boardJob = cs.launch {
+            val board = runCatching { sessions.sessionBoard(session, workspace.directory, before = null, limit = 1) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("session board probe failed session=$session", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                setBoardHasMessages(board.messages.isNotEmpty())
+            }
+        }
+    }
+
+    /**
+     * Probe only while the board is still believed empty. Message events fire many times per turn
+     * and the answer cannot change back to empty on its own, so re-probing once the icon already
+     * shows would be pure chatter.
+     */
+    @RequiresEdt
+    private fun refreshBoardIfEmpty() {
+        if (boardHasMessages) return
+        refreshBoard()
+    }
+
+    @RequiresEdt
+    private fun setBoardHasMessages(value: Boolean) {
+        if (boardHasMessages == value) return
+        boardHasMessages = value
+        // Re-runs the header sync so the icon's visibility follows the new value. The menu action
+        // reads `board` on demand and needs no notification.
+        if (::header.isInitialized) header.update(controller.model.header)
     }
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
@@ -1097,9 +1352,11 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
-        if (wasBusy && state is SessionState.Idle) {
+        if (wasBusy && !busy) {
             refreshBranchChanges()
             refreshBranch()
+            // A turn that ran subagents may have added board messages this transcript never saw.
+            refreshBoard()
         }
         wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
@@ -1165,7 +1422,6 @@ class SessionUi(
     override fun dispose() {
         disposed = true
         refreshJob?.cancel()
-        openJob?.cancel()
         branchJob?.cancel()
         hide.stop()
         popup.hideAll()

@@ -2,7 +2,8 @@
    File Mention Dropdown
    ============================================ */
 
-.file-mention-dropdown {
+.file-mention-dropdown,
+.slash-command-dropdown {
   position: absolute;
   bottom: calc(100% + 4px);
   left: 0;
@@ -69,6 +70,20 @@
   margin: 4px 10px;
   background: var(--vscode-editorWidget-border, var(--vscode-input-border));
   opacity: 0.5;
+}
+
+/* Inline model reference reuses the shared ModelSelectorBase. The component
+   renders its own trigger button, so the wrapper collapses it to a zero-size,
+   non-focusable anchor that only positions the popover above the prompt. */
+.mention-model-anchor {
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mention-model-anchor button {
+  visibility: hidden;
 }
 
 /* ============================================
@@ -148,23 +163,13 @@
   white-space: nowrap;
 }
 
+.worktree-mention-picker [data-slot="list-item"] {
+  text-align: start;
+}
+
 /* ============================================
    Slash Command Dropdown
    ============================================ */
-
-.slash-command-dropdown {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 10;
-  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
-  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
-  border-radius: 4px;
-  overflow: hidden;
-  max-height: 200px;
-  overflow-y: auto;
-}
 
 .slash-command-item {
   display: flex;

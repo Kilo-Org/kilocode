@@ -8,11 +8,13 @@ import { isPendingTab } from "../../utils/local-tabs"
 import { useTabScroll } from "../../utils/tab-scroll"
 import { focusPrompt, focusSelectedTab, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
 import { setTabWidths } from "../../utils/tab-widths"
+import { label, running } from "../../utils/session-activity"
 import { useVSCode } from "../../context/vscode"
 import { SessionTab } from "./SessionTab"
 import { SessionTabMenu } from "./SessionTabMenu"
 import { SessionTabSwitcher } from "./SessionTabSwitcher"
-import { ConstrainDragYAxis, SortableTabContainer } from "./TabDnd"
+import { ConstrainDragYAxis, SortableTabContainer, outsideTabBar } from "./TabDnd"
+import { beginPromptMentionDrop, endPromptMentionDrop, sessionDrop } from "../../utils/prompt-mention-drop"
 
 export const SessionTabStrip: Component = () => {
   const tabs = useLocalTabs()
@@ -28,10 +30,8 @@ export const SessionTabStrip: Component = () => {
     if (isPendingTab(id)) return language.t("sidebar.session.newSession")
     return items().get(id)?.title || language.t("session.untitled")
   }
-  const working = (id: string) => {
-    const status = session.allStatusMap()[id]
-    return status?.type === "busy" || status?.type === "retry"
-  }
+  const state = (id: string) => (isPendingTab(id) ? "idle" : session.activityFor(id))
+  const working = (id: string) => running(state(id))
   const middle = (id: string, event: MouseEvent) => {
     if (event.button !== 1) return
     event.preventDefault()
@@ -62,7 +62,8 @@ export const SessionTabStrip: Component = () => {
       id,
       title: title(id),
       active: tabs.active() === id,
-      busy: working(id),
+      state: state(id),
+      stateLabel: language.t(label(state(id))),
       pending: isPendingTab(id),
     })),
   )
@@ -86,13 +87,20 @@ export const SessionTabStrip: Component = () => {
     if (typeof id !== "string") return
     freeze()
     setDragging(id)
+    if (isPendingTab(id)) return
+    const item = items().get(id)
+    beginPromptMentionDrop(sessionDrop(item ?? { id }))
   }
   const dragOver = (event: DragEvent) => {
+    // Once the tab is below the bar it is on its way to the prompt, so stop
+    // reordering the tabs under it.
+    if (outsideTabBar(event)) return
     const from = event.draggable?.id
     const to = event.droppable?.id
     if (typeof from === "string" && typeof to === "string") tabs.reorder(from, to)
   }
   const dragEnd = () => {
+    endPromptMentionDrop()
     setDragging(undefined)
     release()
     tabs.persist()
@@ -140,7 +148,8 @@ export const SessionTabStrip: Component = () => {
                         <SessionTab
                           title={title(id)}
                           active={tabs.active() === id}
-                          busy={working(id)}
+                          state={state(id)}
+                          stateLabel={language.t(label(state(id)))}
                           closeTitle={language.t("common.closeTab")}
                           closeLabel={language.t("common.closeTab")}
                           role="tab"
@@ -171,7 +180,6 @@ export const SessionTabStrip: Component = () => {
               close: language.t("common.closeTab"),
               current: language.t("session.tabs.switcher.current"),
               pending: language.t("session.tabs.switcher.pending"),
-              busy: language.t("session.tabs.switcher.busy"),
             }}
             onSelect={tabs.select}
             onRestore={focusPrompt}

@@ -1,12 +1,14 @@
-import { createMemo, type Component } from "solid-js"
+import { createEffect, createMemo, createSignal, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
+  AgentManagerSidebarTarget,
   AgentManagerStateMessage,
   AgentProjectSnapshot,
   LocalGitStats,
   PRStatus,
   ProjectSessionInfo,
+  RunStatus,
   WorktreeGitStats,
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
@@ -16,15 +18,24 @@ import { ProjectsSection } from "./ProjectsSection"
 import { ProjectSidebarBody } from "./ProjectSidebarBody"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { SidebarSearchItem } from "./sidebar-search"
+import { label, type Activity } from "../src/utils/session-activity"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { NewProjectDialog } from "./NewProjectDialog"
+import { CloneProjectDialog } from "./CloneProjectDialog"
+import { randomColor } from "./section-colors"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
+import { CaffeinationButton } from "./CaffeinationButton"
 
 const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
   return wt?.label || wt?.branch || local
 }
+
+const activeRun = (status: RunStatus | undefined) => status?.state === "running" || status?.state === "stopping"
+const operationBusy = (store: ProjectStore | undefined, id: string) =>
+  store?.busy().has(id) || activeRun(store?.runStatuses()[id])
 
 interface Props {
   projects: AgentProjectSnapshot[]
@@ -40,9 +51,13 @@ interface Props {
   mode: ModeRouter
   defaultBase?: (projectId: string) => string | undefined
   onCreate?: (projectId: string) => void
-  busy?: (projectId: string, id: string) => boolean
-  working?: (projectId: string, id: string) => boolean
-  localBusy?: (projectId: string) => boolean
+  onSelect?: (target: AgentManagerSidebarTarget, restore?: boolean) => void
+  onOpenComments?: (projectId: string, worktreeId: string) => void
+  onOpenPR?: (projectId: string, worktreeId: string) => void
+  busy: (projectId: string, id: string) => boolean
+  blocked: (projectId: string, id: string) => boolean
+  activityFor: (projectId: string, worktreeId: string | null) => Activity
+  sessionActivity: (id: string) => Activity
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
@@ -54,13 +69,16 @@ interface Props {
 export const ProjectList: Component<Props> = (props) => {
   const vscode = useVSCode()
   const dialog = useDialog()
-  const select = (target: Record<string, unknown>) =>
-    vscode.postMessage({ type: "agentManager.activateSelection", target } as never)
+  const select = (target: AgentManagerSidebarTarget, restore?: boolean) => {
+    if (props.onSelect) return props.onSelect(target, restore)
+    vscode.postMessage({ type: "agentManager.activateSelection", target, restore })
+  }
   const search = createMemo(() => {
     const items: SidebarSearchItem[] = []
     for (const project of props.projects) {
       const state = props.states[project.id]
       if (!state) continue
+      const store = props.store?.(project.id)
       const local = props.sessions[project.id]?.filter((session) => session.worktreeId === null) ?? []
       items.push({
         key: `${project.id}:local`,
@@ -73,7 +91,7 @@ export const ProjectList: Component<Props> = (props) => {
           .filter(Boolean)
           .join(" "),
         updatedAt: local.reduce((latest, session) => (session.updatedAt > latest ? session.updatedAt : latest), ""),
-        state: "idle",
+        state: props.activityFor(project.id, null),
         visible: project.expanded,
         count: local.length,
       })
@@ -88,10 +106,11 @@ export const ProjectList: Component<Props> = (props) => {
           meta: [project.label, worktree.branch],
           search: [project.label, worktree.label, worktree.branch, worktree.id].filter(Boolean).join(" "),
           updatedAt: worktree.createdAt,
-          state: "idle",
+          state: props.activityFor(project.id, worktree.id),
           visible: project.expanded,
           worktreeId: worktree.id,
           count: sessions.length,
+          busy: props.busy(project.id, worktree.id) || operationBusy(store, worktree.id),
         })
       }
       for (const session of props.sessions[project.id] ?? []) {
@@ -106,7 +125,7 @@ export const ProjectList: Component<Props> = (props) => {
           meta: [project.label, where],
           search: [project.label, where, wt?.branch, session.title, session.id].filter(Boolean).join(" "),
           updatedAt: session.updatedAt,
-          state: "idle",
+          state: props.sessionActivity(session.id),
           visible: project.expanded,
           sessionId: session.id,
           location: session.worktreeId ? "worktree" : "local",
@@ -155,6 +174,37 @@ export const ProjectList: Component<Props> = (props) => {
       />
     ))
   }
+  const newProject = () => {
+    dialog.show(() => <NewProjectDialog onClose={() => dialog.close()} />)
+  }
+  const cloneProject = () => {
+    dialog.show(() => (
+      <CloneProjectDialog roots={props.projects.map((project) => project.root)} onClose={() => dialog.close()} />
+    ))
+  }
+  const [pendingSection, setPendingSection] = createSignal<{ project: string; ids: Set<string> }>()
+  const [renamingSection, setRenamingSection] = createSignal<string>()
+  createEffect(() => {
+    const previous = pendingSection()
+    if (!previous) return
+    const created = (props.states[previous.project]?.sections ?? []).find((section) => !previous.ids.has(section.id))
+    if (!created) return
+    setPendingSection(undefined)
+    setRenamingSection(created.id)
+  })
+  const newSection = (projectId: string, worktreeIds?: string[]) => {
+    setPendingSection({
+      project: projectId,
+      ids: new Set((props.states[projectId]?.sections ?? []).map((section) => section.id)),
+    })
+    vscode.postMessage({
+      type: "agentManager.createSection",
+      projectId,
+      name: props.t("agentManager.section.defaultName"),
+      color: randomColor(),
+      worktreeIds,
+    })
+  }
   return (
     <ProjectsSection
       projects={props.projects}
@@ -172,11 +222,11 @@ export const ProjectList: Component<Props> = (props) => {
               scope: props.t("agentManager.sidebarSearch.scope"),
               sessions: props.t("agentManager.section.sessions"),
               contexts: props.t("agentManager.sidebarSearch.contexts"),
-              waiting: props.t("agentManager.tabsMenu.status.waiting"),
-              retry: props.t("agentManager.tabsMenu.status.retry"),
+              state: (value) => props.t(label(value)),
             }}
             onSelect={selectSearch}
           />
+          <CaffeinationButton t={props.t} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}
@@ -193,17 +243,23 @@ export const ProjectList: Component<Props> = (props) => {
         </>
       }
       onAdd={() => vscode.postMessage({ type: "agentManager.addProject" })}
+      onCreateProject={newProject}
+      onClone={cloneProject}
       onSelect={(projectId) =>
         // Selecting the project itself returns to where the user left off in it;
         // the extension resolves its persisted target authoritatively.
-        vscode.postMessage({
-          type: "agentManager.activateSelection",
-          target: { projectId, kind: "local" },
-          restore: true,
-        })
+        select({ projectId, kind: "local" }, true)
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
+      onNew={newWorktree}
+      onCreate={(projectId) => vscode.postMessage({ type: "agentManager.createWorktree", projectId })}
+      onSection={(projectId) => newSection(projectId)}
+      onSettings={(projectId) => vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId })}
+      bindings={props.bindings}
+      baseBranch={(projectId) =>
+        props.states[projectId]?.defaultBaseBranch ?? props.local[projectId]?.branch ?? props.t("common.default")
+      }
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
       }
@@ -216,9 +272,9 @@ export const ProjectList: Component<Props> = (props) => {
           project={project}
           state={props.states[project.id]}
           store={props.store?.(project.id)}
-          busy={(id) => props.busy?.(project.id, id) ?? false}
-          working={(id) => props.working?.(project.id, id) ?? false}
-          localBusy={() => props.localBusy?.(project.id) ?? false}
+          busy={(id) => props.busy(project.id, id)}
+          blocked={(id) => props.blocked(project.id, id)}
+          activityFor={(id) => props.activityFor(project.id, id)}
           stats={props.stats[project.id]}
           local={props.local[project.id]}
           prs={props.prs[project.id]}
@@ -230,7 +286,11 @@ export const ProjectList: Component<Props> = (props) => {
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
-          onNewWorktree={newWorktree}
+          onOpenComments={props.onOpenComments}
+          onOpenPR={props.onOpenPR}
+          onCreateSection={(worktreeIds) => newSection(project.id, worktreeIds)}
+          renamingSection={renamingSection}
+          onRenameEnd={() => setRenamingSection(undefined)}
           shortcutMap={props.shortcutMap}
         />
       )}

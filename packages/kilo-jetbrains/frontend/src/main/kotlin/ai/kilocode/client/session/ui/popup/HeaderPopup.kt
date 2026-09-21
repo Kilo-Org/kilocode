@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.popup
 
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.popup.SidePopupContent
 import com.intellij.openapi.Disposable
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
@@ -26,25 +27,25 @@ class HeaderPopupRequest(
 
 class HeaderPopupBody(
     component: JComponent,
-    val disposable: Disposable,
-    val background: Color,
+    override val disposable: Disposable,
+    override val background: Color,
     maxWidth: Int = SessionUiStyle.View.Popup.MAX_WIDTH,
     // Opt-in bounds for live bodies (e.g. the task card): a floor width in final device px, a fixed
     // height pinned to the shared cap, and a horizontal scrollbar. Snapshot popups keep the defaults.
     minWidth: Int = 0,
     fixedHeight: Boolean = false,
     horizontal: Boolean = false,
-) {
+) : SidePopupContent {
     private val panel = HeaderPopupPanel(component, JBUI.scale(maxWidth), minWidth, fixedHeight, horizontal)
 
-    val component: JComponent get() = panel
+    override val component: JComponent get() = panel
 
     /**
      * Clamps the body to the space available beside the chat, in already-scaled device px. This wins
      * over the opt-in floor width, because a body that overflows its side makes the balloon re-point
      * above or below the chat.
      */
-    fun fitWithin(width: Int, height: Int) {
+    override fun fitWithin(width: Int, height: Int) {
         panel.fitWithin(width, height)
     }
 }
@@ -71,6 +72,11 @@ private class HeaderPopupPanel(
         isOpaque = false
         viewport.isOpaque = false
         border = JBUI.Borders.empty()
+        // A body that scrolls sideways keeps a band above and below it, so the bar has a row of its own
+        // to sit in and the content is not flush against the balloon edge above it.
+        if (horizontal) {
+            viewportBorder = JBUI.Borders.empty(SessionUiStyle.View.Popup.SCROLL_PADDING, 0)
+        }
     }
 
     init {
@@ -90,8 +96,19 @@ private class HeaderPopupPanel(
         val width = measured.coerceAtLeast(minOf(minWidth, limit)).coerceAtMost(limit)
         fit(child, width)
         val cap = minOf(JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT), capHeight)
-        val height = if (fixedHeight) cap else child.preferredSize.height.coerceAtMost(cap)
+        val height = if (fixedHeight) cap else (child.preferredSize.height + band(width)).coerceAtMost(cap)
         return Dimension(width, height)
+    }
+
+    /**
+     * Height the body cannot use: the padding kept around a sideways-scrolling viewport, plus a row for
+     * the horizontal bar itself when the content is wider than the width the popup settled on. Without
+     * it the bar eats into the viewport and the body sprouts a vertical scrollbar it does not need.
+     */
+    private fun band(width: Int): Int {
+        val insets = scroll.viewportBorder?.getBorderInsets(scroll) ?: return 0
+        val bar = if (contentWidth(child) > width) scroll.horizontalScrollBar.preferredSize.height else 0
+        return insets.top + insets.bottom + bar
     }
 
     private fun contentWidth(item: Component): Int = when (item) {
@@ -107,7 +124,13 @@ private class HeaderPopupPanel(
         is Container -> {
             val kids = item.components
             if (kids.isEmpty()) (item as? JComponent)?.preferredSize?.width ?: 0
-            else (kids.maxOfOrNull(::contentWidth) ?: 0) + horiz((item as? JComponent)?.insets)
+            // The widest child is the answer for a column, but a row needs all of its children side by
+            // side and only its own layout knows that. Take whichever is wider; the popup's max width is
+            // what keeps the result bounded either way.
+            else maxOf(
+                (kids.maxOfOrNull(::contentWidth) ?: 0) + horiz((item as? JComponent)?.insets),
+                item.preferredSize.width,
+            )
         }
         else -> 0
     }

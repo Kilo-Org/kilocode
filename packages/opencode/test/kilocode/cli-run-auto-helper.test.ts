@@ -21,10 +21,17 @@ describe("KiloRunAuto", () => {
     })
 
     expect(KiloRunAuto.allowed(state, "ses_child")).toBe(true)
+    KiloRunAuto.track(state, {
+      type: "tool",
+      tool: "task",
+      sessionID: "ses_child",
+      state: { metadata: { sessionId: "ses_grandchild" } },
+    })
+    expect(KiloRunAuto.allowed(state, "ses_grandchild")).toBe(true)
     expect(KiloRunAuto.allowed(state, "ses_other")).toBe(false)
   })
 
-  test("ignores malformed or non-root task metadata", () => {
+  test("ignores malformed or untrusted task metadata", () => {
     const state = KiloRunAuto.create("ses_root")
 
     KiloRunAuto.track(state, {

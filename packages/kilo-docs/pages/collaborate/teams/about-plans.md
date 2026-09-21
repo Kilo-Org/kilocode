@@ -21,7 +21,7 @@ No credits are included with a Teams or Enterprise plan purchase.
 
 ## What You Get from Kilo Teams
 
-- **Zero markup** on AI provider costs - pay exactly what providers charge
+- **No inference markup** - model usage is charged at provider rates; credit purchases have a separate 5% payment-processing fee
 - **No rate limiting** or quality degradation during peak usage
 - **Centralized billing** - one invoice for your whole team
 - **Complete transparency** - see every request, cost, and usage pattern

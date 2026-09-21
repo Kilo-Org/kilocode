@@ -10,11 +10,19 @@ import java.awt.RenderingHints
 import java.awt.font.FontRenderContext
 import javax.swing.Icon
 
+/**
+ * A filled pill drawn as an icon so it can sit inside a label or a list-cell renderer.
+ *
+ * Owners keep an instance for as long as its text and style hold, so it has to stay correct across an
+ * IDE zoom. The geometry is measured per call, and [JBFont] re-derives its size from "Label.font" on
+ * read, so the pill and its text grow together.
+ */
 internal class FilledBadgeIcon(
     internal val text: String,
     internal val style: UiStyle.Badge.Style,
     private val font: Font = JBFont.small(),
 ) : Icon {
+
     override fun getIconWidth(): Int {
         val width = font.getStringBounds(text, FontRenderContext(null, true, true)).width.toInt()
         return width + UiStyle.Gap.lg() * 2

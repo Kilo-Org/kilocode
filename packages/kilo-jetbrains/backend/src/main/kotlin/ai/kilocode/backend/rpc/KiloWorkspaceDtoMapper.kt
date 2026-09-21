@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.workspace.AgentData
 import ai.kilocode.backend.workspace.AgentInfo
@@ -16,6 +17,7 @@ import ai.kilocode.rpc.dto.ModelCostDto
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.KiloWorkspaceLoadProgressDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.ModelDto
@@ -70,6 +72,12 @@ internal object KiloWorkspaceDtoMapper {
         location = s.location,
         content = s.content,
         editable = false,
+    )
+
+    fun warning(w: ConfigWarning) = ConfigWarningDto(
+        path = w.path,
+        message = w.message,
+        detail = w.detail,
     )
 
     private fun provider(p: ProviderInfo) = ProviderDto(

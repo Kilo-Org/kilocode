@@ -1,14 +1,19 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.settings.KiloSettingsSelection
+import ai.kilocode.client.settings.marketplace.MarketplaceConfigurable
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.SetupScriptTargetDto
+import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.AnAction
@@ -18,15 +23,18 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.testFramework.replaceService
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Suppress("UnstableApiUsage")
 class KiloRecoveryActionsTest : BasePlatformTestCase() {
@@ -108,7 +116,74 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("<reference ref=\"Kilo.OpenConfigGroup\"/>"))
         assertFalse(xml.contains("<action id=\"Kilo.ShowProfile\""))
         assertFalse(xml.contains("<reference ref=\"Kilo.ShowProfile\"/>"))
+
+        // The setup-script action lives only in the worktree row menu, not the tool-window popup.
+        val settingsGroupStart = xml.indexOf("<group id=\"Kilo.SettingsGroup\">")
+        val settingsGroupEnd = xml.indexOf("</group>", settingsGroupStart)
+        assertFalse(xml.substring(settingsGroupStart, settingsGroupEnd).contains("Kilo.OpenSetupScript"))
     }
+
+    fun `test settings menu offers page shortcuts between open settings and the config groups`() {
+        val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml"))
+            .bufferedReader()
+            .use { it.readText() }
+        val start = xml.indexOf("<group id=\"Kilo.SettingsGroup\">")
+        val group = xml.substring(start, xml.indexOf("</group>", start))
+
+        val order = Regex("<separator\\s*/>|<reference\\s+ref=\"([^\"]+)\"\\s*/>")
+            .findAll(group)
+            .map { it.groupValues[1].ifEmpty { "---" } }
+            .toList()
+
+        assertEquals(
+            listOf(
+                "Kilo.OpenSettings",
+                "---",
+                "Kilo.OpenUserProfileSettings",
+                "Kilo.OpenMarketplaceSettings",
+                "---",
+                "Kilo.OpenConfigGroup",
+                "---",
+                "Kilo.CliGroup",
+            ),
+            order,
+        )
+        assertTrue(xml.contains("<action id=\"Kilo.OpenUserProfileSettings\""))
+        assertTrue(xml.contains("<action id=\"Kilo.OpenMarketplaceSettings\""))
+    }
+
+    fun `test settings shortcuts target their own pages while open settings resumes the last one`() {
+        assertEquals("ai.kilocode.jetbrains.settings.profile", page(OpenUserProfileSettingsAction()))
+        assertEquals("ai.kilocode.jetbrains.settings.marketplace", page(OpenMarketplaceSettingsAction()))
+        // Nothing visited yet, so the resuming entry falls back to the profile page.
+        assertEquals("ai.kilocode.jetbrains.settings.profile", page(OpenSettingsAction()))
+
+        // Restored afterwards: this is project-wide state other tests read too.
+        val props = PropertiesComponent.getInstance(project)
+        val previous = props.getValue(KiloSettingsSelection.SELECTED_CONFIGURABLE_KEY)
+        props.setValue(KiloSettingsSelection.SELECTED_CONFIGURABLE_KEY, MarketplaceConfigurable.ID)
+        try {
+            assertEquals(MarketplaceConfigurable.ID, page(OpenSettingsAction()))
+            // A shortcut still goes to its own page regardless of where the user last was.
+            assertEquals("ai.kilocode.jetbrains.settings.profile", page(OpenUserProfileSettingsAction()))
+        } finally {
+            props.setValue(KiloSettingsSelection.SELECTED_CONFIGURABLE_KEY, previous)
+        }
+    }
+
+    fun `test settings shortcuts have menu text and resolve their page off the EDT`() {
+        for (action in listOf(OpenUserProfileSettingsAction(), OpenMarketplaceSettingsAction(), OpenSettingsAction())) {
+            // Resolving the page reads project state, so it must not be forced onto the EDT.
+            assertEquals(action.javaClass.simpleName, ActionUpdateThread.BGT, action.actionUpdateThread)
+        }
+        assertEquals("User Profile...", event(OpenUserProfileSettingsAction()).presentation.text)
+        assertEquals("Marketplace...", event(OpenMarketplaceSettingsAction()).presentation.text)
+        assertEquals("Open Settings...", event(OpenSettingsAction()).presentation.text)
+    }
+
+    /** Passes a workspace so the data context carries the project the action reads state from. */
+    private fun page(action: OpenSettingsPageAction): String =
+        action.page(event(action, workspace("/tmp/kilo-settings-shortcuts")))
 
     fun `test core info action shows version and architecture`() {
         appRpc.cliVersion = "1.2.3"
@@ -302,6 +377,98 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals(0, rpc.localConfigPathCalls)
     }
 
+    fun `test setup script action says open when target exists`() {
+        rpc.setupScriptExists = true
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", true)
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertEquals("Show Worktree Setup", event.presentation.text)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action says create when target is missing`() {
+        rpc.setupScriptExists = false
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", false)
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertEquals("Create Worktree Setup", event.presentation.text)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action refreshes missing target in background`() {
+        rpc.setupScriptExists = true
+        val call = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeSetupScriptTarget = {
+            call.complete(Unit)
+            gate.await()
+        }
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        // No cached target yet: defaults to the "Show" wording, same as a resolved existing script.
+        assertEquals("Show Worktree Setup", event.presentation.text)
+        await(call)
+        assertEquals(1, rpc.setupScriptTargetCalls.size)
+
+        // The fake reads setupScriptExists after the gate, so flipping it here makes the released
+        // background lookup cache "missing" itself. Writing the cache from the test instead would
+        // race that write and lose whenever the coroutine resumed first.
+        rpc.setupScriptExists = false
+        gate.complete(Unit)
+        assertTrue("background refresh never cached the resolved target", cached("/test") { !it.exists })
+
+        val next = event(action, workspace = workspace("/test"))
+        update(action, next)
+
+        assertEquals("Create Worktree Setup", next.presentation.text)
+    }
+
+    fun `test setup script action disables without directory`() {
+        val action = OpenSetupScriptAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action hides on the main worktree row`() {
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"), worktree = WorktreeDto("/test", "main", "main", "/test", main = true))
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test setup script action visible on a non-main worktree row`() {
+        rpc.setupScriptExists = true
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "/test/.kilo/setup-script", true)
+        val action = OpenSetupScriptAction()
+        val event = event(
+            action,
+            workspace = workspace("/test"),
+            worktree = WorktreeDto("/test/.kilo/worktrees/feature-x", "feature-x", "feature-x", "/test/.kilo/worktrees/feature-x"),
+        )
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+    }
+
     fun `test settings popup group updates recursively in background`() {
         val group = DefaultActionGroup()
         val wrapped = KiloSettingsAction.popupGroup(group)
@@ -318,6 +485,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
         assertEquals(1, rpc.localConfigPathCalls)
         assertEquals(1, rpc.globalConfigPathCalls)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
     }
 
     fun `test workspace creation prewarms config targets`() {
@@ -334,10 +502,10 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals(1, rpc.globalConfigPathCalls)
     }
 
-    private fun event(action: AnAction, workspace: Workspace? = null, place: String = ""): AnActionEvent {
+    private fun event(action: AnAction, workspace: Workspace? = null, place: String = "", worktree: WorktreeDto? = null): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         presentation.isEnabled = false
-        return AnActionEvent.createFromDataContext(place, presentation, context(workspace))
+        return AnActionEvent.createFromDataContext(place, presentation, context(workspace, worktree))
     }
 
     private fun update(action: AnAction, event: AnActionEvent) {
@@ -350,6 +518,14 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         withTimeout(5_000) { signal.await() }
     }
 
+    /** Waits for the background setup-script lookup to publish a target matching [want]. */
+    private fun cached(dir: String, want: (SetupScriptTargetDto) -> Boolean): Boolean = runBlocking {
+        withTimeoutOrNull(5_000) {
+            while (service().setupScript[dir]?.let(want) != true) delay(5)
+            true
+        } == true
+    }
+
     private fun service(): KiloWorkspaceService = ApplicationManager.getApplication().getService(KiloWorkspaceService::class.java)
 
     private fun app(): KiloAppService = ApplicationManager.getApplication().getService(KiloAppService::class.java)
@@ -360,11 +536,12 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         field.set(service(), target)
     }
 
-    private fun context(workspace: Workspace?): DataContext {
+    private fun context(workspace: Workspace?, worktree: WorktreeDto? = null): DataContext {
         return DataContext { id ->
             when (id) {
                 SessionManager.WORKSPACE_KEY.name -> workspace
                 CommonDataKeys.PROJECT.name -> project.takeIf { workspace != null }
+                WorktreeDataKeys.WORKTREE.name -> worktree
                 else -> null
             }
         }

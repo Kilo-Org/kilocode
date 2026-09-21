@@ -18,7 +18,7 @@
      editor tab the lane is centered, so a lane-hugging rail would sit right
      next to the prose the pointer travels over and open on the way past. The
      far edge is somewhere the pointer only goes deliberately. */
-  inset-inline-start: var(--prompt-rail-edge);
+  left: var(--prompt-rail-edge);
   top: 0;
   bottom: 0;
   width: var(--prompt-rail-width);
@@ -35,7 +35,20 @@
   transition: opacity 0.25s var(--prompt-rail-ease);
 }
 
-.message-list-container:hover .prompt-rail,
+.prompt-rail[data-side="right"] {
+  left: auto;
+  right: var(--prompt-rail-edge);
+}
+
+.prompt-rail[data-side="right"] .prompt-rail-tick {
+  justify-content: right;
+}
+
+.prompt-rail[data-side="right"] .prompt-rail-tick-line {
+  transform-origin: right center;
+}
+
+.prompt-rail:hover,
 .prompt-rail:focus-within {
   opacity: 1;
 }
@@ -44,7 +57,7 @@
   pointer-events: auto;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: left;
   height: var(--prompt-rail-step);
   min-height: 4px;
   width: 100%;
@@ -164,6 +177,11 @@
   transform-origin: left center;
 }
 
+.prompt-rail-card[data-side="right"] {
+  --prompt-rail-enter: 6px;
+  transform-origin: right center;
+}
+
 .prompt-rail-card[data-virtualized] {
   display: flex;
   flex-direction: column;
@@ -246,7 +264,7 @@
 @keyframes prompt-rail-in {
   from {
     opacity: 0;
-    transform: translateX(-6px) scale(0.98);
+    transform: translateX(var(--prompt-rail-enter, -6px)) scale(0.98);
   }
   to {
     opacity: 1;

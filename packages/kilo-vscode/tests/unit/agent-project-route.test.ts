@@ -1,39 +1,15 @@
 import { describe, expect, it } from "bun:test"
-import { ProjectRouteError, ProjectRouteService } from "../../src/agent-manager/project/route"
+import { ProjectRouteService } from "../../src/agent-manager/project/route"
 
 describe("ProjectRouteService", () => {
-  it("resolves explicit local, worktree, and session routes", () => {
+  it("resolves the project root and session routes", () => {
     const routes = new ProjectRouteService()
     routes.registerProject("a", "/repo/a", 1)
-    routes.registerWorktree({ projectId: "a", worktreeId: "wt" }, "/repo/a/.kilo/wt", 1)
     routes.registerSession({ projectId: "a", sessionId: "local" }, "/repo/a", 1)
     routes.registerSession({ projectId: "a", sessionId: "work" }, "/repo/a/.kilo/wt", 1)
     expect(routes.projectRoot({ projectId: "a" })).toBe("/repo/a")
-    expect(routes.worktreeDirectory({ projectId: "a", worktreeId: "wt" })).toBe("/repo/a/.kilo/wt")
-    expect(routes.sessionDirectory({ projectId: "a", sessionId: "local" })).toBe("/repo/a")
-    expect(routes.sessionDirectory({ projectId: "a", sessionId: "work" })).toBe("/repo/a/.kilo/wt")
-  })
-
-  it("inherits child session ownership", () => {
-    const routes = new ProjectRouteService()
-    routes.registerProject("a", "/repo/a", 1)
-    routes.registerSession({ projectId: "a", sessionId: "parent" }, "/repo/a", 1)
-    routes.inheritSession({ projectId: "a", sessionId: "child" }, { projectId: "a", sessionId: "parent" })
-    expect(routes.sessionDirectory({ projectId: "a", sessionId: "child" })).toBe("/repo/a")
-  })
-
-  it("detects ambiguous raw session ids", () => {
-    const routes = new ProjectRouteService()
-    routes.registerProject("a", "/repo/a", 1)
-    routes.registerProject("b", "/repo/b", 1)
-    routes.registerSession({ projectId: "a", sessionId: "same" }, "/repo/a", 1)
-    routes.registerSession({ projectId: "b", sessionId: "same" }, "/repo/b", 1)
-    expect(() => routes.resolveRawSession("same")).toThrow(ProjectRouteError)
-    try {
-      routes.resolveRawSession("same")
-    } catch (err) {
-      expect((err as ProjectRouteError).code).toBe("session_ambiguous")
-    }
+    expect(routes.trySessionDirectoryFor({ projectId: "a", sessionId: "local" })).toBe("/repo/a")
+    expect(routes.trySessionDirectoryFor({ projectId: "a", sessionId: "work" })).toBe("/repo/a/.kilo/wt")
   })
 
   it("invalidates routes when a project generation changes", () => {
@@ -41,13 +17,20 @@ describe("ProjectRouteService", () => {
     routes.registerProject("a", "/repo/a", 1)
     routes.registerSession({ projectId: "a", sessionId: "s" }, "/repo/a", 1)
     routes.registerProject("a", "/repo/a", 2)
-    expect(() => routes.sessionDirectory({ projectId: "a", sessionId: "s" })).toThrow(ProjectRouteError)
+    expect(routes.trySessionDirectoryFor({ projectId: "a", sessionId: "s" })).toBeUndefined()
   })
 
   it("uses composite UI keys", () => {
     expect(ProjectRouteService.key({ projectId: "a", worktreeId: "same" })).not.toBe(
       ProjectRouteService.key({ projectId: "b", worktreeId: "same" }),
     )
+  })
+
+  it("preserves fallback, precedence, and empty fields in composite UI keys", () => {
+    expect(ProjectRouteService.key({ projectId: "a" })).toBe("a\0local")
+    expect(ProjectRouteService.key({ projectId: "a", sessionId: "s", worktreeId: "wt" })).toBe("a\0s")
+    expect(ProjectRouteService.key({ projectId: "a", sessionId: "", worktreeId: "wt" })).toBe("a\0")
+    expect(ProjectRouteService.key({ projectId: "", worktreeId: "" })).toBe("\0")
   })
 
   describe("safe resolution (non-throwing)", () => {
@@ -118,14 +101,6 @@ describe("ProjectRouteService", () => {
       const routes = new ProjectRouteService()
       routes.registerProject("a", "/repo/a", 1)
       expect(() => routes.unregisterSession({ projectId: "a", sessionId: "missing" })).not.toThrow()
-    })
-
-    it("hasSession reports registered refs only", () => {
-      const routes = new ProjectRouteService()
-      routes.registerProject("a", "/repo/a", 1)
-      routes.registerSession({ projectId: "a", sessionId: "s1" }, "/repo/a", 1)
-      expect(routes.hasSession({ projectId: "a", sessionId: "s1" })).toBe(true)
-      expect(routes.hasSession({ projectId: "a", sessionId: "s2" })).toBe(false)
     })
 
     it("unregisterProject clears all session routes for that project", () => {

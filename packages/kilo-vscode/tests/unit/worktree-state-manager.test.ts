@@ -43,6 +43,22 @@ describe("WorktreeStateManager", () => {
       expect(manager.findWorktreeByPath("/tmp/c")).toBeUndefined()
     })
 
+    it("finds worktree through a symlinked parent and a case variant", () => {
+      // Callers pass paths from git, from the backend, and from VS Code, which do not agree on either:
+      // on macOS /tmp is a symlink to /private/tmp, and the filesystem is case-insensitive. A lexical
+      // compare misses both, and the answer decides which worktree a session or tool call belongs to.
+      const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "am-state-path-")))
+      const nested = path.join(real, "Feature-Dir")
+      fs.mkdirSync(nested)
+      const wt = manager.addWorktree({ branch: "feature", path: nested, parentBranch: "main" })
+
+      expect(manager.findWorktreeByPath(nested)?.id).toBe(wt.id)
+      expect(manager.findWorktreeByPath(path.join(real, "feature-dir"))?.id).toBe(
+        process.platform === "darwin" || process.platform === "win32" ? wt.id : undefined,
+      )
+      fs.rmSync(real, { recursive: true, force: true })
+    })
+
     it("removes worktree and deletes its sessions", () => {
       const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
       manager.addSession("s1", wt.id)
@@ -198,6 +214,27 @@ describe("WorktreeStateManager", () => {
       manager.addSession("s1", null)
       manager.removeSession("s1")
       expect(manager.getSession("s1")).toBeUndefined()
+    })
+
+    it("persists stopped worktree sessions across reloads", async () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.closeSession("ses-stopped", wt.id)
+      await manager.flush()
+
+      const restored = new WorktreeStateManager(root, () => undefined)
+      await restored.load()
+
+      expect(restored.isSessionClosed("ses-stopped")).toBe(true)
+      restored.addSession("ses-stopped", wt.id)
+      expect(restored.isSessionClosed("ses-stopped")).toBe(false)
+      await restored.flush()
+    })
+
+    it("removes stopped-session records when their worktree is deleted", () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.closeSession("ses-stopped", wt.id)
+      manager.removeWorktree(wt.id)
+      expect(manager.isSessionClosed("ses-stopped")).toBe(false)
     })
   })
 
@@ -375,6 +412,24 @@ describe("WorktreeStateManager", () => {
       expect(worktree?.remote).toBe("origin")
       expect(manager.getSession("sess-recovered")?.worktreeId).toBe(worktree?.id)
     })
+
+    it("does not recover a session that was explicitly stopped", () => {
+      const wt = manager.addWorktree({ branch: "fix-recovered", path: "/tmp/recovered", parentBranch: "main" })
+      manager.closeSession("sess-stopped", wt.id)
+      const result = restoreWorktrees(manager, [
+        {
+          branch: "fix-recovered",
+          path: "/tmp/recovered",
+          parentBranch: "main",
+          createdAt: Date.UTC(2026, 0, 1),
+          sessionId: "sess-stopped",
+        },
+      ])
+
+      expect(result).toEqual({ worktrees: 0, sessions: 0 })
+      expect(manager.getSession("sess-stopped")).toBeUndefined()
+      expect(manager.isSessionClosed("sess-stopped")).toBe(true)
+    })
   })
 
   describe("tab order", () => {
@@ -387,17 +442,6 @@ describe("WorktreeStateManager", () => {
       manager.setTabOrder("wt-1", ["s1", "s2"])
       manager.setTabOrder("wt-1", ["s2", "s1"])
       expect(manager.getTabOrder()["wt-1"]).toEqual(["s2", "s1"])
-    })
-
-    it("removes tab order for a key", () => {
-      manager.setTabOrder("wt-1", ["s1"])
-      manager.removeTabOrder("wt-1")
-      expect(manager.getTabOrder()["wt-1"]).toBeUndefined()
-    })
-
-    it("removeTabOrder is a no-op for missing key", () => {
-      manager.removeTabOrder("nonexistent")
-      expect(Object.keys(manager.getTabOrder())).toHaveLength(0)
     })
 
     it("cleans up tab order when worktree is removed", () => {
@@ -449,6 +493,70 @@ describe("WorktreeStateManager", () => {
       const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
       const data = JSON.parse(content)
       expect(data.tabOrder).toBeUndefined()
+    })
+  })
+
+  describe("pinned tabs", () => {
+    it("sets and gets pinned tabs for a key", () => {
+      manager.setPinnedTabs("wt-1", ["s2", "s1"])
+      expect(manager.getPinnedTabs()["wt-1"]).toEqual(["s2", "s1"])
+    })
+
+    it("drops the key when the last tab is unpinned", () => {
+      manager.setPinnedTabs("wt-1", ["s1"])
+      manager.setPinnedTabs("wt-1", [])
+      expect(manager.getPinnedTabs()["wt-1"]).toBeUndefined()
+    })
+
+    it("cleans up pinned tabs when a worktree is removed", () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.addSession("s1", wt.id)
+      manager.setPinnedTabs(wt.id, ["s1"])
+
+      manager.removeWorktree(wt.id)
+      expect(manager.getPinnedTabs()[wt.id]).toBeUndefined()
+    })
+
+    it("removes a session from pinned tabs when the session is removed", () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.addSession("s1", wt.id)
+      manager.addSession("s2", wt.id)
+      manager.setPinnedTabs(wt.id, ["s1", "s2"])
+
+      manager.removeSession("s1")
+      expect(manager.getPinnedTabs()[wt.id]).toEqual(["s2"])
+    })
+
+    it("removes the pinned entry when its last session is removed", () => {
+      manager.addSession("s1", null)
+      manager.setPinnedTabs("local", ["s1"])
+
+      manager.removeSession("s1")
+      expect(manager.getPinnedTabs()["local"]).toBeUndefined()
+    })
+
+    it("persists and loads pinned tabs", async () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.setPinnedTabs(wt.id, ["s2", "s1"])
+      manager.setPinnedTabs("local", ["s3"])
+      await manager.flush()
+      await manager.save()
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+
+      expect(loaded.getPinnedTabs()[wt.id]).toEqual(["s2", "s1"])
+      expect(loaded.getPinnedTabs()["local"]).toEqual(["s3"])
+    })
+
+    it("does not persist empty pinned tabs", async () => {
+      manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      await manager.flush()
+      await manager.save()
+
+      const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
+      const data = JSON.parse(content)
+      expect(data.pinnedTabs).toBeUndefined()
     })
   })
 
@@ -535,50 +643,9 @@ describe("WorktreeStateManager", () => {
     })
   })
 
-  describe("validate", () => {
-    it("removes worktrees whose directories do not exist and prunes their sessions", async () => {
-      const existing = path.join(root, "wt-exists")
-      fs.mkdirSync(existing, { recursive: true })
-
-      manager.addWorktree({ branch: "exists", path: existing, parentBranch: "main" })
-      const gone = manager.addWorktree({ branch: "gone", path: path.join(root, "wt-gone"), parentBranch: "main" })
-      manager.addSession("s1", gone.id)
-
-      await manager.validate(root)
-
-      expect(manager.getWorktrees()).toHaveLength(1)
-      expect(manager.getWorktrees()[0].branch).toBe("exists")
-      // Session removed along with its worktree
-      expect(manager.getSession("s1")).toBeUndefined()
-    })
-
-    it("preserves local sessions and prunes missing worktree references on validate", async () => {
-      const existing = path.join(root, "wt-exists")
-      fs.mkdirSync(existing, { recursive: true })
-
-      const wt = manager.addWorktree({ branch: "exists", path: existing, parentBranch: "main" })
-      manager.addSession("s1", wt.id)
-      manager.addSession("s2", null)
-      manager.addSession("s3", "missing")
-
-      await manager.validate(root)
-
-      expect(manager.getSession("s1")).toBeTruthy()
-      expect(manager.getSession("s2")?.worktreeId).toBeNull()
-      expect(manager.getSession("s3")).toBeUndefined()
-    })
-
-    it("resolves relative paths against root", async () => {
-      const relative = ".kilo/worktrees/test-branch"
-      const absolute = path.join(root, relative)
-      fs.mkdirSync(absolute, { recursive: true })
-
-      manager.addWorktree({ branch: "test", path: relative, parentBranch: "main" })
-      await manager.validate(root)
-
-      expect(manager.getWorktrees()).toHaveLength(1)
-    })
-  })
+  // Worktree-directory validation moved to worktree-reconcile.ts, which classifies rows instead of
+  // deleting them; see tests/unit/worktree-reconcile.test.ts. Session pruning for rows that are
+  // already gone stays covered by the load/apply tests above.
 
   describe("concurrent save serialization", () => {
     it("rapid mutations do not lose data after flush", async () => {

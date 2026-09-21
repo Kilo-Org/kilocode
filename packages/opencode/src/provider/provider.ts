@@ -40,7 +40,10 @@ import {
   customProviderVariants,
   patchCustomLoaderResult,
   patchKiloProviderPrivacy,
+  patchKiloProviderAuth,
+  publicKiloProvider,
   kiloSmallModelPriority,
+  hasKiloCredentials,
   buildTimeoutSignal,
   requestTimeout,
   wrapFirstByte,
@@ -1145,7 +1148,7 @@ export function toPublicInfo(provider: Info): Info {
   return JSON.parse(
     JSON.stringify(
       {
-        ...provider,
+        ...publicKiloProvider(provider), // kilocode_change
         models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(Model)(model))),
       },
       (_, value) => {
@@ -1709,6 +1712,7 @@ const layer = Layer.effect(
           mergeProvider(providerID, partial)
         }
         patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
+        patchKiloProviderAuth(providers[ProviderV2.ID.make("kilo")], cfg, auths["kilo"]) // kilocode_change
 
         const gitlab = ProviderV2.ID.make("gitlab")
         if (discoveryLoaders[gitlab] && providers[gitlab] && isProviderAllowed(gitlab)) {
@@ -2090,9 +2094,19 @@ const layer = Layer.effect(
         if (candidates[0]) return candidates[0]
       }
 
-      // kilocode_change start - fall back to kilo's auto small model
-      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")] ?? s.catalog[ProviderV2.ID.make("kilo")]
-      if (kiloFallback?.models["kilo-auto/small"]) return kiloFallback.models["kilo-auto/small"]
+      // kilocode_change start - fall back to kilo's auto small model only when the user actually has
+      // kilo credentials. The kilo provider is always autoloaded (anonymous key), so checking it
+      // unconditionally would route auxiliary tasks (session titles, commit messages, branch names)
+      // to the cloud for users without kilo access and break offline/local-only setups.
+      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")]
+      if (kiloFallback?.models["kilo-auto/small"]) {
+        const hasCreds = hasKiloCredentials(
+          cfg,
+          yield* auth.get(ProviderV2.ID.make("kilo")).pipe(Effect.orDie),
+          yield* env.all(),
+        )
+        if (hasCreds) return kiloFallback.models["kilo-auto/small"]
+      }
       // kilocode_change end
 
       return undefined

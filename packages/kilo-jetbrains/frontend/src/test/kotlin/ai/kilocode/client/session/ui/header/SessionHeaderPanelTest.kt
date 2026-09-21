@@ -126,6 +126,29 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(1, rpc.compacts.size)
     }
 
+    fun `test board button visibility follows the boardVisible callback`() {
+        val c = promptedHeader()
+        var visible = false
+        val panel = SessionHeaderPanel(c, parent, boardVisible = { visible })
+
+        assertFalse(panel.boardButton().isVisible)
+
+        visible = true
+        panel.update(c.model.header)
+
+        assertTrue(panel.boardButton().isVisible)
+    }
+
+    fun `test board button click invokes onShowBoard`() {
+        val c = promptedHeader()
+        var opened = 0
+        val panel = SessionHeaderPanel(c, parent, boardVisible = { true }, onShowBoard = { opened++ })
+
+        panel.boardButton().doClick()
+
+        assertEquals(1, opened)
+    }
+
     fun `test clicking session title toggles expansion`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)

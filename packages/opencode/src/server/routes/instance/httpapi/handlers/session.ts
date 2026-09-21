@@ -28,7 +28,9 @@ import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError, HttpApiSchema } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import {
+  AbortQuery, // kilocode_change
   CommandPayload,
+  DeleteMessageQuery, // kilocode_change
   DiffQuery,
   ForkPayload,
   InitPayload,
@@ -231,10 +233,15 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     const forkRaw = KiloSessionHttpApi.forkRaw(fork) // kilocode_change - carry upstream bodyless full-session fork support
 
-    const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: { params: { sessionID: SessionID } }) {
-      yield* promptSvc.cancel(ctx.params.sessionID)
+    // kilocode_change start
+    const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: {
+      params: { sessionID: SessionID }
+      query: typeof AbortQuery.Type
+    }) {
+      yield* promptSvc.cancel(ctx.params.sessionID, ctx.query.scope)
       return true
     })
+    // kilocode_change end
 
     const init = Effect.fn("SessionHttpApi.init")(function* (ctx: {
       params: { sessionID: SessionID }
@@ -403,15 +410,18 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     const deleteMessage = Effect.fn("SessionHttpApi.deleteMessage")(function* (ctx: {
       params: { sessionID: SessionID; messageID: MessageID }
+      query: typeof DeleteMessageQuery.Type // kilocode_change
     }) {
       yield* requireSession(ctx.params.sessionID)
       // kilocode_change start - allow deleting prompts that are queued behind the active turn
-      const remove = yield* runState.assertNotBusy(ctx.params.sessionID).pipe(
-        Effect.as(true),
-        Effect.catchTag("SessionBusyError", () =>
-          KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
-        ),
-      )
+      const remove = yield* ctx.query.queued === true
+        ? KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID)
+        : runState.assertNotBusy(ctx.params.sessionID).pipe(
+            Effect.as(true),
+            Effect.catchTag("SessionBusyError", () =>
+              KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
+            ),
+          )
       // A false result means the message is not in the waiting list. It may have
       // already started, or the ID may be stale. Leave the message untouched.
       if (!remove) return false

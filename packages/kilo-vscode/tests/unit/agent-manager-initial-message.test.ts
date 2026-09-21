@@ -1,8 +1,150 @@
 import { describe, expect, it } from "bun:test"
-import { initialMessage, initialVariant, seedInitialVariant } from "../../webview-ui/agent-manager/initial-message"
+import {
+  dispatchInitialPrompt,
+  initialCommand,
+  initialMessage,
+  initialVariant,
+  seedInitialVariant,
+} from "../../webview-ui/agent-manager/initial-message"
+
+describe("dispatchInitialPrompt", () => {
+  const collect = () => {
+    const calls: unknown[][] = []
+    return {
+      calls,
+      session: {
+        sendCommand: (...args: unknown[]) => {
+          calls.push(args)
+          return true
+        },
+        submit: (input: unknown) => calls.push([input]),
+      },
+    }
+  }
+
+  it("dispatches a command for a command prompt", () => {
+    const ctx = collect()
+    dispatchInitialPrompt(ctx.session, {
+      type: "agentManager.sendInitialMessage",
+      sessionId: "session-a",
+      worktreeId: "wt-a",
+      command: "goal",
+      arguments: "ship it",
+      providerID: "anthropic",
+      modelID: "claude-sonnet-4",
+      agent: "code",
+      variant: "high",
+      projectId: "project-b",
+    })
+
+    expect(ctx.calls).toHaveLength(1)
+    expect(ctx.calls[0]?.slice(0, 10)).toEqual([
+      "goal",
+      "ship it",
+      "anthropic",
+      "claude-sonnet-4",
+      undefined,
+      undefined,
+      undefined,
+      "session-a",
+      { agent: "code", variant: "high" },
+      "project-b",
+    ])
+  })
+
+  it("submits a plain message for a text prompt", () => {
+    const ctx = collect()
+    dispatchInitialPrompt(ctx.session, {
+      type: "agentManager.sendInitialMessage",
+      sessionId: "session-a",
+      worktreeId: "wt-a",
+      text: "Fix it",
+    })
+
+    expect(ctx.calls).toHaveLength(1)
+    expect(ctx.calls[0]?.[0]).toEqual(
+      expect.objectContaining({ type: "sendMessage", text: "Fix it", sessionID: "session-a" }),
+    )
+  })
+
+  it("does nothing without text or a command", () => {
+    const ctx = collect()
+    dispatchInitialPrompt(ctx.session, {
+      type: "agentManager.sendInitialMessage",
+      sessionId: "session-a",
+      worktreeId: "wt-a",
+    })
+
+    expect(ctx.calls).toHaveLength(0)
+  })
+})
+
+describe("Agent Manager initial command", () => {
+  it("builds a sendCommand request for a command initial prompt", () => {
+    const msg = initialCommand({
+      type: "agentManager.sendInitialMessage",
+      sessionId: "session-a",
+      worktreeId: "wt-a",
+      command: "goal",
+      arguments: "ship the release",
+      providerID: "anthropic",
+      modelID: "claude-sonnet-4",
+      agent: "code",
+      variant: "high",
+      files: [{ mime: "image/png", url: "data:image/png;base64,aaa" }],
+    })
+
+    expect(msg).toEqual({
+      type: "sendCommand",
+      command: "goal",
+      arguments: "ship the release",
+      sessionID: "session-a",
+      providerID: "anthropic",
+      modelID: "claude-sonnet-4",
+      agent: "code",
+      variant: "high",
+      files: [{ mime: "image/png", url: "data:image/png;base64,aaa" }],
+    })
+  })
+
+  it("defaults missing arguments to an empty string", () => {
+    expect(
+      initialCommand({
+        type: "agentManager.sendInitialMessage",
+        sessionId: "session-a",
+        worktreeId: "wt-a",
+        command: "grill",
+      })?.arguments,
+    ).toBe("")
+  })
+
+  it("forwards projectId so multi-project routing matches the text path", () => {
+    expect(
+      initialCommand({
+        type: "agentManager.sendInitialMessage",
+        sessionId: "session-a",
+        worktreeId: "wt-a",
+        command: "goal",
+        arguments: "ship it",
+        projectId: "project-b",
+      })?.projectId,
+    ).toBe("project-b")
+  })
+
+  it("returns undefined for a plain prompt", () => {
+    expect(
+      initialCommand({
+        type: "agentManager.sendInitialMessage",
+        sessionId: "session-a",
+        worktreeId: "wt-a",
+        text: "Fix it",
+      }),
+    ).toBeUndefined()
+  })
+})
 
 describe("Agent Manager initial message", () => {
-  it("forwards the selected variant to sendMessage", () => {
+  it.each(["high", ""])("forwards the selected variant %s to sendMessage", (variant) => {
     const msg = initialMessage({
       type: "agentManager.sendInitialMessage",
       projectId: "project-a",
@@ -12,7 +154,7 @@ describe("Agent Manager initial message", () => {
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
       agent: "code",
-      variant: "high",
+      variant,
     })
 
     expect(msg).toEqual({
@@ -23,7 +165,7 @@ describe("Agent Manager initial message", () => {
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
       agent: "code",
-      variant: "high",
+      variant,
       files: undefined,
     })
   })
@@ -38,7 +180,7 @@ describe("Agent Manager initial message", () => {
     ).toBeUndefined()
   })
 
-  it("builds the initial session variant state", () => {
+  it.each(["medium", ""])("builds the initial session variant state for %s", (variant) => {
     const state = initialVariant(
       {
         type: "agentManager.sendInitialMessage",
@@ -46,7 +188,7 @@ describe("Agent Manager initial message", () => {
         worktreeId: "wt-a",
         providerID: "anthropic",
         modelID: "claude-sonnet-4",
-        variant: "medium",
+        variant,
       },
       "code",
     )
@@ -56,7 +198,7 @@ describe("Agent Manager initial message", () => {
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
       agent: "code",
-      value: "medium",
+      value: variant,
     })
   })
 
@@ -75,7 +217,7 @@ describe("Agent Manager initial message", () => {
     ).toBeUndefined()
   })
 
-  it("seeds initial variant state into the session store", () => {
+  it.each(["medium", ""])("seeds initial variant %s into the session store", (variant) => {
     const calls: unknown[] = []
 
     seedInitialVariant(
@@ -89,10 +231,10 @@ describe("Agent Manager initial message", () => {
         worktreeId: "wt-a",
         providerID: "anthropic",
         modelID: "claude-sonnet-4",
-        variant: "medium",
+        variant,
       },
     )
 
-    expect(calls).toEqual([["session-a", "anthropic", "claude-sonnet-4", "medium", "code"]])
+    expect(calls).toEqual([["session-a", "anthropic", "claude-sonnet-4", variant, "code"]])
   })
 })
