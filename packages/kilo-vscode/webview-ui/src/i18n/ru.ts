@@ -310,7 +310,7 @@ export const dict = {
   "ui.approval.source.agent.default": "агентом",
   "ui.approval.source.global": "вашей глобальной конфигурацией",
   "ui.approval.source.project": "конфигурацией проекта",
-  "ui.approval.source.yolo": "режимом автоодобрения (YOLO)",
+  "ui.approval.source.yolo": "режимом автоодобрения",
   "ui.approval.source.session": "правилом автоодобрения сессии",
   "ui.approval.source.default": "по умолчанию",
   "ui.approval.outsideWorkspace": "(за пределами вашей рабочей области: {{file}})",
@@ -619,14 +619,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Запрашивает разрешение перед редактированием файлов или выполнением команд.",
   "workStyle.choice.human-in-the-loop.bash": "Запрашивает разрешение на каждую команду терминала.",
-  "workStyle.choice.human-in-the-loop.visibility": "Показывает все детали разговора, включая ход рассуждений.",
+  "workStyle.choice.human-in-the-loop.visibility": "Разворачивает рассуждения, команды и изменения для проверки.",
   "workStyle.choice.autonomous.eyebrow": "Меньше прерываний",
   "workStyle.choice.autonomous.title": "Высокая автономность",
   "workStyle.choice.autonomous.description": "Меньше прерываний, упрощённый интерфейс.",
   "workStyle.choice.autonomous.permissions":
     "Редактирует файлы и выполняет команды в рабочем пространстве без разрешения.",
   "workStyle.choice.autonomous.bash": "Может выполнять команды терминала в рабочем пространстве без подтверждения.",
-  "workStyle.choice.autonomous.visibility": "Детали остаются свёрнутыми, пока вы их не развернёте.",
+  "workStyle.choice.autonomous.visibility": "Сворачивает детали инструментов, с компактным предпросмотром рассуждений.",
   "session.cloud.import.title": "Импорт из облака",
   "session.cloud.import.placeholder": "ID сессии, URL или команда kilo import",
   "session.cloud.import.button": "Импортировать",
@@ -1187,6 +1187,20 @@ export const dict = {
   "settings.commitMessage.language.sync": "Синхронизация с языком пользовательского интерфейса",
   "settings.commitMessage.language.description": "Выберите язык для сообщений, генерированных ИИ:",
 
+  "settings.display.preview.title": "Предпросмотр",
+  "settings.display.presets.title": "Пресеты отображения",
+  "settings.display.presets.description":
+    "Изменяет параметры отображения ниже, а не разрешения. Сохраните, чтобы применить.",
+  "settings.display.preview.model": "Пример модели",
+  "settings.display.preview.prompt": "Удалите лишние пробелы из приветствия и проверьте тесты.",
+  "settings.display.preview.reasoning":
+    "**Проверьте приветствие.** Функция должна выдавать одинаковое приветствие для обычного имени и имени с лишними пробелами с обеих сторон. Я сохраню существующую сигнатуру функции и формат приветствия и изменю только то, как имя попадает в возвращаемую строку.\n\nДля входных данных вида `  Ada  ` нежелательные пробелы относятся к входным данным, а не к шаблону приветствия. Обрезка готового приветствия оставила бы пробелы рядом с именем. Поэтому операцию обрезки нужно выполнить до подстановки имени.\n\nЯ проверю документацию по строкам, чтобы убедиться, что `trim()` удаляет пробельные символы с обоих концов и возвращает новую строку. Она должна оставить исходные входные данные без изменений. Для этого изменения не нужны регулярное выражение, дополнительная зависимость или отдельная вспомогательная функция.\n\nПробелы внутри имени должны сохраниться. Имя вроде `Ada Lovelace` не должно превратиться в `AdaLovelace`, и регистр букв не должен меняться. Пустые входные данные или данные только из пробелов не требуют нового приветствия по умолчанию в рамках этого точечного исправления.\n\nИзменение может остаться в выражении возврата, если использовать `name.trim()` там, где шаблон сейчас использует `name`. Я сохраню окружающую пунктуацию и намеренный пробел после приветствия. Так diff останется небольшим, а поведение будет легко проверить.\n\nНаконец, я выполню `bun test greeting.test.ts` и проверю оба результата. Случай с дополненным именем должен подтвердить, что лишние пробелы удаляются, а случай с обычным именем защищает существующий вывод. Я сообщу об изменении и результатах тестов только после завершения команды.",
+  "settings.display.preview.shell": "Проверьте тест приветствия",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] удаляет лишние пробелы\n[pass] сохраняет обычное имя\n\n2 теста пройдено",
+  "settings.display.preview.query": "Обрезка строк",
+  "settings.display.preview.result": "trim() удаляет пробелы с обоих концов строки.",
+  "settings.display.preview.answer": "Приветствие обновлено для удаления лишних пробелов. Оба теста проходят.",
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",
   "settings.display.fontSize.title": "Размер шрифта",
@@ -1221,7 +1235,7 @@ export const dict = {
     "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
-    "Показывает строку у вызовов инструментов, объясняющую, почему они были одобрены автоматически (совпавшее правило, значение агента по умолчанию, режим YOLO и т. д.).",
+    "Показывает, почему вызов инструмента был одобрен автоматически, например по совпавшему правилу разрешений или значению агента по умолчанию.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

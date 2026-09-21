@@ -311,7 +311,7 @@ export const dict = {
   "ui.approval.source.agent.default": "エージェントによって",
   "ui.approval.source.global": "グローバル設定によって",
   "ui.approval.source.project": "プロジェクト設定によって",
-  "ui.approval.source.yolo": "自動承認（YOLO）モードによって",
+  "ui.approval.source.yolo": "自動承認モードによって",
   "ui.approval.source.session": "セッションの自動承認ルールによって",
   "ui.approval.source.default": "デフォルトで",
   "ui.approval.outsideWorkspace": "（ワークスペース外：{{file}}）",
@@ -615,13 +615,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kiloは作業中に一時停止し、計画を表示します。",
   "workStyle.choice.human-in-the-loop.permissions": "ファイルの編集やコマンドの実行前に許可を求めます。",
   "workStyle.choice.human-in-the-loop.bash": "すべてのターミナルコマンド実行時に許可を求める",
-  "workStyle.choice.human-in-the-loop.visibility": "推論を含む会話の詳細をすべて表示します。",
+  "workStyle.choice.human-in-the-loop.visibility": "確認できるように、推論、コマンド、編集を展開します。",
   "workStyle.choice.autonomous.eyebrow": "中断を少なく",
   "workStyle.choice.autonomous.title": "高い自律性",
   "workStyle.choice.autonomous.description": "中断を減らし、インターフェースを簡素化します。",
   "workStyle.choice.autonomous.permissions": "確認なしでワークスペース内のファイルを編集し、コマンドを実行します。",
   "workStyle.choice.autonomous.bash": "ワークスペース内で承認なしにターミナルコマンドを実行できます。",
-  "workStyle.choice.autonomous.visibility": "詳細は展開するまで折りたたまれたままです。",
+  "workStyle.choice.autonomous.visibility": "ツールの詳細を折りたたみ、推論をコンパクトにプレビューします。",
   "session.cloud.import.title": "クラウドからインポート",
   "session.cloud.import.placeholder": "セッションID、URL、またはkilo importコマンド",
   "session.cloud.import.button": "インポート",
@@ -1181,6 +1181,20 @@ export const dict = {
   "settings.commitMessage.language.sync": "UI言語と同期",
   "settings.commitMessage.language.description": "AIが生成するコミットメッセージに使用する言語を選択:",
 
+  "settings.display.preview.title": "プレビュー",
+  "settings.display.presets.title": "表示プリセット",
+  "settings.display.presets.description":
+    "下の表示オプションを変更します。権限は変更しません。適用するには保存してください。",
+  "settings.display.preview.model": "サンプルモデル",
+  "settings.display.preview.prompt": "挨拶から余分な空白を削除し、テストを確認してください。",
+  "settings.display.preview.reasoning":
+    "**挨拶を確認します。** この関数は、通常の名前と両端に余分な空白がある名前に対して、同じ挨拶を生成する必要があります。既存の関数シグネチャと挨拶の形式は維持し、名前が返り値の文字列に入る方法だけを変更します。\n\n`  Ada  ` のような入力では、不要な空白は入力に属し、挨拶のテンプレートには属しません。完成した挨拶をトリムすると、名前の隣に空白が残ってしまいます。したがって、トリム操作は名前を挿入する前に行う必要があります。\n\n文字列のドキュメントを確認し、`trim()` が両端の空白を削除して新しい文字列を返すことを確かめます。元の入力は変更されないはずです。この変更に正規表現、追加の依存関係、別のヘルパーは必要ありません。\n\n名前の中の空白はそのままにしておく必要があります。`Ada Lovelace` のような名前が `AdaLovelace` になってはならず、大文字と小文字も変わってはいけません。空の入力や空白だけの入力には、この限定的な修正の一環として新しいフォールバックの挨拶は必要ありません。\n\nテンプレートが現在 `name` を使っている箇所で `name.trim()` を使うことで、変更を return 式の中に収められます。周囲の句読点と挨拶の後の意図的な空白は維持します。これにより差分が小さくなり、動作を確認しやすくなります。\n\n最後に `bun test greeting.test.ts` を実行し、両方の結果を確認します。空白付きの名前のケースでは余分な空白が削除されることを確認し、通常の名前のケースでは既存の出力を保護します。変更とテスト結果は、コマンドが完了してから報告します。",
+  "settings.display.preview.shell": "挨拶のテストを確認する",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] 余分な空白を削除する\n[pass] 通常の名前を保持する\n\n2件のテストに合格",
+  "settings.display.preview.query": "文字列のトリミング",
+  "settings.display.preview.result": "trim() は文字列の両端から空白を削除します。",
+  "settings.display.preview.answer": "挨拶を更新して余分な空白を削除しました。両方のテストに合格しました。",
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
@@ -1214,7 +1228,7 @@ export const dict = {
     "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",
   "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
   "settings.display.autoApprovalReason.description":
-    "ツール呼び出しが自動承認された理由（一致したルール、エージェントのデフォルト、YOLOモードなど）を示す行を表示します。",
+    "ツール呼び出しが自動承認された理由（一致する権限ルールやエージェントのデフォルトなど）を表示します。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
