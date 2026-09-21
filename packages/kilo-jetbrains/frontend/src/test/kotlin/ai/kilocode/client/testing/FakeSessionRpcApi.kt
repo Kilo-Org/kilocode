@@ -1,6 +1,7 @@
 package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloSessionRpcApi
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
@@ -381,6 +382,34 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> {
         assertNotEdt("pendingQuestions")
         return pendingQuestionList.toList()
+    }
+
+    // ------ background subagents ------
+
+    /** Push background-job list updates here, one flow per root session id. */
+    val backgroundJobsFlow = mutableMapOf<String, MutableSharedFlow<List<BackgroundJobDto>>>()
+    val backgroundJobsCalls = mutableListOf<Pair<String, String>>()
+    val cancelledBackgroundJobs = mutableListOf<Pair<String, String>>()
+    val promotedBackgroundJobs = mutableListOf<Pair<String, String>>()
+    var cancelBackgroundJobResult = true
+    var promoteBackgroundJobResult = true
+
+    override suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>> {
+        assertNotEdt("backgroundJobs")
+        backgroundJobsCalls.add(id to directory)
+        return backgroundJobsFlow.getOrPut(id) { MutableSharedFlow(extraBufferCapacity = 8, replay = 1) }
+    }
+
+    override suspend fun cancelBackgroundJob(id: String, directory: String): Boolean {
+        assertNotEdt("cancelBackgroundJob")
+        cancelledBackgroundJobs.add(id to directory)
+        return cancelBackgroundJobResult
+    }
+
+    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean {
+        assertNotEdt("promoteBackgroundJob")
+        promotedBackgroundJobs.add(id to directory)
+        return promoteBackgroundJobResult
     }
 
     // ------ shared agent board ------
