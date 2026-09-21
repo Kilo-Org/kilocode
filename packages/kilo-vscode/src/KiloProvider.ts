@@ -3288,16 +3288,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async seedSessionStatusMap(reconcile = true): Promise<void> {
     if (!this.client || this.connectionState !== "connected") return
-    const dir = this.getWorkspaceDirectory()
-    const epoch = this.epoch
-    const request = this.begin(dir)
-    await seedSessionStatuses(
-      this.client,
-      dir,
-      this.sessionStatusMap,
-      (message) => this.postMessage(message),
-      reconcile,
-      (sessionID, status) => this.latest(dir, request) && this.accept(sessionID, status, dir, epoch),
+    const client = this.client
+    // Status snapshots are directory-scoped, including sessions in inactive projects.
+    const dirs = new Set([
+      this.getWorkspaceDirectory(),
+      ...(this.opts.worktreeDirectories?.() ?? []),
+      ...this.sessionDirectories.values(),
+      ...[...this.owners.values()].map((owner) => owner.dir),
+      ...[...this.trackedSessionIds].map((id) => this.getWorkspaceDirectory(id)),
+    ])
+    await Promise.all(
+      [...dirs].map(async (dir) => {
+        const epoch = this.epoch
+        const request = this.begin(dir)
+        await seedSessionStatuses(
+          client,
+          dir,
+          this.sessionStatusMap,
+          (message) => this.postMessage(message),
+          reconcile,
+          (sessionID, status) =>
+            (this.isCurrentProjectDirectory(dir) || this.owned(sessionID, dir)) &&
+            this.latest(dir, request) &&
+            this.accept(sessionID, status, dir, epoch),
+        )
+      }),
     )
   }
 
@@ -5664,9 +5679,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private owned(sessionID: string, directory?: string): boolean {
-    if (!directory || directory === "global" || this.syncedChildSessions.has(sessionID)) return false
-    const owner = this.owners.get(sessionID)
-    return owner !== undefined && sameDirectory(owner.dir, directory)
+    if (!directory || directory === "global") return false
+    const route = this.routeSessionDirectory(sessionID)
+    if (route === null) return false
+    const owner =
+      route ??
+      this.owners.get(sessionID)?.dir ??
+      (this.trackedSessionIds.has(sessionID) ? this.sessionDirectories.get(sessionID) : undefined)
+    return owner !== undefined && sameDirectory(owner, directory)
   }
 
   private terminal(event: ProviderEvent, directory?: string): boolean {
