@@ -13,6 +13,7 @@ import com.intellij.util.ui.JBValue
 import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Insets
 import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.UIManager
@@ -53,6 +54,22 @@ object UiStyle {
         fun pad() = JBUI.scale(PAD)
 
         fun xl() = JBUI.scale(XL)
+    }
+
+    /** Metrics for labelled toolbar buttons that pair a leading action icon with text. */
+    object ToolbarButton {
+        /** 25% smaller than IntelliJ's standard 16x16 action icon canvas. */
+        const val ICON_SIZE = 12
+
+        /**
+         * Insets inside the hover pill. IntelliJ's `ActionButtonWithText` starts with its 4px
+         * `BUTTONS_GAP`; the wider trailing side keeps icon+text artwork optically centered.
+         * The toolbar still owns the theme-driven `Toolbar.Button.buttonInsets` border.
+         */
+        fun padding(): Insets = JBUI.insets(0, Gap.SM, 0, Gap.LG)
+
+        /** Matches IntelliJ toolbar combo widgets' 6px gap after their leading icons. */
+        fun gap() = Gap.md()
     }
 
     /** Theme-aware component geometry tokens. */
