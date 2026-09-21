@@ -314,7 +314,7 @@ export const dict = {
   "ui.approval.source.agent.default": "por el agente",
   "ui.approval.source.global": "por tu configuración global",
   "ui.approval.source.project": "por la configuración del proyecto",
-  "ui.approval.source.yolo": "por el modo de aprobación automática (YOLO)",
+  "ui.approval.source.yolo": "por el modo de aprobación automática",
   "ui.approval.source.session": "por una regla de aprobación automática de sesión",
   "ui.approval.source.default": "de forma predeterminada",
   "ui.approval.outsideWorkspace": "(fuera de tu espacio de trabajo: {{file}})",
@@ -626,14 +626,15 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions": "Pide permiso antes de editar archivos o ejecutar comandos.",
   "workStyle.choice.human-in-the-loop.bash": "Pide permiso para ejecutar todos los comandos del terminal.",
   "workStyle.choice.human-in-the-loop.visibility":
-    "Muestra todos los detalles de la conversación, incluido el razonamiento.",
+    "Expande el razonamiento, los comandos y las ediciones para su revisión.",
   "workStyle.choice.autonomous.eyebrow": "Menos interrupciones",
   "workStyle.choice.autonomous.title": "Alta autonomía",
   "workStyle.choice.autonomous.description": "Menos interrupciones y una interfaz optimizada.",
   "workStyle.choice.autonomous.permissions":
     "Edita archivos y ejecuta comandos en el espacio de trabajo sin preguntar.",
   "workStyle.choice.autonomous.bash": "Puede ejecutar comandos en el terminal del espacio de trabajo sin aprobación.",
-  "workStyle.choice.autonomous.visibility": "Los detalles permanecen contraídos hasta que los despliegues.",
+  "workStyle.choice.autonomous.visibility":
+    "Contrae los detalles de las herramientas, con una vista previa compacta del razonamiento.",
   "session.cloud.import.title": "Importar desde la nube",
   "session.cloud.import.placeholder": "ID de sesión, URL o comando kilo import",
   "session.cloud.import.button": "Importar",
@@ -1182,6 +1183,21 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sincronización con el idioma de la interfaz de usuario",
   "settings.commitMessage.language.description": "Elija qué idioma usar para los mensajes de commit generados por IA:",
 
+  "settings.display.preview.title": "Vista previa",
+  "settings.display.presets.title": "Preajustes de visualización",
+  "settings.display.presets.description":
+    "Cambia las opciones de visualización siguientes, no los permisos. Guarda para aplicar.",
+  "settings.display.preview.model": "Modelo de ejemplo",
+  "settings.display.preview.prompt": "Elimina los espacios sobrantes del saludo y comprueba las pruebas.",
+  "settings.display.preview.reasoning":
+    "**Comprueba el saludo.** La función debería producir el mismo saludo para un nombre simple y para un nombre con espacios sobrantes en ambos extremos. Mantendré la firma de la función y el formato del saludo existentes, y cambiaré solo cómo entra el nombre en la cadena devuelta.\n\nPara una entrada como `  Ada  `, los espacios no deseados pertenecen a la entrada, no a la plantilla del saludo. Recortar el saludo completo dejaría espacios junto al nombre. Por lo tanto, la operación de recorte debe realizarse antes de insertar el nombre.\n\nConsultaré la documentación de cadenas para confirmar que `trim()` elimina los espacios en blanco de ambos extremos y devuelve una cadena nueva. Debería dejar la entrada original sin cambios. Para este cambio no se necesita una expresión regular, otra dependencia ni una función auxiliar aparte.\n\nLos espacios dentro de un nombre deben permanecer intactos. Un nombre como `Ada Lovelace` no debería convertirse en `AdaLovelace`, y su uso de mayúsculas y minúsculas no debería cambiar. Una entrada vacía o compuesta solo por espacios no requiere un nuevo saludo predeterminado como parte de esta corrección puntual.\n\nEl cambio puede quedarse en la expresión de retorno usando `name.trim()` donde la plantilla usa actualmente `name`. Conservaré la puntuación circundante y el espacio intencional después del saludo. Así el diff se mantiene pequeño y el comportamiento es fácil de revisar.\n\nPor último, ejecutaré `bun test greeting.test.ts` y comprobaré ambos resultados. El caso del nombre con relleno debería confirmar que se eliminan los espacios sobrantes, mientras que el caso del nombre simple protege la salida existente. Informaré del cambio y de los resultados de las pruebas solo después de que termine el comando.",
+  "settings.display.preview.shell": "Comprueba la prueba del saludo",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] elimina los espacios sobrantes\n[pass] conserva un nombre simple\n\n2 pruebas superadas",
+  "settings.display.preview.query": "Recorte de cadenas",
+  "settings.display.preview.result": "trim() elimina los espacios de ambos extremos de una cadena.",
+  "settings.display.preview.answer":
+    "Se ha actualizado el saludo para eliminar los espacios sobrantes. Ambas pruebas pasan.",
   "settings.display.username.title": "Nombre de usuario",
   "settings.display.username.description": "Nombre de usuario personalizado en conversaciones",
   "settings.display.fontSize.title": "Tamaño de fuente",
@@ -1217,7 +1233,7 @@ export const dict = {
     "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo de aprobación automática",
   "settings.display.autoApprovalReason.description":
-    "Muestra una línea en las llamadas a herramientas que explica por qué se aprobaron automáticamente (regla coincidente, valor predeterminado del agente, modo YOLO, etc.).",
+    "Muestra por qué se aprobó automáticamente una llamada a una herramienta, como una regla de permisos coincidente o un valor predeterminado del agente.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

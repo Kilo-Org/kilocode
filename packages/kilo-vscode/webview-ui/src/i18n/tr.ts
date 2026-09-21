@@ -310,7 +310,7 @@ export const dict = {
   "ui.approval.source.agent.default": "aracı tarafından",
   "ui.approval.source.global": "genel yapılandırmanız tarafından",
   "ui.approval.source.project": "proje yapılandırması tarafından",
-  "ui.approval.source.yolo": "otomatik onay (YOLO) modu tarafından",
+  "ui.approval.source.yolo": "otomatik onay modu tarafından",
   "ui.approval.source.session": "bir oturum otomatik onay kuralı tarafından",
   "ui.approval.source.default": "varsayılan olarak",
   "ui.approval.outsideWorkspace": "(çalışma alanınızın dışında: {{file}})",
@@ -570,14 +570,16 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Dosyaları düzenlemeden veya komutları çalıştırmadan önce izin ister.",
   "workStyle.choice.human-in-the-loop.bash": "Her terminal komutunu çalıştırmadan önce izin ister.",
-  "workStyle.choice.human-in-the-loop.visibility": "Akıl yürütme dahil tüm konuşma ayrıntılarını gösterir.",
+  "workStyle.choice.human-in-the-loop.visibility":
+    "İnceleme için akıl yürütmeyi, komutları ve düzenlemeleri genişletir.",
   "workStyle.choice.autonomous.eyebrow": "Daha az kesinti",
   "workStyle.choice.autonomous.title": "Yüksek özerklik",
   "workStyle.choice.autonomous.description": "Daha az kesinti, daha sade bir arayüz.",
   "workStyle.choice.autonomous.permissions":
     "Çalışma alanındaki dosyaları izin istemeden düzenler ve komutları çalıştırır.",
   "workStyle.choice.autonomous.bash": "Çalışma alanında terminal komutlarını onay almadan çalıştırabilir.",
-  "workStyle.choice.autonomous.visibility": "Ayrıntılar siz genişletene kadar daraltılmış olarak kalır.",
+  "workStyle.choice.autonomous.visibility":
+    "Araç ayrıntılarını daraltır, akıl yürütmeyi kompakt bir önizleme olarak gösterir.",
   "session.cloud.import.title": "Buluttan içe aktar",
   "session.cloud.import.placeholder": "Oturum kimliği, URL veya kilo import komutu",
   "session.cloud.import.button": "İçe Aktar",
@@ -1126,6 +1128,21 @@ export const dict = {
   "settings.commitMessage.language.description":
     "AI tarafından oluşturulan commit mesajları için hangi dili kullanacağınızı seçin:",
 
+  "settings.display.preview.title": "Önizleme",
+  "settings.display.presets.title": "Görüntüleme ön ayarları",
+  "settings.display.presets.description":
+    "Aşağıdaki görüntüleme seçeneklerini değiştirir, izinleri değil. Uygulamak için kaydedin.",
+  "settings.display.preview.model": "Örnek model",
+  "settings.display.preview.prompt": "Selamlamadaki fazla boşlukları kaldırın ve testleri kontrol edin.",
+  "settings.display.preview.reasoning":
+    "**Selamlamayı kontrol et.** İşlev, düz bir ad ve iki ucunda fazla boşluk bulunan bir ad için aynı selamlamayı üretmelidir. Mevcut işlev imzasını ve selamlama biçimini koruyacağım ve yalnızca adın döndürülen dizeye nasıl girdiğini değiştireceğim.\n\n`  Ada  ` gibi bir girdide istenmeyen boşluklar girdiye aittir, selamlama şablonuna değil. Tamamlanmış selamlamayı kırpmak, adın yanında boşluk bırakırdı. Bu nedenle kırpma işlemi, ad eklenmeden önce yapılmalıdır.\n\n`trim()` işlevinin her iki uçtaki boşlukları kaldırdığını ve yeni bir dize döndürdüğünü doğrulamak için dize belgelerini kontrol edeceğim. Özgün girdiyi değiştirmeden bırakmalıdır. Bu değişiklik için düzenli ifade, ek bağımlılık veya ayrı bir yardımcı işleve gerek yoktur.\n\nBir adın içindeki boşluklar bozulmadan kalmalıdır. `Ada Lovelace` gibi bir ad `AdaLovelace` olmamalı ve büyük/küçük harf durumu değişmemelidir. Boş veya yalnızca boşluk içeren bir girdi, bu odaklı düzeltmenin parçası olarak yeni bir yedek selamlama gerektirmez.\n\nDeğişiklik, şablonun şu anda `name` kullandığı yerde `name.trim()` kullanılarak return ifadesinde kalabilir. Çevredeki noktalama işaretlerini ve selamlamadan sonraki kasıtlı boşluğu koruyacağım. Bu, diff'i küçük tutar ve davranışın incelenmesini kolaylaştırır.\n\nSon olarak `bun test greeting.test.ts` komutunu çalıştıracağım ve iki sonucu da kontrol edeceğim. Boşluklu ad durumu fazla boşlukların kaldırıldığını doğrulamalı, düz ad durumu ise mevcut çıktıyı korumalıdır. Değişikliği ve test sonuçlarını yalnızca komut tamamlandıktan sonra bildireceğim.",
+  "settings.display.preview.shell": "Selamlama testini kontrol et",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fazla boşlukları kaldırır\n[pass] düz bir adı korur\n\n2 test geçti",
+  "settings.display.preview.query": "Dize kırpma",
+  "settings.display.preview.result": "trim() bir dizenin her iki ucundaki boşlukları kaldırır.",
+  "settings.display.preview.answer":
+    "Selamlama, fazla boşlukları kaldıracak şekilde güncellendi. Her iki test de geçiyor.",
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
@@ -1160,7 +1177,7 @@ export const dict = {
     "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
-    "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
+    "Bir araç çağrısının neden otomatik olarak onaylandığını gösterir; örneğin eşleşen bir izin kuralı veya aracı varsayılanı.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
