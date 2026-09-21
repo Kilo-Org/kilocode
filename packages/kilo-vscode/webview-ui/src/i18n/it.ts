@@ -995,6 +995,16 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Mai eseguita",
   "settings.autoCleanup.result":
     "{{date}}: eliminate {{deleted}} di {{scanned}} sessioni ({{active}} attive ignorate, {{failed}} non riuscite) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Avvio della pulizia delle sessioni...",
+  "settings.autoCleanup.error.status":
+    "Lo stato della pulizia delle sessioni è temporaneamente non disponibile. Nuovo tentativo...",
+  "settings.autoCleanup.error.timeout":
+    "In attesa dello stato della pulizia. Il backend sta impiegando più tempo del previsto.",
+  "settings.autoCleanup.error.run":
+    "Impossibile confermare il completamento della pulizia delle sessioni. Controlla il risultato dell'ultima pulizia prima di riprovare.",
+  "settings.autoCleanup.progress.scanning": "Scansione delle sessioni: {{processed}}/{{total}} elaborate",
+  "settings.autoCleanup.progress.deleting":
+    "Eliminazione delle sessioni: {{processed}}/{{total}} elaborate ({{deleted}} eliminate, {{failed}} non riuscite)",
   "settings.autoCleanup.runNow": "Esegui pulizia ora",
   "settings.autoCleanup.runNow.confirm":
     "Eliminare definitivamente le sessioni scadute in tutti i progetti e in tutti i client Kilo di questo computer?",

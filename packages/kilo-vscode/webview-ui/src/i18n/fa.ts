@@ -1114,6 +1114,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "هرگز اجرا نشده",
   "settings.autoCleanup.result":
     "{{date}}: {{deleted}} از {{scanned}} جلسه حذف شد ({{active}} فعال رد شد، {{failed}} ناموفق) در {{seconds}} ثانیه",
+  "settings.autoCleanup.starting": "در حال شروع پاک‌سازی جلسه‌ها...",
+  "settings.autoCleanup.error.status": "وضعیت پاک‌سازی جلسه‌ها موقتاً در دسترس نیست. در حال تلاش مجدد...",
+  "settings.autoCleanup.error.timeout": "در انتظار وضعیت پاک‌سازی. بک‌اند بیش از حد انتظار طول می‌کشد.",
+  "settings.autoCleanup.error.run":
+    "تأیید تکمیل پاک‌سازی جلسه‌ها ممکن نشد. پیش از تلاش مجدد، نتیجهٔ آخرین پاک‌سازی را بررسی کنید.",
+  "settings.autoCleanup.progress.scanning": "در حال بررسی جلسه‌ها: {{processed}}/{{total}} پردازش شد",
+  "settings.autoCleanup.progress.deleting":
+    "در حال حذف جلسه‌ها: {{processed}}/{{total}} پردازش شد ({{deleted}} حذف شد، {{failed}} ناموفق)",
   "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف دائمی جلسه‌های منقضی‌شده در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه؟",

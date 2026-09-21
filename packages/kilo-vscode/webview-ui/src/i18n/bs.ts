@@ -1134,6 +1134,14 @@ export const dict = {
   "settings.autoCleanup.lastRun.never": "Nikad pokrenuto",
   "settings.autoCleanup.result":
     "{{date}}: obrisano {{deleted}} od {{scanned}} sesija ({{active}} aktivnih preskočeno, {{failed}} neuspjelo) za {{seconds}}s",
+  "settings.autoCleanup.starting": "Pokretanje čišćenja sesija...",
+  "settings.autoCleanup.error.status": "Status čišćenja sesija je privremeno nedostupan. Ponovni pokušaj...",
+  "settings.autoCleanup.error.timeout": "Čekanje statusa čišćenja. Pozadinski servis traje duže od očekivanog.",
+  "settings.autoCleanup.error.run":
+    "Nije bilo moguće potvrditi da je čišćenje sesija završeno. Provjerite rezultat posljednjeg čišćenja prije ponovnog pokušaja.",
+  "settings.autoCleanup.progress.scanning": "Skeniranje sesija: obrađeno {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Brisanje sesija: obrađeno {{processed}}/{{total}} ({{deleted}} obrisano, {{failed}} neuspjelo)",
   "settings.autoCleanup.runNow": "Pokreni čišćenje sada",
   "settings.autoCleanup.runNow.confirm":
     "Trajno obrisati istekle sesije u svim projektima i svim Kilo klijentima na ovom računaru?",
