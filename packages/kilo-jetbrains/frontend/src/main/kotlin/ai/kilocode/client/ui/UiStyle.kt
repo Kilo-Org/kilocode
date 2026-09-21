@@ -1,6 +1,5 @@
 package ai.kilocode.client.ui
 
-import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
@@ -63,7 +62,7 @@ object UiStyle {
         const val ICON_SIZE = 12
 
         /**
-         * Insets inside the hover pill. IntelliJ's [ActionButtonWithText] starts with its 4px
+         * Insets inside the hover pill. IntelliJ's `ActionButtonWithText` starts with its 4px
          * `BUTTONS_GAP`; the wider trailing side keeps icon+text artwork optically centered.
          * The toolbar still owns the theme-driven `Toolbar.Button.buttonInsets` border.
          */

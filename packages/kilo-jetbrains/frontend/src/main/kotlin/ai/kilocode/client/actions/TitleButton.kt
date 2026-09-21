@@ -9,9 +9,9 @@ import java.awt.Insets
 import javax.swing.JComponent
 
 /**
- * Renders [this] action as an [ActionButtonWithText] with symmetric pill padding, for use from
- * [com.intellij.openapi.actionSystem.ex.CustomComponentAction.createCustomComponent]. Keeps the
- * platform's border, hover/pressed look, and presentation-driven updates.
+ * Renders [this] action as an [ActionButtonWithText] with optically balanced pill padding, for use
+ * from [com.intellij.openapi.actionSystem.ex.CustomComponentAction.createCustomComponent]. Keeps
+ * the platform's border, hover/pressed look, and presentation-driven updates.
  *
  * All spacing comes from [UiStyle.ToolbarButton], whose values follow IntelliJ's labelled toolbar
  * metrics. [TitleButtonTest] renders the real button and measures the painted pixels directly so

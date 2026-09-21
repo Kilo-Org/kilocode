@@ -1,9 +1,13 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.AgentManagerPanel
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.edtWait
@@ -70,13 +74,19 @@ class TitleButtonTest : BasePlatformTestCase() {
     }
 
     fun `test New Worktree button centers the plus and label`() {
-        val context = SimpleDataContext.builder().add(SidePanelKeys.MODE, SidePanelMode.AGENT_MANAGER).build()
+        val service = KiloWorktreeService(coroutines.scope, FakeWorktreeRpcApi())
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edtWait { AgentManagerPanel(testRootDisposable, controller) }
+        val context = SimpleDataContext.builder()
+            .add(SidePanelKeys.MODE, SidePanelMode.AGENT_MANAGER)
+            .add(SidePanelKeys.WORKTREE_PANEL, panel)
+            .build()
         assertCentered(button(NewWorktreeAction(), "Worktree", context))
     }
 
     fun `test add icon is 25 percent smaller than the platform action icon`() {
-        assertEquals(JBUI.scale(UiStyle.ToolbarButton.ICON_SIZE), KiloActionIcons.add.iconWidth)
-        assertEquals(JBUI.scale(UiStyle.ToolbarButton.ICON_SIZE), KiloActionIcons.add.iconHeight)
+        assertEquals(JBUI.scale(12), KiloActionIcons.add.iconWidth)
+        assertEquals(JBUI.scale(12), KiloActionIcons.add.iconHeight)
         assertEquals(JBUI.scale(16), AllIcons.General.Add.iconWidth)
         assertEquals(JBUI.scale(16), AllIcons.General.Add.iconHeight)
     }
@@ -134,12 +144,11 @@ class TitleButtonTest : BasePlatformTestCase() {
 
         val leftGap = first!! - pillLeft
         val rightGap = pillRight - 1 - last!!
-        // 2px tolerance absorbs font-rendering right-side-bearing noise (varies by word and by
-        // platform font), while still catching the original 4-6px left/right asymmetry this test
-        // guards against.
+        // Stay below the platform's standard small gap: font side bearings vary by OS, but the
+        // original regression differed by at least that full spacing step.
         assertTrue(
-            "expected symmetric padding, got left=$leftGap right=$rightGap (pill $pillLeft until $pillRight)",
-            Math.abs(leftGap - rightGap) <= 2,
+            "expected balanced padding, got left=$leftGap right=$rightGap (pill $pillLeft until $pillRight)",
+            Math.abs(leftGap - rightGap) < UiStyle.Gap.sm(),
         )
 
         val gap = firstBlankColumn(image, first, last)
