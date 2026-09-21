@@ -1,5 +1,4 @@
-import type { KiloClient, Session } from "../backend/index"
-import type { SessionMetadata } from "@opencode-ai/client/promise"
+import type { KiloClient, Session, SessionMetadata } from "../backend/index"
 import { getErrorMessage } from "../kilo-provider-utils"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"

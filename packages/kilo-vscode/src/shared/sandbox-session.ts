@@ -1,5 +1,4 @@
-import type { KiloClient } from "../backend/index"
-import type { SessionMetadata } from "@opencode-ai/client/promise"
+import type { KiloClient, SessionMetadata } from "../backend/index"
 import type { SandboxPreference } from "../services/sandbox-preference"
 
 export const SANDBOX_METADATA_KEY = "kilocode.sandbox"

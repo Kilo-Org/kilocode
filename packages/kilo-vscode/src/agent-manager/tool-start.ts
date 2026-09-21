@@ -1,5 +1,4 @@
-import type { KiloClient, Session } from "../backend/index"
-import type { SessionMetadata } from "@opencode-ai/client/promise"
+import type { KiloClient, Session, SessionMetadata } from "../backend/index"
 import { sanitizeBranchName, versionedName } from "./branch-name"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
