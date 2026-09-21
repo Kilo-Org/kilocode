@@ -9,6 +9,50 @@ type Decision = {
   message?: string
 }
 
+const ATTEMPTS = 3
+
+// Mirrors the transient classifier in
+// packages/kilo-vscode/src/services/cli-backend/retry.ts. The SDK cannot import
+// that module, so keep the two lists in sync by hand, including the exact
+// "terminated" match for undici pooled-connection drops. Only transport-level
+// failures are retried. A status-less client error such as a response parse
+// failure or a server-version mismatch is definitive and must not be replayed.
+// Re-sending an identical rule set after a lost response is tolerable because
+// duplicate patterns do not change the decision.
+const TRANSIENT = [
+  "load failed",
+  "network connection was lost",
+  "network request failed",
+  "failed to fetch",
+  "fetch failed",
+  "econnreset",
+  "econnrefused",
+  "etimedout",
+  "socket hang up",
+]
+
+const TRANSIENT_EXACT = ["terminated"]
+
+function transport(error: unknown): boolean {
+  if (!error) return false
+  const message = String(error instanceof Error ? error.message : error)
+    .toLowerCase()
+    .trim()
+  if (TRANSIENT_EXACT.includes(message)) return true
+  return TRANSIENT.some((entry) => message.includes(entry))
+}
+
+async function send<T>(fn: () => Promise<T>, budget: () => number): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (attempt >= ATTEMPTS - 1 || !transport(error) || budget() <= 0) throw error
+      await new Promise((resolve) => setTimeout(resolve, Math.min(100 * 2 ** attempt, budget())))
+    }
+  }
+}
+
 /**
  * Send a permission decision with one bounded wait across both requests.
  * A timeout aborts only the client wait, so callers must reconcile an aborted
@@ -25,25 +69,33 @@ export async function respondToPermission(
   const saved = input.approvedAlways.length > 0 || input.deniedAlways.length > 0
   try {
     if (saved) {
-      await client.permission.saveAlwaysRules(
-        {
-          requestID: input.requestID,
-          directory: input.directory,
-          approvedAlways: input.approvedAlways,
-          deniedAlways: input.deniedAlways,
-        },
-        { throwOnError: true, signal: AbortSignal.timeout(budget()) },
+      await send(
+        () =>
+          client.permission.saveAlwaysRules(
+            {
+              requestID: input.requestID,
+              directory: input.directory,
+              approvedAlways: input.approvedAlways,
+              deniedAlways: input.deniedAlways,
+            },
+            { throwOnError: true, signal: AbortSignal.timeout(budget()) },
+          ),
+        budget,
       )
     }
-    await client.permission.reply(
-      {
-        requestID: input.requestID,
-        directory: input.directory,
-        reply: input.reply,
-        interactive: true,
-        ...(input.message ? { message: input.message } : {}),
-      },
-      { throwOnError: true, signal: AbortSignal.timeout(budget()) },
+    await send(
+      () =>
+        client.permission.reply(
+          {
+            requestID: input.requestID,
+            directory: input.directory,
+            reply: input.reply,
+            interactive: true,
+            ...(input.message ? { message: input.message } : {}),
+          },
+          { throwOnError: true, signal: AbortSignal.timeout(budget()) },
+        ),
+      budget,
     )
     return { saved }
   } catch (error) {

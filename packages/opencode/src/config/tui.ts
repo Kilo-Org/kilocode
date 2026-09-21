@@ -22,6 +22,7 @@ import { Filesystem } from "@/util/filesystem"
 import { ConfigVariable } from "@/config/variable"
 import { Npm } from "@opencode-ai/core/npm"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins" // kilocode_change
+import { Excess } from "@/kilocode/config/excess" // kilocode_change
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { TuiConfig } from "@opencode-ai/tui/config"
 
@@ -117,6 +118,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       // Flatten a nested "tui" key so users who wrote `{ "tui": { ... } }` inside tui.json
       // (mirroring the old opencode.json shape) still get their settings applied.
       const normalized = dropUnknownKeybinds(normalize(data))
+      yield* Excess.warn(Info, normalized, configFilepath) // kilocode_change
       const parsed = ConfigParse.schema(Info, normalized, configFilepath)
       const validated = parsed.attention?.sounds
         ? {
