@@ -143,6 +143,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const provider = useProvider()
   const { config } = useConfig()
   const language = useLanguage()
+  // The Agent Manager nests a second provider for the subagent inspector; the outer one owns the toasts.
+  const nested = useContext(SessionContext) !== undefined
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
@@ -816,7 +818,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleError(message: Extract<ExtensionMessage, { type: "error" }>) {
     if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
     if (message.sessionID) patchPage(message.sessionID, { loadingInitial: false, loadingOlder: false })
-    if (message.code !== REVERT_ERROR_CODE) return
+    if (message.code !== REVERT_ERROR_CODE || nested) return
     showToast({
       variant: "error",
       title: language.t("common.requestFailed"),

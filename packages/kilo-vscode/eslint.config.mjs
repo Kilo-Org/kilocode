@@ -73,7 +73,7 @@ export default [
     // the global limit. Pinned to the file's current size, so growth is a
     // deliberate edit here; shrink it when logic moves out, do not raise it
     // for convenience.
-    rules: { complexity: ["error", 31], "max-lines": ["error", 3107] },
+    rules: { complexity: ["error", 31], "max-lines": ["error", 3109] },
   },
   {
     files: ["src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts"],
