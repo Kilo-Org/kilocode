@@ -2738,7 +2738,16 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
       // Full render: drop everything, including a plain-text fallback block.
       code.textContent = ""
     } else {
-      while (code.children.length > start) code.removeChild(code.lastChild!)
+      while (code.children.length > start) {
+        // Remove the whole line group: the `span.line` element and its trailing
+        // "\n" separator text node. Removing only the element would leave the
+        // separator behind as a blank line.
+        const line = code.lastElementChild
+        if (!line) break
+        const separator = line.nextSibling
+        code.removeChild(line)
+        if (separator?.nodeType === Node.TEXT_NODE) code.removeChild(separator)
+      }
     }
     const tail = code.lastChild
     const separator = code.childNodes.length > 0 && !(tail?.nodeType === Node.TEXT_NODE && tail.textContent === "\n") ? "\n" : ""
