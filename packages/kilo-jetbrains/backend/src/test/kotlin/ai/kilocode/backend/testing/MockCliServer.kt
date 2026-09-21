@@ -80,6 +80,16 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionBoardPath: String? = null
     @Volatile var lastResetSessionBoardPath: String? = null
     @Volatile var lastResetSessionBoardBody: String? = null
+    @Volatile var backgroundJobs = "[]"
+    @Volatile var backgroundJobsStatus = 200
+    @Volatile var backgroundJobCancelResult = "true"
+    @Volatile var backgroundJobCancelStatus = 200
+    @Volatile var backgroundJobPromoteResult = "true"
+    @Volatile var backgroundJobPromoteStatus = 200
+    @Volatile var lastBackgroundJobsPath: String? = null
+    @Volatile var lastBackgroundJobCancelPath: String? = null
+    @Volatile var lastBackgroundJobPromotePath: String? = null
+    val backgroundJobsRequests = java.util.concurrent.CopyOnWriteArrayList<String>()
     @Volatile var lastCommandRemoveBody: String? = null
     @Volatile var lastSkillRemoveBody: String? = null
     @Volatile var lastAgentBuilderPath: String? = null
@@ -183,6 +193,9 @@ class MockCliServer : AutoCloseable {
     /** Optional gate for config warnings only. */
     @Volatile var warningsGate: CountDownLatch? = null
 
+    /** Holds `/experimental/capabilities` so a test can simulate a hung optional probe. */
+    @Volatile var capabilitiesGate: CountDownLatch? = null
+
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
     private val requests = Object()
@@ -220,6 +233,9 @@ class MockCliServer : AutoCloseable {
     }
 
     @Volatile var lastExperimentalSessionPath: String? = null
+    @Volatile var lastCapabilitiesPath: String? = null
+    @Volatile var capabilities = """{"backgroundSubagents":true}"""
+    @Volatile var capabilitiesStatus = 200
 
     /** Reset all request counters. */
     fun resetCounts() { counts.clear() }
@@ -351,6 +367,7 @@ class MockCliServer : AutoCloseable {
             if (delay > 0) Thread.sleep(delay)
             if (bare != "/global/event") responseGate?.await()
             if (bare.startsWith("/config/warnings")) warningsGate?.await()
+            if (bare == "/experimental/capabilities") capabilitiesGate?.await()
 
             when {
                 path == "/global/health" -> respond(output, 200, health)
@@ -443,6 +460,19 @@ class MockCliServer : AutoCloseable {
                     lastResetSessionBoardBody = body
                     respond(output, resetSessionBoardStatus, resetSessionBoardResponse)
                 }
+                bare == "/kilocode/background-jobs" && method == "GET" -> {
+                    lastBackgroundJobsPath = path
+                    backgroundJobsRequests.add(path)
+                    respond(output, backgroundJobsStatus, backgroundJobs)
+                }
+                bare.matches(Regex("/kilocode/background-jobs/[^/]+/cancel")) && method == "POST" -> {
+                    lastBackgroundJobCancelPath = path
+                    respond(output, backgroundJobCancelStatus, backgroundJobCancelResult)
+                }
+                bare.matches(Regex("/kilocode/background-jobs/[^/]+/promote")) && method == "POST" -> {
+                    lastBackgroundJobPromotePath = path
+                    respond(output, backgroundJobPromoteStatus, backgroundJobPromoteResult)
+                }
                 bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
@@ -463,6 +493,10 @@ class MockCliServer : AutoCloseable {
                 bare == "/experimental/session" -> {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
+                }
+                bare == "/experimental/capabilities" -> {
+                    lastCapabilitiesPath = path
+                    respond(output, capabilitiesStatus, capabilities)
                 }
                 bare == "/kilo/cloud-sessions" -> {
                     lastCloudSessionsPath = path
