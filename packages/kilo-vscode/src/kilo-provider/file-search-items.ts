@@ -64,7 +64,11 @@ export function mergeFileSearchItems(input: {
     .map((p, index) => ({
       item: { path: normalize(p), type: "folder" as const, ...label(p) },
       index,
-      rank: query ? rank(query, p) : 4,
+      // Judged on the path within its own folder, like files are. Scoring the
+      // absolute form would make the "src/auth" style prefix boost unreachable
+      // for added folders, while letting a filesystem prefix the query happens
+      // to contain promote every folder beneath one of them.
+      rank: query ? rank(query, input.relative?.get(p) ?? p) : 4,
     }))
 
   if (!query) return [...files, ...folders.map((x) => x.item)]
