@@ -408,6 +408,23 @@ describe("KiloProvider pending session refresh", () => {
     expect(sent).toEqual([{ type: "sessionsLoaded", sessions: [], append: true, hasMore: false }])
   })
 
+  it("keeps the refresh pending and reports an error when a deferred flush fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      pendingSessionRefresh: true,
+      connectionState: "connected",
+      listSessionPage: async () => {
+        throw new Error("offline")
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await flushPendingSessionRefresh(ctx)
+
+    expect(ctx.pendingSessionRefresh).toBe(true)
+    expect(sent).toContainEqual({ type: "error", message: "offline" })
+  })
+
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const { calls, fn } = createListSessions()
     const ctx = createContext()

@@ -408,7 +408,17 @@ export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Pr
     return
   }
 
-  return loadSessions(ctx)
+  try {
+    return await loadSessions(ctx)
+  } catch (error) {
+    // Keep the refresh pending so the next flush retries, and surface the
+    // failure instead of leaving the history empty without feedback.
+    ctx.pendingSessionRefresh = true
+    if (ctx.connectionState !== "connecting") {
+      ctx.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to load sessions" })
+    }
+    return
+  }
 }
 
 export function buildSettingPath(key: string): { section: string; leaf: string } {
