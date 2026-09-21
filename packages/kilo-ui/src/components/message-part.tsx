@@ -2704,7 +2704,11 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
 
   const paintOutput = async (container: HTMLDivElement, out: string, id: number) => {
     const lines = out.split("\n")
-    const { start, skip } = bashLineUpdate(renderedLines, lines)
+    // Without an existing block there is nothing to patch into, so highlight the
+    // whole output instead of a tail fragment. `renderedLines` may still hold
+    // lines from a block that was unmounted, and diffing against them would drop
+    // the prefix.
+    const { start, skip } = container.querySelector("code") ? bashLineUpdate(renderedLines, lines) : { start: 0, skip: false }
     if (skip) return
     const inner = await highlightBashFragment(lines.slice(start).join("\n"))
     if (id !== version || !container.isConnected) return
@@ -2716,10 +2720,12 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
     const code = container.querySelector("code")
     if (!code) {
       container.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${inner}</code></pre>`
-      renderedLines = lines
+      // Record only what was actually rendered. A later chunk then rebuilds the
+      // missing prefix instead of patching lines that are not in the DOM.
+      renderedLines = lines.slice(start)
       return
     }
-    while (code.childNodes.length > start * 2) code.removeChild(code.lastChild!)
+    while (code.children.length > start) code.removeChild(code.lastChild!)
     const tail = code.lastChild
     const separator = code.childNodes.length > 0 && !(tail?.nodeType === Node.TEXT_NODE && tail.textContent === "\n") ? "\n" : ""
     code.insertAdjacentHTML("beforeend", separator + inner)
