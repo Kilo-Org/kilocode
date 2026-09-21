@@ -942,6 +942,7 @@ export interface AgentManagerStateMessage {
    */
   orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number; sized?: boolean }[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean

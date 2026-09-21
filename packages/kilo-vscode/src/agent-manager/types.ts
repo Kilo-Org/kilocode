@@ -150,6 +150,7 @@ interface StateMessage {
   /** Directories under `.kilo/worktrees/` that no worktree claims. Never removed automatically. */
   orphanDirectories?: OrphanDirectory[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -823,6 +824,12 @@ interface SetTabOrderIn {
   order: string[]
 }
 
+interface SetPinnedTabsIn {
+  type: "agentManager.setPinnedTabs"
+  key: string
+  ids: string[]
+}
+
 interface SetWorktreeOrderIn {
   type: "agentManager.setWorktreeOrder"
   projectId?: string
@@ -1277,6 +1284,7 @@ export type AgentManagerInMessage =
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
+  | SetPinnedTabsIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetSidebarCollapsedIn

@@ -156,6 +156,7 @@ import {
   promotePendingDraftDiscard,
 } from "../src/utils/draft-store"
 import { applyTabOrder, firstOrderedTitle } from "./tab-order"
+import { createTabPersistence } from "./tab-persistence"
 import { createTabDrag } from "./tab-drag"
 import { createTabOrderSync } from "./tab-order-sync"
 import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
@@ -710,16 +711,13 @@ const AgentManagerContent: Component = () => {
   const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
   let pendingNewSection = false
 
-  const persistTabOrder = (key: string, order: string[]) => {
-    const durable = order.filter((id) => id !== REVIEW_TAB_ID && !isTerminalTabId(id))
-    vscode.postMessage({ type: "agentManager.setTabOrder", key, order: durable })
-  }
+  const tabState = createTabPersistence(registry.active, selection, REVIEW_TAB_ID, (m) => vscode.postMessage(m))
   const tabOrderSync = createTabOrderSync({
     LOCAL,
     REVIEW_TAB_ID,
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
-    persist: persistTabOrder,
+    persist: tabState.persistOrder,
     localSessionIDs,
     sessions: session.sessions,
     managedSessions,
@@ -2130,10 +2128,11 @@ const AgentManagerContent: Component = () => {
     review: { id: REVIEW_TAB_ID, open: reviewOpen, title: () => t("session.tab.review") },
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
+    ...tabState.drag,
     setLocal: setLocalSessionIDs,
     terms,
     namespace: nsKey,
-    persist: persistTabOrder,
+    persist: tabState.persistOrder,
   })
   const tabIds = drag.ids
   const tabScroll = useTabScroll(tabIds, visibleTabId)
@@ -2245,6 +2244,7 @@ const AgentManagerContent: Component = () => {
       sessionMiddleClick: handleTabMouseDown,
       sessionClose: handleCloseTab,
       sessionFork: handleForkSession,
+      ...tabState.tab,
       onTabKey: tabFocus.key,
       reviewLabel: t("session.tab.review"),
       reviewTooltip: t("command.review.toggle"),
