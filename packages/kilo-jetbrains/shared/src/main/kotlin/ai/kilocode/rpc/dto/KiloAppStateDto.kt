@@ -216,4 +216,11 @@ data class KiloAppStateDto(
     val config: ConfigDto? = null,
     val profile: ProfileDto? = null,
     val migration: LegacyMigrationDetectionDto? = null,
+    /**
+     * Whether the connected CLI allows background subagents, from `GET /experimental/capabilities`.
+     * Driven by the CLI's `KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS` kill switch (default on), not by
+     * Kilo config, so it is app state rather than a [ConfigDto] field. False when the capability
+     * could not be read, matching VS Code's `features()` fallback.
+     */
+    val backgroundSubagents: Boolean = false,
 )
