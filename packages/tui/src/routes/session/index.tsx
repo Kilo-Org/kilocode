@@ -37,6 +37,7 @@ import type {
   ReasoningPart,
   SessionStatus,
   StepFinishPart, // kilocode_change
+  FilePart, // kilocode_change
 } from "@kilocode/sdk/v2"
 import { useLocal } from "../../context/local"
 import { Locale } from "../../util/locale"
@@ -65,6 +66,7 @@ import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
+import { ImageAttachment, isImageMime, isRenderableImageUrl } from "../../kilocode/image" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -1519,6 +1521,8 @@ function UserMessage(props: {
     return texts.join("\n\n")
   })
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
+  const imageFiles = createMemo(() => files().filter((x) => isImageMime(x.mime) && isRenderableImageUrl(x.url))) // kilocode_change
+  const otherFiles = createMemo(() => files().filter((x) => !(isImageMime(x.mime) && isRenderableImageUrl(x.url)))) // kilocode_change
   const { theme } = useTheme()
   const [hover, setHover] = createSignal(false)
   const queued = createMemo(() => props.pending && props.message.id > props.pending)
@@ -1554,9 +1558,17 @@ function UserMessage(props: {
             flexShrink={0}
           >
             <text fg={theme.text}>{text()}</text>
-            <Show when={files().length}>
+            {/* kilocode_change start - render attached images inline in the terminal */}
+            <Show when={imageFiles().length}>
+              <box flexDirection="column" paddingTop={1} gap={1}>
+                <For each={imageFiles()}>
+                  {(file) => <ImageAttachment url={file.url} mime={file.mime} filename={file.filename} />}
+                </For>
+              </box>
+            </Show>
+            <Show when={otherFiles().length}>
               <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
-                <For each={files()}>
+                <For each={otherFiles()}>
                   {(file) => {
                     const directory = file.mime === "application/x-directory"
                     return (
@@ -1571,6 +1583,7 @@ function UserMessage(props: {
                 </For>
               </box>
             </Show>
+            {/* kilocode_change end */}
             <Show
               when={queued()}
               fallback={
@@ -1636,14 +1649,23 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           {(part, index) => {
             const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
             return (
-              <Show when={component()}>
-                <Dynamic
-                  last={index() === props.parts.length - 1}
-                  component={component()}
-                  part={part as any}
-                  message={props.message}
-                />
-              </Show>
+              <>
+                <Show when={component()}>
+                  <Dynamic
+                    last={index() === props.parts.length - 1}
+                    component={component()}
+                    part={part as any}
+                    message={props.message}
+                  />
+                </Show>
+                <Show when={toolImages(part).length}>
+                  <box flexDirection="column" paddingLeft={3} marginTop={1} gap={1}>
+                    <For each={toolImages(part)}>
+                      {(file) => <ImageAttachment url={file.url} mime={file.mime} filename={file.filename} />}
+                    </For>
+                  </box>
+                </Show>
+              </>
             )
           }}
         </For>
@@ -1740,6 +1762,14 @@ const PART_MAPPING = {
 // kilocode_change end
 
 const INLINE_TOOL_ICON_WIDTH = 2
+
+// kilocode_change start - images returned by tools render as inline terminal graphics
+export function toolImages(part: Part): FilePart[] {
+  if (part.type !== "tool") return []
+  if (part.state.status !== "completed") return []
+  return (part.state.attachments ?? []).filter((x) => isImageMime(x.mime) && isRenderableImageUrl(x.url))
+}
+// kilocode_change end
 
 // kilocode_change start - show concrete routed models reported by gateway/provider responses
 function StepFinishPart(props: { last: boolean; part: StepFinishPart; message: AssistantMessage }) {

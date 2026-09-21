@@ -9,7 +9,7 @@ import {
   type Renderable,
 } from "@opentui/core"
 import type { CommandContext } from "@opentui/keymap"
-import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
+import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match, For } from "solid-js" // kilocode_change - For used by the inline image preview
 import { registerOpencodeSpinner } from "../register-spinner"
 import path from "path"
 import { fileURLToPath } from "url"
@@ -67,6 +67,9 @@ import { useVim, VimModeIndicator, vimToggleCommand } from "@/kilocode/cli/cmd/t
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
+// kilocode_change start - inline preview for attached images
+import { ImageAttachment, isImageMime, isRenderableImageUrl } from "../../kilocode/image"
+// kilocode_change end
 
 registerOpencodeSpinner()
 
@@ -326,6 +329,15 @@ export function Prompt(props: PromptProps) {
     interrupt: 0,
     exitPress: 0, // kilocode_change
   })
+
+  // kilocode_change start - attached image parts that get an inline preview
+  const imageParts = createMemo(() =>
+    (store.prompt?.parts ?? []).filter(
+      (x): x is Omit<FilePart, "id" | "messageID" | "sessionID"> =>
+        x.type === "file" && isImageMime(x.mime) && isRenderableImageUrl(x.url),
+    ),
+  )
+  // kilocode_change end
 
   createEffect(
     on(
@@ -1515,6 +1527,17 @@ export function Prompt(props: PromptProps) {
             flexGrow={1}
             width="100%"
           >
+            {/* kilocode_change start - inline preview for attached images */}
+            <Show when={imageParts().length}>
+              <box flexDirection="row" gap={1} flexWrap="wrap" paddingBottom={1}>
+                <For each={imageParts()}>
+                  {(file) => (
+                    <ImageAttachment url={file.url} mime={file.mime} filename={file.filename} maxCols={28} maxRows={8} />
+                  )}
+                </For>
+              </box>
+            </Show>
+            {/* kilocode_change end */}
             <textarea
               width="100%"
               placeholder={placeholderText()}

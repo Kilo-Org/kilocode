@@ -535,7 +535,8 @@ const layer = Layer.effect(
             // existing message-v2 filter already strips them from model context.
             const skipNormalization = value.name === "send_file"
             const normalized = yield* Effect.forEach(rawOutput.attachments ?? [], (attachment) =>
-              attachment.mime.startsWith("image/") && !skipNormalization
+              // kilocode_change - keep non data URL images (for example generate_image file:// output) so the TUI can render them
+              attachment.mime.startsWith("image/") && !skipNormalization && attachment.url.startsWith("data:")
                 ? image.normalize(attachment).pipe(
                     Effect.catchIf(
                       (error) => error instanceof Image.ResizerUnavailableError,
