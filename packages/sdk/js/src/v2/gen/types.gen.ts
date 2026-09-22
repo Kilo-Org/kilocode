@@ -531,7 +531,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -2975,7 +2975,7 @@ export type GlobalSession = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
   project: ProjectSummary | null
   worktreeName?: string
@@ -3331,7 +3331,7 @@ export type Session1 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3385,7 +3385,7 @@ export type Session2 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3446,7 +3446,7 @@ export type Session3 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3500,7 +3500,7 @@ export type Session4 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3554,7 +3554,7 @@ export type Session5 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3608,7 +3608,7 @@ export type Session6 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3662,7 +3662,7 @@ export type Session7 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3771,7 +3771,7 @@ export type Session8 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3825,7 +3825,7 @@ export type Session9 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -5965,7 +5965,7 @@ export type RevertState = {
   snapshot?: string
   diff?: string
   files?: Array<FileDiff>
-  workspace?: "restored" | "snapshots-disabled" | "unavailable"
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type EventSessionNextRevertStaged = {
@@ -18326,7 +18326,7 @@ export type KilocodeSessionImportSessionData = {
       partID?: string
       snapshot?: string
       diff?: string
-      workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     permission?: {
       [key: string]: unknown

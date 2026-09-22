@@ -96,6 +96,8 @@ export const dict = {
     "Unterhaltung zurückgesetzt. Dateiänderungen wurden nicht wiederhergestellt, weil Snapshots deaktiviert sind.",
   "revert.banner.workspace.unavailable":
     "Unterhaltung zurückgesetzt. Es war kein Dateiwiederherstellungspunkt verfügbar, daher wurden Änderungen im Arbeitsbereich nicht wiederhergestellt.",
+  "revert.banner.workspace.notAGitRepo":
+    "Unterhaltung zurückgesetzt. Dateiwiederherstellungspunkte erfordern ein Git-Repository, daher wurden Änderungen im Arbeitsbereich nicht wiederhergestellt.",
   "revert.banner.workspace.legacy":
     "Unterhaltung zurückgesetzt. Der Status der Arbeitsbereichswiederherstellung ist für dieses frühere Zurücksetzen nicht verfügbar.",
   "revert.banner.workspace.enableSnapshots": "Snapshots aktivieren",
