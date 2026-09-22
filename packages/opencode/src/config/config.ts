@@ -27,6 +27,7 @@ import { Context, Duration, Effect, Fiber, Layer, Option, Schema } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
+import { isDeepStrictEqual } from "node:util" // kilocode_change - compare lowered config values
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { RemoteAuthError } from "@opencode-ai/core/v1/config/error"
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
@@ -350,11 +351,24 @@ const layer = Layer.effect(
       const normalized = normalizeLoadedConfig(parsed, source) // kilocode_change
       // kilocode_change start - preserve upstream excess-key compatibility while warning Kilo users about typos
       if (configWarnings) {
-        // Native V2 keys that the V1 lowering aliases to a V1 key are not typos. Other V2-only keys
-        // (for example attachments) still warn, because the lowering does not consume them and the
-        // V1 decoder drops them silently.
-        const aliased = new Set(["agents", "commands", "media", "snapshots"])
-        const keys = Excess.keys(ConfigV1.Info, normalized).filter((key) => !aliased.has(key))
+        // Warn for keys the V1 decoder drops and the V2 lowering does not consume. A key counts as
+        // consumed when removing it changes the lowered value apart from the key itself, so the
+        // exemption follows the lowering instead of hardcoding upstream key spellings.
+        const strip = (value: unknown, key: string) => {
+          if (!isRecord(value)) return value
+          const copy = { ...value }
+          delete copy[key]
+          return copy
+        }
+        const baseline = ConfigV2Compat.lower(normalized, source).value
+        const keys = Excess.keys(ConfigV1.Info, normalized).filter((key) => {
+          const without: Record<string, unknown> = { ...(normalized as Record<string, unknown>) }
+          delete without[key]
+          return isDeepStrictEqual(
+            strip(ConfigV2Compat.lower(without, source).value, key),
+            strip(baseline, key),
+          )
+        })
         if (keys.length) {
           const detail = Excess.issue(keys)
           configWarnings.push({
