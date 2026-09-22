@@ -121,6 +121,7 @@ export interface LoadMessagesRequest {
 
 export interface LoadSessionsRequest {
   type: "loadSessions"
+  more?: boolean
 }
 
 export interface RequestSessionModelUsageMessage {
@@ -521,6 +522,16 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface RequestAutoCleanupStateMessage {
+  type: "requestAutoCleanupState"
+  requestID: string
+}
+
+export interface RunAutoCleanupNowMessage {
+  type: "runAutoCleanupNow"
+  requestID: string
+}
+
 export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
@@ -800,6 +811,31 @@ export interface AddProjectMessage {
   type: "agentManager.addProject"
 }
 
+// Create a local project in the given parent folder
+export interface CreateProjectMessage {
+  type: "agentManager.createProject"
+  parent: string
+  name: string
+}
+
+// Clone a repository into the given parent folder
+export interface CloneProjectMessage {
+  type: "agentManager.cloneProject"
+  url: string
+  parent: string
+}
+
+// Request the default parent folder for a new project
+export interface RequestProjectParentMessage {
+  type: "agentManager.requestProjectParent"
+}
+
+// Pick a parent folder through the native folder picker
+export interface PickProjectParentMessage {
+  type: "agentManager.pickProjectParent"
+  defaultPath?: string
+}
+
 // Remove a project from the catalog (never deletes repository data)
 export interface RemoveProjectMessage {
   type: "agentManager.removeProject"
@@ -1021,6 +1057,13 @@ export interface SetTabOrderRequest {
   type: "agentManager.setTabOrder"
   key: string
   order: string[]
+}
+
+// Persist pinned session tabs for a context (worktree ID or "local"), in pin order
+export interface SetPinnedTabsRequest {
+  type: "agentManager.setPinnedTabs"
+  key: string
+  ids: string[]
 }
 
 // Persist sidebar worktree order
@@ -1263,6 +1306,11 @@ export interface DiffViewerSetBaseBranchRequest {
 export interface DiffVirtualSetMarkdownRenderRequest {
   type: "diffVirtual.setMarkdownRender"
   render: boolean
+}
+
+export interface DiffVirtualSetDiffStyleRequest {
+  type: "diffVirtual.setDiffStyle"
+  style: "unified" | "split"
 }
 
 export interface RetryConnectionRequest {
@@ -1662,6 +1710,8 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestAutoCleanupStateMessage
+  | RunAutoCleanupNowMessage
   | RequestThroughputSettingMessage
   | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
@@ -1710,6 +1760,10 @@ export type WebviewMessage =
   | RequestStateMessage
   | RequestProjectsMessage
   | AddProjectMessage
+  | CreateProjectMessage
+  | CloneProjectMessage
+  | RequestProjectParentMessage
+  | PickProjectParentMessage
   | RemoveProjectMessage
   | SelectProjectMessage
   | ActivateSelectionMessage
@@ -1731,6 +1785,7 @@ export type WebviewMessage =
   | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
+  | SetPinnedTabsRequest
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetSidebarCollapsedRequest
@@ -1772,6 +1827,7 @@ export type WebviewMessage =
   | DiffViewerRequestBranchesRequest
   | DiffViewerSetBaseBranchRequest
   | DiffVirtualSetMarkdownRenderRequest
+  | DiffVirtualSetDiffStyleRequest
   | RetryConnectionRequest
   | ReloadRequest
   | OpenSubAgentViewerRequest

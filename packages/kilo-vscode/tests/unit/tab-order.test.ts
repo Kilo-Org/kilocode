@@ -2,6 +2,8 @@ import { describe, it, expect } from "bun:test"
 import {
   reorderTabs,
   applyTabOrder,
+  applyPinnedTabs,
+  togglePinnedTab,
   firstOrderedTitle,
   replaceInTabOrder,
   insertInTabOrderAfter,
@@ -131,6 +133,53 @@ describe("applyTabOrder", () => {
   it("preserves item properties", () => {
     const result = applyTabOrder(items, ["b", "a", "c"])
     expect(result[0]).toEqual({ id: "b", name: "Bob" })
+  })
+})
+
+describe("applyPinnedTabs", () => {
+  const items = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }]
+
+  it("moves pinned items to the front in pin order", () => {
+    expect(applyPinnedTabs(items, ["c", "a"]).map((i) => i.id)).toEqual(["c", "a", "b", "d"])
+  })
+
+  it("keeps the relative order of unpinned items", () => {
+    expect(applyPinnedTabs(items, ["d"]).map((i) => i.id)).toEqual(["d", "a", "b", "c"])
+  })
+
+  it("ignores pinned ids that are not open", () => {
+    expect(applyPinnedTabs(items, ["x", "b"]).map((i) => i.id)).toEqual(["b", "a", "c", "d"])
+  })
+
+  it("returns the original array when nothing is pinned", () => {
+    expect(applyPinnedTabs(items, undefined)).toBe(items)
+    expect(applyPinnedTabs(items, [])).toBe(items)
+    expect(applyPinnedTabs(items, ["x"])).toBe(items)
+  })
+
+  it("layers on top of a custom tab order", () => {
+    const ordered = applyTabOrder(items, ["d", "c", "b", "a"])
+    expect(applyPinnedTabs(ordered, ["a"]).map((i) => i.id)).toEqual(["a", "d", "c", "b"])
+  })
+})
+
+describe("togglePinnedTab", () => {
+  it("pins at the end of the pinned group", () => {
+    expect(togglePinnedTab(["a"], "b")).toEqual(["a", "b"])
+  })
+
+  it("pins into an empty list", () => {
+    expect(togglePinnedTab(undefined, "a")).toEqual(["a"])
+  })
+
+  it("unpins an already pinned tab", () => {
+    expect(togglePinnedTab(["a", "b", "c"], "b")).toEqual(["a", "c"])
+  })
+
+  it("does not mutate the input", () => {
+    const pinned = ["a", "b"]
+    togglePinnedTab(pinned, "c")
+    expect(pinned).toEqual(["a", "b"])
   })
 })
 

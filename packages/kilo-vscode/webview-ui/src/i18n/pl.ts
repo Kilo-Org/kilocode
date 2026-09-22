@@ -312,7 +312,7 @@ export const dict = {
   "ui.approval.source.agent.default": "przez agenta",
   "ui.approval.source.global": "przez konfigurację globalną",
   "ui.approval.source.project": "przez konfigurację projektu",
-  "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania (YOLO)",
+  "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania",
   "ui.approval.source.session": "przez regułę automatycznego zatwierdzania sesji",
   "ui.approval.source.default": "domyślnie",
   "ui.approval.outsideWorkspace": "(poza obszarem roboczym: {{file}})",
@@ -578,14 +578,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo wstrzymuje pracę i pokazuje swój plan w trakcie działania.",
   "workStyle.choice.human-in-the-loop.permissions": "Prosi o zgodę przed edycją plików lub uruchomieniem poleceń.",
   "workStyle.choice.human-in-the-loop.bash": "Prosi o pozwolenie na każde polecenie terminala.",
-  "workStyle.choice.human-in-the-loop.visibility": "Wyświetla wszystkie szczegóły rozmowy, w tym tok rozumowania.",
+  "workStyle.choice.human-in-the-loop.visibility": "Rozwija rozumowanie, polecenia i zmiany do przeglądu.",
   "workStyle.choice.autonomous.eyebrow": "Mniej przerw",
   "workStyle.choice.autonomous.title": "Wysoka autonomia",
   "workStyle.choice.autonomous.description": "Mniej przerw i uproszczony interfejs.",
   "workStyle.choice.autonomous.permissions":
     "Edytuje pliki i uruchamia polecenia w przestrzeni roboczej bez pytania o zgodę.",
   "workStyle.choice.autonomous.bash": "Może uruchamiać polecenia terminala w przestrzeni roboczej bez zatwierdzenia.",
-  "workStyle.choice.autonomous.visibility": "Szczegóły pozostają zwinięte, dopóki ich nie rozwiniesz.",
+  "workStyle.choice.autonomous.visibility": "Zwieja szczegóły narzędzi, z kompaktowym podglądem rozumowania.",
   "session.cloud.import.title": "Importuj z chmury",
   "session.cloud.import.placeholder": "ID sesji, URL lub polecenie kilo import",
   "session.cloud.import.button": "Importuj",
@@ -1124,6 +1124,28 @@ export const dict = {
     "Zapobieganie powtarzaniu tych samych akcji. Uruchamiane, gdy to samo wywołanie narzędzia powtarza się z identycznymi danymi wejściowymi.",
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
+  "settings.autoCleanup.enable.title": "Włącz automatyczne czyszczenie sesji",
+  "settings.autoCleanup.enable.description":
+    "Automatycznie usuwa starą historię sesji po określonej liczbie dni, we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze, nie tylko w tym oknie. Uruchomione sesje i sesje z niedawnym forkiem nigdy nie są usuwane. Usunięcie jest trwałe.",
+  "settings.autoCleanup.defaultRetention.title": "Przechowuj sesje (dni)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Jak długo przechowywana jest historia sesji, zanim automatyczne czyszczenie ją usunie.",
+  "settings.autoCleanup.lastRun.title": "Ostatnie czyszczenie",
+  "settings.autoCleanup.lastRun.never": "Nigdy nie uruchomiono",
+  "settings.autoCleanup.result":
+    "{{date}}: usunięto {{deleted}} z {{scanned}} sesji ({{active}} aktywnych pominięto, {{failed}} nie powiodło się) w {{seconds}}s",
+  "settings.autoCleanup.starting": "Uruchamianie czyszczenia sesji...",
+  "settings.autoCleanup.error.status": "Stan czyszczenia sesji jest chwilowo niedostępny. Ponawianie próby...",
+  "settings.autoCleanup.error.timeout":
+    "Oczekiwanie na stan czyszczenia. Backend potrzebuje więcej czasu niż oczekiwano.",
+  "settings.autoCleanup.error.run":
+    "Nie udało się potwierdzić zakończenia czyszczenia sesji. Sprawdź wynik ostatniego czyszczenia przed ponowną próbą.",
+  "settings.autoCleanup.progress.scanning": "Skanowanie sesji: przetworzono {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Usuwanie sesji: przetworzono {{processed}}/{{total}} (usunięto {{deleted}}, nie powiodło się {{failed}})",
+  "settings.autoCleanup.runNow": "Uruchom czyszczenie teraz",
+  "settings.autoCleanup.runNow.confirm":
+    "Trwale usunąć wygasłe sesje we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze?",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
   "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
   "settings.context.compaction.title": "Kompaktowanie",
@@ -1172,6 +1194,20 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Wybierz, jaki język używać do wiadomości generowanych przez sztuczną inteligencję:",
 
+  "settings.display.preview.title": "Podgląd",
+  "settings.display.presets.title": "Presety wyświetlania",
+  "settings.display.presets.description":
+    "Zmienia poniższe opcje wyświetlania, a nie uprawnienia. Zapisz, aby zastosować.",
+  "settings.display.preview.model": "Model przykładowy",
+  "settings.display.preview.prompt": "Usuń nadmiarowe spacje z powitania i sprawdź testy.",
+  "settings.display.preview.reasoning":
+    "**Sprawdź powitanie.** Funkcja powinna zwracać to samo powitanie dla zwykłej nazwy i nazwy z nadmiarowymi spacjami na obu końcach. Zachowam istniejącą sygnaturę funkcji i format powitania, a zmienię tylko sposób, w jaki nazwa trafia do zwracanego ciągu.\n\nW przypadku danych wejściowych takich jak `  Ada  ` niechciane spacje należą do danych wejściowych, a nie do szablonu powitania. Przycięcie gotowego powitania pozostawiłoby spacje obok nazwy. Operacja przycinania musi więc nastąpić przed wstawieniem nazwy.\n\nSprawdzę dokumentację ciągów, aby potwierdzić, że `trim()` usuwa białe znaki z obu końców i zwraca nowy ciąg. Powinna pozostawić oryginalne dane wejściowe bez zmian. Do tej zmiany nie jest potrzebne wyrażenie regularne, dodatkowa zależność ani osobna funkcja pomocnicza.\n\nSpacje wewnątrz nazwy muszą pozostać nienaruszone. Nazwa taka jak `Ada Lovelace` nie powinna stać się `AdaLovelace`, a wielkość liter nie powinna się zmieniać. Puste dane wejściowe lub dane zawierające tylko spacje nie wymagają nowego powitania zastępczego w ramach tej ukierunkowanej poprawki.\n\nZmiana może pozostać w wyrażeniu zwracającym dzięki użyciu `name.trim()` tam, gdzie szablon obecnie używa `name`. Zachowam otaczającą interpunkcję i celową spację po powitaniu. Dzięki temu diff pozostaje mały, a zachowanie łatwe do sprawdzenia.\n\nNa koniec uruchomię `bun test greeting.test.ts` i sprawdzę oba wyniki. Przypadek z uzupełnioną nazwą powinien potwierdzić, że nadmiarowe spacje są usuwane, a przypadek ze zwykłą nazwą chroni istniejące dane wyjściowe. Zmianę i wyniki testów zgłoszę dopiero po zakończeniu polecenia.",
+  "settings.display.preview.shell": "Sprawdź test powitania",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] usuwa nadmiarowe spacje\n[pass] zachowuje zwykłą nazwę\n\n2 testy zaliczone",
+  "settings.display.preview.query": "Przycinanie ciągów",
+  "settings.display.preview.result": "trim() usuwa spacje z obu końców ciągu.",
+  "settings.display.preview.answer": "Zaktualizowano powitanie, aby usuwało nadmiarowe spacje. Oba testy przechodzą.",
   "settings.display.username.title": "Nazwa użytkownika",
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.fontSize.title": "Rozmiar czcionki",
@@ -1206,7 +1242,7 @@ export const dict = {
     "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",
   "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
   "settings.display.autoApprovalReason.description":
-    "Pokazuje wiersz przy wywołaniach narzędzi wyjaśniający, dlaczego zostały automatycznie zatwierdzone (dopasowana reguła, wartość domyślna agenta, tryb YOLO itp.).",
+    "Pokazuje, dlaczego wywołanie narzędzia zostało automatycznie zatwierdzone, na przykład pasująca reguła uprawnień lub wartość domyślna agenta.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -177,7 +177,8 @@ export function mergeWithNewestVersions(
   theirs: Record<string, string> | undefined,
   changes: string[],
   section: string,
-): Record<string, string> {
+): Record<string, string> | undefined {
+  if (!ours && !theirs) return
   const result: Record<string, string> = {}
 
   // Seed with ours' keys in ours' order, applying newest-wins per key.
@@ -283,6 +284,7 @@ const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {
 // here gets re-applied from ours after taking theirs.
 const PRESERVE_SCRIPTS: Record<string, string[]> = {
   "package.json": [
+    "dev",
     "extension",
     "extension:isolated",
     "extension:isolated:clean",

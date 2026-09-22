@@ -29,6 +29,7 @@ import { dict as uiTr } from "@kilocode/kilo-ui/i18n/tr"
 import { dict as uiNl } from "@kilocode/kilo-ui/i18n/nl"
 import { dict as uiUk } from "@kilocode/kilo-ui/i18n/uk"
 import { dict as uiIt } from "@kilocode/kilo-ui/i18n/it"
+import { dict as uiFa } from "@kilocode/kilo-ui/i18n/fa"
 import { dict as appEn } from "../i18n/en"
 import { dict as appZh } from "../i18n/zh"
 import { dict as appZht } from "../i18n/zht"
@@ -146,9 +147,9 @@ const dicts: Record<Locale, Record<string, string>> = {
   nl: { ...base, ...appNl, ...uiNl, ...kiloNl, ...amEn, ...amNl },
   uk: { ...base, ...appUk, ...uiUk, ...kiloUk, ...amEn, ...amUk },
   it: { ...base, ...appIt, ...uiIt, ...kiloIt, ...amEn, ...amIt },
-  // Persian (Kilo fork addition). Only app + agent-manager layers are localized;
-  // the upstream ui/kilo layers fall back to English via `base`.
-  fa: { ...base, ...appFa, ...amEn, ...amFa },
+  // Persian (Kilo fork addition). App, UI, and agent-manager layers are localized;
+  // the Kilo overrides layer falls back to English via `base`.
+  fa: { ...base, ...appFa, ...uiFa, ...amEn, ...amFa },
 }
 
 function normalizeLocale(lang: string): Locale {

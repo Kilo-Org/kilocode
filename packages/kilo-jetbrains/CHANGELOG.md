@@ -1,5 +1,17 @@
 # Changelog
 
+## 7.7.7
+
+### Patch Changes
+
+- [#14365](https://github.com/Kilo-Org/kilocode/pull/14365) [`4486af2`](https://github.com/Kilo-Org/kilocode/commit/4486af2a952ac5c31b4ed44f5a85751b1e04fe22) - Even out the padding on the Kilo tool window's "New Session" and "New Worktree" buttons, and animate the active session's centered progress text with a shimmer effect.
+
+- [#14305](https://github.com/Kilo-Org/kilocode/pull/14305) [`122d849`](https://github.com/Kilo-Org/kilocode/commit/122d849f6fecdd0406dd932f3e944a068ce9fe5e) - Stop a single slow GitHub CLI lookup from hiding Agent Manager pull request badges and warning that gh is not answering. Repositories with many worktrees also spend far fewer `gh` calls per refresh.
+
+- [#14306](https://github.com/Kilo-Org/kilocode/pull/14306) [`9de800f`](https://github.com/Kilo-Org/kilocode/commit/9de800f4368e4e7ac5b9bbbb150162e4d3e6ad1b) - Run npm, yarn, pnpm, and bun script configurations in a worktree from the Agent Manager Run popup, and explain unsupported configurations in a "Not Supported" submenu instead of omitting them silently.
+
+- [#14306](https://github.com/Kilo-Org/kilocode/pull/14306) [`b099533`](https://github.com/Kilo-Org/kilocode/commit/b099533fd1e9f2ed4f8c087afa6558c71352a414) - Show the worktree's own log files in the Run tool window when running a configuration from the Agent Manager, instead of tailing the main checkout's stale files.
+
 ## 7.8.0
 
 ### Minor Changes
@@ -477,6 +489,18 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.7-rc.3] - 2026-09-21
+
+### Added
+
+- Added unique avatars for subagents and a background agents strip in the session header.
+- Show scheduled/progress polish for session actions with a shimmering progress footer.
+
+### Fixed
+
+- Stopped a slow `gh` lookup from blanking PR badges.
+- Made worktree runs use the worktree's own logs and npm configs.
 
 ## [7.1.7-rc.2] - 2026-09-17
 

@@ -204,6 +204,10 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         const before = active()
         const listed = message.sessions.map((item) => item.id)
         for (const id of listed) fresh.delete(id)
+        // Appended pages only add older sessions; they do not list every open
+        // tab, so reconciling against them would close tabs for sessions that
+        // are still valid.
+        if (message.append) return
         const next = reconcileTabs(current(), [...listed, ...(message.preserveSessionIds ?? []), ...fresh], pending)
         apply(next)
         if (before !== next.active) focus(next.active)
