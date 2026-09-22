@@ -6,11 +6,15 @@ package:
   version: ${{ version }}
 
 # The archive for the current target platform is selected by the caller
-# (see script/kilocode/conda-publish.ts), which sets KILO_ARCHIVE/KILO_SHA256
-# and invokes `rattler-build build --target-platform <platform>` once per
-# platform. This keeps the recipe itself platform-agnostic.
+# (see the `Build conda package` step in .github/workflows/publish.yml),
+# which sets KILO_ARCHIVE/KILO_SHA256/KILO_TAG and invokes
+# `rattler-build build --target-platform <platform>` once per platform.
+# This keeps the recipe itself platform-agnostic. KILO_TAG is the real git
+# tag (e.g. v1.2.3 or v0.0.0-rc-202609221200); KILO_VERSION is the
+# conda-safe package version (git tag without the leading `v`, dashes
+# replaced by dots).
 source:
-  url: https://github.com/Kilo-Org/kilocode/releases/download/v${{ version }}/${{ env.get("KILO_ARCHIVE") }}
+  url: https://github.com/Kilo-Org/kilocode/releases/download/${{ env.get("KILO_TAG") }}/${{ env.get("KILO_ARCHIVE") }}
   sha256: ${{ env.get("KILO_SHA256") }}
 
 build:

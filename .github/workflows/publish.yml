@@ -494,12 +494,18 @@ jobs:
           echo "RATTLER_BUILD=$RUNNER_TEMP/rattler-build" >> "$GITHUB_ENV"
 
       - name: Build conda package
-        if: ${{ !inputs.pre_release }}
         working-directory: packages/opencode
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
+          KILO_TAG: ${{ needs.version.outputs.tag }}
         run: |
           set -euo pipefail
+          if [ -z "$KILO_TAG" ]; then
+            echo "no release tag produced for this run, skipping conda package build"
+            exit 0
+          fi
+          # conda versions cannot contain '-'; e.g. 0.0.0-rc-202609221200 -> 0.0.0.rc.202609221200
+          conda_version="${KILO_VERSION//-/.}"
           declare -A archives=(
             [linux-64]=kilo-linux-x64.tar.gz
             [linux-aarch64]=kilo-linux-arm64.tar.gz
@@ -512,7 +518,7 @@ jobs:
             archive="${archives[$platform]}"
             sha="$(sha256sum "dist/$archive" | cut -d' ' -f1)"
             echo "building conda package for $platform ($archive)"
-            KILO_ARCHIVE="$archive" KILO_SHA256="$sha" "$RATTLER_BUILD" build \
+            KILO_VERSION="$conda_version" KILO_ARCHIVE="$archive" KILO_SHA256="$sha" "$RATTLER_BUILD" build \
               --recipe script/kilocode/conda-recipe/recipe.yaml \
               --target-platform "$platform" \
               --output-dir dist/conda \
@@ -534,14 +540,15 @@ jobs:
 
       # kilocode_change start - upload the conda packages built above to
       # Anaconda.org. The `channel` input is the Anaconda.org org to publish
-      # under (mirrors ana-cli's `channel: anaconda-cloud`). Skips on pre-releases.
+      # under (mirrors ana-cli's `channel: anaconda-cloud`). Pre-releases go
+      # to the `rc` label, stable releases to `main`.
       - name: Upload conda package to Anaconda.org
-        if: ${{ !inputs.pre_release }}
+        if: ${{ needs.version.outputs.tag != '' }}
         uses: anaconda/actions/upload-package@a6f488910b4a1e4f3fe01736241ca1b92b4b355a # v0.3.1
         with:
           token: ${{ secrets.ANACONDA_API_KEY }}
           packages: packages/opencode/dist/conda/**/*.conda
           channel: anaconda-cloud
-          labels: main
+          labels: ${{ inputs.pre_release && 'rc' || 'main' }}
           force: "true"
       # kilocode_change end
