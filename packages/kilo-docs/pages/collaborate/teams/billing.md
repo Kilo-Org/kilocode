@@ -113,6 +113,10 @@ The minimum top-up amount is **$100.00**.
 
 Once saved, your initial top-up will be processed immediately to verify your payment method.
 
+## Spend Alerts
+
+Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go to the owner's authorized billing contacts by email or mobile push. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
+
 ## Invoices
 
 Invoices for any payment on the Kilo Code platform, for seats or credits, will be available in the Invoices tab.

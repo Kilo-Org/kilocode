@@ -43,6 +43,8 @@ History and CLI list searches do **not** search message content. To find a strin
 
 Local history actions also let you rename, export, or delete a session. Cloud history can be filtered to **Only this repository**.
 
+Local history loads the newest sessions first. When older sessions exist, **Load more** at the end of the list loads the next page, so older sessions stay reachable instead of stopping at a fixed limit. Paging covers the workspace root and every registered worktree directory.
+
 In Agent Manager, select a worktree before opening **History**. The **Worktree** source is selected by default and lists only sessions assigned to that worktree. When you open a worktree session, Agent Manager returns to its owning worktree. Select **Local** or **Cloud** to view another source.
 
 The History search is a fuzzy title search over the sessions currently loaded into the view. It does not search prompts or agent replies.

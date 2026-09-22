@@ -174,6 +174,10 @@ Display changes apply as a draft. Click **Save** to keep them or **Discard** to 
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
 
+### Diff Viewer Style
+
+Kilo diff viewers support **Unified** and **Split** layouts. Toggling the style in any diff viewer remembers your choice in the `kilo-code.new.diff.style` VS Code setting, and later diff viewers open with it. Set the setting to `unified` or `split` directly, or let the first toggle record it. Until you choose a style once, edit-tool diffs open split and diffs expanded from the permission dock open unified.
+
 ### Web Search
 
 See [Web Search Availability](/docs/automate/tools#web-search-availability) for how to enable the `websearch` tool for models from all providers.

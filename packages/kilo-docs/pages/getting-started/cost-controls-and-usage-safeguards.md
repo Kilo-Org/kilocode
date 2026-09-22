@@ -54,6 +54,16 @@ Organization accounts can additionally configure **per-user daily spending limit
 
 **Where to configure:** Organization spending limits are managed in the organization dashboard at [app.kilo.ai](https://app.kilo.ai). Individual credit top-up is at Settings → Adding Credits.
 
+### Spend alerts
+
+Spend alerts notify you when spending crosses thresholds you set, so you can react before a balance runs out. Owners turn them on or off in the spend view, on the web or in the mobile app.
+
+In the spend view you choose which alert kinds to enable, each limit and window, and the channels to notify, such as email or mobile push. An alert fires once when rolling spend over the selected window crosses a configured limit, then stays quiet until the condition clears and crosses again. An hour-spike alert fires when the current hour runs far above your usual rate.
+
+Alerts go only to the owner's authorized billing contacts, and each alert contains only that owner's spend. Every alert includes one action that opens the owner's spend view. In the mobile app, spend alerts are their own push category, and turning it off stops push and matches the choice in the spend view.
+
+**Where to configure:** The spend view in the [Kilo dashboard](https://app.kilo.ai) or the mobile app.
+
 ### Free model rate limits
 
 Requests to free models (`kilo-auto/free` and other free-tier models) are rate-limited to **200 requests per hour**. If you exceed this, requests return HTTP 429 and you must wait before continuing.

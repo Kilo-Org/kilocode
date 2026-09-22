@@ -49,6 +49,33 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
 
+## Background agents
+
+When Kilo moves a subagent to the background, a collapsible status strip appears below the session title. The strip summarizes the agents and stays visible as you scroll the transcript; click it to expand the list.
+
+Each agent shows one of these states:
+
+| State | Meaning |
+|---|---|
+| **Running** | The agent is still working. |
+| **Done** | The agent completed successfully. |
+| **Cancelled** | The agent was stopped before it completed. |
+| **Error** | The agent stopped because it encountered an error. |
+
+An agent can also show **Needs input** when it is waiting for a permission decision or an answer to a question. Click an agent row to open its read-only transcript.
+
+Use these controls in the background-agent strip:
+
+- **Stop** cancels a running agent and its child session.
+- **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
+- **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
+- **Clear finished** hides all agents that are no longer running.
+- **Open all** opens the transcript of every listed agent.
+
+To move a running foreground subagent to the background, use **Continue in background** on its task card. The action appears only when the connected CLI supports background subagents; when they are disabled, Kilo explains this and leaves the task running in the foreground.
+
+Stopping the main session leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed results are delivered to the parent session as it continues.
+
 ## Diagrams in chat
 
 Ask Kilo for a Mermaid diagram to visualize a workflow, architecture, data relationship, or timeline. Chat renders `mermaid` and `mmd` code blocks inline, with source shown while streaming or if rendering fails.

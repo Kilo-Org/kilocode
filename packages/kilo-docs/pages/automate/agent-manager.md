@@ -350,6 +350,10 @@ File mentions, clickable file links, review-comment file links, file-link valida
 
 When a session delegates work to a subagent, open the child transcript from its task card or background-agent row. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
 
+### Pinning session tabs
+
+Right-click a session tab and choose **Pin** to move it to the front of the tab bar. Pinned tabs move in pin order, keep their position across reloads, survive **Close Others**, and show a pin beside the title instead of a close button. Drag a pinned tab to reorder it within the pinned group; an unpinned tab cannot cross into that group. Choose **Unpin** from the same menu to return the tab to the normal order. A pending draft tab or a terminal tab cannot be pinned. The right-click menu also provides **Fork Session**, **Close**, and **Close Others**.
+
 ### Renaming Worktrees
 
 Double-click a worktree name to edit its label inline. You can also right-click the worktree and choose **Rename**. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
@@ -488,6 +492,10 @@ The worktree creation base and the diff comparison base are separate. The Branch
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
 Files marked `linguist-generated` in the repository's `.gitattributes` start collapsed. Expand them to review their changes; files explicitly marked as not generated stay expanded.
+
+### Keyboard review
+
+The diff panel supports keyboard-only review. `Cmd+D` / `Ctrl+D` opens the panel and focuses the scroll viewport; when the panel is already open, the shortcut focuses it first, and closes it only when the viewport already owns focus. Click anywhere in the diff content to give the viewport focus, then use the native arrow keys, Page Up/Down, Space, Home, and End to scroll. `Shift+ArrowDown` / `Shift+ArrowUp` pages the viewport when no text is selected. A focus frame is drawn while the viewport owns focus. Closing the panel returns focus to the prompt or to the control you opened it from.
 
 ### Sending review comments
 

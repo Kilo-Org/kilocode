@@ -19,11 +19,17 @@ The setting is also available as `kilo-code.new.experimental.multiProject`. It i
 
 The repository in your current VS Code workspace is always the **default project**. You cannot remove it from Agent Manager.
 
-To add another repository:
+Project actions are at the bottom of the project list. **New project...** creates a repository. **Add project...** opens a menu with **Open local folder...** and **Clone repository...**.
 
-1. Open Agent Manager.
-2. Select **Add Project**.
-3. Choose a folder inside a Git repository.
+| Action | What it does |
+|---|---|
+| **New project...** | Creates a folder in the parent you choose, initializes Git in it, and registers the project. |
+| **Open local folder...** | Adopts an existing folder. If the folder is not already a Git repository, Agent Manager asks before initializing Git. |
+| **Clone repository...** | Clones a repository URL into the parent you choose and registers the project. |
+
+When Agent Manager initializes a repository, or opens an existing repository that has no commits yet, it creates an empty, unsigned bootstrap commit that skips the normal commit hooks. The commit does not include existing or uncommitted files, and only committed files appear in new worktrees. Creating that commit needs a Git identity, so if the repository has none, Agent Manager asks for a name and email and saves them only in that repository's local Git configuration. If you decline, the folder stays on disk but is not added as a project.
+
+Cloning uses VS Code's built-in Git command, so it reuses your VS Code Git credentials, SSH agent, progress, and cancellation. It requires VS Code 1.111 or later with the built-in Git extension enabled; use **Open local folder...** on older versions. If the repository is already registered, or a checkout already exists at the destination, Agent Manager opens the existing project instead of cloning it again. If the clone succeeds but the checkout fails, for example on a missing Git LFS object, you can still attach the repository at the destination.
 
 Agent Manager registers the repository root and makes it available immediately. Adding a project does not require a separate Agent Manager trust step. VS Code workspace trust still controls whether setup and run scripts can execute.
 
