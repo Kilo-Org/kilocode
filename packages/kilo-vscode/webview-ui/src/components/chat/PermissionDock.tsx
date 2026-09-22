@@ -78,10 +78,10 @@ export const PermissionDock: Component<{
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
 
-  // Dynamic MCP tools send their resolved input as metadata.input so the full
+  // Dynamic MCP tools send their resolved input as metadata.mcpInput so the full
   // request, including nested objects and arrays, is inspectable before approval.
   const input = () => {
-    const value = props.request.args?.input
+    const value = props.request.args?.mcpInput
     if (!value || typeof value !== "object") return undefined
     if (Object.keys(value).length === 0) return undefined
     return JSON.stringify(value, null, 2)

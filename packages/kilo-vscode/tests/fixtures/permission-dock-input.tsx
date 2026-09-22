@@ -56,7 +56,7 @@ const request: PermissionRequest = {
   toolName: "cagcode_find_symbol",
   patterns: ["*"],
   always: ["*"],
-  args: { input: { symbol: "foo", nested: { a: [1, 2] } } },
+  args: { mcpInput: { symbol: "foo", nested: { a: [1, 2] } } },
 }
 const shown = mount(request)
 try {
@@ -75,12 +75,21 @@ try {
   shown.root.remove()
 }
 
-const hidden = mount({ ...request, args: { input: {} } })
+const hidden = mount({ ...request, args: { mcpInput: {} } })
 try {
   assert.equal(hidden.root.querySelector('[data-slot="permission-input"]'), null)
 } finally {
   hidden.dispose()
   hidden.root.remove()
+}
+
+// doom_loop also forwards metadata.input; it must not render the MCP input block.
+const other = mount({ ...request, toolName: "doom_loop", args: { tool: "bash", input: { command: "ls" } } })
+try {
+  assert.equal(other.root.querySelector('[data-slot="permission-input"]'), null)
+} finally {
+  other.dispose()
+  other.root.remove()
 }
 
 await window.happyDOM.close()
