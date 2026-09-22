@@ -205,6 +205,34 @@ describe("global config updates", () => {
     }
   })
 
+  test("does not warn for a V2 key that duplicates its legacy key", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, { model: "test/model", snapshot: false, snapshots: false })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          expect(warnings.filter((warning) => warning.message.includes("Unrecognized keys"))).toEqual([])
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("preserves unknown global JSON fields while returning normalized config", async () => {
     await using global = await tmpdir()
     await using tmp = await tmpdir()
