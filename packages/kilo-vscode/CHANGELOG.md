@@ -1,5 +1,15 @@
 # kilo-code
 
+## 7.7.7
+
+### Patch Changes
+
+- Adopt OpenCode v1.18.14 through v1.18.15 improvements, including message ordering fixes, compaction serialization, locale coverage, and TUI enhancements.
+
+- Adopt OpenCode v1.18.16 through v1.18.18 improvements, including conversation-aware compaction, expanded reasoning effort support, provider compatibility fixes, and retry handling.
+
+- [#14360](https://github.com/Kilo-Org/kilocode/pull/14360) [`675ed4b`](https://github.com/Kilo-Org/kilocode/commit/675ed4b12d9a11d4fa1c103ee3f2dc24e417a550) - Retry transient connection drops when approving permissions so auto-approve and manual approvals no longer leave agents waiting.
+
 ## 7.7.6
 
 ### Minor Changes

@@ -382,6 +382,11 @@ describe("KiloCompactionChunks", () => {
     if (result.summary?.info.role !== "assistant") return
     expect(result.summary.info.finish).toBe("error")
     expect(result.summary.info.error).toEqual(error)
+    expect(
+      result.summary.parts.some(
+        (part) => part.type === "text" && part.text.includes(KiloCompactionChunks.EMPTY_SUMMARY),
+      ),
+    ).toBe(false)
   })
 
   test("keeps context overflow on the terminal compaction path", async () => {
@@ -410,8 +415,13 @@ describe("KiloCompactionChunks", () => {
     expect(result.summary.info.finish).toBe("error")
     expect(result.summary.info.error?.name).toBe("APIError")
     if (result.summary.info.error?.name !== "APIError") return
-    expect(result.summary.info.error.data.message).toBe("Compaction worker returned an empty response")
+    expect(result.summary.info.error.data.message).toBe(KiloCompactionChunks.EMPTY_SUMMARY)
     expect(result.summary.info.error.data.isRetryable).toBe(true)
+    expect(
+      result.summary.parts.some(
+        (part) => part.type === "text" && part.text.includes(KiloCompactionChunks.EMPTY_SUMMARY),
+      ),
+    ).toBe(true)
   })
 
   test("falls back to chunk workers after the first compaction overflows", async () => {

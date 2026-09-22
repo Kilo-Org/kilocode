@@ -25,6 +25,8 @@ const DEPTH = 3
 const OUTPUT = 2_048
 
 export namespace KiloCompactionChunks {
+  export const EMPTY_SUMMARY = "Compaction did not run: the model returned an empty summary. Retry with /compact."
+
   type Chunk = {
     index: number
     messages: MessageV2.WithParts[]
@@ -281,7 +283,7 @@ export namespace KiloCompactionChunks {
           error:
             out.error ??
             new MessageV2.APIError({
-              message: "Compaction worker returned an empty response",
+              message: EMPTY_SUMMARY,
               isRetryable: true,
             }).toObject(),
         }

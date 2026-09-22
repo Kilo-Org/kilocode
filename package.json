@@ -181,6 +181,6 @@
     "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch",
     "bun-pty@0.4.8": "patches/bun-pty@0.4.8.patch"
   },
-  "version": "7.7.6",
+  "version": "7.7.7",
   "peerDependencies": {}
 }

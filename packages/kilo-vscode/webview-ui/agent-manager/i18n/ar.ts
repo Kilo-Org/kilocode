@@ -115,6 +115,7 @@ export const dict = {
   "agentManager.session.noSessions": "لا توجد جلسات مفتوحة",
   "agentManager.tab.close": "إغلاق",
   "agentManager.tab.closeOthers": "إغلاق الآخرين",
+  "agentManager.tab.closeToRight": "إغلاق ما على اليمين",
   "agentManager.tab.closeTab": "إغلاق علامة التبويب",
   "agentManager.tab.forkSession": "تفريع الجلسة",
   "agentManager.tab.pin": "تثبيت",
