@@ -73,6 +73,10 @@ body.vscode-high-contrast-light {
       border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
     }
 
+    [data-slot="permission-input-code"] {
+      border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+    }
+
     [data-slot="permission-command-copy"]:focus-visible {
       outline-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
     }

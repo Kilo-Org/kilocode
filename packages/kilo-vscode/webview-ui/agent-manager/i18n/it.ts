@@ -123,6 +123,7 @@ export const dict = {
 
   "agentManager.tab.close": "Chiudi",
   "agentManager.tab.closeOthers": "Chiudi le altre",
+  "agentManager.tab.closeToRight": "Chiudi a destra",
   "agentManager.tab.closeTab": "Chiudi scheda",
   "agentManager.tab.forkSession": "Forka sessione",
   "agentManager.tab.pin": "Fissa",
