@@ -123,6 +123,7 @@ export const dict = {
 
   "agentManager.tab.close": "Закрити",
   "agentManager.tab.closeOthers": "Закрити інші",
+  "agentManager.tab.closeToRight": "Закрити праворуч",
   "agentManager.tab.closeTab": "Закрити вкладку",
   "agentManager.tab.forkSession": "Розгалужити сесію",
   "agentManager.tab.pin": "Закріпити",
