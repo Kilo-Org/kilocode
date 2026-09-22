@@ -2737,17 +2737,14 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
     if (start === 0) {
       // Full render: drop everything, including a plain-text fallback block.
       code.textContent = ""
-    } else {
-      while (code.children.length > start) {
-        // Remove the whole line group: the `span.line` element and its trailing
-        // "\n" separator text node. Removing only the element would leave the
-        // separator behind as a blank line.
-        const line = code.lastElementChild
-        if (!line) break
-        const separator = line.nextSibling
-        code.removeChild(line)
-        if (separator?.nodeType === Node.TEXT_NODE) code.removeChild(separator)
-      }
+    } else if (code.children.length > start) {
+      // Drop the stale tail in one DOM operation. The range starts before the
+      // first stale line and ends after the last child, so each removed line
+      // takes its trailing "\n" separator with it instead of leaving a blank line.
+      const range = document.createRange()
+      range.setStartBefore(code.children.item(start)!)
+      range.setEndAfter(code.lastChild!)
+      range.deleteContents()
     }
     const tail = code.lastChild
     const separator = code.childNodes.length > 0 && !(tail?.nodeType === Node.TEXT_NODE && tail.textContent === "\n") ? "\n" : ""
