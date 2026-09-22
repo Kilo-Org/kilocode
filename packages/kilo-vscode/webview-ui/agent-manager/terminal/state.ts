@@ -25,12 +25,10 @@ import type { TerminalDestination, TerminalFont, TerminalPlacement } from "../..
 
 export type { TerminalFont }
 
-/** Prefix used for terminal tab IDs in the webview (mirrors terminal-manager.ts). */
-export const TERMINAL_PREFIX = "terminal:"
-export const SCRIPT_TERMINAL_PREFIX = "script:"
+/** Shared terminal tab id helpers. Re-exported so existing callers keep working. */
+import { isTerminalTabId, SCRIPT_TERMINAL_PREFIX, TERMINAL_PREFIX } from "../../src/utils/terminal-tab-id"
 
-export const isTerminalTabId = (id: string): boolean =>
-  id.startsWith(TERMINAL_PREFIX) || id.startsWith(SCRIPT_TERMINAL_PREFIX)
+export { isTerminalTabId, SCRIPT_TERMINAL_PREFIX, TERMINAL_PREFIX }
 
 /** Status is separate from mounted xterm records so snapshot updates never remount them. */
 export type ScriptTerminalStatus = Pick<ScriptTerminalView, "state" | "exitCode" | "kind">
