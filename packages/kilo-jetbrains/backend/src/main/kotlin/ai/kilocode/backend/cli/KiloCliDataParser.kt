@@ -1130,14 +1130,23 @@ object KiloCliDataParser {
         return json.encodeToString(JsonObject.serializer(), JsonObject(mapOf("disabled_providers" to arr)))
     }
 
-    fun buildCustomProviderPatch(input: CustomProviderSaveDto): String {
+    /**
+     * [removedModelIds] are previously configured model IDs no longer present in [input.models].
+     * The config schema deep-merges provider objects on PATCH, so a removed model key must be
+     * emitted as an explicit `null` sentinel or it survives on disk under the old id forever
+     * (visible again after a restart).
+     */
+    fun buildCustomProviderPatch(input: CustomProviderSaveDto, removedModelIds: Set<String> = emptySet()): String {
         val id = input.id.trim()
         val env = input.envVar?.trim()?.takeIf { it.isNotBlank() }
-        val models = input.models.associate { model ->
-            model.id to buildJsonObject {
-                put("id", model.id)
-                put("name", model.name.ifBlank { model.id })
-                put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+        val models = buildJsonObject {
+            removedModelIds.forEach { removedId -> put(removedId, JsonNull) }
+            input.models.forEach { model ->
+                put(model.id, buildJsonObject {
+                    put("id", model.id)
+                    put("name", model.name.ifBlank { model.id })
+                    put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+                })
             }
         }
         val provider = buildJsonObject {
@@ -1146,7 +1155,7 @@ object KiloCliDataParser {
             put("options", buildJsonObject { put("baseURL", input.baseUrl.trim()) })
             if (env != null) put("env", buildJsonArray { add(JsonPrimitive(env)) })
             if (input.headers.isNotEmpty()) put("headers", buildJsonObject { input.headers.forEach { (k, v) -> put(k, v) } })
-            if (models.isNotEmpty()) put("models", JsonObject(models))
+            if (models.isNotEmpty()) put("models", models)
         }
         val root = buildJsonObject {
             put("provider", buildJsonObject { put(id, provider) })
@@ -1157,6 +1166,23 @@ object KiloCliDataParser {
     fun buildCustomProviderDeletePatch(id: String): String {
         val root = buildJsonObject {
             put("provider", buildJsonObject { put(id, JsonNull) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    /**
+     * A models-only deletion patch for provider [id]. Used when the same custom provider id has a
+     * separate, independently-authored config entry in another scope (global vs. workspace) that
+     * still lists a model the primary save removed. Only nulls the given model keys; every other
+     * field on that scope's entry is left untouched by the deep-merge PATCH.
+     */
+    fun buildCustomProviderModelRemovalPatch(id: String, modelIds: Set<String>): String {
+        val root = buildJsonObject {
+            put("provider", buildJsonObject {
+                put(id, buildJsonObject {
+                    put("models", buildJsonObject { modelIds.forEach { put(it, JsonNull) } })
+                })
+            })
         }
         return json.encodeToString(JsonObject.serializer(), root)
     }
