@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.background.BackgroundAgents
 import ai.kilocode.client.session.model.AgentItem
 import ai.kilocode.client.session.model.ModelLimitItem
 import ai.kilocode.client.session.model.ModelItem
@@ -34,6 +35,7 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edtLater as edt
 import ai.kilocode.rpc.dto.AgentsDto
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.EditorContextDto
@@ -109,6 +111,7 @@ class SessionController(
   private val openProfileAction: () -> Unit = {},
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val notify: (String, String) -> Unit = { title, body -> KiloNotifications.error(title, body) },
+  private val notifyInfo: (String, String) -> Unit = { title, body -> KiloNotifications.info(title, body) },
   private val timers: UiTimerSource = UiTimers,
   private val log: KiloLog = LOG,
 ) : Disposable {
@@ -162,6 +165,8 @@ class SessionController(
     private var partType: String? = null
     private var tool: String? = null
     private var eventJob: Job? = null
+    private var backgroundJobsJob: Job? = null
+    private var backgroundJobsRaw: List<BackgroundJobDto> = emptyList()
     private var drainJob: Job? = null
     private var revertJob: Job? = null
     private var revertOp: RevertOp? = null
@@ -1365,6 +1370,20 @@ class SessionController(
                 LOG.debug { "${ChatLogSummary.sid(id)} kind=subscription subscribe=false" }
             }
         }
+        backgroundJobsJob = cs.launch {
+            try {
+                sessions.backgroundJobs(id, directory).collect { jobs ->
+                    edt {
+                        if (disposed || sid != id) return@edt
+                        updateModel { applyBackgroundJobs(jobs) }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("${ChatLogSummary.sid(id)} kind=subscription route=background-jobs failed message=${e.message}", e)
+            }
+        }
     }
 
     @RequiresEdt
@@ -1429,11 +1448,92 @@ class SessionController(
         assertEdt()
         eventJob?.cancel()
         eventJob = null
+        backgroundJobsJob?.cancel()
+        backgroundJobsJob = null
+        backgroundJobsRaw = emptyList()
         childJobs.values.forEach { it.cancel() }
         childJobs.clear()
         childIds.clear()
         childParts.clear()
         pending.clear()
+    }
+
+    /** Apply a fresh background-jobs list from the CLI. Must run inside [updateModel]. */
+    @RequiresEdt
+    private fun applyBackgroundJobs(jobs: List<BackgroundJobDto>) {
+        backgroundJobsRaw = jobs
+        reapplyBackgroundAgents()
+    }
+
+    /**
+     * Re-derive [SessionModel.backgroundAgents] from the last jobs list and the current pending
+     * permissions. Called both when a fresh jobs list arrives and whenever [pending] changes for a
+     * child session — the backend's job-list poll only re-emits when the *job* itself changes, not
+     * when a permission is asked or answered, so a "needs input" badge would otherwise go stale
+     * until the next unrelated job transition.
+     *
+     * Only permission waits are tracked: child *questions* are not routed through [pending] at all
+     * (see [isChildEvent]), so a child awaiting a question does not yet surface "needs input" here.
+     */
+    @RequiresEdt
+    private fun reapplyBackgroundAgents() {
+        val id = sid ?: return
+        val waiting = pending.values.mapTo(mutableSetOf()) { it.sessionId }
+        model.setBackgroundAgents(BackgroundAgents.rows(backgroundJobsRaw, id, waiting))
+    }
+
+    /** Cancel one background subagent job and its child session tree. */
+    @RequiresEdt
+    fun cancelBackgroundAgent(job: String) {
+        assertEdt()
+        val dir = directory
+        cs.launch {
+            try {
+                sessions.cancelBackgroundJob(job, dir)
+                capture("Background Agent Stopped", mapOf("job" to job))
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=background-agent cancel=true job=$job failed message=${e.message}", e)
+            }
+        }
+    }
+
+    /** Hide finished background-agent rows [jobs] locally. Never deletes the child session or job record. */
+    @RequiresEdt
+    fun dismissBackgroundAgents(jobs: Set<String>) {
+        assertEdt()
+        if (jobs.isEmpty()) return
+        updateModel { model.dismissBackgroundAgents(jobs) }
+    }
+
+    /**
+     * Continue foreground task [job] (its child session id) in the background. Returns immediately;
+     * the strip picks up the promoted job on the next background-jobs poll. Surfaces a notification
+     * when the CLI's background-subagent kill switch is off, since the caller cannot tell from a
+     * fire-and-forget UI click.
+     */
+    @RequiresEdt
+    fun promoteBackgroundAgent(job: String) {
+        assertEdt()
+        val dir = directory
+        cs.launch {
+            val promoted = try {
+                sessions.promoteBackgroundJob(job, dir)
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=background-agent promote=true job=$job failed message=${e.message}", e)
+                false
+            }
+            if (promoted) {
+                capture("Background Agent Promoted", mapOf("job" to job))
+                return@launch
+            }
+            edt {
+                if (disposed) return@edt
+                notifyInfo(
+                    KiloBundle.message("session.header.agents.disabledTitle"),
+                    KiloBundle.message("session.header.agents.disabledMessage"),
+                )
+            }
+        }
     }
 
     private suspend fun recoverChildPermissions(child: String) {
@@ -1870,15 +1970,18 @@ class SessionController(
     private fun asked(event: ChatEventDto.PermissionAsked) {
         if (autoApprove) {
             approve(event.request)
+            reapplyBackgroundAgents()
             return
         }
         show(toPermission(event.request))
+        reapplyBackgroundAgents()
     }
 
     private fun replied(event: ChatEventDto.PermissionReplied) {
         val current = model.state
         val front = current is SessionState.AwaitingPermission && current.permission.id == event.requestID
         pending.remove(event.requestID)
+        reapplyBackgroundAgents()
         // Front card resolved: advance to the next queued permission, else resume Busy.
         if (front) {
             model.setState(afterResolve())
@@ -1947,6 +2050,7 @@ class SessionController(
         if (session == null) return
         val removed = pending.entries.removeIf { it.value.sessionId == session }
         if (!removed) return
+        reapplyBackgroundAgents()
         val current = model.state
         if (current is SessionState.AwaitingPermission && current.permission.sessionId == session) {
             model.setState(afterResolve(idle = true))

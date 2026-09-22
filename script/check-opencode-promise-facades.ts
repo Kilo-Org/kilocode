@@ -55,7 +55,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     reason: "production default snapshot hooks require the shared runtime and instance context",
   },
   "kilocode/kilo-sessions.test.ts": {
-    count: 44,
+    count: 46,
     reason:
       "K1 W1: real integration test for SessionStatus→detach→heartbeat-fence; " +
       "the test creates a session and sets its status via the global AppRuntime, " +
@@ -79,7 +79,11 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "metadata while .git is unreadable and restore it on the next gather. " +
       "The create_session share gate tests create the session through that same global " +
       "AppRuntime because the command hosts it through the module-level attachRemoteSession " +
-      "seam while the relay bootstrap is stubbed, so no scoped layer can observe the gate.",
+      "seam while the relay bootstrap is stubbed, so no scoped layer can observe the gate. " +
+      "The PR poll wiring test creates its session through that same global AppRuntime to " +
+      "drive the production init/bootstrap/attach path that starts the 5-minute check, then " +
+      "asserts the scheduler start count on the module-level pr-link-poller seam, so the " +
+      "global-runtime coupling is what the test observes.",
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },

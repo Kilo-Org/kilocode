@@ -2,7 +2,7 @@
  * Pure tab-ordering logic for the agent manager.
  */
 
-export { reorderTabs } from "../src/utils/tab-order"
+export { applyPinnedTabs, reorderTabs, togglePinnedTab } from "../src/utils/tab-order"
 
 /**
  * Apply a custom ordering to a list of items.
@@ -24,34 +24,6 @@ export function applyTabOrder<T extends { id: string }>(items: T[], order: strin
   }
   for (const item of lookup.values()) ordered.push(item)
   return ordered
-}
-
-/**
- * Move pinned items to the front, keeping their pin order.
- *
- * Unpinned items keep the sequence they already had, so this layers on top of
- * `applyTabOrder` without discarding a user's drag order. Pinned ids that are
- * not currently open are ignored.
- */
-export function applyPinnedTabs<T extends { id: string }>(items: T[], pinned: string[] | undefined): T[] {
-  if (!pinned || pinned.length === 0) return items
-  const rank = new Map(pinned.map((id, i) => [id, i]))
-  const head = items.filter((item) => rank.has(item.id)).sort((a, b) => rank.get(a.id)! - rank.get(b.id)!)
-  if (head.length === 0) return items
-  const tail = items.filter((item) => !rank.has(item.id))
-  return [...head, ...tail]
-}
-
-/**
- * Pin or unpin `id`.
- *
- * A newly pinned tab lands at the end of the pinned group so existing pins keep
- * their position. Unpinning drops the tab back into the unpinned group.
- */
-export function togglePinnedTab(pinned: string[] | undefined, id: string): string[] {
-  const base = pinned ?? []
-  if (base.includes(id)) return base.filter((item) => item !== id)
-  return [...base, id]
 }
 
 /**
