@@ -961,7 +961,7 @@ class SessionUi(
         // Only the prompt path uses editor context; gather after the command branches so slash
         // commands and client actions don't pay the editor-context cost or hit its failure modes.
         val editor = EditorContextGatherer.gather(project, workspace.directory)
-        val allFiles = files + listOfNotNull(editor.selection)
+        val allFiles = files + editor.selection
         LOG.debug {
             val parts = buildList {
                 text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
