@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 7.7.7
+
+### Patch Changes
+
+- Adopt OpenCode v1.18.14 through v1.18.15 improvements, including message ordering fixes, compaction serialization, locale coverage, and TUI enhancements.
+
+- Adopt OpenCode v1.18.16 through v1.18.18 improvements, including conversation-aware compaction, expanded reasoning effort support, provider compatibility fixes, and retry handling.
+
 ## 7.7.6
 
 ### Patch Changes
