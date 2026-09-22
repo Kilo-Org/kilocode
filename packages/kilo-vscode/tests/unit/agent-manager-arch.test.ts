@@ -463,7 +463,7 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("closedDrafts.add(sessionId)")
     expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
     expect(body).not.toContain('type: "agentManager.forgetSession"')
-    const close = getMethodBody("onCloseSessions")
+    const close = getMethodBody("onCloseSession")
     expect(close).toContain("await host.sessions.abort(")
     // Abort first, then drop the session from state, and only then stop its
     // processes: a closed session left in state can be restored by a concurrent
@@ -699,7 +699,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.addSessionToWorktree",
       "agentManager.forkSession",
       "agentManager.closeSession",
-      "agentManager.closeSessions",
       "agentManager.persistSession",
       "agentManager.forgetSession",
       "agentManager.configureSetupScript",

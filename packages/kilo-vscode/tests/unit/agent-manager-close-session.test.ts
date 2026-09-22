@@ -19,7 +19,7 @@ type Manager = {
   getRoot: () => string
   pushState: () => void
   log: (...args: unknown[]) => void
-  onCloseSessions: (sessionIds: readonly string[]) => Promise<null>
+  onCloseSession: (sessionId: string) => Promise<null>
 }
 
 function createManager(options?: { dir?: string; panelDir?: string; state?: boolean }) {
@@ -75,14 +75,14 @@ function createManager(options?: { dir?: string; panelDir?: string; state?: bool
   return { manager, stopped, aborted, cleared, removed, messages, events }
 }
 
-describe("AgentManagerProvider closeSessions", () => {
+describe("AgentManagerProvider closeSession", () => {
   // The session leaves Agent Manager state before its processes are stopped:
   // process shutdown can be slow, and a state push that still listed the closed
   // session would restore the tab the user just closed.
   it("aborts the agent, drops the tab, then stops its processes", async () => {
     const { manager, stopped, aborted, cleared, removed, messages, events } = createManager({ dir: "/repo/worktree" })
 
-    await manager.onCloseSessions(["s1"])
+    await manager.onCloseSession("s1")
 
     expect(aborted).toEqual([["s1"]])
     expect(stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
@@ -96,7 +96,7 @@ describe("AgentManagerProvider closeSessions", () => {
   it("falls back to session provider directory mappings", async () => {
     const { manager, stopped } = createManager({ panelDir: "/repo/panel-worktree" })
 
-    await manager.onCloseSessions(["s1"])
+    await manager.onCloseSession("s1")
 
     expect(stopped).toEqual([{ sessionID: "s1", directory: "/repo/panel-worktree" }])
   })
@@ -104,24 +104,9 @@ describe("AgentManagerProvider closeSessions", () => {
   it("still aborts when Agent Manager has no workspace state", async () => {
     const { manager, aborted, removed } = createManager({ state: false })
 
-    await manager.onCloseSessions(["s1"])
+    await manager.onCloseSession("s1")
 
     expect(aborted).toEqual([["s1"]])
     expect(removed).toEqual([])
-  })
-
-  it("stops all requested sessions in one abort batch", async () => {
-    const { manager, stopped, aborted, cleared, removed } = createManager({ dir: "/repo/worktree" })
-
-    await manager.onCloseSessions(["s1", "s2", "s1"])
-
-    expect(aborted).toEqual([["s1", "s2"]])
-    expect(stopped).toEqual([
-      { sessionID: "s1", directory: "/repo/worktree" },
-      { sessionID: "s2", directory: "/repo" },
-    ])
-    expect(removed).toEqual(["s1", "s2"])
-    expect(cleared).toEqual(["s1", "s2"])
-    expect(manager.panelSessions.has("s1")).toBe(false)
   })
 })
