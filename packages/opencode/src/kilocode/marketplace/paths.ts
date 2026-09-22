@@ -12,9 +12,19 @@ export async function configPath(scope: Scope, directory: string, worktree?: str
 function canonical(dir: string) {
   try {
     return realpathSync.native(dir)
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return path.resolve(dir)
-    throw err
+  } catch {
+    // Best effort: an unreadable or looping ancestor must not fail detection or
+    // removal. Callers degrade to partial metadata, matching agentFiles.
+    return path.resolve(dir)
+  }
+}
+
+function stat(dir: string) {
+  try {
+    return statSync(dir, { throwIfNoEntry: false })
+  } catch {
+    // Unreadable ancestors are treated as unknown, not as a hard failure.
+    return undefined
   }
 }
 
@@ -33,11 +43,11 @@ export function pluginFiles(scope: Scope, directory: string, worktree?: string) 
     }
     // realpath need not normalize case. On case-insensitive POSIX filesystems,
     // prove ancestry by directory identity instead of lowercasing distinct paths.
-    const ancestor = statSync(target, { throwIfNoEntry: false })
+    const ancestor = stat(target)
     if (!ancestor?.isDirectory()) return 0
     let current = dir
     for (let step = 0; path.dirname(current) !== current; step++) {
-      const entry = statSync(current, { throwIfNoEntry: false })
+      const entry = stat(current)
       if (entry?.isDirectory() && entry.dev === ancestor.dev && entry.ino === ancestor.ino) return step
       current = path.dirname(current)
     }

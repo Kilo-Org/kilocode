@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
-import { mkdir, realpath, rm } from "fs/promises"
+import { mkdir, realpath, rm, symlink } from "fs/promises"
 import path from "path"
 import { Effect } from "effect"
 import { parse } from "jsonc-parser"
@@ -317,5 +317,15 @@ describe("marketplace plugin helpers", () => {
     expect(out.project["plugin:opencode-models-discovery"]).toEqual({ type: "plugin" })
     expect(out.project["plugin:other-plugin"]).toEqual({ type: "plugin" })
     expect(out.project["plugin:missing"]).toBeUndefined()
+  })
+
+  test("does not throw when a project path cannot be canonicalized", async () => {
+    await using tmp = await tmpdir()
+    const loop = path.join(tmp.path, "loop")
+    await symlink(loop, loop)
+
+    expect(() => pluginFiles("project", loop, loop)).not.toThrow()
+    const files = pluginFiles("project", loop, loop)
+    expect(files.some((file) => file.startsWith(loop))).toBe(true)
   })
 })
