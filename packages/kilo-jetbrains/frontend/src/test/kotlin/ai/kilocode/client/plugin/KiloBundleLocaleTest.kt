@@ -161,9 +161,81 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         Files.walk(sourceRoot()).use { stream ->
             stream
                 .filter { it.extension == "kt" }
-                .forEach { path -> SOURCE.findAll(path.readText()).forEach { keys.add(it.groupValues[1]) } }
+                .forEach { path -> keys += extractKeys(path.readText()) }
         }
         return keys
+    }
+
+    /**
+     * Every string literal that could be the key argument of a `KiloBundle.message(...)` or
+     * `KiloBundle.optional(...)` call in [text].
+     *
+     * Call sites are not always `KiloBundle.message("literal")` on one line: the key argument can
+     * span multiple lines, and can itself be an `if`/`when` expression choosing between two or more
+     * literal keys (see `BackgroundAgentStrip.overflow`, `SkillsConfigurable.sourceDialogTitle`). A
+     * plain single-line regex misses both, so this walks each call's balanced parentheses instead:
+     * it finds the call's first top-level argument (the key expression, delimited by the call's own
+     * parens and its first top-level comma) and pulls every quoted literal out of just that
+     * argument — never a later format-args literal, like the elvis fallback in
+     * `KiloBundle.message(key, target?.displayPath ?: "...")`, which is a value, not a key.
+     */
+    private fun extractKeys(text: String): Set<String> {
+        val keys = mutableSetOf<String>()
+        for (match in CALL.findAll(text)) {
+            val open = match.range.last
+            val close = matchingParen(text, open) ?: continue
+            val keyExpr = firstArgument(text, open, close)
+            LITERAL.findAll(keyExpr).forEach { keys.add(it.groupValues[1]) }
+        }
+        return keys
+    }
+
+    /** Index of the `)` balancing the `(` at [open] in [text], skipping over string literals. */
+    private fun matchingParen(text: String, open: Int): Int? {
+        var depth = 1
+        var i = open + 1
+        while (i < text.length) {
+            when (text[i]) {
+                '"' -> i = skipString(text, i)
+                '(' -> depth++
+                ')' -> {
+                    depth--
+                    if (depth == 0) return i
+                }
+            }
+            i++
+        }
+        return null
+    }
+
+    /** Index just past the closing quote of the string literal starting at [text][start]. */
+    private fun skipString(text: String, start: Int): Int {
+        var i = start + 1
+        while (i < text.length && text[i] != '"') {
+            if (text[i] == '\\') i++
+            i++
+        }
+        return i
+    }
+
+    /**
+     * The call's first top-level argument, between its `(` at [open] and either its first
+     * top-level comma or its closing `)` at [close] — i.e. the key expression, excluding any
+     * later format-args.
+     */
+    private fun firstArgument(text: String, open: Int, close: Int): String {
+        var depth = 0
+        var i = open + 1
+        while (i < close) {
+            when (text[i]) {
+                '"' -> i = skipString(text, i)
+                '(' -> depth++
+                ')' -> depth--
+                ',' -> if (depth == 0) return text.substring(open + 1, i)
+            }
+            i++
+        }
+        return text.substring(open + 1, close)
     }
 
     private fun sourceRoot(): Path {
@@ -178,7 +250,8 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
     }
 
     private companion object {
-        val SOURCE = Regex("""KiloBundle\.(?:message|messagePointer)\("([^"]+)"""")
+        val CALL = Regex("""KiloBundle\.(?:message|optional)\(""")
+        val LITERAL = Regex(""""([^"\\]*(?:\\.[^"\\]*)*)"""")
 
         val LOCALES = listOf(
             "en", "ar", "bs", "da", "de", "es", "fr", "ja", "ko", "nl",

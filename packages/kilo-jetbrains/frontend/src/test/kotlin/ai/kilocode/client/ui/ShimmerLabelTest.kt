@@ -41,6 +41,15 @@ class ShimmerLabelTest : BasePlatformTestCase() {
         }
     }
 
+    /**
+     * Reaches the private animation `Timer` via reflection rather than through
+     * [ai.kilocode.client.util.UiTimerSource] (this module's usual timer seam): `ShimmerLabel` is a
+     * pinned backport of the upstream IntelliJ Platform class (see its header) and builds its timer
+     * directly with `TimerUtil`, so it exposes no public accessor and cannot be redirected onto the
+     * seam without diverging from the upstream source it must stay in lock-step with. The running
+     * flag is what this test needs to prove — that the timer starts only while displayed and
+     * shimmering, and stops on `removeNotify` — so reflection is the narrowest way to observe it.
+     */
     private fun timer(label: ShimmerLabel): Timer {
         val field = ShimmerLabel::class.java.getDeclaredField("animationTimer")
         field.isAccessible = true
