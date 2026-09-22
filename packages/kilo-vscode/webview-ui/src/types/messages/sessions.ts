@@ -57,7 +57,7 @@ export interface SessionInfo {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   } | null
   summary?: {
     additions: number
