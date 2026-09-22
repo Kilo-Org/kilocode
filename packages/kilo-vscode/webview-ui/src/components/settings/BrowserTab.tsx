@@ -1,6 +1,5 @@
 import { Component, Show, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
-import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -33,7 +32,6 @@ const BrowserTab: Component = () => {
     enabled: false,
     useSystemChrome: true,
     headless: false,
-    userDataDir: "",
   })
 
   onMount(() => {
@@ -48,7 +46,7 @@ const BrowserTab: Component = () => {
   })
   onCleanup(unsubscribe)
 
-  const update = (key: keyof BrowserSettings, value: boolean | string) => {
+  const update = (key: keyof BrowserSettings, value: boolean) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
     postMessage({ type: "updateSetting", key: `browserAutomation.${key}`, value })
   }
@@ -150,6 +148,7 @@ const BrowserTab: Component = () => {
           <SettingsRow
             title={t("settings.browser.headless.title")}
             description={t("settings.browser.headless.description")}
+            last
           >
             <Switch
               checked={settings().headless}
@@ -158,19 +157,6 @@ const BrowserTab: Component = () => {
             >
               {t("settings.browser.headless.title")}
             </Switch>
-          </SettingsRow>
-
-          {/* User Data Directory */}
-          <SettingsRow
-            title={t("settings.browser.userDataDir.title")}
-            description={t("settings.browser.userDataDir.description")}
-            last
-          >
-            <TextField
-              value={settings().userDataDir}
-              onChange={(value: string) => update("userDataDir", value)}
-              placeholder="/home/user/.config/google-chrome/Default"
-            />
           </SettingsRow>
         </Card>
       </div>

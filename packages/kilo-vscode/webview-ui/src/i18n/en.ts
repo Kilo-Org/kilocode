@@ -818,15 +818,6 @@ export const dict = {
     "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.browser.headless.title": "Headless Mode",
   "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
-  "settings.browser.userDataDir.title": "User Data Directory",
-  "settings.browser.userDataDir.description":
-    "Absolute path to an existing Chrome/Chromium user data directory to reuse for Playwright browser automation. Leave empty to use a fresh temporary profile.",
-  "settings.browser.agentManagerUserDataDir.title": "User Data Directory",
-  "settings.browser.agentManagerUserDataDir.description":
-    "Absolute path to an existing Chrome/Chromium user data directory for the Integrated Browser. Leave empty to use an isolated temporary profile.",
-  "settings.browser.agentManagerSystemChrome.title": "Use System Chrome",
-  "settings.browser.agentManagerSystemChrome.description":
-    "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',
