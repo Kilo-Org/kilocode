@@ -5,6 +5,7 @@ import { Effect, Fiber, Layer, Logger, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
@@ -1778,6 +1779,106 @@ describe("require_approval_for_config_edits source scope", () => {
       ;(Global.Path as { config: string }).config = prev
       if (previous === undefined) delete process.env["KILO_CONFIG_CONTENT"]
       else process.env["KILO_CONFIG_CONTENT"] = previous
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("KILO_CONFIG and KILO_CONFIG_DIR outside the project do not weaken the global policy", async () => {
+    const prev = Global.Path.config
+    const prevFile = Flag.KILO_CONFIG
+    const prevDir = process.env["KILO_CONFIG_DIR"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      for (const kind of ["file", "dir"] as const) {
+        await using globalDir = await tmpdir()
+        await using project = await tmpdir({ git: true })
+        await using outside = await tmpdir()
+        ;(Global.Path as { config: string }).config = globalDir.path
+        await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+        await writeConfig(outside.path, { require_approval_for_config_edits: false })
+        Flag.KILO_CONFIG = kind === "file" ? path.join(outside.path, "kilo.json") : undefined
+        if (kind === "dir") process.env["KILO_CONFIG_DIR"] = outside.path
+        else delete process.env["KILO_CONFIG_DIR"]
+        await clear()
+        await disposeAllInstances()
+
+        await provideTestInstance({
+          directory: project.path,
+          fn: async () => {
+            const merged = await load()
+            const global = await effectiveGlobal()
+            // The env value still disables the effective project policy...
+            expect(merged.require_approval_for_config_edits).toBe(false)
+            // ...but never the global policy that governs global and sibling config paths.
+            expect(global.require_approval_for_config_edits).toBe(true)
+            for (const file of [
+              path.join(globalDir.path, "kilo.json"),
+              path.join(path.dirname(project.path), "sibling", ".kilo", "kilo.json"),
+            ]) {
+              const level = ConfigProtection.classify(
+                { permission: "edit", patterns: [file], metadata: { filepath: file } },
+                project.path,
+              )
+              expect(level.external).toBe(true)
+              expect(ConfigProtection.verdict(level, { global, project: merged }).protect).toBe(true)
+            }
+          },
+        })
+      }
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      Flag.KILO_CONFIG = prevFile
+      if (prevDir === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = prevDir
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("KILO_CONFIG_DIR pointing at a legacy home root stays in the global policy", async () => {
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    const prevDir = process.env["KILO_CONFIG_DIR"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      await using globalDir = await tmpdir()
+      await using project = await tmpdir()
+      await using home = await tmpdir()
+      const legacy = path.join(home.path, ".kilo")
+      ;(Global.Path as { config: string }).config = globalDir.path
+      process.env["KILO_TEST_HOME"] = home.path
+      process.env["HOME"] = home.path
+      process.env["KILO_CONFIG_DIR"] = legacy
+      await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+      await writeConfig(legacy, { require_approval_for_config_edits: false })
+      await clear()
+      await disposeAllInstances()
+
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          // A legacy home file is real global config, even when KILO_CONFIG_DIR also names it.
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(false)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      if (prevDir === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = prevDir
       await clear()
       await disposeAllInstances()
     }

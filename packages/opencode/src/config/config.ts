@@ -693,15 +693,18 @@ const layer = Layer.effect(
           next: Info,
           kind?: ConfigPlugin.Scope,
           sourceTrusted?: boolean,
+          // KILO_CONFIG and KILO_CONFIG_DIR are env sources. Plugin scope marks them global outside the
+          // project, but like KILO_CONFIG_CONTENT they only feed the project policy.
+          env?: boolean,
         ) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           protection.observe(scoped, scope) // kilocode_change - track a project override for the config-edit protection field
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
-          // kilocode_change start - explicit global scope, plus a known config file directly in a legacy
-          // home root. Plugin scope marks that file local when the open project contains the root.
-          if (scope === "global" || legacyFile(source))
+          // kilocode_change start - global scope excluding env sources, plus a known config file directly
+          // in a legacy home root. Plugin scope marks that file local when the open project contains the root.
+          if ((scope === "global" && !env) || legacyFile(source))
             globalResult = mergeConfigConcatArrays(globalResult, scoped, trusted)
           // kilocode_change end
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
@@ -822,6 +825,7 @@ const layer = Layer.effect(
             ),
             undefined,
             true,
+            true,
           )
           // kilocode_change end
           yield* Effect.logDebug("loaded custom config", { path: Flag.KILO_CONFIG })
@@ -892,7 +896,7 @@ const layer = Layer.effect(
                 }),
               )
               plugins.push(...(next.plugin ?? []))
-              yield* merge(source, next, dirScope, dirTrusted)
+              yield* merge(source, next, dirScope, dirTrusted, dir === Flag.KILO_CONFIG_DIR)
               // kilocode_change - the explicit env dir's own config is an eligible source even though
               // it is merged with the global trust policy; only the field is tracked.
               if (dir === Flag.KILO_CONFIG_DIR) protection.observe(next, "local")
