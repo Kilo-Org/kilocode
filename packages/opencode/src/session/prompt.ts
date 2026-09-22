@@ -1602,8 +1602,9 @@ export const layer = Layer.effect(
         // kilocode_change end
 
         if (
-          lastAssistant?.finish &&
-          !["tool-calls"].includes(lastAssistant.finish) &&
+          
+            lastAssistant?.finish &&
+          !["tool-calls", "unknown"].includes(lastAssistant.finish) &&
           lastAssistant.id !== input.resume && // kilocode_change
           !hasToolCalls &&
           lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn

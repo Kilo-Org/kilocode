@@ -38,6 +38,7 @@ import { ConfigParse } from "./parse"
 import { ConfigPaths } from "./paths"
 import { ConfigPlugin } from "./plugin"
 import { ConfigVariable } from "./variable"
+import { ConfigV2Compat } from "./v2-compat"
 import { Npm } from "@opencode-ai/core/npm"
 import z from "zod" // kilocode_change - Kilo config compatibility schemas
 // kilocode_change start
@@ -288,6 +289,19 @@ const layer = Layer.effect(
 
     const readConfigFile = (filepath: string) => fs.readFileStringSafe(filepath).pipe(Effect.orDie)
 
+    const decodeConfig = Effect.fnUntraced(function* (input: unknown, source: string) {
+      const result = ConfigV2Compat.lower(normalizeLoadedConfig(input, source), source) // kilocode_change - Kilo normalizeLoadedConfig takes source
+      yield* Effect.forEach(result.diagnostics, (diagnostic) =>
+        Effect.logWarning("configuration compatibility diagnostic", {
+          source,
+          path: diagnostic.path,
+          kind: diagnostic.kind,
+          action: diagnostic.message,
+        }),
+      )
+      return ConfigParse.schema(ConfigV1.Info, result.value, source)
+    })
+
     const fetchRemoteJson = Effect.fnUntraced(function* <S extends Schema.Top>(
       url: string,
       headers: Record<string, string> | undefined,
@@ -347,7 +361,7 @@ const layer = Layer.effect(
         }
       }
       // kilocode_change end
-      const data = ConfigParse.schema(ConfigV1.Info, normalized, source) // kilocode_change
+      const data = yield* decodeConfig(normalized, source) // kilocode_change - upstream V2 compatibility lowering
       if (!("path" in options)) return data
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
@@ -1077,6 +1091,8 @@ const layer = Layer.effect(
 
     const update = Effect.fn("Config.update")(function* (config: Info) {
       // kilocode_change start - delegate Kilo project config update behavior.
+      // Kilo's updateProjectConfig already reads the raw file (read: readConfigFile)
+      // and patches JSONC in place, so upstream's raw-text merge fix is covered.
       const ctx = yield* InstanceState.context
       yield* KilocodeConfig.updateProjectConfig({
         fs,
@@ -1085,7 +1101,11 @@ const layer = Layer.effect(
         config,
         read: readConfigFile,
         parse: (input, file) =>
-          ConfigParse.schema(ConfigV1.Info, normalizeLoadedConfig(ConfigParse.jsonc(input, file), file), file),
+          ConfigParse.schema(
+            ConfigV1.Info,
+            ConfigV2Compat.lower(normalizeLoadedConfig(ConfigParse.jsonc(input, file), file), file).value,
+            file,
+          ),
         patch: (input, patch) => patchJsonc(input, patch),
         writable,
       })
@@ -1132,28 +1152,18 @@ const layer = Layer.effect(
             })
 
             if (!file.endsWith(".jsonc")) {
-              const existing = ConfigParse.schema(
-                ConfigV1.Info,
-                normalizeLoadedConfig(ConfigParse.jsonc(before, file), file),
-                file,
-              )
-              const next = KilocodeConfig.mergeConfig(writable(existing), patch)
-              const serialized = JSON.stringify(
-                KilocodeConfig.preserve(normalizeLoadedConfig(ConfigParse.jsonc(before, file), file), patch, file),
-                null,
-                2,
-              )
+              // Lower V2 native settings while keeping Kilo read-merge-write behavior.
+              const existing = normalizeLoadedConfig(ConfigParse.jsonc(before, file), file)
+              const merged = KilocodeConfig.preserve(existing, patch, file)
+              const next = yield* decodeConfig(merged, file)
+              const serialized = JSON.stringify(merged, null, 2)
               const changed = serialized !== before || propagated
               if (serialized !== before) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
               return { next, changed }
             }
 
             const updated = patchJsonc(before, patch)
-            const next = ConfigParse.schema(
-              ConfigV1.Info,
-              normalizeLoadedConfig(ConfigParse.jsonc(updated, file), file),
-              file,
-            )
+            const next = yield* decodeConfig(ConfigParse.jsonc(updated, file), file) // Lower V2 native settings for the returned info.
             const changed = updated !== before || propagated
             if (updated !== before) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
             return { next, changed }

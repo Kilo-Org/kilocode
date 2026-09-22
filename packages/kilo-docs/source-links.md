@@ -4,6 +4,8 @@
 
 - <https://accounts.x.ai>
   <!-- packages/opencode/src/plugin/xai.ts -->
+- <https://ai.azure.com/.default>
+  <!-- packages/opencode/src/plugin/azure.ts -->
 - <https://api.apertis.ai/v1>
   <!-- packages/opencode/src/provider/model-cache.ts -->
   <!-- packages/opencode/src/provider/models.ts -->
@@ -47,6 +49,8 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
   <!-- packages/opencode/src/session/network.ts -->
+- <https://cognitiveservices.azure.com/.default>
+  <!-- packages/opencode/src/plugin/azure.ts -->
 - <https://developers.google.com/identity/sign-in/web/devconsole-project>
   <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
