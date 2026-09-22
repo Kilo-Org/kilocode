@@ -306,7 +306,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           OpenApi.annotations({
             identifier: "kilocode.marketplace.install",
             summary: "Install a marketplace item",
-            description: "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+            description: "Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.",
           }),
         ),
         HttpApiEndpoint.post("marketplaceRemove", KilocodePaths.marketplaceRemove, {
@@ -317,7 +317,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           OpenApi.annotations({
             identifier: "kilocode.marketplace.remove",
             summary: "Remove a marketplace item",
-            description: "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
+            description: "Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.",
           }),
         ),
         HttpApiEndpoint.post("removeSnapshot", KilocodePaths.removeSnapshot, {

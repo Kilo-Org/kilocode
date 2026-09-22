@@ -86,6 +86,12 @@ internal data class ActiveListConfig(
      * title ("builtin", "env"), which read as part of it and would be covered by the hover actions.
      */
     val badgesRight: Boolean = false,
+    /**
+     * Wrap the description line to its full height instead of clipping/fading it to one line.
+     * Only meaningful together with [ActiveListRowHeight.PREFERRED]: a wrapped body under
+     * [ActiveListRowHeight.EQUAL] would still be capped to the shared row height.
+     */
+    val wrapDescription: Boolean = false,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)

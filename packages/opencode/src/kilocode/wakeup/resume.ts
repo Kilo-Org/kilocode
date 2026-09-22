@@ -8,11 +8,14 @@ import { Fire, type Info } from "./schema"
 const log = Log.create({ service: "wakeup" })
 
 /** The prompt the model sees when a wakeup fires: the scheduled text plus wakeup context. */
-export function text(info: Info): string {
+export function text(info: Info, kind?: "wakeup" | "cron"): string {
+  if (kind === "cron") {
+    return `[scheduled cron task] ${info.prompt}\n\n(No user is present. You scheduled this recurring task yourself as ${info.id}, due ${new Date(info.dueAt).toISOString()}.)`
+  }
   return `[scheduled wakeup] ${info.prompt}\n\n(No user is present. You scheduled this wakeup yourself as ${info.id}, due ${new Date(info.dueAt).toISOString()}.)`
 }
 
-async function resume(info: Info, inst?: InstanceContext, inPlace = false) {
+async function resume(info: Info, inst?: InstanceContext, inPlace = false, kind?: "wakeup" | "cron") {
   try {
     const [{ AppRuntime }, { Session }, { SessionPrompt }] = await Promise.all([
       import("@/effect/app-runtime"),
@@ -44,7 +47,7 @@ async function resume(info: Info, inst?: InstanceContext, inPlace = false) {
                 parts: [
                   {
                     type: "text",
-                    text: text(info),
+                    text: text(info, kind),
                     synthetic: true,
                     metadata: { background: true, wakeup: true, wakeupID: info.id },
                   },
@@ -80,7 +83,7 @@ export const fireLayer = Layer.succeed(
     run: (info, options) =>
       Effect.gen(function* () {
         const inst = yield* InstanceRef
-        yield* Effect.promise(() => resume(info, inst, options?.inPlace === true))
+        yield* Effect.promise(() => resume(info, inst, options?.inPlace === true, options?.kind))
       }),
   }),
 )

@@ -116,6 +116,7 @@ export const dict = {
   "agentManager.session.noSessions": "Nema otvorenih sesija",
   "agentManager.tab.close": "Zatvori",
   "agentManager.tab.closeOthers": "Zatvori ostale",
+  "agentManager.tab.closeToRight": "Zatvori desno",
   "agentManager.tab.closeTab": "Zatvori karticu",
   "agentManager.tab.forkSession": "Razdvoji sesiju",
   "agentManager.tab.pin": "Zakači",
