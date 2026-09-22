@@ -312,7 +312,7 @@ export const dict = {
   "ui.approval.source.agent.default": "에이전트에 의해",
   "ui.approval.source.global": "전역 설정에 의해",
   "ui.approval.source.project": "프로젝트 설정에 의해",
-  "ui.approval.source.yolo": "자동 승인(YOLO) 모드에 의해",
+  "ui.approval.source.yolo": "자동 승인 모드에 의해",
   "ui.approval.source.session": "세션 자동 승인 규칙에 의해",
   "ui.approval.source.default": "기본값으로",
   "ui.approval.outsideWorkspace": "(작업 영역 외부: {{file}})",
@@ -576,13 +576,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo가 작업 중에 잠시 멈추고 계획을 보여줍니다.",
   "workStyle.choice.human-in-the-loop.permissions": "파일을 편집하거나 명령을 실행하기 전에 권한을 요청합니다.",
   "workStyle.choice.human-in-the-loop.bash": "모든 터미널 명령 실행 시 권한 요청",
-  "workStyle.choice.human-in-the-loop.visibility": "추론을 포함한 전체 대화 세부 정보를 표시합니다.",
+  "workStyle.choice.human-in-the-loop.visibility": "검토할 수 있도록 추론, 명령, 편집을 펼칩니다.",
   "workStyle.choice.autonomous.eyebrow": "중단 최소화",
   "workStyle.choice.autonomous.title": "높은 자율성",
   "workStyle.choice.autonomous.description": "중단을 줄이고 인터페이스를 간소화합니다.",
   "workStyle.choice.autonomous.permissions": "묻지 않고 작업 공간의 파일을 편집하고 명령을 실행합니다.",
   "workStyle.choice.autonomous.bash": "승인 없이 작업 공간에서 터미널 명령을 실행할 수 있습니다.",
-  "workStyle.choice.autonomous.visibility": "세부 정보는 펼칠 때까지 접힌 상태로 유지됩니다.",
+  "workStyle.choice.autonomous.visibility": "도구 세부 정보를 접고 추론을 간결하게 미리 보여줍니다.",
   "session.cloud.import.title": "클라우드에서 가져오기",
   "session.cloud.import.placeholder": "세션 ID, URL 또는 kilo import 명령어",
   "session.cloud.import.button": "가져오기",
@@ -1102,6 +1102,26 @@ export const dict = {
     "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
+  "settings.autoCleanup.enable.title": "자동 세션 정리 활성화",
+  "settings.autoCleanup.enable.description":
+    "정해진 일 수가 지나면 오래된 세션 기록을 자동으로 삭제합니다. 이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트가 대상이며 이 창만이 아닙니다. 실행 중인 세션과 최근 분기가 있는 세션은 절대 삭제되지 않습니다. 삭제는 영구적입니다.",
+  "settings.autoCleanup.defaultRetention.title": "세션 보관 기간(일)",
+  "settings.autoCleanup.defaultRetention.description": "자동 정리가 세션 기록을 삭제하기 전까지 보관하는 기간입니다.",
+  "settings.autoCleanup.lastRun.title": "마지막 정리",
+  "settings.autoCleanup.lastRun.never": "실행된 적 없음",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}}개 중 {{deleted}}개 세션 삭제({{active}}개 활성 건너뜀, {{failed}}개 실패), {{seconds}}초",
+  "settings.autoCleanup.starting": "세션 정리를 시작하는 중...",
+  "settings.autoCleanup.error.status": "세션 정리 상태를 일시적으로 확인할 수 없습니다. 다시 시도하는 중...",
+  "settings.autoCleanup.error.timeout": "정리 상태를 기다리는 중입니다. 백엔드 응답이 예상보다 오래 걸리고 있습니다.",
+  "settings.autoCleanup.error.run":
+    "세션 정리 완료를 확인할 수 없습니다. 다시 시도하기 전에 마지막 정리 결과를 확인하세요.",
+  "settings.autoCleanup.progress.scanning": "세션 검색 중: {{processed}}/{{total}}개 처리됨",
+  "settings.autoCleanup.progress.deleting":
+    "세션 삭제 중: {{processed}}/{{total}}개 처리됨({{deleted}}개 삭제, {{failed}}개 실패)",
+  "settings.autoCleanup.runNow": "지금 정리 실행",
+  "settings.autoCleanup.runNow.confirm":
+    "이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트에 걸쳐 만료된 세션을 영구적으로 삭제할까요?",
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",
@@ -1149,6 +1169,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "UI 언어와 동기화",
   "settings.commitMessage.language.description": "AI 생성된 커밋 메시지에 사용할 언어를 선택하십시오.:",
 
+  "settings.display.preview.title": "미리보기",
+  "settings.display.presets.title": "표시 프리셋",
+  "settings.display.presets.description": "아래 표시 옵션을 변경하며 권한은 변경하지 않습니다. 적용하려면 저장하세요.",
+  "settings.display.preview.model": "샘플 모델",
+  "settings.display.preview.prompt": "인사말에서 여분의 공백을 제거하고 테스트를 확인하세요.",
+  "settings.display.preview.reasoning":
+    "**인사말을 확인합니다.** 이 함수는 일반 이름과 양쪽 끝에 여분의 공백이 있는 이름에 대해 같은 인사말을 생성해야 합니다. 기존 함수 시그니처와 인사말 형식은 유지하고, 이름이 반환 문자열에 들어가는 방식만 변경합니다.\n\n`  Ada  ` 같은 입력에서 원치 않는 공백은 입력에 속하며 인사말 템플릿에 속하지 않습니다. 완성된 인사말을 트림하면 이름 옆에 공백이 남습니다. 따라서 트림 작업은 이름을 삽입하기 전에 수행해야 합니다.\n\n문자열 문서를 확인하여 `trim()`이 양쪽 끝의 공백을 제거하고 새 문자열을 반환하는지 확인합니다. 원본 입력은 변경하지 않아야 합니다. 이 변경에는 정규식, 추가 의존성 또는 별도의 도우미 함수가 필요하지 않습니다.\n\n이름 안의 공백은 그대로 유지되어야 합니다. `Ada Lovelace` 같은 이름이 `AdaLovelace`가 되어서는 안 되며 대소문자도 바뀌지 않아야 합니다. 빈 입력이나 공백만 있는 입력에는 이 집중적인 수정의 일부로 새로운 대체 인사말이 필요하지 않습니다.\n\n템플릿이 현재 `name`을 사용하는 곳에서 `name.trim()`을 사용하면 변경을 return 식 안에 둘 수 있습니다. 주변 문장 부호와 인사말 뒤의 의도적인 공백은 유지합니다. 이렇게 하면 diff가 작게 유지되고 동작을 검토하기 쉽습니다.\n\n마지막으로 `bun test greeting.test.ts`를 실행하고 두 결과를 확인합니다. 공백이 있는 이름 사례는 여분의 공백이 제거됨을 확인하고, 일반 이름 사례는 기존 출력을 보호합니다. 변경 사항과 테스트 결과는 명령이 완료된 후에만 보고합니다.",
+  "settings.display.preview.shell": "인사말 테스트 확인",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] 여분의 공백 제거\n[pass] 일반 이름 유지\n\n2개 테스트 통과",
+  "settings.display.preview.query": "문자열 트림",
+  "settings.display.preview.result": "trim()은 문자열 양쪽 끝의 공백을 제거합니다.",
+  "settings.display.preview.answer": "인사말을 업데이트하여 여분의 공백을 제거했습니다. 두 테스트 모두 통과합니다.",
   "settings.display.username.title": "사용자 이름",
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.fontSize.title": "글꼴 크기",
@@ -1180,7 +1213,7 @@ export const dict = {
     "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(tokens/sec)를 표시합니다. 기본적으로 표시되며, 필요할 때 이 설정을 비활성화하면 숨길 수 있습니다.",
   "settings.display.autoApprovalReason.title": "자동 승인 이유 표시",
   "settings.display.autoApprovalReason.description":
-    "도구 호출이 자동으로 승인된 이유(일치한 규칙, 에이전트 기본값, YOLO 모드 등)를 설명하는 줄을 표시합니다.",
+    "일치하는 권한 규칙이나 에이전트 기본값 등 도구 호출이 자동 승인된 이유를 표시합니다.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

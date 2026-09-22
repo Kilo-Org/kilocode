@@ -319,6 +319,53 @@ async function createKnownSession(
 }
 
 describe("acp event routing", () => {
+  // kilocode_change start
+  it("waits for the current turn's idle after receiving a stale idle", async () => {
+    const harness = createHarness()
+    const called = Promise.withResolvers<void>()
+    const response = Promise.withResolvers<{ data: { info: { id: string } } }>()
+    const state = { done: false }
+    const idle = {
+      id: "evt_idle",
+      type: "session.status",
+      properties: { sessionID: "ses_a", status: { type: "idle" } },
+    } as Event
+    const message = {
+      id: "evt_current",
+      type: "message.updated",
+      properties: { sessionID: "ses_a", info: { id: "msg_current" } },
+    } as Event
+
+    harness.subscription.start()
+    try {
+      await pollUntil(() => harness.calls.eventSubscribe === 1, "event stream did not connect")
+      await Bun.sleep(0)
+      const result = harness.subscription
+        .runUntilIdle("ses_a", () => {
+          called.resolve()
+          return response.promise
+        })
+        .then(() => {
+          state.done = true
+        })
+
+      await called.promise
+      await harness.subscription.handle(idle)
+      response.resolve({ data: { info: { id: "msg_current" } } })
+      await Bun.sleep(0)
+      await harness.subscription.handle(message)
+      await Bun.sleep(0)
+      expect(state.done).toBe(false)
+
+      await harness.subscription.handle(idle)
+      await result
+      expect(state.done).toBe(true)
+    } finally {
+      harness.subscription.stop()
+    }
+  })
+  // kilocode_change end
+
   it("routes message.part.delta by sessionID without cross-session pollution", async () => {
     const harness = createHarness()
     await createKnownSession(harness.session, "ses_a", { messageId: "msg_a", partId: "part_a", partType: "text" })

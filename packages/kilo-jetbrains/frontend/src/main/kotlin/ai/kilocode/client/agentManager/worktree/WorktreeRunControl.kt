@@ -106,6 +106,7 @@ internal class WorktreeRunControl(
             frame = frame,
             buildable = list.buildable,
             build = { clean -> build(repo, clean) },
+            skipped = list.skipped,
         )
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             KiloBundle.message("worktree.run.popup.title"),

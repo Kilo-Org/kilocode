@@ -48,7 +48,7 @@ export async function seedSessionStatuses(
 
 /**
  * Fetch pending wakeup counts for every known directory and seed the webview.
- * Wakeups are directory scoped, unlike session status, so each directory needs
+ * Wakeups are directory scoped, like session status, so each directory needs
  * its own request. A failed directory is logged and skipped: one missing
  * directory must not blank the others. Returns the session IDs that still hold
  * a wakeup and whether every directory answered, so the caller can reconcile a

@@ -2,7 +2,6 @@
 
 import { For, Show, untrack, type Accessor, type Component, type JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { LanguageContextValue } from "../src/context/language"
 import type { AgentProjectSnapshot } from "../src/types/messages"
 import { ProjectsFooter } from "./ProjectsFooter"
@@ -14,6 +13,8 @@ interface ProjectsSectionProps {
   t: LanguageContextValue["t"]
   bindings: Record<string, string>
   onAdd: () => void
+  onCreateProject: () => void
+  onClone: () => void
   onSelect: (id: string) => void
   onRemove: (id: string) => void
   onExpand: (id: string, expanded: boolean) => void
@@ -98,6 +99,6 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
         }}
       </For>
     </div>
-    <ProjectsFooter label={props.t("agentManager.project.add")} onAdd={props.onAdd} />
+    <ProjectsFooter t={props.t} onCreate={props.onCreateProject} onAdd={props.onAdd} onClone={props.onClone} />
   </div>
 )

@@ -304,7 +304,7 @@ export const dict = {
   "ui.approval.source.agent.default": "بواسطة الوكيل",
   "ui.approval.source.global": "بواسطة الإعداد العام",
   "ui.approval.source.project": "بواسطة إعداد المشروع",
-  "ui.approval.source.yolo": "بواسطة وضع الموافقة التلقائية (YOLO)",
+  "ui.approval.source.yolo": "بواسطة وضع الموافقة التلقائية",
   "ui.approval.source.session": "بواسطة قاعدة موافقة تلقائية للجلسة",
   "ui.approval.source.default": "افتراضيًا",
   "ui.approval.outsideWorkspace": "(خارج مساحة العمل: {{file}})",
@@ -568,13 +568,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "يتوقف Kilo مؤقتًا ويعرض لك خطته أثناء العمل.",
   "workStyle.choice.human-in-the-loop.permissions": "يطلب الإذن قبل تعديل الملفات أو تشغيل الأوامر.",
   "workStyle.choice.human-in-the-loop.bash": "يطلب الإذن لتشغيل أي أمر في المحطة الطرفية.",
-  "workStyle.choice.human-in-the-loop.visibility": "يعرض تفاصيل المحادثة كاملة، بما في ذلك الاستدلال.",
+  "workStyle.choice.human-in-the-loop.visibility": "يوسّع الاستدلال والأوامر والتعديلات للمراجعة.",
   "workStyle.choice.autonomous.eyebrow": "مقاطعات أقل",
   "workStyle.choice.autonomous.title": "استقلالية عالية",
   "workStyle.choice.autonomous.description": "مقاطعات أقل وواجهة أكثر انسيابية.",
   "workStyle.choice.autonomous.permissions": "يعدّل الملفات ويشغّل الأوامر في مساحة العمل دون طلب الإذن.",
   "workStyle.choice.autonomous.bash": "يمكنه تشغيل أوامر المحطة الطرفية في مساحة العمل دون موافقة.",
-  "workStyle.choice.autonomous.visibility": "تظل التفاصيل مطوية حتى توسّعها.",
+  "workStyle.choice.autonomous.visibility": "يطوي تفاصيل الأدوات، مع معاينة مختصرة للاستدلال.",
   "session.cloud.import.title": "استيراد من السحابة",
   "session.cloud.import.placeholder": "معرّف الجلسة أو الرابط أو أمر kilo import",
   "session.cloud.import.button": "استيراد",
@@ -1091,6 +1091,26 @@ export const dict = {
     "منع الإجراءات المتطابقة المتكررة. يتم تشغيله عندما يتكرر نفس استدعاء الأداة بمدخلات متطابقة.",
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
+  "settings.autoCleanup.enable.title": "تمكين التنظيف التلقائي للجلسات",
+  "settings.autoCleanup.enable.description":
+    "حذف سجل الجلسات القديم تلقائيًا بعد عدد ثابت من الأيام، عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز، وليس هذه النافذة فقط. لا يتم حذف الجلسات قيد التشغيل حاليًا، ولا الجلسات ذات التفرعات الحديثة أبدًا. الحذف نهائي.",
+  "settings.autoCleanup.defaultRetention.title": "الاحتفاظ بالجلسات (أيام)",
+  "settings.autoCleanup.defaultRetention.description": "مدة الاحتفاظ بسجل الجلسات قبل أن يحذفه التنظيف التلقائي.",
+  "settings.autoCleanup.lastRun.title": "التنظيف الأخير",
+  "settings.autoCleanup.lastRun.never": "لم يُشغّل أبدًا",
+  "settings.autoCleanup.result":
+    "{{date}}: تم حذف {{deleted}} من {{scanned}} جلسة ({{active}} نشطة تم تخطيها، {{failed}} فشلت) في {{seconds}} ثانية",
+  "settings.autoCleanup.starting": "جارٍ بدء تنظيف الجلسات...",
+  "settings.autoCleanup.error.status": "حالة تنظيف الجلسات غير متاحة مؤقتًا. جارٍ إعادة المحاولة...",
+  "settings.autoCleanup.error.timeout": "في انتظار حالة التنظيف. تستغرق الواجهة الخلفية وقتًا أطول من المتوقع.",
+  "settings.autoCleanup.error.run":
+    "تعذّر تأكيد اكتمال تنظيف الجلسات. تحقق من نتيجة التنظيف الأخير قبل إعادة المحاولة.",
+  "settings.autoCleanup.progress.scanning": "جارٍ فحص الجلسات: تمت معالجة {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "جارٍ حذف الجلسات: تمت معالجة {{processed}}/{{total}} (تم حذف {{deleted}}، فشل {{failed}})",
+  "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
+  "settings.autoCleanup.runNow.confirm":
+    "حذف الجلسات المنتهية الصلاحية نهائيًا عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز؟",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",
@@ -1138,6 +1158,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "مزامنة مع لغة واجهة المستخدم",
   "settings.commitMessage.language.description": "اختر اللغة المستخدمة لرسائل الالتزام التي تولدها الذكاء الاصطناعي:",
 
+  "settings.display.preview.title": "معاينة",
+  "settings.display.presets.title": "إعدادات العرض المسبقة",
+  "settings.display.presets.description": "يغيّر خيارات العرض أدناه، وليس الأذونات. احفظ للتطبيق.",
+  "settings.display.preview.model": "نموذج تجريبي",
+  "settings.display.preview.prompt": "أزل المسافات الزائدة من التحية وتحقق من الاختبارات.",
+  "settings.display.preview.reasoning":
+    "**تحقق من التحية.** يجب أن تنتج الدالة التحية نفسها لاسم عادي واسم به مسافات زائدة في كلا الطرفين. سأحتفظ بتوقيع الدالة وتنسيق التحية الحاليين، وسأغيّر فقط كيفية دخول الاسم إلى السلسلة المعادة.\n\nبالنسبة لإدخال مثل `  Ada  `، تنتمي المسافات غير المرغوبة إلى الإدخال، لا إلى قالب التحية. تقليم التحية المكتملة سيترك مسافات بجوار الاسم. لذلك يجب أن تتم عملية التقليم قبل إدراج الاسم.\n\nسأراجع توثيق السلاسل للتأكد من أن `trim()` يزيل المسافات البيضاء من كلا الطرفين ويعيد سلسلة جديدة. وينبغي أن يترك الإدخال الأصلي دون تغيير. لا حاجة إلى تعبير نمطي أو تبعية أخرى أو دالة مساعدة منفصلة لهذا التغيير.\n\nيجب أن تبقى المسافات داخل الاسم كما هي. اسم مثل `Ada Lovelace` يجب ألا يصبح `AdaLovelace`، وينبغي ألا يتغير حال الأحرف. الإدخال الفارغ أو الذي يتكون من مسافات فقط لا يتطلب تحية احتياطية جديدة في إطار هذا الإصلاح المركّز.\n\nيمكن أن يبقى التعديل في تعبير الإرجاع باستخدام `name.trim()` حيث يستخدم القالب حاليًا `name`. سأحافظ على علامات الترقيم المحيطة والمسافة المقصودة بعد التحية. وهذا يبقي الفرق صغيرًا ويسهل مراجعة السلوك.\n\nأخيرًا، سأشغّل `bun test greeting.test.ts` وأتحقق من كلتا النتيجتين. يجب أن تؤكد حالة الاسم الحشو إزالة المسافات الزائدة، بينما تحمي حالة الاسم العادي المخرجات الحالية. لن أبلّغ عن التغيير ونتائج الاختبارات إلا بعد اكتمال الأمر.",
+  "settings.display.preview.shell": "تحقق من اختبار التحية",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] يزيل المسافات الزائدة\n[pass] يحافظ على اسم عادي\n\nنجح اختباران",
+  "settings.display.preview.query": "تقليم السلاسل",
+  "settings.display.preview.result": "trim() يزيل المسافات من كلا طرفي السلسلة.",
+  "settings.display.preview.answer": "حُدّثت التحية لإزالة المسافات الزائدة. ينجح الاختباران.",
   "settings.display.username.title": "اسم المستخدم",
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
   "settings.display.fontSize.title": "حجم الخط",
@@ -1170,7 +1203,7 @@ export const dict = {
     "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
-    "إظهار سطر عند استدعاءات الأدوات يوضح سبب الموافقة التلقائية عليها (قاعدة مطابقة، إعداد افتراضي للوكيل، وضع YOLO، إلخ).",
+    "يظهر سبب الموافقة التلقائية على استدعاء أداة، مثل قاعدة إذن مطابقة أو إعداد افتراضي للوكيل.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -69,6 +69,7 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -547,12 +548,23 @@ class SessionUi(
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
             banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
             onOpenSubagent = ::openSubagent,
+            onPromoteBackgroundAgent = if (readonly) null else BackgroundPromote(
+                available = { app.state.value.backgroundSubagents },
+                promote = controller::promoteBackgroundAgent,
+            ),
         ).also {
             it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this, readonly, boardVisible = { board }, onShowBoard = ::showBoard)
+        header = SessionHeaderPanel(
+            controller,
+            this,
+            readonly,
+            boardVisible = { board },
+            onShowBoard = ::showBoard,
+            onOpenSubagent = ::openSubagent,
+        )
         if (!readonly && showBranchDock()) {
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
@@ -815,6 +827,7 @@ class SessionUi(
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
             }
@@ -1139,7 +1152,8 @@ class SessionUi(
 
     @RequiresEdt
     private fun openSubagent(sessionId: String, title: String) {
-        service<SubagentTitleCache>().put(sessionId, title)
+        val color = AgentAvatarIdentity.palette(controller.model.childSessions())[sessionId]
+        service<SubagentTitleCache>().put(sessionId, title, color)
         ensureSubagentSessionEditorKind()
         project.service<KiloVfsManager>().open(
             SubagentSessionEditorKind.ID,
