@@ -2,7 +2,10 @@ package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.session.background.BackgroundAgent
 import ai.kilocode.client.session.background.BackgroundAgentStatus
+import ai.kilocode.client.ui.HoverArea
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Component
+import java.awt.Container
 
 /**
  * Streaming-UI churn test for [BackgroundAgentStrip], per this plugin's stress + leak test
@@ -15,8 +18,12 @@ class BackgroundAgentStripStressTest : BasePlatformTestCase() {
         strip.update(listOf(agent("job1"), agent("job2"), agent("job3")))
         val first = strip.agentRowPanel("job1")
         val second = strip.agentRowPanel("job2")
+        val firstCompact = compact(strip, "Agent job1")
+        val secondCompact = compact(strip, "Agent job2")
         assertNotNull(first)
         assertNotNull(second)
+        assertNotNull(firstCompact)
+        assertNotNull(secondCompact)
 
         repeat(200) { i ->
             val count = 3 + i % 20
@@ -24,7 +31,10 @@ class BackgroundAgentStripStressTest : BasePlatformTestCase() {
             strip.update(agents)
             assertSame(first, strip.agentRowPanel("job1"))
             assertSame(second, strip.agentRowPanel("job2"))
+            assertSame(firstCompact, compact(strip, "Agent job1"))
+            assertSame(secondCompact, compact(strip, "Agent job2"))
             assertEquals(agents.size, strip.rowCount())
+            assertEquals(agents.size + 1, descendants(strip.rowComponent()).filterIsInstance<HoverArea>().size)
         }
 
         // Settling back down to just the two stable rows must drop every churned row.
@@ -32,6 +42,18 @@ class BackgroundAgentStripStressTest : BasePlatformTestCase() {
         assertEquals(2, strip.rowCount())
         assertSame(first, strip.agentRowPanel("job1"))
         assertSame(second, strip.agentRowPanel("job2"))
+        assertSame(firstCompact, compact(strip, "Agent job1"))
+        assertSame(secondCompact, compact(strip, "Agent job2"))
+    }
+
+    private fun compact(strip: BackgroundAgentStrip, title: String) =
+        descendants(strip.rowComponent()).filterIsInstance<HoverArea>().firstOrNull {
+            it.accessibleContext.accessibleName == "Open background agent $title"
+        }
+
+    private fun descendants(root: Component): List<Component> = buildList {
+        add(root)
+        if (root is Container) root.components.forEach { addAll(descendants(it)) }
     }
 
     private fun agent(job: String) =
