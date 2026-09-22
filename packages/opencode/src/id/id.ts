@@ -96,6 +96,16 @@ function wallSlot() {
 // deterministic (tests, backfill, migration), so it is used verbatim: neither
 // clamped nor allowed to move the watermark. Moving the watermark would let one
 // far-future timestamp pin every later id in the process to that value.
+//
+// Ceiling: the counter cycles EXPLICIT_COUNTER_MIN..EXPLICIT_COUNTER_MAX, so a
+// single timestamp supports 2048 distinct ordering keys. The 2049th call at
+// that same timestamp packs the same (timestamp << 12 | counter) key as the
+// first; only the random suffix still separates the two ids. This path
+// deliberately does not borrow the next millisecond the way wallSlot() does,
+// because returning timestamp + 1 would contradict using the caller's value
+// verbatim, which is exactly what makes deterministic tests and backfill
+// possible. No caller in src/ supplies an explicit timestamp, so reaching the
+// ceiling means minting more than 2048 ids at one fixed timestamp.
 function explicitSlot(timestamp: number) {
   explicitCounter = explicitCounter >= EXPLICIT_COUNTER_MAX ? EXPLICIT_COUNTER_MIN : explicitCounter + 1
   return { timestamp, counter: explicitCounter }

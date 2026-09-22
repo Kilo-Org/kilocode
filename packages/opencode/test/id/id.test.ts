@@ -250,6 +250,16 @@ describe("Identifier.create counter partitioning", () => {
     expect(new Set(keys.slice(0, 2_048)).size).toBe(2_048)
   })
 
+  test("one explicit timestamp yields 2048 ordering keys before the sequence repeats", () => {
+    // The documented ceiling, asserted rather than only described. The counter
+    // is free-running, so this holds from whatever phase earlier tests left it
+    // in: 2048 consecutive calls are distinct and the 2049th repeats the first.
+    const keys = Array.from({ length: 2_049 }, () => seq(Identifier.create("tool", "ascending", 11_000)))
+
+    expect(new Set(keys.slice(0, 2_048)).size).toBe(2_048)
+    expect(keys[2_048]).toBe(keys[0])
+  })
+
   test("revisiting an earlier explicit timestamp does not repeat its counters", () => {
     const first = seq(Identifier.create("tool", "ascending", 9_000))
     Identifier.create("tool", "ascending", 10_000)
