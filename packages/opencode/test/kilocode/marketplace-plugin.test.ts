@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
-import { mkdir, rm } from "fs/promises"
+import { mkdir, realpath, rm } from "fs/promises"
 import path from "path"
 import { Effect } from "effect"
 import { parse } from "jsonc-parser"
@@ -124,6 +124,35 @@ describe("marketplace plugin helpers", () => {
     const after = await detect(input)
     expect(after.project["plugin:pkg"]).toBeUndefined()
     expect(after.project["plugin:outside-project"]).toBeUndefined()
+  })
+
+  test.each(["worktree", "directory"])("bounds case-variant %s using actual filesystem identity", async (mode) => {
+    await using tmp = await tmpdir()
+    const root = path.join(tmp.path, "MiXeD")
+    const worktree = path.join(tmp.path, "mixed")
+    await mkdir(path.join(root, "child"), { recursive: true })
+    const canonical = await realpath(worktree).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return undefined
+      throw err
+    })
+    const outside = path.join(tmp.path, ".kilo", "opencode.json")
+    const file = path.join(root, ".kilo", "opencode.json")
+    const text = '{"plugin":["pkg@1"]}'
+    await Bun.write(outside, text)
+    await Bun.write(file, text)
+    if (!canonical) await mkdir(path.join(worktree, "child"), { recursive: true })
+    const input = {
+      directory: path.join(mode === "directory" ? worktree : root, "child"),
+      worktree: mode === "worktree" ? worktree : root,
+    }
+    const found = (await detect(input)).project["plugin:pkg"]
+    expect(Boolean(found)).toBe(Boolean(canonical))
+    expect((await Effect.runPromise(remove(input as never, { id: "pkg", type: "plugin" }, "project"))).success).toBe(
+      true,
+    )
+    expect(await Bun.file(outside).text()).toBe(text)
+    expect((await Bun.file(file).json()).plugin).toEqual(canonical ? [] : ["pkg@1"])
+    expect((await detect(input)).project["plugin:pkg"]).toBeUndefined()
   })
 
   test("detects and removes all global overlay and runtime config variants", async () => {
