@@ -1145,7 +1145,7 @@
         "kilo-code.new.browserAutomation.userDataDir": {
           "type": "string",
           "default": "",
-          "description": "Absolute path to an existing Chrome/Chromium user data directory to reuse for browser automation. When set, the Playwright MCP server and the Integrated Browser launch with this profile, preserving cookies, local storage, and other browser state. Leave empty to use a fresh temporary profile."
+          "description": "Absolute path to an existing Chrome/Chromium user data directory to reuse for Playwright browser automation. When set, the Playwright MCP server launches with this profile, preserving cookies, local storage, and other browser state. Leave empty to use a fresh temporary profile."
         },
         "kilo-code.new.agentManager.browser.useSystemChrome": {
           "type": "boolean",

@@ -367,7 +367,7 @@ async function launch() {
 
   settings(preserve, accessible)
 
-  const args = [workspace, `--extensions-dir=${extDir}`, `--user-data-dir=${userDir}`, "--skip-release-notes"]
+  const args = [workspace, `--extensions-dir=${extDir}`, `--user-data-dir=${userDir}`, "--skip-release-notes", "--no-sandbox"]
 
   if (mode === "dev") {
     args.push(`--extensionDevelopmentPath=${root}`)
@@ -398,6 +398,7 @@ async function launch() {
   for (const key of Object.keys(env)) {
     if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
   }
+  env.ELECTRON_DISABLE_SANDBOX = "1"
 
   console.log(`[launch] Starting VS Code (${mode} mode)`)
   console.log(`[launch] Executable: ${app}`)
