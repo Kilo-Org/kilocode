@@ -28,6 +28,7 @@ import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { Config as ConfigV2 } from "@opencode-ai/core/config" // kilocode_change - V2 key set for excess-key warnings
 import { RemoteAuthError } from "@opencode-ai/core/v1/config/error"
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
@@ -348,10 +349,11 @@ const layer = Layer.effect(
       )
       const parsed = ConfigParse.jsonc(expanded, source)
       const normalized = normalizeLoadedConfig(parsed, source) // kilocode_change
-      const lowered = ConfigV2Compat.lower(normalized, source) // kilocode_change - lower supported V2 keys before warning so they are not reported as unrecognized
       // kilocode_change start - preserve upstream excess-key compatibility while warning Kilo users about typos
       if (configWarnings) {
-        const keys = Excess.keys(ConfigV1.Info, lowered.value)
+        // Supported V2 keys are lowered by decodeConfig, so they are not typos.
+        const native = new Set(Object.keys(ConfigV2.Info.fields ?? {}))
+        const keys = Excess.keys(ConfigV1.Info, normalized).filter((key) => !native.has(key))
         if (keys.length) {
           const detail = Excess.issue(keys)
           configWarnings.push({
