@@ -173,6 +173,7 @@ export const Info = ConfigV1.Info
 
 type State = {
   config: Info
+  global: Info // kilocode_change - effective global-scoped config, without project/inline overrides
   directories: string[]
   deps: Fiber.Fiber<void>[]
   warnings: Warning[] // kilocode_change
@@ -192,7 +193,7 @@ export interface Interface {
   // kilocode_change end
   readonly invalidate: () => Effect.Effect<void>
   readonly invalidateInstance: () => Effect.Effect<void> // kilocode_change - instance-only invalidation for project config freshness
-  readonly getEffectiveGlobal: () => Effect.Effect<Info> // kilocode_change - primary + legacy home global config sources
+  readonly getEffectiveGlobal: () => Effect.Effect<Info> // kilocode_change - effective global-scoped config the instance merged (primary, legacy home, cloud, managed)
   readonly getLegacyGlobalField: () => Effect.Effect<KilocodeConfig.LegacyField | undefined> // kilocode_change - winning legacy home value for the config-edit protection field
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
@@ -523,16 +524,13 @@ const layer = Layer.effect(
       return (yield* getGlobalState()).config // kilocode_change
     })
 
-    // kilocode_change start - config-protection policies and the settings overlay must observe the
-    // legacy home config directories, not only Global.Path.config. One ordered read owns the source
+    // kilocode_change start - the settings-overlay provenance read must observe the legacy home
+    // config directories, not only Global.Path.config. One ordered read owns the source
     // interpretation: directory order (.kilocode then .kilo), file names, config-variable
-    // substitution, schema validation, malformed warn+skip, and merge order. `readOnly` is per
-    // consumer: the effective global keeps the loader's normal parse (including plugin resolution and
-    // the $schema write-back), while the settings-overlay provenance read is pure and never rewrites
-    // the file. The helper merges the legacy files onto a caller-supplied base and also reports the
-    // winning legacy file for the config-edit protection field; `getEffectiveGlobal` seeds it with
-    // the cached primary global (later files win), while `getLegacyGlobalField` reads legacy only and
-    // never touches the primary config.
+    // substitution, schema validation, malformed warn+skip, and merge order. `readOnly` keeps this
+    // provenance read pure: it never resolves plugins, rewrites `$schema`, or touches the primary
+    // global config. The helper merges the legacy files onto a caller-supplied base and reports the
+    // winning legacy file for the config-edit protection field.
     const loadLegacyGlobal = Effect.fnUntraced(function* (base: Info, readOnly: boolean) {
       let info = base
       let legacy: KilocodeConfig.LegacyField | undefined
@@ -551,10 +549,6 @@ const layer = Layer.effect(
         }
       }
       return { info, legacy }
-    })
-
-    const getEffectiveGlobal = Effect.fn("Config.getEffectiveGlobal")(function* () {
-      return (yield* loadLegacyGlobal(yield* getGlobal(), false)).info
     })
 
     const getLegacyGlobalField = Effect.fn("Config.getLegacyGlobalField")(function* () {
@@ -598,6 +592,25 @@ const layer = Layer.effect(
         const auth = yield* authSvc.all().pipe(Effect.orDie)
 
         let result: Info = {}
+        // kilocode_change start - global-scoped merge only, so the config-edit protection policy sees every
+        // global contributor without inheriting project or inline overrides. Known legacy home roots
+        // stay in this layer even when the open project contains them: plugin scope is local there,
+        // but those roots are still global config. Match the loader path and its canonical alias.
+        let globalResult: Info = {}
+        const legacyRoot = (source: string) => {
+          if (!path.isAbsolute(source)) return false
+          return KilocodeConfig.LEGACY_GLOBAL_DIRS.some((name) => {
+            const root = path.join(Global.Path.home, name)
+            if (FSUtil.contains(root, source)) return true
+            try {
+              return FSUtil.contains(FSUtil.resolve(root), FSUtil.resolve(source))
+            } catch (err) {
+              log.warn("skipping legacy root alias", { source, err })
+              return false
+            }
+          })
+        }
+        // kilocode_change end
         const legacy = yield* Effect.promise(() =>
           KilocodeConfig.loadLegacyConfigs({
             projectDir: ctx.directory,
@@ -683,6 +696,11 @@ const layer = Layer.effect(
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           protection.observe(scoped, scope) // kilocode_change - track a project override for the config-edit protection field
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
+          // kilocode_change start - explicit global scope, plus known legacy home roots the plugin scope
+          // marks local when they sit inside the open project. Primary global is already explicit.
+          if (scope === "global" || legacyRoot(source))
+            globalResult = mergeConfigConcatArrays(globalResult, scoped, trusted)
+          // kilocode_change end
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
@@ -1091,6 +1109,7 @@ const layer = Layer.effect(
 
         return {
           config: result,
+          global: globalResult, // kilocode_change
           directories,
           deps,
           warnings, // kilocode_change
@@ -1118,6 +1137,17 @@ const layer = Layer.effect(
       // kilocode_change end
       return yield* InstanceState.use(state, (s) => s.config)
     })
+
+    // kilocode_change start - the config-edit protection policy reads the global-scoped config this
+    // instance actually merged, so legacy home, cloud, managed-dir and platform (MDM) sources are all
+    // enforced. Reusing get() keeps the global-stamp freshness and avoids re-reading files or
+    // refetching the active organization on every permission decision. Project/inline sources are
+    // never part of this layer, so they cannot weaken the global policy.
+    const getEffectiveGlobal = Effect.fn("Config.getEffectiveGlobal")(function* () {
+      yield* get()
+      return yield* InstanceState.use(state, (s) => s.global)
+    })
+    // kilocode_change end
 
     const directories = Effect.fn("Config.directories")(function* () {
       return yield* InstanceState.use(state, (s) => s.directories)

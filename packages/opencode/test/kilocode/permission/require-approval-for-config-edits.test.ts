@@ -16,7 +16,13 @@ import { Permission } from "../../../src/permission"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import type { Tool } from "../../../src/tool/tool"
 import { assertExternalDirectoryEffect } from "../../../src/tool/external-directory"
-import { disposeAllInstances, provideInstance, provideTmpdirInstance, tmpdirScoped } from "../../fixture/fixture"
+import {
+  disposeAllInstances,
+  provideInstance,
+  provideTmpdirInstance,
+  testInstanceStoreLayer,
+  tmpdirScoped,
+} from "../../fixture/fixture"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 
 const env = Layer.mergeAll(
@@ -37,6 +43,18 @@ async function setGlobal(value: object | undefined) {
 }
 
 const withGlobal = (value: object | undefined) => Effect.promise(() => setGlobal(value))
+
+const managedDir = process.env["KILO_TEST_MANAGED_CONFIG_DIR"]!
+
+async function setManaged(value: object | undefined) {
+  const file = path.join(managedDir, "kilo.json")
+  await fs.rm(file, { force: true })
+  if (value === undefined) return
+  await fs.mkdir(managedDir, { recursive: true })
+  await fs.writeFile(file, JSON.stringify(value, null, 2))
+}
+
+const withManaged = (value: object | undefined) => Effect.promise(() => setManaged(value))
 
 const GlobalConfig = Schema.Record(Schema.String, Schema.Unknown)
 
@@ -199,6 +217,7 @@ const prompts = (id: string, file: string) =>
 
 afterEach(async () => {
   await setGlobal(undefined)
+  await setManaged(undefined)
   await disposeAllInstances()
 })
 
@@ -816,6 +835,96 @@ describe("require_approval_for_config_edits", () => {
         }),
       { git: true, config: { require_approval_for_config_edits: false } },
     ),
+  )
+
+  // --- managed global sources feed the global policy ---
+
+  it.live("managed global config enforces the policy over a false primary", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal({ require_approval_for_config_edits: false })
+          yield* withManaged({ require_approval_for_config_edits: true })
+          // Managed config is a global-scoped source: it governs the project's own config files...
+          yield* prompts("per_managed_inside", target)
+          // ...and the global policy for global config targets.
+          yield* prompts("per_managed_global", globalFile())
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("managed global false overrides a true primary for both scopes", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal({ require_approval_for_config_edits: true })
+          yield* withManaged({ require_approval_for_config_edits: false })
+          yield* auto("per_managed_off_inside", target)
+          yield* auto("per_managed_off_global", globalFile())
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("project false does not weaken managed global enforcement", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          yield* withGlobal(undefined)
+          yield* withManaged({ require_approval_for_config_edits: true })
+          yield* prompts("per_managed_beats_project_inside", target)
+          yield* prompts("per_managed_beats_project_global", globalFile())
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("legacy home roots govern nested global targets when home is the project", () =>
+    Effect.gen(function* () {
+      const prev = Global.Path.config
+      const home = yield* tmpdirScoped({ git: true })
+      const nested = path.join(home, "xdg", "kilo")
+      ;(Global.Path as { config: string }).config = nested
+      yield* withHome(
+        home,
+        Effect.gen(function* () {
+          for (const c of [
+            { id: "legacy_off", primary: true, legacy: false, check: auto },
+            { id: "legacy_on", primary: false, legacy: true, check: prompts },
+          ]) {
+            yield* Effect.promise(async () => {
+              await fs.mkdir(nested, { recursive: true })
+              await fs.writeFile(
+                path.join(nested, "kilo.json"),
+                JSON.stringify({ require_approval_for_config_edits: c.primary }),
+              )
+              await fs.mkdir(path.join(home, ".kilo"), { recursive: true })
+              await fs.writeFile(
+                path.join(home, ".kilo", "kilo.json"),
+                JSON.stringify({ require_approval_for_config_edits: c.legacy }),
+              )
+            })
+            yield* Effect.promise(() => disposeAllInstances())
+            const file = path.join(nested, "kilo.json")
+            yield* provideInstance(home)(
+              Effect.gen(function* () {
+                const level = ConfigProtection.classify(
+                  { permission: "edit", patterns: [file], metadata: { filepath: file } },
+                  home,
+                )
+                expect(level.external).toBe(true)
+                expect(level.inside).toBe(false)
+                yield* c.check(`per_home_project_${c.id}`, file)
+              }),
+            )
+          }
+        }),
+      ).pipe(
+        Effect.provide(testInstanceStoreLayer),
+        Effect.ensuring(Effect.sync(() => ((Global.Path as { config: string }).config = prev))),
+      )
+    }),
   )
 
   it.live("project false keeps protection for relative traversal into a sibling project", () =>

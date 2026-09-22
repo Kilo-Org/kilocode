@@ -1964,4 +1964,63 @@ describe("require_approval_for_config_edits source scope", () => {
       await disposeAllInstances()
     }
   })
+
+  test("keeps a legacy home root in the global policy when home is the project", async () => {
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    const prevContent = process.env["KILO_CONFIG_CONTENT"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      for (const c of [
+        { id: "legacy-off", primary: true, legacy: false },
+        { id: "legacy-on", primary: false, legacy: true },
+      ]) {
+        await using home = await tmpdir({ git: true })
+        const nested = path.join(home.path, "xdg", "kilo")
+        ;(Global.Path as { config: string }).config = nested
+        process.env["KILO_TEST_HOME"] = home.path
+        process.env["HOME"] = home.path
+        // Opposite inline value must not leak into the global policy.
+        process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ require_approval_for_config_edits: !c.legacy })
+        await writeConfig(nested, { require_approval_for_config_edits: c.primary })
+        await writeConfig(path.join(home.path, ".kilo"), { require_approval_for_config_edits: c.legacy })
+        await clear()
+        await disposeAllInstances()
+
+        await provideTestInstance({
+          directory: home.path,
+          fn: async () => {
+            const global = await effectiveGlobal()
+            expect(global.require_approval_for_config_edits).toBe(c.legacy)
+            const file = path.join(nested, "kilo.json")
+            const level = ConfigProtection.classify(
+              { permission: "edit", patterns: [file], metadata: { filepath: file } },
+              home.path,
+            )
+            expect(level.external).toBe(true)
+            expect(level.inside).toBe(false)
+            expect(
+              ConfigProtection.verdict(level, { global, project: { require_approval_for_config_edits: !c.legacy } })
+                .protect,
+            ).toBe(c.legacy)
+          },
+        })
+      }
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      if (prevContent === undefined) delete process.env["KILO_CONFIG_CONTENT"]
+      else process.env["KILO_CONFIG_CONTENT"] = prevContent
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 })

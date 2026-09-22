@@ -760,6 +760,34 @@ accountTokenIt.instance("resolves env templates in account config with account t
   }),
 )
 
+// kilocode_change start - the effective global protection policy must include the active organization
+const orgProtectionIt = configIt({
+  account: Layer.mock(Account.Service)({
+    active: () =>
+      Effect.succeed(
+        Option.some({
+          id: AccountID.make("account-1"),
+          email: "user@example.com",
+          url: "https://control.example.com",
+          active_org_id: OrgID.make("org-1"),
+        }),
+      ),
+    activeOrg: () => Effect.succeed(Option.none()),
+    config: () => Effect.succeed(Option.some({ require_approval_for_config_edits: true })),
+    token: () => Effect.succeed(Option.none()),
+  }),
+})
+
+orgProtectionIt.instance("effective global policy includes the active organization config", () =>
+  Effect.gen(function* () {
+    const primary = yield* Config.use.getGlobal()
+    expect(primary.require_approval_for_config_edits).toBeUndefined()
+    const global = yield* Config.use.getEffectiveGlobal()
+    expect(global.require_approval_for_config_edits).toBe(true)
+  }),
+)
+// kilocode_change end
+
 // kilocode_change start
 it.instance("validates config schema and reports warning on invalid values", () =>
   Effect.gen(function* () {
@@ -1445,6 +1473,18 @@ it.instance(
   }),
   { config: { model: "user/model" } },
 )
+
+// kilocode_change start - the effective global protection policy must include managed settings
+it.effect("effective global policy includes managed settings over a false primary", () =>
+  withGlobalConfig({ config: { require_approval_for_config_edits: false } }, ({ dir }) =>
+    Effect.gen(function* () {
+      yield* writeManagedSettingsEffect({ require_approval_for_config_edits: true })
+      const global = yield* Config.use.getEffectiveGlobal().pipe(provideInstanceEffect(dir))
+      expect(global.require_approval_for_config_edits).toBe(true)
+    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+  ),
+)
+// kilocode_change end
 
 it.instance("migrates legacy edit tool to edit permission", () =>
   Effect.gen(function* () {
