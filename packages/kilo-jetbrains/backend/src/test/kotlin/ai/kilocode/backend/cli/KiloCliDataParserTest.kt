@@ -2265,6 +2265,24 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `buildPromptJson - synthetic selection marker precedes its ranged file part`() {
+            val prompt = PromptDto(
+                parts = listOf(
+                    PromptPartDto(type = "text", text = "Explain this selection"),
+                    PromptPartDto(type = "text", text = "Note: the user selected lines 2-3", synthetic = true),
+                    PromptPartDto(type = "file", mime = "text/plain", url = "file:///tmp/App.kt?start=2&end=3", filename = "App.kt"),
+                ),
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"Explain this selection"},{"type":"text","text":"Note: the user selected lines 2-3","synthetic":true},{"type":"file","mime":"text/plain","url":"file:///tmp/App.kt?start=2&end=3","filename":"App.kt"}]}""",
+                result,
+            )
+        }
+
+        @Test
         fun `buildPromptJson - file only omits optional filename`() {
             val prompt = PromptDto(
                 parts = listOf(PromptPartDto(type = "file", mime = "application/pdf", url = "file:///tmp/a.pdf"))

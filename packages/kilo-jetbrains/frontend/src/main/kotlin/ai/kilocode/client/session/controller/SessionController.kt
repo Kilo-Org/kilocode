@@ -2564,11 +2564,14 @@ class SessionController(
             }
         }
         model.variant?.takeIf { it in model.variants }?.let { put("variant", it) }
-        if (files.isNotEmpty()) {
-            put("attachmentCount", files.size.toString())
-            put("mediaAttachmentCount", files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
+        // Synthetic parts (e.g. the editor-selection grounding marker) are hidden scaffolding the
+        // user never attached, so they must not inflate attachment/mention telemetry.
+        val attachments = files.filterNot { it.synthetic == true }
+        if (attachments.isNotEmpty()) {
+            put("attachmentCount", attachments.size.toString())
+            put("mediaAttachmentCount", attachments.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
         }
-        val mentions = files.filter { it.source?.text?.value?.startsWith("@") == true }
+        val mentions = attachments.filter { it.source?.text?.value?.startsWith("@") == true }
         if (mentions.isNotEmpty()) {
             val resources = mentions.count { it.source?.path == "git-changes" }
             put("hasMentions", "true")
