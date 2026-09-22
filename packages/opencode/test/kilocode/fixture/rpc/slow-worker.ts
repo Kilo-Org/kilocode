@@ -1,6 +1,5 @@
 // kilocode_change - new file
-// A worker that mirrors the TUI worker's shape: heavy async setup before `Rpc.listen` runs.
-// Stands in for the real one's several hundred module imports, without paying for them.
+// Delays Rpc.listen, like the TUI worker's module graph does.
 import { Rpc } from "@/util/rpc"
 
 await new Promise((resolve) => setTimeout(resolve, 150))

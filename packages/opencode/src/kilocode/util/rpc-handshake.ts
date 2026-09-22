@@ -1,23 +1,12 @@
 // kilocode_change - new file
 /**
- * Ready-gate for the worker RPC channel.
- *
- * A worker installs its handler only after its whole module graph has evaluated, and the TUI's
- * worker imports the entire server — so the main process can reach its first request first. The
- * runtime drops anything posted before that point rather than queueing it, and `Rpc.client.call`
- * has neither a rejection path nor a timeout, so one lost request hangs the caller forever.
- *
- * The target announces its handler and the client holds requests until it sees that announcement.
- * Held requests are the gate's own state, so failing them is the gate's job too: a target that dies
- * before announcing would otherwise turn a dropped-and-hung request into a queued-and-hung one, and
- * the queue would keep growing for the life of the client.
- *
- * Lives here rather than in `util/rpc.ts` so the diff against upstream opencode stays a hook.
+ * The worker installs its RPC handler only after its module graph loads, and messages posted
+ * before that are dropped. The worker announces when it is ready; the client holds requests
+ * until then, and rejects them if the worker dies first.
  */
 export namespace KiloRpcHandshake {
   const READY = "rpc.ready"
 
-  /** Ample for a startup burst; past this the target is not coming, and holding more only hides it. */
   const LIMIT = 256
 
   export type Target = {
@@ -44,7 +33,7 @@ export namespace KiloRpcHandshake {
       return entries
     }
 
-    // Chained, not replaced: the caller installs its own error logging before it builds the client.
+    // Chained: the caller may already have its own handler.
     const previous = target.onerror
     target.onerror = function (event: unknown) {
       const error = new Error("rpc target failed before it installed its handler")
@@ -53,7 +42,7 @@ export namespace KiloRpcHandshake {
     }
 
     return {
-      /** True when the message was the announcement itself and needs no further handling. */
+      /** True if the message was the announcement. */
       accept(parsed: { type?: string }) {
         if (parsed.type !== READY) return false
         ready = true

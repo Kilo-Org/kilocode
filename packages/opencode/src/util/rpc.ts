@@ -12,7 +12,7 @@ export function listen(rpc: Definition) {
       postMessage(JSON.stringify({ type: "rpc.result", result, id: parsed.id }))
     }
   }
-  KiloRpcHandshake.announce((data) => postMessage(data)) // kilocode_change - the client holds requests until it sees this
+  KiloRpcHandshake.announce((data) => postMessage(data)) // kilocode_change
 }
 
 export function emit(event: string, data: unknown) {
@@ -26,10 +26,10 @@ export function client<T extends Definition>(target: {
   const pending = new Map<number, (result: any) => void>()
   const listeners = new Map<string, Set<(data: any) => void>>()
   let id = 0
-  const gate = KiloRpcHandshake.gate(target) // kilocode_change - hold requests until the target announces its handler
+  const gate = KiloRpcHandshake.gate(target) // kilocode_change
   target.onmessage = async (evt) => {
     const parsed = JSON.parse(evt.data)
-    if (gate.accept(parsed)) return // kilocode_change - the announcement, which also flushes what was held
+    if (gate.accept(parsed)) return // kilocode_change
     if (parsed.type === "rpc.result") {
       const resolve = pending.get(parsed.id)
       if (resolve) {
@@ -49,7 +49,7 @@ export function client<T extends Definition>(target: {
   return {
     call<Method extends keyof T>(method: Method, input: Parameters<T[Method]>[0]): Promise<ReturnType<T[Method]>> {
       const requestId = id++
-      // kilocode_change - `fail` runs only for a request the gate could not hand over
+      // kilocode_change
       return new Promise((resolve, reject) => {
         pending.set(requestId, resolve)
         gate.send(JSON.stringify({ type: "rpc.request", method, input, id: requestId }), (error) => {
