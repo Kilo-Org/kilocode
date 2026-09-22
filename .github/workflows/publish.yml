@@ -533,14 +533,15 @@ jobs:
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
 
       # kilocode_change start - upload the conda packages built above to
-      # Anaconda.org. Skips silently if ANACONDA_OWNER isn't configured yet.
+      # Anaconda.org. The `channel` input is the Anaconda.org org to publish
+      # under (mirrors ana-cli's `channel: anaconda-cloud`). Skips on pre-releases.
       - name: Upload conda package to Anaconda.org
-        if: ${{ !inputs.pre_release && vars.ANACONDA_OWNER != '' }}
+        if: ${{ !inputs.pre_release }}
         uses: anaconda/actions/upload-package@a6f488910b4a1e4f3fe01736241ca1b92b4b355a # v0.3.1
         with:
           token: ${{ secrets.ANACONDA_API_KEY }}
           packages: packages/opencode/dist/conda/**/*.conda
-          channel: ${{ vars.ANACONDA_OWNER }}
+          channel: anaconda-cloud
           labels: main
           force: "true"
       # kilocode_change end

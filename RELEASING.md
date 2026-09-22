@@ -82,7 +82,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 - **AUR (Arch Linux)**: Clones `kilo-bin` from the AUR, updates the `PKGBUILD` with new version and SHA256 checksums, and pushes.
 - **Homebrew**: Clones `Kilo-Org/homebrew-tap`, updates the `kilo.rb` formula with new version, download URLs, and SHA256 checksums, and pushes.
-- **Conda (Anaconda.org)**: Uses [`rattler-build`](https://rattler.build) to repackage the released CLI archives (no compilation) into a `kilo-cli` conda package for `linux-64`, `linux-aarch64`, `osx-64`, `osx-arm64`, and `win-64`, all built from the single Linux publish runner (see the `Build conda package` step in `publish.yml` and the recipe in `packages/opencode/script/kilocode/conda-recipe/`). The built `.conda` files are then uploaded to Anaconda.org via the [`anaconda/actions/upload-package`](https://github.com/anaconda/actions) action. Skipped if `ANACONDA_OWNER` isn't configured.
+- **Conda (Anaconda.org)**: Uses [`rattler-build`](https://rattler.build) to repackage the released CLI archives (no compilation) into a `kilo-cli` conda package for `linux-64`, `linux-aarch64`, `osx-64`, `osx-arm64`, and `win-64`, all built from the single Linux publish runner (see the `Build conda package` step in `publish.yml` and the recipe in `packages/opencode/script/kilocode/conda-recipe/`). The built `.conda` files are then uploaded to Anaconda.org via the [`anaconda/actions/upload-package`](https://github.com/anaconda/actions) action, publishing under the `anaconda-cloud` org (same as ana-cli).
 
 ## Prerequisites and Permissions
 
@@ -114,12 +114,6 @@ The following secrets must be configured in the repository:
 | `OVSX_TOKEN` | Open VSX Registry token (currently unused but configured) |
 | `AUR_KEY` | SSH private key for pushing to the AUR |
 | `ANACONDA_API_KEY` | Anaconda.org API token for uploading the conda package |
-
-Additionally, this repository **variable** (not a secret, since it isn't sensitive) configures the conda upload target:
-
-| Variable | Purpose |
-|---|---|
-| `ANACONDA_OWNER` | Anaconda.org organization/user to upload the `kilo-cli` package to. Upload is skipped entirely if unset. |
 
 ### Concurrency
 
