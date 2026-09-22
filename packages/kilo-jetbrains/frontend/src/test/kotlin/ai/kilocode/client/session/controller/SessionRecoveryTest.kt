@@ -8,8 +8,10 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.util.Disposer
@@ -637,13 +639,19 @@ class SessionRecoveryTest : SessionControllerTestBase() {
     }
 
     fun `test initial ready does not trigger a second reconnect recovery`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
         projectRpc.state.value = workspaceReady()
         controller("ses_test")
         flush()
+        val calls = rpc.pendingQuestionCalls
 
-        // Only the one recovery call from history load — the very first READY (no prior
-        // observation) must not also be treated as a reconnect.
-        assertEquals(1, rpc.pendingQuestionCalls)
+        // A restored tab sees DISCONNECTED -> READY on the first connection. History load already
+        // recovered pending prompts, so this first READY must not start another recovery pass.
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        flush()
+
+        assertEquals(1, calls)
+        assertEquals(calls, rpc.pendingQuestionCalls)
     }
 
     fun `test ready to ready config update does not trigger reconnect recovery`() {
@@ -716,6 +724,77 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.Busy)
     }
 
+    fun `test stale reconnect recovery cannot replace a locally answered question`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_live")))
+        rpc.pendingQuestionList.add(question("q_stale"))
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.pendingGate = gate
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        flush()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        settle()
+
+        edt { m.replyQuestion("q_live", QuestionReplyDto(listOf(listOf("Continue here")))) }
+        gate.complete(Unit)
+        flush()
+
+        // The reply echo can be delayed or lost during the same reconnect. The local action is
+        // authoritative and must invalidate the stale q_stale snapshot before it commits.
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        assertEquals("q_live", (m.model.state as SessionState.AwaitingQuestion).question.id)
+    }
+
+    fun `test stale reconnect recovery cannot replace a locally answered permission`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm_live")))
+        rpc.pendingPermissionList.add(permission("perm_stale"))
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.pendingGate = gate
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        flush()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        settle()
+
+        edt { m.replyPermission("perm_live", PermissionReplyDto("once")) }
+        gate.complete(Unit)
+        flush()
+
+        val state = m.model.state as SessionState.AwaitingPermission
+        assertEquals("perm_live", state.permission.id)
+    }
+
+    fun `test stale reconnect recovery cannot replace a locally rejected question`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_live")))
+        rpc.pendingQuestionList.add(question("q_stale"))
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.pendingGate = gate
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        flush()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        settle()
+
+        edt { m.rejectQuestion("q_live") }
+        gate.complete(Unit)
+        flush()
+
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        assertEquals("q_live", (m.model.state as SessionState.AwaitingQuestion).question.id)
+    }
+
     fun `test reconnect recovery result is discarded after controller disposal`() {
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
@@ -740,5 +819,12 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         id = id,
         sessionID = "ses_test",
         questions = listOf(QuestionInfoDto("Ready to implement?", "Plan ready")),
+    )
+
+    private fun permission(id: String) = PermissionRequestDto(
+        id = id,
+        sessionID = "ses_test",
+        permission = "read",
+        patterns = listOf("*.json"),
     )
 }

@@ -181,15 +181,15 @@ class SessionController(
     private val childIds: MutableSet<String> = mutableSetOf()
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
-    // The app-readiness observed on the previous AppChanged tick. Null until the first observation,
-    // so the initial connect never looks like a reconnect. Only a later non-READY -> READY edge is a
-    // reconnect: history load already recovers pending prompts once for the very first READY.
+    // The app-readiness observed on the previous AppChanged tick. Recovery requires both a later
+    // non-READY -> READY edge and a READY observed before that edge: restored tabs commonly see
+    // DISCONNECTED -> READY on their initial connection, which history recovery already covers.
     private var lastAppStatus: KiloAppStatusDto? = null
-    // Bumped whenever a live permission/question ask, reply, or rejection is handled. recoverPending
-    // snapshots this before its suspending REST calls and discards the result if it changed before
-    // the EDT commit, so a stale reconnect snapshot can never overwrite a fresher live prompt state
-    // or resurrect one that was just answered/rejected.
-    private var promptRevision: Long = 0L
+    private var seenReady = false
+    // Bumped whenever a live prompt event or local resolution is handled. recoverPending snapshots
+    // this before its suspending REST calls and discards the result if it changed before the EDT
+    // commit, so a stale reconnect snapshot cannot overwrite or resurrect a fresher prompt state.
+    private var promptRevision = 0L
     private var reconnectRecoveryJob: Job? = null
     private var recentsState: RecentsState = RecentsState.Idle
     private var recentsSnapshot: List<SessionDto> = emptyList()
@@ -900,6 +900,7 @@ class SessionController(
 
     fun replyPermission(requestId: String, reply: PermissionReplyDto, rules: PermissionAlwaysRulesDto? = null) {
         assertEdt()
+        promptRevision++
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission rid=$requestId reply=${reply.reply}" }
         val current = model.state as? SessionState.AwaitingPermission
         updatePermission(requestId, PermissionRequestState.RESPONDING)
@@ -1053,6 +1054,7 @@ class SessionController(
 
     fun replyQuestion(requestId: String, answers: QuestionReplyDto, options: List<List<String>> = answers.answers) {
         assertEdt()
+        promptRevision++
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         val current = model.state
         followup = if (current is SessionState.AwaitingQuestion
@@ -1080,6 +1082,7 @@ class SessionController(
 
     fun rejectQuestion(requestId: String) {
         assertEdt()
+        promptRevision++
         followup = null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true" }
         cs.launch {
@@ -1125,9 +1128,10 @@ class SessionController(
                     // race a later AppChanged tick jumping the queue.
                     val prevStatus = lastAppStatus
                     lastAppStatus = state.status
-                    if (state.status == KiloAppStatusDto.READY && prevStatus != null && prevStatus != KiloAppStatusDto.READY) {
+                    if (state.status == KiloAppStatusDto.READY && seenReady && prevStatus != KiloAppStatusDto.READY) {
                         recoverOnReconnect()
                     }
+                    if (state.status == KiloAppStatusDto.READY) seenReady = true
                     model.app = state
                     model.version = app.version
                     if (model.state is SessionState.LoginRequired && state.profile != null) {
@@ -1685,6 +1689,8 @@ class SessionController(
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LOG.warn("${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
         }
