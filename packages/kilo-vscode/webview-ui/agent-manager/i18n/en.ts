@@ -161,8 +161,12 @@ export const dict = {
 
   "agentManager.tab.close": "Close",
   "agentManager.tab.closeOthers": "Close Others",
+  "agentManager.tab.closeToRight": "Close to the Right",
   "agentManager.tab.closeTab": "Close tab",
   "agentManager.tab.forkSession": "Fork Session",
+  "agentManager.tab.pin": "Pin",
+  "agentManager.tab.unpin": "Unpin",
+  "agentManager.tab.pinned": "Pinned",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
   "agentManager.tab.newOptions": "More new-tab options",

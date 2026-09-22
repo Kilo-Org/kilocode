@@ -12,6 +12,17 @@ export interface CloseOthersDeps {
   selectReviewTab: () => void
   selectSessionTab: (id: string, pending: boolean) => void
   sessionClose: (id: string) => void
+  isPinned: (id: string) => boolean
+}
+
+/** Reveal `target` and clear whichever other tab kind currently owns the view. */
+export function reveal(target: string, deps: CloseOthersDeps) {
+  const terminal = isTerminalTabId(target)
+  const review = target === deps.REVIEW_TAB_ID
+  if (terminal) deps.activateTerminal(target)
+  if (!terminal) deps.deactivateTerminal()
+  if (review) deps.selectReviewTab()
+  if (!terminal && !review) deps.selectSessionTab(target, deps.isPending(target))
 }
 
 /**
@@ -24,12 +35,7 @@ export interface CloseOthersDeps {
  */
 export function closeOthers(target: string, deps: CloseOthersDeps) {
   const ids = [...deps.tabIds()]
-  const terminal = isTerminalTabId(target)
-  const review = target === deps.REVIEW_TAB_ID
-  if (terminal) deps.activateTerminal(target)
-  if (!terminal) deps.deactivateTerminal()
-  if (review) deps.selectReviewTab()
-  if (!terminal && !review) deps.selectSessionTab(target, deps.isPending(target))
+  reveal(target, deps)
   for (const id of ids) {
     if (id === target) continue
     if (isTerminalTabId(id)) {
@@ -40,6 +46,8 @@ export function closeOthers(target: string, deps: CloseOthersDeps) {
       deps.closeReview()
       continue
     }
+    // Pinned tabs survive Close Others, the same way they do in VS Code.
+    if (deps.isPinned(id)) continue
     deps.sessionClose(id)
   }
 }

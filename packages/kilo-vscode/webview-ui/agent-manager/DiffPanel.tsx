@@ -21,6 +21,7 @@ import "../diff-viewer/remote-comments.css"
 import { RemoteCommentsOutside } from "../diff-viewer/remote-comment-renderer"
 import { ReviewDiffItem } from "../diff-viewer/ReviewDiffItem"
 import { type ReviewViewProps } from "../diff-viewer/review-controller"
+import { focusDiff, pageDiff } from "../diff-viewer/review-scroll"
 import { SendAllButton } from "../diff-viewer/SendAllButton"
 import { createReviewSurface } from "../diff-viewer/review-surface"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
@@ -70,7 +71,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     pinned,
     render,
     request,
-    handleRootMouseDown,
     handleKeyDown,
     commentsByFile,
     handleGutterClick,
@@ -98,7 +98,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const openIcon = () => (allOpen() ? "files-collapse" : "files-expand")
 
   return (
-    <div class="am-diff-panel" onKeyDown={handleKeyDown} onMouseDown={handleRootMouseDown} tabIndex={-1} ref={rootRef}>
+    <div class="am-diff-panel" onKeyDown={handleKeyDown} tabIndex={-1} ref={rootRef}>
       <div class="am-diff-header">
         <div class="am-diff-header-main">
           {/* Scope + base picker replace the static "Changes" title: it names
@@ -172,65 +172,79 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
       <DiffViewerNotice text={noticeText()} role="status" />
 
-      <Show when={props.loading && props.diffs.length === 0}>
-        <div class="am-diff-loading">
-          <span>{t("session.review.loadingChanges")}</span>
-        </div>
-      </Show>
-
-      <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
-        <div class="am-diff-empty">
-          <span>{t("session.review.noChanges")}</span>
-        </div>
-      </Show>
-
-      <Show when={props.diffs.length > 0} fallback={<RemoteCommentsOutside controller={remote} />}>
-        <div class="am-diff-content" data-component="session-review" ref={setScroller}>
-          <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
-            <VirtualDiffList
-              context={props.sessionKey}
-              data={rows()}
-              scroll={scroller()}
-              keep={pinned()}
-              onReady={setVirtualizer}
-              render={(diff) => {
-                const viewport = createDiffViewport(scroller)
-                const annotations = remote.annotations(diff.file)
-                return (
-                  <ReviewDiffItem
-                    diff={diff}
-                    open={open}
-                    viewport={viewport}
-                    request={props.onRequestDiff ? request : undefined}
-                    active={() => props.active !== false}
-                    loading={() => props.loadingFiles?.has(diff.file) ?? false}
-                    comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
-                    diffStyle={() => props.diffStyle ?? "unified"}
-                    markdownRender={() => props.markdownRender ?? false}
-                    handle={(handle) => register(diff.file, handle)}
-                    scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
-                    annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
-                    renderAnnotation={render}
-                    onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                    onOpenFile={props.onOpenFile}
-                    onOpenDocument={props.onOpenDocument}
-                    onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
-                    reverting={() => props.revertingFiles?.has(diff.file) ?? false}
-                    onMarkdownRenderChange={props.onMarkdownRenderChange}
-                    canComment={() => true}
-                    sessionKey={props.sessionKey}
-                    sessionReviewSlot
-                  />
-                )
-              }}
-            />
-          </Accordion>
-          <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
-            <DiffEndMarker />
+      <div class="am-diff-viewport">
+        <div
+          class="am-diff-content"
+          onKeyDown={pageDiff}
+          onClick={focusDiff}
+          data-component="session-review"
+          data-focus-region
+          tabIndex={0}
+          role="region"
+          aria-label={t("agentManager.hoverCard.changes")}
+          ref={setScroller}
+        >
+          <Show when={props.loading && props.diffs.length === 0}>
+            <div class="am-diff-loading">
+              <span>{t("session.review.loadingChanges")}</span>
+            </div>
           </Show>
-          <RemoteCommentsOutside controller={remote} />
-        </div>
 
+          <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
+            <div class="am-diff-empty">
+              <span>{t("session.review.noChanges")}</span>
+            </div>
+          </Show>
+
+          <Show when={props.diffs.length > 0} fallback={<RemoteCommentsOutside controller={remote} />}>
+            <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
+              <VirtualDiffList
+                context={props.sessionKey}
+                data={rows()}
+                scroll={scroller()}
+                keep={pinned()}
+                onReady={setVirtualizer}
+                render={(diff) => {
+                  const viewport = createDiffViewport(scroller)
+                  const annotations = remote.annotations(diff.file)
+                  return (
+                    <ReviewDiffItem
+                      diff={diff}
+                      open={open}
+                      viewport={viewport}
+                      request={props.onRequestDiff ? request : undefined}
+                      active={() => props.active !== false}
+                      loading={() => props.loadingFiles?.has(diff.file) ?? false}
+                      comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
+                      diffStyle={() => props.diffStyle ?? "unified"}
+                      markdownRender={() => props.markdownRender ?? false}
+                      handle={(handle) => register(diff.file, handle)}
+                      scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
+                      annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
+                      renderAnnotation={render}
+                      onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                      onOpenFile={props.onOpenFile}
+                      onOpenDocument={props.onOpenDocument}
+                      onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
+                      reverting={() => props.revertingFiles?.has(diff.file) ?? false}
+                      onMarkdownRenderChange={props.onMarkdownRenderChange}
+                      canComment={() => true}
+                      sessionKey={props.sessionKey}
+                      sessionReviewSlot
+                    />
+                  )
+                }}
+              />
+            </Accordion>
+            <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
+              <DiffEndMarker />
+            </Show>
+            <RemoteCommentsOutside controller={remote} />
+          </Show>
+        </div>
+      </div>
+
+      <Show when={props.diffs.length > 0}>
         <Show when={comments().length > 0}>
           <div class="am-diff-comments-footer">
             <span class="am-diff-comments-count">

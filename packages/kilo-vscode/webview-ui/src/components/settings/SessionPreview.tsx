@@ -1,4 +1,4 @@
-import { createMemo, createSignal, createUniqueId, onCleanup, onMount, Show, type Component } from "solid-js"
+import { createMemo, createUniqueId, onCleanup, onMount, Show, type Component } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 import type { AssistantMessage as Message, Part, ToolPart, UserMessage } from "@kilocode/sdk/v2"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
@@ -14,12 +14,6 @@ const SessionPreview: Component = () => {
   const { config, settings } = useConfig()
   const display = useDisplay()
   const language = useLanguage()
-  const [revision, setRevision] = createSignal(0)
-  let elapsed = 0
-  const replay = () => {
-    elapsed = 0
-    setRevision((value) => value + 1)
-  }
   const reasoning = () => resolveReasoningDisplay(config())
   const throughput = () => Boolean(settings().showTokenThroughput ?? true)
   const approval = () => Boolean(settings().showAutoApprovalReason ?? true)
@@ -28,7 +22,6 @@ const SessionPreview: Component = () => {
   )
   const fixture = createMemo(() => {
     // Tool defaults are captured on mount. Refresh IDs for those drafts, never for streaming ticks.
-    revision()
     defaults()
     const id = `settings-preview-${createUniqueId()}`
     const stamp = 1_700_000_000_000
@@ -152,26 +145,35 @@ const SessionPreview: Component = () => {
   const Playback: Component<{ sample: ReturnType<typeof fixture> }> = (props) => {
     const sample = props.sample
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
-    const [state, setState] = createStore(previewFrame(sample, elapsed, motion.matches))
+    const [state, setState] = createStore(previewFrame(sample, 0, motion.matches))
     let body: HTMLDivElement | undefined
     let content: HTMLDivElement | undefined
     let following = true
     onMount(() => {
-      const timer = window.setInterval(() => {
+      // Paint frames schedule playback, but only painted time counts, so time
+      // spent hidden or occluded does not advance the loop. State updates stay
+      // on the previous 50 ms cadence instead of once per paint frame.
+      const step = 50
+      const limit = 100
+      let painted = 0
+      let applied = 0
+      let last = performance.now()
+      let raf = requestAnimationFrame(function tick(now) {
+        raf = requestAnimationFrame(tick)
+        const delta = now - last
+        last = now
         if (document.hidden) return
-        elapsed += 50
-        if (elapsed >= previewDuration) {
-          replay()
-          return
-        }
-        setState(reconcile(previewFrame(sample, elapsed, motion.matches)))
-      }, 50)
+        painted += Math.min(delta, limit)
+        if (painted - applied < step) return
+        applied = painted
+        setState(reconcile(previewFrame(sample, painted % previewDuration, motion.matches)))
+      })
       const observer = new ResizeObserver(() => {
         if (following && body) body.scrollTop = body.scrollHeight
       })
       if (content) observer.observe(content)
       onCleanup(() => {
-        window.clearInterval(timer)
+        cancelAnimationFrame(raf)
         observer.disconnect()
       })
     })

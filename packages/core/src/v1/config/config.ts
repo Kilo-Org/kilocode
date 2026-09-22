@@ -303,8 +303,9 @@ export const Info = Schema.Struct({
         description: "Enable pruning of old tool outputs (default: true)",
       }),
       tail_turns: Schema.optional(NonNegativeInt).annotate({
+        // kilocode_change - Kilo pins an unset tail_turns to 2 turns, so the description must state the cap
         description:
-          "Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)",
+          "Maximum number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction. By default at most 2 turns are kept, further limited by the preserved token budget.", // kilocode_change
       }),
       preserve_recent_tokens: Schema.optional(NonNegativeInt).annotate({
         description: "Maximum number of tokens from recent turns to preserve verbatim after compaction",

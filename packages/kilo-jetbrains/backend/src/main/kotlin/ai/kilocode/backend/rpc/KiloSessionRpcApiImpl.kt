@@ -10,6 +10,7 @@ import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -334,6 +335,17 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? =
         ready { withContext(Dispatchers.IO) { sessions.resetSessionBoard(sessionID, directory, revision) } }
+
+    // ------ background subagents ------
+
+    override suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>> =
+        sessions.backgroundJobs(id, directory)
+
+    override suspend fun cancelBackgroundJob(id: String, directory: String): Boolean =
+        ready { withContext(Dispatchers.IO) { sessions.cancelBackgroundJob(id, directory) } }
+
+    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean =
+        ready { withContext(Dispatchers.IO) { sessions.promoteBackgroundJob(id, directory) } }
 
     private suspend fun <T> ready(block: suspend () -> T): T {
         app.requireReady()

@@ -43,6 +43,7 @@ import com.intellij.openapi.project.RootsChangeRescanningInfo
 import com.intellij.openapi.roots.ex.ProjectRootManagerEx
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -61,7 +62,8 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
     override suspend fun connect() = app.connect()
 
     override suspend fun state(): Flow<KiloAppStateDto> =
-        app.appState.map(::dto).distinctUntilChanged()
+        combine(app.appState, app.capabilities) { state, caps -> appStateDto(state, caps) }
+            .distinctUntilChanged()
 
     override suspend fun health(): HealthDto = app.health()
 
@@ -104,7 +106,7 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
         app.requireReady()
-        return appStateDto(app.updateConfig(patch))
+        return appStateDto(app.updateConfig(patch), app.capabilities.value)
     }
 
     override suspend fun applyLogConfig(config: LogConfigDto) {
@@ -147,11 +149,9 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)
     }
 
-    private fun dto(state: KiloAppState): KiloAppStateDto =
-        appStateDto(state)
 }
 
-internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
+internal fun appStateDto(state: KiloAppState, backgroundSubagents: Boolean = false): KiloAppStateDto =
     when (state) {
         KiloAppState.Disconnected -> KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
         is KiloAppState.Downloading -> KiloAppStateDto(
@@ -179,6 +179,7 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
             ),
             config = state.data.config,
             profile = state.data.profile?.let(::profileDto),
+            backgroundSubagents = backgroundSubagents,
         )
         is KiloAppState.Error -> KiloAppStateDto(
             status = KiloAppStatusDto.ERROR,

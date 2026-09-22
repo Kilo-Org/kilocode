@@ -1,5 +1,6 @@
 package ai.kilocode.rpc
 
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.SessionBoardDto
@@ -181,4 +182,15 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
      * instead of retrying blindly. Throws on any other failure.
      */
     suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto?
+
+    // ------ background subagents ------
+
+    /** Observe background subagent jobs owned by root session [id]. */
+    suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>>
+
+    /** Cancel one background subagent job and its child session tree. */
+    suspend fun cancelBackgroundJob(id: String, directory: String): Boolean
+
+    /** Continue one foreground subagent job in the background. Returns false when the CLI's background-subagent kill switch is off. */
+    suspend fun promoteBackgroundJob(id: String, directory: String): Boolean
 }

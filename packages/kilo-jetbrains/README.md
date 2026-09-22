@@ -170,8 +170,40 @@ Where to find the log files:
 - Frontend log file: `<sandbox log dir>/kilo-frontend/kilo.log`
 - Backend log file: `<sandbox log dir>/kilo-backend/kilo.log`
 - Rotated files use numbered suffixes: `kilo.log.0`, `kilo.log.1`.
+- Each sandbox process starts a new `kilo.log`, so the file holds exactly one run and the previous run stays readable as `kilo.log.0`. Installed builds keep appending instead.
 - In practice these sit under the current `log_run*` sandbox logs for the active run.
 - If you are unsure of the exact sandbox root, open the IDE log directory from the running sandbox instance and then look for the `kilo-frontend/` and `kilo-backend/` subdirectories.
+
+### Reading the logs in the Run tool window
+
+The checked-in IDE run configurations attach both files as `<log_file>` tabs ("Backend Kilo", "Frontend Kilo"). Two IntelliJ defaults are worth knowing:
+
+- `skipped` defaults to `true`, which makes the tab open the file at its current end offset and show nothing that was already written. The checked-in configurations set `skipped="false"`. The `show_all` attribute is unrelated — it only selects "every glob match" over "the newest match" for pattern paths.
+- The tab's log level filter defaults to **Show errors and warnings**, and Kilo's dev logs are almost entirely `INFO`/`DEBUG`, so a correctly wired tab still looks empty. Open the tab's filter control (funnel icon) and pick **Show all**. This is a per-project setting stored in `.idea/workspace.xml` under `LogFilters`, so it cannot ship with the run configuration.
+
+Runs started from the Agent Manager against a git worktree get their log paths rebased onto that worktree, because `$PROJECT_DIR$` was already expanded against the main checkout when the configuration was read (`WorktreeRunAdapter.rebaseLogs`).
+
+### Which run configurations a worktree can run
+
+The Agent Manager Run popup only lists configurations whose location it can repoint at the worktree, so it never silently runs the main checkout instead. `WorktreeRunAdapter.supports` accepts three kinds:
+
+| Kind | Location that gets rebased |
+|---|---|
+| External-system (Gradle, Maven) | `ExternalSystemRunConfiguration.settings.externalProjectPath` |
+| `CommonProgramRunConfigurationParameters` (CLI-style) | `workingDirectory`, plus `WORKTREE_PATH`/`REPO_PATH` env vars |
+| Types listed in `WorktreeRunAdapter.PATHS` | a path in the configuration's serialized state |
+
+The third kind exists for types that keep their working directory out of any callable API. npm/yarn/pnpm/bun script configurations (`js.build_tools.npm`) are the current entry: their `<package-json>` path *is* the working directory — `NpmRunProfileState` takes its parent and hands it to `GeneralCommandLine.withWorkingDirectory` — and the typed setter lives in the Ultimate-only JavaScript plugin, so the rebase goes through `writeExternal` → rewrite → `readExternal` instead. That matches the VS Code Agent Manager contract of cwd = worktree.
+
+Adding a type means one `PATHS` entry, not a generic rewrite: blanket-rebasing every repo-absolute path in an arbitrary configuration's serialized state would reach into types from any installed plugin, where a path may need to keep pointing at the main checkout.
+
+Module-classpath configurations (Application, Spring Boot, tests) are not transplanted — their classpath comes from the main checkout's module — and go through the platform's own build-system delegation instead (`WorktreeRunDelegate`). Anything neither path can run is listed in a collapsed **Not Supported** submenu with the reason, and logged by `WorktreeRunManager.configs`:
+
+```bash
+grep "worktree run: configs listed" packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains/kilo-backend/kilo.log
+```
+
+Worktree npm runs need the worktree's own `node_modules`; that is what the Agent Manager setup script is for.
 
 Recommended combinations:
 
