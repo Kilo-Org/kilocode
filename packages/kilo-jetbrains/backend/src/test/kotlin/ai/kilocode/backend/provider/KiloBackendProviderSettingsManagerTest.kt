@@ -455,6 +455,43 @@ class KiloBackendProviderSettingsManagerTest {
     }
 
     @Test
+    fun `saving custom provider duplicated identically in both scopes also nulls the removed model in the other scope`() = runBlocking {
+        // Regression test for a duplicate-provider edge case: if the same custom provider id is
+        // hand-authored identically into both the global and workspace config files, the merged
+        // view treats it as "global" scoped (the two entries match). Removing a model must still
+        // null it out of the workspace's independent copy too, or that stale duplicate resurrects
+        // the model in the merged config the next time settings load.
+        val duplicated = """{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://localhost:11434"},"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"},"gpt-3.5-turbo":{"id":"gpt-3.5-turbo","name":"gpt-3.5-turbo"}}}"""
+        mock.config = """{"provider":{"my-openai":$duplicated}}"""
+        mock.workspaceConfig = """{"provider":{"my-openai":$duplicated}}"""
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"config","models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"}}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto(
+                "/test",
+                "my-openai",
+                "My OpenAI",
+                "https://api.example.com/v1",
+                apiKey = "sk-test",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            ),
+        )
+
+        assertNull(result.error)
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"gpt-3.5-turbo\":null")
+        assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"gpt-3.5-turbo\":null")
+        val state = manager.state("/test")
+        assertEquals(setOf("gpt-4o"), state.config["my-openai"]?.models?.keys)
+    }
+
+    @Test
     fun `saving custom provider without an existing env var does not delete the entry first`() = runBlocking {
         // Deleting first is only needed to clear a previously-set env var. Doing it unconditionally
         // would risk wiping fields the save patch doesn't set (e.g. a hand-authored

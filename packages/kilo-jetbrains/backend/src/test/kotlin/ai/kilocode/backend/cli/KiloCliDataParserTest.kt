@@ -2298,6 +2298,31 @@ class KiloCliDataParserTest {
             )
         }
 
+        // ---- buildCustomProviderModelRemovalPatch ----
+
+        @Test
+        fun `buildCustomProviderModelRemovalPatch - nulls only the given models`() {
+            val result = KiloCliDataParser.buildCustomProviderModelRemovalPatch("my-openai", setOf("gpt-3.5-turbo"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"models":{"gpt-3.5-turbo":null}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderModelRemovalPatch - leaves every other field untouched`() {
+            // No name, npm, or options keys should appear: a scope's other fields must survive
+            // this patch via the deep-merge, since this builder only ever targets "models".
+            val result = KiloCliDataParser.buildCustomProviderModelRemovalPatch("my-openai", setOf("a", "b"))
+
+            assertFalse(result.contains("\"name\""))
+            assertFalse(result.contains("\"npm\""))
+            assertFalse(result.contains("\"options\""))
+            assertTrue(result.contains("\"a\":null"))
+            assertTrue(result.contains("\"b\":null"))
+        }
+
         @Test
         fun `buildPromptJson - with agent`() {
             val prompt = PromptDto(

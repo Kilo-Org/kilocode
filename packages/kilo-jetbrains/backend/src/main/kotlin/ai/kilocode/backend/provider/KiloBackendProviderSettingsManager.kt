@@ -150,11 +150,18 @@ internal class KiloBackendProviderSettingsManager(
     suspend fun saveCustom(input: CustomProviderSaveDto): ProviderActionResultDto {
         val err = validate(input)
         if (err != null) return ProviderActionResultDto(state(input.directory), error = err)
-        // Read the currently persisted entry once so the patch below can (1) target the scope
-        // ("workspace" vs "global") the provider was originally saved in instead of always
-        // writing global, and (2) diff the submitted models against what's on disk so deselected
-        // IDs can be explicitly nulled — see buildCustomProviderPatch.
-        val existing = state(input.directory).config[input.id]
+        // Read the provider's raw entry from both scopes directly, rather than the single merged
+        // "scope" exposed on ProviderSettingsDto, because a provider id can have an independent,
+        // hand-authored entry in both the global and workspace config files at once. The primary
+        // patch below only targets the scope the dialog is effectively editing; a model removed
+        // from it must also be nulled out of any other scope that independently lists it, or that
+        // scope's stale copy resurrects the model in the merged config next time settings load.
+        val globalCfg = parsed(get("/global/config")).config[input.id]
+        val localCfg = parsed(get("/config?directory=${enc(input.directory)}")).config[input.id]
+        val existing = scopedConfig(
+            globalCfg?.let { mapOf(input.id to it) } ?: emptyMap(),
+            localCfg?.let { mapOf(input.id to it) } ?: emptyMap(),
+        )[input.id]
         val scope = existing?.scope ?: "global"
         // The config schema only allows nulling a whole provider entry (to delete it), not an
         // individual field inside one (except for "models", which is deletion-aware — see
@@ -177,6 +184,16 @@ internal class KiloBackendProviderSettingsManager(
             (existing?.models?.keys ?: emptySet()) - kept
         }
         patch(input.directory, scope, KiloCliDataParser.buildCustomProviderPatch(save, removedModelIds))
+        // The provider id also has a raw entry in the other scope: null out any of the removed
+        // models it still lists so it can't resurrect them once it's no longer the effective copy.
+        if (removedModelIds.isNotEmpty()) {
+            val otherScope = if (scope == "workspace") "global" else "workspace"
+            val otherCfg = if (scope == "workspace") globalCfg else localCfg
+            val otherRemoved: Set<String> = otherCfg?.models?.keys?.intersect(removedModelIds) ?: emptySet()
+            if (otherRemoved.isNotEmpty()) {
+                patch(input.directory, otherScope, KiloCliDataParser.buildCustomProviderModelRemovalPatch(input.id, otherRemoved))
+            }
+        }
         if (input.envVar.isNullOrBlank()) {
             val key = input.apiKey?.takeIf { it.isNotBlank() }
             if (key != null) put("/auth/${enc(input.id)}", KiloCliDataParser.buildProviderAuthJson(key, emptyMap()))

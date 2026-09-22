@@ -1134,8 +1134,7 @@ object KiloCliDataParser {
      * [removedModelIds] are previously configured model IDs no longer present in [input.models].
      * The config schema deep-merges provider objects on PATCH, so a removed model key must be
      * emitted as an explicit `null` sentinel or it survives on disk under the old id forever
-     * (visible again after a restart). See [CustomProviderConfigDto] for the "no config change is
-     * a no-op" contract this deletion-aware builder maintains.
+     * (visible again after a restart).
      */
     fun buildCustomProviderPatch(input: CustomProviderSaveDto, removedModelIds: Set<String> = emptySet()): String {
         val id = input.id.trim()
@@ -1167,6 +1166,23 @@ object KiloCliDataParser {
     fun buildCustomProviderDeletePatch(id: String): String {
         val root = buildJsonObject {
             put("provider", buildJsonObject { put(id, JsonNull) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    /**
+     * A models-only deletion patch for provider [id]. Used when the same custom provider id has a
+     * separate, independently-authored config entry in another scope (global vs. workspace) that
+     * still lists a model the primary save removed. Only nulls the given model keys; every other
+     * field on that scope's entry is left untouched by the deep-merge PATCH.
+     */
+    fun buildCustomProviderModelRemovalPatch(id: String, modelIds: Set<String>): String {
+        val root = buildJsonObject {
+            put("provider", buildJsonObject {
+                put(id, buildJsonObject {
+                    put("models", buildJsonObject { modelIds.forEach { put(it, JsonNull) } })
+                })
+            })
         }
         return json.encodeToString(JsonObject.serializer(), root)
     }
