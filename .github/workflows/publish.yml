@@ -480,6 +480,46 @@ jobs:
           git config --global user.name "kilo-maintainer[bot]"
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
+      # kilocode_change start - repackage the already-built release archives as a
+      # conda package via rattler-build (no compilation; see
+      # packages/opencode/script/kilocode/conda-recipe/). Cross-builds every
+      # target platform from this single Linux runner, then uploads below.
+      - name: Install rattler-build
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/prefix-dev/rattler-build/releases/download/v0.76.1/rattler-build-x86_64-unknown-linux-musl \
+            --output "$RUNNER_TEMP/rattler-build"
+          echo "38359a75f4a880442432923d6e984d349bb4134d330edd712eb1cfb2fa80581a  $RUNNER_TEMP/rattler-build" | sha256sum --check --status
+          chmod +x "$RUNNER_TEMP/rattler-build"
+          echo "RATTLER_BUILD=$RUNNER_TEMP/rattler-build" >> "$GITHUB_ENV"
+
+      - name: Build conda package
+        if: ${{ !inputs.pre_release }}
+        working-directory: packages/opencode
+        env:
+          KILO_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          declare -A archives=(
+            [linux-64]=kilo-linux-x64.tar.gz
+            [linux-aarch64]=kilo-linux-arm64.tar.gz
+            [osx-64]=kilo-darwin-x64.zip
+            [osx-arm64]=kilo-darwin-arm64.zip
+            [win-64]=kilo-windows-x64.zip
+          )
+          mkdir -p dist/conda
+          for platform in "${!archives[@]}"; do
+            archive="${archives[$platform]}"
+            sha="$(sha256sum "dist/$archive" | cut -d' ' -f1)"
+            echo "building conda package for $platform ($archive)"
+            KILO_ARCHIVE="$archive" KILO_SHA256="$sha" "$RATTLER_BUILD" build \
+              --recipe script/kilocode/conda-recipe/recipe.yaml \
+              --target-platform "$platform" \
+              --output-dir dist/conda \
+              --test skip
+          done
+      # kilocode_change end
+
       - run: ./script/publish.ts
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
@@ -491,3 +531,16 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+
+      # kilocode_change start - upload the conda packages built above to
+      # Anaconda.org. Skips silently if ANACONDA_OWNER isn't configured yet.
+      - name: Upload conda package to Anaconda.org
+        if: ${{ !inputs.pre_release && vars.ANACONDA_OWNER != '' }}
+        uses: anaconda/actions/upload-package@a6f488910b4a1e4f3fe01736241ca1b92b4b355a # v0.3.1
+        with:
+          token: ${{ secrets.ANACONDA_API_KEY }}
+          packages: packages/opencode/dist/conda/**/*.conda
+          channel: ${{ vars.ANACONDA_OWNER }}
+          labels: main
+          force: "true"
+      # kilocode_change end
