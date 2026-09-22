@@ -26,6 +26,7 @@ The mobile app lets you:
 - Copy a link to the message on screen from the session header, then open it on the web or another device to continue from the same position.
 - Review GitHub pull requests, GitLab merge requests, and Bitbucket pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
+- Browse the files an agent produced straight from your phone's file browser — see [Agent artifacts in your file browser](#agent-artifacts-in-your-file-browser).
 
 ## App actions
 
@@ -175,6 +176,17 @@ Attaching files from the phone is the mobile flow — this is separate from `kil
 
 While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.
 
+## Agent artifacts in your file browser
+
+On iOS and Android, your phone's file browser shows a **Kilo** location alongside your other file providers.
+
+- It lists each agent session as a folder, in the same recency order as the app.
+- Open a session folder to see the files that agent produced. File names match the names shown in the app.
+- Open a file to view its contents.
+- A session with no artifacts opens as an empty folder rather than an error.
+
+The location is read-only: you cannot create folders, rename, or delete anything from it. When you are signed out, it shows nothing to browse. Files are mirrored in the background, so a session's artifacts can take a few minutes to appear, and only recent sessions are kept — the oldest are removed first as new ones are added.
+
 ## Reviewing pull requests and merge requests
 
 Open a pull request or merge request from a link to review it without leaving the app. GitHub pull requests, GitLab merge requests, and Bitbucket pull requests use the same review layout, with each provider's own wording for states and checks:
@@ -220,6 +232,8 @@ Needs-input notifications are time-sensitive and carry action buttons:
 - **Open session** — opens that session's chat.
 
 A failed **Approve** or **Reply** keeps its buttons and reads **Couldn't answer. Tap again to retry.** An action that can no longer be answered reads **This request is no longer waiting.** and drops its buttons. Button labels follow the app language.
+
+[Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) arrive as their own push category. You can turn them off on their own, and the choice stays in sync with the spend view.
 
 ## Widgets and live updates
 
