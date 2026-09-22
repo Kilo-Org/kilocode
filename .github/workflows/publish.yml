@@ -402,7 +402,7 @@ jobs:
         shell: bash
         run: |
           cd dist
-          tar --zstd -cf "$RUNNER_TEMP/kilo-windows-signed.tar.zst" @kilocode/cli-windows-*/bin/kilo.exe
+          tar --zstd -cf "$RUNNER_TEMP/kilo-windows-signed.tar.zst" ./@kilocode/cli-windows-*/bin/kilo.exe
 
       - uses: actions/upload-artifact@v7
         with:
