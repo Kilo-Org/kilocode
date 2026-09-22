@@ -69,6 +69,20 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
                 assertTrue("$locale: $key is blank", value!!.isNotBlank())
                 assertFalse("$locale: $key should not contain a placeholder -> $value", value.contains("{0}"))
             }
+
+            val summary = props.getProperty("session.header.agents.summary")
+            assertNotNull("$locale: missing session.header.agents.summary", summary)
+            assertEscaped(locale, "session.header.agents.summary", summary!!)
+            val renderedSummary = format(summary, "RUNNING_COUNT", "TOTAL_COUNT")
+            assertTrue(
+                "$locale: session.header.agents.summary dropped the running count -> $renderedSummary",
+                renderedSummary.contains("RUNNING_COUNT"),
+            )
+            assertTrue(
+                "$locale: session.header.agents.summary dropped the total count -> $renderedSummary",
+                renderedSummary.contains("TOTAL_COUNT"),
+            )
+            assertClean(locale, "session.header.agents.summary", renderedSummary)
         }
     }
 
@@ -121,11 +135,13 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.header.agents.open" to "AGENT_NAME",
             "session.header.agents.more.many" to "7",
             "session.header.agents.more.accessible.many" to "7",
+            "session.header.agents.running.many" to "7",
         )
 
         val AGENT_PLAIN = listOf(
             "session.header.agents.more.one",
             "session.header.agents.more.accessible.one",
+            "session.header.agents.running.one",
         )
     }
 }

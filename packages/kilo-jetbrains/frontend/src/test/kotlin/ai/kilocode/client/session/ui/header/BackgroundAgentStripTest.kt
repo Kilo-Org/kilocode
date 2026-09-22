@@ -280,7 +280,7 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
 
         assertTrue(action(more).doAccessibleAction(0))
         assertTrue(strip.expanded())
-        assertEquals("2 of 3 agents running", (strip.labelComponent() as JBLabel).text)
+        assertEquals("2 of 3 background agents running", (strip.labelComponent() as JBLabel).text)
         assertTrue(aggregate(strip, panel).isVisible)
         assertTrue(agents.none { it.isVisible })
         assertFalse(more.isVisible)
