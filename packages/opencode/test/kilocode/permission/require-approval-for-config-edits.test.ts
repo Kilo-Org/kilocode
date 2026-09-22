@@ -927,6 +927,55 @@ describe("require_approval_for_config_edits", () => {
     }),
   )
 
+  it.live("a project nested under a legacy home dir does not change the global policy", () =>
+    Effect.gen(function* () {
+      const prev = Global.Path.config
+      const home = yield* tmpdirScoped()
+      const primary = path.join(home, "xdg", "kilo")
+      const project = path.join(home, ".kilo", "work", "repo")
+      ;(Global.Path as { config: string }).config = primary
+      yield* withHome(
+        home,
+        Effect.gen(function* () {
+          yield* Effect.promise(async () => {
+            await fs.mkdir(project, { recursive: true })
+            await $`git init`.cwd(project).quiet()
+          })
+          for (const c of [
+            { id: "project_off", primary: true, project: false, check: prompts },
+            { id: "project_on", primary: false, project: true, check: auto },
+          ]) {
+            yield* Effect.promise(async () => {
+              await fs.mkdir(primary, { recursive: true })
+              await fs.writeFile(
+                path.join(primary, "kilo.json"),
+                JSON.stringify({ require_approval_for_config_edits: c.primary }),
+              )
+              await fs.writeFile(
+                path.join(project, "kilo.json"),
+                JSON.stringify({ require_approval_for_config_edits: c.project }),
+              )
+              await fs.mkdir(path.join(project, ".kilo"), { recursive: true })
+              await fs.writeFile(
+                path.join(project, ".kilo", "kilo.json"),
+                JSON.stringify({ require_approval_for_config_edits: c.project }),
+              )
+            })
+            yield* Effect.promise(() => disposeAllInstances())
+            yield* provideInstance(project)(
+              Effect.gen(function* () {
+                yield* c.check(`per_nested_legacy_${c.id}`, path.join(primary, "kilo.json"))
+              }),
+            )
+          }
+        }),
+      ).pipe(
+        Effect.provide(testInstanceStoreLayer),
+        Effect.ensuring(Effect.sync(() => ((Global.Path as { config: string }).config = prev))),
+      )
+    }),
+  )
+
   it.live("project false keeps protection for relative traversal into a sibling project", () =>
     provideTmpdirInstance(
       () =>

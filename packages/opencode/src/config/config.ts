@@ -527,17 +527,17 @@ const layer = Layer.effect(
     // kilocode_change start - the settings-overlay provenance read must observe the legacy home
     // config directories, not only Global.Path.config. One ordered read owns the source
     // interpretation: directory order (.kilocode then .kilo), file names, config-variable
-    // substitution, schema validation, malformed warn+skip, and merge order. `readOnly` keeps this
-    // provenance read pure: it never resolves plugins, rewrites `$schema`, or touches the primary
-    // global config. The helper merges the legacy files onto a caller-supplied base and reports the
-    // winning legacy file for the config-edit protection field.
-    const loadLegacyGlobal = Effect.fnUntraced(function* (base: Info, readOnly: boolean) {
+    // substitution, schema validation, malformed warn+skip, and merge order. The read is always
+    // pure: it never resolves plugins, rewrites `$schema`, or touches the primary global config.
+    // The helper merges the legacy files onto a caller-supplied base and reports the winning
+    // legacy file for the config-edit protection field.
+    const loadLegacyGlobal = Effect.fnUntraced(function* (base: Info) {
       let info = base
       let legacy: KilocodeConfig.LegacyField | undefined
       for (const dir of KilocodeConfig.LEGACY_GLOBAL_DIRS) {
         for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
           const source = path.join(Global.Path.home, dir, name)
-          const next = yield* loadFile(source, undefined, true, undefined, undefined, readOnly).pipe(
+          const next = yield* loadFile(source, undefined, true, undefined, undefined, true).pipe(
             Effect.catchDefect((err: unknown) => {
               log.warn("skipping malformed legacy global config", { path: source, err })
               return Effect.succeed({} as Info)
@@ -552,7 +552,7 @@ const layer = Layer.effect(
     })
 
     const getLegacyGlobalField = Effect.fn("Config.getLegacyGlobalField")(function* () {
-      return (yield* loadLegacyGlobal({}, true)).legacy
+      return (yield* loadLegacyGlobal({})).legacy
     })
     // kilocode_change end
 
@@ -593,17 +593,20 @@ const layer = Layer.effect(
 
         let result: Info = {}
         // kilocode_change start - global-scoped merge only, so the config-edit protection policy sees every
-        // global contributor without inheriting project or inline overrides. Known legacy home roots
-        // stay in this layer even when the open project contains them: plugin scope is local there,
-        // but those roots are still global config. Match the loader path and its canonical alias.
+        // global contributor without inheriting project or inline overrides. A known config file directly
+        // in a legacy home root stays global even when the open project contains that root. Descendants,
+        // including a project checked out under the root, do not.
         let globalResult: Info = {}
-        const legacyRoot = (source: string) => {
+        const same = (left: string, right: string) => FSUtil.contains(left, right) && FSUtil.contains(right, left)
+        const legacyFile = (source: string) => {
           if (!path.isAbsolute(source)) return false
+          const base = path.basename(source)
+          if (!KilocodeConfig.ALL_CONFIG_FILES.some((name) => name === base)) return false
           return KilocodeConfig.LEGACY_GLOBAL_DIRS.some((name) => {
             const root = path.join(Global.Path.home, name)
-            if (FSUtil.contains(root, source)) return true
+            if (same(path.dirname(source), root)) return true
             try {
-              return FSUtil.contains(FSUtil.resolve(root), FSUtil.resolve(source))
+              return same(path.dirname(FSUtil.resolve(source)), FSUtil.resolve(root))
             } catch (err) {
               log.warn("skipping legacy root alias", { source, err })
               return false
@@ -696,9 +699,9 @@ const layer = Layer.effect(
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           protection.observe(scoped, scope) // kilocode_change - track a project override for the config-edit protection field
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
-          // kilocode_change start - explicit global scope, plus known legacy home roots the plugin scope
-          // marks local when they sit inside the open project. Primary global is already explicit.
-          if (scope === "global" || legacyRoot(source))
+          // kilocode_change start - explicit global scope, plus a known config file directly in a legacy
+          // home root. Plugin scope marks that file local when the open project contains the root.
+          if (scope === "global" || legacyFile(source))
             globalResult = mergeConfigConcatArrays(globalResult, scoped, trusted)
           // kilocode_change end
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)

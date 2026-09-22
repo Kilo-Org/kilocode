@@ -2023,4 +2023,43 @@ describe("require_approval_for_config_edits source scope", () => {
       await disposeAllInstances()
     }
   })
+
+  test("a project nested under a legacy home dir does not enter the global policy", async () => {
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      await using home = await tmpdir()
+      const primary = path.join(home.path, "xdg", "kilo")
+      const project = path.join(home.path, ".kilo", "work", "repo")
+      ;(Global.Path as { config: string }).config = primary
+      process.env["KILO_TEST_HOME"] = home.path
+      process.env["HOME"] = home.path
+      await writeConfig(primary, { require_approval_for_config_edits: true })
+      await writeConfig(project, { require_approval_for_config_edits: false })
+      await writeConfig(path.join(project, ".kilo"), { require_approval_for_config_edits: false })
+      await clear()
+      await disposeAllInstances()
+
+      await provideTestInstance({
+        directory: project,
+        fn: async () => {
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 })
