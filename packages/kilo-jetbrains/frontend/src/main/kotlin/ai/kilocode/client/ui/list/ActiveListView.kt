@@ -228,7 +228,7 @@ internal class ActiveListView(
         })
         list.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
-                if (extent == list.width) return
+                if (extent == list.width || !cfg.wrapDescription) return
                 extent = list.width
                 resetCellSizes()
             }

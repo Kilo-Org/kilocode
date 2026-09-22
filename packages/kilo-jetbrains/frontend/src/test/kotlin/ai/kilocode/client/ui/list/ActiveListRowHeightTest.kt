@@ -176,6 +176,20 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test resize leaves non-wrapping cell measurements unchanged`() {
+        edtWait {
+            val view = ActiveListView("", ActiveListConfig.Equal) { _, _ -> }
+            view.list.setSize(600, 400)
+            view.update(listOf(wrapRow("Description")))
+            view.list.fixedCellHeight = 777
+
+            view.list.setSize(180, 400)
+            view.list.componentListeners.forEach { it.componentResized(ComponentEvent(view.list, ComponentEvent.COMPONENT_RESIZED)) }
+
+            assertEquals(777, view.list.fixedCellHeight)
+        }
+    }
+
     private fun wrapRow(description: String): ActiveListItem = object : ActiveListItem {
         override val key = "row"
         override val title = "Title"
