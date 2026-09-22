@@ -177,6 +177,34 @@ describe("global config updates", () => {
     }
   })
 
+  test("warns for a V2 key the lowering does not support", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, { model: "test/model", attachments: {} })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          expect(warnings.some((warning) => warning.message.includes("attachments"))).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("preserves unknown global JSON fields while returning normalized config", async () => {
     await using global = await tmpdir()
     await using tmp = await tmpdir()

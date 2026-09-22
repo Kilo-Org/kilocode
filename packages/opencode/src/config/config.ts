@@ -28,7 +28,6 @@ import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
-import { Config as ConfigV2 } from "@opencode-ai/core/config" // kilocode_change - V2 key set for excess-key warnings
 import { RemoteAuthError } from "@opencode-ai/core/v1/config/error"
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
@@ -351,9 +350,11 @@ const layer = Layer.effect(
       const normalized = normalizeLoadedConfig(parsed, source) // kilocode_change
       // kilocode_change start - preserve upstream excess-key compatibility while warning Kilo users about typos
       if (configWarnings) {
-        // Supported V2 keys are lowered by decodeConfig, so they are not typos.
-        const native = new Set(Object.keys(ConfigV2.Info.fields ?? {}))
-        const keys = Excess.keys(ConfigV1.Info, normalized).filter((key) => !native.has(key))
+        // Native V2 keys that the V1 lowering aliases to a V1 key are not typos. Other V2-only keys
+        // (for example attachments) still warn, because the lowering does not consume them and the
+        // V1 decoder drops them silently.
+        const aliased = new Set(["agents", "commands", "media", "snapshots"])
+        const keys = Excess.keys(ConfigV1.Info, normalized).filter((key) => !aliased.has(key))
         if (keys.length) {
           const detail = Excess.issue(keys)
           configWarnings.push({
