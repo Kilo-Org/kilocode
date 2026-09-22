@@ -836,7 +836,7 @@ class SessionController(
         prefVariantKey = null
         prefVariant = null
         app.clearModel(agent)
-        val auto = configModel(agent) ?: providerModel(agent)
+        val auto = resolvedDefaultModel(agent)?.key
         selectResolvedModel(auto)
         model.modelOverride = false
         capture("Model Override Cleared", sessionProps() + mapOf("agent" to agent))
@@ -2293,47 +2293,32 @@ class SessionController(
 
     private fun syncModelSelection() {
         val agent = model.agent ?: return
-        val auto = configModel(agent) ?: providerModel(agent)
-        val selected = selectedModel(agent, auto)
+        val providers = model.workspace.providers
+        val state = app.models.value
+        val cfg = model.app.config
+        val auto = resolvedDefaultModel(agent)?.key
+        val selected = messageSelection(agent)?.key ?: resolveSessionModel(
+            providers = providers,
+            agent = agent,
+            state = state,
+            config = cfg,
+            default = auto?.let(::modelSelection),
+        )?.key
         model.defaultModel = auto
         selectResolvedModel(selected)
         model.modelOverride = messageSelection(agent) == null && selected != auto
     }
 
-    private fun selectedModel(agent: String, auto: String?): String? {
-        messageSelection(agent)?.let { return it.key }
-        val saved = app.models.value.model[agent]
-        val cfg = model.app.config
-        if (cfg != null) return resolveModelSelection(
+    private fun resolvedDefaultModel(agent: String): ModelSelectionDto? {
+        val first = model.models.firstOrNull()?.let { ModelSelectionDto(it.provider, it.id) }
+        return resolveSessionDefaultModel(
             providers = model.workspace.providers,
-            override = saved,
-            mode = cfg.agent[agent]?.model?.let(::selection),
-            global = cfg.model?.let(::selection),
-            recent = app.models.value.recent,
-        )?.key
-        if (saved != null) return valid(model.workspace.providers, saved)?.key ?: auto
-        return auto
-    }
-
-    private fun configModel(agent: String): String? {
-        if (model.app.status != KiloAppStatusDto.READY) return null
-        val cfg = model.app.config
-        return resolveModelSelection(
-            providers = model.workspace.providers,
-            mode = cfg?.agent?.get(agent)?.model?.let(::selection),
-            global = cfg?.model?.let(::selection),
-            recent = app.models.value.recent,
-        )?.key
-    }
-
-    private fun providerModel(agent: String): String? {
-        val providers = model.workspace.providers ?: return null
-        return resolveModelSelection(
-            providers = providers,
-            mode = providers.defaults[agent]?.let(::selection),
-            global = providers.defaults.values.firstNotNullOfOrNull(::selection),
-            fallback = null,
-        )?.key ?: model.models.firstOrNull()?.key
+            agent = agent,
+            state = app.models.value,
+            config = model.app.config,
+            ready = model.app.status == KiloAppStatusDto.READY,
+            first = first,
+        )
     }
 
     private fun selectResolvedModel(key: String?) {
@@ -2352,7 +2337,7 @@ class SessionController(
 
     private fun messageSelection(agent: String): ModelSelectionDto? {
         if (prefAgent != null && prefAgent != agent) return null
-        return valid(model.workspace.providers, prefModel?.let(::selection))
+        return validModelSelection(model.workspace.providers, prefModel?.let(::modelSelection))
     }
 
     private fun handle(events: List<ChatEventDto>) {
@@ -2382,9 +2367,7 @@ class SessionController(
      * gone (renamed, hidden, or removed from a different config).
      */
     private fun seedAgent(agents: AgentsDto?): String? {
-        val remembered = KiloPluginSettings.getAgent() ?: return agents?.default
-        val offered = agents?.agents ?: return remembered
-        return if (offered.any { it.name == remembered }) remembered else agents.default
+        return resolveSessionAgent(agents, KiloPluginSettings.getAgent())
     }
 
     private fun syncHistoryAgent(items: List<MessageWithPartsDto>) {
@@ -2990,41 +2973,6 @@ private fun unsupported(reason: String?, directory: String): String {
     val path = KiloBundle.message("session.connection.unsupported.path", directory)
     val options = KiloBundle.message("session.connection.unsupported.options")
     return "$path\n\n$detail\n\n$options"
-}
-
-private const val KILO_PROVIDER = "kilo"
-private const val KILO_AUTO_MODEL = "kilo-auto/free"
-
-private fun resolveModelSelection(
-    providers: ProvidersDto?,
-    override: ModelSelectionDto? = null,
-    mode: ModelSelectionDto? = null,
-    global: ModelSelectionDto? = null,
-    recent: List<ModelSelectionDto> = emptyList(),
-    fallback: ModelSelectionDto? = ModelSelectionDto(KILO_PROVIDER, KILO_AUTO_MODEL),
-): ModelSelectionDto? {
-    valid(providers, override)?.let { return it }
-    valid(providers, mode)?.let { return it }
-    valid(providers, global)?.let { return it }
-    recent.firstNotNullOfOrNull { valid(providers, it) }?.let { return it }
-    return fallback
-}
-
-private fun valid(providers: ProvidersDto?, item: ModelSelectionDto?): ModelSelectionDto? {
-    if (item == null) return null
-    val list = providers?.providers ?: return item
-    if (list.isEmpty()) return item
-    val provider = list.firstOrNull { it.id == item.providerID } ?: return null
-    if (item.providerID != KILO_PROVIDER && item.providerID !in providers.connected) return null
-    if (item.modelID !in provider.models) return null
-    return item
-}
-
-private val ModelSelectionDto.key: String get() = "$providerID/$modelID"
-
-private fun selection(value: String): ModelSelectionDto? {
-    val parsed = parseModel(value) ?: return null
-    return ModelSelectionDto(parsed.first, parsed.second)
 }
 
 /**
