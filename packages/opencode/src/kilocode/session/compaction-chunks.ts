@@ -158,12 +158,22 @@ export namespace KiloCompactionChunks {
   }
 
   function text(msg: MessageV2.Assistant, parts: MessageV2.Part[]) {
-    return parts
-      .filter((part): part is MessageV2.TextPart => part.type === "text" && part.messageID === msg.id)
-      .map((part) => part.text.trim())
-      .filter(Boolean)
-      .join("\n\n")
-      .trim()
+    const owned = parts.filter((part) => part.messageID === msg.id)
+    const body = (part: MessageV2.Part) => (part.type === "text" || part.type === "reasoning" ? part.text : "")
+    const join = (type: "text" | "reasoning") =>
+      owned
+        .filter((part) => part.type === type)
+        .map((part) => body(part).trim())
+        .filter(Boolean)
+        .join("\n\n")
+        .trim()
+    const visible = join("text")
+    if (visible) return visible
+    // A worker that spends its whole output budget reasoning (for example a
+    // thinking model on the compact path) can finish without emitting any text
+    // part. The deliberation still carries the facts the summary needs, so keep
+    // it rather than reporting an empty response.
+    return join("reasoning")
   }
 
   function clip(input: { text: string; chars: number; label: string }) {
