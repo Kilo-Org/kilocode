@@ -94,6 +94,17 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Pending questions returned by [pendingQuestions]. */
     val pendingQuestionList = mutableListOf<QuestionRequestDto>()
 
+    /**
+     * Held before [pendingPermissions]/[pendingQuestions] return, so a test can deliver a live
+     * event (e.g. `QuestionAsked`, `QuestionReplied`) into the gap between a recovery snapshot's
+     * fetch and its EDT commit, then release the gate to observe whether the stale snapshot won.
+     */
+    var pendingGate: CompletableDeferred<Unit>? = null
+    var pendingPermissionCalls = 0
+        private set
+    var pendingQuestionCalls = 0
+        private set
+
     /** Optional custom event stream factory for routing tests. */
     var eventFlow: ((String, String) -> Flow<ChatEventDto>)? = null
 
@@ -376,11 +387,15 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun pendingPermissions(directory: String): List<PermissionRequestDto> {
         assertNotEdt("pendingPermissions")
+        pendingPermissionCalls++
+        pendingGate?.await()
         return pendingPermissionList.toList()
     }
 
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> {
         assertNotEdt("pendingQuestions")
+        pendingQuestionCalls++
+        pendingGate?.await()
         return pendingQuestionList.toList()
     }
 

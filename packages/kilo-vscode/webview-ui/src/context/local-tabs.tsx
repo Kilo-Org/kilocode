@@ -32,15 +32,18 @@ import {
   isPendingSend,
   promotePendingDraftDiscard,
 } from "../utils/draft-store"
-import { moveTab, reorderTabs } from "../utils/tab-order"
+import { applyPinnedTabs, reorderPinnedTabs, togglePinnedTab } from "../utils/tab-order"
+import { closableRight, closeToRight, sessionCloseDeps } from "../utils/session-close"
 
 interface LocalTabsState extends Record<string, unknown> {
   sidebarSessionTabIDs?: string[]
   sidebarActiveSessionTabID?: string
+  sidebarPinnedSessionTabIDs?: string[]
 }
 
 interface LocalTabsValue {
   ids: Accessor<string[]>
+  display: Accessor<string[]>
   active: Accessor<string | undefined>
   pending: Accessor<string | undefined>
   add: () => string
@@ -49,6 +52,10 @@ interface LocalTabsValue {
   select: (id: string) => void
   close: (id: string) => void
   closeOthers: (id: string) => void
+  closeToRight: (id: string) => void
+  closableRight: (id: string) => string[]
+  isPinned: (id: string) => boolean
+  togglePinned: (id: string) => void
   previewCloud: (id: string) => void
   reorder: (from: string, to: string) => boolean
   move: (id: string, offset: -1 | 1) => number | undefined
@@ -69,12 +76,24 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const [ids, setIds] = createSignal(init.ids)
   onCleanup(session.trackScopes(ids))
   const [active, setActive] = createSignal(init.active)
+  const [pinned, setPinned] = createSignal((saved?.sidebarPinnedSessionTabIDs ?? []).filter((id) => !isPendingTab(id)))
   const [cloud, setCloud] = createSignal<string>()
   const fresh = new Set<string>()
   const current = (): LocalTabState => ({ ids: ids(), active: active() })
   const apply = (next: LocalTabState) => {
     if (!same(ids(), next.ids)) setIds(next.ids)
     if (active() !== next.active) setActive(next.active)
+  }
+  const display = createMemo(() =>
+    applyPinnedTabs(
+      ids().map((id) => ({ id })),
+      pinned(),
+    ).map((item) => item.id),
+  )
+  const isPinned = (id: string) => pinned().includes(id)
+  const togglePinned = (id: string) => {
+    if (isPendingTab(id)) return
+    setPinned((prev) => togglePinnedTab(prev, id))
   }
   const focus = (id: string | undefined, options: { scrollToBottom?: boolean } = {}) => {
     setCloud(undefined)
@@ -125,9 +144,18 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     }
   }
 
+  const closeDeps = sessionCloseDeps({
+    ids: display,
+    visible: active,
+    isPending: isPendingTab,
+    isPinned,
+    close,
+    reveal: select,
+  })
+
   const closeOthers = (id: string) => {
     const removed = ids().filter((tab) => tab !== id && isPendingTab(tab))
-    const next = closeOtherTabs(current(), id)
+    const next = closeOtherTabs(current(), id, pinned())
     apply(next)
     focus(next.active)
     for (const pending of removed) {
@@ -135,18 +163,24 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     }
     queueMicrotask(() => removed.forEach(deletePendingDraft))
   }
+  const closeToRightTab = (id: string) => closeToRight(id, closeDeps)
+  const rightTabs = (id: string) => closableRight(id, closeDeps)
   const previewCloud = (id: string) => setCloud(id)
   const reorder = (from: string, to: string) => {
-    const next = reorderTabs(ids(), from, to)
+    const next = reorderPinnedTabs(ids(), pinned(), from, to)
     if (!next) return false
-    setIds(next)
+    setIds(next.ids)
+    setPinned(next.pinned)
     return true
   }
   const move = (id: string, offset: -1 | 1) => {
-    const next = moveTab(ids(), id, offset)
-    if (!next) return undefined
-    setIds(next)
-    return next.indexOf(id)
+    const list = display()
+    const index = list.indexOf(id)
+    if (index === -1) return undefined
+    const target = list[index + offset]
+    if (target === undefined) return undefined
+    if (!reorder(id, target)) return undefined
+    return display().indexOf(id)
   }
 
   let restored = false
@@ -163,12 +197,19 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     const tabs = real()
     const tab = active()
     const selected = tab && !isPendingTab(tab) ? tab : undefined
+    const pins = pinned().filter((id) => real().includes(id))
     const prev = vscode.getState<LocalTabsState>() ?? {}
-    vscode.setState({ ...prev, sidebarSessionTabIDs: tabs, sidebarActiveSessionTabID: selected })
+    vscode.setState({
+      ...prev,
+      sidebarSessionTabIDs: tabs,
+      sidebarActiveSessionTabID: selected,
+      sidebarPinnedSessionTabIDs: pins,
+    })
   }
   createEffect(() => {
     real()
     active()
+    pinned()
     clearTimeout(timer)
     timer = setTimeout(persist, 300)
   })
@@ -228,6 +269,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     <LocalTabsContext.Provider
       value={{
         ids,
+        display,
         active,
         pending: activePending,
         add,
@@ -236,6 +278,10 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         select,
         close,
         closeOthers,
+        closeToRight: closeToRightTab,
+        closableRight: rightTabs,
+        isPinned,
+        togglePinned,
         previewCloud,
         reorder,
         move,
