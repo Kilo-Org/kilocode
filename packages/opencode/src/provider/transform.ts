@@ -1643,8 +1643,7 @@ export function options(input: {
       // kilocode_change end
       input.model.api.id.includes("gpt-5.") &&
       !input.model.api.id.includes("codex") &&
-      !input.model.api.id.includes("-chat") &&
-      (input.model.api.npm === "@ai-sdk/openai" || input.model.api.npm === "@ai-sdk/amazon-bedrock/mantle")
+      !input.model.api.id.includes("-chat")
     ) {
       result["textVerbosity"] = "low"
     }

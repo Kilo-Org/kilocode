@@ -273,7 +273,6 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         return [
           provider.options?.baseURL,
           auth?.type === "api" ? auth.metadata?.baseURL : undefined,
-          auth?.type === "oauth" ? auth.accountId : undefined,
           env["AZURE_OPENAI_ENDPOINT"],
         ].find((url) => typeof url === "string" && url.trim() !== "")
       })
@@ -283,6 +282,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
             return [
               provider.options?.resourceName,
               auth?.type === "api" ? auth.metadata?.resourceName : undefined,
+              auth?.type === "oauth" ? auth.accountId : undefined,
               env["AZURE_RESOURCE_NAME"],
               env["AZURE_OPENAI_RESOURCE_NAME"],
             ].find((name) => typeof name === "string" && name.trim() !== "")

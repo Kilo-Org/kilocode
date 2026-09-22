@@ -348,9 +348,10 @@ const layer = Layer.effect(
       )
       const parsed = ConfigParse.jsonc(expanded, source)
       const normalized = normalizeLoadedConfig(parsed, source) // kilocode_change
+      const lowered = ConfigV2Compat.lower(normalized, source) // kilocode_change - lower supported V2 keys before warning so they are not reported as unrecognized
       // kilocode_change start - preserve upstream excess-key compatibility while warning Kilo users about typos
       if (configWarnings) {
-        const keys = Excess.keys(ConfigV1.Info, normalized)
+        const keys = Excess.keys(ConfigV1.Info, lowered.value)
         if (keys.length) {
           const detail = Excess.issue(keys)
           configWarnings.push({
