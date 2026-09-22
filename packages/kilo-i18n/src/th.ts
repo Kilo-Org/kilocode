@@ -45,11 +45,12 @@ export const dict = {
   "marketplace.install.learnMore": "เรียนรู้วิธีการติดตั้งจาก Marketplace",
   "marketplace.install.learnMcp": "เรียนรู้เพิ่มเติมเกี่ยวกับ MCP",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "ปลั๊กอิน npm เพิ่มเครื่องมือและการเชื่อมต่อแบบกำหนดเองให้กับ Kilo ปลั๊กอินทำงานโดยมีสิทธิ์เต็มรูปแบบ",
   "marketplace.install.plugin.warning":
-    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
+    "ปลั๊กอินเรียกใช้โค้ดโดยมีสิทธิ์เต็มรูปแบบ สามารถอ่านและแก้ไขไฟล์ของคุณ เรียกใช้คำสั่ง และเข้าถึงข้อมูลรับรองและเครือข่ายของคุณได้ ติดตั้งเฉพาะปลั๊กอินที่คุณเชื่อถือเท่านั้น",
   "marketplace.install.installedAt": "ติดตั้งไปยัง {{path}} แล้ว",
-  "marketplace.intro": "ติดตั้งเอเจนต์ ทักษะ และเครื่องมือ MCP ที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
+  "marketplace.intro":
+    "ติดตั้งเอเจนต์ ทักษะ เครื่องมือ MCP และปลั๊กอินที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
   "marketplace.intro.learnMore": "เกี่ยวกับ Marketplace",
   "marketplace.install.prerequisites": "ข้อกำหนดเบื้องต้น",
   "marketplace.install.installing": "กำลังติดตั้ง...",
@@ -77,7 +78,7 @@ export const dict = {
   "marketplace.scope.project": "โปรเจ็กต์",
   "marketplace.scope.global": "โกลบอล",
   "marketplace.remove.type.mcp": "เซิร์ฟเวอร์ MCP",
-  "marketplace.remove.type.plugin": "plugin",
+  "marketplace.remove.type.plugin": "ปลั๊กอิน",
   "marketplace.remove.type.skill": "ทักษะ",
   "marketplace.remove.type.agent": "เอเจนต์",
   "marketplace.remove.failed": "ไม่สามารถลบ {{name}} ได้",
@@ -88,7 +89,7 @@ export const dict = {
   "marketplace.warning.busyMany": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "marketplace.warning.installAnyway": "ติดตั้งต่อไป",
   "marketplace.warning.cancel": "ยกเลิก",
-  "marketplace.contribute.prompt": "ขาดสกิล เอเจนต์ หรือเซิร์ฟเวอร์ MCP?",
+  "marketplace.contribute.prompt": "ขาดสกิล เอเจนต์ เซิร์ฟเวอร์ MCP หรือปลั๊กอิน?",
   "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
   "marketplace.migration.notice":
     "โหมดถูกแทนที่ด้วยเอเจนต์แล้ว หากคุณเคยติดตั้งโหมดจาก marketplace กรุณาลบและติดตั้งใหม่เป็นเอเจนต์เพื่อย้ายไปยังรูปแบบใหม่",

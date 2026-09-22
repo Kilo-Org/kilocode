@@ -200,6 +200,7 @@ export const MarketplaceInstallResult = Schema.Struct({
   slug: Schema.String,
   error: Schema.optional(Schema.String),
   filePath: Schema.optional(Schema.String),
+  filePaths: Schema.optional(Schema.Array(Schema.String)),
   // Int keeps the generated clients on a plain integer; Schema.Number would emit a
   // number | "NaN" | "Infinity" union that Kotlin/Java codegen models awkwardly.
   line: Schema.optional(Schema.Int),

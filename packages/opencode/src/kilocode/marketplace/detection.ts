@@ -2,8 +2,6 @@ import path from "path"
 import { readdir } from "fs/promises"
 import { parse as parseJsonc } from "jsonc-parser"
 import * as Log from "@opencode-ai/core/util/log"
-import { Global } from "@opencode-ai/core/global"
-import { ConfigPaths } from "@/config/paths"
 import type { Skill } from "@/skill"
 import type { MarketplaceInstalledMetadata, Scope } from "./schema"
 import * as Paths from "./paths"
@@ -98,23 +96,8 @@ async function readPluginList(file: string): Promise<unknown[]> {
 }
 
 async function pluginEntries(scope: Scope, input: DetectInput): Promise<Entry[]> {
-  const dirs =
-    scope === "global"
-      ? [Global.Path.config]
-      : [
-          ...new Set(
-            [path.join(input.directory, ".kilo"), input.worktree ? path.join(input.worktree, ".kilo") : undefined].filter(
-              (dir): dir is string => Boolean(dir),
-            ),
-          ),
-        ]
-  const files = dirs.flatMap((dir) =>
-    (["opencode", "tui"] as const).flatMap((name) => ConfigPaths.fileInDirectory(dir, name)),
-  )
-  files.push(await Paths.configPath(scope, input.directory, input.worktree))
-
   const out: Entry[] = []
-  for (const file of new Set(files)) {
+  for (const file of Paths.pluginFiles(scope, input.directory, input.worktree)) {
     for (const spec of await readPluginList(file)) {
       const name = pluginPackageName(spec)
       if (name) out.push(entry(name, "plugin"))

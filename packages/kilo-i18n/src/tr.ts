@@ -47,12 +47,12 @@ export const dict = {
   "marketplace.install.learnMore": "Marketplace yüklemelerinin nasıl çalıştığını öğrenin",
   "marketplace.install.learnMcp": "MCP hakkında daha fazla bilgi edinin",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "Bir npm eklentisi, Kilo'ya özel araçlar ve entegrasyonlar ekler. Eklentiler tam izinlerle çalışır.",
   "marketplace.install.plugin.warning":
-    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
+    "Eklentiler tam izinlerle kod çalıştırır. Dosyalarınızı okuyup değiştirebilir, komut çalıştırabilir ve kimlik bilgilerinize ve ağınıza erişebilirler. Yalnızca güvendiğiniz eklentileri yükleyin.",
   "marketplace.install.installedAt": "{{path}} konumuna yüklendi",
   "marketplace.intro":
-    "Yeniden kullanılabilir ajanları, yetenekleri ve MCP araçlarını bir proje veya tüm projeler için yükleyin.",
+    "Yeniden kullanılabilir ajanları, yetenekleri, MCP araçlarını ve eklentileri bir proje veya tüm projeler için yükleyin.",
   "marketplace.intro.learnMore": "Marketplace hakkında",
   "marketplace.install.prerequisites": "Ön koşullar",
   "marketplace.install.installing": "Yükleniyor...",
@@ -80,7 +80,7 @@ export const dict = {
   "marketplace.scope.project": "proje",
   "marketplace.scope.global": "genel",
   "marketplace.remove.type.mcp": "MCP sunucusu",
-  "marketplace.remove.type.plugin": "plugin",
+  "marketplace.remove.type.plugin": "eklenti",
   "marketplace.remove.type.skill": "yetenek",
   "marketplace.remove.type.agent": "ajan",
   "marketplace.remove.failed": "{{name}} kaldırılamadı",
@@ -91,7 +91,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
   "marketplace.warning.installAnyway": "Yine de yükle",
   "marketplace.warning.cancel": "İptal",
-  "marketplace.contribute.prompt": "Bir yetenek, ajan veya MCP sunucusu mu eksik?",
+  "marketplace.contribute.prompt": "Bir yetenek, ajan, MCP sunucusu veya eklenti mi eksik?",
   "marketplace.contribute.cta": "GitHub'da katkıda bulun",
   "marketplace.migration.notice":
     "Modlar agentlarla değiştirildi. Daha önce marketplace modları yüklediyseniz, yeni formata geçiş yapmak için bunları kaldırın ve agent olarak yeniden yükleyin.",

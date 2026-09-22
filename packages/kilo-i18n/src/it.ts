@@ -50,11 +50,11 @@ export const dict = {
   "marketplace.install.learnMore": "Scopri come funzionano le installazioni dal Marketplace",
   "marketplace.install.learnMcp": "Scopri di più su MCP",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "Un plugin npm aggiunge strumenti e integrazioni personalizzati a Kilo. I plugin vengono eseguiti con tutte le autorizzazioni.",
   "marketplace.install.plugin.warning":
-    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
+    "I plugin eseguono codice con tutte le autorizzazioni. Possono leggere e modificare i tuoi file, eseguire comandi e accedere alle tue credenziali e alla tua rete. Installa solo plugin di cui ti fidi.",
   "marketplace.install.installedAt": "Installato in {{path}}",
-  "marketplace.intro": "Installa agenti, skill e strumenti MCP riutilizzabili per uno o tutti i progetti.",
+  "marketplace.intro": "Installa agenti, skill, strumenti MCP e plugin riutilizzabili per uno o tutti i progetti.",
   "marketplace.intro.learnMore": "Informazioni sul Marketplace",
   "marketplace.install.prerequisites": "Prerequisiti",
   "marketplace.install.installing": "Installazione...",
@@ -92,7 +92,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Più sessioni sono attive e verranno interrotte",
   "marketplace.warning.installAnyway": "Installa comunque",
   "marketplace.warning.cancel": "Annulla",
-  "marketplace.contribute.prompt": "Manca una skill, una modalità o un server MCP?",
+  "marketplace.contribute.prompt": "Manca una skill, un agente, un server MCP o un plugin?",
   "marketplace.contribute.cta": "Contribuisci su GitHub",
   "marketplace.migration.notice":
     "Le Modalità sono state sostituite dagli agenti. Se in precedenza hai installato Modalità dal marketplace, rimuovile e reinstallale come agenti per migrare al nuovo formato.",

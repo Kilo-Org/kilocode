@@ -46,11 +46,12 @@ export const dict = {
   "marketplace.install.learnMore": "Se, hvordan installationer fra Marketplace fungerer",
   "marketplace.install.learnMcp": "Få mere at vide om MCP",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "Et npm-plugin tilføjer tilpassede værktøjer og integrationer til Kilo. Plugins kører med fulde tilladelser.",
   "marketplace.install.plugin.warning":
-    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
+    "Plugins kører kode med fulde tilladelser. De kan læse og ændre dine filer, køre kommandoer og få adgang til dine legitimationsoplysninger og dit netværk. Installer kun plugins, du har tillid til.",
   "marketplace.install.installedAt": "Installeret i {{path}}",
-  "marketplace.intro": "Installer genanvendelige agenter, færdigheder og MCP-værktøjer til ét eller alle projekter.",
+  "marketplace.intro":
+    "Installer genanvendelige agenter, færdigheder, MCP-værktøjer og plugins til ét eller alle projekter.",
   "marketplace.intro.learnMore": "Om Marketplace",
   "marketplace.install.prerequisites": "Forudsætninger",
   "marketplace.install.installing": "Installerer...",
@@ -89,7 +90,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere sessioner kører og vil blive afbrudt",
   "marketplace.warning.installAnyway": "Installer alligevel",
   "marketplace.warning.cancel": "Annuller",
-  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent, MCP-server eller et plugin?",
   "marketplace.contribute.cta": "Bidrag på GitHub",
   "marketplace.migration.notice":
     "Tilstande er blevet erstattet af agenter. Hvis du tidligere har installeret marketplace-tilstande, skal du fjerne dem og geninstallere dem som agenter for at migrere til det nye format.",

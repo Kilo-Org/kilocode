@@ -95,6 +95,7 @@ export interface InstallResult {
   slug: string
   error?: string
   filePath?: string
+  filePaths?: string[]
   line?: number
 }
 

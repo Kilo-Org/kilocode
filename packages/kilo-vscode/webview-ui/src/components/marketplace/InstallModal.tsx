@@ -51,7 +51,7 @@ export const InstallModal = (props: Props) => {
     success: boolean
     error?: string
     scope: "project" | "global"
-    path: string
+    paths: string[]
     hasParameters: boolean
     method?: string
   } | null>(null)
@@ -67,7 +67,7 @@ export const InstallModal = (props: Props) => {
     const base = target === "project" ? ".kilo" : "~/.config/kilo"
     if (props.item.type === "mcp") return `${base}/kilo.json`
     if (props.item.type === "agent") return `${base}/agents/${props.item.id}.md`
-    if (props.item.type === "plugin") return `${base}/opencode.json`
+    if (props.item.type === "plugin") return `${base}/`
     if (target === "project") return `.kilo/skills/${props.item.id}/`
     return `~/.kilo/skills/${props.item.id}/`
   }
@@ -113,7 +113,12 @@ export const InstallModal = (props: Props) => {
         const request = pending()
         setInstalling(false)
         if (!request) return
-        setResult({ success: msg.success, error: msg.error, ...request })
+        setResult({
+          ...request,
+          success: msg.success,
+          error: msg.error,
+          paths: msg.filePaths?.length ? msg.filePaths : [msg.filePath || request.path],
+        })
         props.onInstallResult(msg.success, request.scope, {
           hasParameters: request.hasParameters,
           installationMethodName: request.method,
@@ -287,7 +292,9 @@ export const InstallModal = (props: Props) => {
               }
             >
               <p class="install-modal-success">{t("marketplace.install.success")}</p>
-              <p class="install-modal-result-path">{t("marketplace.install.installedAt", { path: r().path })}</p>
+              <For each={r().paths}>
+                {(path) => <p class="install-modal-result-path">{t("marketplace.install.installedAt", { path })}</p>}
+              </For>
               <div class="install-modal-footer">
                 <Button onClick={props.onClose}>{t("marketplace.install.done")}</Button>
               </div>

@@ -45,12 +45,12 @@ export const dict = {
   "marketplace.install.learnMore": "Marketplaceからのインストールの仕組みを見る",
   "marketplace.install.learnMcp": "MCPについて詳しく見る",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "npmプラグインは、カスタムツールや連携機能をKiloに追加します。プラグインはすべての権限を持って実行されます。",
   "marketplace.install.plugin.warning":
-    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
+    "プラグインはすべての権限を持ってコードを実行します。ファイルの読み取りや変更、コマンドの実行、認証情報やネットワークへのアクセスが可能です。信頼できるプラグインのみをインストールしてください。",
   "marketplace.install.installedAt": "{{path}} にインストール済み",
   "marketplace.intro":
-    "再利用可能なエージェント、スキル、MCPツールを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
+    "再利用可能なエージェント、スキル、MCPツール、プラグインを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
   "marketplace.intro.learnMore": "Marketplaceについて",
   "marketplace.install.prerequisites": "前提条件",
   "marketplace.install.installing": "インストール中...",
@@ -77,7 +77,7 @@ export const dict = {
   "marketplace.scope.project": "プロジェクト",
   "marketplace.scope.global": "グローバル",
   "marketplace.remove.type.mcp": "MCPサーバー",
-  "marketplace.remove.type.plugin": "plugin",
+  "marketplace.remove.type.plugin": "プラグイン",
   "marketplace.remove.type.skill": "スキル",
   "marketplace.remove.type.agent": "エージェント",
   "marketplace.remove.failed": "{{name}} の削除に失敗しました",
@@ -88,7 +88,7 @@ export const dict = {
   "marketplace.warning.busyMany": "複数のセッションが実行中で中断されます",
   "marketplace.warning.installAnyway": "それでもインストール",
   "marketplace.warning.cancel": "キャンセル",
-  "marketplace.contribute.prompt": "スキル、エージェント、またはMCPサーバーが見つかりませんか？",
+  "marketplace.contribute.prompt": "スキル、エージェント、MCPサーバー、またはプラグインが見つかりませんか？",
   "marketplace.contribute.cta": "GitHub で貢献する",
   "marketplace.migration.notice":
     "モードはエージェントに置き換えられました。以前にマーケットプレイスのモードをインストールしていた場合は、新しい形式に移行するためにそれらを削除してエージェントとして再インストールしてください。",

@@ -40339,6 +40339,12 @@
           "filePath": {
             "type": "string"
           },
+          "filePaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "line": {
             "type": "integer"
           }

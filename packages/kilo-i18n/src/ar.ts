@@ -43,12 +43,11 @@ export const dict = {
     "قد تُضاف ملفات المشروع إلى نظام التحكم في الإصدارات. لا تخزّن الأسرار هنا إلا إذا كان الإعداد يشير إلى متغير بيئة.",
   "marketplace.install.learnMore": "تعرّف على كيفية عمل عمليات التثبيت من Marketplace",
   "marketplace.install.learnMcp": "معرفة المزيد عن MCP",
-  "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+  "marketplace.install.about.plugin": "تضيف إضافة npm أدوات وتكاملات مخصصة إلى Kilo. تعمل الإضافات بصلاحيات كاملة.",
   "marketplace.install.plugin.warning":
-    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
+    "تشغّل الإضافات التعليمات البرمجية بصلاحيات كاملة. يمكنها قراءة ملفاتك وتغييرها وتشغيل الأوامر والوصول إلى بيانات اعتمادك وشبكتك. لا تثبّت إلا الإضافات التي تثق بها.",
   "marketplace.install.installedAt": "تم التثبيت في {{path}}",
-  "marketplace.intro": "ثبّت وكلاء ومهارات وأدوات MCP قابلة لإعادة الاستخدام لمشروع واحد أو لجميع المشاريع.",
+  "marketplace.intro": "ثبّت وكلاء ومهارات وأدوات MCP وإضافات قابلة لإعادة الاستخدام لمشروع واحد أو لجميع المشاريع.",
   "marketplace.intro.learnMore": "حول Marketplace",
   "marketplace.install.prerequisites": "المتطلبات الأساسية",
   "marketplace.install.installing": "جاري التثبيت...",
@@ -76,7 +75,7 @@ export const dict = {
   "marketplace.scope.project": "مشروع",
   "marketplace.scope.global": "عام",
   "marketplace.remove.type.mcp": "خادم MCP",
-  "marketplace.remove.type.plugin": "plugin",
+  "marketplace.remove.type.plugin": "إضافة",
   "marketplace.remove.type.skill": "مهارة",
   "marketplace.remove.type.agent": "وكيل",
   "marketplace.remove.failed": "فشلت إزالة {{name}}",
@@ -87,7 +86,7 @@ export const dict = {
   "marketplace.warning.busyMany": "عدة جلسات تعمل وستتوقف",
   "marketplace.warning.installAnyway": "تثبيت على أي حال",
   "marketplace.warning.cancel": "إلغاء",
-  "marketplace.contribute.prompt": "هل تفتقد مهارة أو وكيلاً أو خادم MCP؟",
+  "marketplace.contribute.prompt": "هل تفتقد مهارة أو وكيلاً أو خادم MCP أو إضافة؟",
   "marketplace.contribute.cta": "ساهم على GitHub",
   "marketplace.migration.notice":
     "تم استبدال الأوضاع بالوكلاء. إذا كنت قد قمت بتثبيت أوضاع السوق سابقاً، يرجى إزالتها وإعادة تثبيتها كوكلاء للانتقال إلى التنسيق الجديد.",

@@ -5,16 +5,15 @@ import os from "os"
 import { stringify as stringifyYaml } from "yaml"
 import { applyEdits, modify, parse as parseJsonc, type ParseError as JsoncParseError } from "jsonc-parser"
 import { Effect } from "effect"
-import { Global } from "@opencode-ai/core/global"
 import { Flock } from "@opencode-ai/core/util/flock"
-import { ConfigPaths } from "@/config/paths"
 import { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
 import { Skill } from "@/skill"
 import { Process } from "@/util/process"
 import { Filesystem } from "@/util/filesystem"
-import { installPlugin as stagePlugin, patchPluginConfig, readPluginManifest } from "@/plugin/install"
+import { installPlugin as stagePlugin, readPluginManifest } from "@/plugin/install"
 import { pluginPackageName } from "./plugin-spec"
+import { patchPlugin } from "./plugin-config"
 import type {
   AgentInstallItem,
   MarketplaceInstallPayload,
@@ -308,7 +307,7 @@ function installPlugin(svc: Services, item: PluginInstallItem, scope: Scope) {
         return { success: false, slug: item.id, error }
       }
 
-      const out = await patchPluginConfig({
+      const out = await patchPlugin({
         spec,
         targets: manifest.targets,
         global: scope === "global",
@@ -316,46 +315,34 @@ function installPlugin(svc: Services, item: PluginInstallItem, scope: Scope) {
         worktree: svc.worktree ?? svc.directory,
         directory: svc.directory,
       })
-      if (!out.ok) {
-        const error =
-          out.code === "invalid_json"
-            ? `Invalid JSON in ${out.file} (${out.parse} at line ${out.line}, column ${out.col})`
-            : errorText(out.error)
-        return { success: false, slug: item.id, error }
-      }
+      if (!out.success) return { success: false, slug: item.id, error: out.error }
 
-      const file = out.items[0]?.file
-      return { success: true, slug: item.id, ...(file ? { filePath: file, line: 1 } : {}) }
+      const file = out.files.at(0)
+      return { success: true, slug: item.id, filePaths: out.files, ...(file ? { filePath: file, line: 1 } : {}) }
     } catch (err) {
       return { success: false, slug: item.id, error: errorText(err) }
     }
   })
 }
 
-function pluginFiles(scope: Scope, svc: Services) {
-  const root = svc.worktree && svc.worktree !== "/" && svc.vcs === "git" ? svc.worktree : svc.directory
-  const dirs = scope === "global" ? [Global.Path.config] : [path.join(root, ".kilo")]
-  return dirs.flatMap((dir) =>
-    (["opencode", "tui"] as const).flatMap((name) => ConfigPaths.fileInDirectory(dir, name)),
-  )
-}
-
-type StripResult = "missing" | "removed" | "error"
-
 function lockPath(file: string) {
   return path.join(path.dirname(file), path.basename(file).replace(/\.jsonc?$/, ""))
 }
 
-async function stripPluginFromFile(file: string, pkg: string): Promise<StripResult> {
+async function stripPluginFromFile(file: string, pkg: string) {
   // Take the same lock runtime-backed installs use so a concurrent install and
   // remove cannot interleave and drop an entry.
   await using _ = await Flock.acquire(`plug-config:${Filesystem.resolve(lockPath(file))}`)
-  const cfg = Bun.file(file)
-  if (!(await cfg.exists())) return "missing"
-  const text = await cfg.text()
+  const text = await Bun.file(file)
+    .text()
+    .catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return undefined
+      throw err
+    })
+  if (text === undefined) return "missing"
   const errors: JsoncParseError[] = []
   const data = parseJsonc(text, errors, { allowTrailingComma: true })
-  if (errors.length > 0) return "error"
+  if (errors.length > 0) throw new Error("Invalid JSON; file left unchanged and plugin removal could not be verified")
   const list =
     data && typeof data === "object" && Array.isArray((data as { plugin?: unknown }).plugin)
       ? (data as { plugin: unknown[] }).plugin
@@ -367,27 +354,30 @@ async function stripPluginFromFile(file: string, pkg: string): Promise<StripResu
     text,
     modify(text, ["plugin"], next, { formattingOptions: { tabSize: 2, insertSpaces: true } }),
   )
-  await Bun.write(file, out)
+  await Filesystem.write(file, out)
   return "removed"
 }
 
 function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   return Effect.promise(async (): Promise<MarketplaceRemoveResult> => {
     const pkg = pluginPackageName(item.id) ?? item.id
-    let removed = false
-    let unreadable = false
-    for (const file of pluginFiles(scope, svc)) {
-      const status = await stripPluginFromFile(file, pkg).catch((err) => {
-        console.warn("Failed to remove plugin from marketplace config", err)
-        return "error" as StripResult
-      })
-      if (status === "removed") removed = true
-      if (status === "error") unreadable = true
+    const removed: string[] = []
+    const errors: string[] = []
+    for (const file of Paths.pluginFiles(scope, svc.directory, svc.worktree)) {
+      try {
+        if ((await stripPluginFromFile(file, pkg)) === "removed") removed.push(file)
+      } catch (err) {
+        errors.push(`${file}: ${errorText(err)}`)
+      }
     }
-    // A successful write elsewhere wins, so an unparseable sibling config (for
-    // example a malformed tui.json when the plugin lives in opencode.json) does
-    // not report a failure after the entry was already removed.
-    if (!removed && unreadable) return { success: false, slug: item.id, error: "Could not read plugin config" }
+    if (errors.length) {
+      const changed = removed.length ? ` Removed from: ${removed.join(", ")}.` : ""
+      return {
+        success: false,
+        slug: item.id,
+        error: `Plugin removal incomplete.${changed} Could not verify removal from: ${errors.join("; ")}`,
+      }
+    }
     return { success: true, slug: item.id }
   })
 }

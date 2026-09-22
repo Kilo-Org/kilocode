@@ -4340,6 +4340,7 @@ export type MarketplaceInstallResult = {
   slug: string
   error?: string
   filePath?: string
+  filePaths?: Array<string>
   line?: number
 }
 

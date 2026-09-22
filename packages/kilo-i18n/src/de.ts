@@ -48,12 +48,12 @@ export const dict = {
   "marketplace.install.learnMore": "Erfahren Sie, wie Installationen aus dem Marketplace funktionieren",
   "marketplace.install.learnMcp": "Mehr über MCP erfahren",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "Ein npm-Plugin fügt Kilo benutzerdefinierte Werkzeuge und Integrationen hinzu. Plugins werden mit vollständigen Berechtigungen ausgeführt.",
   "marketplace.install.plugin.warning":
-    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
+    "Plugins führen Code mit vollständigen Berechtigungen aus. Sie können Ihre Dateien lesen und ändern, Befehle ausführen und auf Ihre Zugangsdaten und Ihr Netzwerk zugreifen. Installieren Sie nur Plugins, denen Sie vertrauen.",
   "marketplace.install.installedAt": "Installiert unter {{path}}",
   "marketplace.intro":
-    "Installieren Sie wiederverwendbare Agenten, Skills und MCP-Werkzeuge für ein Projekt oder für alle Projekte.",
+    "Installieren Sie wiederverwendbare Agenten, Skills, MCP-Werkzeuge und Plugins für ein Projekt oder für alle Projekte.",
   "marketplace.intro.learnMore": "Über den Marketplace",
   "marketplace.install.prerequisites": "Voraussetzungen",
   "marketplace.install.installing": "Wird installiert...",
@@ -64,7 +64,7 @@ export const dict = {
   "marketplace.install.close": "Schließen",
   "marketplace.remove.title": "{{name}} entfernen?",
   "marketplace.remove.confirm":
-    "Sind Sie sicher, dass Sie diese {{type}} entfernen möchten? Dadurch wird sie aus Ihrer {{scope}}-Konfiguration entfernt.",
+    "Soll dieser Eintrag ({{type}}) wirklich entfernt werden? Er wird dadurch aus Ihrer {{scope}}-Konfiguration entfernt.",
   "marketplace.remove.cancel": "Abbrechen",
   "marketplace.remove.confirm.button": "Entfernen",
   "marketplace.search": "Suchen...",
@@ -81,7 +81,7 @@ export const dict = {
   "marketplace.scope.project": "Projekt",
   "marketplace.scope.global": "Global",
   "marketplace.remove.type.mcp": "MCP-Server",
-  "marketplace.remove.type.plugin": "plugin",
+  "marketplace.remove.type.plugin": "Plugin",
   "marketplace.remove.type.skill": "Skill",
   "marketplace.remove.type.agent": "Agent",
   "marketplace.remove.failed": "Fehler beim Entfernen von {{name}}",
@@ -92,7 +92,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Mehrere Sitzungen laufen und werden unterbrochen",
   "marketplace.warning.installAnyway": "Trotzdem installieren",
   "marketplace.warning.cancel": "Abbrechen",
-  "marketplace.contribute.prompt": "Fehlt ein Skill, Agent oder MCP-Server?",
+  "marketplace.contribute.prompt": "Fehlt ein Skill, Agent, MCP-Server oder Plugin?",
   "marketplace.contribute.cta": "Auf GitHub beitragen",
   "marketplace.migration.notice":
     "Modi wurden durch Agenten ersetzt. Wenn Sie zuvor Marketplace-Modi installiert haben, entfernen Sie diese bitte und installieren Sie sie als Agenten neu, um zum neuen Format zu migrieren.",
