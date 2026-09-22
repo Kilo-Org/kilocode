@@ -66,7 +66,6 @@ class BackgroundAgentStrip(
     override val vertical = true
 
     private var agents: List<BackgroundAgent> = emptyList()
-    private var activeCount = 0
     private val rows = LinkedHashMap<String, Row>()
     private val body = Body()
     private val preview = Preview()
@@ -123,13 +122,12 @@ class BackgroundAgentStrip(
         preview.sync(agents)
         body.sync(agents)
         syncVisible(agents.isNotEmpty())
-        // Auto-collapse once, on the transition into "nothing active" — not on every subsequent
-        // update while it stays at zero, or a manual re-expand to dismiss a finished row would be
-        // immediately undone by the next poll tick.
-        val active = agents.count { it.status == BackgroundAgentStatus.RUNNING || it.waiting }
-        if (active == 0 && activeCount > 0 && expanded()) collapse()
-        activeCount = active
         refresh()
+    }
+
+    @RequiresEdt
+    override fun onExpansion() {
+        preview.relayout()
     }
 
     @RequiresEdt
@@ -218,6 +216,14 @@ class BackgroundAgentStrip(
             sample.font = style.smallFont
             sample.foreground = style.editorForeground
             for (chip in chips.values) chip.applyStyle(style)
+            panel.revalidate()
+            panel.repaint()
+        }
+
+        @RequiresEdt
+        fun relayout() {
+            panel.invalidate()
+            if (panel.width > 0 && panel.height > 0) panel.doLayout()
             panel.revalidate()
             panel.repaint()
         }

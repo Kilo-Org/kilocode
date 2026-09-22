@@ -100,6 +100,10 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
     /** Whether the body is currently attached — containment-derived, never a separate boolean. */
     fun expanded(): Boolean = body?.parent === this
 
+    /** Notify specialized summaries after the body containment changes. */
+    @RequiresEdt
+    protected open fun onExpansion() = Unit
+
     @RequiresEdt
     protected fun toggle() {
         if (expanded()) collapse() else expand()
@@ -112,6 +116,7 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         val content = body ?: Scroller(createBody(), vertical).also { body = it }
         add(content)
         arrow.icon = AllIcons.General.ArrowDown
+        onExpansion()
         return true
     }
 
@@ -124,6 +129,7 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         }
         remove(content)
         arrow.icon = AllIcons.General.ArrowRight
+        onExpansion()
         return true
     }
 

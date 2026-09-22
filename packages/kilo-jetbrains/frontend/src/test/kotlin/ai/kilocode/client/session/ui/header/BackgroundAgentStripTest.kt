@@ -280,13 +280,12 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
 
         assertTrue(action(more).doAccessibleAction(0))
         assertTrue(strip.expanded())
-        layoutTree(panel)
+        assertEquals("2 of 3 agents running", (strip.labelComponent() as JBLabel).text)
         assertTrue(aggregate(strip, panel).isVisible)
         assertTrue(agents.none { it.isVisible })
         assertFalse(more.isVisible)
 
         click(strip.labelComponent())
-        layoutTree(panel)
         assertFalse(strip.expanded())
         assertTrue(agents[0].isVisible)
         assertTrue(more.isVisible)
@@ -700,21 +699,40 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         return strip.agentRowPanel(job)!!.y
     }
 
-    fun `test auto collapses once when the last active agent finishes`() {
-        val strip = strip()
+    fun `test stopping agents does not collapse the expanded strip`() {
+        val cancelled = mutableListOf<String>()
+        val cancelledAll = mutableListOf<List<String>>()
+        val strip = strip(onCancel = cancelled::add, onCancelAll = cancelledAll::add)
 
-        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.RUNNING),
+                agent("job2", BackgroundAgentStatus.RUNNING),
+            ),
+        )
         click(strip.rowPanel())
         assertTrue(strip.expanded())
 
-        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
-        assertFalse(strip.expanded())
-
-        // Re-expanding to dismiss the finished row must not be undone by the next poll tick while
-        // still at zero active agents.
-        click(strip.rowPanel())
+        strip.rowActionButton("job1")!!.doClick()
+        assertEquals(listOf("job1"), cancelled)
         assertTrue(strip.expanded())
-        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.CANCELLED),
+                agent("job2", BackgroundAgentStatus.RUNNING),
+            ),
+        )
+        assertTrue(strip.expanded())
+
+        strip.stopAllButton().doClick()
+        assertEquals(listOf(listOf("job2")), cancelledAll)
+        assertTrue(strip.expanded())
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.CANCELLED),
+                agent("job2", BackgroundAgentStatus.CANCELLED),
+            ),
+        )
         assertTrue(strip.expanded())
     }
 
