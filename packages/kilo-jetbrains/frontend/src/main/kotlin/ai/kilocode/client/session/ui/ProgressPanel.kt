@@ -14,7 +14,6 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -349,9 +348,14 @@ private class Footer(
 
     private fun active(): Component = if (status.isVisible) status else busy
 
+    // `SessionLayout` resizes the immediate parent to its target width before
+    // reading `preferredSize`, but Swing only propagates that size to this
+    // footer via `doLayout()`, which hasn't run yet at that point. Reading the
+    // parent chain's width first (instead of this component's own, still-stale
+    // width) keeps `getPreferredSize()` in sync with the width the parent is
+    // about to assign. During an actual `doLayout()` pass the two are already
+    // identical, so preferring the ancestor is safe there too.
     private fun space(): Int {
-        val own = width - insets.left - insets.right
-        if (own > 0) return own
         var node: Container? = parent
         while (node != null) {
             if (node.width > 0) {
@@ -360,7 +364,7 @@ private class Footer(
             }
             node = node.parent
         }
-        return 0
+        return (width - insets.left - insets.right).coerceAtLeast(0)
     }
 
     private data class Metrics(
@@ -376,12 +380,5 @@ private class Footer(
 
 private fun markup(value: String, centered: Boolean): String {
     val lines = value.replace("\r\n", "\n").replace('\r', '\n').split('\n')
-    val div = HtmlChunk.div().children(
-        lines.flatMapIndexed { index, line ->
-            if (index == lines.lastIndex) listOf(HtmlChunk.text(line))
-            else listOf(HtmlChunk.text(line), HtmlChunk.br())
-        },
-    )
-    val body = if (centered) div.attr("style", "text-align:center") else div
-    return body.wrapWith(HtmlChunk.body()).wrapWith("html").toString()
+    return UiStyle.Text.wrapLines(lines, centered)
 }

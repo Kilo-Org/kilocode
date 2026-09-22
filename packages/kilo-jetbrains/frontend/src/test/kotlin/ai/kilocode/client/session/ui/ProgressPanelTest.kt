@@ -155,6 +155,37 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertTrue("wrapped status must be taller than one line", status().height > elapsed().height)
     }
 
+    fun `test preferred height reflects a narrower resize before doLayout runs`() {
+        // Mirrors SessionLayout.measure(): it calls setSize(width, ...) on the
+        // ProgressPanel and reads preferredSize.height immediately, without
+        // first running doLayout() on this footer. The footer's own `width`
+        // field is therefore still the previous layout's width at that point,
+        // so `space()` must read the width from the parent chain instead of
+        // trusting its own stale field.
+        val text = "The request limited providers for this model and they are currently at capacity. Add more providers to continue."
+        model.setState(SessionState.Retry(text, attempt = 0, next = 0L))
+
+        // Establish a real single-line layout at a wide width first.
+        panel.setSize(800, panel.preferredSize.height)
+        layout(panel)
+        val oneLine = status().height
+
+        // Narrow the panel like SessionLayout does — resize only, no layout —
+        // and read the preferred height that a subsequent real layout pass
+        // would need to reserve.
+        panel.setSize(220, 1)
+        val measuredNarrow = panel.preferredSize.height
+
+        // Independently confirm the true wrapped height at 220px by actually
+        // laying the panel out at that width.
+        panel.setSize(220, measuredNarrow)
+        layout(panel)
+        val actualNarrow = panel.preferredSize.height
+
+        assertTrue("narrow measurement must already reflect the new width", measuredNarrow > oneLine)
+        assertEquals("measured height must match the true laid-out height", actualNarrow, measuredNarrow)
+    }
+
     fun `test long unbroken retry stays constrained to footer bounds`() {
         model.setState(SessionState.Retry("https://example.test/${"segment".repeat(50)}", attempt = 0, next = 0L))
         panel.setSize(180, panel.preferredSize.height)
