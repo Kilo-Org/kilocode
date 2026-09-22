@@ -52,6 +52,40 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test background agent controls are translated and format in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for ((key, marker) in AGENT) {
+                val pattern = props.getProperty(key)
+                assertNotNull("$locale: missing $key", pattern)
+                assertEscaped(locale, key, pattern!!)
+                val rendered = format(pattern, marker)
+                assertTrue("$locale: $key dropped its argument -> $rendered", rendered.contains(marker))
+                assertClean(locale, key, rendered)
+            }
+            for (key in AGENT_PLAIN) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+                assertFalse("$locale: $key should not contain a placeholder -> $value", value.contains("{0}"))
+            }
+
+            val summary = props.getProperty("session.header.agents.summary")
+            assertNotNull("$locale: missing session.header.agents.summary", summary)
+            assertEscaped(locale, "session.header.agents.summary", summary!!)
+            val renderedSummary = format(summary, "RUNNING_COUNT", "TOTAL_COUNT")
+            assertTrue(
+                "$locale: session.header.agents.summary dropped the running count -> $renderedSummary",
+                renderedSummary.contains("RUNNING_COUNT"),
+            )
+            assertTrue(
+                "$locale: session.header.agents.summary dropped the total count -> $renderedSummary",
+                renderedSummary.contains("TOTAL_COUNT"),
+            )
+            assertClean(locale, "session.header.agents.summary", renderedSummary)
+        }
+    }
+
     private fun format(pattern: String, vararg args: String) =
         MessageFormat(pattern, Locale.ROOT).format(args)
 
@@ -95,6 +129,19 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.empty.worktree.unknown",
             "action.Kilo.NewSession.toolbar",
             "action.Kilo.NewWorktree.toolbar",
+        )
+
+        val AGENT = mapOf(
+            "session.header.agents.open" to "AGENT_NAME",
+            "session.header.agents.more.many" to "7",
+            "session.header.agents.more.accessible.many" to "7",
+            "session.header.agents.running.many" to "7",
+        )
+
+        val AGENT_PLAIN = listOf(
+            "session.header.agents.more.one",
+            "session.header.agents.more.accessible.one",
+            "session.header.agents.running.one",
         )
     }
 }
