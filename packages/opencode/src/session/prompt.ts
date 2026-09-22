@@ -1758,6 +1758,7 @@ export const layer = Layer.effect(
             bypassAgentCheck,
             messages: msgs,
             promptOps,
+            goalOps: goals, // kilocode_change
             memoryCache, // kilocode_change
             notify, // kilocode_change
           }).pipe(

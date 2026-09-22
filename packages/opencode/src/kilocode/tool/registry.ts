@@ -1,5 +1,5 @@
 import { RecallTool } from "../../tool/recall"
-import { GoalReportTool } from "../session/goal/tool"
+import { GoalReportTool, GoalTool } from "../session/goal/tool"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
@@ -98,6 +98,7 @@ export namespace KiloToolRegistry {
         boardRead: BoardReadTool,
         boardPost: BoardPostTool,
         goalReport: GoalReportTool,
+        goal: GoalTool,
       })
       if (!notebook)
         return {
@@ -163,6 +164,7 @@ export namespace KiloToolRegistry {
       cancel?: Tool.Info
       boardRead?: Tool.Info
       goalReport?: Tool.Info
+      goal?: Tool.Info
       boardPost?: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
@@ -188,6 +190,7 @@ export namespace KiloToolRegistry {
       const schedule = tools.schedule ? yield* Tool.init(tools.schedule) : undefined
       const cancel = tools.cancel ? yield* Tool.init(tools.cancel) : undefined
       const report = tools.goalReport ? { goalReport: yield* Tool.init(tools.goalReport) } : {}
+      const goal = tools.goal ? { goal: yield* Tool.init(tools.goal) } : {}
       const board =
         tools.boardRead && tools.boardPost
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
@@ -206,6 +209,7 @@ export namespace KiloToolRegistry {
         ...base,
         ...board,
         ...report,
+        ...goal,
         browser,
         ...notebooks,
         semantic,
@@ -281,6 +285,7 @@ export namespace KiloToolRegistry {
       cancel?: Tool.Def
       boardRead?: Tool.Def
       goalReport?: Tool.Def
+      goal?: Tool.Def
       boardPost?: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
@@ -299,6 +304,7 @@ export namespace KiloToolRegistry {
     const enabled = BoardEnabled.on(cfg, flags)
     return [
       ...(tools.goalReport ? [tools.goalReport] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.goal ? [tools.goal] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
       ...(enabled && tools.boardRead && tools.boardPost ? [tools.boardRead, tools.boardPost] : []),
       ...(tools.semantic ? [tools.semantic] : []),
