@@ -850,6 +850,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.setStatsVisible(visible)
     this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
+    if (!visible) this.opts.onHidden?.()
     if (!visible && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }
@@ -1703,6 +1704,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private handleWebviewFocusMessage(message: TypedWebviewMessage & { focused?: unknown; target?: unknown }): void {
     if (message.type === "webviewFocusChanged") this.latch?.note(message.focused === true)
+    if (message.type === "webviewFocusChanged" && message.focused === true) this.opts.onFocused?.()
     if (message.type === "webviewFocusChanged" && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, message.focused === true)
     }
@@ -5962,6 +5964,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    this.opts.onHidden?.()
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }

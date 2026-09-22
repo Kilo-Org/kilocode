@@ -707,6 +707,11 @@ interface CloseSessionIn {
   sessionId: string
 }
 
+interface CloseSessionsIn {
+  type: "agentManager.closeSessions"
+  sessionIds: string[]
+}
+
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 interface PersistSessionIn {
   type: "agentManager.persistSession"
@@ -1264,6 +1269,7 @@ export type AgentManagerInMessage =
   | OpenSessionLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
+  | CloseSessionsIn
   | PersistSessionIn
   | ForgetSessionIn
   | ForkSessionIn

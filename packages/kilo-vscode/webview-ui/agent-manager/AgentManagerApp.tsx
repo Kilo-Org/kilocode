@@ -159,6 +159,7 @@ import { applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabPersistence } from "./tab-persistence"
 import { createTabDrag } from "./tab-drag"
 import { createTabOrderSync } from "./tab-order-sync"
+import { closeAllTasks as closeTasks, closeFocusedTask } from "./task-close"
 import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import {
@@ -1288,6 +1289,8 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "toggleDiff") {
         diffPanels.toggleCommand()
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
+      else if (msg.action === "closeTask") closeFocusedTask(visibleTabId(), tabLookup(), handleCloseTab)
+      else if (msg.action === "closeAllTasks") closeAllTasks()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") showNewWorktreeDialog()
       else if (msg.action === "quickWorktree") handleCreateWorktree()
@@ -2208,6 +2211,26 @@ const AgentManagerContent: Component = () => {
         : undefined
     if (!target) return
     handleCloseTab(target.id)
+  }
+
+  const closeAllTasks = () => {
+    closeTasks({
+      tabs: activeTabs(),
+      freeze: freezeTabs,
+      pending: isPending,
+      local: localSet(),
+      clear: () => session.clearCurrentSession(),
+      setPending: setActivePendingId,
+      forget: forgetSessionFocus,
+      setLocal: (next) => setLocalSessionIDs(next),
+      submitting: (id) => session.isSubmitting(id),
+      sending: isPendingSend,
+      discard: discardPendingDraft,
+      closed: closedDrafts,
+      remove: deletePendingDraft,
+      post: (ids) => vscode.postMessage({ type: "agentManager.closeSessions", sessionIds: ids }),
+      restore: () => tabFocus.restore(),
+    })
   }
 
   // Close the currently selected worktree with a confirmation dialog
