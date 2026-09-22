@@ -492,6 +492,43 @@ class KiloBackendProviderSettingsManagerTest {
     }
 
     @Test
+    fun `clearing an env var still nulls a removed model in a duplicated other-scope entry`() = runBlocking {
+        // The env-var clear forces the primary (global) scope through delete-then-recreate, which
+        // only touches that one scope. A model removed on the same save must still be nulled out
+        // of an independent duplicate entry in the other (workspace) scope, or that untouched
+        // duplicate resurrects the model once the two scopes' entries diverge (recreate drops the
+        // env from global) and scopedConfig picks the workspace duplicate as effective again.
+        val duplicated = """{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://localhost:11434"},"env":["OLD_VAR"],"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"},"gpt-3.5-turbo":{"id":"gpt-3.5-turbo","name":"gpt-3.5-turbo"}}}"""
+        mock.config = """{"provider":{"my-openai":$duplicated}}"""
+        mock.workspaceConfig = """{"provider":{"my-openai":$duplicated}}"""
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"config","models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"}}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto(
+                "/test",
+                "my-openai",
+                "My OpenAI",
+                "https://api.example.com/v1",
+                apiKey = "sk-test",
+                envVar = null,
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            ),
+        )
+
+        assertNull(result.error)
+        assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"gpt-3.5-turbo\":null")
+        val state = manager.state("/test")
+        assertEquals(setOf("gpt-4o"), state.config["my-openai"]?.models?.keys)
+    }
+
+    @Test
     fun `saving custom provider without an existing env var does not delete the entry first`() = runBlocking {
         // Deleting first is only needed to clear a previously-set env var. Doing it unconditionally
         // would risk wiping fields the save patch doesn't set (e.g. a hand-authored

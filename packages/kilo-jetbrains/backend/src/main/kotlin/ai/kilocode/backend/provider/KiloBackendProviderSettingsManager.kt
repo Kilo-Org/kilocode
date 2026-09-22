@@ -175,15 +175,18 @@ internal class KiloBackendProviderSettingsManager(
         // The dialog never edits headers, so the delete above would otherwise drop hand-authored
         // ones: carry them into the recreate patch when the save itself doesn't set any.
         val save = if (stale != null && input.headers.isEmpty()) input.copy(headers = stale.headers) else input
+        // Diff the submitted models against the persisted ones regardless of `stale`: this set
+        // also drives the other-scope cleanup below, which must still run even when the primary
+        // scope took the delete-then-recreate path (that recreate only touches the *edited*
+        // scope; an independent duplicate in the other scope is untouched by it either way).
+        val kept = input.models.mapTo(mutableSetOf()) { it.id }
+        val removedModelIds: Set<String> = (existing?.models?.keys ?: emptySet()) - kept
         // A delete-then-recreate patch already drops every existing model, so no removal
-        // sentinels are needed on top of it. Otherwise, diff the submitted models against the
-        // persisted ones so deselected IDs are explicitly nulled instead of silently surviving
-        // the deep-merge PATCH (and reappearing after a restart).
-        val removedModelIds: Set<String> = if (stale != null) emptySet() else {
-            val kept = input.models.mapTo(mutableSetOf()) { it.id }
-            (existing?.models?.keys ?: emptySet()) - kept
-        }
-        patch(input.directory, scope, KiloCliDataParser.buildCustomProviderPatch(save, removedModelIds))
+        // sentinels are needed on top of it for the primary scope. Otherwise, the sentinels are
+        // what explicitly null the deselected IDs instead of letting them silently survive the
+        // deep-merge PATCH (and reappear after a restart).
+        val primaryRemovedModelIds = if (stale != null) emptySet() else removedModelIds
+        patch(input.directory, scope, KiloCliDataParser.buildCustomProviderPatch(save, primaryRemovedModelIds))
         // The provider id also has a raw entry in the other scope: null out any of the removed
         // models it still lists so it can't resurrect them once it's no longer the effective copy.
         if (removedModelIds.isNotEmpty()) {
