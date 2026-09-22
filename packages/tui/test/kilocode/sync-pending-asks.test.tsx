@@ -398,3 +398,36 @@ test("auto mode does not resurrect a protected ask answered during refetch", asy
     app.renderer.destroy()
   }
 })
+
+test("auto mode retries a failed reply on the next recovery", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  const replies: string[] = []
+  const { app, sync } = await mount(
+    (url) => {
+      const match = url.pathname.match(/^\/permission\/([^/]+)\/reply$/)
+      if (match) {
+        replies.push(match.at(1) ?? "")
+        return replies.length === 1 ? json({ message: "boom" }, { status: 500 }) : json(true)
+      }
+      if (url.pathname === "/permission") return json([permission("per_1")])
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+    { auto: true },
+  )
+
+  try {
+    // bootstrap's recovery fires the first reply, which fails.
+    await wait(() => replies.length === 1)
+
+    // The ask is still pending server-side, so the next recovery must retry
+    // the reply instead of treating the failed one as settled.
+    await sync.session.sync(childID)
+    await wait(() => replies.length === 2)
+
+    expect(replies).toEqual(["per_1", "per_1"])
+  } finally {
+    app.renderer.destroy()
+  }
+})

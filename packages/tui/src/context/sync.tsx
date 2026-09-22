@@ -249,7 +249,6 @@ export const {
           if (temporaryPermission(request)) continue
           // kilocode_change end
           if (terminal.has(request.id)) continue // kilocode_change - already answered, ignore straggler events
-          terminal.add(request.id)
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
         }
         // kilocode_change start - keep protected asks visible; clear only what was settled
