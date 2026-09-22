@@ -43,6 +43,55 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.Busy)
     }
 
+    fun `test showing controller defers hidden catchup beyond hierarchy callback`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val modelEvents = collectModelEvents(m)
+        flush()
+        modelEvents.clear()
+
+        hide(m)
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        settle()
+
+        show(m)
+
+        assertTrue(modelEvents.isEmpty())
+        assertNull(m.model.message("msg1"))
+
+        settle()
+
+        assertNotNull(m.model.message("msg1"))
+    }
+
+    fun `test hidden catchup yields between bounded batches`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        var updates = 0
+        val m = controller(
+            id = "ses_test",
+            flushMs = 250L,
+            condense = true,
+            afterUpdate = { updates++ },
+        )
+        val total = EVENT_CATCHUP_SIZE * 25 + 1
+        flush()
+        updates = 0
+
+        hide(m)
+        repeat(total) { idx ->
+            emit(ChatEventDto.MessageUpdated("ses_test", msg("msg$idx", "ses_test", "assistant")), flush = false)
+        }
+        settle()
+
+        show(m)
+        settle()
+
+        assertEquals(26, updates)
+        assertEquals(total, m.model.messages().size)
+    }
+
     fun `test hidden controller applies question metadata without flushing transcript`() {
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()
