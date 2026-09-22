@@ -187,13 +187,13 @@ export const {
       for (const child of children) evict(child)
     }
 
-// pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
-// kilocode_change start - skill shell batches and sandbox escalations need an interactive human decision:
-// the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
-const temporaryPermission = (request: PermissionRequest) =>
-  request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
-// kilocode_change end
-function mergePending<T extends PermissionRequest | QuestionRequest>(
+    // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
+    // kilocode_change start - skill shell batches and sandbox escalations need an interactive human decision:
+    // the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
+    const temporaryPermission = (request: PermissionRequest) =>
+      request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+    // kilocode_change end
+    function mergePending<T extends PermissionRequest | QuestionRequest>(
       list: T[],
       current: Record<string, T[]>,
       before: Set<string>,
@@ -220,7 +220,16 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
       return next
     }
 
+    let task: Promise<void> | undefined // dedupe overlapping recoveries (bootstrap + session sync)
     async function syncPending() {
+      if (task) return task // an in-flight recovery serves both callers
+      task = recover().finally(() => {
+        task = undefined
+      })
+      return task
+    }
+
+    async function recover() {
       const workspace = project.workspace.current()
       const before = {
         permission: new Set(Object.values(store.permission).flatMap((list) => list.map((r) => r.id))),
@@ -239,6 +248,7 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
           // human decision and must remain visible instead of being cleared
           if (temporaryPermission(request)) continue
           // kilocode_change end
+          if (terminal.has(request.id)) continue // kilocode_change - already answered, ignore straggler events
           terminal.add(request.id)
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
         }
@@ -273,6 +283,14 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
     const deleted = new Set<string>() // kilocode_change
         // kilocode_change - request IDs already replied/rejected; a stale pending list must not resurrect them
     const terminal = new Set<string>() // kilocode_change
+    // replied/rejected asks are terminal: a stale pending list must not resurrect them; cap the set so it cannot grow unbounded
+    const terminalCap = 512
+    function markTerminal(id: string) {
+      terminal.add(id)
+      if (terminal.size <= terminalCap) return
+      const oldest = terminal.values().next().value
+      if (oldest != null) terminal.delete(oldest)
+    }
     let syncedWorkspace = project.workspace.current() // kilocode_change
     let vcsVersion = 0 // kilocode_change
     const syncingSessions = new Map<string, Promise<void>>()
@@ -311,11 +329,7 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
           void bootstrap()
           break
         case "permission.replied": {
-          terminal.add(event.properties.requestID) // kilocode_change - a replied ask is terminal: a stale list must not resurrect it
-          if (terminal.size > 512) {
-            const oldest = terminal.values().next().value // kilocode_change
-            if (oldest != null) terminal.delete(oldest) // kilocode_change
-          }
+          markTerminal(event.properties.requestID) // kilocode_change - a replied ask is terminal: a stale list must not resurrect it
           const requests = store.permission[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -367,11 +381,7 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
 
         case "question.replied":
         case "question.rejected": {
-          terminal.add(event.properties.requestID) // kilocode_change - a settled question is terminal: a stale list must not resurrect it
-          if (terminal.size > 512) {
-            const oldest = terminal.values().next().value // kilocode_change
-            if (oldest != null) terminal.delete(oldest) // kilocode_change
-          }
+          markTerminal(event.properties.requestID) // kilocode_change - a settled question is terminal: a stale list must not resurrect it
           const requests = store.question[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)

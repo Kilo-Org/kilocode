@@ -145,17 +145,14 @@ test("session sync refetches pending permission and question asks and drops stal
 test("an ask arriving while the pending refetch is in flight survives it", async () => {
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")
-  let resolveSecond!: (value: PermissionRequest[]) => void
-  const second = new Promise<PermissionRequest[]>((resolve) => {
-    resolveSecond = resolve
-  })
+  const held = Promise.withResolvers<PermissionRequest[]>()
   let seen = 0
   const { app, emit, sync } = await mount(
     (url) => {
       if (url.pathname === "/permission") {
         seen += 1
         // bootstrap consumes the first list call; the session sync holds the second
-        return seen === 1 ? json([]) : second.then((data) => json(data))
+        return seen === 1 ? json([]) : held.promise.then((data) => json(data))
       }
       return serveSessions([parent, child], () => ({}))(url)
     },
@@ -169,7 +166,7 @@ test("an ask arriving while the pending refetch is in flight survives it", async
     await wait(() => seen === 2)
     // The server list resolves with no pending asks, but the live ask event
     // lands while the refetch is still settling.
-    resolveSecond([])
+    held.resolve([])
     emit(wrap({ id: "evt_ask", type: "permission.asked", properties: permission("per_1") }))
     await hydrate
 
@@ -182,17 +179,14 @@ test("an ask arriving while the pending refetch is in flight survives it", async
 test("an ask answered while the pending refetch is in flight is not resurrected", async () => {
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")
-  let resolveSecond!: (value: PermissionRequest[]) => void
-  const second = new Promise<PermissionRequest[]>((resolve) => {
-    resolveSecond = resolve
-  })
+  const held = Promise.withResolvers<PermissionRequest[]>()
   let seen = 0
   const { app, emit, sync } = await mount(
     (url) => {
       if (url.pathname === "/permission") {
         seen += 1
         // bootstrap consumes the first list call; the session sync holds the second
-        return seen === 1 ? json([]) : second.then((data) => json(data))
+        return seen === 1 ? json([]) : held.promise.then((data) => json(data))
       }
       return serveSessions([parent, child], () => ({}))(url)
     },
@@ -212,7 +206,7 @@ test("an ask answered while the pending refetch is in flight is not resurrected"
         properties: { sessionID: childID, requestID: "per_1", reply: "once" },
       }),
     )
-    resolveSecond([permission("per_1")])
+    held.resolve([permission("per_1")])
     await hydrate
 
     // The stale list must not resurrect the answered ask.
@@ -255,17 +249,14 @@ test("a failed pending list fetch keeps existing asks", async () => {
 test("an ask created and answered during the refetch is not resurrected", async () => {
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")
-  let resolveSecond!: (value: PermissionRequest[]) => void
-  const second = new Promise<PermissionRequest[]>((resolve) => {
-    resolveSecond = resolve
-  })
+  const held = Promise.withResolvers<PermissionRequest[]>()
   let seen = 0
   const { app, emit, sync } = await mount(
     (url) => {
       if (url.pathname === "/permission") {
         seen += 1
         // bootstrap consumes the first list call; the session sync holds the second
-        return seen === 1 ? json([]) : second.then((data) => json(data))
+        return seen === 1 ? json([]) : held.promise.then((data) => json(data))
       }
       return serveSessions([parent, child], () => ({}))(url)
     },
@@ -290,7 +281,7 @@ test("an ask created and answered during the refetch is not resurrected", async 
       }),
     )
     await wait(() => (sync.data.permission[childID] ?? []).length === 0)
-    resolveSecond([permission("per_1")])
+    held.resolve([permission("per_1")])
     await hydrate
 
     // The stale list must not resurrect the answered ask.
@@ -366,10 +357,7 @@ test("auto mode stores a protected ask delivered by SSE instead of replying", as
 test("auto mode does not resurrect a protected ask answered during refetch", async () => {
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")
-  let resolveSecond!: (value: PermissionRequest[]) => void
-  const second = new Promise<PermissionRequest[]>((resolve) => {
-    resolveSecond = resolve
-  })
+  const held = Promise.withResolvers<PermissionRequest[]>()
   let seen = 0
   const replies: string[] = []
   const { app, emit, sync } = await mount(
@@ -381,7 +369,7 @@ test("auto mode does not resurrect a protected ask answered during refetch", asy
       }
       if (url.pathname === "/permission") {
         seen += 1
-        return seen === 1 ? json([]) : second.then((data) => json(data))
+        return seen === 1 ? json([]) : held.promise.then((data) => json(data))
       }
       return serveSessions([parent, child], () => ({}))(url)
     },
@@ -401,7 +389,7 @@ test("auto mode does not resurrect a protected ask answered during refetch", asy
       }),
     )
     await wait(() => (sync.data.permission[childID] ?? []).length === 0)
-    resolveSecond([protectedPermission("per_protected")])
+    held.resolve([protectedPermission("per_protected")])
     await hydrate
 
     expect(sync.data.permission[childID]).toBeUndefined()
