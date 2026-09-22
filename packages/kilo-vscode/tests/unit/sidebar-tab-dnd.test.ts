@@ -11,7 +11,7 @@ describe("sidebar tab drag ordering", () => {
     expect(strip).toContain("<DragDropProvider")
     expect(strip).toContain("<DragDropSensors />")
     expect(strip).toContain("<ConstrainDragYAxis />")
-    expect(strip).toContain("<SortableProvider ids={tabs.ids()}>")
+    expect(strip).toContain("<SortableProvider ids={tabs.display()}>")
     expect(strip).toContain("<SortableTabContainer id={id}>")
   })
 
@@ -22,18 +22,20 @@ describe("sidebar tab drag ordering", () => {
 
   it("supports keyboard reorder without replacing selection navigation", () => {
     expect(strip).toContain('tabs.move(id, event.key === "ArrowLeft" ? -1 : 1)')
-    expect(strip).toContain("handleTabKey({ ids: tabs.ids(), id, event, select: tabs.select, root })")
+    expect(strip).toContain("handleTabKey({ ids: tabs.display(), id, event, select: tabs.select, root })")
     expect(strip).toContain('aria-live="polite"')
   })
 
-  it("persists real order and active tab through VS Code webview state", () => {
+  it("persists real order, active tab, and pins through VS Code webview state", () => {
     expect(tabs).toContain("sidebarSessionTabIDs: tabs")
     expect(tabs).toContain("sidebarActiveSessionTabID: selected")
+    expect(tabs).toContain("sidebarPinnedSessionTabIDs: pins")
     expect(tabs).toContain("timer = setTimeout(persist, 300)")
   })
 
-  it("releases frozen widths after closing and after dragging", () => {
-    expect(strip.match(/requestAnimationFrame\(release\)/g)).toHaveLength(2)
+  it("releases frozen widths after closing, close to right, and dragging", () => {
+    expect(strip.match(/requestAnimationFrame\(release\)/g)).toHaveLength(3)
+    expect(strip).toMatch(/const closeRight = \(id: string\) => \{[\s\S]*requestAnimationFrame\(release\)/)
     expect(strip).toMatch(/const dragEnd = \(\) => \{[\s\S]*release\(\)/)
   })
 })
