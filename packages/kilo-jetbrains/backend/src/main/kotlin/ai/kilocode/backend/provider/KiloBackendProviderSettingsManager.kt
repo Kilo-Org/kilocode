@@ -150,19 +150,33 @@ internal class KiloBackendProviderSettingsManager(
     suspend fun saveCustom(input: CustomProviderSaveDto): ProviderActionResultDto {
         val err = validate(input)
         if (err != null) return ProviderActionResultDto(state(input.directory), error = err)
+        // Read the currently persisted entry once so the patch below can (1) target the scope
+        // ("workspace" vs "global") the provider was originally saved in instead of always
+        // writing global, and (2) diff the submitted models against what's on disk so deselected
+        // IDs can be explicitly nulled — see buildCustomProviderPatch.
+        val existing = state(input.directory).config[input.id]
+        val scope = existing?.scope ?: "global"
         // The config schema only allows nulling a whole provider entry (to delete it), not an
-        // individual field inside one, so a previously-set env var can only be cleared by deleting
+        // individual field inside one (except for "models", which is deletion-aware — see
+        // buildCustomProviderPatch), so a previously-set env var can only be cleared by deleting
         // the entry before the patch below recreates it. Only do this when there is an existing env
         // var to clear: deleting drops any fields the recreate patch doesn't set (e.g. a
         // hand-authored whitelist/blacklist), and a failure between the two patches would otherwise
         // leave the entry missing until the next successful save.
-        val cfg = if (input.envVar.isNullOrBlank()) state(input.directory).config[input.id] else null
-        val stale = cfg?.takeIf { it.env.isNotEmpty() }
-        if (stale != null) patch(KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
+        val stale = existing?.takeIf { input.envVar.isNullOrBlank() && it.env.isNotEmpty() }
+        if (stale != null) patch(input.directory, scope, KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
         // The dialog never edits headers, so the delete above would otherwise drop hand-authored
         // ones: carry them into the recreate patch when the save itself doesn't set any.
         val save = if (stale != null && input.headers.isEmpty()) input.copy(headers = stale.headers) else input
-        patch(KiloCliDataParser.buildCustomProviderPatch(save))
+        // A delete-then-recreate patch already drops every existing model, so no removal
+        // sentinels are needed on top of it. Otherwise, diff the submitted models against the
+        // persisted ones so deselected IDs are explicitly nulled instead of silently surviving
+        // the deep-merge PATCH (and reappearing after a restart).
+        val removedModelIds: Set<String> = if (stale != null) emptySet() else {
+            val kept = input.models.mapTo(mutableSetOf()) { it.id }
+            (existing?.models?.keys ?: emptySet()) - kept
+        }
+        patch(input.directory, scope, KiloCliDataParser.buildCustomProviderPatch(save, removedModelIds))
         if (input.envVar.isNullOrBlank()) {
             val key = input.apiKey?.takeIf { it.isNotBlank() }
             if (key != null) put("/auth/${enc(input.id)}", KiloCliDataParser.buildProviderAuthJson(key, emptyMap()))
@@ -222,7 +236,6 @@ internal class KiloBackendProviderSettingsManager(
     private suspend fun get(path: String) = request(Request.Builder().url(url(path)).get().build())
     private suspend fun post(path: String, body: String, timeoutSeconds: Long = CALL_TIMEOUT_SECONDS) = request(Request.Builder().url(url(path)).post(body.toRequestBody(JSON)).build(), timeoutSeconds)
     private suspend fun put(path: String, body: String) = request(Request.Builder().url(url(path)).put(body.toRequestBody(JSON)).build())
-    private suspend fun patch(body: String) = request(Request.Builder().url(url("/global/config")).patch(body.toRequestBody(JSON)).build())
     private suspend fun patch(directory: String, scope: String, body: String) {
         val path = if (scope == "workspace") "/config?directory=${enc(directory)}" else "/global/config"
         request(Request.Builder().url(url(path)).patch(body.toRequestBody(JSON)).build())

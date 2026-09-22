@@ -7,6 +7,8 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.CustomModelDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -2218,6 +2220,82 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.buildProviderOAuthJson("0", mapOf("deploymentType" to "github.com"))
 
             assertEquals("""{"method":0,"inputs":{"deploymentType":"github.com"}}""", result)
+        }
+
+        // ---- buildCustomProviderPatch ----
+
+        @Test
+        fun `buildCustomProviderPatch - no removed models by default`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input)
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - deselected model becomes a null sentinel`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-3.5-turbo"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-3.5-turbo":null,"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - removed model never appears alongside a matching kept entry`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            // A removed ID that the caller mistakenly still lists among the kept models must not
+            // null out the entry the user is keeping: the kept model always wins.
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-4o"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - all models removed still writes a models object with only null sentinels`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = emptyList(),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-4o"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":null}}}}""",
+                result,
+            )
         }
 
         @Test
