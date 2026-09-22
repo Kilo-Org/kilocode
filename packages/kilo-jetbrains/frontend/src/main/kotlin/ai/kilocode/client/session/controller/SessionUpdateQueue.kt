@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 
 internal const val EVENT_FLUSH_MS = 150L
 internal const val EVENT_CATCHUP_SIZE = 8
+internal const val EVENT_CATCHUP_SCAN_SIZE = 128
 
 internal class SessionUpdateQueue(
     parent: Disposable,
@@ -36,7 +37,7 @@ internal class SessionUpdateQueue(
     }
 
     private val condenser = SessionQueueCondenser()
-    private val pending = mutableListOf<ChatEventDto>()
+    private val pending = ArrayDeque<ChatEventDto>()
     private val catchup = ArrayDeque<ChatEventDto>()
     private val lock = Any()
     private val disposed = AtomicBoolean(false)
@@ -120,30 +121,16 @@ internal class SessionUpdateQueue(
         }
         val now = System.currentTimeMillis()
         if (!forced && now - last < flushMs) return
-        val batch = synchronized(lock) {
-            pending.takeIf { it.isNotEmpty() }?.toList()?.also { pending.clear() }
-        }
-        if (batch == null) {
-            if (forced && source != "visible" && catchup.isNotEmpty()) {
+        val batch = take()
+        if (batch.isEmpty()) {
+            if (forced && catchup.isNotEmpty()) {
                 val out = catchup.toList()
                 catchup.clear()
                 fire(out)
             }
             return
         }
-        val before = batch.size
-        val out = if (condense) condenser.condense(batch) else batch
-        last = now
-        LOG.debug {
-            val types = batch.groupBy { it::class.simpleName }
-                .entries.joinToString(",") { (k, v) -> "$k:${v.size}" }
-            "${ChatLogSummary.sid(sid())} flush source=$source forced=$forced pending=$before condensed=${out.size} saved=${before - out.size} types=$types"
-        }
-        if (source == "visible") {
-            catchup.addAll(out)
-            drainCatchup()
-            return
-        }
+        val out = prepare(batch, source, forced, now)
         if (forced && catchup.isNotEmpty()) {
             catchup.addAll(out)
             val all = catchup.toList()
@@ -156,8 +143,8 @@ internal class SessionUpdateQueue(
 
     /**
      * A newly visible editor must finish its hierarchy change before transcript updates mutate its
-     * Swing tree. Apply only a bounded batch per EDT turn so a long-running background session cannot
-     * monopolize the event queue when its tab is selected.
+     * Swing tree. Condense a bounded raw window and apply a bounded result per EDT turn so a
+     * long-running background session cannot monopolize the event queue when its tab is selected.
      */
     private fun scheduleCatchup() {
         if (disposed.get() || scheduled) return
@@ -166,8 +153,9 @@ internal class SessionUpdateQueue(
             scheduled = false
             if (disposed.get() || !visible.get() || hold) return@edtLater
             if (catchup.isEmpty()) {
-                flushNow(true, "visible")
-                return@edtLater
+                val batch = take(EVENT_CATCHUP_SCAN_SIZE)
+                if (batch.isEmpty()) return@edtLater
+                catchup.addAll(prepare(batch, "visible", true, System.currentTimeMillis()))
             }
             drainCatchup()
         }
@@ -183,6 +171,24 @@ internal class SessionUpdateQueue(
         LOG.debug { "${ChatLogSummary.sid(sid())} catchup batch=${batch.size} remaining=${catchup.size}" }
         fire(batch)
         if (catchup.isNotEmpty() || synchronized(lock) { pending.isNotEmpty() }) scheduleCatchup()
+    }
+
+    private fun take(limit: Int = Int.MAX_VALUE): List<ChatEventDto> = synchronized(lock) {
+        val count = minOf(limit, pending.size)
+        buildList(count) {
+            repeat(count) { add(pending.removeFirst()) }
+        }
+    }
+
+    private fun prepare(batch: List<ChatEventDto>, source: String, forced: Boolean, now: Long): List<ChatEventDto> {
+        val out = if (condense) condenser.condense(batch) else batch
+        last = now
+        LOG.debug {
+            val types = batch.groupBy { it::class.simpleName }
+                .entries.joinToString(",") { (k, v) -> "$k:${v.size}" }
+            "${ChatLogSummary.sid(sid())} flush source=$source forced=$forced pending=${batch.size} condensed=${out.size} saved=${batch.size - out.size} types=$types"
+        }
+        return out
     }
 
     private fun onVisible(show: Boolean) {

@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.ToolRefDto
+import com.intellij.openapi.application.ApplicationManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 class SessionUpdateQueueTest : SessionControllerTestBase() {
@@ -85,10 +86,56 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
         }
         settle()
 
+        var interleaved = -1
+        show(m)
+        ApplicationManager.getApplication().invokeLater { interleaved = updates }
+        settle()
+
+        assertEquals(1, interleaved)
+        assertEquals(26, updates)
+        assertEquals(total, m.model.messages().size)
+    }
+
+    fun `test hiding during catchup pauses until shown again`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val total = EVENT_CATCHUP_SIZE * 2 + 1
+        flush()
+
+        hide(m)
+        repeat(total) { idx ->
+            emit(ChatEventDto.MessageUpdated("ses_test", msg("msg$idx", "ses_test", "assistant")), flush = false)
+        }
+        settle()
+
+        show(m)
+        ApplicationManager.getApplication().invokeLater { hide(m) }
+        settle()
+
+        assertEquals(EVENT_CATCHUP_SIZE, m.model.messages().size)
+
         show(m)
         settle()
 
-        assertEquals(26, updates)
+        assertEquals(total, m.model.messages().size)
+    }
+
+    fun `test forced flush drains hidden backlog synchronously`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val total = EVENT_CATCHUP_SIZE + 1
+        flush()
+
+        hide(m)
+        repeat(total) { idx ->
+            emit(ChatEventDto.MessageUpdated("ses_test", msg("msg$idx", "ses_test", "assistant")), flush = false)
+        }
+        settle()
+
+        edt { m.flushEvents() }
+
         assertEquals(total, m.model.messages().size)
     }
 
