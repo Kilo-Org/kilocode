@@ -308,10 +308,23 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     fun `test reveal routes the path to the backend rpc`() {
         val controller = controller()
 
-        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested")
+        var failed = false
+        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") { failed = true }
         flush()
 
         assertEquals(listOf("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested"), rpc.revealPaths.toList())
+        assertFalse(failed)
+    }
+
+    fun `test reveal reports failure when the backend can't reveal the path`() {
+        val controller = controller()
+        rpc.revealPathResult = { false }
+
+        var failed = false
+        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") { failed = true }
+        flush()
+
+        assertTrue(failed)
     }
 
     fun `test force remove passes the force flag and drops the row on success`() {

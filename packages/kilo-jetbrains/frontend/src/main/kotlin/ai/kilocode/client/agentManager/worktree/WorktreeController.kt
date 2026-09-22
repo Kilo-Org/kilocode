@@ -274,9 +274,16 @@ class WorktreeController(
         }
     }
 
-    /** Fire-and-forget reveal for a path this controller manages (e.g. a worktree blocking a delete). */
-    fun reveal(path: String) {
-        cs.launch { service.revealPath(path) }
+    /**
+     * Fire-and-forget reveal for a path this controller manages (e.g. a worktree blocking a delete).
+     * [onFailure] runs on the EDT when the host can't reveal the path (unsupported platform, or the
+     * directory is already gone) so callers can surface that instead of silently no-op'ing.
+     */
+    fun reveal(path: String, onFailure: () -> Unit = {}) {
+        cs.launch {
+            val ok = service.revealPath(path)
+            if (!ok) edt { onFailure() }
+        }
     }
 
     /**
