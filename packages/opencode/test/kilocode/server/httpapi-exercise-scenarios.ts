@@ -712,6 +712,62 @@ export const kiloScenarios: Scenario[] = [
       check(body.models.length === 0, "a new session should have no model usage")
     }),
   http.protected
+    .get("/kilocode/worktree/usage/summaries", "kilocode.worktreeUsage.summaries")
+    .at((ctx) => ({
+      path: "/kilocode/worktree/usage/summaries",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.projectID === "string", "summaries should include a project id")
+      check(body.basis === "retained", "summaries should report the retained accounting basis")
+      check(body.currency === "USD", "summaries should report USD as the currency")
+      array(body.worktrees)
+      check(body.worktrees.length > 0, "summaries should include at least the primary worktree")
+      for (const item of body.worktrees) {
+        object(item)
+        check(typeof item.directory === "string", "worktree summary should include a directory")
+        check(item.kind === "primary" || item.kind === "linked", "worktree summary should have a kind")
+        object(item.totals)
+        object(item.time)
+        object(item.communication)
+        check(item.communication.directCost === 0, "communication direct cost should always be zero")
+      }
+    }),
+  http.protected
+    .get("/kilocode/worktree/usage", "kilocode.worktreeUsage.get")
+    .at((ctx) => ({
+      path: "/kilocode/worktree/usage",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(body.basis === "retained", "detail should report the retained accounting basis")
+      object(body.worktree)
+      array(body.models)
+      array(body.agents)
+      array(body.sessions)
+    }),
+  http.protected
+    .get("/kilocode/worktree/usage/timeline", "kilocode.worktreeUsage.timeline")
+    .at((ctx) => ({
+      path: "/kilocode/worktree/usage/timeline",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.worktree)
+      array(body.events)
+      check(typeof body.hasMore === "boolean", "timeline should include hasMore")
+    }),
+  http.protected
+    .get("/kilocode/worktree/usage/timeline", "kilocode.worktreeUsage.timeline")
+    .at((ctx) => ({
+      path: "/kilocode/worktree/usage/timeline?limit=1&before=not-a-real-cursor",
+      headers: ctx.headers(),
+    }))
+    .status(400),
+  http.protected
     .get("/kilocode/background-jobs", "kilocode.backgroundJobs")
     .at((ctx) => ({
       path: "/kilocode/background-jobs?sessionID=ses_httpapi_missing",

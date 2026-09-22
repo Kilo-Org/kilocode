@@ -60,6 +60,56 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     ])
   })
 
+  test("exposes retained worktree usage endpoints with a content-free timeline contract", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const summaries = KilocodePaths.worktreeUsageSummaries
+    const detail = KilocodePaths.worktreeUsage
+    const timeline = KilocodePaths.worktreeUsageTimeline
+    expect(spec.paths[summaries]?.get?.operationId).toBe("kilocode.worktreeUsage.summaries")
+    expect(spec.paths[detail]?.get?.operationId).toBe("kilocode.worktreeUsage.get")
+    expect(spec.paths[timeline]?.get?.operationId).toBe("kilocode.worktreeUsage.timeline")
+
+    const query = spec.paths[timeline]?.get?.parameters as Parameter[] | undefined
+    expect(query?.find((field) => field.name === "limit")?.schema).toMatchObject({
+      type: "integer",
+      minimum: 1,
+      maximum: 200,
+    })
+
+    const schemas = (spec.components?.schemas ?? {}) as Record<string, Schema>
+    expect(schemas.KilocodeWorktreeUsageSummaries).toBeDefined()
+    expect(schemas.KilocodeWorktreeUsageDetail).toBeDefined()
+    expect(schemas.KilocodeWorktreeUsageTimeline).toBeDefined()
+    expect(schemas.KilocodeWorktreeUsageCommunicationEvent).toBeDefined()
+
+    // Communication reporting is activity-only: never a prompt/message body,
+    // and never an estimated/attributed communication cost beyond the fixed
+    // zero direct cost.
+    const communicationProps = Object.keys(schemas.KilocodeWorktreeUsageCommunicationEvent?.properties ?? {})
+    expect(communicationProps).not.toContain("body")
+    expect(communicationProps).not.toContain("prompt")
+    expect(communicationProps).not.toContain("output")
+    const communicationFields = Object.keys(schemas.KilocodeWorktreeUsageSummary?.properties?.communication?.properties ?? {})
+    expect(communicationFields.sort()).toEqual(
+      ["agentManagerPrompts", "agentManagerReplies", "boardBytes", "boardPosts", "boardReads", "directCost"].sort(),
+    )
+
+    // Every timeline event kind must carry root/session identity and never raw
+    // tool input/output or board bodies.
+    for (const kind of [
+      "KilocodeWorktreeUsageGenerationEvent",
+      "KilocodeWorktreeUsageToolEvent",
+      "KilocodeWorktreeUsageSubagentEvent",
+      "KilocodeWorktreeUsageCommunicationEvent",
+    ]) {
+      const props = Object.keys(schemas[kind]?.properties ?? {})
+      expect(props, kind).not.toContain("input")
+      expect(props, kind).not.toContain("output")
+      expect(props, kind).not.toContain("body")
+      expect(props, kind).not.toContain("title")
+    }
+  })
+
   test("uses Kilo branding", () => {
     const spec = OpenApi.fromApi(PublicApi)
     expect(spec.info.title).toBe("kilo")
@@ -185,6 +235,9 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: KilocodePaths.providerUsage },
       { method: "post", path: KilocodePaths.providerUsageRefresh },
       { method: "get", path: KilocodePaths.sessionModelUsage },
+      { method: "get", path: KilocodePaths.worktreeUsageSummaries },
+      { method: "get", path: KilocodePaths.worktreeUsage },
+      { method: "get", path: KilocodePaths.worktreeUsageTimeline },
       { method: "post", path: BranchNamePaths.generate },
       { method: "get", path: MemoryPaths.status },
       { method: "get", path: MemoryPaths.show },

@@ -25,6 +25,7 @@ import { AgentManager } from "@/kilocode/agent-manager/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
+import { WorktreeUsage } from "@/kilocode/worktree/usage"
 import * as MarketplaceApi from "@/kilocode/marketplace/api"
 import * as MarketplaceDetection from "@/kilocode/marketplace/detection"
 import * as MarketplaceInstaller from "@/kilocode/marketplace/installer"
@@ -75,6 +76,7 @@ import {
   SessionBoardQuery,
   ResetSessionBoardPayload,
   RetentionRunPayload,
+  WorktreeUsageTimelineQuery,
 } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -489,6 +491,26 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return usage
     })
 
+    const worktreeUsageSummaries = Effect.fn("KilocodeHttpApi.worktreeUsageSummaries")(function* () {
+      return yield* WorktreeUsage.summaries()
+    })
+
+    const worktreeUsage = Effect.fn("KilocodeHttpApi.worktreeUsage")(function* () {
+      return yield* WorktreeUsage.get()
+    })
+
+    const worktreeUsageTimeline = Effect.fn("KilocodeHttpApi.worktreeUsageTimeline")(function* (ctx: {
+      query: typeof WorktreeUsageTimelineQuery.Type
+    }) {
+      return yield* WorktreeUsage.timeline({ before: ctx.query.before, limit: ctx.query.limit ?? 100 }).pipe(
+        Effect.catch((err) => {
+          if (WorktreeUsage.InvalidCursorError.isInstance(err))
+            return Effect.fail(new InvalidRequestError({ message: err.data.message, kind: "cursor" }))
+          return Effect.die(err)
+        }),
+      )
+    })
+
     const backgroundJobs = Effect.fn("KilocodeHttpApi.backgroundJobs")(function* (ctx: {
       query: typeof BackgroundJobsQuery.Type
     }) {
@@ -584,6 +606,9 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("agentManagerReply", agentManagerReply)
       .handle("agentManagerReject", agentManagerReject)
       .handle("sessionModelUsage", sessionModelUsage)
+      .handle("worktreeUsageSummaries", worktreeUsageSummaries)
+      .handle("worktreeUsage", worktreeUsage)
+      .handle("worktreeUsageTimeline", worktreeUsageTimeline)
       .handle("backgroundJobs", backgroundJobs)
       .handle("backgroundJobCancel", backgroundJobCancel)
       .handle("backgroundJobPromote", backgroundJobPromote)

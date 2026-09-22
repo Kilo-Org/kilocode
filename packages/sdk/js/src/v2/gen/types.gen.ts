@@ -4598,6 +4598,239 @@ export type AgentManagerFailure = {
   message: string
 }
 
+export type KilocodeWorktreeUsageSummary = {
+  directory: string
+  kind: "primary" | "linked"
+  rootSessions: number
+  sessions: number
+  subagents: number
+  totals: {
+    steps: number
+    cost: number
+    tokens: {
+      input: number
+      output: number
+      reasoning: number
+      cache: {
+        read: number
+        write: number
+      }
+    }
+  }
+  time: {
+    firstActivity?: number
+    lastActivity?: number
+    wallMs?: number
+    modelMs: number
+    toolMs: number
+    activeMs: number
+    coverage: {
+      timedSteps: number
+      totalSteps: number
+      closedTools: number
+      totalTools: number
+    }
+  }
+  communication: {
+    boardPosts: number
+    boardReads: number
+    agentManagerPrompts: number
+    agentManagerReplies: number
+    boardBytes: number
+    directCost: 0
+  }
+}
+
+export type KilocodeWorktreeUsageSummaries = {
+  projectID: string
+  basis: "retained"
+  currency: "USD"
+  asOf: number
+  worktrees: Array<KilocodeWorktreeUsageSummary>
+}
+
+export type KilocodeWorktreeUsageModelGroup = {
+  providerID: string
+  modelID: string
+  variant?: string
+  steps: number
+  cost: number
+  tokens: {
+    input: number
+    output: number
+    reasoning: number
+    cache: {
+      read: number
+      write: number
+    }
+  }
+}
+
+export type KilocodeWorktreeUsageAgentGroup = {
+  agent: string
+  steps: number
+  cost: number
+  tokens: {
+    input: number
+    output: number
+    reasoning: number
+    cache: {
+      read: number
+      write: number
+    }
+  }
+}
+
+export type KilocodeWorktreeUsageSessionRow = {
+  id: string
+  parentID?: string
+  rootID: string
+  title: string
+  agent?: string
+  archivedAt?: number
+  createdAt: number
+  direct: {
+    steps: number
+    cost: number
+    tokens: {
+      input: number
+      output: number
+      reasoning: number
+      cache: {
+        read: number
+        write: number
+      }
+    }
+  }
+  subtree: {
+    steps: number
+    cost: number
+    tokens: {
+      input: number
+      output: number
+      reasoning: number
+      cache: {
+        read: number
+        write: number
+      }
+    }
+  }
+  models: Array<KilocodeWorktreeUsageModelGroup>
+  time: {
+    firstActivity?: number
+    lastActivity?: number
+    wallMs?: number
+    modelMs: number
+    toolMs: number
+    activeMs: number
+    coverage: {
+      timedSteps: number
+      totalSteps: number
+      closedTools: number
+      totalTools: number
+    }
+  }
+}
+
+export type KilocodeWorktreeUsageDetail = {
+  projectID: string
+  basis: "retained"
+  currency: "USD"
+  asOf: number
+  worktree: KilocodeWorktreeUsageSummary
+  models: Array<KilocodeWorktreeUsageModelGroup>
+  agents: Array<KilocodeWorktreeUsageAgentGroup>
+  sessions: Array<KilocodeWorktreeUsageSessionRow>
+}
+
+export type KilocodeWorktreeUsageGenerationEvent = {
+  kind: "generation"
+  id: string
+  sessionID: string
+  rootID: string
+  agent?: string
+  providerID?: string
+  modelID?: string
+  variant?: string
+  cost: number
+  tokens: {
+    input: number
+    output: number
+    reasoning: number
+    cache: {
+      read: number
+      write: number
+    }
+  }
+  time: {
+    start: number
+    end?: number
+  }
+}
+
+export type KilocodeWorktreeUsageToolEvent = {
+  kind: "tool"
+  id: string
+  sessionID: string
+  rootID: string
+  tool: string
+  status: "pending" | "running" | "completed" | "error"
+  time?: {
+    start: number
+    end?: number
+  }
+}
+
+export type KilocodeWorktreeUsageSubagentEvent = {
+  kind: "subagent"
+  id: string
+  parentSessionID: string
+  childSessionID: string
+  rootID: string
+  agentType?: string
+  background: boolean
+  status: "pending" | "running" | "completed" | "error"
+  time?: {
+    start: number
+    end?: number
+  }
+}
+
+export type KilocodeWorktreeUsageCommunicationEvent = {
+  kind: "communication"
+  id: string
+  channel: "board" | "agent_manager"
+  action: "post" | "read" | "prompt" | "reply"
+  sessionID: string
+  rootID: string
+  target?: string
+  replyTo?: string
+  bytes?: number
+  messageType?: string
+  time: {
+    start: number
+    end?: number
+  }
+}
+
+export type KilocodeWorktreeUsageTimelineEvent =
+  | KilocodeWorktreeUsageGenerationEvent
+  | KilocodeWorktreeUsageToolEvent
+  | KilocodeWorktreeUsageSubagentEvent
+  | KilocodeWorktreeUsageCommunicationEvent
+
+export type KilocodeWorktreeUsageTimeline = {
+  projectID: string
+  basis: "retained"
+  worktree: {
+    directory: string
+    kind: "primary" | "linked"
+  }
+  events: Array<KilocodeWorktreeUsageTimelineEvent>
+  cursor?: string
+  hasMore: boolean
+}
+
 export type AnacondaDesktopStatus =
   | {
       type: "unsupported-platform"
@@ -17770,6 +18003,97 @@ export type KilocodeRetentionRunResponses = {
 }
 
 export type KilocodeRetentionRunResponse = KilocodeRetentionRunResponses[keyof KilocodeRetentionRunResponses]
+
+export type KilocodeWorktreeUsageSummariesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/worktree/usage/summaries"
+}
+
+export type KilocodeWorktreeUsageSummariesErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeWorktreeUsageSummariesError =
+  KilocodeWorktreeUsageSummariesErrors[keyof KilocodeWorktreeUsageSummariesErrors]
+
+export type KilocodeWorktreeUsageSummariesResponses = {
+  /**
+   * Retained usage summaries for every worktree in the project
+   */
+  200: KilocodeWorktreeUsageSummaries
+}
+
+export type KilocodeWorktreeUsageSummariesResponse =
+  KilocodeWorktreeUsageSummariesResponses[keyof KilocodeWorktreeUsageSummariesResponses]
+
+export type KilocodeWorktreeUsageGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/worktree/usage"
+}
+
+export type KilocodeWorktreeUsageGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeWorktreeUsageGetError = KilocodeWorktreeUsageGetErrors[keyof KilocodeWorktreeUsageGetErrors]
+
+export type KilocodeWorktreeUsageGetResponses = {
+  /**
+   * Retained usage detail for the routed worktree
+   */
+  200: KilocodeWorktreeUsageDetail
+}
+
+export type KilocodeWorktreeUsageGetResponse =
+  KilocodeWorktreeUsageGetResponses[keyof KilocodeWorktreeUsageGetResponses]
+
+export type KilocodeWorktreeUsageTimelineData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    before?: string
+    limit?: number
+  }
+  url: "/kilocode/worktree/usage/timeline"
+}
+
+export type KilocodeWorktreeUsageTimelineErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+}
+
+export type KilocodeWorktreeUsageTimelineError =
+  KilocodeWorktreeUsageTimelineErrors[keyof KilocodeWorktreeUsageTimelineErrors]
+
+export type KilocodeWorktreeUsageTimelineResponses = {
+  /**
+   * Paginated worktree usage timeline
+   */
+  200: KilocodeWorktreeUsageTimeline
+}
+
+export type KilocodeWorktreeUsageTimelineResponse =
+  KilocodeWorktreeUsageTimelineResponses[keyof KilocodeWorktreeUsageTimelineResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

@@ -233,6 +233,12 @@ import type {
   KilocodeTeardownWorktreeResponses,
   KilocodeWakeupsErrors,
   KilocodeWakeupsResponses,
+  KilocodeWorktreeUsageGetErrors,
+  KilocodeWorktreeUsageGetResponses,
+  KilocodeWorktreeUsageSummariesErrors,
+  KilocodeWorktreeUsageSummariesResponses,
+  KilocodeWorktreeUsageTimelineErrors,
+  KilocodeWorktreeUsageTimelineResponses,
   KiloEditErrors,
   KiloEditResponses,
   KiloFimErrors,
@@ -7926,6 +7932,114 @@ export class Retention extends HeyApiClient {
   }
 }
 
+export class WorktreeUsage extends HeyApiClient {
+  /**
+   * List worktree usage summaries
+   *
+   * Get retained cost, token, time, and communication activity summaries for the primary checkout and every linked worktree in the routed project.
+   */
+  public summaries<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeWorktreeUsageSummariesResponses,
+      KilocodeWorktreeUsageSummariesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/worktree/usage/summaries",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get worktree usage detail
+   *
+   * Get retained cost/model/agent/session breakdowns for the routed worktree, including direct and subtree cost per session.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeWorktreeUsageGetResponses,
+      KilocodeWorktreeUsageGetErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/worktree/usage",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get worktree usage timeline
+   *
+   * Get a paginated, content-free timeline of generation, tool, subagent, and communication activity for the routed worktree, newest first.
+   */
+  public timeline<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      before?: string
+      limit?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "before" },
+            { in: "query", key: "limit" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeWorktreeUsageTimelineResponses,
+      KilocodeWorktreeUsageTimelineErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/worktree/usage/timeline",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Migrate extends HeyApiClient {
   /**
    * Migrate external sessions into Kilo
@@ -8956,6 +9070,11 @@ export class Kilocode extends HeyApiClient {
   private _retention?: Retention
   get retention(): Retention {
     return (this._retention ??= new Retention({ client: this.client }))
+  }
+
+  private _worktreeUsage?: WorktreeUsage
+  get worktreeUsage(): WorktreeUsage {
+    return (this._worktreeUsage ??= new WorktreeUsage({ client: this.client }))
   }
 
   private _migrate?: Migrate

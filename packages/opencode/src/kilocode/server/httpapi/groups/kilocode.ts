@@ -23,6 +23,7 @@ import {
   Result as NotebookResult,
 } from "@/kilocode/notebook/protocol"
 import { ModelUsage } from "@/kilocode/session/model-usage"
+import { WorktreeUsage } from "@/kilocode/worktree/usage"
 import { MessageID, SessionID } from "@/session/schema"
 import {
   ApiNotFoundError,
@@ -100,6 +101,14 @@ export const SessionBoardQuery = Schema.Struct({
   before: Schema.optional(Schema.String),
   limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 }))),
 })
+
+export const WorktreeUsageTimelineQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  before: Schema.optional(Schema.String),
+  limit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1), Schema.isLessThanOrEqualTo(200)),
+  ),
+})
 export const ResetSessionBoardPayload = Schema.Struct({
   revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
 })
@@ -171,6 +180,9 @@ export const KilocodePaths = {
   retentionStatus: `${root}/retention`,
   retentionRun: `${root}/retention/run`,
   wakeups: `${root}/wakeups`,
+  worktreeUsageSummaries: `${root}/worktree/usage/summaries`,
+  worktreeUsage: `${root}/worktree/usage`,
+  worktreeUsageTimeline: `${root}/worktree/usage/timeline`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -531,6 +543,40 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Run session retention",
             description:
               "Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.",
+          }),
+        ),
+        HttpApiEndpoint.get("worktreeUsageSummaries", KilocodePaths.worktreeUsageSummaries, {
+          query: WorkspaceRoutingQuery,
+          success: described(WorktreeUsage.Summaries, "Retained usage summaries for every worktree in the project"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.worktreeUsage.summaries",
+            summary: "List worktree usage summaries",
+            description:
+              "Get retained cost, token, time, and communication activity summaries for the primary checkout and every linked worktree in the routed project.",
+          }),
+        ),
+        HttpApiEndpoint.get("worktreeUsage", KilocodePaths.worktreeUsage, {
+          query: WorkspaceRoutingQuery,
+          success: described(WorktreeUsage.Detail, "Retained usage detail for the routed worktree"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.worktreeUsage.get",
+            summary: "Get worktree usage detail",
+            description:
+              "Get retained cost/model/agent/session breakdowns for the routed worktree, including direct and subtree cost per session.",
+          }),
+        ),
+        HttpApiEndpoint.get("worktreeUsageTimeline", KilocodePaths.worktreeUsageTimeline, {
+          query: WorktreeUsageTimelineQuery,
+          success: described(WorktreeUsage.Timeline, "Paginated worktree usage timeline"),
+          error: InvalidRequestError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.worktreeUsage.timeline",
+            summary: "Get worktree usage timeline",
+            description:
+              "Get a paginated, content-free timeline of generation, tool, subagent, and communication activity for the routed worktree, newest first.",
           }),
         ),
       )
