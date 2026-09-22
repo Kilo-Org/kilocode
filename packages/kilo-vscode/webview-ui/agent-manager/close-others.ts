@@ -12,6 +12,7 @@ export interface CloseOthersDeps {
   selectReviewTab: () => void
   selectSessionTab: (id: string, pending: boolean) => void
   sessionClose: (id: string) => void
+  isPinned: (id: string) => boolean
 }
 
 /**
@@ -40,6 +41,8 @@ export function closeOthers(target: string, deps: CloseOthersDeps) {
       deps.closeReview()
       continue
     }
+    // Pinned tabs survive Close Others, the same way they do in VS Code.
+    if (deps.isPinned(id)) continue
     deps.sessionClose(id)
   }
 }

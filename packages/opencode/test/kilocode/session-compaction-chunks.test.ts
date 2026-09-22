@@ -459,6 +459,8 @@ describe("KiloCompactionChunks", () => {
           expect(result).toBe("continue")
           expect(calls.length).toBeGreaterThanOrEqual(1)
           expect(calls.at(-1)).toContain("Create a new anchored summary")
+          expect(calls.at(-1)).toContain("<partial-summary")
+          expect(calls.at(-1)?.match(/Here is the conversation so far:/g)).toHaveLength(1)
           expect(summaries).toHaveLength(1)
           expect(parts.map((part) => part.text)).toEqual(["final summary"])
         } finally {
