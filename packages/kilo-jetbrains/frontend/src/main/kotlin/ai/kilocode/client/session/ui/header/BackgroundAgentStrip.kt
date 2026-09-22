@@ -9,6 +9,7 @@ import ai.kilocode.client.session.ui.SessionSurface
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
@@ -27,6 +28,7 @@ import java.awt.Container
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.LayoutManager2
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -67,6 +69,7 @@ class BackgroundAgentStrip(
     private var activeCount = 0
     private val rows = LinkedHashMap<String, Row>()
     private val body = Body()
+    private val preview = Preview()
 
     private val stopAll = HoverIcon().apply {
         icon = AllIcons.Actions.Suspend
@@ -91,6 +94,9 @@ class BackgroundAgentStrip(
     }
 
     init {
+        summary.add(preview.panel, BorderLayout.CENTER)
+        watch(preview.panel)
+        preview.applyStyle(style)
         summary.toolTipText = KiloBundle.message("session.header.agents.toggle")
         summary.accessibleContext.accessibleName = KiloBundle.message("session.header.agents.toggle")
         actions.next(stopAll).next(clearFinished).next(openAll)
@@ -114,6 +120,7 @@ class BackgroundAgentStrip(
         stopAll.isVisible = !readonly && running > 0
         clearFinished.isVisible = !readonly && agents.any { it.status != BackgroundAgentStatus.RUNNING }
         openAll.isVisible = agents.isNotEmpty()
+        preview.sync(agents)
         body.sync(agents)
         syncVisible(agents.isNotEmpty())
         // Auto-collapse once, on the transition into "nothing active" — not on every subsequent
@@ -128,6 +135,7 @@ class BackgroundAgentStrip(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         super.applyStyle(style)
+        preview.applyStyle(style)
         body.applyStyle(style)
     }
 
@@ -150,6 +158,253 @@ class BackgroundAgentStrip(
         agents.any { it.status == BackgroundAgentStatus.ERROR } -> BackgroundAgentStatus.ERROR
         agents.any { it.status == BackgroundAgentStatus.CANCELLED } -> BackgroundAgentStatus.CANCELLED
         else -> BackgroundAgentStatus.COMPLETED
+    }
+
+    /** Retained compact controls shown in the strip header while its full row list is collapsed. */
+    private inner class Preview {
+        private val chips = LinkedHashMap<String, Chip>()
+        private var order = emptyList<Chip>()
+        private val text = JBLabel()
+        private val more = HoverArea(text).apply {
+            action = {
+                if (expand()) refresh()
+            }
+            isVisible = false
+        }
+        // Detached but styled identically to `more`, so each localized count can be measured during
+        // layout without changing the attached control's text and recursively invalidating its parent.
+        private val sample = JBLabel()
+        private val meter = HoverArea(sample)
+        val panel = JPanel(Layout()).apply {
+            isOpaque = false
+            add(fallback)
+            add(more)
+        }
+
+        @RequiresEdt
+        fun sync(agents: List<BackgroundAgent>) {
+            val ids = agents.map { it.job }.toSet()
+            for (stale in chips.keys.filter { it !in ids }) {
+                val chip = chips.remove(stale) ?: continue
+                panel.remove(chip.area)
+            }
+            for (agent in agents) {
+                val chip = chips[agent.job]
+                if (chip == null) {
+                    val created = Chip().also {
+                        it.applyStyle(style)
+                        it.update(agent)
+                        it.area.isVisible = false
+                    }
+                    chips[agent.job] = created
+                    panel.add(created.area)
+                    continue
+                }
+                chip.update(agent)
+            }
+            val next = agents.mapNotNull { chips[it.job] }
+            if (next != order) {
+                order = next
+                order.forEachIndexed { index, chip -> panel.setComponentZOrder(chip.area, index) }
+                panel.setComponentZOrder(more, order.size)
+                panel.setComponentZOrder(fallback, order.size + 1)
+            }
+        }
+
+        @RequiresEdt
+        fun applyStyle(style: SessionEditorStyle) {
+            text.font = style.smallFont
+            text.foreground = style.editorForeground
+            sample.font = style.smallFont
+            sample.foreground = style.editorForeground
+            for (chip in chips.values) chip.applyStyle(style)
+            panel.revalidate()
+            panel.repaint()
+        }
+
+        private fun overflow(count: Int) = KiloBundle.message(
+            if (count == 1) "session.header.agents.more.one" else "session.header.agents.more.many",
+            count,
+        )
+
+        private fun overflowName(count: Int) = KiloBundle.message(
+            if (count == 1) "session.header.agents.more.accessible.one" else "session.header.agents.more.accessible.many",
+            count,
+        )
+
+        private fun width(count: Int): Int {
+            sample.text = overflow(count)
+            return meter.preferredSize.width
+        }
+
+        private inner class Layout : LayoutManager2 {
+            private var busy = false
+
+            override fun addLayoutComponent(comp: Component, constraints: Any?) = Unit
+            override fun addLayoutComponent(name: String?, comp: Component) = Unit
+            override fun removeLayoutComponent(comp: Component) = Unit
+
+            override fun layoutContainer(parent: Container) {
+                if (busy) return
+                busy = true
+                try {
+                    val ins = parent.insets
+                    val avail = maxOf(0, parent.width - ins.left - ins.right)
+                    val height = maxOf(0, parent.height - ins.top - ins.bottom)
+                    if (expanded() || order.isEmpty()) {
+                        aggregate(ins.left, ins.top, avail, height)
+                        return
+                    }
+
+                    val widths = order.map { bounded(it.area).width }
+                    val gap = UiStyle.Gap.sm()
+                    val total = widths.sumOf { it.toLong() } + gap.toLong() * (widths.size - 1).coerceAtLeast(0)
+                    if (total <= avail) {
+                        entries(ins.left, ins.top, avail, height, widths, widths.size, 0, gap)
+                        return
+                    }
+
+                    val prefix = LongArray(widths.size + 1)
+                    for (index in widths.indices) {
+                        prefix[index + 1] = prefix[index] + widths[index] + if (index == 0) 0 else gap
+                    }
+                    var count = 0
+                    var expander = 0
+                    for (candidate in widths.size - 1 downTo 1) {
+                        val hidden = widths.size - candidate
+                        val measured = width(hidden)
+                        if (prefix[candidate] + gap + measured > avail) continue
+                        count = candidate
+                        expander = measured
+                        break
+                    }
+                    if (count == 0) {
+                        aggregate(ins.left, ins.top, avail, height)
+                        return
+                    }
+                    entries(ins.left, ins.top, avail, height, widths, count, expander, gap)
+                } finally {
+                    busy = false
+                }
+            }
+
+            private fun aggregate(x: Int, y: Int, width: Int, height: Int) {
+                visible(fallback, true)
+                for (chip in order) visible(chip.area, false)
+                visible(more, false)
+                place(fallback, x, y, width, height)
+            }
+
+            private fun entries(
+                x: Int,
+                y: Int,
+                width: Int,
+                height: Int,
+                widths: List<Int>,
+                count: Int,
+                expander: Int,
+                gap: Int,
+            ) {
+                visible(fallback, false)
+                var offset = x
+                for ((index, chip) in order.withIndex()) {
+                    val show = index < count
+                    visible(chip.area, show)
+                    if (!show) continue
+                    place(chip.area, offset, y, widths[index], height)
+                    offset += widths[index] + gap
+                }
+                val hidden = order.size - count
+                visible(more, hidden > 0)
+                if (hidden == 0) return
+                val value = overflow(hidden)
+                if (text.text != value) text.text = value
+                val name = overflowName(hidden)
+                more.tooltip(name, name)
+                place(more, offset, y, minOf(expander, x + width - offset), height)
+            }
+
+            private fun place(component: Component, x: Int, y: Int, width: Int, height: Int) {
+                val size = bounded(component)
+                val actual = minOf(height, size.height)
+                component.setBounds(x, y + (height - actual) / 2, maxOf(0, width), actual)
+            }
+
+            private fun visible(component: Component, value: Boolean) {
+                if (component.isVisible != value) component.isVisible = value
+                if (!value && (component.x != 0 || component.y != 0 || component.width != 0 || component.height != 0)) {
+                    component.setBounds(0, 0, 0, 0)
+                }
+            }
+
+            override fun minimumLayoutSize(parent: Container) = Dimension(0, natural().height)
+
+            override fun preferredLayoutSize(parent: Container): Dimension {
+                val ins = parent.insets
+                val widths = order.map { bounded(it.area).width }
+                val width = widths.sumOf { it.toLong() } +
+                    UiStyle.Gap.sm().toLong() * (widths.size - 1).coerceAtLeast(0)
+                val total = width + ins.left + ins.right
+                return Dimension(total.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), natural().height)
+            }
+
+            override fun maximumLayoutSize(target: Container) = Dimension(Int.MAX_VALUE, natural().height)
+
+            override fun getLayoutAlignmentX(target: Container) = 0.5f
+            override fun getLayoutAlignmentY(target: Container) = 0.5f
+            override fun invalidateLayout(target: Container) = Unit
+
+            private fun natural(): Dimension {
+                val components = order.map { it.area } + more + fallback
+                val height = components.maxOfOrNull { bounded(it).height } ?: 0
+                val ins = panel.insets
+                return Dimension(0, height + ins.top + ins.bottom)
+            }
+
+            private fun bounded(component: Component): Dimension {
+                val min = component.minimumSize
+                val pref = component.preferredSize
+                val max = component.maximumSize
+                return Dimension(
+                    pref.width.coerceIn(min.width, maxOf(min.width, max.width)),
+                    pref.height.coerceIn(min.height, maxOf(min.height, max.height)),
+                )
+            }
+        }
+    }
+
+    private inner class Chip {
+        private var agent = BackgroundAgent("", "", null, BackgroundAgentStatus.RUNNING)
+        private var id = ""
+        private var slot: Int? = null
+        private var static = AgentAvatar.static(id, slot)
+        private var running = AgentAvatar.running(id, slot)
+        private val avatar = JBLabel()
+        private val label = JBLabel()
+        val area = HoverArea(Stack.horizontal(UiStyle.Gap.sm()).next(avatar).next(label)).apply {
+            action = { onOpen(agent.session, title(agent)) }
+        }
+
+        @RequiresEdt
+        fun update(next: BackgroundAgent) {
+            agent = next
+            val color = avatarColor(next.session)
+            if (next.session != id || color != slot) {
+                id = next.session
+                slot = color
+                static = AgentAvatar.static(id, color)
+                running = AgentAvatar.running(id, color)
+            }
+            avatar.icon = if (next.status == BackgroundAgentStatus.RUNNING) running else static
+            label.text = title(next)
+            area.tooltip(label.text, KiloBundle.message("session.header.agents.open", label.text))
+        }
+
+        @RequiresEdt
+        fun applyStyle(style: SessionEditorStyle) {
+            label.font = style.smallFont
+            label.foreground = style.editorForeground
+        }
     }
 
     // Raised content surface painted with the editor background, matching TodoListPanel's block arc.
