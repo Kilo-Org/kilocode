@@ -29,6 +29,17 @@ export namespace ConfigProtection {
    * "Config file edits always require approval" explanation copy applies. */
   export const CONFIG_PROTECTED_KEY = "configProtected" as const
 
+  /**
+   * Whether the extra config-edit restrictions are active for one config source.
+   * Default-on: only an explicit `false` disables it.
+   */
+  export function enabled(config?: { require_approval_for_config_edits?: boolean }): boolean {
+    return config?.require_approval_for_config_edits !== false
+  }
+
+  /** Where a config request's protected targets live relative to the project boundary. */
+  export type Scope = { inside: boolean; outside: boolean }
+
   function normalize(p: string): string {
     return path.posix.normalize(p.replaceAll("\\", "/"))
   }
@@ -175,53 +186,71 @@ export namespace ConfigProtection {
    * Gates `edit` permissions and bash-originated `external_directory` requests.
    * File-tool reads are not restricted.
    */
-  export function isRequest(request: {
-    permission: string
-    patterns: readonly string[]
-    metadata?: Record<string, any>
-  }): boolean {
-    if (request.permission === "external_directory") {
-      // File tools include metadata.filepath. They may read global config
-      // without prompting, but edits are still protected separately via `edit`.
-      if (request.metadata?.filepath) return false
-      // Bash read-only file commands may read global config when explicitly allowed.
-      if (request.metadata?.access === "read") return false
-      for (const pattern of request.patterns) {
-        const dir = pattern.replace(/[\\/]\*$/, "")
-        const target = physical(dir)
-        if (isAbsolute(dir) || (target && isAbsolute(target))) return true
-      }
-      return false
-    }
-
+  export function isRequest(request: Target): boolean {
+    if (request.permission === "external_directory") return external(request)
     if (request.permission !== "edit") return false
+    return edits(request).some(protected_)
+  }
 
-    // Check patterns — handle both relative and absolute
-    for (const pattern of request.patterns) {
-      if (protected_(pattern)) return true
-    }
+  /**
+   * Classify a config request's protected targets against the project boundary (the git worktree,
+   * or the instance directory for non-git projects). Global config dirs and targets that resolve
+   * outside the boundary are `outside`; the rest are `inside`. Returns undefined when the request
+   * does not target protected config.
+   */
+  export function scope(request: Target, ctx: { directory: string; worktree: string }): Scope | undefined {
+    if (request.permission === "external_directory")
+      return external(request) ? { inside: false, outside: true } : undefined
+    if (request.permission !== "edit") return
 
-    // Check metadata.filepath (absolute for edit, comma-joined relative for apply_patch)
+    const targets = edits(request).filter(protected_)
+    if (targets.length === 0) return
+    const root = physical(ctx.worktree && ctx.worktree !== "/" ? ctx.worktree : ctx.directory)
+    const places = targets.map((target) => {
+      // A protected absolute target is always inside a global config dir.
+      if (path.isAbsolute(target)) return "outside"
+      // Tools report relative targets against the worktree. Resolve symlinks so an alias that
+      // escapes the project follows the global policy.
+      const full = path.resolve(ctx.worktree, target)
+      if (isAbsolute(full)) return "outside"
+      const real = physical(full)
+      return real && root && within(real, root) ? "inside" : "outside"
+    })
+    return { inside: places.includes("inside"), outside: places.includes("outside") }
+  }
+
+  export type Target = { permission: string; patterns: readonly string[]; metadata?: Record<string, any> }
+
+  /** Bash-originated `external_directory` requests that reach a global config dir. */
+  function external(request: Target): boolean {
+    // File tools include metadata.filepath. They may read global config
+    // without prompting, but edits are still protected separately via `edit`.
+    if (request.metadata?.filepath) return false
+    // Bash read-only file commands may read global config when explicitly allowed.
+    if (request.metadata?.access === "read") return false
+    return request.patterns.some((pattern) => {
+      const dir = pattern.replace(/[\\/]\*$/, "")
+      const target = physical(dir)
+      return isAbsolute(dir) || (target !== undefined && isAbsolute(target))
+    })
+  }
+
+  /** Every path an `edit` request may write: patterns, metadata.filepath, and apply_patch files. */
+  function edits(request: Target): string[] {
+    const out = [...request.patterns]
+    // metadata.filepath is absolute for edit/write and comma-joined relative for apply_patch.
     const fp = request.metadata?.filepath
-    if (typeof fp === "string") {
-      // apply_patch joins relative paths with ", "
-      const parts = fp.includes(", ") ? fp.split(", ") : [fp]
-      for (const part of parts) {
-        if (protected_(part)) return true
-      }
-    }
-
-    // Check metadata.files[] (apply_patch file objects with absolute filePath/movePath)
+    if (typeof fp === "string") out.push(...(fp.includes(", ") ? fp.split(", ") : [fp]))
+    // metadata.files[] carries apply_patch file objects with absolute filePath/movePath.
     const files = request.metadata?.files
     if (Array.isArray(files)) {
       for (const file of files) {
         for (const key of ["filePath", "movePath"] as const) {
           const val = file?.[key]
-          if (typeof val === "string" && protected_(val)) return true
+          if (typeof val === "string") out.push(val)
         }
       }
     }
-
-    return false
+    return out
   }
 }

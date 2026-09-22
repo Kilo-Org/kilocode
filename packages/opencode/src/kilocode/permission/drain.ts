@@ -1,6 +1,5 @@
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
-import { ConfigProtection } from "@/kilocode/permission/config-paths"
 
 interface PendingEntry {
   info: Permission.Request
@@ -16,6 +15,9 @@ type PublishReply = (data: {
   reply: Permission.Reply
 }) => Effect.Effect<void>
 
+// Resolves config protection per entry, since entries can target different config scopes.
+type Policy = (info: Permission.Request) => Effect.Effect<{ protect: boolean; skill?: string }>
+
 /**
  * Auto-resolve pending permissions now fully covered by approved or denied rules.
  * When the user approves/denies a rule on subagent A, sibling subagent B's
@@ -25,14 +27,17 @@ export function drainCovered(
   pending: Map<string, PendingEntry>,
   approved: Permission.Ruleset,
   publishReply: PublishReply,
+  policy: Policy,
   exclude?: string,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
     for (const [id, entry] of pending) {
       if (id === exclude) continue
-      // Never auto-resolve config file edit permissions
-      const skill = ConfigProtection.globalSkillPattern(entry.info)
-      if (ConfigProtection.isRequest(entry.info) && !skill) continue
+      // Never auto-resolve config file edit permissions while config protection is active.
+      // A global skill request resolves only against its exact skill subtree.
+      const verdict = yield* policy(entry.info)
+      const skill = verdict.skill
+      if (verdict.protect && !skill) continue
       // Never auto-resolve a skill shell batch; it must get an explicit reply.
       if (entry.info.metadata?.["skillShell"] === true) continue
       if (entry.info.metadata?.["sandboxEscalation"] === true) continue

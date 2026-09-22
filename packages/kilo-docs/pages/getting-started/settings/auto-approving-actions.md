@@ -280,6 +280,38 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
 
+## Config File Protection
+
+Config file edits always require approval by default, even when `edit` or `external_directory` is set to `"allow"`. Kilo protects these paths:
+
+- The root-level `AGENTS.md`
+- Root-level `kilo.json`, `kilo.jsonc`, `opencode.json`, and `opencode.jsonc`
+- Project `.kilo/` and `.kilocode/` directories at any depth, except `plans/`
+- Global config directories `~/.config/kilo/`, `~/.kilo/`, and `~/.kilocode/`
+
+Protection by filename applies to the root-level `AGENTS.md` and the root-level config files above. A nested `AGENTS.md` or `AGENT.md` is not protected by name alone, but any file inside a project `.kilo/` or `.kilocode/` directory, or inside a global config directory, is still protected by directory, except files in an exempt `plans/` subtree.
+
+Set `require_approval_for_config_edits` to `false` to disable the check:
+
+```jsonc
+{
+  "require_approval_for_config_edits": false,
+}
+```
+
+Where you set it controls which files it covers:
+
+- **Project config** (for example the project's `kilo.json` or `.kilo/kilo.json`) covers config files inside the project — the git worktree, or the working directory for non-git projects. It follows normal config precedence, so a project value overrides the global value for the project's own files.
+- **Global config** (`~/.config/kilo/kilo.json` or `kilo.jsonc`) covers global config directories and config files outside the project, such as a `.kilo/` directory in another checkout. A project value never turns protection off for these.
+
+Symlinks are resolved, so a project config path that points outside the project follows the global setting. The option defaults to enabled, so leaving it out keeps the current behavior.
+
+With protection off, config file edits follow your regular `edit` and `external_directory` rules, and any `deny` or agent-level restrictions still apply.
+
+{% callout type="note" %}
+This setting controls a permission check, not a security boundary. Other tools, including shell commands and scripts, can still change files and bypass the check.
+{% /callout %}
+
 ## MCP Tool Permissions
 
 MCP tools use the same `allow` / `ask` / `deny` permission system as built-in tools. Each MCP tool's permission key is its namespaced name: `{server}_{tool}` (e.g. `github_create_pull_request`). You can use glob patterns like `github_*` for broad rules.

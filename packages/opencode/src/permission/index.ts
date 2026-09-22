@@ -14,6 +14,7 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionID } from "@/session/schema" // kilocode_change - used by AllowEverythingInput
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { ConfigPolicy } from "@/kilocode/permission/config-policy"
 import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
@@ -143,8 +144,8 @@ function subset(permission: string, ruleset: Ruleset) {
   return ruleset.filter((rule) => Wildcard.match(permission, rule.permission))
 }
 
-function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
-  if (ConfigProtection.isRequest(entry.info)) return false
+function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset, protect: boolean) {
+  if (protect) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
   return entry.info.patterns.every((pattern) => {
@@ -184,6 +185,8 @@ const layer = Layer.effect(
       }),
     )
 
+    const guard = (info: ConfigProtection.Target) => ConfigPolicy.check(config, info) // kilocode_change
+
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       // kilocode_change start
@@ -195,21 +198,22 @@ const layer = Layer.effect(
       let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
-      const isProtected = ConfigProtection.isRequest(request)
-      const skill = ConfigProtection.globalSkillPattern(request)
+      const verdict = yield* guard(request)
+      const isProtected = verdict.protect
+      const skill = verdict.skill
       const trusted = skill
         ? (() => {
             const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, approved)
             return rule.action === "allow" && rule.pattern === skill
           })() ||
-          (yield* config.getGlobal().pipe(
-            Effect.map((global) => fromConfig(global.permission ?? {})),
-            Effect.map((rules) => {
-              const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, rules)
-              return rule.action === "allow" && rule.pattern === skill
-            }),
-            Effect.catch(() => Effect.succeed(false)),
-          ))
+          (() => {
+            const rule = ExternalDirectoryPermission.evaluate(
+              request.permission,
+              skill,
+              fromConfig(verdict.global?.permission ?? {}),
+            )
+            return rule.action === "allow" && rule.pattern === skill
+          })()
         : false
       // kilocode_change end
 
@@ -336,7 +340,8 @@ const layer = Layer.effect(
       if (input.reply === "once") return
 
       // kilocode_change start - downgrade "always" to "once" for protected config paths
-      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
+      const verdict = yield* guard(existing.info)
+      if (verdict.protect && !verdict.skill) return
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
@@ -350,8 +355,11 @@ const layer = Layer.effect(
         }
       }
 
-      yield* drainCovered(pending as unknown as Map<string, PendingEntry>, approved, (data) =>
-        Effect.asVoid(events.publish(Event.Replied, data)),
+      yield* drainCovered(
+        pending as unknown as Map<string, PendingEntry>,
+        approved,
+        (data) => Effect.asVoid(events.publish(Event.Replied, data)),
+        guard,
       ) // kilocode_change - drain publishes replies through the same EventV2Bridge channel
 
       if (!existing.saved) {
@@ -380,9 +388,11 @@ const layer = Layer.effect(
       const existing = s.pending.get(input.requestID)
       if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
 
-      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
-
-      const skill = ConfigProtection.globalSkillPattern(existing.info)
+      // kilocode_change start - protected config paths persist only an exact global skill subtree
+      const verdict = yield* guard(existing.info)
+      if (verdict.protect && !verdict.skill) return
+      const skill = verdict.skill
+      // kilocode_change end
       const validRules = new Set(
         skill ? [skill] : [...((existing.info.metadata?.rules as string[] | undefined) ?? []), ...existing.info.always],
       )
@@ -407,6 +417,7 @@ const layer = Layer.effect(
         s.pending as unknown as Map<string, PendingEntry>,
         s.approved,
         (data) => Effect.asVoid(events.publish(Event.Replied, data)),
+        guard, // kilocode_change - per-entry config protection
         input.requestID as unknown as string,
       )
     })
@@ -432,7 +443,11 @@ const layer = Layer.effect(
 
       if (input.requestID) {
         const entry = s.pending.get(input.requestID)
-        const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? []) : false
+        // kilocode_change start - YOLO/auto-approve must not silently clear protected config edits
+        const ok = entry
+          ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], (yield* guard(entry.info)).protect)
+          : false
+        // kilocode_change end
         if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
           s.pending.delete(input.requestID)
           yield* events.publish(Event.Replied, {
@@ -446,7 +461,8 @@ const layer = Layer.effect(
 
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
-        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [])) continue
+        const protect = (yield* guard(entry.info)).protect // kilocode_change
+        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], protect)) continue // kilocode_change
         s.pending.delete(id)
         yield* events.publish(Event.Replied, {
           sessionID: entry.info.sessionID,
