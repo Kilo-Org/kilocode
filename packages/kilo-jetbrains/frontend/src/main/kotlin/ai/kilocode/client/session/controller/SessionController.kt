@@ -181,6 +181,16 @@ class SessionController(
     private val childIds: MutableSet<String> = mutableSetOf()
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
+    // The app-readiness observed on the previous AppChanged tick. Null until the first observation,
+    // so the initial connect never looks like a reconnect. Only a later non-READY -> READY edge is a
+    // reconnect: history load already recovers pending prompts once for the very first READY.
+    private var lastAppStatus: KiloAppStatusDto? = null
+    // Bumped whenever a live permission/question ask, reply, or rejection is handled. recoverPending
+    // snapshots this before its suspending REST calls and discards the result if it changed before
+    // the EDT commit, so a stale reconnect snapshot can never overwrite a fresher live prompt state
+    // or resurrect one that was just answered/rejected.
+    private var promptRevision: Long = 0L
+    private var reconnectRecoveryJob: Job? = null
     private var recentsState: RecentsState = RecentsState.Idle
     private var recentsSnapshot: List<SessionDto> = emptyList()
     private var viewState: SessionControllerEvent.ViewChanged? = null
@@ -1109,6 +1119,15 @@ class SessionController(
             app.state.collect { state ->
                 if (state.status == KiloAppStatusDto.READY) app.fetchVersionAsync()
                 fire(SessionControllerEvent.AppChanged) {
+                    // Read/write lastAppStatus here, not in the collect body: this closure always
+                    // runs on the EDT (now or via invokeLater), the same thread recoverOnReconnect
+                    // reads sid/sessionLoadState/promptRevision from, so the edge detection can't
+                    // race a later AppChanged tick jumping the queue.
+                    val prevStatus = lastAppStatus
+                    lastAppStatus = state.status
+                    if (state.status == KiloAppStatusDto.READY && prevStatus != null && prevStatus != KiloAppStatusDto.READY) {
+                        recoverOnReconnect()
+                    }
                     model.app = state
                     model.version = app.version
                     if (model.state is SessionState.LoginRequired && state.profile != null) {
@@ -1211,6 +1230,7 @@ class SessionController(
     private fun loadSession(token: SessionLoadState.Loading) {
         val target = ref as? SessionRef.Local ?: return
         val id = target.id
+        val revision = promptRevision
         cs.launch {
             try {
                 val session = target.session ?: runCatching { sessions.get(id, directory) }.getOrNull()
@@ -1229,7 +1249,7 @@ class SessionController(
                         if (session != null) this@SessionController.model.setSession(session)
                     }
                 }
-                recoverPending(id)
+                recoverPending(id, revision)
                 seedRevertDiff(id)
                 runEdt {
                     if (disposed) return@runEdt
@@ -1266,6 +1286,7 @@ class SessionController(
     }
 
     private fun importCloud(id: String, token: SessionLoadState.Loading) {
+        val revision = promptRevision
         cs.launch {
             try {
                 val session = sessions.importCloudSession(id, directory)
@@ -1283,7 +1304,7 @@ class SessionController(
                         this@SessionController.model.setSession(session)
                     }
                 }
-                recoverPending(session.id)
+                recoverPending(session.id, revision)
                 seedRevertDiff(session.id)
                 runEdt {
                     if (disposed) return@runEdt
@@ -1586,8 +1607,24 @@ class SessionController(
         }
     }
 
-    /** Rehydrate pending permissions/questions and current session status after history load. */
-    private suspend fun recoverPending(id: String) {
+    /**
+     * Recover pending prompts after a backend reconnect (a non-READY -> READY app-state edge for an
+     * already-loaded local session). Mirrors the reconnect recovery VS Code performs on SSE
+     * reconnect: the backend's SSE/chat event streams have no replay, so a `question.asked` (or
+     * `permission.asked`) lost during the reconnect gap would otherwise leave the session looking
+     * busy forever even though the CLI's pending-list endpoints still report it.
+     */
+    @RequiresEdt
+    private fun recoverOnReconnect() {
+        val id = sid ?: return
+        if (sessionLoadState !is SessionLoadState.Idle) return
+        val revision = promptRevision
+        reconnectRecoveryJob?.cancel()
+        reconnectRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "reconnect") }
+    }
+
+    /** Rehydrate pending permissions/questions and current session status after history load or reconnect. */
+    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {
         try {
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
@@ -1601,6 +1638,7 @@ class SessionController(
                     runEdt {
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
+                        if (promptRevision != revision) return@runEdt
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                     return
@@ -1620,11 +1658,19 @@ class SessionController(
                 else -> "outcome"
             }
             LOG.debug {
-                "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
+                "${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
             }
             runEdt {
                 if (disposed) return@runEdt
                 if (sid != id) return@runEdt
+                // A live permission/question ask, reply, or rejection landed after this snapshot was
+                // taken but before this commit — the model already reflects the fresher truth, so
+                // applying the stale snapshot now could only overwrite it (e.g. Busy over a newly
+                // asked question) or resurrect something already answered/rejected. Discard instead.
+                if (promptRevision != revision) {
+                    LOG.debug { "${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger stale=true" }
+                    return@runEdt
+                }
                 updateModel {
                     pending.entries.removeIf { it.value.sessionId == id }
                     if (queue.isNotEmpty()) {
@@ -1640,7 +1686,7 @@ class SessionController(
                 }
             }
         } catch (e: Exception) {
-            LOG.warn("${ChatLogSummary.sid(id)} kind=recovery dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+            LOG.warn("${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
         }
     }
 
@@ -1968,6 +2014,7 @@ class SessionController(
     }
 
     private fun asked(event: ChatEventDto.PermissionAsked) {
+        promptRevision++
         if (autoApprove) {
             approve(event.request)
             reapplyBackgroundAgents()
@@ -1978,6 +2025,7 @@ class SessionController(
     }
 
     private fun replied(event: ChatEventDto.PermissionReplied) {
+        promptRevision++
         val current = model.state
         val front = current is SessionState.AwaitingPermission && current.permission.id == event.requestID
         pending.remove(event.requestID)
@@ -1994,10 +2042,12 @@ class SessionController(
     }
 
     private fun asked(event: ChatEventDto.QuestionAsked) {
+        promptRevision++
         model.setState(SessionState.AwaitingQuestion(toQuestion(event.request)))
     }
 
     private fun replied(event: ChatEventDto.QuestionReplied) {
+        promptRevision++
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
             model.setState(afterResolve())
@@ -2005,6 +2055,7 @@ class SessionController(
     }
 
     private fun rejected(event: ChatEventDto.QuestionRejected) {
+        promptRevision++
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
             model.setState(afterResolve(idle = true))
@@ -2075,6 +2126,7 @@ class SessionController(
                     || current is SessionState.TurnEnded
                     || current is SessionState.LoginRequired
                     || current is SessionState.Reverting
+                    || current is SessionState.AwaitingQuestion
                 ) return
                 purgePending(sid)
                 // purgePending may promote a still-queued permission from another (unpurged) child

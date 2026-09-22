@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -11,6 +12,8 @@ import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
+import com.intellij.openapi.util.Disposer
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Tests for pending permission/question recovery after history load.
@@ -600,4 +603,142 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             m, show = true,
         )
     }
+
+    // ------ Reconnect recovery (non-READY -> READY for an already-loaded session) ------
+
+    /**
+     * The primary regression: a plan follow-up `question.asked` lost during a reconnect gap left the
+     * session Busy forever even though the CLI still reports it via the pending-question endpoint.
+     */
+    fun `test reconnect recovers a missed question over stale Busy`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        // A turn opened but its QuestionAsked event was lost — exactly the state a missed live
+        // event leaves behind.
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(m.model.state is SessionState.Busy)
+
+        // The CLI still reports the question through the pending-list endpoint.
+        rpc.pendingQuestionList.add(question("q_missed"))
+
+        // A backend reconnect: app state leaves READY and comes back. Flush between the two writes
+        // so the controller's collector actually observes the intermediate CONNECTING value —
+        // otherwise StateFlow conflation would coalesce the round trip into a no-op (same READY
+        // payload as before) before the collector ever gets scheduled.
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        flush()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        flush()
+
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        assertEquals("q_missed", (m.model.state as SessionState.AwaitingQuestion).question.id)
+    }
+
+    fun `test initial ready does not trigger a second reconnect recovery`() {
+        projectRpc.state.value = workspaceReady()
+        controller("ses_test")
+        flush()
+
+        // Only the one recovery call from history load — the very first READY (no prior
+        // observation) must not also be treated as a reconnect.
+        assertEquals(1, rpc.pendingQuestionCalls)
+    }
+
+    fun `test ready to ready config update does not trigger reconnect recovery`() {
+        projectRpc.state.value = workspaceReady()
+        controller("ses_test")
+        flush()
+        val calls = rpc.pendingQuestionCalls
+
+        // Status stays READY; only the config payload changes (e.g. a model list refresh).
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-4"))
+        flush()
+
+        assertEquals(calls, rpc.pendingQuestionCalls)
+    }
+
+    fun `test stale reconnect recovery cannot overwrite a live QuestionAsked`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(m.model.state is SessionState.Busy)
+
+        // Hold the reconnect recovery's REST fetch open so a live QuestionAsked can land first.
+        // Flush between the two app-state writes so the collector actually observes the
+        // intermediate CONNECTING value instead of StateFlow coalescing the round trip away.
+        val gate = CompletableDeferred<Unit>()
+        rpc.pendingGate = gate
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        flush()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        settle()
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_live")))
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+
+        gate.complete(Unit)
+        flush()
+
+        // The stale snapshot (taken before q_live existed) must not overwrite it with Busy.
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        assertEquals("q_live", (m.model.state as SessionState.AwaitingQuestion).question.id)
+    }
+
+    fun `test stale reconnect recovery cannot resurrect an already replied question`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q1")))
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        // The server still reports it pending at the instant recovery's snapshot is taken —
+        // the reply below races that snapshot, arriving before the commit.
+        rpc.pendingQuestionList.add(question("q1"))
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.pendingGate = gate
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        flush()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        settle()
+
+        emit(ChatEventDto.QuestionReplied("ses_test", "q1"))
+        assertTrue(m.model.state is SessionState.Busy)
+
+        gate.complete(Unit)
+        flush()
+
+        // The stale snapshot must not resurrect a question that was already answered.
+        assertTrue(m.model.state is SessionState.Busy)
+    }
+
+    fun `test reconnect recovery result is discarded after controller disposal`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        rpc.pendingQuestionList.add(question("q_late"))
+        val gate = CompletableDeferred<Unit>()
+        rpc.pendingGate = gate
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        flush()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        settle()
+
+        Disposer.dispose(m)
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(SessionState.Idle, m.model.state)
+    }
+
+    private fun question(id: String) = QuestionRequestDto(
+        id = id,
+        sessionID = "ses_test",
+        questions = listOf(QuestionInfoDto("Ready to implement?", "Plan ready")),
+    )
 }
