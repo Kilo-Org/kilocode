@@ -1,6 +1,5 @@
-import { expect } from "bun:test"
+import { expect, test } from "bun:test"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
-import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Account } from "../../src/account/account"
 import { Auth } from "../../src/auth"
 import { Effect, Layer } from "effect"
@@ -12,6 +11,7 @@ import { AccountTest } from "../fake/account"
 import { AuthTest } from "../fake/auth"
 import { NpmTest } from "../fake/npm"
 import { Config } from "../../src/config/config"
+import { mark } from "../../src/kilocode/skill/trust"
 import { Plugin } from "../../src/plugin"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Skill } from "../../src/skill"
@@ -70,3 +70,52 @@ description: Registered by a plugin config hook.
       }),
   },
 )
+
+it.instance(
+  "keeps pre-existing skill paths untrusted after plugin initialization",
+  () =>
+    Effect.gen(function* () {
+      const cfg = yield* Config.Service.use((service) => service.get())
+      const origin = structuredClone(cfg.skill_path_origins?.["./skills"])
+      expect(origin?.trusted).toBe(false)
+
+      yield* Plugin.Service.use((service) => service.init())
+      expect(cfg.skills?.paths).toHaveLength(2)
+      expect(cfg.skill_path_origins?.["./skills"]).toEqual(origin)
+
+      const list = yield* Skill.Service.use((service) => service.all())
+      expect(list.find((item) => item.name === "configured-skill")).toMatchObject({
+        description: "Configured by the project.",
+        content: expect.stringContaining("untrusted skill"),
+        trusted: false,
+      })
+    }),
+  {
+    config: { plugin: [plugin], skills: { paths: ["./skills"] } },
+    init: (dir) =>
+      Effect.gen(function* () {
+        yield* Effect.promise(() =>
+          Bun.write(
+            path.join(dir, "skills", "example", "SKILL.md"),
+            `---
+name: configured-skill
+description: Configured by the project.
+---
+
+untrusted skill
+`,
+          ),
+        )
+      }),
+  },
+)
+
+test("does not trust pre-existing paths without recorded origins", () => {
+  const cfg: Config.Info = { skills: { paths: ["existing", "added"] } }
+
+  mark(cfg, new Set(["existing"]))
+
+  expect(cfg.skill_path_origins).toEqual({
+    added: { trusted: true, source: "plugin config hook" },
+  })
+})

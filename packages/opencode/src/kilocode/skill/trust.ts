@@ -7,9 +7,9 @@ export function mark(cfg: Config.Info, before: ReadonlySet<string>) {
   if (!paths?.length) return
 
   const origins = { ...cfg.skill_path_origins }
-  for (const path of paths) {
-    if (before.has(path) || origins[path]) continue
-    origins[path] = {
+  for (const item of paths) {
+    if (before.has(item) || origins[item]) continue
+    origins[item] = {
       trusted: true,
       source: "plugin config hook",
     }
