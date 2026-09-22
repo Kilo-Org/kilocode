@@ -118,6 +118,7 @@ export const dict = {
   "agentManager.session.noSessions": "Nenhuma sessão aberta",
   "agentManager.tab.close": "Fechar",
   "agentManager.tab.closeOthers": "Fechar outras",
+  "agentManager.tab.closeToRight": "Fechar à direita",
   "agentManager.tab.closeTab": "Fechar aba",
   "agentManager.tab.forkSession": "Bifurcar sessão",
   "agentManager.tab.pin": "Fixar",

@@ -120,6 +120,7 @@ export const dict = {
 
   "agentManager.tab.close": "بستن",
   "agentManager.tab.closeOthers": "بستن بقیه",
+  "agentManager.tab.closeToRight": "بستن سمت راست",
   "agentManager.tab.closeTab": "بستن برگه",
   "agentManager.tab.forkSession": "انشعاب جلسه",
   "agentManager.tab.pin": "سنجاق کردن",

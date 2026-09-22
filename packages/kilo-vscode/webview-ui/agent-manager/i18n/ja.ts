@@ -116,6 +116,7 @@ export const dict = {
   "agentManager.session.noSessions": "開いているセッションがありません",
   "agentManager.tab.close": "閉じる",
   "agentManager.tab.closeOthers": "他を閉じる",
+  "agentManager.tab.closeToRight": "右側を閉じる",
   "agentManager.tab.closeTab": "タブを閉じる",
   "agentManager.tab.forkSession": "セッションをフォーク",
   "agentManager.tab.pin": "ピン留め",

@@ -160,6 +160,132 @@ for (const status of ["complete", "blocked"] as const) {
   )
 }
 
+const toolNames = (tools: unknown) =>
+  (tools as { function: { name: string } }[] | undefined)?.map((tool) => tool.function.name) ?? []
+
+it.instance(
+  "starts a goal from the agent's goal tool",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    yield* run.llm.push(
+      reply().tool("goal", { action: "start", objective: "Fix the validation tests" }),
+      reply().text("Goal armed").stop(),
+      reply().tool("goal_report", { status: "complete", reason: "Validation tests pass." }),
+      reply().text("Final report").stop(),
+    )
+    yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Keep working" }] })
+    yield* run.paused
+    expect(GoalState.read(yield* run.metadata)).toMatchObject({
+      text: "Fix the validation tests",
+      status: "complete",
+      active: false,
+      reason: expect.stringContaining("Validation tests pass."),
+    })
+    const hits = yield* run.llm.hits
+    expect(toolNames(hits.at(0)?.body.tools)).toContain("goal")
+    expect(toolNames(hits.at(1)?.body.tools)).not.toContain("goal")
+    expect(JSON.stringify(hits.at(-1)?.body.messages)).toContain("Fix the validation tests")
+    expect(hits).toHaveLength(4)
+  }),
+  30_000,
+)
+
+it.instance(
+  "resumes a saved goal from the agent's goal tool",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    yield* run.sessions.setMetadata({
+      sessionID: run.session.id,
+      metadata: { ...retained, "kilo.goal": { text: objective, status: "paused", active: false } },
+    })
+    yield* run.llm.push(
+      reply().tool("goal", { action: "resume" }),
+      reply().text("Goal resumed").stop(),
+      reply().tool("goal_report", { status: "complete", reason: "Resumed work finished." }),
+      reply().text("Done").stop(),
+    )
+    yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Continue the goal" }] })
+    yield* run.paused
+    expect(GoalState.read(yield* run.metadata)).toMatchObject({
+      text: objective,
+      status: "complete",
+      active: false,
+    })
+  }),
+  30_000,
+)
+
+it.instance(
+  "rejects an agent goal start without an objective",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    yield* run.llm.push(reply().tool("goal", { action: "start" }), reply().text("No goal started").stop())
+    yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Start something" }] })
+    expect(GoalState.read(yield* run.metadata)).toBeUndefined()
+    const parts = (yield* run.sessions.messages({ sessionID: run.session.id })).flatMap((message) => message.parts)
+    expect(
+      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
+    ).toBe(true)
+    yield* Effect.sleep("5200 millis")
+    expect(yield* run.llm.hits).toHaveLength(2)
+  }),
+  30_000,
+)
+
+it.instance(
+  "keeps agent Goal start permission rejection as a blocker",
+  Effect.gen(function* () {
+    const run = yield* setup({ permission: { goal: "ask" } })
+    const permissions = yield* Permission.Service
+    yield* run.llm.push(
+      reply().tool("goal", { action: "start", objective: "Do the thing" }),
+      reply().text("Blocked").stop(),
+    )
+    yield* run.prompt
+      .prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Start a goal" }] })
+      .pipe(Effect.forkChild)
+    const request = yield* pollWithTimeout(
+      permissions
+        .list()
+        .pipe(
+          Effect.map((items) =>
+            items.find((item) => item.sessionID === run.session.id && item.permission === "goal"),
+          ),
+        ),
+      "Goal start did not request permission",
+      "10 seconds",
+    )
+    yield* permissions.reply({ requestID: request.id, reply: "reject" })
+    yield* run.idle
+    expect(GoalState.read(yield* run.metadata)).toBeUndefined()
+    const parts = (yield* run.sessions.messages({ sessionID: run.session.id })).flatMap((message) => message.parts)
+    expect(
+      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
+    ).toBe(true)
+  }),
+  30_000,
+)
+
+it.instance(
+  "rejects an agent goal start in a delegated session",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    const child = yield* run.sessions.create({ parentID: run.session.id, title: "Delegated" })
+    yield* run.llm.push(
+      reply().tool("goal", { action: "start", objective: "Do the thing" }),
+      reply().text("No goal started").stop(),
+    )
+    yield* run.prompt.prompt({ sessionID: child.id, parts: [{ type: "text", text: "Start a goal" }] })
+    const metadata = yield* run.sessions.get(child.id).pipe(Effect.map((value) => value.metadata))
+    expect(GoalState.read(metadata)).toBeUndefined()
+    const parts = (yield* run.sessions.messages({ sessionID: child.id })).flatMap((message) => message.parts)
+    expect(
+      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
+    ).toBe(true)
+  }),
+  30_000,
+)
+
 for (const action of ["stop", "pause", "clear", "replace"] as const) {
   it.instance(
     `discards a pending root report after ${action}`,
@@ -349,9 +475,13 @@ for (const state of ["ordinary", "pause", "clear", "completed"] as const) {
       if (state !== "ordinary") {
         expect(
           (hits.at(0)?.body.tools as { function: { name: string } }[]).filter(
-            (tool) => tool.function.name !== "goal_report",
+            (tool) => tool.function.name !== "goal_report" && tool.function.name !== "goal",
           ),
-        ).toEqual((tools as { function: { name: string } }[]).filter((tool) => tool.function.name !== "question"))
+        ).toEqual(
+          (tools as { function: { name: string } }[]).filter(
+            (tool) => tool.function.name !== "question" && tool.function.name !== "goal",
+          ),
+        )
         expect(JSON.stringify(hits.at(0)?.body.tools)).toContain('"goal_report"')
       }
       yield* question.reply({ requestID: pending.id, answers: [["Small"]] })
