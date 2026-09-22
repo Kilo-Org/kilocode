@@ -47,7 +47,7 @@ This means:
 
 Skills are loaded from multiple locations, allowing both personal skills and project-specific instructions.
 
-To share personal skills across projects, install them at `~/.agents/skills/<name>/SKILL.md`. Kilo discovers this user-level directory by default, without a `skills.paths` entry or a plugin to register the skills. This loads the skill files only, not plugin-specific hooks.
+To share personal skills across projects, install them at `~/.agents/skills/<name>/SKILL.md`. Kilo discovers this user-level directory by default, without a `skills.paths` entry or a plugin to register the skills. This does not register plugin hooks. Skills in this trusted user-level location can execute [embedded shell commands](/docs/customize/skills#shell-commands-in-skills) when invoked.
 
 {% tabs %}
 {% tab label="VSCode" %}
