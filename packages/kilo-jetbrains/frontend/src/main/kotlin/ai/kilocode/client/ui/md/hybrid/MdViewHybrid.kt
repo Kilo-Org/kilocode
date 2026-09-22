@@ -37,6 +37,7 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBHtmlPaneConfiguration
@@ -515,7 +516,7 @@ internal open class MdViewHybrid(
     }
 
     private fun sourceText(text: String, kind: Kind.Source): String {
-        val value = text.trimEnd('\n')
+        val value = StringUtil.convertLineSeparators(text).trimEnd('\n')
         if (kind.highlight == Highlight.DiffPure) return MdDiffHighlight.display(value).text
         return value
     }
