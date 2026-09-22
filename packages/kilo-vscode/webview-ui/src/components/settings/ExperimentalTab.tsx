@@ -272,6 +272,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.browser.agentManagerUserDataDir.title")}
+          description={language.t("settings.browser.agentManagerUserDataDir.description")}
+        >
+          <TextField
+            value={(settings().agentManagerBrowserUserDataDir as string) ?? ""}
+            onChange={(value: string) =>
+              applySetting("agentManagerBrowserUserDataDir", value, "agentManager.browser.userDataDir")
+            }
+            placeholder="/home/user/.config/google-chrome/Default"
+          />
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.taskModelSelection.title")}
           description={language.t("settings.experimental.taskModelSelection.description")}
         >

@@ -132,6 +132,7 @@ export interface BrowserSettings {
   enabled: boolean
   useSystemChrome: boolean
   headless: boolean
+  userDataDir: string
 }
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
