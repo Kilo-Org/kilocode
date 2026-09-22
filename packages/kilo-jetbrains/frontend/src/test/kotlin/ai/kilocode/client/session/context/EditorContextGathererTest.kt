@@ -42,6 +42,8 @@ class EditorContextGathererTest : BasePlatformTestCase() {
         assertTrue(marker.text, marker.text.orEmpty().contains("\"src/App.kt\""))
         assertTrue(marker.text, marker.text.orEmpty().contains("\"this\""))
         assertTrue(marker.text, marker.text.orEmpty().contains("\"the selection\""))
+        assertTrue(marker.text, marker.text.orEmpty().contains("<system-reminder>"))
+        assertTrue(marker.text, marker.text.orEmpty().contains("</system-reminder>"))
         val range = result.selection[1]
         assertEquals("file", range.type)
         assertEquals("text/plain", range.mime)

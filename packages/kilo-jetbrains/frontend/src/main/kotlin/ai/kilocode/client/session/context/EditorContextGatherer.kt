@@ -135,12 +135,13 @@ internal object EditorContextGatherer {
 
     // Grounds vague prompt references (e.g. "this", "this code", "the selection") in the attached
     // range that follows. Leading blank lines separate it from the user's own text when the parts
-    // are adjacent, mirroring the <environment_details> block.
+    // are adjacent, mirroring the <environment_details> block. Wrapped in <system-reminder> like
+    // ForkHandoff.forkText and the CLI's own editor-context note, the two other hidden-note producers.
     private fun selectionMarkerText(relative: String, first: Int, last: Int): String {
         val lines = if (first == last) "line $first" else "lines $first-$last"
-        return "\n\nNote: The user selected $lines from \"$relative\" in the active editor. Treat this " +
-            "selected range as the primary referent when the user's prompt says \"this\", \"this code\", " +
-            "\"these lines\", or \"the selection\"."
+        return "\n\n<system-reminder>Note: The user selected $lines from \"$relative\" in the active editor. " +
+            "Treat this selected range as the primary referent when the user's prompt says \"this\", " +
+            "\"this code\", \"these lines\", or \"the selection\".</system-reminder>"
     }
 
     private fun file(editor: Editor): VirtualFile? = FileDocumentManager.getInstance().getFile(editor.document)
