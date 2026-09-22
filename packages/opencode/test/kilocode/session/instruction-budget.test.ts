@@ -12,13 +12,47 @@ describe("KilocodeInstruction.budget", () => {
     const kept = "Instructions from: /a/AGENTS.md\nfoo"
     const dropped = "Instructions from: /b/AGENTS.md\nbar"
     const result = KilocodeInstruction.budget([kept, dropped], kept.length)
-    expect(result).toEqual([kept, `1 instruction file(s) skipped (over ${kept.length}-char budget): /b/AGENTS.md`])
+    expect(result).toEqual([
+      kept,
+      `1 instruction file(s) skipped or truncated (over ${kept.length}-char budget): /b/AGENTS.md`,
+    ])
   })
 
   test("names every skipped file in the summary", () => {
     const blocks = ["Instructions from: /a\nx", "Instructions from: /b\ny", "Instructions from: /c\nz"]
     const result = KilocodeInstruction.budget(blocks, 0)
-    expect(result).toEqual(["3 instruction file(s) skipped (over 0-char budget): /a, /b, /c"])
+    expect(result).toEqual(["3 instruction file(s) skipped or truncated (over 0-char budget): /a, /b, /c"])
+  })
+
+  test("truncates an oversized block to the remaining budget instead of dropping it", () => {
+    const block = "Instructions from: /a/AGENTS.md\n" + "x".repeat(100)
+    const result = KilocodeInstruction.budget([block], 40)
+    expect(result).toEqual([block.slice(0, 40), "1 instruction file(s) skipped or truncated (over 40-char budget): /a/AGENTS.md (truncated)"])
+  })
+
+  test("only truncates the last block that fits; later blocks are fully skipped", () => {
+    const first = "Instructions from: /a\n" + "x".repeat(100)
+    const second = "Instructions from: /b\nfoo"
+    const result = KilocodeInstruction.budget([first, second], 30)
+    expect(result).toEqual([
+      first.slice(0, 30),
+      "2 instruction file(s) skipped or truncated (over 30-char budget): /a (truncated), /b",
+    ])
+  })
+
+  test("caps the number of names listed in the summary", () => {
+    const blocks = Array.from({ length: 25 }, (_, i) => `Instructions from: /file-${i}\ncontent`)
+    const result = KilocodeInstruction.budget(blocks, 0)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toContain("25 instruction file(s) skipped or truncated")
+    expect(result[0]).toContain("/file-19")
+    expect(result[0]).not.toContain("/file-20")
+    expect(result[0]).toContain("and 5 more")
+  })
+
+  test("falls back to the raw header line when a block lacks the expected prefix", () => {
+    const result = KilocodeInstruction.budget(["Custom Header\nsome content"], 0)
+    expect(result).toEqual(["1 instruction file(s) skipped or truncated (over 0-char budget): Custom Header"])
   })
 
   test("returns nothing for an empty input", () => {
@@ -29,8 +63,10 @@ describe("KilocodeInstruction.budget", () => {
     const original = process.env["KILO_INSTRUCTIONS_MAX_CHARS"]
     process.env["KILO_INSTRUCTIONS_MAX_CHARS"] = "5"
     try {
-      expect(KilocodeInstruction.budget(["Instructions from: /a\nlong content"])).toEqual([
-        "1 instruction file(s) skipped (over 5-char budget): /a",
+      const block = "Instructions from: /a\nlong content"
+      expect(KilocodeInstruction.budget([block])).toEqual([
+        block.slice(0, 5),
+        "1 instruction file(s) skipped or truncated (over 5-char budget): /a (truncated)",
       ])
     } finally {
       if (original === undefined) delete process.env["KILO_INSTRUCTIONS_MAX_CHARS"]
@@ -54,7 +90,7 @@ describe("KilocodeInstruction.budget", () => {
 
   test("does not crash when a block has no newline", () => {
     expect(KilocodeInstruction.budget(["no newline here"], 0)).toEqual([
-      "1 instruction file(s) skipped (over 0-char budget): no newline here",
+      "1 instruction file(s) skipped or truncated (over 0-char budget): no newline here",
     ])
   })
 })
