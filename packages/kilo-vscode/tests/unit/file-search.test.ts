@@ -39,6 +39,12 @@ function multiClient(data: Record<string, { files: string[]; folders: string[] }
 
 const abs = (root: string, rel: string) => path.resolve(root, rel).replaceAll("\\", "/")
 
+/** The session's own project, plus one folder added beside it. */
+const roots = [
+  { path: "/repo", name: "repo" },
+  { path: "/other", name: "other" },
+]
+
 type Glob = { base: { uri: { fsPath: string } }; pattern: string }
 
 const quote = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -515,11 +521,6 @@ describe("handleFileSearch", () => {
 })
 
 describe("handleFileSearch resilience and ranking basis", () => {
-  const roots = [
-    { path: "/repo", name: "repo" },
-    { path: "/other", name: "other" },
-  ]
-
   it("still returns the session's own files when an added folder cannot be read", async () => {
     const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: ["src"] } })
     // An added folder is an arbitrary user-chosen directory; one unreadable
@@ -743,11 +744,6 @@ describe("handleFileSearch resilience and ranking basis", () => {
 })
 
 describe("splitRoots", () => {
-  const roots = [
-    { path: "/repo", name: "repo" },
-    { path: "/other", name: "other" },
-  ]
-
   it("separates the session's own folder from the rest", () => {
     expect(splitRoots(roots, "/repo")).toEqual({
       primary: { path: "/repo", name: "repo" },
