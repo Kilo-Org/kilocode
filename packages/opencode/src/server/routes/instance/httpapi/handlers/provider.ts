@@ -61,7 +61,6 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) filtered[key] = value
       }
       const connected = yield* provider.list()
-      const credentials = yield* access.all().pipe(Effect.orDie)
       // kilocode_change start
       const info = yield* access.get("kilo").pipe(Effect.option)
       const unavailable = Option.isNone(info) && ("kilo" in filtered || "kilo" in connected)
@@ -73,6 +72,8 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         ),
         config.hide_prompt_training_models === true,
       )
+      // kilocode_change end
+      // kilocode_change start
       const failed = yield* cache.failedProviders()
       // Note: connected only contains providers with non-empty models after Provider.Service.list(),
       // so failed must be checked explicitly for providers whose fetch returned an error.
@@ -100,7 +101,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
           metadata: providerMetadata(item.id),
         })), // kilocode_change
         default: defaults,
-        connected: Object.keys(validProviders).filter((id) => id in connected || credentials[id]),
+        connected: Object.keys(connected),
         failed: [...failedSet],
       }
       // kilocode_change end
