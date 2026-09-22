@@ -1642,8 +1642,9 @@ export const layer = Layer.effect(
             auto: task.auto,
             overflow: task.overflow,
           })
-          // kilocode_change start - compaction.process only returns "stop" after
-          // setting ContextOverflowError on the summary message; surface as turn error
+          // kilocode_change start - compaction.process returns "stop" after
+          // setting a terminal error on the summary message: either a
+          // ContextOverflowError or the empty-summary APIError; surface as turn error
           if (result === "stop") {
             closeReasons.set(sessionID, "error")
             break
