@@ -496,7 +496,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             ctx.sessionID,
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
             Effect.gen(function* () {
-              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+              yield* ctx.ask({ permission: key, metadata: { mcpInput: args }, patterns: ["*"], always: ["*"] })
               return yield* Effect.promise(() => execute(args, opts))
             }),
           ).pipe(
