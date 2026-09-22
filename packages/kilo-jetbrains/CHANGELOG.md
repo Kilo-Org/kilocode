@@ -490,6 +490,42 @@
 
 ## [Unreleased]
 
+## [7.1.7-rc.4] - 2026-09-22
+
+### Added
+- feat(agent-manager): add close to the right tab action by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14444
+- feat(goal): let the agent start or resume a session goal by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14445
+- feat(sidebar): add pinning and close to the right to chat tabs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14446
+- feat(cli): add experimental self-context tools by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14268
+- feat(cli): add background process monitor and session cron scheduling by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14312
+- feat(cli): link sessions to pull requests via tool and remote check by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14315
+- feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate by @zfralish in https://github.com/Kilo-Org/kilocode/pull/13981
+- feat(jetbrains): preview agents in collapsed strip by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14438
+- feat(jetbrains): add copy path/reveal actions to nested-worktree delete error by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14368
+
+### Fixed
+- fix(ui): highlight streaming shell output incrementally by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14361
+- fix: show pending MCP tool arguments in the permission prompt by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14447
+- fix(cli): skip providers excluded by enabled_providers before auth loaders by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14448
+- fix(session): keep the session when compaction returns an empty summary by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14318
+- fix(mcp): keep the OAuth flow's own state and PKCE verifier by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14196
+- fix(jetbrains): wrap session status messages by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14435
+- fix(jetbrains): normalize markdown line endings by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14439
+- fix(jetbrains): recover pending question/permission after reconnect by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14440
+- fix(jetbrains): use normal session model defaults for new worktrees by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14441
+- fix(jetbrains): ground selected-code prompts in the active selection by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14434
+- fix(jetbrains): remove deselected models from custom OpenAI-compatible providers by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14457
+- fix(jetbrains): wrap Swarm board messages, keep board open, add copy all by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14452
+
+### Changed
+- release(jetbrains): v7.1.7-rc.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14366
+- chore(jetbrains): bump CLI pin to v7.7.6 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14358
+- OpenCode Merge v1.18.19…v1.18.20 by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13513
+- docs(kilo-docs): clarify skill paths and trust by @jezdez in https://github.com/Kilo-Org/kilocode/pull/14460
+- Revert "feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate" by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14461
+- chore(jetbrains): bump CLI pin to v7.7.7 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14443
+
+
 ## [7.1.7-rc.3] - 2026-09-21
 
 ### Added
