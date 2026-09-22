@@ -181,6 +181,16 @@ class SessionController(
     private val childIds: MutableSet<String> = mutableSetOf()
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
+    // The app-readiness observed on the previous AppChanged tick. Recovery requires both a later
+    // non-READY -> READY edge and a READY observed before that edge: restored tabs commonly see
+    // DISCONNECTED -> READY on their initial connection, which history recovery already covers.
+    private var lastAppStatus: KiloAppStatusDto? = null
+    private var seenReady = false
+    // Bumped whenever a live prompt event or local resolution is handled. recoverPending snapshots
+    // this before its suspending REST calls and discards the result if it changed before the EDT
+    // commit, so a stale reconnect snapshot cannot overwrite or resurrect a fresher prompt state.
+    private var promptRevision = 0L
+    private var reconnectRecoveryJob: Job? = null
     private var recentsState: RecentsState = RecentsState.Idle
     private var recentsSnapshot: List<SessionDto> = emptyList()
     private var viewState: SessionControllerEvent.ViewChanged? = null
@@ -836,7 +846,7 @@ class SessionController(
         prefVariantKey = null
         prefVariant = null
         app.clearModel(agent)
-        val auto = configModel(agent) ?: providerModel(agent)
+        val auto = resolvedDefaultModel(agent)?.key
         selectResolvedModel(auto)
         model.modelOverride = false
         capture("Model Override Cleared", sessionProps() + mapOf("agent" to agent))
@@ -890,6 +900,7 @@ class SessionController(
 
     fun replyPermission(requestId: String, reply: PermissionReplyDto, rules: PermissionAlwaysRulesDto? = null) {
         assertEdt()
+        promptRevision++
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission rid=$requestId reply=${reply.reply}" }
         val current = model.state as? SessionState.AwaitingPermission
         updatePermission(requestId, PermissionRequestState.RESPONDING)
@@ -1043,6 +1054,7 @@ class SessionController(
 
     fun replyQuestion(requestId: String, answers: QuestionReplyDto, options: List<List<String>> = answers.answers) {
         assertEdt()
+        promptRevision++
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         val current = model.state
         followup = if (current is SessionState.AwaitingQuestion
@@ -1070,6 +1082,7 @@ class SessionController(
 
     fun rejectQuestion(requestId: String) {
         assertEdt()
+        promptRevision++
         followup = null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true" }
         cs.launch {
@@ -1109,6 +1122,16 @@ class SessionController(
             app.state.collect { state ->
                 if (state.status == KiloAppStatusDto.READY) app.fetchVersionAsync()
                 fire(SessionControllerEvent.AppChanged) {
+                    // Read/write lastAppStatus here, not in the collect body: this closure always
+                    // runs on the EDT (now or via invokeLater), the same thread recoverOnReconnect
+                    // reads sid/sessionLoadState/promptRevision from, so the edge detection can't
+                    // race a later AppChanged tick jumping the queue.
+                    val prevStatus = lastAppStatus
+                    lastAppStatus = state.status
+                    if (state.status == KiloAppStatusDto.READY && seenReady && prevStatus != KiloAppStatusDto.READY) {
+                        recoverOnReconnect()
+                    }
+                    if (state.status == KiloAppStatusDto.READY) seenReady = true
                     model.app = state
                     model.version = app.version
                     if (model.state is SessionState.LoginRequired && state.profile != null) {
@@ -1211,6 +1234,7 @@ class SessionController(
     private fun loadSession(token: SessionLoadState.Loading) {
         val target = ref as? SessionRef.Local ?: return
         val id = target.id
+        val revision = promptRevision
         cs.launch {
             try {
                 val session = target.session ?: runCatching { sessions.get(id, directory) }.getOrNull()
@@ -1229,7 +1253,7 @@ class SessionController(
                         if (session != null) this@SessionController.model.setSession(session)
                     }
                 }
-                recoverPending(id)
+                recoverPending(id, revision)
                 seedRevertDiff(id)
                 runEdt {
                     if (disposed) return@runEdt
@@ -1266,6 +1290,7 @@ class SessionController(
     }
 
     private fun importCloud(id: String, token: SessionLoadState.Loading) {
+        val revision = promptRevision
         cs.launch {
             try {
                 val session = sessions.importCloudSession(id, directory)
@@ -1283,7 +1308,7 @@ class SessionController(
                         this@SessionController.model.setSession(session)
                     }
                 }
-                recoverPending(session.id)
+                recoverPending(session.id, revision)
                 seedRevertDiff(session.id)
                 runEdt {
                     if (disposed) return@runEdt
@@ -1586,8 +1611,24 @@ class SessionController(
         }
     }
 
-    /** Rehydrate pending permissions/questions and current session status after history load. */
-    private suspend fun recoverPending(id: String) {
+    /**
+     * Recover pending prompts after a backend reconnect (a non-READY -> READY app-state edge for an
+     * already-loaded local session). Mirrors the reconnect recovery VS Code performs on SSE
+     * reconnect: the backend's SSE/chat event streams have no replay, so a `question.asked` (or
+     * `permission.asked`) lost during the reconnect gap would otherwise leave the session looking
+     * busy forever even though the CLI's pending-list endpoints still report it.
+     */
+    @RequiresEdt
+    private fun recoverOnReconnect() {
+        val id = sid ?: return
+        if (sessionLoadState !is SessionLoadState.Idle) return
+        val revision = promptRevision
+        reconnectRecoveryJob?.cancel()
+        reconnectRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "reconnect") }
+    }
+
+    /** Rehydrate pending permissions/questions and current session status after history load or reconnect. */
+    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {
         try {
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
@@ -1601,6 +1642,7 @@ class SessionController(
                     runEdt {
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
+                        if (promptRevision != revision) return@runEdt
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                     return
@@ -1620,11 +1662,19 @@ class SessionController(
                 else -> "outcome"
             }
             LOG.debug {
-                "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
+                "${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
             }
             runEdt {
                 if (disposed) return@runEdt
                 if (sid != id) return@runEdt
+                // A live permission/question ask, reply, or rejection landed after this snapshot was
+                // taken but before this commit — the model already reflects the fresher truth, so
+                // applying the stale snapshot now could only overwrite it (e.g. Busy over a newly
+                // asked question) or resurrect something already answered/rejected. Discard instead.
+                if (promptRevision != revision) {
+                    LOG.debug { "${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger stale=true" }
+                    return@runEdt
+                }
                 updateModel {
                     pending.entries.removeIf { it.value.sessionId == id }
                     if (queue.isNotEmpty()) {
@@ -1639,8 +1689,10 @@ class SessionController(
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            LOG.warn("${ChatLogSummary.sid(id)} kind=recovery dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+            LOG.warn("${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
         }
     }
 
@@ -1968,6 +2020,7 @@ class SessionController(
     }
 
     private fun asked(event: ChatEventDto.PermissionAsked) {
+        promptRevision++
         if (autoApprove) {
             approve(event.request)
             reapplyBackgroundAgents()
@@ -1978,6 +2031,7 @@ class SessionController(
     }
 
     private fun replied(event: ChatEventDto.PermissionReplied) {
+        promptRevision++
         val current = model.state
         val front = current is SessionState.AwaitingPermission && current.permission.id == event.requestID
         pending.remove(event.requestID)
@@ -1994,10 +2048,12 @@ class SessionController(
     }
 
     private fun asked(event: ChatEventDto.QuestionAsked) {
+        promptRevision++
         model.setState(SessionState.AwaitingQuestion(toQuestion(event.request)))
     }
 
     private fun replied(event: ChatEventDto.QuestionReplied) {
+        promptRevision++
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
             model.setState(afterResolve())
@@ -2005,6 +2061,7 @@ class SessionController(
     }
 
     private fun rejected(event: ChatEventDto.QuestionRejected) {
+        promptRevision++
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
             model.setState(afterResolve(idle = true))
@@ -2075,6 +2132,7 @@ class SessionController(
                     || current is SessionState.TurnEnded
                     || current is SessionState.LoginRequired
                     || current is SessionState.Reverting
+                    || current is SessionState.AwaitingQuestion
                 ) return
                 purgePending(sid)
                 // purgePending may promote a still-queued permission from another (unpurged) child
@@ -2293,47 +2351,32 @@ class SessionController(
 
     private fun syncModelSelection() {
         val agent = model.agent ?: return
-        val auto = configModel(agent) ?: providerModel(agent)
-        val selected = selectedModel(agent, auto)
+        val providers = model.workspace.providers
+        val state = app.models.value
+        val cfg = model.app.config
+        val auto = resolvedDefaultModel(agent)?.key
+        val selected = messageSelection(agent)?.key ?: resolveSessionModel(
+            providers = providers,
+            agent = agent,
+            state = state,
+            config = cfg,
+            default = auto?.let(::modelSelection),
+        )?.key
         model.defaultModel = auto
         selectResolvedModel(selected)
         model.modelOverride = messageSelection(agent) == null && selected != auto
     }
 
-    private fun selectedModel(agent: String, auto: String?): String? {
-        messageSelection(agent)?.let { return it.key }
-        val saved = app.models.value.model[agent]
-        val cfg = model.app.config
-        if (cfg != null) return resolveModelSelection(
+    private fun resolvedDefaultModel(agent: String): ModelSelectionDto? {
+        val first = model.models.firstOrNull()?.let { ModelSelectionDto(it.provider, it.id) }
+        return resolveSessionDefaultModel(
             providers = model.workspace.providers,
-            override = saved,
-            mode = cfg.agent[agent]?.model?.let(::selection),
-            global = cfg.model?.let(::selection),
-            recent = app.models.value.recent,
-        )?.key
-        if (saved != null) return valid(model.workspace.providers, saved)?.key ?: auto
-        return auto
-    }
-
-    private fun configModel(agent: String): String? {
-        if (model.app.status != KiloAppStatusDto.READY) return null
-        val cfg = model.app.config
-        return resolveModelSelection(
-            providers = model.workspace.providers,
-            mode = cfg?.agent?.get(agent)?.model?.let(::selection),
-            global = cfg?.model?.let(::selection),
-            recent = app.models.value.recent,
-        )?.key
-    }
-
-    private fun providerModel(agent: String): String? {
-        val providers = model.workspace.providers ?: return null
-        return resolveModelSelection(
-            providers = providers,
-            mode = providers.defaults[agent]?.let(::selection),
-            global = providers.defaults.values.firstNotNullOfOrNull(::selection),
-            fallback = null,
-        )?.key ?: model.models.firstOrNull()?.key
+            agent = agent,
+            state = app.models.value,
+            config = model.app.config,
+            ready = model.app.status == KiloAppStatusDto.READY,
+            first = first,
+        )
     }
 
     private fun selectResolvedModel(key: String?) {
@@ -2352,7 +2395,7 @@ class SessionController(
 
     private fun messageSelection(agent: String): ModelSelectionDto? {
         if (prefAgent != null && prefAgent != agent) return null
-        return valid(model.workspace.providers, prefModel?.let(::selection))
+        return validModelSelection(model.workspace.providers, prefModel?.let(::modelSelection))
     }
 
     private fun handle(events: List<ChatEventDto>) {
@@ -2382,9 +2425,7 @@ class SessionController(
      * gone (renamed, hidden, or removed from a different config).
      */
     private fun seedAgent(agents: AgentsDto?): String? {
-        val remembered = KiloPluginSettings.getAgent() ?: return agents?.default
-        val offered = agents?.agents ?: return remembered
-        return if (offered.any { it.name == remembered }) remembered else agents.default
+        return resolveSessionAgent(agents, KiloPluginSettings.getAgent())
     }
 
     private fun syncHistoryAgent(items: List<MessageWithPartsDto>) {
@@ -2523,11 +2564,14 @@ class SessionController(
             }
         }
         model.variant?.takeIf { it in model.variants }?.let { put("variant", it) }
-        if (files.isNotEmpty()) {
-            put("attachmentCount", files.size.toString())
-            put("mediaAttachmentCount", files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
+        // Synthetic parts (e.g. the editor-selection grounding marker) are hidden scaffolding the
+        // user never attached, so they must not inflate attachment/mention telemetry.
+        val attachments = files.filterNot { it.synthetic == true }
+        if (attachments.isNotEmpty()) {
+            put("attachmentCount", attachments.size.toString())
+            put("mediaAttachmentCount", attachments.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
         }
-        val mentions = files.filter { it.source?.text?.value?.startsWith("@") == true }
+        val mentions = attachments.filter { it.source?.text?.value?.startsWith("@") == true }
         if (mentions.isNotEmpty()) {
             val resources = mentions.count { it.source?.path == "git-changes" }
             put("hasMentions", "true")
@@ -2990,41 +3034,6 @@ private fun unsupported(reason: String?, directory: String): String {
     val path = KiloBundle.message("session.connection.unsupported.path", directory)
     val options = KiloBundle.message("session.connection.unsupported.options")
     return "$path\n\n$detail\n\n$options"
-}
-
-private const val KILO_PROVIDER = "kilo"
-private const val KILO_AUTO_MODEL = "kilo-auto/free"
-
-private fun resolveModelSelection(
-    providers: ProvidersDto?,
-    override: ModelSelectionDto? = null,
-    mode: ModelSelectionDto? = null,
-    global: ModelSelectionDto? = null,
-    recent: List<ModelSelectionDto> = emptyList(),
-    fallback: ModelSelectionDto? = ModelSelectionDto(KILO_PROVIDER, KILO_AUTO_MODEL),
-): ModelSelectionDto? {
-    valid(providers, override)?.let { return it }
-    valid(providers, mode)?.let { return it }
-    valid(providers, global)?.let { return it }
-    recent.firstNotNullOfOrNull { valid(providers, it) }?.let { return it }
-    return fallback
-}
-
-private fun valid(providers: ProvidersDto?, item: ModelSelectionDto?): ModelSelectionDto? {
-    if (item == null) return null
-    val list = providers?.providers ?: return item
-    if (list.isEmpty()) return item
-    val provider = list.firstOrNull { it.id == item.providerID } ?: return null
-    if (item.providerID != KILO_PROVIDER && item.providerID !in providers.connected) return null
-    if (item.modelID !in provider.models) return null
-    return item
-}
-
-private val ModelSelectionDto.key: String get() = "$providerID/$modelID"
-
-private fun selection(value: String): ModelSelectionDto? {
-    val parsed = parseModel(value) ?: return null
-    return ModelSelectionDto(parsed.first, parsed.second)
 }
 
 /**

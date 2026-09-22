@@ -36,7 +36,9 @@ import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
+import com.intellij.ui.components.JBTextArea
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
@@ -126,11 +128,17 @@ internal class ActiveListRenderer(
         ipad = JBUI.emptyInsets()
         myBorder = null
     }
+    // Only built when a caller opts into wrapping (board-style rows); every other list keeps the
+    // single-line faded [desc] and pays nothing for this. Measured at its own current width, which
+    // [activeListLayout] assigns before anything reads its preferred size — see the wrap block near
+    // the end of [getListCellRendererComponent].
+    private val descWrap: ActiveListWrapText? = if (cfg.wrapDescription) ActiveListWrapText() else null
+    private val descBody: JComponent = descWrap ?: desc
     private val metrics = ActiveListChangesCell()
     private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
     private val detailsPane = details.align(HAlign.RIGHT, VAlign.CENTER)
     private val descLine = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
-        add(desc, BorderLayout.CENTER)
+        add(descBody, BorderLayout.CENTER)
         add(detailsPane, BorderLayout.EAST)
     }
     private val text = Stack.vertical().next(header).next(descLine)
@@ -195,6 +203,7 @@ internal class ActiveListRenderer(
             glyph,
             spacer,
         )
+        descWrap?.let { UiStyle.Components.transparent(it) }
         layers.addOverlay(pill) { host, child ->
             val size = child.preferredSize
             // The dropdown column, so the pill clears it when a list opts into both.
@@ -311,13 +320,24 @@ internal class ActiveListRenderer(
         icon.icon = value.icon?.let { if (active && value.tinted) IconUtil.colorize(it, fg, keepBrightness = false) else it }
         mark.isVisible = value.icon != null
         val note = if (cfg.description) value.description.orEmpty() else ""
-        desc.clear()
-        if (note.isNotBlank()) desc.append(note, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
-        desc.isVisible = note.isNotBlank()
-        desc.border = if (cfg.descriptionIndent && desc.isVisible) {
-            JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
+        if (descWrap != null) {
+            if (descWrap.text != note) descWrap.text = note
+            descWrap.foreground = weak
+            descWrap.isVisible = note.isNotBlank()
+            descWrap.border = if (cfg.descriptionIndent && descWrap.isVisible) {
+                JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
+            } else {
+                JBUI.Borders.empty()
+            }
         } else {
-            JBUI.Borders.empty()
+            desc.clear()
+            if (note.isNotBlank()) desc.append(note, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
+            desc.isVisible = note.isNotBlank()
+            desc.border = if (cfg.descriptionIndent && desc.isVisible) {
+                JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
+            } else {
+                JBUI.Borders.empty()
+            }
         }
         val data = if (value.progress != null) null else value.metrics
         metrics.isEnabled = list.isEnabled && !value.disabled
@@ -326,7 +346,7 @@ internal class ActiveListRenderer(
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
         detailsPane.isVisible = metrics.isVisible || secondary.isVisible
-        descLine.isVisible = desc.isVisible || detailsPane.isVisible
+        descLine.isVisible = descBody.isVisible || detailsPane.isVisible
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
@@ -340,6 +360,23 @@ internal class ActiveListRenderer(
         pill.background = if (selected && list.isEnabled) UIUtil.getListBackground(true, active) else list.background
         val height = bodyHeight
         wrap.setPreferredSize(height?.let { Dimension(0, it) })
+        if (cfg.wrapDescription) {
+            // [descWrap] answers its own preferred height from its current width (see
+            // [ActiveListWrapText.getPreferredSize]), but nothing has assigned it a width yet: this
+            // renderer is a stamp that has never been through a real layout pass at [list]'s size. A
+            // real (not preferred-size-only) layout pass at the list's width — the same
+            // [activeListLayout] helper [rowImage] uses to learn actual widths — cascades the real
+            // column width down through every BorderLayout/Stack/Align level to [descWrap] before
+            // anything below reads a preferred size. Column widths never depend on the height passed
+            // here, so it is kept at a minimal placeholder rather than a generous one: [layers]'
+            // absolutely-positioned overlay/blocker children have no layout manager of their own, so
+            // in a renderer that was never added to a real, displayable window they fall back to
+            // reporting their *current bounds* as their preferred size. A tall placeholder here would
+            // land in that fallback and make [LayeredOverlayPanel] report a body far taller than the
+            // wrapped text actually needs.
+            setBounds(0, 0, list.width.coerceAtLeast(1), 1)
+            activeListLayout(this)
+        }
         // Neither the content mutations above nor setPreferredSize invalidate reliably: a same-size
         // icon swap, an equal label text, or an explicit preferred size leave the tree valid, and a
         // valid subtree keeps the sizes it was measured with for another row.
@@ -598,4 +635,35 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     override fun cellTooltip(): String? = badge?.tooltip?.takeIf { it.isNotBlank() }
 
     override fun cellAction(): (() -> Unit)? = badge?.action
+}
+
+/**
+ * Wrapping row body used when [ActiveListConfig.wrapDescription] is enabled, in place of the
+ * single-line faded [FadeText]. Non-interactive: it carries no [ActiveListHitCell] contract, so it
+ * never becomes a click/cursor/tooltip target the way a badge or action cell does.
+ *
+ * Measured at its own current width rather than a fixed row/columns count, matching the same
+ * pattern as `MessageErrorView.ErrorText`: [javax.swing.JTextArea] answers a wrap-aware preferred
+ * height only once it already knows the width it will paint at, so [getPreferredSize] re-measures
+ * against [width] instead of the platform default.
+ */
+private class ActiveListWrapText : JBTextArea() {
+    init {
+        isEditable = false
+        isFocusable = false
+        caret.isVisible = false
+        caret.isSelectionVisible = false
+        lineWrap = true
+        wrapStyleWord = true
+        border = JBUI.Borders.empty()
+    }
+
+    override fun getPreferredSize(): Dimension {
+        if (width <= 0) return super.getPreferredSize()
+        val old = size
+        setSize(width, Int.MAX_VALUE)
+        val height = super.getPreferredSize().height
+        setSize(old)
+        return Dimension(width, height)
+    }
 }

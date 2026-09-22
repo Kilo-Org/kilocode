@@ -14,9 +14,9 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
@@ -44,20 +44,28 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
     protected val glyph = JBLabel().apply { isVisible = false }
     protected val label = JBLabel()
     protected val actions: Stack = Stack.horizontal(UiStyle.Gap.sm())
+    private val content = Stack.horizontal(UiStyle.Gap.sm()).apply {
+        next(glyph)
+        next(label)
+    }
+    protected val fallback = content.align(HAlign.LEFT, VAlign.CENTER)
 
-    /** Left cluster that toggles expand/collapse; [actions] deliberately does not. */
-    protected val summary = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.sm(), 0)).apply {
+    /** Flexible summary slot that toggles expand/collapse; [actions] deliberately does not. */
+    protected val summary = BorderLayoutPanel().apply {
         isOpaque = false
-        add(arrow)
-        add(glyph)
-        add(label)
+        border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
+        add(fallback, BorderLayout.WEST)
     }
     private val row = BorderLayoutPanel().apply {
         isOpaque = false
-        add(summary, BorderLayout.WEST)
+        add(arrow, BorderLayout.WEST)
+        add(summary.align(HAlign.TRACK, VAlign.CENTER), BorderLayout.CENTER)
         add(actions.align(HAlign.RIGHT, VAlign.CENTER), BorderLayout.EAST)
     }
     private var body: JComponent? = null
+    private val click = object : MouseAdapter() {
+        override fun mouseClicked(event: MouseEvent) = toggle()
+    }
 
     /** Todo bodies remain horizontal; background-agent rows opt into width-tracking vertical scroll. */
     protected open val vertical = false
@@ -73,17 +81,17 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         // A strip has nothing to show until its owner reports content, so it starts hidden and each
         // subclass's update() turns it on via syncVisible.
         isVisible = false
-        val click = object : MouseAdapter() {
-            override fun mouseClicked(event: MouseEvent) = toggle()
-        }
         // `row` spans the full width, so the empty space beside the summary toggles too. The arrow,
         // glyph, and label keep their own listeners so a click lands on them directly; Swing
         // delivers a click only to the innermost listener, so this cannot toggle twice. Controls in
         // [actions] own their listeners and are therefore never retargeted here.
-        listOf(row, summary, arrow, glyph, label).forEach {
-            it.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            it.addMouseListener(click)
-        }
+        listOf(row, summary, arrow, fallback, content, glyph, label).forEach(::watch)
+    }
+
+    /** Give a subclass-owned summary surface the strip's ordinary toggle behavior. */
+    protected fun watch(component: Component) {
+        component.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        component.addMouseListener(click)
     }
 
     /** Build the expanded body. Called at most once; the result is retained for the strip's lifetime. */
@@ -91,6 +99,10 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
 
     /** Whether the body is currently attached — containment-derived, never a separate boolean. */
     fun expanded(): Boolean = body?.parent === this
+
+    /** Notify specialized summaries after the body containment changes. */
+    @RequiresEdt
+    protected open fun onExpansion() = Unit
 
     @RequiresEdt
     protected fun toggle() {
@@ -104,6 +116,7 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         val content = body ?: Scroller(createBody(), vertical).also { body = it }
         add(content)
         arrow.icon = AllIcons.General.ArrowDown
+        onExpansion()
         return true
     }
 
@@ -116,6 +129,7 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         }
         remove(content)
         arrow.icon = AllIcons.General.ArrowRight
+        onExpansion()
         return true
     }
 
