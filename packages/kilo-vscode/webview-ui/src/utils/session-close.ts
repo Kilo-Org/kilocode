@@ -1,4 +1,4 @@
-import { closableRightOf, closeToRight, type CloseToRightDeps } from "../../agent-manager/close-to-right"
+import { closableRightOf, closeToRight, type CloseToRightDeps } from "./tab-close"
 
 /**
  * The Agent Manager close helpers also cover terminal and review tabs. The
