@@ -90,6 +90,8 @@ export const dict = {
     "Conversación revertida. Los cambios en los archivos no se restauraron porque las instantáneas están desactivadas.",
   "revert.banner.workspace.unavailable":
     "Conversación revertida. No había ningún punto de control de archivos disponible, por lo que no se restauraron los cambios del espacio de trabajo.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversación revertida. Los puntos de control de archivos requieren un repositorio Git, por lo que no se restauraron los cambios del espacio de trabajo.",
   "revert.banner.workspace.legacy":
     "Conversación revertida. El estado de restauración del espacio de trabajo no está disponible para esta reversión anterior.",
   "revert.banner.workspace.enableSnapshots": "Activar instantáneas",
@@ -314,7 +316,7 @@ export const dict = {
   "ui.approval.source.agent.default": "por el agente",
   "ui.approval.source.global": "por tu configuración global",
   "ui.approval.source.project": "por la configuración del proyecto",
-  "ui.approval.source.yolo": "por el modo de aprobación automática (YOLO)",
+  "ui.approval.source.yolo": "por el modo de aprobación automática",
   "ui.approval.source.session": "por una regla de aprobación automática de sesión",
   "ui.approval.source.default": "de forma predeterminada",
   "ui.approval.outsideWorkspace": "(fuera de tu espacio de trabajo: {{file}})",
@@ -626,14 +628,15 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions": "Pide permiso antes de editar archivos o ejecutar comandos.",
   "workStyle.choice.human-in-the-loop.bash": "Pide permiso para ejecutar todos los comandos del terminal.",
   "workStyle.choice.human-in-the-loop.visibility":
-    "Muestra todos los detalles de la conversación, incluido el razonamiento.",
+    "Expande el razonamiento, los comandos y las ediciones para su revisión.",
   "workStyle.choice.autonomous.eyebrow": "Menos interrupciones",
   "workStyle.choice.autonomous.title": "Alta autonomía",
   "workStyle.choice.autonomous.description": "Menos interrupciones y una interfaz optimizada.",
   "workStyle.choice.autonomous.permissions":
     "Edita archivos y ejecuta comandos en el espacio de trabajo sin preguntar.",
   "workStyle.choice.autonomous.bash": "Puede ejecutar comandos en el terminal del espacio de trabajo sin aprobación.",
-  "workStyle.choice.autonomous.visibility": "Los detalles permanecen contraídos hasta que los despliegues.",
+  "workStyle.choice.autonomous.visibility":
+    "Contrae los detalles de las herramientas, con una vista previa compacta del razonamiento.",
   "session.cloud.import.title": "Importar desde la nube",
   "session.cloud.import.placeholder": "ID de sesión, URL o comando kilo import",
   "session.cloud.import.button": "Importar",
@@ -1134,6 +1137,29 @@ export const dict = {
     "Evitar acciones idénticas repetidas. Se activa cuando se repite la misma llamada de herramienta con entrada idéntica.",
   "settings.checkpoints.enable.title": "Habilitar instantáneas",
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
+  "settings.autoCleanup.enable.title": "Habilitar limpieza automática de sesiones",
+  "settings.autoCleanup.enable.description":
+    "Elimina automáticamente el historial de sesiones antiguo tras una cantidad fija de días, en todos los proyectos y en todos los clientes de Kilo de esta máquina, no solo en esta ventana. Las sesiones en ejecución y las sesiones con una bifurcación reciente nunca se eliminan. La eliminación es permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Mantener sesiones durante (días)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Cuánto tiempo se conserva el historial de sesiones antes de que la limpieza automática lo elimine.",
+  "settings.autoCleanup.lastRun.title": "Última limpieza",
+  "settings.autoCleanup.lastRun.never": "Nunca ejecutada",
+  "settings.autoCleanup.result":
+    "{{date}}: eliminadas {{deleted}} de {{scanned}} sesiones ({{active}} activas omitidas, {{failed}} fallidas) en {{seconds}}s",
+  "settings.autoCleanup.starting": "Iniciando la limpieza de sesiones...",
+  "settings.autoCleanup.error.status":
+    "El estado de la limpieza de sesiones no está disponible temporalmente. Reintentando...",
+  "settings.autoCleanup.error.timeout":
+    "Esperando el estado de la limpieza. El backend está tardando más de lo esperado.",
+  "settings.autoCleanup.error.run":
+    "No se pudo confirmar que la limpieza de sesiones haya finalizado. Comprueba el resultado de la última limpieza antes de volver a intentarlo.",
+  "settings.autoCleanup.progress.scanning": "Analizando sesiones: {{processed}}/{{total}} procesadas",
+  "settings.autoCleanup.progress.deleting":
+    "Eliminando sesiones: {{processed}}/{{total}} procesadas ({{deleted}} eliminadas, {{failed}} fallidas)",
+  "settings.autoCleanup.runNow": "Ejecutar limpieza ahora",
+  "settings.autoCleanup.runNow.confirm":
+    "¿Eliminar permanentemente las sesiones caducadas en todos los proyectos y en todos los clientes de Kilo de esta máquina?",
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",
@@ -1182,6 +1208,21 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sincronización con el idioma de la interfaz de usuario",
   "settings.commitMessage.language.description": "Elija qué idioma usar para los mensajes de commit generados por IA:",
 
+  "settings.display.preview.title": "Vista previa",
+  "settings.display.presets.title": "Preajustes de visualización",
+  "settings.display.presets.description":
+    "Cambia las opciones de visualización siguientes, no los permisos. Guarda para aplicar.",
+  "settings.display.preview.model": "Modelo de ejemplo",
+  "settings.display.preview.prompt": "Elimina los espacios sobrantes del saludo y comprueba las pruebas.",
+  "settings.display.preview.reasoning":
+    "**Comprueba el saludo.** La función debería producir el mismo saludo para un nombre simple y para un nombre con espacios sobrantes en ambos extremos. Mantendré la firma de la función y el formato del saludo existentes, y cambiaré solo cómo entra el nombre en la cadena devuelta.\n\nPara una entrada como `  Ada  `, los espacios no deseados pertenecen a la entrada, no a la plantilla del saludo. Recortar el saludo completo dejaría espacios junto al nombre. Por lo tanto, la operación de recorte debe realizarse antes de insertar el nombre.\n\nConsultaré la documentación de cadenas para confirmar que `trim()` elimina los espacios en blanco de ambos extremos y devuelve una cadena nueva. Debería dejar la entrada original sin cambios. Para este cambio no se necesita una expresión regular, otra dependencia ni una función auxiliar aparte.\n\nLos espacios dentro de un nombre deben permanecer intactos. Un nombre como `Ada Lovelace` no debería convertirse en `AdaLovelace`, y su uso de mayúsculas y minúsculas no debería cambiar. Una entrada vacía o compuesta solo por espacios no requiere un nuevo saludo predeterminado como parte de esta corrección puntual.\n\nEl cambio puede quedarse en la expresión de retorno usando `name.trim()` donde la plantilla usa actualmente `name`. Conservaré la puntuación circundante y el espacio intencional después del saludo. Así el diff se mantiene pequeño y el comportamiento es fácil de revisar.\n\nPor último, ejecutaré `bun test greeting.test.ts` y comprobaré ambos resultados. El caso del nombre con relleno debería confirmar que se eliminan los espacios sobrantes, mientras que el caso del nombre simple protege la salida existente. Informaré del cambio y de los resultados de las pruebas solo después de que termine el comando.",
+  "settings.display.preview.shell": "Comprueba la prueba del saludo",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] elimina los espacios sobrantes\n[pass] conserva un nombre simple\n\n2 pruebas superadas",
+  "settings.display.preview.query": "Recorte de cadenas",
+  "settings.display.preview.result": "trim() elimina los espacios de ambos extremos de una cadena.",
+  "settings.display.preview.answer":
+    "Se ha actualizado el saludo para eliminar los espacios sobrantes. Ambas pruebas pasan.",
   "settings.display.username.title": "Nombre de usuario",
   "settings.display.username.description": "Nombre de usuario personalizado en conversaciones",
   "settings.display.fontSize.title": "Tamaño de fuente",
@@ -1217,7 +1258,7 @@ export const dict = {
     "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo de aprobación automática",
   "settings.display.autoApprovalReason.description":
-    "Muestra una línea en las llamadas a herramientas que explica por qué se aprobaron automáticamente (regla coincidente, valor predeterminado del agente, modo YOLO, etc.).",
+    "Muestra por qué se aprobó automáticamente una llamada a una herramienta, como una regla de permisos coincidente o un valor predeterminado del agente.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

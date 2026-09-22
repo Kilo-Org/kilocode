@@ -11,6 +11,7 @@ import { KiloEmbeddingModelsContext } from "../context/kilo-embedding-models"
 import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
 import ModelsTab from "../components/settings/ModelsTab"
+import DisplayTab from "../components/settings/DisplayTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import AutoApproveTab from "../components/settings/AutoApproveTab"
 import ModeEditView from "../components/settings/ModeEditView"
@@ -92,6 +93,23 @@ export const SandboxingAllowlist: Story = {
     >
       <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
         <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+/**
+ * The Display tab shows its session preview beside the controls only when the
+ * `@container (min-width: 1050px)` grid rule matches. This wrapper establishes
+ * the inline-size container, like the Tabs root does in the full settings panel,
+ * so the two-column layout renders.
+ */
+export const DisplayPreview: Story = {
+  name: "Display — session preview",
+  render: () => (
+    <StoryProviders config={{}}>
+      <div style={{ width: "1200px", height: "700px", overflow: "auto", "container-type": "inline-size" }}>
+        <DisplayTab />
       </div>
     </StoryProviders>
   ),

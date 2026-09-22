@@ -21,6 +21,8 @@ import type { SidebarSearchItem } from "./sidebar-search"
 import { label, type Activity } from "../src/utils/session-activity"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { NewProjectDialog } from "./NewProjectDialog"
+import { CloneProjectDialog } from "./CloneProjectDialog"
 import { randomColor } from "./section-colors"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
@@ -172,6 +174,14 @@ export const ProjectList: Component<Props> = (props) => {
       />
     ))
   }
+  const newProject = () => {
+    dialog.show(() => <NewProjectDialog onClose={() => dialog.close()} />)
+  }
+  const cloneProject = () => {
+    dialog.show(() => (
+      <CloneProjectDialog roots={props.projects.map((project) => project.root)} onClose={() => dialog.close()} />
+    ))
+  }
   const [pendingSection, setPendingSection] = createSignal<{ project: string; ids: Set<string> }>()
   const [renamingSection, setRenamingSection] = createSignal<string>()
   createEffect(() => {
@@ -233,6 +243,8 @@ export const ProjectList: Component<Props> = (props) => {
         </>
       }
       onAdd={() => vscode.postMessage({ type: "agentManager.addProject" })}
+      onCreateProject={newProject}
+      onClone={cloneProject}
       onSelect={(projectId) =>
         // Selecting the project itself returns to where the user left off in it;
         // the extension resolves its persisted target authoritatively.

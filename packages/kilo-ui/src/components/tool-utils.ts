@@ -75,6 +75,21 @@ export function busy(status: string | undefined) {
   return status === "pending" || status === "running"
 }
 
+/**
+ * Decide how to patch a streaming block of highlighted lines.
+ *
+ * Returns the number of leading lines that are unchanged (`start`), so only the
+ * trailing lines need re-highlighting. `skip` is true when the new lines are
+ * identical to the rendered ones. A shorter line set is not an append, so it
+ * reports `start: 0` and forces a full rebuild.
+ */
+export function bashLineUpdate(rendered: string[], lines: string[]) {
+  let same = 0
+  while (same < rendered.length && same < lines.length && rendered[same] === lines[same]) same++
+  if (same === lines.length) return { start: 0, skip: same === rendered.length }
+  return { start: same, skip: false }
+}
+
 export function hold(state: () => boolean, wait = 2000) {
   const [live, setLive] = createSignal(state())
   let timer: ReturnType<typeof setTimeout> | undefined

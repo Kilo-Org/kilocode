@@ -531,7 +531,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -2527,6 +2527,13 @@ export type Config = {
     ignore?: Array<string>
   }
   snapshot?: boolean
+  retention?: {
+    enabled?: boolean
+    /**
+     * Days a session is kept before retention deletes it. Defaults to 30, minimum 1.
+     */
+    maxAgeDays?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
   plugin?: Array<
     | string
     | [
@@ -2968,7 +2975,7 @@ export type GlobalSession = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
   project: ProjectSummary | null
   worktreeName?: string
@@ -3324,7 +3331,7 @@ export type Session1 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3378,7 +3385,7 @@ export type Session2 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3439,7 +3446,7 @@ export type Session3 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3493,7 +3500,7 @@ export type Session4 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3547,7 +3554,7 @@ export type Session5 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3601,7 +3608,7 @@ export type Session6 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3655,7 +3662,7 @@ export type Session7 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3764,7 +3771,7 @@ export type Session8 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3818,7 +3825,7 @@ export type Session9 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -5958,7 +5965,7 @@ export type RevertState = {
   snapshot?: string
   diff?: string
   files?: Array<FileDiff>
-  workspace?: "restored" | "snapshots-disabled" | "unavailable"
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type EventSessionNextRevertStaged = {
@@ -17664,6 +17671,106 @@ export type KilocodeWakeupsResponses = {
 
 export type KilocodeWakeupsResponse = KilocodeWakeupsResponses[keyof KilocodeWakeupsResponses]
 
+export type KilocodeRetentionStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention"
+}
+
+export type KilocodeRetentionStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionStatusError = KilocodeRetentionStatusErrors[keyof KilocodeRetentionStatusErrors]
+
+export type KilocodeRetentionStatusResponses = {
+  /**
+   * Session retention policy and last run
+   */
+  200: {
+    policy: {
+      enabled: boolean
+      maxAgeDays: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    last?: {
+      at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      scanned: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      deleted: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    progress?: {
+      phase: "scanning" | "deleting"
+      total: number
+      processed: number
+      deleted: number
+      failed: number
+      skippedActive: number
+    }
+  }
+}
+
+export type KilocodeRetentionStatusResponse = KilocodeRetentionStatusResponses[keyof KilocodeRetentionStatusResponses]
+
+export type KilocodeRetentionRunData = {
+  body?: {
+    force?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention/run"
+}
+
+export type KilocodeRetentionRunErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionRunError = KilocodeRetentionRunErrors[keyof KilocodeRetentionRunErrors]
+
+export type KilocodeRetentionRunResponses = {
+  /**
+   * Retention pass outcome
+   */
+  200: {
+    policy: {
+      enabled: boolean
+      maxAgeDays: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    last?: {
+      at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      scanned: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      deleted: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    progress?: {
+      phase: "scanning" | "deleting"
+      total: number
+      processed: number
+      deleted: number
+      failed: number
+      skippedActive: number
+    }
+  }
+}
+
+export type KilocodeRetentionRunResponse = KilocodeRetentionRunResponses[keyof KilocodeRetentionRunResponses]
+
 export type AnacondaDesktopStatusData = {
   body?: never
   path?: never
@@ -18219,7 +18326,7 @@ export type KilocodeSessionImportSessionData = {
       partID?: string
       snapshot?: string
       diff?: string
-      workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     permission?: {
       [key: string]: unknown

@@ -600,7 +600,7 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
             setStore("part", event.properties.part.messageID, [event.properties.part])
             break
           }
-          const result = search(parts, event.properties.part.id, (p) => p.id)
+          const result = search(parts, event.properties.part.id, (part) => part.id)
           if (result.found) {
             setStore("part", event.properties.part.messageID, result.index, reconcile(event.properties.part))
             break
@@ -618,7 +618,7 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
         case "message.part.delta": {
           const parts = store.part[event.properties.messageID]
           if (!parts) break
-          const result = search(parts, event.properties.partID, (p) => p.id)
+          const result = search(parts, event.properties.partID, (part) => part.id)
           if (!result.found) break
           touchPart(event.properties.sessionID, event.properties.partID)
           setStore(
@@ -637,7 +637,7 @@ function mergePending<T extends PermissionRequest | QuestionRequest>(
         case "message.part.removed": {
           touchPart(event.properties.sessionID, event.properties.partID)
           const parts = store.part[event.properties.messageID]
-          const result = search(parts, event.properties.partID, (p) => p.id)
+          const result = search(parts, event.properties.partID, (part) => part.id)
           if (result.found) {
             setStore(
               "part",

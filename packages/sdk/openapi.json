@@ -16906,6 +16906,557 @@
         ]
       }
     },
+    "/kilocode/retention": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.retention.status",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session retention policy and last run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "policy": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "maxAgeDays": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["enabled", "maxAgeDays"],
+                      "additionalProperties": false
+                    },
+                    "last": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "scanned": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "deleted": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "skippedActive": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "failed": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "durationMs": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
+                      "additionalProperties": false
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "phase": {
+                          "type": "string",
+                          "enum": ["scanning", "deleting"]
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "processed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "deleted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "skippedActive": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": ["phase", "total", "processed", "deleted", "failed", "skippedActive"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["policy"],
+                  "additionalProperties": false,
+                  "description": "Session retention policy and last run"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read the machine-wide session retention policy and the state of the most recent cleanup pass.",
+        "summary": "Get session retention status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.retention.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/retention/run": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.retention.run",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retention pass outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "policy": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "maxAgeDays": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["enabled", "maxAgeDays"],
+                      "additionalProperties": false
+                    },
+                    "last": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "scanned": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "deleted": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "skippedActive": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "failed": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        },
+                        "durationMs": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
+                      "additionalProperties": false
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "phase": {
+                          "type": "string",
+                          "enum": ["scanning", "deleting"]
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "processed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "deleted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "skippedActive": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": ["phase", "total", "processed", "deleted", "failed", "skippedActive"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["policy"],
+                  "additionalProperties": false,
+                  "description": "Retention pass outcome"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.",
+        "summary": "Run session retention",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "force": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.retention.run({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/anaconda-desktop/status": {
       "get": {
         "tags": ["anaconda-desktop"],
@@ -18281,7 +18832,7 @@
                       },
                       "workspace": {
                         "type": "string",
-                        "enum": ["restored", "snapshots-disabled", "unavailable"]
+                        "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
                       }
                     },
                     "required": ["messageID"],
@@ -28418,7 +28969,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -34737,6 +35288,39 @@
           "snapshot": {
             "type": "boolean"
           },
+          "retention": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "maxAgeDays": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["NaN"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["-Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity", "-Infinity", "NaN"]
+                  }
+                ],
+                "description": "Days a session is kept before retention deletes it. Defaults to 30, minimum 1."
+              }
+            },
+            "additionalProperties": false
+          },
           "plugin": {
             "type": "array",
             "items": {
@@ -35208,6 +35792,9 @@
                 "type": "boolean"
               },
               "task_model_selection": {
+                "type": "boolean"
+              },
+              "code_mode": {
                 "type": "boolean"
               },
               "speech_to_text_model": {
@@ -36024,7 +36611,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37093,7 +37680,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37266,7 +37853,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37458,7 +38045,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37631,7 +38218,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37804,7 +38391,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37977,7 +38564,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38150,7 +38737,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38488,7 +39075,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38661,7 +39248,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -45826,7 +46413,7 @@
           },
           "workspace": {
             "type": "string",
-            "enum": ["restored", "snapshots-disabled", "unavailable"]
+            "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
           }
         },
         "required": ["messageID"],

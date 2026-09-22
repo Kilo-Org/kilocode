@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.SessionBoardDto
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -16,6 +17,7 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.util.ui.UIUtil
+import java.awt.datatransfer.DataFlavor
 import javax.swing.JComponent
 import javax.swing.JEditorPane
 import kotlinx.coroutines.CoroutineScope
@@ -50,7 +52,7 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test empty board shows empty text and disables reset`() {
+    fun `test empty board shows empty text and disables reset and copy`() {
         rpc.board = board(messages = emptyList(), hasMore = false)
         val d = open()
 
@@ -59,10 +61,11 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         edt {
             assertFalse(d.loadMoreButton.isVisible)
             assertFalse(d.resetButton.isEnabled)
+            assertFalse(d.copyButton.isEnabled)
         }
     }
 
-    fun `test loaded messages render route title body description and type badge`() {
+    fun `test loaded messages render route title full body description and type badge`() {
         rpc.board = board(
             messages = listOf(
                 message("m1", from = "main", to = "ALL", fromLabel = "Main", toLabel = null, type = "INFO", body = "status\nupdate"),
@@ -77,7 +80,9 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
             val items = items(d)
             assertEquals(1, items.size)
             assertEquals("Main \u2192 ALL", items[0].title)
-            assertEquals("status update", items[0].description)
+            // The body wraps in the list instead of being flattened to one line, so its newline
+            // must survive into the row description unchanged.
+            assertEquals("status\nupdate", items[0].description)
             assertEquals("INFO", items[0].badges.single().text)
         }
     }
@@ -140,7 +145,7 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         edt { assertEquals("still here", items(d).single().description) }
     }
 
-    fun `test clicking a non-main participant closes the dialog and opens the agent`() {
+    fun `test clicking a non-main sender opens the agent without closing the board`() {
         rpc.board = board(
             messages = listOf(message("m1", from = "ses_child", to = "main", fromLabel = "Explorer", body = "found it")),
             hasMore = false,
@@ -154,10 +159,50 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         edt { clickRow(d, "m1") }
 
         assertEquals(listOf("ses_child" to "Explorer"), opened)
-        assertEquals(com.intellij.openapi.ui.DialogWrapper.OK_EXIT_CODE, d.exitCode)
+        // The board is modeless precisely so it can stay open while a subagent tab is opened
+        // beside it; a click must never close it.
+        edt { assertFalse(Disposer.isDisposed(d.disposable)) }
     }
 
-    fun `test clicking the main participant does not close the dialog`() {
+    fun `test clicking a non-main recipient opens the agent without closing the board`() {
+        rpc.board = board(
+            messages = listOf(message("m1", from = "main", to = "ses_child", toLabel = "Explorer", body = "go look")),
+            hasMore = false,
+        )
+        val d = open(order = listOf("main", "ses_child"))
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        edt { clickRow(d, "m1") }
+
+        // `main -> agent` and `agent -> main` both open `agent`: only one side of the route can
+        // ever be the non-"main"/"ALL" participant that is actually openable.
+        assertEquals(listOf("ses_child" to "Explorer"), opened)
+        edt { assertFalse(Disposer.isDisposed(d.disposable)) }
+    }
+
+    fun `test clicking a route between two subagents opens the sender`() {
+        rpc.board = board(
+            messages = listOf(
+                message(
+                    "m1",
+                    from = "ses_a",
+                    to = "ses_b",
+                    fromLabel = "Alpha",
+                    toLabel = "Beta",
+                    body = "handoff",
+                ),
+            ),
+            hasMore = false,
+        )
+        val d = open(order = listOf("main", "ses_a", "ses_b"))
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        edt { clickRow(d, "m1") }
+
+        assertEquals(listOf("ses_a" to "Alpha"), opened)
+    }
+
+    fun `test clicking a route with only main or ALL opens nothing`() {
         rpc.board = board(messages = listOf(message("m1", from = "main", to = "ALL", body = "note")), hasMore = false)
         val d = open()
         flushUntil { edt { itemCount(d) == 1 } }
@@ -165,6 +210,60 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         edt { clickRow(d, "m1") }
 
         assertTrue(opened.isEmpty())
+        edt { assertFalse(Disposer.isDisposed(d.disposable)) }
+    }
+
+    fun `test copy all fetches every page and copies oldest-first plain text`() {
+        // Only the newest page is loaded into the dialog; "Copy all" must still walk backward
+        // through every older page on its own, independent of what the dialog has paged in.
+        rpc.board = board(messages = listOf(message("m3", from = "ses_a", to = "main", fromLabel = "Alpha", body = "third")), hasMore = true, cursor = "m3")
+        val d = open(order = listOf("main", "ses_a"))
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        rpc.boardPages = mapOf(
+            null to board(messages = listOf(message("m3", from = "ses_a", to = "main", fromLabel = "Alpha", body = "third")), hasMore = true, cursor = "m3"),
+            "m3" to board(messages = listOf(message("m2", body = "second")), hasMore = true, cursor = "m2"),
+            "m2" to board(messages = listOf(message("m1", body = "first")), hasMore = false),
+        )
+
+        edt { d.copyButton.doClick() }
+        flushUntil { edt { CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor) != null } }
+
+        val expected = listOf(
+            "main -> ALL [INFO]\nfirst",
+            "main -> ALL [INFO]\nsecond",
+            "Alpha -> main [INFO]\nthird",
+        ).joinToString("\n\n")
+        assertEquals(expected, CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor))
+        edt { assertTrue(d.copyButton.isEnabled) }
+    }
+
+    fun `test copy all failure leaves clipboard untouched and re-enables the button`() {
+        rpc.board = board(messages = listOf(message("m1", body = "keep")), hasMore = false)
+        val d = open()
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection("unchanged"))
+        rpc.sessionBoardThrows = RuntimeException("boom")
+
+        edt { d.copyButton.doClick() }
+        flushUntil { edt { d.copyButton.isEnabled } }
+
+        assertEquals("unchanged", CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor))
+    }
+
+    fun `test copy all is disabled while a copy is already in progress`() {
+        rpc.board = board(messages = listOf(message("m1", body = "keep")), hasMore = false)
+        val d = open()
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        edt { d.copyButton.doClick() }
+
+        // The click above already dispatched to a coroutine but that coroutine has not been
+        // resumed yet (no dispatcher pump between here and the assertion), so the button must
+        // already read disabled from the synchronous `loading = true` the click performed.
+        edt { assertFalse(d.copyButton.isEnabled) }
+        flushUntil { edt { d.copyButton.isEnabled } }
     }
 
     private fun open(

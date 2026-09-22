@@ -35,6 +35,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/NewProjectDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/CloneProjectDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectParentField.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
@@ -89,6 +92,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/shared/ActivityIcon.tsx"),
   path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
+  path.join(ROOT, "webview-ui/src/components/chat/SessionTab.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/SendAllButton.tsx"),
 ]
@@ -100,6 +104,7 @@ const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-co
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
+const TAB_LAYOUT_FILE = path.join(ROOT, "src/agent-manager/tab-layout.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
 const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
@@ -415,6 +420,7 @@ describe("Agent Manager Provider Messages", () => {
     const body = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/state-gate.ts"), "utf-8")
     const messages = [
       "agentManager.setTabOrder",
+      "agentManager.setPinnedTabs",
       "agentManager.setWorktreeOrder",
       "agentManager.persistSession",
       "agentManager.forgetSession",
@@ -676,7 +682,10 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("provider routing handles all documented agentManager.* message types", () => {
     const text =
-      provider() + fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") + fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8")
+      provider() +
+      fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") +
+      fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8") +
+      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -697,6 +706,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
+      "agentManager.setPinnedTabs",
       "agentManager.setDefaultBaseBranch",
       "agentManager.terminal.create",
       "agentManager.terminal.close",
@@ -1045,8 +1055,8 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
    * the pending refresh.
    */
   it("loadSessions sets pendingSessionRefresh when client is null", () => {
-    const start = utils.indexOf("export async function loadSessions")
-    expect(start, "loadSessions must exist in kilo-provider-utils").toBeGreaterThan(-1)
+    const start = utils.indexOf("async function loadPage")
+    expect(start, "loadPage must exist in kilo-provider-utils").toBeGreaterThan(-1)
     const snippet = utils.slice(start, start + 700)
     expect(snippet, "must set pendingSessionRefresh when client missing").toContain("ctx.pendingSessionRefresh = true")
     expect(snippet, "must avoid noisy errors while still connecting").toContain('ctx.connectionState !== "connecting"')
@@ -1056,9 +1066,9 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
   })
 
   it("handleLoadSessions delegates to loadSessionsUtil", () => {
-    const start = provider.indexOf("private async handleLoadSessions()")
+    const start = provider.indexOf("private async handleLoadSessions(")
     expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
-    const snippet = provider.slice(start, start + 400)
+    const snippet = provider.slice(start, start + 700)
     expect(snippet, "must call loadSessionsUtil").toContain("loadSessionsUtil")
   })
 
