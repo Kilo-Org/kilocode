@@ -18832,7 +18832,7 @@
                       },
                       "workspace": {
                         "type": "string",
-                        "enum": ["restored", "snapshots-disabled", "unavailable"]
+                        "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
                       }
                     },
                     "required": ["messageID"],
@@ -28969,7 +28969,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -36611,7 +36611,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37680,7 +37680,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37853,7 +37853,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38045,7 +38045,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38218,7 +38218,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38391,7 +38391,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38564,7 +38564,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38737,7 +38737,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -39075,7 +39075,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -39248,7 +39248,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -46413,7 +46413,7 @@
           },
           "workspace": {
             "type": "string",
-            "enum": ["restored", "snapshots-disabled", "unavailable"]
+            "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
           }
         },
         "required": ["messageID"],

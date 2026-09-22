@@ -93,6 +93,8 @@ export const dict = {
     "Samtalen ble tilbakestilt. Filendringer ble ikke gjenopprettet fordi øyeblikksbilder er deaktivert.",
   "revert.banner.workspace.unavailable":
     "Samtalen ble tilbakestilt. Ingen filkontrollpunkt var tilgjengelig, så endringer i arbeidsområdet ble ikke gjenopprettet.",
+  "revert.banner.workspace.notAGitRepo":
+    "Samtalen ble tilbakestilt. Filkontrollpunkter krever et Git-repositorium, så endringer i arbeidsområdet ble ikke gjenopprettet.",
   "revert.banner.workspace.legacy":
     "Samtalen er tilbakeført. Statusen for gjenoppretting av arbeidsområdet er ikke tilgjengelig for denne tidligere tilbakeføringen.",
   "revert.banner.workspace.enableSnapshots": "Aktiver øyeblikksbilder",
