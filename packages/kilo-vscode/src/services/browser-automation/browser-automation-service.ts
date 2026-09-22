@@ -154,6 +154,7 @@ export class BrowserAutomationService implements vscode.Disposable {
     return playwrightCommand({
       headless: config.get<boolean>("headless", false),
       useSystemChrome: config.get<boolean>("useSystemChrome", true),
+      userDataDir: config.get<string>("userDataDir", "") || undefined,
     })
   }
 

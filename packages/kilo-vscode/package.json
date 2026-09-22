@@ -1142,11 +1142,22 @@
           "default": false,
           "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         },
+        "kilo-code.new.browserAutomation.userDataDir": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to an existing Chrome/Chromium user data directory to reuse for browser automation. When set, the Playwright MCP server and the Integrated Browser launch with this profile, preserving cookies, local storage, and other browser state. Leave empty to use a fresh temporary profile."
+        },
         "kilo-code.new.agentManager.browser.useSystemChrome": {
           "type": "boolean",
           "default": true,
           "scope": "application",
           "description": "Use system-installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed."
+        },
+        "kilo-code.new.agentManager.browser.userDataDir": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "Absolute path to an existing Chrome/Chromium user data directory for the Integrated Browser. Reuses the same profile across sessions, preserving cookies and browser state. Leave empty to use an isolated temporary profile."
         },
         "kilo-code.new.attention.enabled": {
           "type": "boolean",

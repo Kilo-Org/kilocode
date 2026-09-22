@@ -14,6 +14,11 @@ export function integratedBrowserUseSystemChrome(): boolean {
   return vscode.workspace.getConfiguration(INTEGRATED_BROWSER).get("useSystemChrome", true)
 }
 
+export function integratedBrowserUserDataDir(): string | undefined {
+  const value = vscode.workspace.getConfiguration(INTEGRATED_BROWSER).get<string>("userDataDir", "")
+  return value || undefined
+}
+
 /**
  * Copy a user-level Chrome preference that was stored before this setting had
  * its own key.

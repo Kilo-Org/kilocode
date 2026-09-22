@@ -24,6 +24,7 @@ import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
 import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
 import {
   integratedBrowserUseSystemChrome,
+  integratedBrowserUserDataDir,
   migrateIntegratedBrowserUseSystemChrome,
 } from "./services/browser-automation/chrome-setting"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
@@ -75,6 +76,7 @@ export async function activate(context: vscode.ExtensionContext) {
     enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
     trusted: () => vscode.workspace.isTrusted,
     useSystemChrome: () => integratedBrowserUseSystemChrome(),
+    userDataDir: () => integratedBrowserUserDataDir(),
   })
 
   // Create shared connection service (one server for all webviews)

@@ -59,7 +59,7 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses, seedSessionWakeups } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
-import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
+import { integratedBrowserUseSystemChrome, integratedBrowserUserDataDir } from "./services/browser-automation/chrome-setting"
 import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
@@ -4214,6 +4214,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       claudeMigration: this.claudeMigrationSetting(),
       browserAutomation: this.browserAutomationSetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
+      agentManagerBrowserUserDataDir: integratedBrowserUserDataDir(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),
@@ -4981,6 +4982,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         enabled: config.get<boolean>("enabled", false),
         useSystemChrome: config.get<boolean>("useSystemChrome", true),
         headless: config.get<boolean>("headless", false),
+        userDataDir: config.get<string>("userDataDir", ""),
       },
     })
   }

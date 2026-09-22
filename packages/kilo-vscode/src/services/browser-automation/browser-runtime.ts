@@ -4,6 +4,7 @@ export function options(
   system: boolean,
   port?: number,
   env: Record<string, string | undefined> = process.env,
+  userDataDir?: string,
 ): LaunchOptions {
   return {
     chromiumSandbox: true,
@@ -21,5 +22,6 @@ export function options(
       ...(port ? ["--remote-debugging-address=127.0.0.1", `--remote-debugging-port=${port}`] : []),
     ],
     ...(system ? { channel: "chrome" } : {}),
+    ...(userDataDir ? { userDataDir } : {}),
   }
 }

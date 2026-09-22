@@ -43,4 +43,14 @@ describe("browser runtime isolation", () => {
     expect(config.env).toEqual({ PATH: "/bin" })
     expect(config.args).toEqual(["--no-proxy-server"])
   })
+
+  test("includes userDataDir when provided", () => {
+    const config = options(true, undefined, {}, "/tmp/chrome-profile")
+    expect(config.userDataDir).toBe("/tmp/chrome-profile")
+  })
+
+  test("omits userDataDir when not provided", () => {
+    const config = options(true, undefined, {})
+    expect(config.userDataDir).toBeUndefined()
+  })
 })

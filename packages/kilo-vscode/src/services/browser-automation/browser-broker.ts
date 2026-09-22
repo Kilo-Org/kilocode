@@ -64,6 +64,7 @@ export interface BrowserBrokerOptions {
   trusted?: () => boolean
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
   useSystemChrome?: () => boolean
+  userDataDir?: () => string | undefined
 }
 
 export interface BrowserContextFactory {
@@ -463,7 +464,7 @@ export class BrowserBroker {
     if (this.browserStarting) return this.browserStarting
     this.browserStarting = (async () => {
       const port = this.opts.launch ? undefined : await reserve()
-      const config = options(this.opts.useSystemChrome?.() !== false, port)
+      const config = options(this.opts.useSystemChrome?.() !== false, port, undefined, this.opts.userDataDir?.())
       const browser = await (this.opts.launch?.(config) ?? chromium.launch(config))
       this.debugging = ("debugging" in browser ? browser.debugging : undefined) ?? port
       this.browser = browser

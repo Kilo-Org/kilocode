@@ -28,4 +28,16 @@ describe("Playwright MCP command", () => {
     const index = command.indexOf("--output-dir")
     expect(command.at(index + 1)).not.toContain(process.cwd())
   })
+
+  it("adds --user-data-dir when a profile path is provided", () => {
+    const command = playwrightCommand({ headless: false, useSystemChrome: true, userDataDir: "/tmp/chrome-profile" })
+    const index = command.indexOf("--user-data-dir")
+    expect(index).toBeGreaterThanOrEqual(0)
+    expect(command.at(index + 1)).toBe("/tmp/chrome-profile")
+  })
+
+  it("omits --user-data-dir when userDataDir is empty", () => {
+    const command = playwrightCommand({ headless: false, useSystemChrome: true, userDataDir: "" })
+    expect(command).not.toContain("--user-data-dir")
+  })
 })
