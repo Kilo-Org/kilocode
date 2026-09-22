@@ -548,7 +548,7 @@
             }
           }
         },
-        "description": "Upgrade kilo to the specified version.",
+        "description": "Upgrade kilo to the specified version or latest if not specified.",
         "summary": "Upgrade kilo",
         "requestBody": {
           "content": {
@@ -560,7 +560,6 @@
                     "type": "string"
                   }
                 },
-                "required": ["target"],
                 "additionalProperties": false
               }
             }

@@ -115,7 +115,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
           { status: 400 },
         )
       }
-      const target = ctx.payload.target
+      const target = ctx.payload.target || (yield* installation.latest(method)) // kilocode_change - omitted target upgrades to the latest version
       const result = yield* installation.upgrade(method, target).pipe(
         Effect.as({ success: true as const, version: target }),
         Effect.catch((err) =>

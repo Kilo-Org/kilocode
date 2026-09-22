@@ -1640,10 +1640,11 @@ export function options(input: {
         input.model.api.npm === "@ai-sdk/github-copilot" ||
         input.model.api.npm === "@openrouter/ai-sdk-provider" ||
         input.model.api.npm === "@kilocode/kilo-gateway") &&
-      // kilocode_change end
       input.model.api.id.includes("gpt-5.") &&
       !input.model.api.id.includes("codex") &&
-      !input.model.api.id.includes("-chat")
+      !input.model.api.id.includes("-chat") &&
+      input.model.providerID !== "azure"
+      // kilocode_change end
     ) {
       result["textVerbosity"] = "low"
     }

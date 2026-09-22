@@ -1599,11 +1599,11 @@ export class Global extends HeyApiClient {
   /**
    * Upgrade kilo
    *
-   * Upgrade kilo to the specified version.
+   * Upgrade kilo to the specified version or latest if not specified.
    */
   public upgrade<ThrowOnError extends boolean = false>(
-    parameters: {
-      target: string
+    parameters?: {
+      target?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
