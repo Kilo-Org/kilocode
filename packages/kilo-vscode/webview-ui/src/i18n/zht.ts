@@ -88,6 +88,7 @@ export const dict = {
   "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.banner.workspace.snapshotsDisabled": "工作階段已還原。由於快照已停用，未還原檔案變更。",
   "revert.banner.workspace.unavailable": "工作階段已還原。沒有可用的檔案檢查點，因此未還原工作區變更。",
+  "revert.banner.workspace.notAGitRepo": "工作階段已還原。檔案檢查點需要 Git 儲存庫，因此未還原工作區變更。",
   "revert.banner.workspace.legacy": "工作階段已還原。此次先前還原的工作區復原狀態無法取得。",
   "revert.banner.workspace.enableSnapshots": "啟用快照",
   "revert.disabled.agentBusy": "等待 Agent 完成",

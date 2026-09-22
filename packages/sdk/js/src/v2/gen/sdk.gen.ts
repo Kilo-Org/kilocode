@@ -8118,7 +8118,7 @@ export class SessionImport extends HeyApiClient {
         partID?: string
         snapshot?: string
         diff?: string
-        workspace?: "restored" | "snapshots-disabled" | "unavailable"
+        workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
       }
       permission?: {
         [key: string]: unknown
