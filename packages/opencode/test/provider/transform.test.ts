@@ -4810,6 +4810,37 @@ describe("ProviderTransform.variants", () => {
       expect(result.medium).toEqual({ reasoningEffort: "medium" })
     })
 
+    // kilocode_change start - grok-4.6 and grok-4.7 expose xhigh; grok-4.5 does not
+    test("grok-4.7 includes xhigh reasoning effort", () => {
+      const model = createMockModel({
+        id: "xai/grok-4.7",
+        providerID: "xai",
+        api: {
+          id: "grok-4.7",
+          url: "https://api.x.ai",
+          npm: "@ai-sdk/xai",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
+      expect(result.xhigh).toEqual({ reasoningEffort: "xhigh" })
+    })
+
+    test("grok-4.6 includes xhigh reasoning effort", () => {
+      const model = createMockModel({
+        id: "xai/grok-4.6",
+        providerID: "xai",
+        api: {
+          id: "grok-4.6",
+          url: "https://api.x.ai",
+          npm: "@ai-sdk/xai",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
+    })
+    // kilocode_change end
+
     test("grok-3-mini returns low and high with reasoningEffort", () => {
       const model = createMockModel({
         id: "xai/grok-3-mini",

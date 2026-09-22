@@ -762,6 +762,13 @@ function googleThinkingLevelEfforts(apiId: string) {
   return ["low", "medium", "high"]
 }
 
+// kilocode_change start - https://docs.x.ai/developers/model-capabilities/text/reasoning
+function grokXHigh(id: string) {
+  const api = id.toLowerCase()
+  return api.includes("grok-4.6") || api.includes("grok-4.7")
+}
+// kilocode_change end
+
 function googleThinkingBudgetMax(apiId: string) {
   const id = apiId.toLowerCase()
   if (id.includes("2.5") && id.includes("pro") && !id.includes("flash")) return 32_768
@@ -1014,6 +1021,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       if (model.api.id.toLowerCase().includes("deepseek-v4")) {
         efforts.push("max")
       }
+      // kilocode_change start - grok-4.6 and grok-4.7 accept reasoning effort xhigh
+      if (model.api.npm === "@ai-sdk/xai" && grokXHigh(`${model.id} ${model.api.id}`)) efforts.push("xhigh")
+      // kilocode_change end
       return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
 
     case "@ai-sdk/azure":
