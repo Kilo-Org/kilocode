@@ -1792,6 +1792,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
     // OpenRouter encrypts some reasoning blocks; drop the placeholder.
     return props.part.text.replace("[REDACTED]", "").trim()
   })
+  const opaque = createMemo(() => !content() && Boolean(props.part.metadata))
   // Reasoning is finalized when the server sets `time.end` (see processor.ts).
   // Flips independently of the parent message completing.
   const isDone = createMemo(() => props.part.time.end !== undefined)
@@ -1804,12 +1805,12 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   const syntax = createSyntaxStyleMemo(() => generateSubtleSyntax(theme))
 
   const toggle = () => {
-    if (!inMinimal()) return
+    if (!inMinimal() || opaque()) return
     setExpanded((prev) => !prev)
   }
 
   return (
-    <Show when={content()}>
+    <Show when={content() || opaque()}>
       <box
         ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
         paddingLeft={3}
@@ -1822,14 +1823,15 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
             /* kilocode_change start */
             partID={props.part.id}
             /* kilocode_change end */
-            toggleable={inMinimal()}
+            toggleable={inMinimal() && !opaque()}
             open={!inMinimal() || expanded()}
             done={isDone()}
             title={summary().title}
             duration={isDone() ? Locale.duration(duration()) : undefined}
+            encrypted={opaque()}
           />
         </box>
-        <Show when={(!inMinimal() || expanded()) && summary().body}>
+        <Show when={!opaque() && (!inMinimal() || expanded()) && summary().body}>
           <box paddingLeft={inMinimal() ? 2 : 0} marginTop={1}>
             <code
               filetype="markdown"
@@ -1854,12 +1856,18 @@ function ReasoningHeader(props: {
   done: boolean
   title: string | null
   duration?: string
+  encrypted?: boolean
 }) {
   const { theme } = useTheme()
   const fg = () =>
     props.open
       ? RGBA.fromValues(theme.warning.r, theme.warning.g, theme.warning.b, theme.thinkingOpacity)
       : theme.warning
+  const completed = () => {
+    if (props.encrypted) return `Thought${props.duration ? ` · ${props.duration}` : ""}`
+    const detail = [props.title, props.duration].filter(Boolean).join(" · ")
+    return `${props.toggleable ? (props.open ? "- " : "+ ") : ""}Thought${detail ? `: ${detail}` : ""}`
+  }
 
   return (
     <Switch>
@@ -1870,22 +1878,7 @@ function ReasoningHeader(props: {
       </Match>
       <Match when={true}>
         <text fg={fg()} wrapMode="none">
-          <Show when={props.toggleable}>
-            <span>{props.open ? "- " : "+ "}</span>
-          </Show>
-          <span>Thought</span>
-          <Show when={props.title || props.duration}>
-            <span>: </span>
-          </Show>
-          <Show when={props.title}>
-            <span>{props.title}</span>
-          </Show>
-          <Show when={props.duration}>
-            <span>
-              {props.title ? " · " : ""}
-              {props.duration}
-            </span>
-          </Show>
+          {completed()}
           {/* kilocode_change start */}
           <RoutedModelMeta.View id={props.partID} />
           {/* kilocode_change end */}
