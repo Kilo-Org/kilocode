@@ -30,6 +30,7 @@ describe("sidebar tab drag ordering", () => {
     expect(tabs).toContain("sidebarSessionTabIDs: tabs")
     expect(tabs).toContain("sidebarActiveSessionTabID: selected")
     expect(tabs).toContain("sidebarPinnedSessionTabIDs: pins")
+    expect(tabs).toContain("const pins = pinned().filter((id) => real().includes(id))")
     expect(tabs).toContain("timer = setTimeout(persist, 300)")
   })
 

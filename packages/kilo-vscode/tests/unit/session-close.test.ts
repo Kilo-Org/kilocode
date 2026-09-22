@@ -31,12 +31,21 @@ function scene(ids: string[], opts: { active?: string; pins?: string[] } = {}) {
   const deps = sessionCloseDeps({
     ids: () => [...open],
     visible: () => active,
+    isPending: (id) => id.startsWith("sidebar-pending:"),
     isPinned: (id) => pins.has(id),
     close,
     reveal,
   })
   return { deps, calls, open, visible: () => active }
 }
+
+describe("session close deps", () => {
+  it("reports pending tabs through the shared contract", () => {
+    const s = scene(["a", PENDING])
+    expect(s.deps.isPending(PENDING)).toBe(true)
+    expect(s.deps.isPending("a")).toBe(false)
+  })
+})
 
 describe("sidebar closable right", () => {
   it("returns every tab after the target in order", () => {

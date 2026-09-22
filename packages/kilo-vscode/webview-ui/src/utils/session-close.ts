@@ -12,6 +12,7 @@ const none = () => {}
 export interface SessionTabBar {
   ids: () => readonly string[]
   visible: () => string | undefined
+  isPending: (id: string) => boolean
   isPinned: (id: string) => boolean
   close: (id: string) => void
   reveal: (id: string) => void
@@ -23,7 +24,7 @@ export function sessionCloseDeps(bar: SessionTabBar): CloseToRightDeps {
     REVIEW_TAB_ID: REVIEW_ID,
     tabIds: bar.ids,
     visibleTabId: bar.visible,
-    isPending: () => false,
+    isPending: bar.isPending,
     isPinned: bar.isPinned,
     activateTerminal: none,
     deactivateTerminal: none,

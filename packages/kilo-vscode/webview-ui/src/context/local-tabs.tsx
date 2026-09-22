@@ -147,6 +147,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const closeDeps = sessionCloseDeps({
     ids: display,
     visible: active,
+    isPending: isPendingTab,
     isPinned,
     close,
     reveal: select,
@@ -196,7 +197,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     const tabs = real()
     const tab = active()
     const selected = tab && !isPendingTab(tab) ? tab : undefined
-    const pins = pinned().filter((id) => !isPendingTab(id))
+    const pins = pinned().filter((id) => real().includes(id))
     const prev = vscode.getState<LocalTabsState>() ?? {}
     vscode.setState({
       ...prev,
