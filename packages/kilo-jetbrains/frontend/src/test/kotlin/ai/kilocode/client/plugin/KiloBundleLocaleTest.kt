@@ -208,7 +208,7 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         return null
     }
 
-    /** Index just past the closing quote of the string literal starting at [text][start]. */
+    /** Index of the closing quote of the string literal starting at index [start]. */
     private fun skipString(text: String, start: Int): Int {
         var i = start + 1
         while (i < text.length && text[i] != '"') {
