@@ -97,19 +97,30 @@ describe("ToolInputStream", () => {
     stream.dispose()
   })
 
-  test("counts added and removed lines from a streamed patch", async () => {
+  test("counts change lines in a streamed patch, including content that starts with -- or ++", async () => {
     const { pushed, stream } = setup()
     stream.track(part("apply_patch", "pending"))
     stream.delta({
       callID: "call_1",
-      delta: '{"patchText":"*** Update File: a.ts\\n--- a.ts\\n+++ b.ts\\n@@\\n-old\\n+new',
+      delta: '{"patchText":"*** Begin Patch\\n*** Update File: a.ts\\n@@\\n-old\\n---x\\n+new\\n+++y',
     })
     await wait()
 
     expect((pushed[0]!.part as Part).state.input).toEqual({})
+    // `---x` removes a line whose content is `--x`, and `+++y` adds a line
+    // whose content is `++y`; both must count.
     expect((pushed[0]!.part as Part).state.metadata).toEqual({
-      streamChanges: { additions: 1, deletions: 1 },
+      streamChanges: { additions: 2, deletions: 2 },
     })
+    stream.dispose()
+  })
+
+  test("does not parse fragments that only carry other fields", async () => {
+    const { pushed, stream } = setup()
+    stream.track(part("write", "pending"))
+    stream.delta({ callID: "call_1", delta: '{"filePath":"src/a.ts"' })
+    await wait()
+    expect(pushed).toHaveLength(0)
     stream.dispose()
   })
 })
