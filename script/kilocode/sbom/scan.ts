@@ -76,6 +76,8 @@ export function convert(document: any, delivery: Component["delivery"] = "contai
  * `registry:ghcr.io/kilo-org/kilocode@sha256:...`.
  */
 export async function scan(target: string): Promise<Scan> {
+  // `SYFT` pins a specific binary; setting it to an empty string disables the
+  // scan explicitly, which is how tests exercise the degraded path.
   const binary = process.env.SYFT ?? Bun.which("syft")
   if (!binary) {
     return {

@@ -161,18 +161,31 @@ const SCOPE: Record<Delivery, "required" | "optional" | "excluded"> = {
  * Stable identity for a component. purl is preferred because it is what
  * consumers correlate against advisory databases.
  *
- * Delivery is folded into the ref for anything not contained in the artifact. A
- * package can legitimately appear as both compiled-in and runtime-downloaded
- * across the inputs of one artifact, and those are different claims that must
- * not collide on a single `bom-ref`.
+ * Delivery is deliberately not part of the identity. Dependency edges are built
+ * from the same purls and refs, so encoding delivery here would make any
+ * reclassified component unreachable from its edges and silently flatten the
+ * graph. Delivery is expressed through `scope` and the delivery property.
  */
 export function ref(input: Component) {
-  const delivery = input.delivery && input.delivery !== "contained" ? `?kilo-delivery=${input.delivery}` : ""
-  if (input.ref) return `${input.ref}${delivery}`
-  if (input.purl) return `${input.purl}${delivery}`
+  if (input.ref) return input.ref
+  if (input.purl) return input.purl
   const scope = [input.group, input.name].filter(Boolean).join("/")
   const platform = input.platform ? `?platform=${input.platform}` : ""
-  return `${input.type}:${scope}@${input.version ?? "unknown"}${platform}${delivery}`
+  return `${input.type}:${scope}@${input.version ?? "unknown"}${platform}`
+}
+
+/**
+ * When inputs disagree on how one component is delivered, the strongest claim
+ * wins. A component that is physically present is contained even if another
+ * input also installs it on demand, because that copy is what users receive
+ * and what vulnerability handling has to account for.
+ */
+const STRENGTH: Record<Delivery, number> = { contained: 2, runtime: 1, provided: 0 }
+
+function strongest(a?: Delivery, b?: Delivery): Delivery {
+  const x = a ?? "contained"
+  const y = b ?? "contained"
+  return STRENGTH[x] >= STRENGTH[y] ? x : y
 }
 
 /**
@@ -180,9 +193,9 @@ export function ref(input: Component) {
  *
  * Kilo composes each SBOM from a bundler graph, a physical artifact scan, and
  * explicitly modelled native components, so the same package routinely arrives
- * more than once. Identity is purl plus version plus delivery: a component that
- * is contained in one artifact and only runtime-downloaded in another is not
- * the same claim and must not collapse.
+ * more than once. Identity is the purl (or explicit ref); conflicting delivery
+ * claims resolve to the strongest one rather than producing two components that
+ * collide on one `bom-ref`.
  */
 export function dedupe(input: Component[]) {
   const merged = new Map<string, Component>()
@@ -196,6 +209,7 @@ export function dedupe(input: Component[]) {
     merged.set(key, {
       ...previous,
       ...item,
+      delivery: strongest(previous.delivery, item.delivery),
       licenses: union(previous.licenses, item.licenses),
       hashes: hashes(previous.hashes, item.hashes),
       properties: { ...previous.properties, ...item.properties },

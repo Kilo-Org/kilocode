@@ -195,15 +195,29 @@ jobs:
       # One release publishes two plugin artifacts from two workflows, so the
       # already-published lean manifest is pulled back in and merged. Without it
       # the release would claim it only ever produced the bundled ZIP.
+      # Absent evidence is a legitimate state (the lean run may have produced
+      # none in advisory mode), so that case continues. Evidence that exists but
+      # cannot be fetched fails the step: continuing would upload a bundled-only
+      # manifest over the published one and permanently drop the lean evidence.
+      # The sidecars listed in the manifest are restored alongside it because
+      # verification resolves them relative to the manifest directory.
       - name: Restore published JetBrains SBOM manifest
-        continue-on-error: true
         run: |
-          mkdir -p packages/kilo-jetbrains/build/release
-          gh release download "$TAG" \
-            --pattern jetbrains-sbom-evidence.json \
-            --dir packages/kilo-jetbrains/build/release \
-            --clobber \
-            --repo "$GITHUB_REPOSITORY"
+          set -euo pipefail
+          dir=packages/kilo-jetbrains/build/release
+          mkdir -p "$dir"
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name' --repo "$GITHUB_REPOSITORY")"
+          if ! grep -qx jetbrains-sbom-evidence.json <<<"$assets"; then
+            echo "No published JetBrains SBOM manifest on $TAG yet; bundled evidence starts a new one."
+            exit 0
+          fi
+          gh release download "$TAG" --pattern jetbrains-sbom-evidence.json --dir "$dir" --clobber --repo "$GITHUB_REPOSITORY"
+          mapfile -t sidecars < <(jq -r '.entries[] | select(.sbom) | .sbom' "$dir/jetbrains-sbom-evidence.json")
+          for sidecar in "${sidecars[@]}"; do
+            if grep -qx "$sidecar" <<<"$assets"; then
+              gh release download "$TAG" --pattern "$sidecar" --dir "$dir" --clobber --repo "$GITHUB_REPOSITORY"
+            fi
+          done
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.validate.outputs.tag }}

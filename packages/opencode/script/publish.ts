@@ -4,6 +4,7 @@ import pkg from "../package.json"
 import { Script } from "@opencode-ai/script"
 import { fileURLToPath } from "url"
 // kilocode_change start
+import fs from "node:fs"
 import path from "node:path"
 import { NpmPublish } from "./kilocode/npm-publish"
 import * as KiloSbom from "./kilocode/sbom"
@@ -13,7 +14,47 @@ import type { Manifest } from "../../../script/kilocode/sbom/index"
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 
-const evidence: Manifest.Entry[] = [] // kilocode_change
+// kilocode_change start
+const evidence: Manifest.Entry[] = []
+
+/** Record SBOM evidence for one npm tarball, or an explicit failure entry. */
+async function describe(file: string | undefined, name: string, version: string) {
+  const described = file
+    ? await KiloSbom.npmPackage({
+        file,
+        name,
+        release: { version, channel: Script.channel },
+        out: path.resolve("dist"),
+      }).catch((err) => {
+        console.error(`sbom: could not describe ${name}@${version}`, err)
+        return undefined
+      })
+    : undefined
+  evidence.push(
+    described?.entry ?? {
+      artifact: file ? path.basename(file) : `${name}@${version}`,
+      sha256: "",
+      distribution: "npm",
+      error: `SBOM generation failed for ${name}@${version}`,
+    },
+  )
+}
+
+/** Fetch the tarball the registry actually serves for an already-published version. */
+async function registry(name: string, version: string) {
+  const dest = path.resolve("dist", ".sbom-registry")
+  await fs.promises.mkdir(dest, { recursive: true })
+  const out = await $`npm pack ${name}@${version} --pack-destination ${dest} --json`
+    .quiet()
+    .json()
+    .catch((err) => {
+      console.error(`sbom: could not fetch published ${name}@${version}`, err)
+      return undefined
+    })
+  const filename = (out as { filename?: string }[] | undefined)?.at(0)?.filename
+  return filename ? path.join(dest, filename) : undefined
+}
+// kilocode_change end
 
 async function published(name: string, version: string) {
   return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0
@@ -25,31 +66,28 @@ async function publish(dir: string, name: string, version: string) {
   if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(dir)
   if (await published(name, version)) {
     console.log(`already published ${name}@${version}`)
+    // kilocode_change start - a re-run must still describe what the registry
+    // serves, otherwise the distribution manifest shrinks and its upload would
+    // replace the complete evidence from the first run.
+    await describe(await registry(name, version), name, version)
+    // kilocode_change end
     return
   }
+  // kilocode_change start - remove stale tarballs so the SBOM subject and the
+  // published bytes are provably the file this pack just wrote.
+  for (const stale of await Array.fromAsync(new Bun.Glob("*.tgz").scan({ cwd: dir }))) {
+    await fs.promises.rm(path.join(dir, stale), { force: true })
+  }
+  // kilocode_change end
   await $`bun pm pack`.cwd(dir)
   // kilocode_change start - describe the exact tarball before publishing it, and
-  // publish that resolved path rather than a glob so the SBOM subject and the
-  // uploaded bytes cannot diverge.
-  const tarball = (await Array.fromAsync(new Bun.Glob("*.tgz").scan({ cwd: dir }))).sort().at(-1)
-  if (!tarball) throw new Error(`bun pm pack produced no tarball for ${name}`)
-  const described = await KiloSbom.npmPackage({
-    file: path.join(dir, tarball),
-    name,
-    release: { version, channel: Script.channel },
-    out: path.resolve("dist"),
-  }).catch((err) => {
-    console.error(`sbom: could not describe ${name}@${version}`, err)
-    return undefined
-  })
-  evidence.push(
-    described?.entry ?? {
-      artifact: tarball,
-      sha256: "",
-      distribution: "npm",
-      error: `SBOM generation failed for ${name}@${version}`,
-    },
-  )
+  // publish that resolved path rather than a glob.
+  const packed = await Array.fromAsync(new Bun.Glob("*.tgz").scan({ cwd: dir }))
+  if (packed.length !== 1) {
+    throw new Error(`bun pm pack must produce exactly one tarball for ${name}, found ${packed.length}`)
+  }
+  const tarball = packed[0]
+  await describe(path.join(dir, tarball), name, version)
 
   await NpmPublish.retry({
     name,
@@ -268,11 +306,15 @@ if (!Script.preview) {
 // release produced. Homebrew and AUR redistribute the archives described by the
 // archive manifest, so they need no separate evidence.
 if (Script.release) {
+  // Expected coverage is derived from what this release had to produce, not from
+  // what happened to be recorded, so a missing package or image is a shortfall.
+  const packages = Object.keys(binaries).length + 1
+  const images = Script.preview ? 0 : platforms.split(",").length + 1
   const described = await KiloSbom.distribution({
     dir: path.resolve("dist"),
     release: { version, channel: Script.channel },
     entries: evidence,
-    expected: evidence.length,
+    expected: packages + images,
   })
   await $`gh release upload v${Script.version} ${described.files} --clobber`.nothrow()
 }
@@ -317,7 +359,15 @@ async function describeImages(metadata: string) {
       console.error(`sbom: could not describe ${image}@${item.digest}`, err)
       return undefined
     })
-    if (described) entries.push(described.entry)
+    entries.push(
+      described?.entry ?? {
+        artifact: KiloSbom.ociName(item.digest, item.platform),
+        sha256: item.digest.replace(/^sha256:/, ""),
+        distribution: "oci",
+        ...(item.platform ? { target: item.platform } : {}),
+        error: `SBOM generation failed for ${image}@${item.digest}`,
+      },
+    )
   }
   return entries
 }

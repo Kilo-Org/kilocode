@@ -78,6 +78,28 @@ describe("jetbrains plugin", () => {
     }
   })
 
+  test("keeps each runtime CLI subtree nested under its CLI instead of flattening it onto the root", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, "kilo.jetbrains-1.2.3-signed.zip")
+      await Bun.write(file, "lean")
+      const result = await JetBrains.plugin({ file, variant: "lean", version: "1.2.3", cli: "9.9.9" })
+      const bom = await Bun.file(result.sidecar).json()
+
+      const root = bom.dependencies.find((item: any) => item.ref.startsWith("kilocode:artifact:"))
+      const clis = JetBrains.PLATFORMS.map((platform) => `kilocode:cli:${platform}@9.9.9`)
+      // The root should reach the CLIs and the plugin's own libraries, not the
+      // roughly one thousand npm packages compiled into each CLI.
+      expect(root.dependsOn).toEqual(expect.arrayContaining(clis))
+      expect(root.dependsOn.length).toBeLessThan(50)
+      for (const ref of clis) {
+        expect(bom.dependencies.find((item: any) => item.ref === ref)?.dependsOn.length).toBeGreaterThan(0)
+      }
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
   test("marks the six CLI builds as contained for the bundled ZIP", async () => {
     const dir = await scratch()
     try {
@@ -199,7 +221,7 @@ describe("vscode vsix", () => {
     try {
       const file = path.join(dir, "kilo-vscode-solaris-sparc.vsix")
       await Bun.write(file, "vsix")
-      expect(VsCode.vsix({ file, target: "solaris-sparc", release })).rejects.toThrow(/Unknown VS Code target/)
+      await expect(VsCode.vsix({ file, target: "solaris-sparc", release })).rejects.toThrow(/Unknown VS Code target/)
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }

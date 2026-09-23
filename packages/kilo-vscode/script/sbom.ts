@@ -179,8 +179,14 @@ export async function evidence(input: { dir: string; release: Release; expected?
   }
 }
 
+function flag(name: string) {
+  const index = process.argv.indexOf(`--${name}`)
+  if (index === -1) return undefined
+  return process.argv[index + 1]
+}
+
 if (import.meta.main) {
-  const dir = process.argv[process.argv.indexOf("--dir") + 1] ?? path.join(import.meta.dir, "..", "out")
+  const dir = flag("dir") ?? path.join(import.meta.dir, "..", "out")
   const version = process.env.KILO_VERSION
   if (!version) throw new Error("KILO_VERSION is required to describe VSIX artifacts")
   await evidence({ dir, release: { version, channel: process.env.KILO_PRE_RELEASE === "true" ? "rc" : "latest" } })

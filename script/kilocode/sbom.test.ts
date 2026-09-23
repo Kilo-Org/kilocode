@@ -137,12 +137,44 @@ describe("dedupe", () => {
     expect(merged).toHaveLength(2)
   })
 
-  test("does not collapse a contained component into a runtime-downloaded one", () => {
-    const merged = dedupe([
-      { type: "application", name: "kilo", version: "7.7.9", ref: "kilo", delivery: "contained" },
-      { type: "application", name: "kilo", version: "7.7.9", ref: "kilo", delivery: "runtime" },
+  test("resolves a contained-versus-runtime conflict to contained, in either order", () => {
+    const contained = {
+      type: "application" as const,
+      name: "kilo",
+      version: "7.7.9",
+      ref: "kilo",
+      delivery: "contained" as const,
+    }
+    const runtime = { ...contained, delivery: "runtime" as const }
+    expect(dedupe([contained, runtime])).toEqual([expect.objectContaining({ delivery: "contained" })])
+    expect(dedupe([runtime, contained])).toEqual([expect.objectContaining({ delivery: "contained" })])
+  })
+
+  test("resolves a runtime-versus-provided conflict to runtime", () => {
+    const provided = {
+      type: "library" as const,
+      name: "x",
+      version: "1",
+      purl: "pkg:npm/x@1",
+      delivery: "provided" as const,
+    }
+    expect(dedupe([provided, { ...provided, delivery: "runtime" }])).toEqual([
+      expect.objectContaining({ delivery: "runtime" }),
     ])
-    expect(merged).toHaveLength(2)
+  })
+
+  test("keeps delivery out of the ref so dependency edges stay resolvable", () => {
+    const document = bom({
+      components: [
+        { type: "application", name: "cli", version: "1", ref: "cli", delivery: "runtime" },
+        { type: "library", name: "dep", version: "1", purl: "pkg:npm/dep@1", delivery: "runtime" },
+      ],
+      dependencies: { cli: ["pkg:npm/dep@1"] },
+    })
+    expect(validate(document)).toEqual([])
+    const root = document.dependencies.find((item) => item.ref.startsWith("kilocode:artifact:"))
+    expect(root?.dependsOn).toEqual(["cli"])
+    expect(document.dependencies.find((item) => item.ref === "cli")?.dependsOn).toEqual(["pkg:npm/dep@1"])
   })
 })
 
@@ -347,10 +379,11 @@ describe("scan", () => {
     process.env.SYFT = ""
     try {
       const result = await Scan.scan("file:/does/not/exist")
-      if (result.gaps.length) {
-        expect(result.gaps[0].reason).toContain("syft")
-        expect(result.components).toEqual([])
-      }
+      expect(result.components).toEqual([])
+      expect(result.tools).toEqual([])
+      expect(result.gaps).toEqual([
+        { component: "file:/does/not/exist", reason: "file-level inventory unavailable: syft is not installed" },
+      ])
     } finally {
       if (previous == null) delete process.env.SYFT
       else process.env.SYFT = previous
@@ -498,6 +531,20 @@ describe("manifest", () => {
   test("refuses to merge evidence across releases", () => {
     const base: Manifest.Manifest = { version: "1.0.0", product: "cli", generated: "", expected: 0, entries: [] }
     expect(() => Manifest.merge(base, { ...base, version: "1.0.1" })).toThrow(/Cannot merge evidence/)
+  })
+
+  test("omits digest-less failure entries from checksums instead of writing a malformed line", async () => {
+    const text = await Manifest.checksums({
+      manifest: {
+        version: "7.7.9",
+        product: "cli",
+        generated: "",
+        expected: 1,
+        entries: [{ artifact: "@kilocode/cli@7.7.9", sha256: "", error: "failed" }],
+      },
+      dir: "/nonexistent",
+    })
+    expect(text).toBe("\n")
   })
 
   test("writes checksums for artifacts and their sidecars", async () => {

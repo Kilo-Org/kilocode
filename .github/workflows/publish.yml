@@ -398,6 +398,8 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
+      - uses: ./.github/actions/setup-sbom # kilocode_change - VSIX sidecars scan the packaged archive
+
       - uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
@@ -433,6 +435,7 @@ jobs:
           KILO_VERSION: ${{ needs.build-cli.outputs.version }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
       - uses: actions/upload-artifact@v7 # kilocode_change
         with:
@@ -471,6 +474,8 @@ jobs:
         # kilocode_change end
 
       - uses: ./.github/actions/setup-bun
+
+      - uses: ./.github/actions/setup-sbom # kilocode_change - npm and OCI sidecars scan the published bytes
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -550,3 +555,4 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change

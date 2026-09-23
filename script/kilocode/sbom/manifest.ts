@@ -164,7 +164,9 @@ export async function verify(input: { manifest: Manifest; dir: string }): Promis
 export async function checksums(input: { manifest: Manifest; dir: string }) {
   const lines: string[] = []
   for (const entry of [...input.manifest.entries].sort((a, b) => a.artifact.localeCompare(b.artifact))) {
-    lines.push(`${entry.sha256}  ${entry.artifact}`)
+    // A failure entry may have no digest; emitting "  name" would produce a
+    // SHA256SUMS line that `sha256sum --check` rejects.
+    if (entry.sha256) lines.push(`${entry.sha256}  ${entry.artifact}`)
     if (!entry.sbom) continue
     const file = path.join(input.dir, entry.sbom)
     const sha = entry.sbomSha256 ?? (fs.existsSync(file) ? await digest(file) : undefined)

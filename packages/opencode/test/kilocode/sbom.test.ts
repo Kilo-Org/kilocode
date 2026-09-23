@@ -19,7 +19,7 @@ function delivery(bom: any, name: string) {
 describe("target", () => {
   test("parses every published archive name", () => {
     expect(Sbom.target("linux-x64")).toEqual({
-      name: "linux-x64",
+      name: "@kilocode/cli-linux-x64",
       os: "linux",
       arch: "x64",
       abi: undefined,
@@ -36,7 +36,12 @@ describe("target", () => {
   })
 
   test("accepts the npm package name form", () => {
-    expect(Sbom.target("@kilocode/cli-linux-arm64-musl")).toMatchObject({ os: "linux", arch: "arm64", abi: "musl" })
+    expect(Sbom.target("@kilocode/cli-linux-arm64-musl")).toMatchObject({
+      name: "@kilocode/cli-linux-arm64-musl",
+      os: "linux",
+      arch: "arm64",
+      abi: "musl",
+    })
   })
 })
 
@@ -54,6 +59,34 @@ describe("archive", () => {
       expect(result.entry).toMatchObject({ artifact: "kilo-linux-x64.tar.gz", target: "linux-x64" })
       expect(bom.metadata.component.hashes[0].content).toBe(result.entry.sha256)
       expect(bom.metadata.properties).toContainEqual({ name: "kilocode:build:commit", value: release.commit })
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("identifies the archive by the npm package that carries the same binary", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, "kilo-linux-x64-musl.tar.gz")
+      await Bun.write(file, "a")
+      const result = await Sbom.archive({ file, target: Sbom.target("linux-x64-musl"), release })
+      const root = (await Bun.file(result.sidecar).json()).metadata.component
+      expect(root.name).toBe("@kilocode/cli-linux-x64-musl")
+      expect(root.purl).toBe("pkg:npm/%40kilocode/cli-linux-x64-musl@9.9.9")
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("keeps the dependency edges of reclassified runtime components", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, "kilo-linux-x64.tar.gz")
+      await Bun.write(file, "a")
+      const result = await Sbom.archive({ file, target: Sbom.target("linux-x64"), release })
+      const bom = await Bun.file(result.sidecar).json()
+      const lance = bom.dependencies.find((item: any) => item.ref === "pkg:npm/%40lancedb/lancedb@0.26.2")
+      expect(lance?.dependsOn.length).toBeGreaterThan(0)
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }
@@ -102,6 +135,52 @@ describe("archive", () => {
       expect(names).not.toContain("@opentui/core-linux-x64")
       expect(names.some((name: string) => name.startsWith("@opentui/core-darwin"))).toBe(true)
     } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("npm package", () => {
+  test("links the launcher package to every platform package it installs", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, "kilocode-cli-9.9.9.tgz")
+      await Bun.write(file, "a")
+      const result = await Sbom.npmPackage({ file, name: "@kilocode/cli", release })
+      const bom = await Bun.file(result.sidecar).json()
+      expect(validate(bom)).toEqual([])
+      const root = bom.dependencies.find((item: any) => item.ref.startsWith("kilocode:artifact:"))
+      expect(root.dependsOn).toHaveLength(12)
+      expect(result.entry).toMatchObject({ distribution: "npm" })
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("oci image", () => {
+  test("names a failed and a successful description identically", () => {
+    expect(Sbom.ociName("sha256:" + "a".repeat(64), "linux/amd64")).toBe("kilo-oci-linux-amd64@aaaaaaaaaaaa")
+    expect(Sbom.ociName("sha256:" + "a".repeat(64))).toBe("kilo-oci-index@aaaaaaaaaaaa")
+  })
+
+  test("records an empty image inventory as a failure rather than valid evidence", async () => {
+    const dir = await scratch()
+    const previous = process.env.SYFT
+    process.env.SYFT = ""
+    try {
+      const result = await Sbom.ociImage({
+        reference: "ghcr.io/kilo-org/kilocode@sha256:" + "b".repeat(64),
+        digest: "sha256:" + "b".repeat(64),
+        platform: "linux/arm64",
+        release,
+        out: dir,
+      })
+      expect(result.entry.error).toContain("image inventory is empty")
+      expect(result.entry.error).toContain("syft is not installed")
+    } finally {
+      if (previous == null) delete process.env.SYFT
+      else process.env.SYFT = previous
       await fs.promises.rm(dir, { recursive: true, force: true })
     }
   })

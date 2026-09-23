@@ -40,12 +40,19 @@ export type Target = {
 
 export type Graph = { components: Component[]; dependencies: Record<string, string[]>; gaps: Gap[]; tools: Tool[] }
 
-/** Parse a build output directory name back into its target description. */
-export function target(name: string): Target {
-  const parts = name.replace(/^@kilocode\/cli-/, "").split("-")
+/**
+ * Parse a platform slug (`linux-x64`) or npm package name back into its target.
+ *
+ * `name` is always normalized to the real npm package name, so a release
+ * archive and the npm package carrying the same binary share one product
+ * identity instead of the archive claiming a nonexistent `pkg:npm/linux-x64`.
+ */
+export function target(input: string): Target {
+  const slug = input.replace(/^@kilocode\/cli-/, "")
+  const parts = slug.split("-")
   const os = parts[0] === "windows" ? "win32" : parts[0]
   return {
-    name,
+    name: `@kilocode/cli-${slug}`,
     os,
     arch: parts[1],
     abi: parts.includes("musl") ? "musl" : undefined,
@@ -383,7 +390,7 @@ async function wrapper(input: { version: string; subject: string }): Promise<Gra
       delivery: "runtime",
       description: "Platform binary resolved through optionalDependencies at install time",
     })),
-    dependencies: { [input.subject]: names.map((name) => `${Deps.purl(name, input.version)}?kilo-delivery=runtime`) },
+    dependencies: { [input.subject]: names.map((name) => Deps.purl(name, input.version)) },
     gaps: [],
     tools: [],
   }
@@ -396,6 +403,15 @@ async function wrapper(input: { version: string; subject: string }): Promise<Gra
  * installs OS packages, and copies only a subset of the CLI resources, so its
  * inventory has to come from the image itself.
  */
+/**
+ * Evidence name for an image manifest. Shared with the publish script so a
+ * failed description is recorded under the same name a success would use.
+ */
+export function ociName(digest: string, platform?: string) {
+  const label = platform ? platform.replace("/", "-") : "index"
+  return `kilo-oci-${label}@${digest.replace(/^sha256:/, "").slice(0, 12)}`
+}
+
 export async function ociImage(input: {
   reference: string
   digest: string
@@ -403,8 +419,7 @@ export async function ociImage(input: {
   platform?: string
   out: string
 }) {
-  const label = input.platform ? input.platform.replace("/", "-") : "index"
-  const name = `kilo-oci-${label}@${input.digest.replace(/^sha256:/, "").slice(0, 12)}`
+  const name = ociName(input.digest, input.platform)
   const scan = await Scan.scan(`registry:${input.reference}`)
   const subject = { name, sha256: input.digest.replace(/^sha256:/, "") }
 
@@ -440,6 +455,13 @@ export async function ociImage(input: {
       distribution: "oci",
       ...(input.platform ? { target: input.platform } : {}),
       sbomSha256: await Artifact.digest(out),
+      // An image SBOM has no lockfile half to fall back on: without a scan it
+      // lists nothing, and that must not verify as valid evidence.
+      ...(scan.components.length
+        ? {}
+        : {
+            error: `image inventory is empty: ${scan.gaps.map((gap) => gap.reason).join("; ") || "no components found"}`,
+          }),
     } satisfies Manifest.Entry,
   }
 }
