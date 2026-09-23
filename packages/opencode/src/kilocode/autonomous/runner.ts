@@ -1,10 +1,10 @@
-import { Effect, Schema } from "effect"
+import { Context, Effect, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Agent } from "@/agent/agent"
 import { KiloSession } from "@/kilocode/session"
 import { SessionDrain } from "@/kilocode/session/drain"
 import { Session } from "@/session/session"
-import { SessionPrompt } from "@/session/prompt"
+import type { PromptInput } from "@/session/prompt"
 import { MessageID, type SessionID } from "@/session/schema"
 import type { AutonomousModels } from "./models"
 
@@ -14,6 +14,13 @@ import type { AutonomousModels } from "./models"
  * invalid output, and report cost and tokens.
  */
 export namespace AutonomousRunner {
+  /** Prompt functions, injected so the engine can be built inside the SessionPrompt layer. */
+  export type OpsShape = {
+    readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, unknown>
+    readonly cancel: (sessionID: SessionID, scope?: "session" | "tree") => Effect.Effect<void>
+  }
+  export class Ops extends Context.Service<Ops, OpsShape>()("@kilo/AutonomousRunnerOps") {}
+
   export class Invalid extends Schema.TaggedErrorClass<Invalid>()("AutonomousRunnerInvalid", {
     sessionID: Schema.String,
     attempts: Schema.Number,
@@ -27,7 +34,7 @@ export namespace AutonomousRunner {
 
   export type Tokens = { input: number; output: number }
 
-  export type Input<S extends Schema.Top> = {
+  export type Input<S extends Schema.Decoder<unknown>> = {
     parent: SessionID
     title: string
     agent: string
@@ -68,9 +75,9 @@ export namespace AutonomousRunner {
     return out
   }
 
-  export const run = Effect.fn("AutonomousRunner.run")(function* <S extends Schema.Top>(input: Input<S>) {
+  export const run = Effect.fn("AutonomousRunner.run")(function* <S extends Schema.Top & Schema.Decoder<unknown>>(input: Input<S>) {
     const sessions = yield* Session.Service
-    const prompt = yield* SessionPrompt.Service
+    const prompt = yield* Ops
     const drain = yield* SessionDrain.Service
     const agents = yield* Agent.Service
     const agent = yield* agents.get(input.agent).pipe(
@@ -115,7 +122,7 @@ export namespace AutonomousRunner {
       if (used.text) total.text = used.text
       if (result.info.role !== "assistant") return yield* fail("Child session produced no assistant reply.")
       const err = result.info.error
-      if (err && err.name !== "StructuredOutputError") return yield* fail(`${err.name}: ${err.data.message}`)
+      if (err && err.name !== "StructuredOutputError") return yield* fail(`${err.name}: ${"message" in err.data ? String(err.data.message) : ""}`)
       const exit = result.info.structured === undefined ? undefined : decode(result.info.structured)
       if (exit && exit._tag === "Success") {
         return { value: exit.value as S["Type"], sessionID: session.id, cost: total.cost, tokens: total.tokens, text: total.text } satisfies Output<S["Type"]>

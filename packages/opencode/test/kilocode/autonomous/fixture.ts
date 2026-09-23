@@ -1,5 +1,5 @@
 import path from "path"
-import { Effect, Schema } from "effect"
+import { Effect, Layer, Schema } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { FSUtil } from "@opencode-ai/core/fs-util"
@@ -7,7 +7,8 @@ import { Agent } from "@/agent/agent"
 import * as MCP from "@/mcp"
 import { BackgroundJob } from "@/background/job"
 import { Command } from "@/command"
-import type { Config } from "@/config/config"
+import { Config } from "@/config/config"
+import { Provider } from "@/provider/provider"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
@@ -17,12 +18,20 @@ import { SessionStatus } from "@/session/status"
 import { SessionRunState } from "@/session/run-state"
 import { SessionDrain } from "@/kilocode/session/drain"
 import { Storage } from "@/storage/storage"
+import { AutonomousRunner } from "@/kilocode/autonomous/runner"
 import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 import { TestLLMServer } from "../../lib/llm-server"
 
-export const it = testEffect(
-  LayerNode.compile(
+const ops = Layer.effect(
+  AutonomousRunner.Ops,
+  Effect.gen(function* () {
+    const svc = yield* SessionPrompt.Service
+    return AutonomousRunner.Ops.of({ prompt: svc.prompt, cancel: svc.cancel })
+  }),
+)
+
+const compiled = LayerNode.compile(
     LayerNode.group([
       SessionPrompt.node,
       Session.node,
@@ -39,10 +48,13 @@ export const it = testEffect(
       Question.node,
       FSUtil.node,
       Storage.node,
+      Config.node,
+      Provider.node,
       LayerNode.make({ service: TestLLMServer, layer: TestLLMServer.layer, deps: [] }),
     ]),
-  ),
-)
+  )
+
+export const it = testEffect(Layer.provideMerge(ops, compiled))
 
 /** Writes an opencode.json pointing every model class at the fake LLM server. */
 export const setup = Effect.fnUntraced(function* (cfg: Partial<Config.Info> = {}) {

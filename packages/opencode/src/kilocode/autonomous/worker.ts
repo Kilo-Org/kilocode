@@ -63,7 +63,14 @@ export namespace AutonomousWorker {
     const after = yield* changed(input.dir)
     const detected = after.filter((f) => !before.has(f))
     const files = new Set([...out.value.changedFiles, ...detected])
-    const result: AutonomousState.Result = { ...out.value, changedFiles: [...files] }
+    const result: AutonomousState.Result = {
+      status: out.value.status,
+      summary: out.value.summary,
+      changedFiles: [...files],
+      assumptions: [...out.value.assumptions],
+      unresolved: [...out.value.unresolved],
+      ...(out.value.confidence != null ? { confidence: out.value.confidence } : {}),
+    }
     input.task.result = result
     return { result, cost: out.cost, tokens: out.tokens, sessionID: out.sessionID }
   })

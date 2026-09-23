@@ -35,7 +35,7 @@ export namespace AutonomousPlanner {
 
   export const validate = (plan: Plan) => {
     if (plan.tasks.length === 0) return ["The plan has no tasks."]
-    return AutonomousScheduler.validate(plan.tasks).map((p) => p.message)
+    return AutonomousScheduler.validate(plan.tasks.map((t) => ({ id: t.id, dependsOn: [...t.dependsOn] }))).map((p) => p.message)
   }
 
   export function toTasks(plan: Plan, maxAttempts: number): AutonomousState.Task[] {

@@ -27,7 +27,7 @@ export namespace AutonomousVerifier {
       return "npm"
     })
 
-  export const detect = Effect.fn("AutonomousVerifier.detect")(function* (dir: string): Generator<any, Check[], any> {
+  export const detect = Effect.fn("AutonomousVerifier.detect")(function* (dir: string) {
     const out: Check[] = []
     const pkg = yield* json(path.join(dir, "package.json"))
     if (pkg) {
@@ -38,8 +38,9 @@ export namespace AutonomousVerifier {
         if (typeof scripts[name] === "string" && scripts[name].trim().length > 0) out.push({ name, command: cmd(name) })
       }
     }
-    const py = (yield* exists(path.join(dir, "pyproject.toml"))) || (yield* exists(path.join(dir, "pytest.ini"))) || (yield* exists(path.join(dir, "setup.cfg")))
-    if (py) {
+    const pyFiles = ["pyproject.toml", "pytest.ini", "setup.cfg"]
+    const pyHits = yield* Effect.forEach(pyFiles, (f) => exists(path.join(dir, f)))
+    if (pyHits.some(Boolean)) {
       if (yield* exists(path.join(dir, "ruff.toml"))) out.push({ name: "lint", command: "ruff check ." })
       out.push({ name: "test", command: "pytest -q" })
     }
@@ -55,7 +56,7 @@ export namespace AutonomousVerifier {
       out.push({ name: "vet", command: "go vet ./..." })
       out.push({ name: "test", command: "go test ./..." })
     }
-    return out
+    return out satisfies Check[]
   })
 
   export const fromConfig = (commands: string[]): Check[] => commands.map((command, i) => ({ name: `check${i + 1}`, command }))
