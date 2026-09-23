@@ -124,6 +124,16 @@ describe("skill shell injection", () => {
         { input: "Use `notice !` and `code`", commands: [], output: "Use `notice !` and `code`" },
         { input: "Use `code`, then !`printf LIVE`", commands: ["printf LIVE"], output: "Use `code`, then [output]" },
         { input: "Status:!`printf LIVE`", commands: ["printf LIVE"], output: "Status:[output]" },
+        {
+          input: "Literal \\` marker, then !`printf LIVE`",
+          commands: ["printf LIVE"],
+          output: "Literal \\` marker, then [output]",
+        },
+        {
+          input: "Open `\r\n\r\n!`printf LIVE`\r\n\r\nClose `",
+          commands: ["printf LIVE"],
+          output: "Open `\r\n\r\n[output]\r\n\r\nClose `",
+        },
         { input: "!`printf one\nprintf two`", commands: ["printf one\nprintf two"], output: "[output]" },
         { input: "!`printf one` and !`printf two`", commands: ["printf one", "printf two"], output: "[output] and [output]" },
       ]

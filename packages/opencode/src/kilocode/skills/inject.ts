@@ -197,7 +197,7 @@ export namespace SkillInject {
     const out: Array<{ start: number; text: string }> = []
     const push = (from: number, to: number) => {
       const slice = content.slice(from, to)
-      const blank = /\n[ \t]*\n/g
+      const blank = /\r?\n[ \t]*\r?\n/g
       let start = 0
       for (const m of slice.matchAll(blank)) {
         out.push({ start: from + start, text: slice.slice(start, m.index) })
@@ -228,7 +228,7 @@ export namespace SkillInject {
     }
     const out: Array<[number, number]> = []
     for (let i = 0; i < runs.length; ) {
-      if (next[i] < 0) {
+      if (escaped(chunk.text, runs[i].start - chunk.start) || next[i] < 0) {
         i++
         continue
       }
@@ -237,6 +237,12 @@ export namespace SkillInject {
       i = j + 1
     }
     return out
+  }
+
+  function escaped(text: string, index: number) {
+    let count = 0
+    for (let i = index - 1; i >= 0 && text[i] === "\\"; i--) count++
+    return count % 2 === 1
   }
 
   // Binary search over a sorted, non-overlapping [start, end) range list.
