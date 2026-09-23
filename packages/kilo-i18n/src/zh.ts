@@ -42,7 +42,7 @@ export const dict = {
     "项目文件可能会提交到版本控制。除非配置引用了环境变量，否则不要在此处存储密钥。",
   "marketplace.install.learnMore": "了解 Marketplace 安装的工作方式",
   "marketplace.install.learnMcp": "详细了解 MCP",
-  "marketplace.install.about.plugin": "npm 插件可为 Kilo 添加自定义工具和集成功能。插件以完整权限运行。",
+  "marketplace.install.about.plugin": "插件可为 Kilo 添加自定义工具和集成功能。插件以完整权限运行。",
   "marketplace.install.plugin.warning":
     "插件以完整权限运行代码。它们可以读取和修改你的文件、运行命令，以及访问你的凭据和网络。请仅安装你信任的插件。",
   "marketplace.install.installedAt": "已安装到 {{path}}",

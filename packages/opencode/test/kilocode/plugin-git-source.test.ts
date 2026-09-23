@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import { $ } from "bun"
-import { mkdir, symlink } from "fs/promises"
+import { mkdir, readdir, symlink } from "fs/promises"
+import { homedir } from "os"
 import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
 import { Effect } from "effect"
+import { Global } from "@opencode-ai/core/global"
 import { Filesystem } from "../../src/util/filesystem"
 import { detect } from "../../src/kilocode/marketplace/detection"
 import { install, remove } from "../../src/kilocode/marketplace/installer"
@@ -84,6 +86,26 @@ describe("git plugin spec parsing", () => {
     expect(gitPluginIdentity("git:/tmp/repo")).toBe("git/tmp/repo")
     // A trailing slash must not defeat the `.git` normalization.
     expect(gitPluginIdentity("git:github.com/owner/repo.git/")).toBe("git/github.com/owner/repo")
+  })
+
+  test("keeps a backslash in a POSIX path identity", () => {
+    if (process.platform === "win32") return
+    // On POSIX a backslash is a legal filename character, not a separator.
+    expect(gitPluginIdentity("git:/tmp/repo\\name")).toBe("git/tmp/repo\\name")
+  })
+
+  test("normalizes Windows paths and their file URL form to one identity", () => {
+    expect(gitPluginIdentity("git:C:\\repo")).toBe("git/C:/repo")
+    expect(gitPluginIdentity("git:file:///C:/repo")).toBe("git/C:/repo")
+  })
+
+  test("keeps git identities distinct from npm and local path identities", () => {
+    // A git plugin and a local path of the same text must not collapse onto one
+    // detection key, or removing one would drop the other.
+    expect(pluginIdentity("/tmp/repo")).toBe("/tmp/repo")
+    expect(pluginIdentity("git:/tmp/repo")).toBe("git/tmp/repo")
+    expect(pluginIdentity("repo")).toBe("repo")
+    expect(pluginIdentity("git:github.com/owner/repo")).toBe("git/github.com/owner/repo")
   })
 })
 
@@ -186,6 +208,30 @@ describe("git plugin resolution", () => {
     const out = await resolveGitPluginTarget(`git:${repo.path}#escape`)
     expect(out.ok).toBe(false)
     if (!out.ok) expect(out.code).toBe("subpath_missing")
+  })
+
+  test("removes the staging directory after a failed clone", async () => {
+    const token = `kilo-missing-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    const out = await resolveGitPluginTarget(`git:/tmp/${token}`)
+    expect(out.ok).toBe(false)
+    if (!out.ok) expect(out.code).toBe("clone_failed")
+
+    const root = path.join(Global.Path.cache, "packages", "git")
+    const entries = await readdir(root)
+    expect(entries.filter((entry) => entry.includes(token))).toEqual([])
+  })
+
+  test("expands a ~/ repo to the home directory before cloning", async () => {
+    const token = `kilo-missing-${Date.now()}`
+    const out = await resolveGitPluginTarget(`git:~/${token}`)
+    expect(out.ok).toBe(false)
+    if (out.ok) return
+    expect(out.code).toBe("clone_failed")
+    const message = out.error instanceof Error ? out.error.message : String(out.error)
+    // Before expansion the repo became `https://~/...`; the clone must instead
+    // target a path under the home directory.
+    expect(message).toContain(path.join(homedir(), token))
+    expect(message).not.toContain("https://")
   })
 
   test("installs, detects, and removes a git plugin", async () => {
