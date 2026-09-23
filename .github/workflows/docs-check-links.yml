@@ -25,7 +25,7 @@ jobs:
           # kilocode_change start - validate the new asset before it is deployed; main still checks the live URL
           args: >-
             "**/*.md"
-            ${{ github.event_name == 'pull_request' && format('--remap ''^https://kilo\.ai/docs/oauth/kilo/client\.json$ file://{0}/packages/kilo-docs/public/oauth/kilo/client.json''', github.workspace) || '' }}
+            ${{ github.event_name == 'pull_request' && format('--remap ''kilo-docs/docs kilo-docs/pages'' --remap ''^https://kilo\.ai/docs/oauth/kilo/client\.json$ file://{0}/packages/kilo-docs/public/oauth/kilo/client.json''', github.workspace) || '' }}
           # kilocode_change end
           workingDirectory: packages/kilo-docs
           fail: true
