@@ -43,7 +43,10 @@ export class McpOAuthProvider implements OAuthClientProvider {
 
   // kilocode_change start
   get clientMetadataUrl(): string | undefined {
-    return clientMetadataUrl(this.config, this.redirectUrl)
+    // The hosted document describes a public client with the default callback URI.
+    if (this.config.clientId || this.config.clientSecret) return undefined
+    if (this.redirectUrl !== `http://127.0.0.1:${OAUTH_CALLBACK_PORT}${OAUTH_CALLBACK_PATH}`) return undefined
+    return clientMetadataUrl
   }
   // kilocode_change end
 
