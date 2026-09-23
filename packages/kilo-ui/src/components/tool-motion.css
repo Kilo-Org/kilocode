@@ -1,0 +1,174 @@
+/* Tool motion
+   The transcript marks a tool row with data-tool-enter on its first mount
+   after a streamed update, and with data-tool-live while the user watches it
+   change (see tool-motion.ts). Rows from history, session switches, and
+   remounts carry neither attribute, so they render without motion.
+
+   Keyframes move opacity and transform. The trigger text wipe also moves a
+   mask over its own small box. Row height is animated by useToolSize. */
+
+:root {
+  --tool-motion-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --tool-motion-enter: 260ms;
+  --tool-motion-text: 340ms;
+  --tool-motion-fast: 200ms;
+  --tool-motion-step: 40ms;
+  --tool-motion-shift: 5px;
+  --tool-motion-nudge: -0.35em;
+  --tool-motion-scale: 0.75;
+  --tool-motion-wipe: tool-motion-wipe;
+  --tool-motion-breathe: tool-motion-breathe;
+  --tool-motion-pop: tool-motion-pop;
+  --tool-motion-mask: linear-gradient(to right, #000 0%, #000 45%, transparent 60%, transparent 100%);
+}
+
+/* A new row rises into place. Rows that start in the same frame follow each other. */
+[data-component="tool-part-wrapper"][data-tool-enter] {
+  animation: tool-motion-enter var(--tool-motion-enter) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step));
+}
+
+/* Trigger details (file name, pattern, command description) wipe in after the
+   title when the tool input arrives. */
+[data-tool-live]
+  [data-component="tool-trigger"]
+  :is([data-slot="basic-tool-tool-subtitle"], [data-slot="basic-tool-tool-arg"], [data-slot="message-part-meta-line"]) {
+  animation: var(--tool-motion-wipe) var(--tool-motion-text) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step) + 60ms);
+}
+
+[data-tool-live] [data-component="tool-trigger"] [data-slot="basic-tool-tool-arg"] + [data-slot="basic-tool-tool-arg"] {
+  animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step) + 120ms);
+}
+
+/* Controls and counters that appear when the tool completes. */
+[data-tool-live]
+  [data-component="tool-trigger"]
+  :is(
+    [data-slot="collapsible-arrow"],
+    [data-slot="basic-tool-tool-action"],
+    [data-component="icon-button"],
+    [data-component="tool-action"]
+  ),
+[data-tool-live] [data-component="diff-changes"] {
+  animation: tool-motion-fade var(--tool-motion-fast) var(--tool-motion-ease) 80ms backwards;
+}
+
+/* Result rows under the trigger rise into place. */
+[data-tool-live]
+  :is(
+    [data-component="tool-loaded-file"],
+    [data-slot="tool-read-images"],
+    [data-component="diagnostics"],
+    [data-component="tool-hint"],
+    [data-component="card"][data-variant="error"]
+  ) {
+  animation: tool-motion-enter var(--tool-motion-enter) var(--tool-motion-ease) 60ms backwards;
+}
+
+/* Streaming lists (subagent tool calls, shell sections) sit in scroll boxes
+   that follow the bottom. They only fade: a moving item would change the
+   scroll height while the box pins to it. They animate only while the tool
+   runs, so a later toggle does not replay them. */
+[data-tool-live][data-tool-status="running"] :is([data-slot="task-tool-item"], [data-slot="bash-terminal"]) {
+  animation: tool-motion-appear var(--tool-motion-fast) var(--tool-motion-ease) backwards;
+}
+
+[data-tool-live] [data-component="tool-loaded-file"] + [data-component="tool-loaded-file"] {
+  animation-delay: 110ms;
+}
+
+/* The tool icon breathes while the tool works and gives a short beat when it
+   completes. The beat never grows past the icon box: the trigger clips its
+   content. It waits for the row entry so the growing row does not cut it off.
+   Avatars and participant stacks have their own motion. */
+[data-tool-live]:is([data-tool-status="pending"], [data-tool-status="running"])
+  [data-component="tool-trigger"]
+  [data-slot="basic-tool-icon"]:not(:has([data-component="agent-avatar"], [data-component="board-participant-stack"])) {
+  animation: var(--tool-motion-breathe) 1.8s ease-in-out infinite;
+}
+
+[data-tool-live]:not([data-tool-enter])[data-tool-status="completed"]
+  [data-component="tool-trigger"]
+  [data-slot="basic-tool-icon"]:not(:has([data-component="agent-avatar"], [data-component="board-participant-stack"])) {
+  animation: var(--tool-motion-pop) 520ms var(--tool-motion-ease);
+}
+
+@keyframes tool-motion-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--tool-motion-shift));
+  }
+}
+
+@keyframes tool-motion-fade {
+  from {
+    opacity: 0;
+    transform: scale(var(--tool-motion-scale));
+  }
+}
+
+@keyframes tool-motion-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes tool-motion-wipe {
+  from {
+    opacity: 0;
+    transform: translateX(var(--tool-motion-nudge));
+    mask-image: var(--tool-motion-mask);
+    mask-size: 240% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 100% 0;
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    mask-image: var(--tool-motion-mask);
+    mask-size: 240% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 0 0;
+  }
+}
+
+@keyframes tool-motion-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes tool-motion-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  30% {
+    transform: scale(0.72);
+    opacity: 0.6;
+  }
+
+  60% {
+    color: var(--text-strong);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* The OS reduced motion setting keeps short fades and drops movement, loops,
+   and delays. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --tool-motion-shift: 0px;
+    --tool-motion-nudge: 0em;
+    --tool-motion-scale: 1;
+    --tool-motion-step: 0ms;
+    --tool-motion-wipe: tool-motion-fade;
+    --tool-motion-breathe: none;
+    --tool-motion-pop: none;
+  }
+}

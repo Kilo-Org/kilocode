@@ -7,10 +7,12 @@ type Sample = {
   thoughts: Part[]
   message: AssistantMessage
   parts: Part[]
+  copy?: string
 }
 
 // Frames are reconciled by part ID, so streaming never replaces mounted parts.
-export function previewFrame(sample: Sample, elapsed: number, reduced = false): Sample {
+// Each replay cycle suffixes every part ID so the next loop mounts fresh rows.
+export function previewFrame(sample: Sample, elapsed: number, reduced = false, cycle = 0): Sample {
   const frame = structuredClone(sample)
   const stamp = sample.message.time.created
   const text = (value: string, start: number, end: number) =>
@@ -52,5 +54,10 @@ export function previewFrame(sample: Sample, elapsed: number, reduced = false): 
     }
     return elapsed >= 2500 ? [part] : []
   })
+  frame.parts = frame.parts.map((part) => {
+    if (part.type === "tool") return { ...part, id: `${part.id}-${cycle}`, callID: `${part.callID}-${cycle}` }
+    return { ...part, id: `${part.id}-${cycle}` }
+  })
+  if (frame.copy !== undefined) frame.copy = `${frame.copy}-${cycle}`
   return frame
 }
