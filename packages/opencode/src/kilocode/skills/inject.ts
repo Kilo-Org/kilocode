@@ -40,18 +40,43 @@ export namespace SkillInject {
 
   // Migration validation uses the same inert-code boundaries without executing commands.
   export function hasLiveShell(content: string) {
+    return shell(content).length > 0
+  }
+
+  // Scan past rejected matches because their greedy body can include a later live command's
+  // opening backtick. Replacing only accepted matches keeps matching and rendering in sync.
+  export function shell(content: string) {
     const inert = ranges(content)
-    return ConfigMarkdown.shell(content).some((match) => !inert(match.index))
+    const regex = new RegExp(ConfigMarkdown.SHELL_REGEX)
+    const matches: RegExpExecArray[] = []
+    for (let match = regex.exec(content); match; match = regex.exec(content)) {
+      if (inert(match.index)) {
+        regex.lastIndex = match.index + 1
+        continue
+      }
+      matches.push(match)
+    }
+    return matches
+  }
+
+  export function rewrite(content: string, matches: RegExpExecArray[], value: (command: string) => string) {
+    const out: string[] = []
+    let pos = 0
+    for (const match of matches) {
+      out.push(content.slice(pos, match.index), value(match[1]))
+      pos = match.index + match[0].length
+    }
+    out.push(content.slice(pos))
+    return out.join("")
   }
 
   export const render = Effect.fn("SkillInject.render")(function* (opts: Options) {
-    // Fenced blocks and inline code spans (`` !`cmd` ``) are documentation, not live commands.
-    const inert = ranges(opts.content)
-    const live = ConfigMarkdown.shell(opts.content).filter((m) => !inert(m.index))
+    // Fenced blocks and inline code spans are documentation, not live commands.
+    const live = SkillInject.shell(opts.content)
     if (live.length === 0) return opts.content
 
     // Policy checks before the approval gate; `replace` only touches live placeholders.
-    const replace = (value: (command: string) => string) => rewrite(opts.content, inert, value)
+    const replace = (value: (command: string) => string) => rewrite(opts.content, live, value)
     if (opts.disabled) return replace(() => SKILL_SHELL_DISABLED)
     if (!opts.trusted) return replace(() => SKILL_SHELL_UNTRUSTED)
 
@@ -137,14 +162,6 @@ export namespace SkillInject {
     return buf.toString("utf8", 0, MAX_OUTPUT_BYTES) + "\n[skill shell output truncated]"
   }
 
-  // Rewrites only live placeholders, once, in the original content — inlined output
-  // containing `!`cmd`` stays inert, and documentation examples stay literal text.
-  function rewrite(content: string, inert: (index: number) => boolean, value: (command: string) => string) {
-    return content.replace(ConfigMarkdown.SHELL_REGEX, (match, command: string, index: number) =>
-      inert(index) ? match : value(command),
-    )
-  }
-
   // Fenced code block spans (``` or ~~~), sorted and non-overlapping by construction.
   function fenceSpans(content: string): Array<[number, number]> {
     const spans: Array<[number, number]> = []
@@ -163,9 +180,7 @@ export namespace SkillInject {
     return spans
   }
 
-  // Also treats inline code spans of 2+ backticks as inert: a single-backtick span can't
-  // contain a backtick, so a single-backtick pair nested in a longer run (e.g. `` !`cmd` ``)
-  // is always documentation, never a real placeholder.
+  // Inline code spans are inert. A real placeholder's `!` stays outside its opening backtick.
   function ranges(content: string): (index: number) => boolean {
     const fences = fenceSpans(content)
     const fenced = within(fences)
@@ -213,7 +228,7 @@ export namespace SkillInject {
     }
     const out: Array<[number, number]> = []
     for (let i = 0; i < runs.length; ) {
-      if (runs[i].len < 2 || next[i] < 0) {
+      if (next[i] < 0) {
         i++
         continue
       }

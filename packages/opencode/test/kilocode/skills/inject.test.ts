@@ -82,6 +82,80 @@ function loadSkill(name: string, ask: Tool.Context["ask"]) {
 }
 
 describe("skill shell injection", () => {
+  it.effect("#12868 leaves single-backtick Markdown untouched", () =>
+    Effect.gen(function* () {
+      for (const separator of [" ", "\n", "\r\n"]) {
+        const content = "Autosquash `fixup!` commits" + separator + "Some other valid `code` block"
+        expect(SkillInject.hasLiveShell(content)).toBe(false)
+        for (const policy of [
+          { trusted: true, disabled: false },
+          { trusted: false, disabled: false },
+          { trusted: true, disabled: true },
+        ]) {
+          const fail = () => Effect.die(new Error("documentation reached shell authorization"))
+          const output = yield* SkillInject.render({
+            content,
+            ...policy,
+            cwd: ".",
+            skill: "issue-12868",
+            shell: Shell.acceptable(),
+            ctx: { ...baseCtx, ask: fail },
+            decompose: fail,
+          })
+          expect(output).toBe(content)
+        }
+      }
+    }),
+  )
+
+  it.effect("#12868 scans only live placeholders after inline Markdown", () =>
+    Effect.sync(() => {
+      const rows = [
+        {
+          input: "Autosquash `fixup!` commits\n!`printf LIVE`",
+          commands: ["printf LIVE"],
+          output: "Autosquash `fixup!` commits\n[output]",
+        },
+        {
+          input: "Autosquash `fixup!` commits !`printf LIVE`",
+          commands: ["printf LIVE"],
+          output: "Autosquash `fixup!` commits [output]",
+        },
+        { input: "Use `notice !` and `code`", commands: [], output: "Use `notice !` and `code`" },
+        { input: "Use `code`, then !`printf LIVE`", commands: ["printf LIVE"], output: "Use `code`, then [output]" },
+        { input: "Status:!`printf LIVE`", commands: ["printf LIVE"], output: "Status:[output]" },
+        { input: "!`printf one\nprintf two`", commands: ["printf one\nprintf two"], output: "[output]" },
+        { input: "!`printf one` and !`printf two`", commands: ["printf one", "printf two"], output: "[output] and [output]" },
+      ]
+      for (const row of rows) {
+        const matches = SkillInject.shell(row.input)
+        expect(matches.map((match) => match[1])).toEqual(row.commands)
+        expect(SkillInject.hasLiveShell(row.input)).toBe(row.commands.length > 0)
+        expect(SkillInject.rewrite(row.input, matches, () => "[output]")).toBe(row.output)
+      }
+
+      const input = "!`printf one`"
+      let calls = 0
+      const output = SkillInject.rewrite(input, SkillInject.shell(input), () => {
+        calls++
+        return "!`printf NEVER`"
+      })
+      expect(output).toBe("!`printf NEVER`")
+      expect(calls).toBe(1)
+    }),
+  )
+
+  it.instance("#12868 does not prompt for a documentation-only skill", () =>
+    Effect.gen(function* () {
+      const content = "Autosquash `fixup!` commits\nSome other valid `code` block"
+      yield* writeGlobalSkill("issue-12868", content)
+      const result = yield* loadSkill("issue-12868", (req) =>
+        req.permission === "skill" ? Effect.void : Effect.die(new Error("unexpected shell permission")),
+      )
+      expect(result.output).toContain(content)
+    }),
+  )
+
   unix("runs the batch after a single forced approval listing every command", () =>
     Effect.gen(function* () {
       yield* writeGlobalSkill("trusted-shell", "A: !`printf one` B: !`printf two`")
