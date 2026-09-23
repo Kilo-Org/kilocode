@@ -2534,6 +2534,57 @@ export type Config = {
      */
     maxAgeDays?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
   }
+  autonomous_goal?: {
+    enabled?: boolean
+    models?: {
+      local_small?: string
+      local_coder?: string
+      cloud_reasoner?: string
+    }
+    /**
+     * Local attempts per task before escalation. Defaults 2.
+     */
+    worker_max_attempts?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    routing?: {
+      /**
+       * Highest task complexity routed to local_small. Defaults 0.
+       */
+      local_small_max_complexity?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      /**
+       * Highest task complexity routed to local_coder. Defaults 2.
+       */
+      local_coder_max_complexity?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    stuck?: {
+      /**
+       * Identical failures before escalating. Defaults 2.
+       */
+      same_error_limit?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    budget?: {
+      /**
+       * Defaults 2.
+       */
+      cloud_task_max_usd?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      /**
+       * Defaults 10.
+       */
+      cloud_goal_max_usd?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      /**
+       * Defaults 3.
+       */
+      max_cloud_calls_per_task?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      /**
+       * Defaults 20.
+       */
+      max_cloud_calls_per_goal?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    /**
+     * Use cloud_reasoner for the final review when any task complexity reaches this. Defaults 3.
+     */
+    final_review_cloud_at_complexity?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    checks?: Array<string>
+  }
   plugin?: Array<
     | string
     | [
