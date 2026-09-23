@@ -85,12 +85,15 @@ export async function stageSkill(item: { id: string; content: string }, dir: str
       if (roots.size !== 1) throw new Error("Skill archive must contain one top-level directory")
     }
 
-    // A bare archive filename also works with GNU tar on Windows, where a drive
-    // letter in the archive argument is otherwise parsed as a remote host.
-    await Process.run(
-      ["tar", "-xzf", archive, "--strip-components=1", "--no-same-owner", "--no-same-permissions", "-C", dir],
-      opts,
-    )
+    // Extract with the working directory set to the target. An absolute Windows
+    // path passed to `-C` contains a drive-letter colon, which GNU tar misreads
+    // as a remote host, so use a relative archive path and the working directory.
+    const relative = path.relative(dir, file)
+    const source = relative && !path.isAbsolute(relative) ? relative : file
+    await Process.run(["tar", "-xzf", source, "--strip-components=1", "--no-same-owner", "--no-same-permissions"], {
+      ...opts,
+      cwd: dir,
+    })
     if ((await findEscapedPaths(dir)).length) throw new Error("Skill archive contains unsafe paths")
     const owner = await lstat(path.join(dir, OWNER)).catch((err: NodeJS.ErrnoException) => {
       if (err.code === "ENOENT") return undefined
