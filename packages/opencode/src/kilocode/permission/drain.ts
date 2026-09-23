@@ -36,6 +36,8 @@ export function drainCovered(
       // Never auto-resolve config file edit permissions while config protection is active.
       // A global skill request resolves only against its exact skill subtree.
       const verdict = yield* policy(entry.info)
+      // The policy can suspend; skip an entry a concurrent reply settled in the meantime.
+      if (pending.get(id) !== entry) continue
       const skill = verdict.skill
       if (verdict.protect && !skill) continue
       // Never auto-resolve a skill shell batch; it must get an explicit reply.

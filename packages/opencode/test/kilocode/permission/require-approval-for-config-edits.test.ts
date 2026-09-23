@@ -1,6 +1,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer, Schema } from "effect"
+import { realpathSync } from "fs"
 import fs from "fs/promises"
 import os from "os"
 import path from "path"
@@ -8,7 +9,6 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Bus } from "../../../src/bus"
-import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { Permission } from "../../../src/permission"
 import { SessionID } from "../../../src/session/schema"
 import { disposeAllInstances, provideTmpdirInstance } from "../../fixture/fixture"
@@ -22,6 +22,7 @@ const env = Layer.mergeAll(
 const it = testEffect(env)
 
 const target = ".kilo/kilo.json"
+const link = process.platform === "win32" ? "junction" : "dir"
 const globalFile = () => path.join(Global.Path.config, "kilo.json")
 const globalFiles = () => [globalFile(), path.join(Global.Path.config, "kilo.jsonc")]
 
@@ -246,11 +247,34 @@ describe("require_approval_for_config_edits", () => {
             Effect.promise(() => fs.mkdtemp(path.join(os.tmpdir(), "kilo-outside-"))),
             (dir) => Effect.promise(() => fs.rm(dir, { recursive: true, force: true })),
           )
-          yield* Effect.promise(() => fs.symlink(outside, path.join(dir, ".kilo"), "dir"))
+          yield* Effect.promise(() => fs.symlink(outside, path.join(dir, ".kilo"), link))
           yield* withGlobal(undefined)
           const fiber = yield* ask(request("per_project_symlink")).pipe(Effect.forkScoped)
           expect(yield* wait(1)).toHaveLength(1)
           yield* reject("per_project_symlink")
+          yield* Fiber.await(fiber)
+        }),
+      { git: true, config: { require_approval_for_config_edits: false } },
+    ),
+  )
+
+  it.live("project false keeps protection for a dangling symlink into the global config dir", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const missing = path.join(Global.Path.config, "dangling-agents")
+          yield* Effect.promise(async () => {
+            await fs.rm(missing, { recursive: true, force: true })
+            await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+            await fs.symlink(missing, path.join(dir, ".kilo", "agent"), link)
+          })
+          yield* withGlobal(undefined)
+          const file = ".kilo/agent/demo.md"
+          const fiber = yield* ask(
+            request("per_project_dangling", { patterns: [file], metadata: { filepath: file }, always: [file] }),
+          ).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toHaveLength(1)
+          yield* reject("per_project_dangling")
           yield* Fiber.await(fiber)
         }),
       { git: true, config: { require_approval_for_config_edits: false } },
@@ -477,21 +501,17 @@ describe("require_approval_for_config_edits", () => {
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const skill = path.join(Global.Path.config, "skills", "demo")
-          yield* Effect.promise(() => fs.mkdir(skill, { recursive: true }))
-          const raw = path.join(skill, "*").replaceAll("\\", "/")
-          const pattern = ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns: [raw] })
-          expect(pattern).toBeDefined()
-          yield* withGlobal({ permission: { external_directory: { [pattern!]: "allow" } } })
+          const { skill: pattern } = yield* Effect.promise(() => paths("demo"))
+          yield* withGlobal({ permission: { external_directory: { [pattern]: "allow" } } })
 
           const outcome = yield* ask({
             id: PermissionV1.ID.make("per_skill"),
             sessionID: SessionID.make("ses_per_skill"),
             permission: "external_directory",
-            patterns: [pattern!],
+            patterns: [pattern],
             metadata: {},
-            always: [pattern!],
-            ruleset: [{ permission: "external_directory", pattern: pattern!, action: "allow" }],
+            always: [pattern],
+            ruleset: [{ permission: "external_directory", pattern, action: "allow" }],
           })
           expect(outcome.manual).toBe(false)
         }),
@@ -571,11 +591,10 @@ describe("require_approval_for_config_edits", () => {
   )
 })
 
+// Derive the expected skill subtree from the created directory, not from globalSkillPattern.
 async function paths(name: string) {
   const dir = path.join(Global.Path.config, "skills", name)
   await fs.mkdir(dir, { recursive: true })
-  const raw = path.join(dir, "*").replaceAll("\\", "/")
-  const skill = ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns: [raw] })
-  if (!skill) throw new Error(`expected a global skill pattern for ${dir}`)
-  return { skill, concrete: skill.slice(0, -2) + "/SKILL.md" }
+  const real = path.posix.normalize(realpathSync.native(dir).replaceAll("\\", "/"))
+  return { skill: real + "/*", concrete: real + "/SKILL.md" }
 }

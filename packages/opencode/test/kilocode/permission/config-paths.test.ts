@@ -231,6 +231,17 @@ describe("ConfigProtection.scope", () => {
     expect(ConfigProtection.scope(edit(rel), ctx)).toEqual({ inside: true, outside: false })
   })
 
+  test("classifies a dangling symlink as outside and a new plain file as inside", async () => {
+    await using tmp = await tmpdir()
+    await using other = await tmpdir()
+    const ctx = { directory: tmp.path, worktree: tmp.path }
+    await fs.mkdir(path.join(tmp.path, ".kilo"))
+    const link = process.platform === "win32" ? "junction" : "dir"
+    await fs.symlink(path.join(other.path, "missing"), path.join(tmp.path, ".kilo", "agent"), link)
+    expect(ConfigProtection.scope(edit(".kilo/agent/demo.md"), ctx)).toEqual({ inside: false, outside: true })
+    expect(ConfigProtection.scope(edit(".kilo/new.md"), ctx)).toEqual({ inside: true, outside: false })
+  })
+
   test("returns undefined for ordinary files", async () => {
     await using tmp = await tmpdir()
     expect(ConfigProtection.scope(edit("src/index.ts"), { directory: tmp.path, worktree: tmp.path })).toBeUndefined()

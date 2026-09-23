@@ -301,10 +301,14 @@ Set `require_approval_for_config_edits` to `false` to disable the check:
 
 Where you set it controls which files it covers:
 
-- **Project config** (for example the project's `kilo.json` or `.kilo/kilo.json`) covers config files inside the project — the git worktree, or the working directory for non-git projects. It follows normal config precedence, so a project value overrides the global value for the project's own files.
-- **Global config** (`~/.config/kilo/kilo.json` or `kilo.jsonc`) covers global config directories and config files outside the project, such as a `.kilo/` directory in another checkout. A project value never turns protection off for these.
+- **Global config** (`~/.config/kilo/kilo.json` or `kilo.jsonc`) is the default for every project. It also always governs global config directories and config files outside the project, such as a `.kilo/` directory in another checkout. A global `false` therefore turns protection off for every project's own config files too, unless that project sets `true`.
+- **Project config** (for example the project's `kilo.json` or `.kilo/kilo.json`) overrides the global value only for config files inside the project — the git worktree, or the working directory for non-git projects. A project value never turns protection off for global config directories or files outside the project.
 
-Symlinks are resolved, so a project config path that points outside the project follows the global setting. The option defaults to enabled, so leaving it out keeps the current behavior.
+Symlinks are resolved, so a project config path that points outside the project, or to a target that does not exist yet, follows the global setting. The option defaults to enabled, so leaving it out keeps the current behavior.
+
+{% callout type="warning" %}
+A project can turn protection off for its own config files by committing `"require_approval_for_config_edits": false`. When you open a repository you did not write, check its `kilo.json` and `.kilo/` config: with this set, the agent can change that project's `AGENTS.md`, agents, commands, and permission rules without asking, for example after a prompt injection from web content or an issue. Set the value to `true` in the project config, or review the project config before starting work, if you do not want that.
+{% /callout %}
 
 With protection off, config file edits follow your regular `edit` and `external_directory` rules, and any `deny` or agent-level restrictions still apply.
 

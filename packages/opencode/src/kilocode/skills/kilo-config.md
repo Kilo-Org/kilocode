@@ -268,7 +268,7 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 | `instructions` | `string[]` | Glob patterns for additional instruction files |
 | `plugin` | `string[]` | Plugin specifiers (npm packages or `file://` paths) |
 | `snapshot` | `boolean` | Enable git snapshots |
-| `require_approval_for_config_edits` | `boolean` | Require approval for protected config edits (default: `true`). A project value covers the project's own config files; the global value covers global config dirs and files outside the project |
+| `require_approval_for_config_edits` | `boolean` | Require approval for protected config edits (default: `true`). Global value is the default everywhere and always governs global config dirs and files outside the project; a project value overrides it only for the project's own config files |
 | `share` | `"manual"\|"auto"\|"disabled"` | Session sharing mode |
 | `autoupdate` | `boolean\|"notify"` | Auto-update behavior |
 | `username` | `string` | Display name override |

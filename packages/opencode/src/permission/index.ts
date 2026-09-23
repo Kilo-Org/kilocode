@@ -443,9 +443,11 @@ const layer = Layer.effect(
 
       if (input.requestID) {
         const entry = s.pending.get(input.requestID)
-        // kilocode_change start - YOLO/auto-approve must not silently clear protected config edits
+        // kilocode_change start - YOLO/auto-approve must not silently clear protected config edits.
+        // guard can suspend, so skip an entry a concurrent reply already settled.
         const ok = entry
-          ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], (yield* guard(entry.info)).protect)
+          ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], (yield* guard(entry.info)).protect) &&
+            s.pending.get(input.requestID) === entry
           : false
         // kilocode_change end
         if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
@@ -462,6 +464,7 @@ const layer = Layer.effect(
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
         const protect = (yield* guard(entry.info)).protect // kilocode_change
+        if (s.pending.get(id) !== entry) continue // kilocode_change - settled by a concurrent reply during guard
         if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [], protect)) continue // kilocode_change
         s.pending.delete(id)
         yield* events.publish(Event.Replied, {

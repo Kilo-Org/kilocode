@@ -1,5 +1,5 @@
 import path from "path"
-import { existsSync, realpathSync } from "fs"
+import { existsSync, lstatSync, realpathSync } from "fs"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
@@ -101,6 +101,26 @@ export namespace ConfigProtection {
     } catch {
       return
     }
+  }
+
+  /**
+   * Whether a missing component of `filepath` is a symlink whose target does not exist yet.
+   * `physical()` cannot resolve such a link, but a write follows it and creates the target, so the
+   * real location is unknown. Uncertain lookups count as dangling so callers stay conservative.
+   */
+  function dangling(filepath: string): boolean {
+    let current = path.resolve(filepath)
+    while (!existsSync(current)) {
+      try {
+        if (lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink()) return true
+      } catch {
+        return true // e.g. EACCES or ENOTDIR: the location cannot be proven
+      }
+      const parent = path.dirname(current)
+      if (parent === current) return false
+      current = parent
+    }
+    return false
   }
 
   function skillRoot(pattern: string): string | undefined {
@@ -212,7 +232,7 @@ export namespace ConfigProtection {
       // Tools report relative targets against the worktree. Resolve symlinks so an alias that
       // escapes the project follows the global policy.
       const full = path.resolve(ctx.worktree, target)
-      if (isAbsolute(full)) return "outside"
+      if (isAbsolute(full) || dangling(full)) return "outside"
       const real = physical(full)
       return real && root && within(real, root) ? "inside" : "outside"
     })
