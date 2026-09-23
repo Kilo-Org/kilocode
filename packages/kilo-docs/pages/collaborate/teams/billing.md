@@ -5,7 +5,7 @@ description: "Manage billing and subscriptions for your team"
 
 # Billing
 
-Kilo seats use a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits. Model inference is charged at provider rates with no markup. A separate 5% payment-processing fee applies when you purchase credits.
+Kilo seats use a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits. Model inference is charged at provider rates with no markup. A separate 5% payment-processing fee applies when you purchase credits, including automatic top-ups, and to Kilo Pass purchases.
 
 {% callout type="note" %}
 
@@ -72,6 +72,8 @@ To fill empty seats or remove members ahead of seat deletion, see the [team mana
 
 Organizations can subscribe to [Kilo Pass](https://kilo.ai/pricing/kilo-pass) at the organization level, pooling the subscription's credit capacity across the team instead of each member holding a personal Kilo Pass. Personal Kilo Pass subscriptions stay separate and are not affected.
 
+A 5% payment-processing fee applies to every Kilo Pass purchase, including recurring billing. The fee is charged separately and does not increase the credits the pass provides.
+
 - **One pass per seat** — purchased capacity always matches your paid seat count and adjusts automatically as seats are added or removed.
 - **Pooled credits** — each service window's Kilo Pass credits are issued to the organization's pool rather than to individuals.
 - **Child organizations** — if your organization has direct child organizations, you can allocate part of the pooled capacity to each child. Anything not allocated stays with the parent organization.
@@ -110,6 +112,10 @@ The minimum top-up amount is **$100.00**.
 5. Click **Save Changes** to confirm
 
 Once saved, your initial top-up will be processed immediately to verify your payment method.
+
+## Spend Alerts
+
+Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go to the owner's authorized billing contacts by email or mobile push. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
 
 ## Invoices
 
