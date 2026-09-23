@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "crypto"
 import { mkdir, realpath, rename, rm } from "fs/promises"
 import path from "path"
-import { fileURLToPath, pathToFileURL } from "url"
+import { pathToFileURL } from "url"
 import { Global } from "@opencode-ai/core/global"
 import { Flock } from "@opencode-ai/core/util/flock"
 import { Filesystem } from "@/util/filesystem"
@@ -42,13 +42,24 @@ function isSafeGitRef(ref: string) {
   return true
 }
 
+// Parse a `file:` URL without platform-dependent helpers so the result is the
+// same on Windows and POSIX. A drive-less URL such as `file:///tmp/repo` is
+// valid here, while `fileURLToPath` rejects it on Windows. A Windows drive
+// letter is moved out of the path prefix so `file:///C:/x` becomes `C:/x`.
+function fileUrlPath(repo: string): string | undefined {
+  try {
+    const url = new URL(repo)
+    if (url.hostname && url.hostname !== "localhost") return undefined
+    return decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)(?=\/|$)/, "$1")
+  } catch {
+    return undefined
+  }
+}
+
 function isLocalRepo(repo: string) {
   if (repo.startsWith("file:")) {
-    try {
-      return fileURLToPath(repo).length > 1
-    } catch {
-      return false
-    }
+    const local = fileUrlPath(repo)
+    return Boolean(local && local.replace(/^\/+/, "").length > 0)
   }
   if (path.isAbsolute(repo) || /^[A-Za-z]:[\\/]/.test(repo)) return true
   return repo.startsWith("./") || repo.startsWith("../") || repo.startsWith("~/")
@@ -90,16 +101,12 @@ export function parseGitPluginSpec(spec: string): GitPluginSpec | undefined {
 }
 
 function normalizeRepo(repo: string) {
-  if (repo.startsWith("file:")) {
-    try {
-      return fileURLToPath(repo)
-    } catch {
-      return repo.replace(/^file:\/*/, "/")
-    }
-  }
-  const scheme = repo.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)
-  if (scheme) return repo.slice(scheme[0].length)
-  return repo
+  const base = repo.startsWith("file:")
+    ? (fileUrlPath(repo) ?? repo.replace(/^file:\/*/, "/"))
+    : repo.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "")
+  // Use forward slashes so a plain Windows path and its `file://` URL form
+  // resolve to the same identity and cache entry.
+  return base.replace(/\\/g, "/")
 }
 
 // The identity is the installed-state key and must equal the catalog item id. It
@@ -130,7 +137,10 @@ function cachePaths(identity: string, ref: string | undefined) {
   const safe = identity.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^[._-]+|[._-]+$/g, "") || "repo"
   // The ref is part of the cache key so different refs of one repo can coexist
   // and a re-resolve cannot delete a directory another ref is reading.
-  const digest = createHash("sha1").update(`${identity}@${ref ?? ""}`).digest("hex").slice(0, 10)
+  const digest = createHash("sha1")
+    .update(`${identity}@${ref ?? ""}`)
+    .digest("hex")
+    .slice(0, 10)
   const root = path.join(Global.Path.cache, "packages", "git")
   const name = `${safe}-${digest}`
   return { dir: path.join(root, name), marker: path.join(root, `${name}.json`) }
@@ -196,8 +206,7 @@ export async function resolveGitPluginTarget(spec: string): Promise<GitPluginRes
   }
 
   const root = await realpath(dir).catch(() => undefined)
-  if (!root)
-    return { ok: false, code: "subpath_missing", error: new Error(`Plugin clone missing for ${spec}`) }
+  if (!root) return { ok: false, code: "subpath_missing", error: new Error(`Plugin clone missing for ${spec}`) }
   let target = root
   if (hit.subpath) {
     const sub = hit.subpath.replace(/^\/+/, "")

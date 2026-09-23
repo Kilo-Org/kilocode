@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { $ } from "bun"
 import { mkdir, symlink } from "fs/promises"
 import path from "path"
-import { fileURLToPath } from "url"
+import { fileURLToPath, pathToFileURL } from "url"
 import { Effect } from "effect"
 import { Filesystem } from "../../src/util/filesystem"
 import { detect } from "../../src/kilocode/marketplace/detection"
@@ -113,15 +113,14 @@ describe("git plugin resolution", () => {
     expect(path.basename(target)).toBe("my-plugin")
     expect(await Filesystem.exists(path.join(target, "package.json"))).toBe(true)
     expect(await Filesystem.exists(path.join(target, ".git"))).toBe(false)
-    expect(pluginIdentity(`git:${repo.path}#plugins/my-plugin`)).toBe(
-      `git/${repo.path.replace(/^\/+/, "")}/plugins/my-plugin`,
-    )
+    const rel = repo.path.replace(/\\/g, "/").replace(/^\/+/, "")
+    expect(pluginIdentity(`git:${repo.path}#plugins/my-plugin`)).toBe(`git/${rel}/plugins/my-plugin`)
 
     // resolvePluginTarget is the shared entrypoint used by the loader and installer.
     expect(await resolvePluginTarget(`git:${repo.path}#plugins/my-plugin`)).toBe(out.target)
 
-    // The `file://` form of a local repo resolves to the same cache target.
-    const fileUrl = await resolveGitPluginTarget(`git:file://${repo.path}#plugins/my-plugin`)
+    // The `file://` URL form of a local repo resolves to the same cache target.
+    const fileUrl = await resolveGitPluginTarget(`git:${pathToFileURL(repo.path).href}#plugins/my-plugin`)
     expect(fileUrl.ok).toBe(true)
     if (fileUrl.ok) expect(fileUrl.target).toBe(out.target)
 
