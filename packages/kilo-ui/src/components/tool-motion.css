@@ -4,9 +4,11 @@
    change (see tool-motion.ts). Rows from history, session switches, and
    remounts carry neither attribute, so they render without motion.
 
-   Keyframes move only opacity and transform, so the compositor runs them
-   without repaints. Short timings keep new details readable within about
-   200ms of their data. Row height is animated by useToolSize. */
+   Keyframes move opacity and transform, so the compositor runs them without
+   repaints. The only exceptions are the to-do check draw and strike, which
+   repaint a 10px check and one line of text. Short timings keep new details
+   readable within about 200ms of their data. Row height is animated by
+   useToolSize. */
 
 :root {
   --tool-motion-ease: cubic-bezier(0.23, 1, 0.32, 1);
@@ -21,6 +23,7 @@
   --tool-motion-pop: tool-motion-pop;
   --tool-motion-tick: 0.6;
   --tool-motion-draw: tool-motion-draw;
+  --tool-motion-caret: tool-motion-caret;
 }
 
 /* A new row rises into place. Rows that start in the same frame follow each other. */
@@ -97,6 +100,19 @@
   [data-slot="basic-tool-icon"]:not(:has([data-component="agent-avatar"], [data-component="board-participant-stack"])) {
   animation: var(--tool-motion-pop) 320ms var(--tool-motion-ease);
   animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step));
+}
+
+/* A caret follows the file content while the model writes it. */
+[data-tool-live][data-tool-status="pending"] [data-component="write-stream"]::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1.1em;
+  margin-inline-start: 1px;
+  vertical-align: text-bottom;
+  background: currentColor;
+  opacity: 0.6;
+  animation: var(--tool-motion-caret) 1s steps(1) infinite;
 }
 
 /* A to-do that just got done ticks: its box pops, the check draws, and the
@@ -201,6 +217,12 @@
   }
 }
 
+@keyframes tool-motion-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* The OS reduced motion setting keeps short fades and drops movement, loops,
    and delays. */
 @media (prefers-reduced-motion: reduce) {
@@ -213,5 +235,6 @@
     --tool-motion-pop: none;
     --tool-motion-tick: 1;
     --tool-motion-draw: none;
+    --tool-motion-caret: none;
   }
 }
