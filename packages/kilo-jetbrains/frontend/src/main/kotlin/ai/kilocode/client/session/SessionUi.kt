@@ -148,6 +148,7 @@ class SessionUi(
     private val workspaces: KiloWorkspaceService = service(),
     private val onboarding: OnboardingController = service<KiloOnboardingService>(),
     private val timers: UiTimerSource = UiTimers,
+    sandbox: KiloSandboxService = project.service(),
 ) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
 
     companion object {
@@ -177,7 +178,7 @@ class SessionUi(
         sessions = sessions,
         workspace = workspace,
         app = app,
-        sandbox = project.service<KiloSandboxService>(),
+        sandbox = sandbox,
         cs = cs,
         comp = this,
         flushMs = flushMs,

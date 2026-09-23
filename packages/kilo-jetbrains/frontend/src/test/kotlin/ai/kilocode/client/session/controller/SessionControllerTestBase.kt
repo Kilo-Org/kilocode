@@ -142,6 +142,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             Disposer.dispose(parent)
             coroutines.close()
             KiloPluginSettings.unsetAgent()
+            // The light test project is reused across tests; never leak a sandbox preference.
+            KiloSandboxService(project, scope, null).unsetNewSessionDefault()
         } finally {
             super.tearDown()
         }

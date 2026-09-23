@@ -112,6 +112,7 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         withSandbox.create {}
         drain()
         assertEquals(listOf(false, true, true), rpc.createSandboxCalls)
+        sandbox.unsetNewSessionDefault()
     }
 
     fun `test unavailable sandbox deletes session and rolls back new worktree`() {
