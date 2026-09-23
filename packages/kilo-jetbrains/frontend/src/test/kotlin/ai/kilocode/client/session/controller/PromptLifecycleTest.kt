@@ -291,7 +291,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.AwaitingPermission)
     }
 
-    fun `test auto approve does not machine-reply a sandbox escalation`() {
+    fun `test auto approve surfaces sandbox escalation for a human reply`() {
         val (m, _, _) = prompted()
 
         edt { m.setAutoApprove(true) }
@@ -300,7 +300,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         emit(
             ChatEventDto.PermissionAsked(
                 "ses_test",
-                permission("perm1").copy(permission = "sandbox_escalation"),
+                permission("perm1").copy(metadata = mapOf("sandboxEscalation" to "true")),
             ),
         )
 
@@ -378,7 +378,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
 
     fun `test enabling auto approve surfaces a pending sandbox escalation as a card`() {
         val (m, _, _) = prompted()
-        rpc.pendingPermissionList.add(permission("perm_sandbox").copy(permission = "sandbox_escalation"))
+        rpc.pendingPermissionList.add(permission("perm_sandbox").copy(metadata = mapOf("sandboxEscalation" to "true")))
 
         edt { m.setAutoApprove(true) }
         flush()
@@ -391,7 +391,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
     fun `test recovery surfaces a pending sandbox escalation as a card under auto approve`() {
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
-        rpc.pendingPermissionList.add(permission("perm_sandbox").copy(permission = "sandbox_escalation"))
+        rpc.pendingPermissionList.add(permission("perm_sandbox").copy(metadata = mapOf("sandboxEscalation" to "true")))
         edt { KiloPluginSettings.setAutoApprove(true) }
 
         val m = controller("ses_test")

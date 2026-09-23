@@ -184,7 +184,9 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenameBody: String? = null
     @Volatile var lastSessionRenameMethod: String? = null
     @Volatile var pendingPermissions = "[]"
+    @Volatile var pendingPermissionsStatus = 200
     @Volatile var pendingQuestions = "[]"
+    @Volatile var pendingQuestionsStatus = 200
 
     // Sandbox REST responses
     @Volatile var sandboxSupport = """{"available":true}"""
@@ -521,8 +523,10 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
-                bare == "/permission" && method == "GET" -> respond(output, 200, pendingPermissions)
-                bare == "/question" && method == "GET" -> respond(output, 200, pendingQuestions)
+                bare == "/permission" && method == "GET" ->
+                    respond(output, pendingPermissionsStatus, pendingPermissions)
+                bare == "/question" && method == "GET" ->
+                    respond(output, pendingQuestionsStatus, pendingQuestions)
                 bare == "/sandbox/support" && method == "GET" -> {
                     lastSandboxSupportPath = path
                     respond(output, sandboxSupportStatus, sandboxSupport)

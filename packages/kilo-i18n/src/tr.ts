@@ -47,7 +47,7 @@ export const dict = {
   "marketplace.install.learnMore": "Marketplace yüklemelerinin nasıl çalıştığını öğrenin",
   "marketplace.install.learnMcp": "MCP hakkında daha fazla bilgi edinin",
   "marketplace.install.about.plugin":
-    "Bir npm eklentisi, Kilo'ya özel araçlar ve entegrasyonlar ekler. Eklentiler tam izinlerle çalışır.",
+    "Bir eklenti, Kilo'ya özel araçlar ve entegrasyonlar ekler. Eklentiler tam izinlerle çalışır.",
   "marketplace.install.plugin.warning":
     "Eklentiler tam izinlerle kod çalıştırır. Dosyalarınızı okuyup değiştirebilir, komut çalıştırabilir ve kimlik bilgilerinize ve ağınıza erişebilirler. Yalnızca güvendiğiniz eklentileri yükleyin.",
   "marketplace.install.installedAt": "{{path}} konumuna yüklendi",

@@ -990,12 +990,12 @@ class SessionController(
     private fun approve(id: String, restore: () -> Permission) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
-        // Skill-shell batches and sandbox escalation must be answered by a human: the server
-        // refuses non-interactive approvals for both, so show the card (its manual reply sets
-        // interactive=true) rather than send a machine reply. Decide and enqueue synchronously on
-        // the EDT so back-to-back asks keep arrival (FIFO) order, matching asked()'s non-auto path;
-        // only the RPC needs a coroutine.
-        if (!autoApprove || needsHumanApproval(restore())) {
+        // Sensitive permissions (skill-shell batches, sandbox escalation) must be answered by a
+        // human: the server refuses non-interactive approvals for these, so show the card (its
+        // manual reply sets interactive=true) rather than send a machine reply. Decide and enqueue
+        // synchronously on the EDT so back-to-back asks keep arrival (FIFO) order, matching
+        // asked()'s non-auto path; only the RPC needs a coroutine.
+        if (!autoApprove || manual(restore().meta.raw)) {
             show(restore())
             return
         }
@@ -1029,10 +1029,10 @@ class SessionController(
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
                 val count = replyAll(permissions)
-                // Skill-shell and sandbox-escalation requests are skipped by replyAll; queue all of
-                // them so they aren't stranded (never machine-approved, never shown) or overwritten
-                // by later cards.
-                val cards = permissions.filter(::needsHumanApproval).map(::toPermission)
+                // Sensitive requests (skill-shell batches, sandbox escalation) are skipped by
+                // replyAll; queue all of them so they aren't stranded (never machine-approved, never
+                // shown) or overwritten by later cards.
+                val cards = permissions.filter { manual(it.metadata) }.map(::toPermission)
                 if (count == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
@@ -1047,8 +1047,8 @@ class SessionController(
                     }
                     val current = model.state
                     // A card in `skip` was handled synchronously by the caller (approve() either
-                    // replied to it — already Busy — or re-showed a skill-shell card we must keep).
-                    // Never transition it to Busy here or the preserved skill-shell card vanishes
+                    // replied to it — already Busy — or re-showed a sensitive card we must keep).
+                    // Never transition it to Busy here or the preserved sensitive card vanishes
                     // with no reply path left.
                     if (current is SessionState.AwaitingPermission &&
                         current.permission.sessionId in ids &&
@@ -1067,9 +1067,9 @@ class SessionController(
         var count = 0
         for (request in permissions) {
             if (!autoApprove) return count
-            // Skill-shell batches and sandbox escalation need a human; skip them here (callers
-            // surface the card).
-            if (needsHumanApproval(request)) continue
+            // Sensitive permissions (skill-shell batches, sandbox escalation) need a human; skip
+            // them here (callers surface the card).
+            if (manual(request.metadata)) continue
             sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
             count++
@@ -1077,11 +1077,14 @@ class SessionController(
         return count
     }
 
-    // A skill-shell request or sandbox escalation is never machine-approved (the server refuses
-    // non-interactive approvals for both); after draining, callers must surface one as a card so a
-    // human can answer.
-    private fun skillShellCard(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
-        permissions.lastOrNull(::needsHumanApproval)
+    // Sensitive requests (skill-shell batches, sandbox escalation) are never machine-approved (the
+    // server refuses non-interactive approvals for these); after draining, callers must surface one
+    // as a card so a human can answer.
+    private fun card(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
+        permissions.lastOrNull { manual(it.metadata) }
+
+    private fun manual(metadata: Map<String, String>): Boolean =
+        metadata["skillShell"] == "true" || metadata["sandboxEscalation"] == "true"
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
@@ -1782,12 +1785,12 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
-            // Under auto-approve, replyAll approves the ordinary permissions and skips skill-shell
-            // and sandbox-escalation ones (they need a human); queue only those. Otherwise queue
+            // Under auto-approve, replyAll approves ordinary permissions and skips sensitive ones
+            // (skill-shell batches, sandbox escalation); queue only the latter. Otherwise queue
             // every pending permission.
             val queue = if (autoApprove) {
                 replyAll(permissions)
-                permissions.filter(::needsHumanApproval)
+                permissions.filter { manual(it.metadata) }
             } else {
                 permissions
             }
@@ -1850,13 +1853,13 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
-            // replyAll auto-approves the ordinary permissions and skips skill-shell and
-            // sandbox-escalation ones. Those must then fall through to a human card rather than go
-            // Busy.
-            val skillCard = skillShellCard(permissions)
+            // replyAll auto-approves ordinary permissions and skips sensitive ones (skill-shell
+            // batches, sandbox escalation). A sensitive request must then fall through to a human
+            // card rather than go Busy.
+            val prompt = card(permissions)
             if (permissions.isNotEmpty() && autoApprove) {
                 val count = replyAll(permissions)
-                if (count > 0 && skillCard == null) {
+                if (count > 0 && prompt == null) {
                     runEdt {
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
@@ -1866,10 +1869,10 @@ class SessionController(
                     return
                 }
             }
-            // After auto-approve only skill-shell/sandbox-escalation permissions still need a human
-            // card; queue those. Otherwise queue the whole pending set so each request is resolved
-            // in turn.
-            val queue = if (autoApprove) permissions.filter(::needsHumanApproval) else permissions
+            // After auto-approve only sensitive permissions (skill-shell batches, sandbox
+            // escalation) still need a human card; queue those. Otherwise queue the whole pending
+            // set so each request is resolved in turn.
+            val queue = if (autoApprove) permissions.filter { manual(it.metadata) } else permissions
             // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
             // must not shadow the transcript: a session reopened after a failed turn is idle on the
             // server and would otherwise recover as if it had never failed.
@@ -3324,15 +3327,6 @@ private fun ConfigWarningDto.toDetailLine(): String {
     val tail = detail?.trim()?.ifEmpty { null } ?: return head
     return "$head\n$tail"
 }
-
-// Skill-shell batches and sandbox escalation both require a human, interactive reply — the CLI
-// permission layer rejects a non-interactive ("machine") approval for either, so auto-approve must
-// never answer them. See packages/opencode/src/permission/index.ts forceAsk.
-private fun needsHumanApproval(dto: PermissionRequestDto): Boolean =
-    dto.metadata["skillShell"] == "true" || dto.permission == "sandbox_escalation"
-
-private fun needsHumanApproval(permission: Permission): Boolean =
-    permission.meta.raw["skillShell"] == "true" || permission.name == "sandbox_escalation"
 
 private fun toPermission(dto: PermissionRequestDto): Permission {
     val ref = dto.tool?.let { ToolCallRef(it.messageID, it.callID) }

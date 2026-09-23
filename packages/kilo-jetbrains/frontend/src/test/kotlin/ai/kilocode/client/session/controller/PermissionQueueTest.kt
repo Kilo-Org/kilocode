@@ -310,7 +310,8 @@ class PermissionQueueTest : SessionControllerTestBase() {
 
     private fun skillPermission(id: String) = permission(id).copy(metadata = mapOf("skillShell" to "true"))
 
-    private fun sandboxPermission(id: String) = permission(id, "sandbox_escalation")
+    private fun sandboxPermission(id: String) =
+        permission(id, "sandbox_escalation").copy(metadata = mapOf("sandboxEscalation" to "true"))
 
     private fun question(id: String) = QuestionRequestDto(
         id = id,

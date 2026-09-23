@@ -42,7 +42,7 @@ export const dict = {
   "marketplace.install.about.skill":
     "A skill adds task-specific instructions and resources that Kilo can load when needed.",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "A plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
   "marketplace.install.mcp.warning":
     "MCP servers can run local commands or connect to external services. Kilo will ask for permission before using their tools unless your permissions allow them automatically.",
   "marketplace.install.plugin.warning":
