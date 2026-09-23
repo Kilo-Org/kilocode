@@ -713,9 +713,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
     session.loadOlderMessages()
   }
 
+  // A synthetic scroll only exists to let virtua re-read the offset after a
+  // remount. It must not page history for the session that just became active.
+  let syncing = false
   const handleScroll = () => {
     autoScroll.handleScroll()
-    maybeLoadOlder()
+    if (!syncing) maybeLoadOlder()
     scheduleActive()
     if (search.active()) scheduleHighlight()
   }
@@ -919,7 +922,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       // event would sync it, so report the position once.
                       queueMicrotask(() => {
                         if (virtualizer() !== next || Math.abs(el.scrollTop - next.scrollOffset) < 1) return
+                        syncing = true
                         el.dispatchEvent(new Event("scroll"))
+                        syncing = false
                       })
                     }
                     return (
