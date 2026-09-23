@@ -51,6 +51,8 @@ export namespace AutonomousAgents {
 
   /** Tools no engine child may use: they need a human or spawn more agents. */
   const noHuman = Permission.fromConfig({
+    // Every engine child replies through StructuredOutput; the "*" deny above would hide it.
+    StructuredOutput: "allow",
     question: "deny",
     suggest: "deny",
     task: "deny",
