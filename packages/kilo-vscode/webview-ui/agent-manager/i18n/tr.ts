@@ -121,6 +121,7 @@ export const dict = {
 
   "agentManager.tab.close": "Kapat",
   "agentManager.tab.closeOthers": "Diğerlerini kapat",
+  "agentManager.tab.closeToRight": "Sağdakileri kapat",
   "agentManager.tab.closeTab": "Sekmeyi kapat",
   "agentManager.tab.forkSession": "Oturumu Fork'la",
   "agentManager.tab.pin": "Sabitle",

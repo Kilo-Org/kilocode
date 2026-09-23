@@ -119,6 +119,7 @@ export const dict = {
   "agentManager.session.noSessions": "Нет открытых сессий",
   "agentManager.tab.close": "Закрыть",
   "agentManager.tab.closeOthers": "Закрыть остальные",
+  "agentManager.tab.closeToRight": "Закрыть справа",
   "agentManager.tab.closeTab": "Закрыть вкладку",
   "agentManager.tab.forkSession": "Ответвить сессию",
   "agentManager.tab.pin": "Закрепить",

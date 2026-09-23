@@ -5,17 +5,22 @@ import ai.kilocode.client.session.background.BackgroundAgent
 import ai.kilocode.client.session.background.BackgroundAgentStatus
 import ai.kilocode.client.session.background.BackgroundAgents
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
+import javax.accessibility.AccessibleAction
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.RepaintManager
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
 
 class BackgroundAgentStripTest : BasePlatformTestCase() {
 
@@ -108,6 +113,27 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         if (root is java.awt.Container) root.components.forEach { found.addAll(descendants(it)) }
         return found
     }
+
+    private fun compactControls(strip: BackgroundAgentStrip): List<HoverArea> =
+        descendants(strip.rowComponent()).filterIsInstance<HoverArea>()
+
+    private fun compactAgents(strip: BackgroundAgentStrip): List<HoverArea> = compactControls(strip).filter {
+        it.accessibleContext.accessibleName?.startsWith("Open background agent ") == true
+    }
+
+    private fun aggregate(strip: BackgroundAgentStrip, panel: JComponent): Component {
+        var component: Component = strip.labelComponent()
+        while (component.parent !== panel) component = component.parent
+        return component
+    }
+
+    private fun fixed(component: JComponent, width: Int) {
+        component.minimumSize = JBUI.size(0, 24)
+        component.preferredSize = JBUI.size(width, 24)
+        component.maximumSize = JBUI.size(width, 24)
+    }
+
+    private fun action(area: HoverArea): AccessibleAction = area.accessibleContext.accessibleAction
 
     fun `test running row action stops that agent`() {
         val cancelled = mutableListOf<String>()
@@ -219,6 +245,129 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         click(strip.stopAllButton())
 
         assertFalse(strip.expanded())
+    }
+
+    fun `test collapsed preview shows a fitting prefix and overflow expands the strip`() {
+        val opened = mutableListOf<String>()
+        val strip = strip(onOpen = { session, _ -> opened.add(session) })
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.RUNNING, title = "Analyze APIs", session = "ses1"),
+                agent("job2", BackgroundAgentStatus.RUNNING, title = "Inspect APIs", session = "ses2"),
+                agent("job3", BackgroundAgentStatus.COMPLETED, title = "Write tests", session = "ses3"),
+            ),
+        )
+        val agents = compactAgents(strip)
+        val more = compactControls(strip).single { it !in agents }
+        agents.forEach { fixed(it, 80) }
+        val label = more.content as JBLabel
+        label.text = "+2 more"
+        val panel = agents.first().parent as JComponent
+        panel.setSize(agents.first().preferredSize.width + UiStyle.Gap.sm() + more.preferredSize.width, panel.preferredSize.height)
+
+        layoutTree(panel)
+
+        assertTrue(agents[0].isVisible)
+        assertFalse(agents[1].isVisible)
+        assertFalse(agents[2].isVisible)
+        assertTrue(more.isVisible)
+        assertEquals("+2 more", label.text)
+        assertEquals("Show 2 more background agents", more.accessibleContext.accessibleName)
+
+        assertTrue(action(agents[0]).doAccessibleAction(0))
+        assertEquals(listOf("ses1"), opened)
+        assertFalse(strip.expanded())
+
+        assertTrue(action(more).doAccessibleAction(0))
+        assertTrue(strip.expanded())
+        assertEquals("2 of 3 background agents running", (strip.labelComponent() as JBLabel).text)
+        assertTrue(aggregate(strip, panel).isVisible)
+        assertTrue(agents.none { it.isVisible })
+        assertFalse(more.isVisible)
+
+        click(strip.labelComponent())
+        assertFalse(strip.expanded())
+        assertTrue(agents[0].isVisible)
+        assertTrue(more.isVisible)
+    }
+
+    fun `test collapsed preview uses all-fit and aggregate fallback without replacing controls`() {
+        val strip = strip()
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.RUNNING, title = "One"),
+                agent("job2", BackgroundAgentStatus.RUNNING, title = "Two"),
+                agent("job3", BackgroundAgentStatus.COMPLETED, title = "Three"),
+            ),
+        )
+        val agents = compactAgents(strip)
+        val more = compactControls(strip).single { it !in agents }
+        agents.forEach { fixed(it, 60) }
+        val panel = agents.first().parent as JComponent
+        val aggregate = aggregate(strip, panel)
+        val natural = agents.sumOf { it.preferredSize.width } + UiStyle.Gap.sm() * (agents.size - 1)
+        panel.setSize(natural, panel.preferredSize.height)
+
+        layoutTree(panel)
+
+        assertTrue(agents.all { it.isVisible })
+        assertFalse(more.isVisible)
+        assertFalse(aggregate.isVisible)
+        val preferred = panel.preferredSize
+
+        (more.content as JBLabel).text = "+2 more"
+        panel.setSize(more.preferredSize.width, panel.preferredSize.height)
+        layoutTree(panel)
+
+        assertTrue(aggregate.isVisible)
+        assertTrue(agents.none { it.isVisible })
+        assertFalse(more.isVisible)
+        assertEquals(preferred, panel.preferredSize)
+
+        panel.setSize(natural, panel.preferredSize.height)
+        layoutTree(panel)
+        assertTrue(agents.all { it.isVisible })
+        assertEquals(agents, compactAgents(strip))
+    }
+
+    fun `test compact preview retains controls while following active-first order`() {
+        val strip = strip()
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.RUNNING, title = "First"),
+                agent("job2", BackgroundAgentStatus.RUNNING, title = "Second"),
+            ),
+        )
+        val before = compactAgents(strip)
+
+        strip.update(
+            listOf(
+                agent("job2", BackgroundAgentStatus.RUNNING, title = "Second"),
+                agent("job1", BackgroundAgentStatus.COMPLETED, title = "First finished"),
+            ),
+        )
+        val after = compactAgents(strip)
+
+        assertSame(before[1], after[0])
+        assertSame(before[0], after[1])
+        assertEquals("Open background agent First finished", after[1].accessibleContext.accessibleName)
+    }
+
+    fun `test compact preview never displaces east actions`() {
+        val strip = strip()
+        strip.update((1..6).map { agent("job$it", BackgroundAgentStatus.RUNNING, title = "Agent ${"x".repeat(40)}") })
+        val row = strip.rowComponent()
+        row.setSize(400, row.preferredSize.height)
+
+        layoutTree(row)
+
+        val action = strip.openAllButton()
+        val right = SwingUtilities.convertPoint(action, action.width, 0, row).x
+        val panel = compactAgents(strip).first().parent as JComponent
+        val edge = SwingUtilities.convertPoint(panel, panel.width, 0, row).x
+        val actionX = SwingUtilities.convertPoint(action, 0, 0, row).x
+        assertTrue(right <= row.width)
+        assertTrue(edge <= actionX)
     }
 
     fun `test hovering an agent row paints the block hover fill`() {
@@ -550,21 +699,40 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         return strip.agentRowPanel(job)!!.y
     }
 
-    fun `test auto collapses once when the last active agent finishes`() {
-        val strip = strip()
+    fun `test stopping agents does not collapse the expanded strip`() {
+        val cancelled = mutableListOf<String>()
+        val cancelledAll = mutableListOf<List<String>>()
+        val strip = strip(onCancel = cancelled::add, onCancelAll = cancelledAll::add)
 
-        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING)))
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.RUNNING),
+                agent("job2", BackgroundAgentStatus.RUNNING),
+            ),
+        )
         click(strip.rowPanel())
         assertTrue(strip.expanded())
 
-        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
-        assertFalse(strip.expanded())
-
-        // Re-expanding to dismiss the finished row must not be undone by the next poll tick while
-        // still at zero active agents.
-        click(strip.rowPanel())
+        strip.rowActionButton("job1")!!.doClick()
+        assertEquals(listOf("job1"), cancelled)
         assertTrue(strip.expanded())
-        strip.update(listOf(agent("job1", BackgroundAgentStatus.COMPLETED)))
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.CANCELLED),
+                agent("job2", BackgroundAgentStatus.RUNNING),
+            ),
+        )
+        assertTrue(strip.expanded())
+
+        strip.stopAllButton().doClick()
+        assertEquals(listOf(listOf("job2")), cancelledAll)
+        assertTrue(strip.expanded())
+        strip.update(
+            listOf(
+                agent("job1", BackgroundAgentStatus.CANCELLED),
+                agent("job2", BackgroundAgentStatus.CANCELLED),
+            ),
+        )
         assertTrue(strip.expanded())
     }
 

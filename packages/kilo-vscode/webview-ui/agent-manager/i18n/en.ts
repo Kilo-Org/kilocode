@@ -161,6 +161,7 @@ export const dict = {
 
   "agentManager.tab.close": "Close",
   "agentManager.tab.closeOthers": "Close Others",
+  "agentManager.tab.closeToRight": "Close to the Right",
   "agentManager.tab.closeTab": "Close tab",
   "agentManager.tab.forkSession": "Fork Session",
   "agentManager.tab.pin": "Pin",

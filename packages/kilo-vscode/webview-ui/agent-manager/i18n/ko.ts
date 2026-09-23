@@ -116,6 +116,7 @@ export const dict = {
   "agentManager.session.noSessions": "열린 세션 없음",
   "agentManager.tab.close": "닫기",
   "agentManager.tab.closeOthers": "다른 탭 닫기",
+  "agentManager.tab.closeToRight": "오른쪽 탭 닫기",
   "agentManager.tab.closeTab": "탭 닫기",
   "agentManager.tab.forkSession": "세션 포크",
   "agentManager.tab.pin": "고정",

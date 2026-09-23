@@ -6,19 +6,26 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListIconAlignment
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.SessionBoardDto
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.InlineBanner
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBDimension
@@ -28,6 +35,8 @@ import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Point
+import java.awt.datatransfer.StringSelection
 import javax.swing.Action
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -80,13 +89,21 @@ internal class SessionBoardDialog(
         override val description: String?,
         override val icon: javax.swing.Icon?,
         override val badges: List<ActiveListBadge>,
-        val participant: String,
-        val participantLabel: String?,
+        val from: String,
+        val fromLabel: String?,
+        val to: String,
+        val toLabel: String?,
     ) : ActiveListItem
 
     // internal (not private): lets tests simulate real clicks/selection on the live list.
     internal val list = ActiveList(
         emptyText = KiloBundle.message("session.board.empty"),
+        cfg = ActiveListConfig(
+            height = ActiveListRowHeight.PREFERRED,
+            tooltip = false,
+            iconAlignment = ActiveListIconAlignment.TOP,
+            wrapDescription = true,
+        ),
         showSearch = false,
         onCell = { _, _ -> },
         onClick = { item -> (item as? Row)?.let(::openParticipant) },
@@ -94,6 +111,7 @@ internal class SessionBoardDialog(
 
     internal val loadMoreButton = button(KiloBundle.message("session.board.loadMore")) { load(before = board?.cursor) }
     internal val resetButton = button(KiloBundle.message("session.board.reset.action")) { onReset() }
+    internal val copyButton = button(KiloBundle.message("session.board.copy.action")) { copyAll() }
     private val closeButton = button(KiloBundle.message("session.board.close"), primary = true) { close(OK_EXIT_CODE) }
     private val status = JBLabel().apply {
         foreground = UIUtil.getErrorForeground()
@@ -185,7 +203,7 @@ internal class SessionBoardDialog(
     override fun createSouthPanel(): JComponent = JPanel(BorderLayout()).apply {
         isOpaque = false
         border = JBUI.Borders.empty(UiStyle.Gap.pad())
-        add(resetButton, BorderLayout.WEST)
+        add(Stack.horizontal(gap = UiStyle.Gap.sm()).next(resetButton).next(copyButton), BorderLayout.WEST)
         add(Stack.horizontal(gap = UiStyle.Gap.sm()).next(loadMoreButton).next(closeButton), BorderLayout.EAST)
     }
 
@@ -250,11 +268,24 @@ internal class SessionBoardDialog(
         }
     }
 
+    /**
+     * Opens whichever route endpoint is a subagent, regardless of message direction: both
+     * `main -> agent` and `agent -> main` open `agent`. A route between two subagents opens the
+     * sender, matching the row's own reading order. Never closes the board — it stays open behind
+     * the newly opened (or focused) editor tab.
+     */
     private fun openParticipant(row: Row) {
-        if (row.participant == "main" || row.participant == "ALL") return
-        close(OK_EXIT_CODE)
-        onOpenAgent(row.participant, row.participantLabel)
+        val (id, label) = openTarget(row) ?: return
+        onOpenAgent(id, label)
     }
+
+    private fun openTarget(row: Row): Pair<String, String?>? {
+        if (isSubagent(row.from)) return row.from to row.fromLabel
+        if (isSubagent(row.to)) return row.to to row.toLabel
+        return null
+    }
+
+    private fun isSubagent(participant: String): Boolean = participant != "main" && participant != "ALL"
 
     private fun row(message: BoardMessageDto): Row {
         val from = message.fromLabel ?: message.from
@@ -262,18 +293,78 @@ internal class SessionBoardDialog(
         return Row(
             key = message.id,
             title = "$from \u2192 $to",
-            description = message.body.replace("\n", " "),
+            description = message.body,
             icon = avatars.icon(message.from),
             badges = listOf(ActiveListBadge(message.type)),
-            participant = message.from,
-            participantLabel = message.fromLabel,
+            from = message.from,
+            fromLabel = message.fromLabel,
+            to = message.to,
+            toLabel = message.toLabel,
         )
+    }
+
+    /**
+     * Fetches the full board history, oldest-first, independent of the paged [board] the dialog has
+     * loaded so far: it starts from a fresh newest page so messages posted after the dialog opened
+     * are included, then walks every older page from the server's exclusive cursor.
+     *
+     * Guards against a cursor that repeats or goes missing while [SessionBoardDto.hasMore] is still
+     * true — either would otherwise spin or silently drop messages if the board resets mid-fetch.
+     * De-duplicates by message id so an overlapping page (a concurrent post landing between two of
+     * this method's own requests) is never copied twice.
+     */
+    private suspend fun fetchAllMessages(): List<BoardMessageDto> {
+        var page = service.sessionBoard(sessionId, directory, before = null, limit = COPY_PAGE_SIZE)
+        var messages = page.messages
+        val seenCursors = mutableSetOf<String>()
+        while (page.hasMore) {
+            val before = page.cursor ?: error("board reported more messages with no cursor")
+            if (!seenCursors.add(before)) error("board cursor $before repeated while paging")
+            page = service.sessionBoard(sessionId, directory, before, COPY_PAGE_SIZE)
+            messages = page.messages + messages
+        }
+        val byId = LinkedHashMap<String, BoardMessageDto>()
+        for (message in messages) byId[message.id] = message
+        return byId.values.toList()
+    }
+
+    private fun formatMessage(message: BoardMessageDto): String {
+        val from = message.fromLabel ?: message.from
+        val to = message.toLabel ?: message.to
+        return "$from -> $to [${message.type.uppercase()}]\n${message.body}"
+    }
+
+    @RequiresEdt
+    private fun copyAll() {
+        if (loading) return
+        loading = true
+        syncButtons()
+        scope.launch {
+            val result = runCatching { fetchAllMessages() }
+            ui {
+                loading = false
+                result.onSuccess { messages -> copyToClipboard(messages.joinToString("\n\n", transform = ::formatMessage)) }
+                result.onFailure { fail(KiloBundle.message("session.board.copy.failed"), it) }
+                syncButtons()
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun copyToClipboard(text: String) {
+        CopyPasteManager.getInstance().setContents(StringSelection(text))
+        val point = RelativePoint(copyButton, Point(copyButton.width / 2, 0))
+        JBPopupFactory.getInstance()
+            .createHtmlTextBalloonBuilder(KiloBundle.message("session.board.copy.done"), null, null, null)
+            .createBalloon()
+            .show(point, Balloon.Position.above)
     }
 
     private fun syncButtons() {
         loadMoreButton.isVisible = board?.hasMore == true
         loadMoreButton.isEnabled = !loading
         resetButton.isEnabled = !loading && board?.messages?.isNotEmpty() == true
+        copyButton.isEnabled = !loading && board?.messages?.isNotEmpty() == true
         closeButton.isEnabled = !loading
     }
 
@@ -312,6 +403,9 @@ internal class SessionBoardDialog(
 
     private companion object {
         const val PAGE_SIZE = 20
+        // The CLI's board endpoint caps a single page at 50 messages; used for the full-history
+        // export so a copy needs the fewest possible round trips.
+        const val COPY_PAGE_SIZE = 50
         const val DIALOG_HEIGHT = 420
         val LOG = KiloLog.create(SessionBoardDialog::class.java)
     }

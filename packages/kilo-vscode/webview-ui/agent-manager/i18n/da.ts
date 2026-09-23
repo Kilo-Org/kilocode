@@ -116,6 +116,7 @@ export const dict = {
   "agentManager.session.noSessions": "Ingen åbne sessioner",
   "agentManager.tab.close": "Luk",
   "agentManager.tab.closeOthers": "Luk andre",
+  "agentManager.tab.closeToRight": "Luk til højre",
   "agentManager.tab.closeTab": "Luk fane",
   "agentManager.tab.forkSession": "Forgren session",
   "agentManager.tab.pin": "Fastgør",

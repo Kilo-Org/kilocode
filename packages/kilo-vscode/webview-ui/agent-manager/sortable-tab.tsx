@@ -27,6 +27,7 @@ export const SortableTab: Component<{
   onMiddleClick: (e: MouseEvent) => void
   onClose: () => void
   onCloseOthers: () => void
+  onCloseToRight?: () => void
   onFork?: () => void
   pinned?: boolean
   onTogglePin?: () => void
@@ -43,6 +44,7 @@ export const SortableTab: Component<{
         onFork={props.onFork}
         onClose={props.onClose}
         onCloseOthers={props.onCloseOthers}
+        onCloseToRight={props.onCloseToRight}
         pinned={props.pinned}
         onTogglePin={props.onTogglePin}
         closeShortcut={
