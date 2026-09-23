@@ -80,7 +80,7 @@ export function useToolMotion(props: { id: string; status: () => string | undefi
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)"
 const DURATION = 220
 // Matches --tool-motion-step in tool-motion.css.
-const STEP = 40
+const STEP = 30
 // Collapsible open and close keyframes already animate the height. Follow them instead.
 const TOGGLES = new Set(["tool-card-down", "tool-card-up"])
 
