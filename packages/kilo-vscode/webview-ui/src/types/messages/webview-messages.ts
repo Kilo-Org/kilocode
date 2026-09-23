@@ -4,7 +4,14 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
+import type {
+  ModelAllocation,
+  RequestWorktreeUsageMessage,
+  RequestWorktreeUsageSummariesMessage,
+  ReviewCommentEntry,
+  TerminalDestination,
+  TerminalPlacement,
+} from "./agent-manager"
 import type { PRReviewCommentData, ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
@@ -1758,6 +1765,8 @@ export type WebviewMessage =
   | TelemetryRequest
   | RequestRepoInfoMessage
   | RequestStateMessage
+  | RequestWorktreeUsageSummariesMessage
+  | RequestWorktreeUsageMessage
   | RequestProjectsMessage
   | AddProjectMessage
   | CreateProjectMessage

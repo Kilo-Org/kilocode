@@ -1,3 +1,9 @@
+import type {
+  KilocodeWorktreeUsageDetail,
+  KilocodeWorktreeUsageSummary,
+  KilocodeWorktreeUsageTimeline,
+} from "@kilocode/sdk/v2/client"
+
 export type WorktreeErrorCode =
   | "git_not_found"
   | "not_git_repo"
@@ -108,6 +114,38 @@ export interface RunStatus {
   startedAt?: string
   finishedAt?: string
   error?: string
+}
+
+export interface AgentManagerWorktreeUsageSummaryEntry {
+  worktreeId: string
+  summary: KilocodeWorktreeUsageSummary
+}
+
+export interface AgentManagerWorktreeUsageSummariesMessage {
+  type: "agentManager.worktreeUsageSummaries"
+  projectId?: string
+  summaries: AgentManagerWorktreeUsageSummaryEntry[]
+  error?: string
+}
+
+export interface AgentManagerWorktreeUsageMessage {
+  type: "agentManager.worktreeUsage"
+  projectId?: string
+  worktreeId: string
+  detail?: KilocodeWorktreeUsageDetail
+  timeline?: KilocodeWorktreeUsageTimeline
+  error?: string
+}
+
+export interface RequestWorktreeUsageSummariesMessage {
+  type: "agentManager.requestWorktreeUsageSummaries"
+  projectId?: string
+}
+
+export interface RequestWorktreeUsageMessage {
+  type: "agentManager.requestWorktreeUsage"
+  projectId?: string
+  worktreeId: string
 }
 
 export interface CaffeinationState {

@@ -97,6 +97,7 @@ import { HealthScheduler, applyPresence, healthPayload, needsReconcile, staleFor
 import { broken, type WorktreeHealthReport } from "./worktree-reconcile"
 import { handleRecovery, type RecoveryMessage } from "./worktree-recovery"
 import { runDoctor } from "./worktree-doctor"
+import { handleUsageMessage } from "./worktree-usage"
 import type { BrowserBroker } from "../services/browser-automation"
 import { createBrowserLifecycle } from "./browser-lifecycle"
 import { handleSessionLifecycle } from "./session-lifecycle"
@@ -546,7 +547,7 @@ export class AgentManagerProvider implements Disposable {
     const session = this.onSessionMessage(m, msg)
     if (session !== undefined) return session
     if (this.browserLifecycle.handle(m)) return null
-    const ui = this.onUiMessage(m, msg)
+    const ui = this.onUiMessage(m, msg, ctx)
     if (ui !== undefined) return ui
     const state = this.onStateMessage(m)
     if (state !== undefined) return state
@@ -729,6 +730,7 @@ export class AgentManagerProvider implements Disposable {
   private onUiMessage(
     m: AgentManagerInMessage,
     msg: Record<string, unknown>,
+    ctx: ProjectContext,
   ): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.configureSetupScript") {
       void this.configureSetupScript()
@@ -736,6 +738,14 @@ export class AgentManagerProvider implements Disposable {
     }
     if (handleDestination(this.destination, m, (msg) => this.log("[XTerm]", msg))) return null
     if (handleRunMessage(this.run, m, (id) => this.runKey(id))) return null
+    if (
+      handleUsageMessage(m, ctx, {
+        connection: this.connectionService,
+        post: (m) => this.postToWebview(m),
+        log: (m) => this.log(m),
+      })
+    )
+      return null
     if (m.type === "agentManager.showTerminal") {
       this.terminalManager.showTerminal(m.sessionId, this.state)
       return null

@@ -46,6 +46,7 @@ import { rootSessions } from "./project/session-filter"
 import { createWorktreeCompletion } from "./worktree-completion"
 import { worktreeDropReference } from "./worktree-references"
 import { beginPromptMentionDrop, endPromptMentionDrop } from "../src/utils/prompt-mention-drop"
+import type { KilocodeWorktreeUsageSummary } from "@kilocode/sdk/v2/client"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -57,6 +58,7 @@ interface Props {
   blocked: (id: string) => boolean
   activityFor: (worktreeId: string | null) => Activity
   stats?: Record<string, WorktreeGitStats>
+  usage?: Record<string, KilocodeWorktreeUsageSummary>
   local?: LocalGitStats
   prs?: Record<string, PRStatus | null>
   sessions?: ProjectSessionInfo[]
@@ -69,6 +71,7 @@ interface Props {
   onSelectWorktree: (projectId: string, worktreeId: string) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
   onOpenPR?: (projectId: string, worktreeId: string) => void
+  onOpenEconomics?: () => void
   onCreateSection: (worktreeIds?: string[]) => void
   renamingSection: () => string | undefined
   onRenameEnd: () => void
@@ -300,6 +303,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           }
           health={state()?.worktreeHealth?.[worktree.id]}
           stats={props.stats?.[worktree.id]}
+          usage={props.usage?.[worktree.id]}
           shortcut={values().shortcut}
           navHint={values().navHint}
           sessions={sessions(worktree.id).length}
@@ -353,6 +357,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
           onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
+          onOpenEconomics={props.onOpenEconomics}
           onOpenPR={() => props.onOpenPR?.(props.project.id, worktree.id)}
         />
       </div>

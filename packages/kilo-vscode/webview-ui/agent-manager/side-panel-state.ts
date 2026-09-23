@@ -6,6 +6,7 @@ const ownership: Record<SidePanel, "worktree" | "session"> = {
   [SidePanel.PR]: "worktree",
   [SidePanel.Terminal]: "worktree",
   [SidePanel.Documents]: "worktree",
+  [SidePanel.Economics]: "worktree",
   [SidePanel.Subagents]: "session",
   [SidePanel.EditPreview]: "session",
   [SidePanel.Browser]: "session",

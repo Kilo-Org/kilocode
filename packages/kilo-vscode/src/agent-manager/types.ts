@@ -7,7 +7,12 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
+import type {
+  KilocodeWorktreeUsageDetail,
+  KilocodeWorktreeUsageSummary,
+  KilocodeWorktreeUsageTimeline,
+  SnapshotFileDiff,
+} from "@kilocode/sdk/v2/client"
 import type { DiffImage } from "../diff/types"
 import type { BrowserElement } from "../services/browser-automation"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
@@ -513,6 +518,27 @@ interface RunStatusMessage extends RunStatus {
   projectId?: string
 }
 
+export interface AgentManagerWorktreeUsageSummaryEntry {
+  worktreeId: string
+  summary: KilocodeWorktreeUsageSummary
+}
+
+interface WorktreeUsageSummariesMessage {
+  type: "agentManager.worktreeUsageSummaries"
+  projectId?: string
+  summaries: AgentManagerWorktreeUsageSummaryEntry[]
+  error?: string
+}
+
+interface WorktreeUsageMessage {
+  type: "agentManager.worktreeUsage"
+  projectId?: string
+  worktreeId: string
+  detail?: KilocodeWorktreeUsageDetail
+  timeline?: KilocodeWorktreeUsageTimeline
+  error?: string
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeDeletedMessage
@@ -554,6 +580,8 @@ export type AgentManagerOutMessage =
   | BrowserInspectionMessage
   | BrowserDevtoolsMessage
   | RunStatusMessage
+  | WorktreeUsageSummariesMessage
+  | WorktreeUsageMessage
   | TerminalCreatedMessage
   | TerminalRestartedMessage
   | TerminalClosedMessage
@@ -811,6 +839,17 @@ interface OpenSettingsPanelIn {
 
 interface RequestStateIn {
   type: "agentManager.requestState"
+}
+
+interface RequestWorktreeUsageSummariesIn {
+  type: "agentManager.requestWorktreeUsageSummaries"
+  projectId?: string
+}
+
+interface RequestWorktreeUsageIn {
+  type: "agentManager.requestWorktreeUsage"
+  projectId?: string
+  worktreeId: string
 }
 
 interface RequestBranchesIn {
@@ -1282,6 +1321,8 @@ export type AgentManagerInMessage =
   | RenameWorktreeIn
   | OpenSettingsPanelIn
   | RequestStateIn
+  | RequestWorktreeUsageSummariesIn
+  | RequestWorktreeUsageIn
   | RequestBranchesIn
   | SetTabOrderIn
   | SetPinnedTabsIn

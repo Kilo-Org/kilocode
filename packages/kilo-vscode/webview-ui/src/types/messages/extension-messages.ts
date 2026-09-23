@@ -65,6 +65,8 @@ import type {
   AgentManagerApplyWorktreeDiffConflict,
   AgentManagerApplyWorktreeDiffStatus,
   AgentManagerCaffeinationMessage,
+  AgentManagerWorktreeUsageMessage,
+  AgentManagerWorktreeUsageSummariesMessage,
   BranchInfo,
   ContinueInWorktreeStatus,
   LocalGitStats,
@@ -1760,6 +1762,8 @@ export type ExtensionMessage =
   | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage
   | AgentManagerRunStatusMessage
+  | AgentManagerWorktreeUsageSummariesMessage
+  | AgentManagerWorktreeUsageMessage
   | AgentManagerCaffeinationMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage

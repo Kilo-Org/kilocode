@@ -10,6 +10,7 @@ import type {
   ProjectSessionInfo,
   RunStatus,
   WorktreeGitStats,
+  AgentManagerWorktreeUsageSummaryEntry,
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -42,6 +43,7 @@ interface Props {
   states: Record<string, AgentManagerStateMessage>
   store?: (projectId: string) => ProjectStore
   stats: Record<string, Record<string, WorktreeGitStats>>
+  usage?: Record<string, Record<string, AgentManagerWorktreeUsageSummaryEntry["summary"]>>
   local: Record<string, LocalGitStats>
   prs: Record<string, Record<string, PRStatus | null>>
   sessions: Record<string, ProjectSessionInfo[]>
@@ -54,6 +56,7 @@ interface Props {
   onSelect?: (target: AgentManagerSidebarTarget, restore?: boolean) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
   onOpenPR?: (projectId: string, worktreeId: string) => void
+  onOpenEconomics?: () => void
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
@@ -276,6 +279,7 @@ export const ProjectList: Component<Props> = (props) => {
           blocked={(id) => props.blocked(project.id, id)}
           activityFor={(id) => props.activityFor(project.id, id)}
           stats={props.stats[project.id]}
+          usage={props.usage?.[project.id]}
           local={props.local[project.id]}
           prs={props.prs[project.id]}
           sessions={props.sessions[project.id]}
@@ -287,6 +291,7 @@ export const ProjectList: Component<Props> = (props) => {
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
           onOpenComments={props.onOpenComments}
+          onOpenEconomics={props.onOpenEconomics}
           onOpenPR={props.onOpenPR}
           onCreateSection={(worktreeIds) => newSection(project.id, worktreeIds)}
           renamingSection={renamingSection}

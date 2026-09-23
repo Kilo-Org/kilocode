@@ -1,5 +1,4 @@
 /** @jsxImportSource solid-js */
-
 import {
   batch,
   For,
@@ -216,6 +215,8 @@ import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel } from "./side-panel-state"
 import { SubagentPanel } from "./SubagentPanel"
+import { WorktreeEconomicsHost } from "./WorktreeEconomicsPanel"
+import { createWorktreeEconomics } from "./worktree-economics-controller"
 import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { createDocumentInspector } from "../documents/state"
 import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
@@ -280,7 +281,6 @@ const AgentManagerContent: Component = () => {
   const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
   const [restricted, setRestricted] = createSignal(false)
   const [multiProject, setMultiProject] = createSignal(false)
-
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
@@ -294,9 +294,7 @@ const AgentManagerContent: Component = () => {
   )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
-
   const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
-
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
@@ -378,6 +376,17 @@ const AgentManagerContent: Component = () => {
   })
   const sidePanel = panels.panel
   const [diffMounted, setDiffMounted] = createSignal(false)
+  const economics = createWorktreeEconomics({
+    project: activeProjectId,
+    selection,
+    loaded: worktreesLoaded,
+    worktrees,
+    panel: sidePanel,
+    post: vscode.postMessage,
+    closeHistory,
+    setReviewActive,
+    togglePanel: panels.toggle,
+  })
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
   const activePR = createMemo(() => {
@@ -688,7 +697,6 @@ const AgentManagerContent: Component = () => {
     refresh: ({ projectId, worktreeId }) =>
       vscode.postMessage({ type: "agentManager.refreshPR", projectId, worktreeId }),
   })
-
   const runWorktree = (id: string, destination: TerminalDestination) => {
     const state = runStatuses()[id]?.state ?? "idle"
     if (state === "running" || state === "stopping") {
@@ -697,17 +705,13 @@ const AgentManagerContent: Component = () => {
     }
     vscode.postMessage(resolveRunScriptRequest(id, destination))
   }
-
   const configureRunScript = () => vscode.postMessage({ type: "agentManager.configureRunScript" })
-
   const runSelected = () => {
     const sel = selection()
     if (sel) runWorktree(sel, sideCtl.destination())
   }
-
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
-
   const releaseTabs = () => setTabWidths(false)
   const freezeTabs = () => {
     const bar = document.querySelector(".am-tab-bar")
@@ -715,7 +719,6 @@ const AgentManagerContent: Component = () => {
     setTabWidths(true)
     requestAnimationFrame(releaseTabs)
   }
-
   const worktreeTabOrder = () => registry.active().tabOrder()
   const setWorktreeTabOrder: Setter<Record<string, string[]>> = (v) => registry.active().setTabOrder(v)
   const sidebarWorktreeOrder = () => registry.active().worktreeOrder()
@@ -723,7 +726,6 @@ const AgentManagerContent: Component = () => {
   const [draggingWorktree, setDraggingWorktree] = createSignal<string | undefined>()
   const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
   let pendingNewSection = false
-
   const tabState = createTabPersistence(registry.active, selection, REVIEW_TAB_ID, (m) => vscode.postMessage(m))
   const tabOrderSync = createTabOrderSync({
     LOCAL,
@@ -822,7 +824,6 @@ const AgentManagerContent: Component = () => {
       return next
     })
   })
-
   const worktreeSessionIds = createMemo(
     () =>
       new Set(
@@ -831,9 +832,7 @@ const AgentManagerContent: Component = () => {
           .map((ms) => ms.id),
       ),
   )
-
   const localSet = createMemo(() => new Set(localSessionIDs()))
-
   const projectSessionsLive = createProjectSessionsLive({
     base: projectLive.sessions,
     pid: currentProjectId,
@@ -843,7 +842,6 @@ const AgentManagerContent: Component = () => {
     locals: localSet,
   })
   const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
-
   /** Session ids shown in the project-scoped history view (every session of the project). */
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
@@ -854,7 +852,6 @@ const AgentManagerContent: Component = () => {
     if (!sessions) return new Set<string>()
     return new Set(sessions.filter(isKnownRootSession).map((s) => s.id))
   })
-
   const localSessions = createLocalSessions({
     ids: localSessionIDs,
     sessions: () => {
@@ -866,29 +863,24 @@ const AgentManagerContent: Component = () => {
     root: isKnownRootSession,
     title: () => t("agentManager.session.newSession"),
   })
-
   const sessionsForWorktree = (id: string) =>
     worktreeSessions(id, managedSessions(), session.sessions(), worktreeTabOrder()[id])
-
   const activeWorktreeSessions = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (!sel || sel === LOCAL) return []
     return sessionsForWorktree(sel)
   })
-
   const activeWorktreeSessionIds = createMemo<ReadonlySet<string> | undefined>(() => {
     const sel = selection()
     if (!sel || sel === LOCAL) return undefined
     return worktreeMembership(sel, managedSessions())
   })
-
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (sel === LOCAL) return localSessions()
     if (sel) return activeWorktreeSessions()
     return []
   })
-
   const contextEmpty = createMemo(() => {
     const sel = selection()
     if (terms.current().length > 0) return false
@@ -896,13 +888,11 @@ const AgentManagerContent: Component = () => {
     if (sel) return activeWorktreeSessions().length === 0 && managedSessions().every((ms) => ms.worktreeId !== sel)
     return false
   })
-
   const showDetailStack = createMemo(
     () =>
       !restricted() &&
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
-
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
     const state = setup()
@@ -921,7 +911,6 @@ const AgentManagerContent: Component = () => {
       branch: busy.branch ?? tree?.branch,
     }
   })
-
   /** The selected worktree is provisioning: block session CTAs, keep selection put. */
   const settingUpSelection = createMemo(() => {
     const sel = selection()
@@ -930,7 +919,6 @@ const AgentManagerContent: Component = () => {
     if (busy?.reason !== "setting-up") return undefined
     return busy
   })
-
   createEffect(() => {
     const sel = selection()
     if (sel === null) {
@@ -941,7 +929,6 @@ const AgentManagerContent: Component = () => {
       setReviewActive(false)
     }
   })
-
   createEffect(() => {
     const id = selection() ?? session.currentSessionID()
     if (!id) return
@@ -950,7 +937,6 @@ const AgentManagerContent: Component = () => {
       if (el instanceof HTMLElement) scrollIntoView(el)
     })
   })
-
   const readOnly = createMemo(() => selection() === null && !!session.currentSessionID())
 
   const visibleTabId = createMemo(() => {
@@ -1473,6 +1459,7 @@ const AgentManagerContent: Component = () => {
         setRepoBranch(info.branch)
         if (info.defaultBranch) setRepoDetectedBranch(info.defaultBranch)
       }
+      if (economics.handle(msg)) return
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
@@ -2296,6 +2283,7 @@ const AgentManagerContent: Component = () => {
             busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
             blocked={(projectId, id) => activity.blocked(id, projectId)}
             stats={projectLive.stats()}
+            usage={{ [activeProjectId() ?? "single"]: economics.summaries() }}
             local={projectLive.local()}
             prs={projectLive.prs()}
             sessions={projectSessionsLive()}
@@ -2307,6 +2295,7 @@ const AgentManagerContent: Component = () => {
             onCreate={creation.schedule}
             onSelect={activateSelection}
             onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
+            onOpenEconomics={() => panels.open(SidePanel.Economics)}
             onOpenPR={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
             bindings={kb()}
             t={t}
@@ -2326,6 +2315,7 @@ const AgentManagerContent: Component = () => {
             selectLocal={selectLocal}
             selectWorktree={selectWorktree}
             onOpenComments={(worktreeId) => comments.open({ projectId: activeProjectId(), worktreeId })}
+            onOpenEconomics={() => panels.open(SidePanel.Economics)}
             onOpenPR={(worktreeId) => comments.open({ projectId: activeProjectId(), worktreeId })}
             activityFor={(id) => (id === null ? activity.local() : activity.agent(id))}
             repoBranch={repoBranch}
@@ -2371,6 +2361,7 @@ const AgentManagerContent: Component = () => {
             }
             shortcutMap={shortcutMap}
             worktreeStats={worktreeStats}
+            worktreeUsage={economics.summaries}
             prStatuses={prStatuses}
             runStatuses={runStatuses}
             cancelPendingDelete={cancelPendingDelete}
@@ -2425,6 +2416,7 @@ const AgentManagerContent: Component = () => {
           onToggleDocuments={metrics.click("documents", "tab_toolbar", documentInspector.toggle, () => ({
             action: documentInspector.isOpen() ? "close" : "open",
           }))}
+          {...economics.toolbar}
           subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
           subagentsOpen={() => sidePanel() === SidePanel.Subagents}
           onToggleSubagents={metrics.click("subagents", "tab_toolbar", subagentCtl.toolbar.toggle, () => ({
@@ -2677,6 +2669,15 @@ const AgentManagerContent: Component = () => {
                         onClose={() => panels.close(SidePanel.PR)}
                       />
                     </Show>
+                    <WorktreeEconomicsHost
+                      active={() => sidePanel() === SidePanel.Economics}
+                      worktree={economics.worktree}
+                      usage={economics.selected}
+                      label={worktreeLabel}
+                      onClose={() => panels.close(SidePanel.Economics)}
+                      onRefresh={economics.request}
+                      onOpenSession={selectChatSession}
+                    />
                     {browser.render(session.currentSessionID, activeProjectId)}
                     <Show when={subagents.tabs().length > 0}>
                       <SubagentPanel
