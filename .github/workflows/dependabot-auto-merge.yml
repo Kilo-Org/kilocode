@@ -6,7 +6,13 @@ name: Dependabot auto-merge
 # keeps normal write permissions.
 #
 # dependabot.yml groups minor/patch updates into `*-minor-patch` PRs, so a
-# title match on that group name is our low-risk classifier.
+# title match on that group name is our low-risk classifier. kilocode is a
+# fork of opencode sharing one bun.lock with ~17 upstream-owned packages, so
+# we additionally require every changed file (besides the shared bun.lock
+# itself) to live under a "kilo"-named path, per AGENTS.md's own shared-vs-
+# owned boundary. A PR touching shared/upstream code is left for a human,
+# since auto-merging it risks a recurring conflict -- or a silent revert --
+# on the next upstream sync.
 
 on:
   schedule:
@@ -37,6 +43,13 @@ jobs:
             --jq '.[] | select(.title | test("Bump the [a-z-]*-minor-patch group")) | select(.autoMergeRequest == null) | .url' |
           while IFS= read -r pr_url; do
             [ -z "$pr_url" ] && continue
+
+            unsafe=$(gh pr diff "$pr_url" --name-only | grep -v '^bun\.lock$' | grep -vi 'kilo' || true)
+            if [ -n "$unsafe" ]; then
+              echo "::warning::skipping $pr_url, touches shared/upstream path(s): $(echo "$unsafe" | tr '\n' ' ')"
+              continue
+            fi
+
             echo "Enabling auto-merge for $pr_url"
             gh pr merge --auto --squash "$pr_url" || echo "::warning::could not enable auto-merge for $pr_url"
           done
