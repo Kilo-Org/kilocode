@@ -273,6 +273,31 @@ function edge(map: Map<string, Set<string>>, from: string, to: string) {
   map.set(from, new Set([to]))
 }
 
+/** Bun's isolated-linker store uses `+` in place of a scope's `/`. */
+function storeName(name: string) {
+  return name.replace("/", "+")
+}
+
+/**
+ * Look up a package inside Bun's isolated-linker store.
+ *
+ * CI's Linux/macOS runners install with plain `bun install --frozen-lockfile`
+ * (see `.github/actions/setup-bun/action.yml`, which only forces
+ * `--linker hoisted` on Windows), so they get Bun's default isolated layout: a
+ * flat `<root>/<name>` symlink exists only for a package's own direct
+ * dependents, and every other package -- most transitive dependencies in
+ * practice -- lives solely in the shared content-addressable store at
+ * `<root>/.bun/<name>@<version>[+hash]/node_modules/<name>`. The `+hash`
+ * suffix appears when a package resolves differently per peer context, so the
+ * version is matched as a prefix rather than an exact directory name.
+ */
+function fromStore(root: string, name: string, version: string) {
+  const pattern = `.bun/${storeName(name)}@${version}*/node_modules/${name}/package.json`
+  // `.bun` is a dot-directory; Bun.Glob skips those unless `dot` is set.
+  const matches = [...new Bun.Glob(pattern).scanSync({ cwd: root, dot: true })].sort()
+  return matches.length ? path.join(root, matches[0]) : undefined
+}
+
 /**
  * Add license and supplier data from the installed tree.
  *
@@ -289,11 +314,19 @@ export async function enrich(components: Component[], modules: string | string[]
       out.push(item)
       continue
     }
-    // Bun hoists most packages to the workspace root but not all of them, so
-    // every candidate module root is searched before reporting a gap.
-    const manifest = roots
+    // Bun hoists a package's own direct dependents to `<root>/<name>`, but
+    // most transitive dependencies only exist in the isolated linker's shared
+    // store; both are searched before reporting a gap.
+    const flat = roots
       .map((root) => path.join(root, item.name, "package.json"))
       .find((candidate) => fs.existsSync(candidate))
+    const manifest =
+      flat ??
+      (item.version
+        ? roots
+            .map((root) => fromStore(root, item.name, item.version!))
+            .find((candidate): candidate is string => !!candidate)
+        : undefined)
     if (!manifest) {
       gaps.push({ component: `${item.name}@${item.version}`, reason: "licence unknown: package not installed locally" })
       out.push(item)

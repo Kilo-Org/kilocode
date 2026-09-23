@@ -342,6 +342,85 @@ describe("deps", () => {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }
   })
+
+  test("falls back to Bun's isolated-linker store for transitive dependencies", async () => {
+    const dir = await scratch()
+    try {
+      // No flat `<root>/cors` symlink -- only the shared store entry Bun's
+      // default (non-Windows) install produces for a transitive dependency.
+      await Bun.write(
+        path.join(dir, ".bun", "cors@2.8.6", "node_modules", "cors", "package.json"),
+        JSON.stringify({ license: "MIT" }),
+      )
+      const input: Component[] = [{ type: "library", name: "cors", version: "2.8.6", purl: "pkg:npm/cors@2.8.6" }]
+      const result = await Deps.enrich(input, dir)
+      expect(result.components[0]).toMatchObject({ licenses: ["MIT"] })
+      expect(result.gaps).toEqual([])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("matches a peer-variant hash suffix in the isolated store", async () => {
+    const dir = await scratch()
+    try {
+      await Bun.write(
+        path.join(dir, ".bun", "oxlint@1.60.0+6c6101fa9d9a1fb4", "node_modules", "oxlint", "package.json"),
+        JSON.stringify({ license: "MIT" }),
+      )
+      const input: Component[] = [{ type: "library", name: "oxlint", version: "1.60.0", purl: "pkg:npm/oxlint@1.60.0" }]
+      const result = await Deps.enrich(input, dir)
+      expect(result.components[0]).toMatchObject({ licenses: ["MIT"] })
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("resolves a scoped package's store directory name from its scope slash", async () => {
+    const dir = await scratch()
+    try {
+      await Bun.write(
+        path.join(dir, ".bun", "@actions+core@1.11.1", "node_modules", "@actions", "core", "package.json"),
+        JSON.stringify({ license: "MIT" }),
+      )
+      const input: Component[] = [
+        { type: "library", name: "@actions/core", version: "1.11.1", purl: "pkg:npm/%40actions/core@1.11.1" },
+      ]
+      const result = await Deps.enrich(input, dir)
+      expect(result.components[0]).toMatchObject({ licenses: ["MIT"] })
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("prefers a flat symlink over the isolated store when both exist", async () => {
+    const dir = await scratch()
+    try {
+      await Bun.write(path.join(dir, "effect", "package.json"), JSON.stringify({ license: "MIT" }))
+      await Bun.write(
+        path.join(dir, ".bun", "effect@4.0.0", "node_modules", "effect", "package.json"),
+        JSON.stringify({ license: "Apache-2.0" }),
+      )
+      const input: Component[] = [{ type: "library", name: "effect", version: "4.0.0", purl: "pkg:npm/effect@4.0.0" }]
+      const result = await Deps.enrich(input, dir)
+      expect(result.components[0]).toMatchObject({ licenses: ["MIT"] })
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("still reports a gap when neither the flat symlink nor the store has the package", async () => {
+    const dir = await scratch()
+    try {
+      const input: Component[] = [{ type: "library", name: "missing", version: "1.0.0", purl: "pkg:npm/missing@1.0.0" }]
+      const result = await Deps.enrich(input, dir)
+      expect(result.gaps).toEqual([
+        { component: "missing@1.0.0", reason: "licence unknown: package not installed locally" },
+      ])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe("scan", () => {
