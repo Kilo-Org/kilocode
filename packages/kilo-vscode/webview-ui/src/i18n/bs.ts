@@ -789,6 +789,15 @@ export const dict = {
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",
   "context.stats.thisSession": "Ova sesija",
+  "session.costNotice.request": "Posljednji zahtjev je koštao {{cost}}.",
+  "session.costNotice.subagent": "Zahtjev podagenta je koštao {{cost}}.",
+  "session.costNotice.model": "Promjena modela: sljedeći zahtjev ne koristi keš ({{tokens}} tokena, oko {{cost}}).",
+  "session.costNotice.variant":
+    "Promjena rezonovanja: sljedeći zahtjev ne koristi keš ({{tokens}} tokena, oko {{cost}}).",
+  "session.costNotice.dismiss": "Zatvori obavijest o trošku",
+  "settings.autoApprove.requestCost.title": "Obavijest o trošku zahtjeva",
+  "settings.autoApprove.requestCost.description":
+    "Prikaži kratko obavještenje kada jedan zahtjev modelu košta najmanje ovaj iznos u USD, ili će ga koštati jer promjena modela ili rezonovanja zaobilazi keš. 0 isključuje.",
 
   "time.today": "Danas",
   "time.yesterday": "Jučer",

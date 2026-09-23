@@ -763,6 +763,14 @@ export const dict = {
   "context.usage.sessionCost": "Session cost",
   "context.usage.olderSessions": "{{count}} older sessions",
   "context.stats.thisSession": "This session",
+  "session.costNotice.request": "Last request cost {{cost}}.",
+  "session.costNotice.subagent": "A subagent request cost {{cost}}.",
+  "session.costNotice.model": "Model change: the next request is uncached ({{tokens}} tokens, about {{cost}}).",
+  "session.costNotice.variant": "Reasoning change: the next request is uncached ({{tokens}} tokens, about {{cost}}).",
+  "session.costNotice.dismiss": "Dismiss cost notice",
+  "settings.autoApprove.requestCost.title": "Request Cost Notice",
+  "settings.autoApprove.requestCost.description":
+    "Show a short notice when one model request costs at least this USD amount, or will cost it because a model or reasoning change skips the cache. Set to 0 to disable.",
 
   "time.today": "Today",
   "time.yesterday": "Yesterday",

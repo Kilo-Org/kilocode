@@ -776,6 +776,15 @@ export const dict = {
   "context.usage.sessionCost": "Вартість сесії",
   "context.usage.olderSessions": "{{count}} старіших сесій",
   "context.stats.thisSession": "Ця сесія",
+  "session.costNotice.request": "Останній запит коштував {{cost}}.",
+  "session.costNotice.subagent": "Запит субагента коштував {{cost}}.",
+  "session.costNotice.model": "Зміна моделі: наступний запит буде без кешу ({{tokens}} токенів, близько {{cost}}).",
+  "session.costNotice.variant":
+    "Зміна міркування: наступний запит буде без кешу ({{tokens}} токенів, близько {{cost}}).",
+  "session.costNotice.dismiss": "Закрити сповіщення про вартість",
+  "settings.autoApprove.requestCost.title": "Сповіщення про вартість запиту",
+  "settings.autoApprove.requestCost.description":
+    "Показувати коротке сповіщення, коли один запит до моделі коштує щонайменше цю суму в USD або коштуватиме, бо зміна моделі чи міркування оминає кеш. 0 вимикає.",
 
   "time.today": "Сьогодні",
   "time.yesterday": "Вчора",

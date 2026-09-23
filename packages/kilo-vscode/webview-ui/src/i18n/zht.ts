@@ -717,6 +717,14 @@ export const dict = {
   "context.usage.sessionCost": "工作階段費用",
   "context.usage.olderSessions": "{{count}} 個較早的工作階段",
   "context.stats.thisSession": "此工作階段",
+  "session.costNotice.request": "上一次請求花費 {{cost}}。",
+  "session.costNotice.subagent": "一次子代理請求花費 {{cost}}。",
+  "session.costNotice.model": "已更換模型：下一個請求不使用快取（{{tokens}} 個 token，約 {{cost}}）。",
+  "session.costNotice.variant": "已變更推理設定：下一個請求不使用快取（{{tokens}} 個 token，約 {{cost}}）。",
+  "session.costNotice.dismiss": "關閉費用提示",
+  "settings.autoApprove.requestCost.title": "請求費用提示",
+  "settings.autoApprove.requestCost.description":
+    "當一次模型請求的費用至少達到此美元金額，或因更換模型或推理設定略過快取而將達到此金額時，顯示簡短提示。設為 0 可停用。",
 
   "time.today": "今天",
   "time.yesterday": "昨天",

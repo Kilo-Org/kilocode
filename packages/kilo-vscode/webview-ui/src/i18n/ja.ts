@@ -781,6 +781,15 @@ export const dict = {
   "context.usage.sessionCost": "セッションコスト",
   "context.usage.olderSessions": "{{count}} 件の古いセッション",
   "context.stats.thisSession": "このセッション",
+  "session.costNotice.request": "直近のリクエストのコストは {{cost}} でした。",
+  "session.costNotice.subagent": "サブエージェントのリクエストのコストは {{cost}} でした。",
+  "session.costNotice.model": "モデル変更: 次のリクエストはキャッシュを使いません ({{tokens}} トークン、約 {{cost}})。",
+  "session.costNotice.variant":
+    "推論設定の変更: 次のリクエストはキャッシュを使いません ({{tokens}} トークン、約 {{cost}})。",
+  "session.costNotice.dismiss": "コスト通知を閉じる",
+  "settings.autoApprove.requestCost.title": "リクエストコスト通知",
+  "settings.autoApprove.requestCost.description":
+    "1 回のモデルリクエストがこの USD 金額以上かかるとき、またはモデルや推論設定の変更でキャッシュが使われずにかかる見込みのときに短い通知を表示します。0 で無効になります。",
 
   "time.today": "今日",
   "time.yesterday": "昨日",

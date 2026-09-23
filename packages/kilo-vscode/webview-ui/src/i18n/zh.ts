@@ -757,6 +757,14 @@ export const dict = {
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",
   "context.stats.thisSession": "此会话",
+  "session.costNotice.request": "上一次请求花费 {{cost}}。",
+  "session.costNotice.subagent": "一次子代理请求花费 {{cost}}。",
+  "session.costNotice.model": "已更换模型：下一个请求不使用缓存（{{tokens}} 个 token，约 {{cost}}）。",
+  "session.costNotice.variant": "已更改推理设置：下一个请求不使用缓存（{{tokens}} 个 token，约 {{cost}}）。",
+  "session.costNotice.dismiss": "关闭费用提示",
+  "settings.autoApprove.requestCost.title": "请求费用提示",
+  "settings.autoApprove.requestCost.description":
+    "当一次模型请求的费用至少达到此美元金额，或因更换模型或推理设置跳过缓存而将达到此金额时，显示简短提示。设为 0 可禁用。",
 
   "time.today": "今天",
   "time.yesterday": "昨天",

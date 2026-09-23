@@ -778,6 +778,16 @@ export const dict = {
   "context.usage.sessionCost": "Sessiekosten",
   "context.usage.olderSessions": "{{count}} oudere sessies",
   "context.stats.thisSession": "Deze sessie",
+  "session.costNotice.request": "Laatste verzoek kostte {{cost}}.",
+  "session.costNotice.subagent": "Een subagent-verzoek kostte {{cost}}.",
+  "session.costNotice.model":
+    "Modelwissel: het volgende verzoek gebruikt geen cache ({{tokens}} tokens, ongeveer {{cost}}).",
+  "session.costNotice.variant":
+    "Redeneerwijziging: het volgende verzoek gebruikt geen cache ({{tokens}} tokens, ongeveer {{cost}}).",
+  "session.costNotice.dismiss": "Kostenmelding sluiten",
+  "settings.autoApprove.requestCost.title": "Melding verzoekkosten",
+  "settings.autoApprove.requestCost.description":
+    "Toon een korte melding wanneer één modelverzoek minstens dit USD-bedrag kost, of zal kosten omdat een model- of redeneerwijziging de cache overslaat. 0 schakelt dit uit.",
 
   "time.today": "Vandaag",
   "time.yesterday": "Gisteren",

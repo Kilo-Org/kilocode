@@ -771,6 +771,14 @@ export const dict = {
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",
   "context.stats.thisSession": "هذه الجلسة",
+  "session.costNotice.request": "تكلفة آخر طلب {{cost}}.",
+  "session.costNotice.subagent": "تكلفة طلب وكيل فرعي {{cost}}.",
+  "session.costNotice.model": "تغيير النموذج: الطلب التالي بدون ذاكرة تخزين مؤقت ({{tokens}} رمز، نحو {{cost}}).",
+  "session.costNotice.variant": "تغيير الاستدلال: الطلب التالي بدون ذاكرة تخزين مؤقت ({{tokens}} رمز، نحو {{cost}}).",
+  "session.costNotice.dismiss": "إغلاق إشعار التكلفة",
+  "settings.autoApprove.requestCost.title": "إشعار تكلفة الطلب",
+  "settings.autoApprove.requestCost.description":
+    "عرض إشعار قصير عندما يكلف طلب نموذج واحد هذا المبلغ بالدولار على الأقل، أو سيكلفه لأن تغيير النموذج أو الاستدلال يتجاوز ذاكرة التخزين المؤقت. 0 يعطّله.",
 
   "time.today": "اليوم",
   "time.yesterday": "أمس",

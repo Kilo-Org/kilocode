@@ -790,6 +790,16 @@ export const dict = {
   "context.usage.sessionCost": "Custo da sessão",
   "context.usage.olderSessions": "{{count}} sessões anteriores",
   "context.stats.thisSession": "Esta sessão",
+  "session.costNotice.request": "A última solicitação custou {{cost}}.",
+  "session.costNotice.subagent": "Uma solicitação de subagente custou {{cost}}.",
+  "session.costNotice.model":
+    "Troca de modelo: a próxima solicitação não usa cache ({{tokens}} tokens, cerca de {{cost}}).",
+  "session.costNotice.variant":
+    "Mudança de raciocínio: a próxima solicitação não usa cache ({{tokens}} tokens, cerca de {{cost}}).",
+  "session.costNotice.dismiss": "Dispensar aviso de custo",
+  "settings.autoApprove.requestCost.title": "Aviso de custo por solicitação",
+  "settings.autoApprove.requestCost.description":
+    "Mostrar um aviso curto quando uma solicitação ao modelo custa pelo menos este valor em USD, ou vai custar porque uma troca de modelo ou de raciocínio ignora o cache. 0 desativa.",
 
   "time.today": "Hoje",
   "time.yesterday": "Ontem",

@@ -25,6 +25,7 @@ import { useProvider } from "./provider"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
 import { createCostAlertHandler } from "./cost-alert"
+import { createCostNotices, noticeThreshold } from "./cost-notice"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
   SessionInfo,
@@ -141,7 +142,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
-  const { config } = useConfig()
+  const { config, settings } = useConfig()
+  const notices = createCostNotices(() => noticeThreshold(settings().requestCostNotice))
   const language = useLanguage()
 
   // Current session ID
@@ -920,6 +922,7 @@ export const SessionProvider: ParentComponent = (props) => {
     routeSuggestionMessage(message)
     if (handleModelUsageMessage(message)) return
     refreshModelUsageForMessage(message)
+    notices.handle(message)
     if (handleStreamMessage(message)) return
     handleCommandCompletion(message)
     handleResumeResult(message)
@@ -2982,6 +2985,8 @@ export const SessionProvider: ParentComponent = (props) => {
     rememberSelection,
     trackScopes: memory.track,
     costBreakdown,
+    costNotice: () => notices.latest(currentSessionID(), visibleFamily),
+    dismissCostNotice: notices.dismiss,
     contextUsage,
     modelUsage,
     agents,

@@ -690,3 +690,22 @@
 ::highlight(kilo-transcript-search-match-active) {
   background-color: var(--vscode-editor-findMatchBackground, rgba(255, 165, 0, 0.65));
 }
+
+/* Request cost notice: a quiet line centered in the session dock lane.
+   Only the small warning icon carries color. */
+[data-component="cost-notice"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 6px 12px 0;
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground);
+}
+
+[data-slot="cost-notice-icon"] {
+  flex-shrink: 0;
+  color: var(--icon-warning-base);
+}

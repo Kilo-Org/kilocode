@@ -242,6 +242,8 @@ export function mockSessionValue(overrides?: {
     rememberSelection: noop,
     trackScopes: () => noop,
     costBreakdown: () => [],
+    costNotice: () => undefined,
+    dismissCostNotice: noop,
     contextUsage: () => undefined,
     modelUsage: () => undefined,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
