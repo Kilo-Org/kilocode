@@ -3004,6 +3004,11 @@ ToolRegistry.register({
     // `metadata.lines`, so the header counts up before the diff exists.
     const streamed = () =>
       pending() && typeof props.metadata?.lines === "number" ? { additions: props.metadata.lines, deletions: 0 } : undefined
+    // A write that leaves the file as it was has an empty diff: show only the header.
+    const unchanged = () => {
+      const diff = props.metadata?.filediff
+      return !pending() && !!diff && !diff.additions && !diff.deletions
+    }
     // Lazy like the edit card: only parsed when the deferred body mounts or the
     // user opens the diff viewer, never while the card is collapsed.
     const view = () => {
@@ -3037,6 +3042,7 @@ ToolRegistry.register({
           icon="code-lines"
           defer
           hasDetails
+          hideDetails={props.hideDetails || (unchanged() && !diagnostics().length)}
           trigger={
             <div data-component="write-trigger">
               <div data-slot="message-part-title-area">
