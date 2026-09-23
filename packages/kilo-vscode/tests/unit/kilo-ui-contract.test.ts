@@ -263,7 +263,7 @@ describe("Bash tool static terminal preview (source)", () => {
 
   it("BashHighlightedOutput syntax highlights log output", () => {
     expect(src).toContain('data-slot="bash-terminal" data-kind="output"')
-    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={outRef}')
+    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={bindOutput}')
     expect(src).toContain('data-lang="log"')
     expect(src).toContain("escapeHtml(out)")
   })

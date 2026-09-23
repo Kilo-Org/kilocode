@@ -44,8 +44,13 @@ export const dict = {
     "프로젝트 파일이 버전 관리에 추가될 수 있습니다. 구성에서 환경 변수를 참조하는 경우가 아니면 여기에 비밀 정보를 저장하지 마세요.",
   "marketplace.install.learnMore": "Marketplace 설치 방식 알아보기",
   "marketplace.install.learnMcp": "MCP 자세히 알아보기",
+  "marketplace.install.about.plugin":
+    "플러그인은 Kilo에 사용자 정의 도구와 통합 기능을 추가합니다. 플러그인은 모든 권한으로 실행됩니다.",
+  "marketplace.install.plugin.warning":
+    "플러그인은 모든 권한으로 코드를 실행합니다. 사용자의 파일을 읽고 변경하고, 명령을 실행하며, 사용자의 인증 정보와 네트워크에 접근할 수 있습니다. 신뢰할 수 있는 플러그인만 설치하세요.",
   "marketplace.install.installedAt": "{{path}}에 설치됨",
-  "marketplace.intro": "재사용 가능한 에이전트, 스킬 및 MCP 도구를 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
+  "marketplace.intro":
+    "재사용 가능한 에이전트, 스킬, MCP 도구 및 플러그인을 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
   "marketplace.intro.learnMore": "Marketplace 정보",
   "marketplace.install.prerequisites": "사전 요구 사항",
   "marketplace.install.installing": "설치 중...",
@@ -72,6 +77,7 @@ export const dict = {
   "marketplace.scope.project": "프로젝트",
   "marketplace.scope.global": "글로벌",
   "marketplace.remove.type.mcp": "MCP 서버",
+  "marketplace.remove.type.plugin": "플러그인",
   "marketplace.remove.type.skill": "스킬",
   "marketplace.remove.type.agent": "에이전트",
   "marketplace.remove.failed": "{{name}} 제거 실패",
@@ -82,7 +88,7 @@ export const dict = {
   "marketplace.warning.busyMany": "여러 세션이 실행 중이며 중단됩니다",
   "marketplace.warning.installAnyway": "그래도 설치",
   "marketplace.warning.cancel": "취소",
-  "marketplace.contribute.prompt": "스킬, 에이전트 또는 MCP 서버가 없나요?",
+  "marketplace.contribute.prompt": "스킬, 에이전트, MCP 서버 또는 플러그인이 없나요?",
   "marketplace.contribute.cta": "GitHub에서 기여하기",
   "marketplace.migration.notice":
     "모드가 에이전트로 대체되었습니다. 이전에 마켓플레이스 모드를 설치한 경우 새 형식으로 마이그레이션하려면 해당 모드를 제거하고 에이전트로 다시 설치하세요.",

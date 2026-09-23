@@ -160,6 +160,43 @@ describe("config overlay routes", () => {
     expect(await Bun.file(target.path).text()).toContain('"model": "test/model"')
   })
 
+  test("rejects unknown requested config settings without writing them", async () => {
+    await using project = await tmpdir()
+    const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    const result = await KilocodeConfigWriter.write({
+      scope: "project",
+      directory: project.path,
+      expected: target,
+      set: { modle: "test/model" },
+    }).then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+
+    expect(result).toMatchObject({
+      data: { path: target.path, issues: [{ message: "Unrecognized key: modle", path: [] }] },
+    })
+    expect(await Bun.file(target.path).exists()).toBe(false)
+  })
+
+  test("preserves existing unknown settings when writing recognized config", async () => {
+    await using project = await tmpdir()
+    const file = path.join(project.path, "kilo.json")
+    await Bun.write(file, JSON.stringify({ future: { enabled: true } }))
+    const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    const result = await KilocodeConfigWriter.write({
+      scope: "project",
+      directory: project.path,
+      expected: target,
+      set: { model: "test/model" },
+    })
+
+    expect(result.ok).toBe(true)
+    expect(await Bun.file(file).json()).toEqual({ future: { enabled: true }, model: "test/model" })
+  })
+
   test("ignores a nested unset path when the project target is missing", async () => {
     await using project = await tmpdir()
     const response = await req(project.path, "/config/overlay", {

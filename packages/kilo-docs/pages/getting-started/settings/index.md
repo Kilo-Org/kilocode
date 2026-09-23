@@ -141,6 +141,19 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 
 Valid values are `expanded` and `collapsed`.
 
+### Code Edit and Tool Blocks
+
+Code edit and diff blocks start collapsed. Choose **Expanded** for **Code Edit Blocks** in the Display tab, or set `code_edit_display` in `kilo.jsonc`. MCP and generic tool blocks also start collapsed, controlled by `mcp_tool_display`:
+
+```json
+{
+  "code_edit_display": "expanded",
+  "mcp_tool_display": "expanded"
+}
+```
+
+Both keys accept `expanded` and `collapsed`.
+
 ### Inline Code
 
 Inline code keeps its current text-only appearance by default. Enable **Highlight Inline Code** in the Display tab, or set `inline_code_background` to `true`, to add a theme-aware background and spacing. You can independently set `inline_code_color` to a hex color:
@@ -153,6 +166,22 @@ Inline code keeps its current text-only appearance by default. Enable **Highligh
 ```
 
 Omit either setting to keep its current theme-controlled behavior.
+
+### Work Styles and the Session Preview
+
+Onboarding asks you to pick a work style. The choice sets display defaults and, for **Review first**, permission rules:
+
+- **Review first** expands reasoning, terminal, and code edit blocks, collapses MCP and generic tool blocks, and shows auto-approval reasons. It also allows read-only commands and asks before edits, external directory access, and other commands.
+- **High autonomy** uses a reasoning preview, collapses terminal, code edit, and tool blocks, and hides auto-approval reasons. It leaves permissions unchanged.
+
+Onboarding only fills settings and permission rules that are not already configured, so an existing `kilo.jsonc` or customized settings are preserved.
+
+You can change both choices later:
+
+- **Settings → Display** holds the display options. The **Display presets** buttons apply the same combinations as onboarding, and each option stays individually editable. A looping sample conversation beside the options previews your changes with the same components as a real session, using local data only.
+- **Settings → Auto-Approve** lists the current permission rules and lets you edit them.
+
+Display changes apply as a draft. Click **Save** to keep them or **Discard** to revert.
 
 ### Markdown Diff Rendering
 

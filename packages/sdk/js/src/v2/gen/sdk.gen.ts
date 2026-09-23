@@ -211,6 +211,10 @@ import type {
   KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeRetentionRunErrors,
+  KilocodeRetentionRunResponses,
+  KilocodeRetentionStatusErrors,
+  KilocodeRetentionStatusResponses,
   KilocodeSessionBoardErrors,
   KilocodeSessionBoardResponses,
   KilocodeSessionImportMessageErrors,
@@ -7333,7 +7337,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Install a marketplace item
    *
-   * Install a marketplace MCP server, agent, or skill into project or global Kilo config.
+   * Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.
    */
   public install<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7380,7 +7384,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Remove a marketplace item
    *
-   * Remove a marketplace MCP server, agent, or skill from project or global Kilo config.
+   * Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7845,6 +7849,83 @@ export class BackgroundJob extends HeyApiClient {
   }
 }
 
+export class Retention extends HeyApiClient {
+  /**
+   * Get session retention status
+   *
+   * Read the machine-wide session retention policy and the state of the most recent cleanup pass.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeRetentionStatusResponses,
+      KilocodeRetentionStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Run session retention
+   *
+   * Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.
+   */
+  public run<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      force?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "force" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionRunResponses,
+      KilocodeRetentionRunErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/run",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Migrate extends HeyApiClient {
   /**
    * Migrate external sessions into Kilo
@@ -8037,7 +8118,7 @@ export class SessionImport extends HeyApiClient {
         partID?: string
         snapshot?: string
         diff?: string
-        workspace?: "restored" | "snapshots-disabled" | "unavailable"
+        workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
       }
       permission?: {
         [key: string]: unknown
@@ -8870,6 +8951,11 @@ export class Kilocode extends HeyApiClient {
   private _backgroundJob?: BackgroundJob
   get backgroundJob(): BackgroundJob {
     return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
+  }
+
+  private _retention?: Retention
+  get retention(): Retention {
+    return (this._retention ??= new Retention({ client: this.client }))
   }
 
   private _migrate?: Migrate

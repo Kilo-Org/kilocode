@@ -62,4 +62,45 @@ describe("buildInitialMessages", () => {
     const msgs = buildInitialMessages(created(1), [], { providerID: "a", modelID: "m1" }, "do it", undefined, "medium")
     expect(msgs[0]?.variant).toBe("medium")
   })
+
+  test("routes a command initial prompt instead of literal text", () => {
+    const msgs = buildInitialMessages(
+      created(1),
+      [],
+      { providerID: "a", modelID: "m1" },
+      undefined,
+      "code",
+      "high",
+      undefined,
+      { command: "goal", arguments: "ship it" },
+    )
+    expect(msgs[0]).toEqual({
+      sessionId: "ses-0",
+      worktreeId: "wt-0",
+      providerID: "a",
+      modelID: "m1",
+      agent: "code",
+      variant: "high",
+      command: "goal",
+      arguments: "ship it",
+      files: undefined,
+    })
+  })
+
+  test("keeps attachments on a command initial prompt", () => {
+    const files = [{ mime: "image/png", url: "data:image/png;base64,aaa" }]
+    const msgs = buildInitialMessages(
+      created(1),
+      [],
+      { providerID: "a", modelID: "m1" },
+      undefined,
+      undefined,
+      undefined,
+      files,
+      { command: "grill", arguments: "" },
+    )
+    expect(msgs[0]?.command).toBe("grill")
+    expect(msgs[0]?.text).toBeUndefined()
+    expect(msgs[0]?.files).toEqual(files)
+  })
 })

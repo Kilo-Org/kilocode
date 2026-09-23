@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "خطا یا قطع اتصال.",
   "session.activity.retry": "تلاش مجدد خودکار.",
   "session.activity.busy": "در حال انجام.",
+  "session.activity.scheduled": "در انتظار بیدارشدن زمان‌بندی‌شده.",
   "session.activity.done": "نوبت به پایان رسید.",
   "session.activity.idle": "در حال اجرا نیست.",
 
@@ -89,6 +90,8 @@ export const dict = {
     "مکالمه بازگردانده شد. تغییرات فایل بازیابی نشدند زیرا عکس‌برداری غیرفعال است.",
   "revert.banner.workspace.unavailable":
     "مکالمه بازگردانده شد. هیچ نقطه بازیابی فایلی موجود نبود، بنابراین تغییرات فضای کاری بازیابی نشدند.",
+  "revert.banner.workspace.notAGitRepo":
+    "مکالمه بازگردانده شد. نقاط بازیابی فایل به مخزن Git نیاز دارند، بنابراین تغییرات فضای کاری بازیابی نشدند.",
   "revert.banner.workspace.legacy":
     "مکالمه بازگردانده شد. وضعیت بازیابی فضای کاری برای این بازگردانی قدیمی‌تر در دسترس نیست.",
   "revert.banner.workspace.enableSnapshots": "فعال‌سازی اسنپ‌شات‌ها",
@@ -308,7 +311,7 @@ export const dict = {
   "ui.approval.source.agent.default": "توسط عامل",
   "ui.approval.source.global": "توسط تنظیمات سراسری شما",
   "ui.approval.source.project": "توسط تنظیمات پروژه",
-  "ui.approval.source.yolo": "توسط حالت تأیید خودکار (YOLO)",
+  "ui.approval.source.yolo": "توسط حالت تأیید خودکار",
   "ui.approval.source.session": "توسط قانون تأیید خودکار جلسه",
   "ui.approval.source.default": "به‌طور پیش‌فرض",
   "ui.approval.outsideWorkspace": "(خارج از فضای کاری شما: {{file}})",
@@ -510,6 +513,7 @@ export const dict = {
   "session.tabs.switcher.current": "فعلی",
   "session.tabs.switcher.pending": "جدید",
   "session.tabs.switcher.busy": "در حال کار",
+  "session.tabs.switcher.scheduled": "زمان‌بندی‌شده",
   "session.tab.local": "محلی",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -533,14 +537,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo در حین کار مکث می‌کند و برنامه خود را به شما نشان می‌دهد.",
   "workStyle.choice.human-in-the-loop.permissions": "قبل از ویرایش فایل‌ها یا اجرای دستورات اجازه می‌گیرد.",
   "workStyle.choice.human-in-the-loop.bash": "هنگام اجرای تمام دستورات ترمینال اجازه می‌گیرد.",
-  "workStyle.choice.human-in-the-loop.visibility": "جزئیات کامل مکالمه، از جمله استدلال، را نمایش می‌دهد.",
+  "workStyle.choice.human-in-the-loop.visibility": "استدلال، فرمان‌ها و ویرایش‌ها را برای بررسی باز می‌کند.",
   "workStyle.choice.autonomous.eyebrow": "وقفه‌های کمتر",
   "workStyle.choice.autonomous.title": "استقلال بالا",
   "workStyle.choice.autonomous.description": "وقفه‌های کمتر، رابط کاربری ساده‌تر.",
   "workStyle.choice.autonomous.permissions":
     "بدون درخواست اجازه، فایل‌ها را ویرایش می‌کند و دستورات را در فضای کاری اجرا می‌کند.",
   "workStyle.choice.autonomous.bash": "می‌تواند بدون تأیید، دستورات ترمینال را در فضای کاری اجرا کند.",
-  "workStyle.choice.autonomous.visibility": "جزئیات تا زمانی که آن‌ها را باز کنید، جمع‌شده باقی می‌مانند.",
+  "workStyle.choice.autonomous.visibility": "جزئیات ابزار را جمع می‌کند، همراه با پیش‌نمایش فشرده استدلال.",
   "session.cloud.import.title": "وارد کردن جلسه",
   "session.cloud.import.placeholder": "شناسه جلسه، URL، یا دستور kilo import",
   "session.cloud.import.button": "وارد کردن",
@@ -1103,6 +1107,27 @@ export const dict = {
   "settings.checkpoints.enable.title": "فعال‌سازی اسنپ‌شات‌ها",
   "settings.checkpoints.enable.description":
     "قبل از ویرایش فایل‌ها نقاط بازیابی ایجاد کنید تا بتوانید به حالت‌های قبلی بازگردید",
+  "settings.autoCleanup.enable.title": "فعال‌سازی پاکسازی خودکار جلسه‌ها",
+  "settings.autoCleanup.enable.description":
+    "تاریخچه جلسه‌های قدیمی را پس از تعداد روز مشخصی به‌صورت خودکار حذف می‌کند، در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه، نه فقط همین پنجره. جلسه‌های در حال اجرا و جلسه‌های دارای انشعاب اخیر هرگز حذف نمی‌شوند. حذف دائمی است.",
+  "settings.autoCleanup.defaultRetention.title": "نگهداری جلسه‌ها (روز)",
+  "settings.autoCleanup.defaultRetention.description": "مدت نگهداری تاریخچه جلسه‌ها قبل از حذف توسط پاکسازی خودکار.",
+  "settings.autoCleanup.lastRun.title": "آخرین پاکسازی",
+  "settings.autoCleanup.lastRun.never": "هرگز اجرا نشده",
+  "settings.autoCleanup.result":
+    "{{date}}: {{deleted}} از {{scanned}} جلسه حذف شد ({{active}} فعال رد شد، {{failed}} ناموفق) در {{seconds}} ثانیه",
+  "settings.autoCleanup.starting": "در حال شروع پاکسازی جلسه‌ها...",
+  "settings.autoCleanup.error.status": "وضعیت پاکسازی جلسه‌ها موقتاً در دسترس نیست. در حال تلاش مجدد...",
+  "settings.autoCleanup.error.timeout":
+    "در انتظار وضعیت پاکسازی. پاسخ‌دهی بخش پشتیبان بیشتر از حد انتظار طول کشیده است.",
+  "settings.autoCleanup.error.run":
+    "تکمیل پاکسازی جلسه‌ها تأیید نشد. پیش از تلاش مجدد، نتیجه آخرین پاکسازی را بررسی کنید.",
+  "settings.autoCleanup.progress.scanning": "در حال اسکن جلسه‌ها: {{processed}}/{{total}} پردازش شده",
+  "settings.autoCleanup.progress.deleting":
+    "در حال حذف جلسه‌ها: {{processed}}/{{total}} پردازش شده ({{deleted}} حذف شده، {{failed}} ناموفق)",
+  "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
+  "settings.autoCleanup.runNow.confirm":
+    "حذف دائمی جلسه‌های منقضی‌شده در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه؟",
 
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",
@@ -1151,6 +1176,19 @@ export const dict = {
   "settings.commitMessage.language.description":
     "زبان مورد استفاده برای پیام‌های کامیت تولیدشده توسط هوش مصنوعی را انتخاب کنید:",
 
+  "settings.display.preview.title": "پیش‌نمایش",
+  "settings.display.presets.title": "از پیش تعیین‌های نمایش",
+  "settings.display.presets.description": "گزینه‌های نمایش زیر را تغییر می‌دهد، نه مجوزها. برای اعمال ذخیره کنید.",
+  "settings.display.preview.model": "مدل نمونه",
+  "settings.display.preview.prompt": "فاصله‌های اضافی را از درود حذف کنید و تست‌ها را بررسی کنید.",
+  "settings.display.preview.reasoning":
+    "**درود را بررسی کنید.** تابع باید برای یک نام ساده و نامی با فاصله‌های اضافی در دو طرف، درود یکسانی تولید کند. من امضای تابع و قالب درود موجود را حفظ می‌کنم و فقط نحوه ورود نام به رشته بازگشتی را تغییر می‌دهم.\n\nبرای ورودی مانند `  Ada  `، فاصله‌های ناخواسته به ورودی تعلق دارند، نه به قالب درود. بریدن درود کامل، فاصله‌هایی کنار نام باقی می‌گذارد. بنابراین عملیات بریدن باید پیش از درج نام انجام شود.\n\nمستندات رشته را بررسی می‌کنم تا تأیید کنم که `trim()` فاصله‌های سفید را از دو طرف حذف می‌کند و رشته جدیدی برمی‌گرداند. باید ورودی اصلی را بدون تغییر بگذارد. برای این تغییر نیازی به عبارت باقاعده، وابستگی دیگر یا تابع کمکی جداگانه نیست.\n\nفاصله‌های داخل نام باید دست‌نخورده باقی بمانند. نامی مانند `Ada Lovelace` نباید به `AdaLovelace` تبدیل شود و بزرگی و کوچکی حروف آن نباید تغییر کند. ورودی خالی یا فقط شامل فاصله، در چارچوب این اصلاح هدفمند به درود جایگزین جدید نیاز ندارد.\n\nاین تغییر می‌تواند در عبارت بازگشتی بماند و از `name.trim()` در جایی استفاده کند که قالب اکنون `name` را به کار می‌برد. من نقطه‌گذاری اطراف و فاصله عمدی پس از درود را حفظ می‌کنم. این کار diff را کوچک نگه می‌دارد و بررسی رفتار را آسان می‌کند.\n\nدر پایان، `bun test greeting.test.ts` را اجرا می‌کنم و هر دو نتیجه را بررسی می‌کنم. حالت نام دارای فاصله باید تأیید کند که فاصله‌های اضافی حذف می‌شوند، در حالی که حالت نام ساده از خروجی موجود محافظت می‌کند. تغییر و نتایج تست را فقط پس از تکمیل فرمان گزارش می‌کنم.",
+  "settings.display.preview.shell": "تست درود را بررسی کنید",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] فاصله‌های اضافی را حذف می‌کند\n[pass] نام ساده را حفظ می‌کند\n\n۲ تست قبول شد",
+  "settings.display.preview.query": "بریدن رشته",
+  "settings.display.preview.result": "trim() فاصله‌ها را از دو طرف رشته حذف می‌کند.",
+  "settings.display.preview.answer": "درود به‌روزرسانی شد تا فاصله‌های اضافی حذف شود. هر دو تست قبول می‌شوند.",
   "settings.display.username.title": "نام کاربری",
   "settings.display.username.description": "نام کاربری سفارشی که در مکالمات نمایش داده می‌شود",
   "settings.display.fontSize.title": "اندازه قلم",
@@ -1183,7 +1221,7 @@ export const dict = {
     "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
-    "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",
+    "نشان می‌دهد چرا یک فراخوانی ابزار به‌طور خودکار تأیید شده است، مانند یک قانون مجوز مطابق یا پیش‌فرض عامل.",
 
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",
@@ -1314,8 +1352,6 @@ export const dict = {
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "ذخیرهٔ محلی",
-  "diffViewer.comment.sendToAgent": "ارسال به عامل",
   "diffViewer.comment.postToGithub": "انتشار در GitHub",
   "diffViewer.comment.loadFailed": "بارگذاری تغییرات درخواست ادغام ممکن نشد.",
   "diffViewer.comment.unavailable": "این خط در تصویر لحظه‌ای فعلی درخواست ادغام موجود نیست.",

@@ -456,6 +456,17 @@ const PENDING_TRANSLATION = new Set<string>([
 ])
 
 describe("i18n locale completeness — every English key exists in all locales", () => {
+  it("translates the plugin description and security warning instead of copying English", () => {
+    const keys = ["marketplace.install.about.plugin", "marketplace.install.plugin.warning"] as const
+    for (const [locale, dict] of Object.entries(kiloLocales)) {
+      if (locale === "en") continue
+      for (const key of keys) {
+        expect(dict[key]?.trim(), `${locale}: ${key}`).toBeTruthy()
+        expect(dict[key], `${locale}: ${key}`).not.toBe(kiloEn[key])
+      }
+    }
+  })
+
   it("shared UI: every English key has a translation in all locales", () => {
     const missing = findMissingLocaleKeys(uiEn, uiLocales)
     if (missing.length > 0) {

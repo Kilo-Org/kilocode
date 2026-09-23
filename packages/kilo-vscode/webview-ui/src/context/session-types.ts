@@ -183,6 +183,7 @@ export interface SessionContextValue {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ) => boolean
   sendCommand: (
     command: string,
@@ -194,6 +195,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+    projectId?: string,
   ) => boolean
   abort: () => void
   compact: () => void
@@ -212,6 +214,9 @@ export interface SessionContextValue {
   createSession: () => void
   clearCurrentSession: () => void
   loadSessions: () => void
+  loadMoreSessions: () => void
+  sessionsHasMore: Accessor<boolean>
+  sessionsLoadingMore: Accessor<boolean>
   loadOlderMessages: () => boolean
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
   scrollBottomID: Accessor<string | undefined>

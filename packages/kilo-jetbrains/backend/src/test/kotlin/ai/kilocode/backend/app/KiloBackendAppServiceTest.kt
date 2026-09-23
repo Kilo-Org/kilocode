@@ -113,6 +113,68 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `ready reports the background subagent capability`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        // The probe runs off the load's critical path, so Ready starts with it off and flips once
+        // the answer lands.
+        withTimeout(10_000) { svc.capabilities.first { it } }
+        assertNotNull(mock.lastCapabilitiesPath)
+    }
+
+    @Test
+    fun `background subagent capability is false when the CLI reports it off`() = runBlocking {
+        mock.capabilities = """{"backgroundSubagents":false}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        awaitCapabilityProbe()
+
+        assertFalse(svc.capabilities.value)
+    }
+
+    @Test
+    fun `a hung capability probe still reaches Ready`() = runBlocking {
+        // The probe's client call is blocking, so it cannot live inside the load's coroutineScope:
+        // structured concurrency would wait on the socket and time the whole load out.
+        val gate = java.util.concurrent.CountDownLatch(1)
+        mock.capabilitiesGate = gate
+        val svc = create()
+        try {
+            svc.connect()
+
+            ready(svc)
+
+            assertFalse(svc.capabilities.value)
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `unreadable capability leaves it off without failing the load`() = runBlocking {
+        // An older CLI has no /experimental/capabilities route at all; that must not block Ready.
+        mock.capabilitiesStatus = 404
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        awaitCapabilityProbe()
+
+        assertFalse(svc.capabilities.value)
+    }
+
+    private suspend fun awaitCapabilityProbe() {
+        withTimeout(10_000) {
+            while (mock.lastCapabilitiesPath == null) delay(20)
+        }
+    }
+
+    @Test
     fun `download progress maps to app state before ready`() = runBlocking {
         val resolved = CompletableDeferred<Unit>()
         val signal = CompletableDeferred<Unit>()

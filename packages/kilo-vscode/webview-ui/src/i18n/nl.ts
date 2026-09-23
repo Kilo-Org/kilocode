@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Fout of verbinding verbroken.",
   "session.activity.retry": "Automatisch opnieuw proberen.",
   "session.activity.busy": "In uitvoering.",
+  "session.activity.scheduled": "Wacht op een geplande wekactie.",
   "session.activity.done": "Beurt voltooid.",
   "session.activity.idle": "Niet actief.",
 
@@ -89,6 +90,8 @@ export const dict = {
     "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
   "revert.banner.workspace.unavailable":
     "Conversatie teruggedraaid. Er was geen bestandscheckpoint beschikbaar, dus wijzigingen in de werkruimte zijn niet hersteld.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversatie teruggedraaid. Bestandscheckpoints vereisen een Git-repository, dus wijzigingen in de werkruimte zijn niet hersteld.",
   "revert.banner.workspace.legacy":
     "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
   "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
@@ -313,7 +316,7 @@ export const dict = {
   "ui.approval.source.agent.default": "door de agent",
   "ui.approval.source.global": "door je globale configuratie",
   "ui.approval.source.project": "door de projectconfiguratie",
-  "ui.approval.source.yolo": "door de automatische goedkeuringsmodus (YOLO)",
+  "ui.approval.source.yolo": "door de automatische goedkeuringsmodus",
   "ui.approval.source.session": "door een sessie-automatische-goedkeuringsregel",
   "ui.approval.source.default": "standaard",
   "ui.approval.outsideWorkspace": "(buiten je werkruimte: {{file}})",
@@ -548,6 +551,7 @@ export const dict = {
   "session.tabs.switcher.current": "Huidig",
   "session.tabs.switcher.pending": "Nieuw",
   "session.tabs.switcher.busy": "Bezig",
+  "session.tabs.switcher.scheduled": "Gepland",
   "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Werkboom",
@@ -572,14 +576,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Vraagt toestemming voordat bestanden worden bewerkt of opdrachten worden uitgevoerd.",
   "workStyle.choice.human-in-the-loop.bash": "Vraagt toestemming voor elke terminalopdracht.",
-  "workStyle.choice.human-in-the-loop.visibility": "Toont alle gespreksdetails, inclusief de redenering.",
+  "workStyle.choice.human-in-the-loop.visibility": "Vouwt redenering, opdrachten en bewerkingen uit ter controle.",
   "workStyle.choice.autonomous.eyebrow": "Minder onderbrekingen",
   "workStyle.choice.autonomous.title": "Hoge autonomie",
   "workStyle.choice.autonomous.description": "Minder onderbrekingen, gestroomlijnde interface.",
   "workStyle.choice.autonomous.permissions":
     "Bewerkt bestanden en voert opdrachten in de werkruimte uit zonder toestemming te vragen.",
   "workStyle.choice.autonomous.bash": "Kan terminalopdrachten in de werkruimte zonder goedkeuring uitvoeren.",
-  "workStyle.choice.autonomous.visibility": "Details blijven ingeklapt totdat je ze uitvouwt.",
+  "workStyle.choice.autonomous.visibility": "Vouwt tool-details in, met een compacte preview van de redenering.",
   "session.cloud.import.title": "Importeer uit de cloud",
   "session.cloud.import.placeholder": "Sessie-ID, URL, of kilo import commando",
   "session.cloud.import.button": "Importeren",
@@ -1088,6 +1092,28 @@ export const dict = {
   "settings.checkpoints.enable.title": "Snapshots inschakelen",
   "settings.checkpoints.enable.description":
     "Maak checkpoints aan voor het bewerken van bestanden zodat je eerdere staten kunt herstellen",
+  "settings.autoCleanup.enable.title": "Automatische sessieopschoning inschakelen",
+  "settings.autoCleanup.enable.description":
+    "Verwijdert oude sessiegeschiedenis automatisch na een vast aantal dagen, in alle projecten en alle Kilo-clients op deze machine, niet alleen in dit venster. Actieve sessies en sessies met een recente fork worden nooit verwijderd. Verwijderen is definitief.",
+  "settings.autoCleanup.defaultRetention.title": "Sessies bewaren (dagen)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Hoe lang sessiegeschiedenis wordt bewaard voordat automatische opschoning deze verwijdert.",
+  "settings.autoCleanup.lastRun.title": "Laatste opschoning",
+  "settings.autoCleanup.lastRun.never": "Nooit uitgevoerd",
+  "settings.autoCleanup.result":
+    "{{date}}: {{deleted}} van {{scanned}} sessies verwijderd ({{active}} actief overgeslagen, {{failed}} mislukt) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Sessieopschoning wordt gestart...",
+  "settings.autoCleanup.error.status":
+    "De status van de sessieopschoning is tijdelijk niet beschikbaar. Opnieuw proberen...",
+  "settings.autoCleanup.error.timeout": "Wachten op de opschoningsstatus. De backend doet er langer over dan verwacht.",
+  "settings.autoCleanup.error.run":
+    "Kon niet bevestigen dat de sessieopschoning is voltooid. Controleer het resultaat van de laatste opschoning voordat je het opnieuw probeert.",
+  "settings.autoCleanup.progress.scanning": "Sessies scannen: {{processed}}/{{total}} verwerkt",
+  "settings.autoCleanup.progress.deleting":
+    "Sessies verwijderen: {{processed}}/{{total}} verwerkt ({{deleted}} verwijderd, {{failed}} mislukt)",
+  "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
+  "settings.autoCleanup.runNow.confirm":
+    "Verlopen sessies definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
@@ -1138,6 +1164,21 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Kies welke taal je wilt gebruiken voor AI-gegenereerde commitberichten:",
 
+  "settings.display.preview.title": "Voorbeeld",
+  "settings.display.presets.title": "Weergavepresets",
+  "settings.display.presets.description":
+    "Wijzigt de weergaveopties hieronder, niet de machtigingen. Sla op om toe te passen.",
+  "settings.display.preview.model": "Voorbeeldmodel",
+  "settings.display.preview.prompt": "Verwijder overtollige spaties uit de begroeting en controleer de tests.",
+  "settings.display.preview.reasoning":
+    "**Controleer de begroeting.** De functie moet dezelfde begroeting opleveren voor een eenvoudige naam en een naam met overtollige spaties aan beide uiteinden. Ik behoud de bestaande functiesignatuur en het begroetingsformaat en wijzig alleen hoe de naam in de geretourneerde tekenreeks terechtkomt.\n\nBij een invoer zoals `  Ada  ` horen de ongewenste spaties bij de invoer, niet bij de begroetingssjabloon. Als je de voltooide begroeting zou trimmen, blijven er spaties naast de naam staan. De trim-bewerking moet dus plaatsvinden voordat de naam wordt ingevoegd.\n\nIk controleer de documentatie over tekenreeksen om te bevestigen dat `trim()` witruimte aan beide uiteinden verwijdert en een nieuwe tekenreeks retourneert. De oorspronkelijke invoer moet ongewijzigd blijven. Voor deze wijziging is geen reguliere expressie, extra afhankelijkheid of aparte hulpfunctie nodig.\n\nSpaties binnen een naam moeten intact blijven. Een naam zoals `Ada Lovelace` mag niet `AdaLovelace` worden, en de letterkast mag niet veranderen. Een lege invoer of invoer met alleen witruimte vereist geen nieuwe standaardbegroeting als onderdeel van deze gerichte correctie.\n\nDe wijziging kan in de return-expressie blijven door `name.trim()` te gebruiken waar de sjabloon nu `name` gebruikt. Ik behoud de omliggende leestekens en de bewuste spatie na de begroeting. Zo blijft de diff klein en is het gedrag makkelijk te controleren.\n\nTen slotte voer ik `bun test greeting.test.ts` uit en controleer beide resultaten. Het geval met de opgevulde naam moet bevestigen dat overtollige spaties worden verwijderd, terwijl het geval met de eenvoudige naam de bestaande uitvoer beschermt. Ik meld de wijziging en de testresultaten pas nadat de opdracht is voltooid.",
+  "settings.display.preview.shell": "Controleer de begroetingstest",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] verwijdert overtollige spaties\n[pass] behoudt een eenvoudige naam\n\n2 tests geslaagd",
+  "settings.display.preview.query": "Tekenreeksen trimmen",
+  "settings.display.preview.result": "trim() verwijdert spaties aan beide uiteinden van een tekenreeks.",
+  "settings.display.preview.answer":
+    "De begroeting is bijgewerkt om overtollige spaties te verwijderen. Beide tests slagen.",
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.fontSize.title": "Lettergrootte",
@@ -1172,7 +1213,7 @@ export const dict = {
     "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",
   "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
   "settings.display.autoApprovalReason.description":
-    "Toont een regel bij tool-aanroepen die uitlegt waarom ze automatisch zijn goedgekeurd (overeenkomende regel, agentstandaard, YOLO-modus, enz.).",
+    "Toont waarom een tool-aanroep automatisch is goedgekeurd, zoals een overeenkomende machtigingsregel of een agentstandaard.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1343,8 +1384,6 @@ export const dict = {
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Lokaal opslaan",
-  "diffViewer.comment.sendToAgent": "Naar agent sturen",
   "diffViewer.comment.postToGithub": "Op GitHub plaatsen",
   "diffViewer.comment.loadFailed": "De wijzigingen van de pull request konden niet worden geladen.",
   "diffViewer.comment.unavailable": "Deze regel is niet beschikbaar in de huidige snapshot van de pull request.",

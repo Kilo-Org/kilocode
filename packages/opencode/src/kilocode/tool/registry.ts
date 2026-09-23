@@ -1,5 +1,5 @@
 import { RecallTool } from "../../tool/recall"
-import { GoalReportTool } from "../session/goal/tool"
+import { GoalReportTool, GoalTool } from "../session/goal/tool"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
@@ -7,7 +7,9 @@ import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
 import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
+import { CronCreateTool, CronDeleteTool, CronListTool } from "./cron"
 import { GenerateImageTool } from "./generate-image"
+import { LinkPrTool } from "./link-pr"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
@@ -91,13 +93,18 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const openPlan = yield* OpenPlanTool
       const send = yield* SendFileTool
+      const linkPr = yield* LinkPrTool
       // Wakeup.Service is provided by Wakeup.node in the tool-registry node graph.
       const schedule = yield* ScheduleWakeupTool
       const cancel = yield* CancelWakeupTool
+      const cronCreate = yield* CronCreateTool
+      const cronList = yield* CronListTool
+      const cronDelete = yield* CronDeleteTool
       const board = yield* Effect.all({
         boardRead: BoardReadTool,
         boardPost: BoardPostTool,
         goalReport: GoalReportTool,
+        goal: GoalTool,
       })
       if (!notebook)
         return {
@@ -113,8 +120,12 @@ export namespace KiloToolRegistry {
           notify,
           openPlan,
           send,
+          linkPr,
           schedule,
           cancel,
+          cronCreate,
+          cronList,
+          cronDelete,
           ...board,
         }
       const tools = yield* Effect.all({
@@ -135,8 +146,12 @@ export namespace KiloToolRegistry {
         notify,
         openPlan,
         send,
+        linkPr,
         schedule,
         cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
         ...board,
         ...tools,
       }
@@ -159,10 +174,15 @@ export namespace KiloToolRegistry {
       notify: Tool.Info
       openPlan?: Tool.Info
       send: Tool.Info
+      linkPr: Tool.Info
       schedule?: Tool.Info
       cancel?: Tool.Info
+      cronCreate?: Tool.Info
+      cronList?: Tool.Info
+      cronDelete?: Tool.Info
       boardRead?: Tool.Info
       goalReport?: Tool.Info
+      goal?: Tool.Info
       boardPost?: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
@@ -183,11 +203,16 @@ export namespace KiloToolRegistry {
         image: Tool.init(tools.image),
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
+        linkPr: Tool.init(tools.linkPr),
       })
       const openPlan = tools.openPlan ? yield* Tool.init(tools.openPlan) : undefined
       const schedule = tools.schedule ? yield* Tool.init(tools.schedule) : undefined
       const cancel = tools.cancel ? yield* Tool.init(tools.cancel) : undefined
+      const cronCreate = tools.cronCreate ? yield* Tool.init(tools.cronCreate) : undefined
+      const cronList = tools.cronList ? yield* Tool.init(tools.cronList) : undefined
+      const cronDelete = tools.cronDelete ? yield* Tool.init(tools.cronDelete) : undefined
       const report = tools.goalReport ? { goalReport: yield* Tool.init(tools.goalReport) } : {}
+      const goal = tools.goal ? { goal: yield* Tool.init(tools.goal) } : {}
       const board =
         tools.boardRead && tools.boardPost
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
@@ -206,12 +231,16 @@ export namespace KiloToolRegistry {
         ...base,
         ...board,
         ...report,
+        ...goal,
         browser,
         ...notebooks,
         semantic,
         openPlan,
         schedule,
         cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
         notify: base.notify,
         send: base.send,
       }
@@ -277,10 +306,15 @@ export namespace KiloToolRegistry {
       notify: Tool.Def
       openPlan?: Tool.Def
       send: Tool.Def
+      linkPr: Tool.Def
       schedule?: Tool.Def
       cancel?: Tool.Def
+      cronCreate?: Tool.Def
+      cronList?: Tool.Def
+      cronDelete?: Tool.Def
       boardRead?: Tool.Def
       goalReport?: Tool.Def
+      goal?: Tool.Def
       boardPost?: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
@@ -299,6 +333,7 @@ export namespace KiloToolRegistry {
     const enabled = BoardEnabled.on(cfg, flags)
     return [
       ...(tools.goalReport ? [tools.goalReport] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.goal ? [tools.goal] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
       ...(enabled && tools.boardRead && tools.boardPost ? [tools.boardRead, tools.boardPost] : []),
       ...(tools.semantic ? [tools.semantic] : []),
@@ -309,6 +344,9 @@ export namespace KiloToolRegistry {
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.schedule ? [tools.schedule] : []),
       ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cancel ? [tools.cancel] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronCreate ? [tools.cronCreate] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronList ? [tools.cronList] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronDelete ? [tools.cronDelete] : []),
       ...(Flag.KILO_CLIENT === "vscode" || cfg.experimental?.task_model_selection === true
         ? [tools.managerModels]
         : []),
@@ -324,6 +362,7 @@ export namespace KiloToolRegistry {
       tools.notify,
       ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
+      tools.linkPr,
     ]
   }
 

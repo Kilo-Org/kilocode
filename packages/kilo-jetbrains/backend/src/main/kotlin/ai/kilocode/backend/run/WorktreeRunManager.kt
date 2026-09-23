@@ -4,6 +4,7 @@ import ai.kilocode.backend.rpc.readWorktreeState
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.RunConfigDto
 import ai.kilocode.rpc.dto.RunConfigListDto
+import ai.kilocode.rpc.dto.RunSkipDto
 import ai.kilocode.rpc.dto.RunProcessState
 import ai.kilocode.rpc.dto.RunResultDto
 import ai.kilocode.rpc.dto.RunStateDto
@@ -158,7 +159,7 @@ class WorktreeRunManager internal constructor(
      */
     suspend fun configs(): RunConfigListDto {
         val manager = RunManager.getInstance(project)
-        val skipped = mutableListOf<String>()
+        val skipped = mutableListOf<RunSkipDto>()
         val items = readAction {
             manager.allSettings.mapNotNull { s ->
                 val type = s.type.displayName
@@ -170,7 +171,7 @@ class WorktreeRunManager internal constructor(
                         RunConfigDto(s.uniqueID, s.name, type, via = support.via)
 
                     is WorktreeRunDelegate.Support.Skip -> {
-                        skipped += "'${s.name}' [$type] ${support.reason}"
+                        skipped += RunSkipDto(s.name, type, support.reason)
                         null
                     }
                 }
@@ -180,9 +181,9 @@ class WorktreeRunManager internal constructor(
         LOG.info(
             "worktree run: configs listed=${items.size} skipped=${skipped.size} buildableRoots=${roots.size}" +
                 items.joinToString("") { "\n  + '${it.name}' [${it.type}]${it.via?.let { v -> " via $v" } ?: ""}" } +
-                skipped.joinToString("") { "\n  - $it" },
+                skipped.joinToString("") { "\n  - '${it.name}' [${it.type}] ${it.reason}" },
         )
-        return RunConfigListDto(items, buildable = roots.isNotEmpty())
+        return RunConfigListDto(items, buildable = roots.isNotEmpty(), skipped = skipped)
     }
 
     /**
