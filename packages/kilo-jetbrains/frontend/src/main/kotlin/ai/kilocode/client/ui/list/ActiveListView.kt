@@ -123,6 +123,13 @@ internal class ActiveListView(
     private var wired = false
     internal var onSelect: (() -> Unit)? = null
 
+    // Without a delegate every animation frame repaints the whole list, and every row re-renders and re-lays out
+    // its stamp at the frame rate of whichever spinner is running. Only rows that show an animated glyph need
+    // the next frame. REFRESH_DELEGATE is an experimental platform hook, installed/cleared with the view's own
+    // attach/detach (see addNotify/removeNotify) rather than once in init, because a worktree session editor
+    // tab switch detaches and re-attaches this exact view.
+    private val refreshDelegate = Runnable { repaintAnimated() }
+
     fun setEmptyText(text: String) {
         list.emptyText.text = text
     }
@@ -130,10 +137,6 @@ internal class ActiveListView(
     init {
         if (surface == ActiveListSurface.ToolWindow) isOpaque = true
         list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
-        // Without a delegate every animation frame repaints the whole list, and every row re-renders and
-        // re-lays out its stamp at the frame rate of whichever spinner is running. Only rows that show an
-        // animated glyph need the next frame. REFRESH_DELEGATE is an experimental platform hook.
-        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, Runnable { repaintAnimated() })
         list.cellRenderer = renderer
         list.registerKeyboardAction(
             { open(enter()) },
@@ -241,6 +244,15 @@ internal class ActiveListView(
         ScrollingUtil.installActions(list)
         next(list)
         wired = true
+    }
+
+    // Symmetric with removeNotify below: the client property only matters while this view is actually showing
+    // (that is when the platform's own animation cycle reads it), and a tab switch detaches and re-attaches the
+    // same view, so installing it once in init would leave it cleared — and the whole-list repaint it exists to
+    // avoid back — for the rest of the view's life after the first switch.
+    override fun addNotify() {
+        super.addNotify()
+        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, refreshDelegate)
     }
 
     // The delegate closes over this view's model/renderer/items. It costs nothing while the view stays attached

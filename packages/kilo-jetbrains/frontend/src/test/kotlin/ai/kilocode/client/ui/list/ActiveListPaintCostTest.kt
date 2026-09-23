@@ -63,6 +63,24 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
         assertEquals(rows, dirty)
     }
 
+    fun `test the refresh delegate survives a detach and re-attach`() {
+        // A worktree session editor tab switch detaches and re-attaches this exact view, so REFRESH_DELEGATE has
+        // to come back on the next attach — not just once at construction — or every switch after the first
+        // permanently loses the per-row animation repaint and the list starts repainting whole on every frame.
+        val spinner = AnimatedIcon(100, EmptyIcon.ICON_16, EmptyIcon.ICON_16)
+        val view = ActiveListView("") { _, _ -> }
+        view.update(listOf(row("spin", spinner)))
+        layout(view)
+        assertNotNull(view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE))
+
+        view.removeNotify()
+        assertNull(view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE))
+
+        view.addNotify()
+
+        assertNotNull(view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE))
+    }
+
     fun `test an animation frame repaints nothing when no row animates`() {
         val view = ActiveListView("") { _, _ -> }
         view.update(listOf(row("a", EmptyIcon.ICON_16), row("b", EmptyIcon.ICON_16)))
@@ -99,6 +117,9 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
         val pane = JPanel()
         pane.add(view)
         pane.setSize(400, 600)
+        // A bare, never-shown JPanel never becomes displayable, so REFRESH_DELEGATE — installed from addNotify
+        // now, not from init — needs the same attach call an editor tab switch triggers for real.
+        view.addNotify()
         view.setSize(400, 600)
         view.list.setSize(400, 600)
         view.list.doLayout()
