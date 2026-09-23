@@ -1,0 +1,42 @@
+name: Dependabot auto-merge
+
+# Runs on a schedule, not `pull_request`: GitHub gives workflow runs
+# triggered by dependabot[bot] a read-only GITHUB_TOKEN regardless of the
+# `permissions:` block, so `gh pr merge` would fail there. A schedule run
+# keeps normal write permissions.
+#
+# dependabot.yml groups minor/patch updates into `*-minor-patch` PRs, so a
+# title match on that group name is our low-risk classifier.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: dependabot-auto-merge
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable auto-merge on grouped minor/patch Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr list --repo "$REPO" --search "is:open is:pr author:app/dependabot" \
+            --json number,title,url,autoMergeRequest \
+            --jq '.[] | select(.title | test("Bump the [a-z-]*-minor-patch group")) | select(.autoMergeRequest == null) | .url' |
+          while IFS= read -r pr_url; do
+            [ -z "$pr_url" ] && continue
+            echo "Enabling auto-merge for $pr_url"
+            gh pr merge --auto --squash "$pr_url" || echo "::warning::could not enable auto-merge for $pr_url"
+          done

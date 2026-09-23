@@ -1,0 +1,92 @@
+version: 2
+updates:
+  # Bun workspace root (packages/*). Known overlap: packages/kilo-docs also
+  # has its own pnpm block below, since this scan can't see its separate
+  # pnpm-lock.yaml. Both may target the same package.json line; whichever PR
+  # merges first makes the other stale (caught by stale-bot-pr-notify.yml).
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      bun-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # packages/kilo-docs deploys separately via pnpm; see note above.
+  - package-ecosystem: "npm"
+    directory: "/packages/kilo-docs"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(kilo-docs)"
+    groups:
+      kilo-docs-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "gradle"
+    directory: "/packages/kilo-jetbrains"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(jetbrains)"
+    groups:
+      jetbrains-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "docker"
+    directory: "/packages/opencode"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(opencode)"
+    groups:
+      opencode-docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
