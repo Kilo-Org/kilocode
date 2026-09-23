@@ -5,7 +5,7 @@ description: "Manage billing and subscriptions for your team"
 
 # Billing
 
-Kilo seats use a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits. Model inference is charged at provider rates with no markup. A separate 5% payment-processing fee applies when you purchase credits, including automatic top-ups, and to Kilo Pass purchases.
+Kilo seats use a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits. Model inference is charged at provider rates with no markup. A separate 5% payment-processing fee applies to credit purchases (including automatic top-ups) and to Kilo Pass purchases.
 
 {% callout type="note" %}
 
@@ -113,7 +113,7 @@ The minimum top-up amount is **$100.00**.
 
 Once saved, your initial top-up will be processed immediately to verify your payment method.
 
-## Spend Alerts
+## Spend alerts
 
 Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go to the owner's authorized billing contacts by email or mobile push. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
 
