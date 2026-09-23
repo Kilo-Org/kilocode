@@ -2436,6 +2436,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     if (!this.syncedChildSessions.delete(sessionID)) return
     const status = this.sessionStatusMap.get(sessionID)
+    // Offline is not the end of a turn: the session reconnects and continues. Keep the owner so a
+    // later status can clear the offline state on the row.
     if (!status || status === "idle") this.owners.delete(sessionID)
     this.trackedSessionIds.delete(sessionID)
     this.streams.drop(sessionID)
@@ -5719,8 +5721,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return owner !== undefined && sameDirectory(owner, directory)
   }
 
-  // Activity events must pass for owned sessions in inactive projects. Otherwise their sidebar
-  // rows keep a stale state, for example an offline error after the session reconnects.
+  // Activity events pass the directory gate for sessions this panel owns, so an inactive project's
+  // sidebar row keeps a current state. The tracked-session check still applies to these events.
   private routed(event: ProviderEvent, directory?: string): boolean {
     if (!ACTIVITY_EVENTS.has(event.type)) return false
     const props = event.properties
