@@ -522,6 +522,57 @@
 
 ## [Unreleased]
 
+## [7.1.7] - 2026-09-23
+
+### Added
+
+- Fold and unfold large pasted text blocks directly from the prompt input and transcript.
+- Add a Marketplace page to JetBrains settings for browsing, installing, and removing marketplace agents, MCP servers, and skills without leaving the IDE.
+- Install Marketplace plugins from npm packages or from a git repository (for example `git:github.com/owner/repo@v1.2.3#subdir`).
+- Add Kilo Swarm support to JetBrains, including an Agent Behavior toggle, readable board tool cards, and a board viewer for session collaboration.
+- Add a cleanup flow for leftover Agent Manager worktree folders, with size reporting, git-checkout warnings, and safe removal from JetBrains.
+- Add unique avatars for subagents and a background agents strip in the session header, with a collapsed preview so active work stays visible without expanding the panel.
+- Add copy path and reveal actions when nested worktree deletion is blocked.
+- Add CLI support for background process monitoring, session cron scheduling, pull request linking, and experimental self-context tools.
+
+### Fixed
+
+- Pause the working timer while waiting on a permission prompt or a question.
+- Prevent snapshot progress from hanging a session.
+- Keep diagnostics edits responsive during large edits.
+- Warn when posting to the shared board targets a stopped subagent.
+- Keep a session goal running when a new message arrives instead of dropping it.
+- Only route auxiliary tasks to `kilo-auto/small` when using Kilo credentials.
+- Stop looping on repeated malformed tool calls.
+- Keep Keep Awake active while a wakeup is scheduled, and clear it when a session with pending wakeups is deleted.
+- Speed up local recall searches and improve match ranking.
+- Link sessions to their pull requests without a slow, timed `gh pr view` probe.
+- Submit and cancel custom answers correctly in the question dialog.
+- Format detailed code review findings as distinct sections.
+- Collapse pasted text in JetBrains only after larger 15-line or 4000-character blocks, matching VS Code and avoiding over-folding ordinary snippets.
+- Recover shared agent board reads when a stale or foreign cursor appears, instead of leaving a sub-agent stuck on repeated tool errors.
+- Reduce unnecessary sandbox escalation prompts for read-only `git` and `gh` commands while keeping mutating commands protected.
+- Stop a slow `gh` lookup from blanking PR badges.
+- Make worktree runs use the worktree's own logs and npm configs.
+- Wrap long session status messages instead of clipping them in the JetBrains UI.
+- Normalize markdown line endings before rendering, preventing unexpected formatting breaks in JetBrains chat.
+- Recover pending questions and permission prompts after reconnecting to an existing session.
+- Use normal session model defaults when creating sessions in new worktrees.
+- Ground selected-code prompts in the active editor selection so the agent receives the intended context.
+- Remove deselected models from custom OpenAI-compatible providers, including delete-and-recreate flows and providers saved in another settings scope.
+- Improve Swarm board readability by wrapping long messages, keeping the board open while navigating, and adding copy-all.
+- Explain that file checkpoints require Git when a revert cannot restore files, showing "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+- Keep Agent Manager attention badges in sync with resolved prompts, surface sandbox escalation permissions, and center status glyphs.
+- Keep JetBrains worktree session tabs responsive by deferring and batching transcript updates accumulated while a tab is hidden.
+- Fix the JetBrains shared board dialog layout when resizing and remove redundant message hover tooltips.
+- Add missing JetBrains release locale keys and guard localized bundles against stale entries.
+- Fix git-hosted Marketplace plugins so `~/` repository paths resolve, a failed clone leaves no staging directory, POSIX paths with a backslash are preserved, and uninstalling a plugin deletes its cloned cache when no scope still uses it.
+
+### Changed
+
+- Speed up the first worktree snapshot by skipping unnecessary re-hashing of the checkout.
+- Skip resolving the source project when moving sessions without changes, for faster session moves.
+
 ## [7.1.7-rc.5] - 2026-09-23
 
 ### Added
