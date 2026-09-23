@@ -164,7 +164,7 @@ export const Info = Schema.Struct({
   }),
   require_approval_for_config_edits: Schema.optional(Schema.Boolean).annotate({
     description:
-      "Require approval before the agent edits protected Kilo config files. Defaults to true. Global config supplies the default and always governs global config directories and config files outside the project. A project value overrides it only for config files inside that project. Other permission rules still apply.",
+      "Require approval before the agent edits protected Kilo config files. Defaults to true. Global config supplies the default and is the only value used for global config directories and config files outside the project. Config files inside the project use the effective merged config, so a project value overrides global config there under normal config precedence. Other permission rules still apply.",
   }),
   sandbox: Schema.optional(
     Schema.Struct({

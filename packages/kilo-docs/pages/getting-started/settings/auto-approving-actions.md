@@ -301,8 +301,10 @@ Set `require_approval_for_config_edits` to `false` to disable the check:
 
 Where you set it controls which files it covers:
 
-- **Global config** (`~/.config/kilo/kilo.json` or `kilo.jsonc`) is the default for every project. It also always governs global config directories and config files outside the project, such as a `.kilo/` directory in another checkout. A global `false` therefore turns protection off for every project's own config files too, unless that project sets `true`.
-- **Project config** (for example the project's `kilo.json` or `.kilo/kilo.json`) overrides the global value only for config files inside the project — the git worktree, or the working directory for non-git projects. A project value never turns protection off for global config directories or files outside the project.
+- **Global config** (`~/.config/kilo/kilo.json` or `kilo.jsonc`) is the default for every project. It is also the only value used for global config directories and config files outside the project, such as a `.kilo/` directory in another checkout. A global `false` therefore turns protection off for every project's own config files too, unless that project sets `true`.
+- **Project config** (for example the project's `kilo.json` or `.kilo/kilo.json`) applies only to config files inside the project — the git worktree, or the working directory for non-git projects. A project value never turns protection off for global config directories or files outside the project.
+
+For config files inside the project, the value follows normal config precedence: a project value overrides the global config above, but sources that load after project config can override the project value. These are legacy `~/.kilo/` and `~/.kilocode/` config, `KILO_CONFIG_DIR`, `KILO_CONFIG_CONTENT`, and organization or managed config. For example, `false` in a `KILO_CONFIG_DIR` profile turns protection off for a project's own files even when the project sets `true`.
 
 Symlinks are resolved, so a project config path that points outside the project, or to a target that does not exist yet, follows the global setting. The option defaults to enabled, so leaving it out keeps the current behavior.
 
