@@ -130,12 +130,14 @@ export const SortableClosableTab: Component<
   ClosableTabProps & {
     id: string
     onCloseOthers: () => void
+    onCloseToRight?: () => void
   }
 > = (props) => (
   <SortableTabContainer id={props.id}>
     <SessionTabMenu
       onClose={props.onClose}
       onCloseOthers={props.onCloseOthers}
+      onCloseToRight={props.onCloseToRight}
       closeable={props.closeable}
       closeShortcut={
         props.closeKeybind ? (

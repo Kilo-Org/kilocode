@@ -490,6 +490,28 @@
 
 ## [Unreleased]
 
+## [7.1.7-rc.4] - 2026-09-22
+
+### Added
+
+- Preview background agents directly in the collapsed agent strip, so active work stays visible without expanding the panel.
+- Add copy path and reveal actions when nested worktree deletion is blocked, making it easier to inspect and clean up the folder manually.
+- Add CLI support for background process monitoring, session cron scheduling, pull request linking, and experimental self-context tools.
+
+### Fixed
+
+- Wrap long session status messages instead of clipping them in the JetBrains UI.
+- Normalize markdown line endings before rendering, preventing unexpected formatting breaks in JetBrains chat.
+- Recover pending questions and permission prompts after reconnecting to an existing session.
+- Use normal session model defaults when creating sessions in new worktrees.
+- Ground selected-code prompts in the active editor selection so the agent receives the intended context.
+- Remove deselected models from custom OpenAI-compatible providers, including delete-and-recreate flows and providers saved in another settings scope.
+- Improve Swarm board readability by wrapping long messages, keeping the board open while navigating, and adding copy-all.
+
+### Changed
+
+- Update the bundled JetBrains CLI pin to Kilo CLI v7.7.7, including the latest CLI runtime fixes from the OpenCode v1.18.20 merge.
+
 ## [7.1.7-rc.3] - 2026-09-21
 
 ### Added

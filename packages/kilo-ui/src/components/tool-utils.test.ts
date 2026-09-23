@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createEffect, createRoot, createSignal } from "solid-js"
-import { createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS } from "./tool-utils"
+import { bashLineUpdate, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS } from "./tool-utils"
 
 const tick = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -82,5 +82,27 @@ describe("createThrottledValue cadence", () => {
     expect(current).toBe("d")
     expect(Date.now() - start).toBeLessThan(50)
     dispose()
+  })
+})
+
+describe("bashLineUpdate", () => {
+  test("skips an unchanged render", () => {
+    expect(bashLineUpdate(["a", "b"], ["a", "b"])).toEqual({ start: 0, skip: true })
+  })
+
+  test("starts after the unchanged prefix when lines are appended", () => {
+    expect(bashLineUpdate(["a", "b"], ["a", "b", "c"])).toEqual({ start: 2, skip: false })
+  })
+
+  test("re-highlights a changed tail line", () => {
+    expect(bashLineUpdate(["a", "b", "c"], ["a", "b", "c2"])).toEqual({ start: 2, skip: false })
+  })
+
+  test("rebuilds when the output shrinks", () => {
+    expect(bashLineUpdate(["a", "b", "c"], ["a", "b"])).toEqual({ start: 0, skip: false })
+  })
+
+  test("rebuilds when the front changes", () => {
+    expect(bashLineUpdate(["a", "b"], ["x", "b"])).toEqual({ start: 0, skip: false })
   })
 })
