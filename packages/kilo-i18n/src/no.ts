@@ -47,7 +47,7 @@ export const dict = {
   "marketplace.install.learnMore": "Finn ut hvordan installasjoner fra Marketplace fungerer",
   "marketplace.install.learnMcp": "Finn ut mer om MCP",
   "marketplace.install.about.plugin":
-    "Et npm-programtillegg legger til tilpassede verktøy og integrasjoner i Kilo. Programtillegg kjører med fulle tillatelser.",
+    "Et programtillegg legger til tilpassede verktøy og integrasjoner i Kilo. Programtillegg kjører med fulle tillatelser.",
   "marketplace.install.plugin.warning":
     "Programtillegg kjører kode med fulle tillatelser. De kan lese og endre filene dine, kjøre kommandoer og få tilgang til påloggingsopplysningene dine og nettverket ditt. Installer bare programtillegg du stoler på.",
   "marketplace.install.installedAt": "Installert i {{path}}",

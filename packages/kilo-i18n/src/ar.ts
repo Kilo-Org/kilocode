@@ -43,7 +43,7 @@ export const dict = {
     "قد تُضاف ملفات المشروع إلى نظام التحكم في الإصدارات. لا تخزّن الأسرار هنا إلا إذا كان الإعداد يشير إلى متغير بيئة.",
   "marketplace.install.learnMore": "تعرّف على كيفية عمل عمليات التثبيت من Marketplace",
   "marketplace.install.learnMcp": "معرفة المزيد عن MCP",
-  "marketplace.install.about.plugin": "تضيف إضافة npm أدوات وتكاملات مخصصة إلى Kilo. تعمل الإضافات بصلاحيات كاملة.",
+  "marketplace.install.about.plugin": "تضيف إضافة أدوات وتكاملات مخصصة إلى Kilo. تعمل الإضافات بصلاحيات كاملة.",
   "marketplace.install.plugin.warning":
     "تشغّل الإضافات التعليمات البرمجية بصلاحيات كاملة. يمكنها قراءة ملفاتك وتغييرها وتشغيل الأوامر والوصول إلى بيانات اعتمادك وشبكتك. لا تثبّت إلا الإضافات التي تثق بها.",
   "marketplace.install.installedAt": "تم التثبيت في {{path}}",
