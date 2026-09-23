@@ -525,28 +525,23 @@
 ## [7.1.7-rc.5] - 2026-09-23
 
 ### Added
-- feat(marketplace): support installing npm plugins by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14281
-- feat(marketplace): install plugins from git repositories by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14485
+
+- Install Marketplace plugins from a git repository, using a git source such as `git:github.com/owner/repo@v1.2.3#subdir` so a plugin can be distributed without publishing to npm.
+- Install plugins from the Kilo Marketplace via npm packages, alongside agents, skills, and MCP servers.
 
 ### Fixed
-- fix: explain file checkpoints require Git in revert notice by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14464
-- fix(jetbrains): fix board dialog icon alignment, resize, and tooltips by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14472
-- fix(jetbrains): keep worktree tab switches responsive by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14473
-- fix(jetbrains): guard release locale keys by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14471
-- fix(jetbrains): sync agent permission attention by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14474
-- fix(vscode): show latest live bash output in chat by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14482
-- fix(vscode): keep session cost totals complete on restart by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14484
-- fix(vscode): remount transcript virtualizer per session by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14486
-- fix(agent-manager): keep status icons current for other projects by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14487
-- fix(marketplace): harden git plugin install and cleanup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14492
-- fix(kilo-docs): update next to 16.3.5 for GHSA-p293-qw3h-jr36 by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14494
-- fix(cli): route plan follow-up events by directory by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14480
+
+- Fix git-hosted Marketplace plugins so `~/` repository paths resolve, a failed clone leaves no staging directory, POSIX paths with a backslash are preserved, and uninstalling a plugin deletes its cloned cache when no scope still uses it. The plugin install dialog no longer describes every plugin as an npm plugin.
+- Deliver plan completion questions to directory-scoped clients such as JetBrains without requiring a reconnect.
+- Explain that file checkpoints require Git when a revert cannot restore files, showing "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+- Keep Agent Manager attention badges in sync with resolved prompts, surface sandbox escalation permissions, and center status glyphs.
+- Keep JetBrains worktree session tabs responsive by deferring and batching transcript updates accumulated while a tab is hidden.
+- Fix the JetBrains shared board dialog layout when resizing and remove redundant message hover tooltips.
+- Add missing JetBrains release locale keys and guard localized bundles against stale entries.
 
 ### Changed
-- release(jetbrains): v7.1.7-rc.4 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14466
-- docs: feature Kilo Marketplace plugins in README by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14495
-- chore(jetbrains): bump CLI pin to v7.7.9 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14496
 
+- Update the bundled JetBrains CLI pin to Kilo CLI v7.7.9.
 
 ## [7.1.7-rc.4] - 2026-09-22
 
