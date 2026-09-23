@@ -1,0 +1,581 @@
+import { describe, expect, test } from "bun:test"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import { Artifact, Deps, Manifest, Policy, Scan, compose, dedupe, serial, validate } from "./sbom/index"
+import type { Component } from "./sbom/index"
+
+const DIGEST = "a".repeat(64)
+
+function bom(overrides: Partial<Parameters<typeof compose>[0]> = {}) {
+  return compose({
+    subject: { name: "kilo-linux-x64.tar.gz", sha256: DIGEST, size: 10 },
+    product: { name: "kilo-cli", version: "7.7.9" },
+    ...overrides,
+  })
+}
+
+async function scratch() {
+  return fs.promises.mkdtemp(path.join(os.tmpdir(), "kilo-sbom-test-"))
+}
+
+describe("compose", () => {
+  test("produces a valid CycloneDX 1.6 document for an artifact with no dependencies", () => {
+    const document = bom()
+    expect(document.bomFormat).toBe("CycloneDX")
+    expect(document.specVersion).toBe("1.6")
+    expect(validate(document)).toEqual([])
+  })
+
+  test("binds the document to the exact artifact digest", () => {
+    const document = bom()
+    expect(document.metadata.component).toMatchObject({ hashes: [{ alg: "SHA-256", content: DIGEST }] })
+    const properties = document.metadata.properties as { name: string; value: string }[]
+    expect(properties).toContainEqual({ name: "kilocode:subject:name", value: "kilo-linux-x64.tar.gz" })
+    expect(properties).toContainEqual({ name: "kilocode:subject:sha256", value: DIGEST })
+  })
+
+  test("derives a deterministic serial number from the subject digest", () => {
+    expect(bom().serialNumber).toBe(bom().serialNumber)
+    expect(serial(DIGEST)).not.toBe(serial("b".repeat(64)))
+    expect(serial(DIGEST)).toMatch(/^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+
+  test("honours SOURCE_DATE_EPOCH so reproducible builds stay reproducible", () => {
+    const previous = process.env.SOURCE_DATE_EPOCH
+    process.env.SOURCE_DATE_EPOCH = "1700000000"
+    try {
+      expect(bom().metadata.timestamp).toBe("2023-11-14T22:13:20.000Z")
+    } finally {
+      if (previous == null) delete process.env.SOURCE_DATE_EPOCH
+      else process.env.SOURCE_DATE_EPOCH = previous
+    }
+  })
+
+  test("records target and build provenance", () => {
+    const document = bom({
+      target: { platform: "linux-x64", os: "linux", arch: "x64", abi: "musl", baseline: true },
+      build: { commit: "c".repeat(40), channel: "latest", properties: { "build:tag": "jetbrains/v1.2.3" } },
+    })
+    const properties = document.metadata.properties as { name: string; value: string }[]
+    expect(properties).toContainEqual({ name: "kilocode:target:abi", value: "musl" })
+    expect(properties).toContainEqual({ name: "kilocode:target:baseline", value: "true" })
+    expect(properties).toContainEqual({ name: "kilocode:build:commit", value: "c".repeat(40) })
+    expect(properties).toContainEqual({ name: "kilocode:build:tag", value: "jetbrains/v1.2.3" })
+  })
+
+  test("maps delivery onto CycloneDX scope so host-provided code is not claimed as shipped", () => {
+    const document = bom({
+      components: [
+        { type: "library", name: "okhttp", version: "4.12.0", purl: "pkg:maven/okhttp@4.12.0", delivery: "contained" },
+        { type: "framework", name: "intellij", version: "2026.1", delivery: "provided" },
+        { type: "application", name: "ripgrep", version: "15.1.0", delivery: "runtime" },
+      ],
+    })
+    const scopes = Object.fromEntries(document.components.map((item: any) => [item.name, item.scope]))
+    expect(scopes).toEqual({ okhttp: "required", intellij: "excluded", ripgrep: "optional" })
+    expect(validate(document)).toEqual([])
+  })
+
+  test("records coverage gaps instead of silently omitting unknown data", () => {
+    const document = bom({ gaps: [{ component: "syft", reason: "not installed" }] })
+    expect(document.metadata.properties).toContainEqual({
+      name: "kilocode:coverage:gap:syft",
+      value: "not installed",
+    })
+  })
+
+  test("attaches unparented components to the artifact root", () => {
+    const document = bom({
+      components: [
+        { type: "library", name: "a", version: "1", purl: "pkg:npm/a@1" },
+        { type: "library", name: "b", version: "1", purl: "pkg:npm/b@1" },
+      ],
+      dependencies: { "pkg:npm/a@1": ["pkg:npm/b@1"] },
+    })
+    const root = document.dependencies.find((item) => item.ref.startsWith("kilocode:artifact:"))
+    expect(root?.dependsOn).toEqual(["pkg:npm/a@1"])
+    expect(document.dependencies.find((item) => item.ref === "pkg:npm/a@1")?.dependsOn).toEqual(["pkg:npm/b@1"])
+    expect(validate(document)).toEqual([])
+  })
+
+  test("drops dependency edges whose endpoints were filtered out", () => {
+    const document = bom({
+      components: [{ type: "library", name: "a", version: "1", purl: "pkg:npm/a@1" }],
+      dependencies: { "pkg:npm/a@1": ["pkg:npm/removed@1"], "pkg:npm/ghost@1": ["pkg:npm/a@1"] },
+    })
+    expect(document.dependencies.map((item) => item.ref)).not.toContain("pkg:npm/ghost@1")
+    expect(document.dependencies.flatMap((item) => item.dependsOn)).not.toContain("pkg:npm/removed@1")
+    expect(validate(document)).toEqual([])
+  })
+})
+
+describe("dedupe", () => {
+  test("merges the same package reported by several generators", () => {
+    const merged = dedupe([
+      { type: "library", name: "diff", version: "8.0.4", purl: "pkg:npm/diff@8.0.4", licenses: ["BSD-3-Clause"] },
+      {
+        type: "library",
+        name: "diff",
+        version: "8.0.4",
+        purl: "pkg:npm/diff@8.0.4",
+        properties: { source: "syft" },
+        hashes: [{ alg: "SHA-256", content: "b".repeat(64) }],
+      },
+    ])
+    expect(merged).toHaveLength(1)
+    expect(merged[0].licenses).toEqual(["BSD-3-Clause"])
+    expect(merged[0].properties).toEqual({ source: "syft" })
+    expect(merged[0].hashes).toHaveLength(1)
+  })
+
+  test("keeps different versions of the same package apart", () => {
+    const merged = dedupe([
+      { type: "library", name: "diff", version: "8.0.4", purl: "pkg:npm/diff@8.0.4" },
+      { type: "library", name: "diff", version: "9.0.0", purl: "pkg:npm/diff@9.0.0" },
+    ])
+    expect(merged).toHaveLength(2)
+  })
+
+  test("does not collapse a contained component into a runtime-downloaded one", () => {
+    const merged = dedupe([
+      { type: "application", name: "kilo", version: "7.7.9", ref: "kilo", delivery: "contained" },
+      { type: "application", name: "kilo", version: "7.7.9", ref: "kilo", delivery: "runtime" },
+    ])
+    expect(merged).toHaveLength(2)
+  })
+})
+
+describe("validate", () => {
+  test("rejects a document that does not identify its artifact", () => {
+    const document = bom()
+    document.metadata.properties = []
+    expect(validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("kilocode:subject:name")]))
+  })
+
+  test("rejects a digest that disagrees with the root component hash", () => {
+    const document = bom()
+    ;(document.metadata.component as any).hashes = [{ alg: "SHA-256", content: "b".repeat(64) }]
+    expect(validate(document)).toEqual(
+      expect.arrayContaining([expect.stringContaining("does not match subject digest")]),
+    )
+  })
+
+  test("rejects a non-reproducible serial number", () => {
+    const document = bom()
+    document.serialNumber = "urn:uuid:00000000-0000-5000-8000-000000000000"
+    expect(validate(document)).toEqual(
+      expect.arrayContaining([expect.stringContaining("not derived from the subject digest")]),
+    )
+  })
+
+  test("rejects dangling dependency references", () => {
+    const document = bom({ components: [{ type: "library", name: "a", version: "1", purl: "pkg:npm/a@1" }] })
+    document.dependencies.push({ ref: "pkg:npm/a@1", dependsOn: ["pkg:npm/missing@1"] })
+    expect(validate(document)).toEqual(
+      expect.arrayContaining([expect.stringContaining("does not resolve to a component")]),
+    )
+  })
+
+  test("rejects a library without a version", () => {
+    const document = bom({ components: [{ type: "library", name: "mystery" }] })
+    expect(validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("requires a version")]))
+  })
+
+  test("rejects a provided component that claims to be shipped", () => {
+    const document = bom({
+      components: [{ type: "framework", name: "intellij", version: "2026.1", delivery: "provided" }],
+    })
+    ;(document.components[0] as any).scope = "required"
+    expect(validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("host-provided")]))
+  })
+
+  test("rejects malformed input rather than throwing", () => {
+    expect(validate(null)).toEqual(["SBOM is not an object"])
+    expect(validate({ bomFormat: "SPDX" })).toEqual(expect.arrayContaining([expect.stringContaining("bomFormat")]))
+  })
+})
+
+describe("deps", () => {
+  const lock: Deps.Lock = {
+    lockfileVersion: 1,
+    workspaces: {
+      "": { name: "root" },
+      "packages/app": {
+        name: "@kilo/app",
+        version: "1.0.0",
+        dependencies: { shipped: "1.0.0", "@kilo/lib": "workspace:*" },
+        devDependencies: { tooling: "1.0.0" },
+        optionalDependencies: { "native-linux": "1.0.0", "native-darwin": "1.0.0" },
+      },
+      "packages/lib": { name: "@kilo/lib", version: "2.0.0", dependencies: { nested: "1.0.0" } },
+    },
+    packages: {
+      shipped: ["shipped@1.0.0", "", { dependencies: { transitive: "1.0.0" } }, "sha512-shipped"],
+      transitive: ["transitive@1.0.0", "", {}, "sha512-transitive"],
+      "shipped/transitive": ["transitive@2.0.0", "", {}, "sha512-nested-transitive"],
+      nested: ["nested@1.0.0", "", {}, "sha512-nested"],
+      tooling: ["tooling@1.0.0", "", {}, "sha512-tooling"],
+      "native-linux": ["native-linux@1.0.0", "", { os: ["linux"], cpu: ["x64"] }, "sha512-native-linux"],
+      "native-darwin": ["native-darwin@1.0.0", "", { os: ["darwin"] }, "sha512-native-darwin"],
+      "@kilo/lib": ["@kilo/lib@workspace:packages/lib"],
+    },
+  }
+
+  test("splits scoped lockfile keys into node_modules segments", () => {
+    expect(Deps.segments("a/@scope/b/c")).toEqual(["a", "@scope/b", "c"])
+    expect(Deps.segments("@scope/b")).toEqual(["@scope/b"])
+  })
+
+  test("includes shipped dependencies and excludes dev dependencies", () => {
+    const result = Deps.closure({ lock, workspace: "packages/app" })
+    const names = result.components.map((item) => item.name)
+    expect(names).toContain("shipped")
+    expect(names).not.toContain("tooling")
+  })
+
+  test("prefers the nested copy of a transitive dependency", () => {
+    const result = Deps.closure({ lock, workspace: "packages/app" })
+    const versions = result.components.filter((item) => item.name === "transitive").map((item) => item.version)
+    expect(versions).toEqual(["2.0.0"])
+  })
+
+  test("records workspace packages as first-party without inventing npm purls", () => {
+    const result = Deps.closure({ lock, workspace: "packages/app" })
+    const workspace = result.components.find((item) => item.name === "@kilo/lib")
+    expect(workspace).toMatchObject({ version: "2.0.0", supplier: "Kilo Code", properties: { origin: "workspace" } })
+    expect(workspace?.purl).toBeUndefined()
+    expect(result.components.map((item) => item.name)).toContain("nested")
+  })
+
+  test("keeps only the optional native packages for the target platform", () => {
+    const linux = Deps.closure({ lock, workspace: "packages/app", platform: { os: "linux", arch: "x64" } })
+    expect(linux.components.map((item) => item.name)).toContain("native-linux")
+    expect(linux.components.map((item) => item.name)).not.toContain("native-darwin")
+
+    const darwin = Deps.closure({ lock, workspace: "packages/app", platform: { os: "darwin", arch: "arm64" } })
+    expect(darwin.components.map((item) => item.name)).toContain("native-darwin")
+    expect(darwin.components.map((item) => item.name)).not.toContain("native-linux")
+  })
+
+  test("carries the lockfile integrity hash into the component", () => {
+    const result = Deps.closure({ lock, workspace: "packages/app" })
+    expect(result.components.find((item) => item.name === "shipped")?.properties).toMatchObject({
+      integrity: "sha512-shipped",
+    })
+  })
+
+  test("reports unresolvable dependencies as gaps", () => {
+    const broken: Deps.Lock = {
+      ...lock,
+      workspaces: { ...lock.workspaces, "packages/app": { name: "@kilo/app", dependencies: { ghost: "1.0.0" } } },
+    }
+    const result = Deps.closure({ lock: broken, workspace: "packages/app" })
+    expect(result.gaps).toEqual([{ component: "ghost", reason: "not resolvable from <root> in bun.lock" }])
+  })
+
+  test("composes into a valid document", () => {
+    const result = Deps.closure({ lock, workspace: "packages/app", platform: { os: "linux", arch: "x64" } })
+    const document = bom({ components: result.components, dependencies: result.dependencies, gaps: result.gaps })
+    expect(validate(document)).toEqual([])
+  })
+
+  test("reads the repository lockfile and resolves the CLI workspace", async () => {
+    const parsed = await Deps.load(path.join(import.meta.dir, "..", "..", "bun.lock"))
+    const result = Deps.closure({
+      lock: parsed,
+      workspace: "packages/opencode",
+      platform: { os: "linux", arch: "x64" },
+    })
+    expect(result.components.length).toBeGreaterThan(50)
+    expect(result.components.every((item) => item.version)).toBe(true)
+    const document = bom({ components: result.components, dependencies: result.dependencies, gaps: result.gaps })
+    expect(validate(document)).toEqual([])
+  })
+
+  test("enriches licences from the installed tree and reports unknown ones", async () => {
+    const dir = await scratch()
+    try {
+      await Bun.write(path.join(dir, "known", "package.json"), JSON.stringify({ license: "MIT", description: "d" }))
+      const input: Component[] = [
+        { type: "library", name: "known", version: "1.0.0", purl: "pkg:npm/known@1.0.0" },
+        { type: "library", name: "absent", version: "1.0.0", purl: "pkg:npm/absent@1.0.0" },
+      ]
+      const result = await Deps.enrich(input, dir)
+      expect(result.components[0]).toMatchObject({ licenses: ["MIT"], description: "d" })
+      expect(result.gaps).toEqual([
+        { component: "absent@1.0.0", reason: "licence unknown: package not installed locally" },
+      ])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("scan", () => {
+  test("converts a syft document and drops its scan-target root", () => {
+    const components = Scan.convert({
+      metadata: { component: { "bom-ref": "root" } },
+      components: [
+        { "bom-ref": "root", type: "file", name: "kilo-linux-x64.tar.gz" },
+        {
+          "bom-ref": "pkg-1",
+          type: "library",
+          name: "diff",
+          version: "8.0.4",
+          purl: "pkg:npm/diff@8.0.4",
+          licenses: [{ license: { id: "BSD-3-Clause" } }],
+          properties: [
+            { name: "syft:location:0:path", value: "/bin/x" },
+            { name: "other", value: "ignored" },
+          ],
+        },
+      ],
+    })
+    expect(components).toHaveLength(1)
+    expect(components[0]).toMatchObject({
+      name: "diff",
+      version: "8.0.4",
+      licenses: ["BSD-3-Clause"],
+      delivery: "contained",
+      properties: { source: "syft", "syft.location:0:path": "/bin/x" },
+    })
+  })
+
+  test("records a gap instead of claiming an empty artifact when syft is unavailable", async () => {
+    const previous = process.env.SYFT
+    process.env.SYFT = ""
+    try {
+      const result = await Scan.scan("file:/does/not/exist")
+      if (result.gaps.length) {
+        expect(result.gaps[0].reason).toContain("syft")
+        expect(result.components).toEqual([])
+      }
+    } finally {
+      if (previous == null) delete process.env.SYFT
+      else process.env.SYFT = previous
+    }
+  })
+})
+
+describe("manifest", () => {
+  async function fixture(dir: string, name: string, overrides: Partial<Parameters<typeof compose>[0]> = {}) {
+    const file = path.join(dir, name)
+    await Bun.write(file, "artifact-bytes")
+    const subject = await Artifact.subject(file)
+    const document = compose({
+      subject,
+      product: { name: "kilo-cli", version: "7.7.9" },
+      ...overrides,
+    })
+    await Bun.write(Artifact.sidecar(file), `${JSON.stringify(document, null, 2)}\n`)
+    return {
+      artifact: name,
+      sha256: subject.sha256,
+      size: subject.size,
+      sbom: `${name}.cdx.json`,
+    }
+  }
+
+  test("accepts a complete set", async () => {
+    const dir = await scratch()
+    try {
+      const entry = await fixture(dir, "kilo-linux-x64.tar.gz")
+      const report = await Manifest.verify({
+        manifest: { version: "7.7.9", product: "cli", generated: "", expected: 1, entries: [entry] },
+        dir,
+      })
+      expect(report).toMatchObject({ issues: [], ok: 1, missing: 0 })
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("detects a missing sidecar", async () => {
+    const dir = await scratch()
+    try {
+      const report = await Manifest.verify({
+        manifest: {
+          version: "7.7.9",
+          product: "cli",
+          generated: "",
+          expected: 1,
+          entries: [{ artifact: "kilo-linux-x64.tar.gz", sha256: DIGEST, sbom: "kilo-linux-x64.tar.gz.cdx.json" }],
+        },
+        dir,
+      })
+      expect(report.missing).toBe(1)
+      expect(report.issues[0]).toContain("is missing from")
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("detects a sidecar generated for different bytes", async () => {
+    const dir = await scratch()
+    try {
+      const entry = await fixture(dir, "kilo-linux-x64.tar.gz")
+      const report = await Manifest.verify({
+        manifest: {
+          version: "7.7.9",
+          product: "cli",
+          generated: "",
+          expected: 1,
+          entries: [{ ...entry, sha256: "b".repeat(64) }],
+        },
+        dir,
+      })
+      expect(report.missing).toBe(1)
+      expect(report.issues[0]).toContain("declares digest")
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("detects an incomplete artifact set", async () => {
+    const dir = await scratch()
+    try {
+      const entry = await fixture(dir, "kilo-linux-x64.tar.gz")
+      const report = await Manifest.verify({
+        manifest: { version: "7.7.9", product: "cli", generated: "", expected: 12, entries: [entry] },
+        dir,
+      })
+      expect(report.issues).toEqual([expect.stringContaining("expected 12 artifacts, manifest records 1")])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("reports a recorded generation failure", async () => {
+    const report = await Manifest.verify({
+      manifest: {
+        version: "7.7.9",
+        product: "cli",
+        generated: "",
+        expected: 1,
+        entries: [{ artifact: "a.zip", sha256: DIGEST, error: "syft crashed" }],
+      },
+      dir: "/nonexistent",
+    })
+    expect(report.missing).toBe(1)
+    expect(report.issues[0]).toContain("syft crashed")
+  })
+
+  test("merges a later workflow stage into an existing release manifest", () => {
+    const lean: Manifest.Manifest = {
+      version: "1.0.0",
+      product: "jetbrains",
+      generated: "",
+      expected: 1,
+      entries: [{ artifact: "lean.zip", sha256: DIGEST, sbom: "lean.zip.cdx.json" }],
+    }
+    const bundled: Manifest.Manifest = {
+      version: "1.0.0",
+      product: "jetbrains",
+      generated: "",
+      expected: 2,
+      entries: [{ artifact: "bundled.zip", sha256: "b".repeat(64), sbom: "bundled.zip.cdx.json" }],
+    }
+    const merged = Manifest.merge(lean, bundled)
+    expect(merged.expected).toBe(2)
+    expect(merged.entries.map((item) => item.artifact).sort()).toEqual(["bundled.zip", "lean.zip"])
+  })
+
+  test("allows an identical retry but refuses to silently replace published bytes", () => {
+    const base: Manifest.Manifest = {
+      version: "1.0.0",
+      product: "cli",
+      generated: "",
+      expected: 1,
+      entries: [{ artifact: "a.zip", sha256: DIGEST }],
+    }
+    expect(Manifest.merge(base, base).entries).toHaveLength(1)
+    expect(() => Manifest.merge(base, { ...base, entries: [{ artifact: "a.zip", sha256: "b".repeat(64) }] })).toThrow(
+      /refusing to overwrite/,
+    )
+  })
+
+  test("refuses to merge evidence across releases", () => {
+    const base: Manifest.Manifest = { version: "1.0.0", product: "cli", generated: "", expected: 0, entries: [] }
+    expect(() => Manifest.merge(base, { ...base, version: "1.0.1" })).toThrow(/Cannot merge evidence/)
+  })
+
+  test("writes checksums for artifacts and their sidecars", async () => {
+    const dir = await scratch()
+    try {
+      const entry = await fixture(dir, "kilo-linux-x64.tar.gz")
+      const text = await Manifest.checksums({
+        manifest: { version: "7.7.9", product: "cli", generated: "", expected: 1, entries: [entry] },
+        dir,
+      })
+      expect(text).toContain(`${entry.sha256}  kilo-linux-x64.tar.gz\n`)
+      expect(text).toContain("  kilo-linux-x64.tar.gz.cdx.json\n")
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("round-trips through disk", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, Manifest.name("cli"))
+      const manifest: Manifest.Manifest = {
+        version: "7.7.9",
+        product: "cli",
+        generated: "now",
+        expected: 2,
+        entries: [
+          { artifact: "b.zip", sha256: DIGEST },
+          { artifact: "a.zip", sha256: DIGEST },
+        ],
+      }
+      await Manifest.write(file, manifest)
+      const read = await Manifest.read(file)
+      expect(read.entries.map((item) => item.artifact)).toEqual(["a.zip", "b.zip"])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("policy", () => {
+  test("defaults to advisory mode", () => {
+    expect(Policy.policy({}).enforce).toBe(false)
+    expect(Policy.policy({ SBOM_ENFORCE: "false" }).enforce).toBe(false)
+    expect(Policy.policy({ SBOM_ENFORCE: "true" }).enforce).toBe(true)
+    expect(Policy.policy({ SBOM_ENFORCE: "1" }).enforce).toBe(true)
+  })
+
+  test("does not block a release while advisory", () => {
+    expect(Policy.report({ label: "cli", issues: ["broken"], env: {} })).toEqual({ ok: false, enforce: false })
+  })
+
+  test("blocks a release once enforcing", () => {
+    expect(Policy.report({ label: "cli", issues: ["broken"], env: { SBOM_ENFORCE: "true" } })).toEqual({
+      ok: false,
+      enforce: true,
+    })
+  })
+
+  test("passes clean evidence in both modes", () => {
+    expect(Policy.report({ label: "cli", issues: [], env: {} }).ok).toBe(true)
+    expect(Policy.report({ label: "cli", issues: [], env: { SBOM_ENFORCE: "true" } }).ok).toBe(true)
+  })
+})
+
+describe("artifact", () => {
+  test("hashes and names a real file", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, "kilo-darwin-arm64.zip")
+      await Bun.write(file, "bytes")
+      const subject = await Artifact.subject(file)
+      expect(subject.name).toBe("kilo-darwin-arm64.zip")
+      expect(subject.size).toBe(5)
+      expect(subject.sha256).toBe(new Bun.CryptoHasher("sha256").update("bytes").digest("hex"))
+      expect(Artifact.sidecar(file)).toBe(`${file}.cdx.json`)
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+})

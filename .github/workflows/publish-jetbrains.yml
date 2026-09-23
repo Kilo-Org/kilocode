@@ -24,7 +24,10 @@ concurrency:
 
 permissions:
   actions: write
+  artifact-metadata: write
+  attestations: write
   contents: write
+  id-token: write
   pull-requests: read
 
 env:
@@ -99,6 +102,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Setup SBOM tooling
+        uses: ./.github/actions/setup-sbom
+
       - name: Validate publishing secrets
         run: |
           missing=0
@@ -115,13 +121,19 @@ jobs:
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
-      - name: Verify plugin
+      # Signing moved ahead of the Marketplace upload so the SBOM can describe the
+      # exact signed bytes that ship, and so evidence problems surface while the
+      # publish is still reversible. publishPlugin reuses these outputs.
+      - name: Build, sign, and verify plugin
         working-directory: packages/kilo-jetbrains
-        run: ./gradlew verifyPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
+        run: ./gradlew buildPlugin signPlugin verifyPluginSignature verifyPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
           CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
       - name: Render release notes
         working-directory: packages/kilo-jetbrains
@@ -133,17 +145,6 @@ jobs:
           ./gradlew getChangelog --project-version "$VERSION" --no-header --no-empty-sections --output-file=build/release-notes.md
         env:
           VERSION: ${{ steps.release.outputs.version }}
-
-      - name: Publish to JetBrains Marketplace
-        working-directory: packages/kilo-jetbrains
-        run: ./gradlew publishPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-          CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
-          JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
-          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
-          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
-          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
       - name: Resolve plugin archive
         id: archive
@@ -167,6 +168,46 @@ jobs:
           fi
           echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
 
+      - name: Generate plugin SBOM
+        id: sbom
+        run: |
+          bun packages/kilo-jetbrains/script/sbom.ts \
+            --zip "$ARCHIVE" \
+            --variant lean \
+            --version "$VERSION" \
+            --channel "$CHANNEL" \
+            --tag "$TAG" \
+            --merge "$MERGE_COMMIT"
+          echo "sidecar=$ARCHIVE.cdx.json" >> "$GITHUB_OUTPUT"
+          echo "digest=sha256:$(sha256sum "$ARCHIVE" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$ARCHIVE")" >> "$GITHUB_OUTPUT"
+        env:
+          ARCHIVE: ${{ steps.archive.outputs.path }}
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
+          TAG: ${{ steps.release.outputs.tag }}
+          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
+
+      - name: Attest plugin SBOM
+        continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.sbom.outputs.name }}
+          subject-digest: ${{ steps.sbom.outputs.digest }}
+          sbom-path: ${{ steps.sbom.outputs.sidecar }}
+
+      - name: Publish to JetBrains Marketplace
+        working-directory: packages/kilo-jetbrains
+        run: ./gradlew publishPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
+          JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
       - name: Upload to GitHub Release
         run: |
           tag="$TAG"
@@ -176,17 +217,18 @@ jobs:
             flags+=(--prerelease)
           fi
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$tag" "$ARCHIVE" --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload "$tag" "$ARCHIVE" $EVIDENCE --clobber --repo "$GITHUB_REPOSITORY"
             gh release edit "$tag" "${flags[@]}" --repo "$GITHUB_REPOSITORY"
             exit 0
           fi
-          gh release create "$tag" "$ARCHIVE" "${flags[@]}" --repo "$GITHUB_REPOSITORY"
+          gh release create "$tag" "$ARCHIVE" $EVIDENCE "${flags[@]}" --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
           VERSION: ${{ steps.release.outputs.version }}
           KIND: ${{ steps.release.outputs.kind }}
           ARCHIVE: ${{ steps.archive.outputs.path }}
+          EVIDENCE: ${{ steps.archive.outputs.path }}.cdx.json packages/kilo-jetbrains/build/distributions/jetbrains-sbom-evidence.json packages/kilo-jetbrains/build/distributions/kilo-jetbrains-SHA256SUMS
           NOTES: packages/kilo-jetbrains/build/release-notes.md
 
       - name: Dispatch bundled GitHub release build
@@ -207,5 +249,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kilo-jetbrains-${{ steps.release.outputs.version }}
-          path: packages/kilo-jetbrains/build/distributions/*.zip
+          path: |
+            packages/kilo-jetbrains/build/distributions/*.zip
+            packages/kilo-jetbrains/build/distributions/*.cdx.json
+            packages/kilo-jetbrains/build/distributions/jetbrains-sbom-evidence.json
+            packages/kilo-jetbrains/build/distributions/kilo-jetbrains-SHA256SUMS
           if-no-files-found: ignore
