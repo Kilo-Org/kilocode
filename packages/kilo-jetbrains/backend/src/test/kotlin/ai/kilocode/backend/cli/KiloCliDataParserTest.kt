@@ -733,7 +733,8 @@ class KiloCliDataParserTest {
                             "messageID": "msg_rollback",
                             "partID": "prt_rollback",
                             "snapshot": "snap_rollback",
-                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone"
+                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone",
+                            "workspace": "not-a-git-repo"
                         }
                     }
                 }
@@ -754,6 +755,7 @@ class KiloCliDataParserTest {
             assertEquals("modified", result.session.revert?.diffs?.get(0)?.status)
             assertEquals("src/Old.kt", result.session.revert?.diffs?.get(1)?.file)
             assertEquals("deleted", result.session.revert?.diffs?.get(1)?.status)
+            assertEquals("not-a-git-repo", result.session.revert?.workspace)
         }
 
         @Test

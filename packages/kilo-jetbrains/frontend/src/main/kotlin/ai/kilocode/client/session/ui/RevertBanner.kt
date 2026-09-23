@@ -89,8 +89,9 @@ class RevertBanner(
         font = JBFont.small()
     }
 
-    private val notice = JBLabel(KiloBundle.message("revert.banner.filesNotRestored")).apply {
+    private val notice = JBLabel("").apply {
         font = JBFont.small()
+        setAllowAutoWrapping(true)
     }
 
     init {
@@ -120,7 +121,9 @@ class RevertBanner(
         val total = model.revertedCount()
         title.text = KiloBundle.message(if (total == 1) "revert.banner.count.one" else "revert.banner.count.other", total)
         setActionVisible("all", total > 1)
-        notice.isVisible = revert.snapshot == null
+        val message = workspaceNotice(revert)
+        notice.isVisible = message != null
+        if (message != null) notice.text = message
         val diffs = resolveDiffs(revert)
         val names = disambiguate(diffs.map { it.file })
         diff.isVisible = diffs.isNotEmpty()
@@ -179,6 +182,20 @@ class RevertBanner(
      */
     private fun resolveDiffs(revert: ai.kilocode.rpc.dto.SessionRevertDto): List<DiffFileDto> =
         if (revert.snapshot == null) emptyList() else revert.diffs.ifEmpty { model.diff }
+
+    /**
+     * Explains why workspace files were, or were not, restored. Returns null when files were
+     * restored (nothing to explain) or the CLI didn't report a reason on an older revert whose
+     * files happened to be restored anyway.
+     */
+    private fun workspaceNotice(revert: ai.kilocode.rpc.dto.SessionRevertDto): String? = when (revert.workspace) {
+        "restored" -> null
+        "snapshots-disabled" -> KiloBundle.message("revert.banner.workspace.snapshotsDisabled")
+        "not-a-git-repo" -> KiloBundle.message("revert.banner.workspace.notAGitRepo")
+        "unavailable" -> KiloBundle.message("revert.banner.workspace.unavailable")
+        null -> if (revert.snapshot == null) KiloBundle.message("revert.banner.workspace.legacy") else null
+        else -> KiloBundle.message("revert.banner.workspace.unavailable")
+    }
 
     private fun openDiffViewer() {
         val revert = model.revert() ?: return

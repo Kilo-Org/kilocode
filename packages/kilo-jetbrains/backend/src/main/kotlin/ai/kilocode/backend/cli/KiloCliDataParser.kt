@@ -1714,6 +1714,7 @@ object KiloCliDataParser {
             snapshot = obj.str("snapshot"),
             diff = diff,
             diffs = parseUnifiedDiff(diff),
+            workspace = obj.str("workspace"),
         )
     }
 
