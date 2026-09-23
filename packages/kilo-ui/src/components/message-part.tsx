@@ -2225,6 +2225,26 @@ function ToolChanges(props: { changes: DiffValue; slot?: string }) {
   )
 }
 
+function ToolDiffAction(props: { when: boolean; onClick: (e: MouseEvent) => void }) {
+  const i18n = useI18n()
+  return (
+    <Show when={props.when}>
+      <span data-slot="tool-trigger-actions">
+        <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+          <IconButton
+            icon="square-arrow-top-right"
+            size="small"
+            variant="ghost"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={props.onClick}
+            aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+          />
+        </Tooltip>
+      </span>
+    </Show>
+  )
+}
+
 function ShellText(props: { text: string }) {
   return (
     <span data-component="shell-submessage">
@@ -2950,20 +2970,7 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
-              <Show when={canOpenDiff()}>
-                <span data-slot="tool-trigger-actions">
-                  <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
-                    <IconButton
-                      icon="square-arrow-top-right"
-                      size="small"
-                      variant="ghost"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={handleOpenDiffClick}
-                      aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
-                    />
-                  </Tooltip>
-                </span>
-              </Show>
+              <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
             </div>
           }
         >
@@ -3067,20 +3074,7 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
-              <Show when={canOpenDiff()}>
-                <span data-slot="tool-trigger-actions">
-                  <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
-                    <IconButton
-                      icon="square-arrow-top-right"
-                      size="small"
-                      variant="ghost"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={handleOpenDiffClick}
-                      aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
-                    />
-                  </Tooltip>
-                </span>
-              </Show>
+              <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
             </div>
           }
         >
@@ -3190,23 +3184,13 @@ ToolRegistry.register({
     // like the `view` guard did, without parsing every file while collapsed.
     const hasHunk = (file: ApplyPatchFile) => HUNK_MARKER.test(file.patch ?? file.diff ?? "")
     const allDiffAction = () => (
-      <Show when={data.openDiff && files().some(hasHunk)}>
-        <span data-slot="tool-trigger-actions">
-          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
-            <IconButton
-              icon="square-arrow-top-right"
-              size="small"
-              variant="ghost"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation()
-                openAllDiff()
-              }}
-              aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
-            />
-          </Tooltip>
-        </span>
-      </Show>
+      <ToolDiffAction
+        when={!!data.openDiff && files().some(hasHunk)}
+        onClick={(e) => {
+          e.stopPropagation()
+          openAllDiff()
+        }}
+      />
     )
     const pending = createMemo(() => busy(props.status))
     const single = createMemo(() => {
