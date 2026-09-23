@@ -107,7 +107,11 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
       return true
     })
 
-    const upgrade = Effect.fn("GlobalHttpApi.upgrade")(function* (ctx: { payload: typeof GlobalUpgradeInput.Type }) {
+    const upgrade = Effect.fn("GlobalHttpApi.upgrade")(function* (ctx: {
+      // kilocode_change start - a bodyless request decodes to no payload
+      payload?: void | typeof GlobalUpgradeInput.Type
+      // kilocode_change end
+    }) {
       const method = yield* installation.method()
       if (method === "unknown") {
         return HttpServerResponse.jsonUnsafe(
@@ -115,7 +119,8 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
           { status: 400 },
         )
       }
-      const target = ctx.payload.target || (yield* installation.latest(method)) // kilocode_change - omitted target upgrades to the latest version
+      const requested = ctx.payload ? ctx.payload.target : undefined // kilocode_change - a bodyless request has no payload
+      const target = requested || (yield* installation.latest(method)) // kilocode_change - omitted target upgrades to the latest version
       const result = yield* installation.upgrade(method, target).pipe(
         Effect.as({ success: true as const, version: target }),
         Effect.catch((err) =>

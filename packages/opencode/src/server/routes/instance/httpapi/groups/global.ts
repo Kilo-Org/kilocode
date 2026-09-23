@@ -7,7 +7,7 @@ import "@opencode-ai/core/account"
 import "@/server/event"
 import "@/kilocode/indexing-event" // kilocode_change - register indexing.status before HttpApi event schemas
 import { Schema } from "effect"
-import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
+import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi" // kilocode_change - HttpApiSchema for the bodyless upgrade payload
 import semver from "semver"
 import { described } from "./metadata"
 
@@ -131,7 +131,9 @@ export const GlobalApi = HttpApi.make("global").add(
         }),
       ),
       HttpApiEndpoint.post("upgrade", GlobalPaths.upgrade, {
-        payload: GlobalUpgradeInput,
+        // kilocode_change start - a bodyless request upgrades to the latest version
+        payload: [HttpApiSchema.NoContent, GlobalUpgradeInput],
+        // kilocode_change end
         success: described(GlobalUpgradeResult, "Upgrade result"),
         error: HttpApiError.BadRequest,
       }).annotateMerge(
