@@ -4201,6 +4201,11 @@ export type McpInstallationMethod = {
   prerequisites?: Array<string>
 }
 
+export type McpSkill = {
+  id: string
+  content: string
+}
+
 export type McpMarketplaceItem = {
   id: string
   name: string
@@ -4214,6 +4219,7 @@ export type McpMarketplaceItem = {
   url: string
   content: string | Array<McpInstallationMethod>
   parameters?: Array<McpParameter>
+  skills?: Array<McpSkill>
 }
 
 export type AgentMarketplaceItem = {
@@ -4302,6 +4308,7 @@ export type McpInstallItem = {
   type: "mcp"
   id: string
   content: string | Array<McpInstallationMethod>
+  skills?: Array<McpSkill>
 }
 
 export type AgentInstallItem = {

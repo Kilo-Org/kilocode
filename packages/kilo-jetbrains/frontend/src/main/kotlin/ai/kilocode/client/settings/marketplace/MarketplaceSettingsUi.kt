@@ -34,6 +34,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -227,6 +228,7 @@ internal class MarketplaceSettingsUi(
     }
 
     /** Runs one install or uninstall against [request]'s scope, reporting progress on the item's row. */
+    @RequiresEdt
     private fun act(item: MarketplaceItemDto, request: MarketplaceInstallRequest) {
         val key = rowKey(item)
         pending = Pending(
@@ -247,7 +249,7 @@ internal class MarketplaceSettingsUi(
                     svc.install(dir, item, request.target, request.parameters)
                 }
                 if (!result.success) throw SettingsMessageException(result.error ?: failedText(request.remove))
-                if (item.type == "skill") service<KiloAgentBehaviorService>().reloadSkills(dir)
+                if (item.type == "skill" || item.type == "mcp") service<KiloAgentBehaviorService>().reloadSkills(dir)
                 Telemetry.send(
                     if (request.remove) "Marketplace Item Removed" else "Marketplace Item Installed",
                     mapOf("type" to item.type, "id" to item.id, "target" to request.target),
@@ -273,9 +275,11 @@ internal class MarketplaceSettingsUi(
         }
     }
 
+    @RequiresEdt
     private fun remove(item: MarketplaceItemDto, scope: String) {
+        val notice = if (item.type == "mcp") "\n\n${KiloBundle.message("settings.marketplace.remove.skills")}" else ""
         val answer = Messages.showYesNoDialog(
-            KiloBundle.message("settings.marketplace.remove.message", item.name, scopeLabel(scope)),
+            KiloBundle.message("settings.marketplace.remove.message", item.name, scopeLabel(scope)) + notice,
             KiloBundle.message("settings.marketplace.remove.title"),
             KiloBundle.message("common.delete"),
             Messages.getCancelButton(),
