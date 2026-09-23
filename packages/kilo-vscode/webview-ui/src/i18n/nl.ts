@@ -90,6 +90,8 @@ export const dict = {
     "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
   "revert.banner.workspace.unavailable":
     "Conversatie teruggedraaid. Er was geen bestandscheckpoint beschikbaar, dus wijzigingen in de werkruimte zijn niet hersteld.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversatie teruggedraaid. Bestandscheckpoints vereisen een Git-repository, dus wijzigingen in de werkruimte zijn niet hersteld.",
   "revert.banner.workspace.legacy":
     "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
   "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",

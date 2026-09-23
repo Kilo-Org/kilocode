@@ -1,0 +1,9 @@
+Delete a scheduled cron task by its id.
+
+Use this tool to:
+- Stop a recurring task you no longer need
+- Cancel a one-shot task you scheduled with `cron_create`
+
+Call `cron_list` first to find the id.
+Deleting an id that is already gone is safe: the tool reports it and does not fail.
+Only tasks scheduled for this session can be deleted.

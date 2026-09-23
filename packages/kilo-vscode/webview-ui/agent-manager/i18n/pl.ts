@@ -117,6 +117,7 @@ export const dict = {
   "agentManager.session.noSessions": "Brak otwartych sesji",
   "agentManager.tab.close": "Zamknij",
   "agentManager.tab.closeOthers": "Zamknij pozostałe",
+  "agentManager.tab.closeToRight": "Zamknij po prawej",
   "agentManager.tab.closeTab": "Zamknij kartę",
   "agentManager.tab.forkSession": "Rozgałęź sesję",
   "agentManager.tab.pin": "Przypnij",

@@ -29,8 +29,9 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
-import { detectPrLink, persistRecordedPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
+import { detectPrLinkState, persistRecordedPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
 import type { PrLink } from "@/kilo-sessions/pr-link"
+import { refreshPrLink, startPrLinkPoll } from "@/kilo-sessions/pr-link-poller"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import {
@@ -478,11 +479,12 @@ export namespace KiloSessions {
         triple: { platform: override.platform, prUrl: override.prUrl, prNumber: override.prNumber },
       }
     }
-    const detected = await detectPrLink()
-    if (detected) {
+    const state = await detectPrLinkState()
+    if (state.cleared) return { triple: { platform: null, prUrl: null, prNumber: null } }
+    if (state.link) {
       return {
-        prLink: detected,
-        triple: { platform: detected.platform, prUrl: detected.prUrl, prNumber: detected.prNumber },
+        prLink: state.link,
+        triple: { platform: state.link.platform, prUrl: state.link.prUrl, prNumber: state.link.prNumber },
       }
     }
     return {}
@@ -741,6 +743,17 @@ export namespace KiloSessions {
               return handler
             }),
             (handler) => Effect.sync(() => void GlobalBus.off("event", handler)),
+          )
+
+          // One PR check per instance start plus one every 5 minutes. Never on a
+          // session update and never once per heartbeat/request.
+          yield* Effect.acquireRelease(
+            Effect.sync(() =>
+              startPrLinkPoll(async () => {
+                await Instance.restore(ctx, () => refreshPrLink(ctx.worktree))
+              }),
+            ),
+            (stop) => Effect.sync(stop),
           )
 
           const cfg = yield* config.getGlobal()

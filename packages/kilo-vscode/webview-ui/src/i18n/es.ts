@@ -90,6 +90,8 @@ export const dict = {
     "Conversación revertida. Los cambios en los archivos no se restauraron porque las instantáneas están desactivadas.",
   "revert.banner.workspace.unavailable":
     "Conversación revertida. No había ningún punto de control de archivos disponible, por lo que no se restauraron los cambios del espacio de trabajo.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversación revertida. Los puntos de control de archivos requieren un repositorio Git, por lo que no se restauraron los cambios del espacio de trabajo.",
   "revert.banner.workspace.legacy":
     "Conversación revertida. El estado de restauración del espacio de trabajo no está disponible para esta reversión anterior.",
   "revert.banner.workspace.enableSnapshots": "Activar instantáneas",

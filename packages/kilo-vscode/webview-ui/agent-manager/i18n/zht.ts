@@ -114,6 +114,7 @@ export const dict = {
   "agentManager.session.noSessions": "沒有開啟的工作階段",
   "agentManager.tab.close": "關閉",
   "agentManager.tab.closeOthers": "關閉其他分頁",
+  "agentManager.tab.closeToRight": "關閉右側分頁",
   "agentManager.tab.closeTab": "關閉分頁",
   "agentManager.tab.forkSession": "複製工作階段",
   "agentManager.tab.pin": "釘選",

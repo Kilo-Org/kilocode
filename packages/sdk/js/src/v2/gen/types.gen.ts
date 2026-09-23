@@ -531,7 +531,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -2975,7 +2975,7 @@ export type GlobalSession = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
   project: ProjectSummary | null
   worktreeName?: string
@@ -3331,7 +3331,7 @@ export type Session1 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3385,7 +3385,7 @@ export type Session2 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3446,7 +3446,7 @@ export type Session3 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3500,7 +3500,7 @@ export type Session4 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3554,7 +3554,7 @@ export type Session5 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3608,7 +3608,7 @@ export type Session6 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3662,7 +3662,7 @@ export type Session7 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3771,7 +3771,7 @@ export type Session8 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3825,7 +3825,7 @@ export type Session9 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -4263,7 +4263,21 @@ export type SkillMarketplaceItem = {
   displayCategory: string
 }
 
-export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem
+export type PluginMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "plugin"
+  content: string
+  url?: string
+}
+
+export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem | PluginMarketplaceItem
 
 export type MarketplaceInstalledMetadata = {
   project: {
@@ -4320,19 +4334,26 @@ export type SkillInstallItem = {
   content: string
 }
 
-export type MarketplaceInstallItem = McpInstallItem | AgentInstallItem | SkillInstallItem
+export type PluginInstallItem = {
+  type: "plugin"
+  id: string
+  content: string
+}
+
+export type MarketplaceInstallItem = McpInstallItem | AgentInstallItem | SkillInstallItem | PluginInstallItem
 
 export type MarketplaceInstallResult = {
   success: boolean
   slug: string
   error?: string
   filePath?: string
+  filePaths?: Array<string>
   line?: number
 }
 
 export type MarketplaceItemRef = {
   id: string
-  type: "mcp" | "agent" | "skill"
+  type: "mcp" | "agent" | "skill" | "plugin"
 }
 
 export type MarketplaceRemoveResult = {
@@ -5965,7 +5986,7 @@ export type RevertState = {
   snapshot?: string
   diff?: string
   files?: Array<FileDiff>
-  workspace?: "restored" | "snapshots-disabled" | "unavailable"
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type EventSessionNextRevertStaged = {
@@ -18326,7 +18347,7 @@ export type KilocodeSessionImportSessionData = {
       partID?: string
       snapshot?: string
       diff?: string
-      workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     permission?: {
       [key: string]: unknown
