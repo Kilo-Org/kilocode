@@ -275,6 +275,22 @@ const mapAgent = (a: Agent) => ({
 // message.part.* events are always session-scoped; drop them when the session is unknown.
 const SESSION_SCOPED_PART_EVENTS = new Set(["message.part.updated", "message.part.delta", "message.part.removed"])
 const isSessionScopedPartEvent = (type: string) => SESSION_SCOPED_PART_EVENTS.has(type)
+// Events that change the activity state of a sidebar row: status, outcome, input requests, and wakeups.
+const ACTIVITY_EVENTS = new Set<string>([
+  "session.status",
+  "session.deleted",
+  "session.wakeup",
+  "session.turn.close",
+  "session.error",
+  "permission.asked",
+  "permission.replied",
+  "question.asked",
+  "question.replied",
+  "question.rejected",
+  "suggestion.shown",
+  "suggestion.accepted",
+  "suggestion.dismissed",
+])
 
 type RawSyncPayload = Extract<WirePayload, { type: "sync" }>
 type LegacySyncEvent =
@@ -1943,7 +1959,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             directory &&
             directory !== "global" &&
             !this.isCurrentProjectDirectory(directory) &&
-            !this.terminal(event, directory)
+            !this.routed(event, directory)
           )
             return false
           if (!directory && isEventFromForeignProject(payload, this.projectID)) return false
@@ -2420,7 +2436,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     if (!this.syncedChildSessions.delete(sessionID)) return
     const status = this.sessionStatusMap.get(sessionID)
-    if (status !== "busy" && status !== "retry") this.owners.delete(sessionID)
+    if (!status || status === "idle") this.owners.delete(sessionID)
     this.trackedSessionIds.delete(sessionID)
     this.streams.drop(sessionID)
     this.visibleTaskStreams.delete(sessionID)
@@ -3286,7 +3302,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const previous = this.sessionStatusMap.get(sessionID)
     if ((previous === undefined || previous === "idle") && status.type !== "idle") this.costs.rearm(sessionID)
     this.sessionStatusMap.set(sessionID, status.type)
-    if ((status.type === "idle" || status.type === "offline") && !this.syncedChildSessions.has(sessionID)) {
+    // Offline sessions reconnect and continue, so keep the owner until the session is idle.
+    if (status.type === "idle" && !this.syncedChildSessions.has(sessionID)) {
       this.owners.delete(sessionID)
     }
     this.streams.flush(sessionID)
@@ -5235,7 +5252,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       directory &&
       directory !== "global" &&
       !this.isCurrentProjectDirectory(directory) &&
-      !this.terminal(event, directory)
+      !this.routed(event, directory)
     )
       return
     if (
@@ -5702,13 +5719,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return owner !== undefined && sameDirectory(owner, directory)
   }
 
-  private terminal(event: ProviderEvent, directory?: string): boolean {
-    if (event.type === "session.status") {
-      const type = event.properties.status.type
-      if (type === "idle" || type === "offline") return this.owned(event.properties.sessionID, directory)
-    }
-    if (event.type === "session.deleted") return this.owned(event.properties.sessionID, directory)
-    return false
+  // Activity events must pass for owned sessions in inactive projects. Otherwise their sidebar
+  // rows keep a stale state, for example an offline error after the session reconnects.
+  private routed(event: ProviderEvent, directory?: string): boolean {
+    if (!ACTIVITY_EVENTS.has(event.type)) return false
+    const props = event.properties
+    const sid = "sessionID" in props && typeof props.sessionID === "string" ? props.sessionID : undefined
+    return sid !== undefined && this.owned(sid, directory)
   }
 
   private isCurrentProjectSession(sessionID: string): boolean {
