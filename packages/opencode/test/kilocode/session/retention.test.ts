@@ -142,9 +142,40 @@ describe("expiredRoots", () => {
     expect(run(rows).roots).toEqual(["parent", "grand"])
   })
 
-  it("keeps an expired child whose parent is not expired as its own root", () => {
-    const rows = [session("fresh-parent", 2), session("orphan-child", 35, { parentID: "fresh-parent" })]
-    expect(run(rows).roots).toEqual(["orphan-child"])
+  it("keeps an old sub-agent while its parent chat is fresh", () => {
+    const rows = [session("fresh-parent", 2), session("old-child", 35, { parentID: "fresh-parent" })]
+    const result = run(rows)
+    expect(result.expired.size).toBe(0)
+    expect(result.roots).toEqual([])
+  })
+
+  it("keeps old siblings when one sub-agent of an old chat is fresh", () => {
+    const rows = [
+      session("parent", 40),
+      session("fresh", 2, { parentID: "parent" }),
+      session("stale", 35, { parentID: "parent" }),
+    ]
+    expect(run(rows).expired.size).toBe(0)
+  })
+
+  it("keeps a chain of old sub-agents under a fresh chat", () => {
+    const rows = [
+      session("chat", 2),
+      session("mid", 35, { parentID: "chat" }),
+      session("leaf", 35, { parentID: "mid" }),
+    ]
+    expect(run(rows).expired.size).toBe(0)
+  })
+
+  it("holds back old sub-agents of a busy chat", () => {
+    const result = run([session("chat", 40), session("child", 35, { parentID: "chat" })], ["chat"])
+    expect(result.expired.size).toBe(0)
+    expect(result.skipped).toEqual(["chat", "child"])
+  })
+
+  it("judges a child whose parent row is missing by its own tree", () => {
+    const rows = [session("fresh", 2), session("orphan", 35, { parentID: "missing" })]
+    expect(run(rows).roots).toEqual(["orphan"])
   })
 })
 
@@ -342,9 +373,9 @@ runIt.live("candidate probes preserve cross-project descendant and busy-parent s
       rows: [{ id: child, parent, updated: old, message: old, part: now }],
     })
     const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(enabled))
-    expect(outcome.ran && outcome.result).toMatchObject({ scanned: 9, deleted: 2, failed: 0, skippedActive: 4 })
+    expect(outcome.ran && outcome.result).toMatchObject({ scanned: 9, deleted: 0, failed: 0, skippedActive: 5 })
     const rows = yield* db.select({ id: SessionTable.id }).from(SessionTable).all().pipe(Effect.orDie)
-    expect(rows.map((row) => row.id).sort()).toEqual(ids.filter((id) => id !== idle && id !== expired).sort())
+    expect(rows.map((row) => row.id).sort()).toEqual([...ids].sort())
   }),
 )
 

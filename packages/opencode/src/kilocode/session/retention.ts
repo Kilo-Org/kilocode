@@ -141,7 +141,8 @@ export namespace KiloSessionRetention {
    * expired ancestors to actually delete (the backend cascades children with
    * the parent), and expired sessions held back because they or a descendant
    * look busy. A parent is as fresh — and as protected — as its freshest
-   * descendant, so an old task with a recent or busy fork survives.
+   * descendant, so an old task with a recent or busy fork survives, and a
+   * child is as fresh as its top-level session.
    */
   export function expiredRoots(
     rows: Row[],
@@ -172,10 +173,25 @@ export namespace KiloSessionRetention {
       return next
     }
 
+    // A sub-agent session stops updating when it finishes, so a child is judged
+    // by its top-level chat: resuming an old chat keeps its earlier sub-agents.
+    const byId = new Map(rows.map((row) => [row.id, row]))
+    const top = (row: Row) => {
+      const seen = new Set<string>()
+      let cur = row
+      while (cur.parentID && !seen.has(cur.id)) {
+        seen.add(cur.id)
+        const next = byId.get(cur.parentID)
+        if (!next) break
+        cur = next
+      }
+      return cur
+    }
+
     const expired = new Set<string>()
     const skipped: string[] = []
     for (const row of rows) {
-      const state = touch(row)
+      const state = touch(top(row))
       if (input.now - state.updated < input.maxAgeDays * DAY_MS) continue
       if (state.busy) {
         skipped.push(row.id)
@@ -184,7 +200,6 @@ export namespace KiloSessionRetention {
       expired.add(row.id)
     }
 
-    const byId = new Map(rows.map((row) => [row.id, row]))
     const roots: string[] = []
     for (const row of rows) {
       if (!expired.has(row.id)) continue
@@ -290,7 +305,7 @@ export namespace KiloSessionRetention {
         updated: row.updated ?? now,
       }))
       // Select by age first so unrelated fresh sessions never require history
-      // probes. The second pass still propagates busy descendants to ancestors.
+      // probes. The second pass still propagates busy status across each session tree.
       const candidates = expiredRoots(mapped, { maxAgeDays: active.maxAgeDays, busy: new Set(), now })
       const recent = yield* busySessions(now, candidates.expired)
       const memory = yield* SessionStatus.busyAll()
