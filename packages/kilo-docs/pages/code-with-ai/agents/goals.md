@@ -119,6 +119,8 @@ Set `autonomous_goal.enabled: true` in your config to route `/goal` to the auton
 
 Model classes come from `autonomous_goal.models` (`local_small`, `local_coder`, `cloud_reasoner`) and fall back to `small_model`, `subagent_model`, and `model`. Cloud usage is limited by `autonomous_goal.budget`; when a limit is reached the goal pauses with the reason.
 
+The engine remembers each repository: the planner writes a short summary of the project that later goals receive as notes, and a per-project routing history moves a task complexity to a stronger model class once a local class has failed it repeatedly. An objective of the form `#123`, `owner/repo#123`, or a GitHub issue URL is resolved to the issue title and body through the `gh` CLI.
+
 Controls: `/goal <objective>` starts, `/goal status` (or bare `/goal`), `/goal tasks`, and `/goal budget` report progress, `/goal pause`, `/goal resume`, and `/goal clear` work as before. State is saved after every step, so a paused or restarted goal resumes from its task list. The session goal row shows `active`, `paused`, `blocked`, or `complete` as with the standard loop; `complete` here means the checks, goal check, and final review all passed.
 
 ## Related

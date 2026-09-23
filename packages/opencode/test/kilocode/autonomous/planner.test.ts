@@ -8,6 +8,7 @@ import { it, setup } from "./fixture"
 const model = { providerID: "test", modelID: "cloud" }
 const plan = (tasks: unknown[]) => ({
   goal_summary: "Add a greeting",
+  repo_summary: "node project, npm test",
   acceptance_criteria: [{ id: "ac1", description: "greet() returns hello" }],
   tasks,
   risks: [],

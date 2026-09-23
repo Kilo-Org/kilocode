@@ -19,6 +19,7 @@ it.instance(
       reply()
         .tool("StructuredOutput", {
           goal_summary: "s",
+          repo_summary: "r",
           acceptance_criteria: [{ id: "ac1", description: "c" }],
           tasks: [{ id: "t1", title: "t", description: "d", type: "implementation", complexity: 1, dependsOn: [], relevantFiles: [], acceptanceCriteria: ["ac1"], risk: {}, preferredModelClass: "local-coder" }],
           risks: [],

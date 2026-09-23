@@ -23,6 +23,7 @@ export namespace AutonomousPlanner {
 
   export const Plan = Schema.Struct({
     goal_summary: Schema.String,
+    repo_summary: Schema.String,
     acceptance_criteria: Schema.Array(Schema.Struct({ id: Schema.String, description: Schema.String })),
     tasks: Schema.Array(PlannedTask),
     risks: Schema.Array(Schema.String),
@@ -58,8 +59,12 @@ export namespace AutonomousPlanner {
     }))
   }
 
-  export function text(state: AutonomousState.Info, input?: { findings?: string[]; newWork?: string[] }) {
+  export type Extra = { findings?: string[]; newWork?: string[]; memory?: string; history?: string }
+
+  export function text(state: AutonomousState.Info, input?: Extra) {
     const lines = [`Objective:\n${state.objective}`]
+    if (input?.memory) lines.push(`Repository notes from a previous goal (verify anything you rely on; skip inspection you do not need):\n${input.memory}`)
+    if (input?.history) lines.push(`${input.history}\nPrefer local classes where their history is good; use cloud-reasoner where local runs kept failing.`)
     if (state.tasks.length) {
       lines.push(
         `Previous plan (revision ${state.revision}). Keep completed task ids unchanged:\n` +
@@ -86,8 +91,11 @@ export namespace AutonomousPlanner {
     model: AutonomousModels.Ref
     maxAttempts: number
     replan?: { findings?: string[]; newWork?: string[] }
+    memory?: string
+    history?: string
   }) {
-    let text = AutonomousPlanner.text(input.state, input.replan)
+    const extra: Extra = { ...input.replan, memory: input.memory, history: input.history }
+    let text = AutonomousPlanner.text(input.state, extra)
     let cost = 0
     const tokens = { input: 0, output: 0 }
     let errors: string[] = []
@@ -109,7 +117,7 @@ export namespace AutonomousPlanner {
         const tasks = toTasks(out.value, input.maxAttempts)
         return { plan: out.value, tasks, cost, tokens }
       }
-      text = `${AutonomousPlanner.text(input.state, input.replan)}\n\nYour previous plan was rejected:\n${errors.map((e) => `- ${e}`).join("\n")}\nFix the task graph and return the full plan again.`
+      text = `${AutonomousPlanner.text(input.state, extra)}\n\nYour previous plan was rejected:\n${errors.map((e) => `- ${e}`).join("\n")}\nFix the task graph and return the full plan again.`
     }
     return yield* new Invalid({ message: errors.join("; ") })
   })

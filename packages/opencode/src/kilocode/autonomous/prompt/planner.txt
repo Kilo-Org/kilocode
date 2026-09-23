@@ -5,6 +5,7 @@ Input: an objective, optionally the previous plan with task results and goal-che
 Do this:
 1. Inspect the repository enough to plan concretely: project type, test and lint commands, relevant modules and files. Use read, grep, glob and list. Keep inspection focused.
 2. Write a one-paragraph goal_summary.
+2b. Write repo_summary: a compact description of the repository for future runs (project type, how to run tests/lint/typecheck, key directories and modules, conventions). Keep it under 2000 characters and factual. When repository notes were provided, update them rather than starting from scratch.
 3. Write acceptance_criteria: observable, checkable statements. Each must be verifiable from the code, tests or a command. Give each a stable short id like "ac1".
 4. Split the objective into small tasks. Each task should be completable by one focused implementation run and should touch few files. Give each a stable short id like "t1". Set dependsOn to the ids it needs first. The graph must be acyclic.
 5. For every task set: type (research | implementation | test | review | repair | verification), complexity 0-4 (0 trivial edit, 1 small local change, 2 multi-file but mechanical, 3 needs design decisions, 4 architectural), relevantFiles, acceptanceCriteria (ids from step 3 it contributes to), risk flags (security, auth, schema, infra) when applicable, and preferredModelClass ("local-small", "local-coder" or "cloud-reasoner"). Prefer local classes; use cloud-reasoner only when reasoning about design is needed.

@@ -17,6 +17,8 @@ import { AutonomousBudget } from "./budget"
 import { AutonomousChecker } from "./checker"
 import { AutonomousConfig } from "./config"
 import { AutonomousFinal } from "./final"
+import { AutonomousIssue } from "./issue"
+import { AutonomousMemory } from "./memory"
 import { AutonomousLog } from "./log"
 import { AutonomousModels } from "./models"
 import { AutonomousPlanner } from "./planner"
@@ -26,6 +28,7 @@ import { AutonomousRouter } from "./router"
 import { AutonomousRunner } from "./runner"
 import { AutonomousScheduler } from "./scheduler"
 import { AutonomousState } from "./state"
+import { AutonomousStats } from "./stats"
 import { AutonomousStatus } from "./status"
 import { AutonomousStore } from "./store"
 import { AutonomousVerifier } from "./verifier"
@@ -118,6 +121,16 @@ export namespace AutonomousEngine {
       }).pipe(Effect.provideService(Provider.Service, provider))
       const dir = (yield* InstanceState.context).directory
       const checks = cfg.checks ? AutonomousVerifier.fromConfig(cfg.checks) : yield* AutonomousVerifier.detect(dir)
+      const projectID = String((yield* sessions.get(id).pipe(Effect.orDie)).projectID)
+      const memory = yield* AutonomousMemory.load(projectID)
+      let stats = yield* AutonomousStats.load(projectID)
+      const learn = (task: AutonomousState.Task) =>
+        Effect.gen(function* () {
+          stats = AutonomousStats.record(stats, task)
+          yield* AutonomousStats.save(stats)
+        })
+      const remember = (summary: string) =>
+        summary.trim().length ? AutonomousMemory.save({ projectID, summary }).pipe(Effect.asVoid) : Effect.void
       const charge = (modelClass: AutonomousState.ModelClass, out: { cost: number; tokens: { input: number; output: number } }, taskID?: string) =>
         AutonomousBudget.charge(state, { modelClass, taskID, cost: out.cost, tokens: out.tokens })
       const log = (event: string, opts?: { taskID?: string; detail?: string }) => AutonomousLog.record(state, event, opts)
@@ -129,8 +142,17 @@ export namespace AutonomousEngine {
           if (state.revision >= MAX_REVISIONS) return false
           if (!AutonomousBudget.allow(state, cfg)) return false
           state.revision++
-          const planned = yield* AutonomousPlanner.plan({ parent: id, state, model: models["cloud-reasoner"], maxAttempts: cfg.worker_max_attempts, replan: input })
+          const planned = yield* AutonomousPlanner.plan({
+            parent: id,
+            state,
+            model: models["cloud-reasoner"],
+            maxAttempts: cfg.worker_max_attempts,
+            replan: input,
+            memory: memory?.summary,
+            history: AutonomousStats.summary(stats),
+          })
           charge("cloud-reasoner", planned)
+          yield* remember(planned.plan.repo_summary)
           state.tasks = AutonomousScheduler.merge(state, planned.tasks)
           for (const c of planned.plan.acceptance_criteria) {
             if (!state.criteria.some((x) => x.id === c.id)) state.criteria.push({ id: c.id, description: c.description, status: "open" })
@@ -143,8 +165,16 @@ export namespace AutonomousEngine {
 
       if (state.status === "planning") {
         if (!AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
-        const planned = yield* AutonomousPlanner.plan({ parent: id, state, model: models["cloud-reasoner"], maxAttempts: cfg.worker_max_attempts })
+        const planned = yield* AutonomousPlanner.plan({
+          parent: id,
+          state,
+          model: models["cloud-reasoner"],
+          maxAttempts: cfg.worker_max_attempts,
+          memory: memory?.summary,
+          history: AutonomousStats.summary(stats),
+        })
         charge("cloud-reasoner", planned)
+        yield* remember(planned.plan.repo_summary)
         state.summary = planned.plan.goal_summary
         state.criteria = planned.plan.acceptance_criteria.map((c) => ({ id: c.id, description: c.description, status: "open" as const }))
         state.tasks = planned.tasks
@@ -172,6 +202,7 @@ export namespace AutonomousEngine {
           if (decision.action === "fail") {
             task.status = "failed"
             AutonomousScheduler.propagate(state)
+            yield* learn(task)
           }
           yield* persist(state)
         })
@@ -218,7 +249,7 @@ export namespace AutonomousEngine {
           return yield* settle(state, "completed", `Verified by checks, goal check and final review (${cls}). ${AutonomousStatus.budget(state)}`)
         }
 
-        const route = AutonomousRouter.route({ task, state, cfg, models })
+        const route = AutonomousRouter.route({ task, state, cfg, models, stats })
         if (!route.ok) return yield* paused(route.reason)
         task.route = { modelClass: route.modelClass, model: AutonomousModels.format(route.model), reason: route.reason }
         task.status = "running"
@@ -261,6 +292,7 @@ export namespace AutonomousEngine {
         for (const f of state.findings) if (f.taskID === task.id) f.resolved = true
         task.status = "completed"
         log("task.completed", { taskID: task.id, detail: worked.result.summary })
+        yield* learn(task)
         yield* persist(state)
       }
     })
@@ -307,11 +339,14 @@ export namespace AutonomousEngine {
 
     const start = Effect.fn("AutonomousEngine.start")(function* (id: SessionID, objective: string) {
       yield* guard(id)
-      const text = objective.trim()
-      if (!text) return yield* Effect.fail(new Error("Set a goal with /goal <objective> first."))
+      const raw = objective.trim()
+      if (!raw) return yield* Effect.fail(new Error("Set a goal with /goal <objective> first."))
+      const dir = (yield* InstanceState.context).directory
+      const resolved = yield* AutonomousIssue.resolve(raw, dir)
+      const text = resolved.objective
       if (text.length > 10_000) return yield* Effect.fail(new Error("Keep the goal under 10,000 characters."))
       const state = AutonomousState.create({ sessionID: id, objective: text })
-      AutonomousLog.record(state, "goal.started")
+      AutonomousLog.record(state, "goal.started", resolved.issue ? { detail: `from ${resolved.issue.url}` } : undefined)
       yield* persist(state)
       yield* launch(id, state)
       return state

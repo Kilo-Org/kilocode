@@ -168,8 +168,14 @@ Each package is one commit with tests. Order is top to bottom.
 - [x] Docs: "Autonomous engine (experimental)" section in `packages/kilo-docs/pages/code-with-ai/agents/goals.md`.
 - [x] Tests: command routing, status snapshot, existing goal tests unchanged with the flag off.
 
+### P16 – Repository memory, learned routing, GitHub issues
+- [x] `autonomous/memory.ts`: planner writes `repo_summary`; stored per project (`["autonomous-repo", projectID]`) and fed back to the next planner run so it skips rediscovery.
+- [x] `autonomous/stats.ts` + router: per-project outcome history by model class and complexity; after 5 runs a local class under 50% success is skipped for that complexity (only ever moves up, never down). Planner sees the history.
+- [x] `autonomous/issue.ts`: `/goal #123`, `owner/repo#123`, or an issue URL resolves to the issue title and body through the `gh` CLI.
+- [x] Tests: stats recording, history-aware routing, issue parsing and resolution, memory round-trip, planner prompt content.
+
 ### Later (not MVP)
-- Parallel workers with worktrees; learned router; repository memory; GitHub issue → PR; benchmark mode.
+- Parallel workers with worktrees; benchmark mode; opening a PR from a completed goal.
 
 ## 8. Execution loop
 

@@ -11,7 +11,7 @@ import { it, setup } from "./fixture"
 
 const so = (value: unknown) => reply().tool("StructuredOutput", value)
 const plan = (tasks: unknown[], criteria = [{ id: "ac1", description: "greet.ts exports greet" }]) =>
-  so({ goal_summary: "Add greet", acceptance_criteria: criteria, tasks, risks: [] }).usage({ input: 1000, output: 100 })
+  so({ goal_summary: "Add greet", repo_summary: "node project", acceptance_criteria: criteria, tasks, risks: [] }).usage({ input: 1000, output: 100 })
 const task = (id: string, over: Record<string, unknown> = {}) => ({
   id,
   title: `task ${id}`,
