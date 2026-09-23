@@ -95,6 +95,9 @@ const EASE = "cubic-bezier(0.23, 1, 0.32, 1)"
 const DURATION = 220
 // Matches --tool-motion-step in tool-motion.css.
 const STEP = 30
+// Height changes below this snap instead of animating. One output line is
+// about 18px, a diff body or an error card is much larger.
+const STEP_LIMIT = 40
 // Collapsible open and close keyframes already animate the height. Follow them instead.
 const TOGGLES = new Set(["tool-card-down", "tool-card-up"])
 
@@ -169,6 +172,10 @@ export function useToolSize(props: {
       grow = false
       if (from === undefined) return
       if (reduce() || resized || performance.now() < quiet || toggling()) return stop()
+      // Streamed growth arrives a line at a time. Clipping a small step would
+      // hide the bottom of the card (for example the approval line) until the
+      // animation catches up, so small steps snap and only large reveals glide.
+      if (!first && Math.abs(next - prev) < STEP_LIMIT) return stop()
       if (Math.abs(next - from) < 1) return
       run(from, next, first ? props.motion.stagger() * STEP : 0)
     })
