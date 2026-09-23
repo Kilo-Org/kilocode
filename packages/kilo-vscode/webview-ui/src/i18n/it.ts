@@ -662,10 +662,15 @@ export const dict = {
     "Cambio modello: la prossima richiesta non usa la cache ({{tokens}} token, circa {{cost}}).",
   "session.costNotice.variant":
     "Cambio ragionamento: la prossima richiesta non usa la cache ({{tokens}} token, circa {{cost}}).",
+  "session.costNotice.idle":
+    "Inattivo da {{minutes}} min: la prossima richiesta potrebbe non usare la cache ({{tokens}} token, circa {{cost}}).",
   "session.costNotice.dismiss": "Chiudi avviso sui costi",
   "settings.autoApprove.requestCost.title": "Avviso costo richiesta",
   "settings.autoApprove.requestCost.description":
     "Mostra un breve avviso quando una richiesta al modello costa almeno questo importo in USD, o lo costerà perché un cambio di modello o di ragionamento salta la cache. 0 lo disattiva.",
+  "settings.autoApprove.cacheIdle.title": "Avviso cache inattiva",
+  "settings.autoApprove.cacheIdle.description":
+    "Avvisa prima della prossima richiesta dopo questi minuti di inattività, perché la cache del prompt potrebbe essere scaduta. L'avviso appare solo quando la stima raggiunge l'importo dell'avviso sul costo della richiesta. 0 lo disattiva.",
   "time.today": "Oggi",
   "time.yesterday": "Ieri",
   "time.thisWeek": "Questa settimana",

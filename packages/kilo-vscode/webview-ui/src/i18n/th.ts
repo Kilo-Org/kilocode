@@ -781,10 +781,15 @@ export const dict = {
   "session.costNotice.subagent": "คำขอของเอเจนต์ย่อยมีค่าใช้จ่าย {{cost}}",
   "session.costNotice.model": "เปลี่ยนโมเดล: คำขอถัดไปจะไม่ใช้แคช ({{tokens}} โทเค็น ประมาณ {{cost}})",
   "session.costNotice.variant": "เปลี่ยนการให้เหตุผล: คำขอถัดไปจะไม่ใช้แคช ({{tokens}} โทเค็น ประมาณ {{cost}})",
+  "session.costNotice.idle":
+    "ไม่มีการใช้งาน {{minutes}} นาที: คำขอถัดไปอาจไม่ใช้แคช ({{tokens}} โทเค็น ประมาณ {{cost}})",
   "session.costNotice.dismiss": "ปิดการแจ้งค่าใช้จ่าย",
   "settings.autoApprove.requestCost.title": "การแจ้งค่าใช้จ่ายต่อคำขอ",
   "settings.autoApprove.requestCost.description":
     "แสดงประกาศสั้น ๆ เมื่อคำขอโมเดลหนึ่งครั้งมีค่าใช้จ่ายอย่างน้อยจำนวน USD นี้ หรือจะมีค่าใช้จ่ายเท่านี้เพราะการเปลี่ยนโมเดลหรือการให้เหตุผลข้ามแคช ตั้งเป็น 0 เพื่อปิด",
+  "settings.autoApprove.cacheIdle.title": "ประกาศแคชไม่มีการใช้งาน",
+  "settings.autoApprove.cacheIdle.description":
+    "เตือนก่อนคำขอถัดไปหลังจากไม่มีการใช้งานตามจำนวนนาทีนี้ เพราะแคชพรอมต์อาจหมดอายุแล้ว คำเตือนจะแสดงเฉพาะเมื่อค่าประมาณถึงจำนวนของประกาศค่าใช้จ่ายคำขอ ตั้งเป็น 0 เพื่อปิด",
 
   "time.today": "วันนี้",
   "time.yesterday": "เมื่อวาน",

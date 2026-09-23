@@ -767,10 +767,15 @@ export const dict = {
   "session.costNotice.subagent": "A subagent request cost {{cost}}.",
   "session.costNotice.model": "Model change: the next request is uncached ({{tokens}} tokens, about {{cost}}).",
   "session.costNotice.variant": "Reasoning change: the next request is uncached ({{tokens}} tokens, about {{cost}}).",
+  "session.costNotice.idle":
+    "Idle {{minutes}} min: the next request may be uncached ({{tokens}} tokens, about {{cost}}).",
   "session.costNotice.dismiss": "Dismiss cost notice",
   "settings.autoApprove.requestCost.title": "Request Cost Notice",
   "settings.autoApprove.requestCost.description":
     "Show a short notice when one model request costs at least this USD amount, or will cost it because a model or reasoning change skips the cache. Set to 0 to disable.",
+  "settings.autoApprove.cacheIdle.title": "Cache Idle Notice",
+  "settings.autoApprove.cacheIdle.description":
+    "Warn before the next request after this many idle minutes, because the prompt cache may have expired. The warning shows only when the estimate reaches the Request Cost Notice amount. Set to 0 to disable.",
 
   "time.today": "Today",
   "time.yesterday": "Yesterday",

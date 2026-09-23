@@ -761,10 +761,14 @@ export const dict = {
   "session.costNotice.subagent": "一次子代理请求花费 {{cost}}。",
   "session.costNotice.model": "已更换模型：下一个请求不使用缓存（{{tokens}} 个 token，约 {{cost}}）。",
   "session.costNotice.variant": "已更改推理设置：下一个请求不使用缓存（{{tokens}} 个 token，约 {{cost}}）。",
+  "session.costNotice.idle": "已空闲 {{minutes}} 分钟：下一个请求可能不使用缓存（{{tokens}} 个 token，约 {{cost}}）。",
   "session.costNotice.dismiss": "关闭费用提示",
   "settings.autoApprove.requestCost.title": "请求费用提示",
   "settings.autoApprove.requestCost.description":
     "当一次模型请求的费用至少达到此美元金额，或因更换模型或推理设置跳过缓存而将达到此金额时，显示简短提示。设为 0 可禁用。",
+  "settings.autoApprove.cacheIdle.title": "缓存空闲提示",
+  "settings.autoApprove.cacheIdle.description":
+    "空闲达到此分钟数后，在下一个请求前发出提醒，因为提示缓存可能已过期。仅当估算费用达到请求费用提示金额时才显示。设为 0 可禁用。",
 
   "time.today": "今天",
   "time.yesterday": "昨天",

@@ -80,6 +80,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
   if (message.type === "pushFixesSettingLoaded") return { "agentManager.pushFixes": message.enabled }
   if (message.type === "requestCostNoticeLoaded") return { requestCostNotice: message.value }
+  if (message.type === "cacheIdleNoticeLoaded") return { cacheIdleNotice: message.value }
 }
 
 export const ConfigProvider: ParentComponent = (props) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { cacheReset, createCostNotices, noticeThreshold } from "../../webview-ui/src/context/cost-notice"
+import { cacheReset, createCostNotices, idleMinutes, noticeThreshold } from "../../webview-ui/src/context/cost-notice"
 import type { ExtensionMessage, Part } from "../../webview-ui/src/types/messages"
 
 const step = (id: string, cost: number, end: number) =>
@@ -16,7 +16,7 @@ describe("cacheReset", () => {
 
   it("warns when the model changes and the resend reaches the threshold", () => {
     const hit = cacheReset({ ...base, last: { ...gpt }, next: claude })
-    expect(hit).toEqual({ kind: "model", tokens: 200_000, cost: 1 })
+    expect(hit).toEqual({ kind: "model", tokens: 200_000, cost: 1, minutes: 0 })
     expect(cacheReset({ ...base, tokens: 100_000, last: gpt, next: claude })).toBeUndefined()
   })
 
@@ -32,6 +32,15 @@ describe("cacheReset", () => {
     expect(cacheReset({ ...base, price: undefined, last: gpt, next: claude })).toBeUndefined()
     expect(cacheReset({ ...base, threshold: 0, last: gpt, next: claude })).toBeUndefined()
     expect(cacheReset({ ...base, next: claude })).toBeUndefined()
+  })
+
+  it("warns after the idle limit for any provider", () => {
+    const idle = { ...base, last: gpt, next: gpt, ttl: 5 }
+    expect(cacheReset({ ...idle, idle: 12 * 60_000 })).toEqual({ kind: "idle", tokens: 200_000, cost: 1, minutes: 12 })
+    expect(cacheReset({ ...idle, idle: 4 * 60_000 })).toBeUndefined()
+    expect(cacheReset({ ...idle, idle: 12 * 60_000, ttl: 0 })).toBeUndefined()
+    expect(cacheReset({ ...idle, idle: 12 * 60_000, tokens: 100_000 })).toBeUndefined()
+    expect(cacheReset({ ...idle, idle: 12 * 60_000, next: claude })?.kind).toBe("model")
   })
 })
 
@@ -68,5 +77,8 @@ describe("createCostNotices", () => {
     expect(noticeThreshold(-1)).toBe(1)
     expect(noticeThreshold(0)).toBe(0)
     expect(noticeThreshold(2.5)).toBe(2.5)
+    expect(idleMinutes(undefined)).toBe(5)
+    expect(idleMinutes(0)).toBe(0)
+    expect(idleMinutes(60)).toBe(60)
   })
 })

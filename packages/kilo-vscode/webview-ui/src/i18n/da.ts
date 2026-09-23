@@ -793,10 +793,15 @@ export const dict = {
   "session.costNotice.model": "Modelskift: næste anmodning bruger ikke cache ({{tokens}} tokens, cirka {{cost}}).",
   "session.costNotice.variant":
     "Ændret ræsonnering: næste anmodning bruger ikke cache ({{tokens}} tokens, cirka {{cost}}).",
+  "session.costNotice.idle":
+    "Inaktiv i {{minutes}} min: næste anmodning bruger måske ikke cache ({{tokens}} tokens, cirka {{cost}}).",
   "session.costNotice.dismiss": "Luk omkostningsmeddelelse",
   "settings.autoApprove.requestCost.title": "Meddelelse om anmodningsomkostning",
   "settings.autoApprove.requestCost.description":
     "Vis en kort besked, når én modelanmodning koster mindst dette USD-beløb, eller vil koste det, fordi et skift af model eller ræsonnering springer cachen over. 0 slår den fra.",
+  "settings.autoApprove.cacheIdle.title": "Besked om inaktiv cache",
+  "settings.autoApprove.cacheIdle.description":
+    "Advar før næste anmodning efter så mange minutters inaktivitet, fordi prompt-cachen måske er udløbet. Advarslen vises kun, når estimatet når beløbet for anmodningsomkostning. 0 slår den fra.",
 
   "time.today": "I dag",
   "time.yesterday": "I går",

@@ -845,6 +845,11 @@ export interface RequestCostNoticeLoadedMessage {
   value: number
 }
 
+export interface CacheIdleNoticeLoadedMessage {
+  type: "cacheIdleNoticeLoaded"
+  value: number
+}
+
 export interface PushFixesSettingLoadedMessage {
   type: "pushFixesSettingLoaded"
   enabled: boolean
@@ -1750,6 +1755,7 @@ export type ExtensionMessage =
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
   | RequestCostNoticeLoadedMessage
+  | CacheIdleNoticeLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage

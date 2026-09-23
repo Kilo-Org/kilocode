@@ -3,8 +3,8 @@
  * whose reported cost reaches the Request Cost Notice threshold. Costs come
  * from step-finish parts, one per model request. Assistant message costs can
  * also hold subagent spend, so they are not used here. Before a request: a
- * warning when a model or reasoning change will resend the context without
- * cache.
+ * warning when a model or reasoning change, or a long idle time, will resend
+ * the context without cache.
  */
 
 import { createSignal } from "solid-js"
@@ -20,14 +20,24 @@ export function noticeThreshold(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : NOTICE_THRESHOLD
 }
 
+/** Default idle minutes before the cache expiry warning. 0 disables it. */
+export const IDLE_MINUTES = 5
+
+/** Read the idle minutes from extension settings. */
+export function idleMinutes(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : IDLE_MINUTES
+}
+
 type Model = { providerID: string; modelID: string }
 
-export type CacheReset = { kind: "model" | "variant"; tokens: number; cost: number }
+export type CacheReset = { kind: "model" | "variant" | "idle"; tokens: number; cost: number; minutes: number }
 
 /**
  * Warn before a request that cannot use the prompt cache. A different model
  * never shares a cache. On Anthropic models a different thinking or effort
- * setting also invalidates the cached messages. The cost is an estimate:
+ * setting also invalidates the cached messages. After `ttl` idle minutes the
+ * provider cache may have expired. Cache lifetimes differ by provider, so
+ * one configurable limit applies to all of them. The cost is an estimate:
  * the session context at the input price of the next model.
  */
 export function cacheReset(input: {
@@ -37,6 +47,8 @@ export function cacheReset(input: {
   tokens: number
   price?: number
   threshold: number
+  idle?: number
+  ttl?: number
 }): CacheReset | undefined {
   const last = input.last
   const next = input.next
@@ -44,10 +56,13 @@ export function cacheReset(input: {
   const model = last.providerID !== next.providerID || last.modelID !== next.modelID
   const variant =
     (last.variant ?? "") !== (input.variant ?? "") && /anthropic|claude/i.test(`${next.providerID}/${next.modelID}`)
-  if (!model && !variant) return undefined
+  const ttl = input.ttl ?? 0
+  const idle = ttl > 0 && input.idle != null && input.idle >= ttl * 60_000
+  if (!model && !variant && !idle) return undefined
   const cost = (input.tokens * input.price) / 1_000_000
   if (cost < input.threshold) return undefined
-  return { kind: model ? "model" : "variant", tokens: input.tokens, cost }
+  const kind = model ? "model" : variant ? "variant" : "idle"
+  return { kind, tokens: input.tokens, cost, minutes: Math.floor((input.idle ?? 0) / 60_000) }
 }
 
 /**

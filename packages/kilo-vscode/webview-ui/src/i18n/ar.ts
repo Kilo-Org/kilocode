@@ -775,10 +775,15 @@ export const dict = {
   "session.costNotice.subagent": "تكلفة طلب وكيل فرعي {{cost}}.",
   "session.costNotice.model": "تغيير النموذج: الطلب التالي بدون ذاكرة تخزين مؤقت ({{tokens}} رمز، نحو {{cost}}).",
   "session.costNotice.variant": "تغيير الاستدلال: الطلب التالي بدون ذاكرة تخزين مؤقت ({{tokens}} رمز، نحو {{cost}}).",
+  "session.costNotice.idle":
+    "خامل {{minutes}} دقيقة: قد يكون الطلب التالي بدون ذاكرة تخزين مؤقت ({{tokens}} رمز، نحو {{cost}}).",
   "session.costNotice.dismiss": "إغلاق إشعار التكلفة",
   "settings.autoApprove.requestCost.title": "إشعار تكلفة الطلب",
   "settings.autoApprove.requestCost.description":
     "عرض إشعار قصير عندما يكلف طلب نموذج واحد هذا المبلغ بالدولار على الأقل، أو سيكلفه لأن تغيير النموذج أو الاستدلال يتجاوز ذاكرة التخزين المؤقت. 0 يعطّله.",
+  "settings.autoApprove.cacheIdle.title": "إشعار خمول ذاكرة التخزين المؤقت",
+  "settings.autoApprove.cacheIdle.description":
+    "التحذير قبل الطلب التالي بعد هذا العدد من دقائق الخمول، لأن ذاكرة التخزين المؤقت ربما انتهت صلاحيتها. يظهر التحذير فقط عندما يصل التقدير إلى مبلغ إشعار تكلفة الطلب. 0 يعطّله.",
 
   "time.today": "اليوم",
   "time.yesterday": "أمس",

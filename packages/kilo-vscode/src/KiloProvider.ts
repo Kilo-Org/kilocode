@@ -206,7 +206,7 @@ import {
   watchAutoApprovalReasonConfig,
 } from "./kilo-provider/auto-approval-reason-settings"
 import { buildPushFixesSettingMessage, pushFixes, watchPushFixesConfig } from "./kilo-provider/push-fixes-settings"
-import { requestCostNotice, watchRequestCostConfig } from "./kilo-provider/request-cost-settings"
+import { cacheIdleNotice, requestCostNotice, watchRequestCostConfig } from "./kilo-provider/request-cost-settings"
 
 type ReviewCommentsHandler = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string) => void
 
@@ -4214,6 +4214,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return {
       maxCost: this.maxCostSetting(),
       requestCostNotice: requestCostNotice(),
+      cacheIdleNotice: cacheIdleNotice(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
       multiProject: this.multiProjectSetting(),
       claudeMigration: this.claudeMigrationSetting(),

@@ -786,10 +786,15 @@ export const dict = {
   "session.costNotice.model": "モデル変更: 次のリクエストはキャッシュを使いません ({{tokens}} トークン、約 {{cost}})。",
   "session.costNotice.variant":
     "推論設定の変更: 次のリクエストはキャッシュを使いません ({{tokens}} トークン、約 {{cost}})。",
+  "session.costNotice.idle":
+    "{{minutes}} 分間アイドル: 次のリクエストはキャッシュを使えない可能性があります ({{tokens}} トークン、約 {{cost}})。",
   "session.costNotice.dismiss": "コスト通知を閉じる",
   "settings.autoApprove.requestCost.title": "リクエストコスト通知",
   "settings.autoApprove.requestCost.description":
     "1 回のモデルリクエストがこの USD 金額以上かかるとき、またはモデルや推論設定の変更でキャッシュが使われずにかかる見込みのときに短い通知を表示します。0 で無効になります。",
+  "settings.autoApprove.cacheIdle.title": "キャッシュのアイドル通知",
+  "settings.autoApprove.cacheIdle.description":
+    "この分数だけアイドル状態が続いたとき、プロンプトキャッシュが期限切れの可能性があるため次のリクエストの前に警告します。見積もりがリクエストコスト通知の金額に達したときだけ表示します。0 で無効になります。",
 
   "time.today": "今日",
   "time.yesterday": "昨日",

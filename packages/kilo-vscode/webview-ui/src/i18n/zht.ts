@@ -721,10 +721,14 @@ export const dict = {
   "session.costNotice.subagent": "一次子代理請求花費 {{cost}}。",
   "session.costNotice.model": "已更換模型：下一個請求不使用快取（{{tokens}} 個 token，約 {{cost}}）。",
   "session.costNotice.variant": "已變更推理設定：下一個請求不使用快取（{{tokens}} 個 token，約 {{cost}}）。",
+  "session.costNotice.idle": "已閒置 {{minutes}} 分鐘：下一個請求可能不使用快取（{{tokens}} 個 token，約 {{cost}}）。",
   "session.costNotice.dismiss": "關閉費用提示",
   "settings.autoApprove.requestCost.title": "請求費用提示",
   "settings.autoApprove.requestCost.description":
     "當一次模型請求的費用至少達到此美元金額，或因更換模型或推理設定略過快取而將達到此金額時，顯示簡短提示。設為 0 可停用。",
+  "settings.autoApprove.cacheIdle.title": "快取閒置提示",
+  "settings.autoApprove.cacheIdle.description":
+    "閒置達到此分鐘數後，在下一個請求前發出提醒，因為提示快取可能已過期。僅當估算費用達到請求費用提示金額時才顯示。設為 0 可停用。",
 
   "time.today": "今天",
   "time.yesterday": "昨天",

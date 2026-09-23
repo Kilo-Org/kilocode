@@ -1126,6 +1126,12 @@
           "minimum": 0,
           "description": "Show a short notice when one model request costs at least this USD amount, or will cost it because a model or reasoning change skips the cache. Set to 0 to disable."
         },
+        "kilo-code.new.cacheIdleNotice": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "description": "Warn before the next request when the session was idle for this many minutes, because the prompt cache may have expired. The warning shows only when the estimated cost reaches the Request Cost Notice amount. Set to 0 to disable."
+        },
         "kilo-code.new.fontSize": {
           "type": "number",
           "default": 13,
