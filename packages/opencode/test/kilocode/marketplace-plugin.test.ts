@@ -23,13 +23,13 @@ describe("marketplace plugin helpers", () => {
     expect(pluginIdentity(["pkg", { option: true }])).toBe("pkg")
     expect(pluginIdentity("file:///tmp/plugin")).toBe("file:///tmp/plugin")
     expect(pluginIdentity("git:github.com/owner/repo")).toBe("git/github.com/owner/repo")
-    expect(pluginIdentity("git:github.com/owner/repo@v1.2.3")).toBe("github.com/owner/repo")
+    expect(pluginIdentity("git:github.com/owner/repo@v1.2.3")).toBe("git/github.com/owner/repo")
     expect(pluginIdentity("git:github.com/owner/repo#plugins/my-plugin")).toBe(
-      "github.com/owner/repo/plugins/my-plugin",
+      "git/github.com/owner/repo/plugins/my-plugin",
     )
-    expect(pluginIdentity("git:https://github.com/owner/repo.git@main#sub/dir")).toBe("github.com/owner/repo/sub/dir")
-    expect(pluginIdentity("git:file:///tmp/repo")).toBe("/tmp/repo")
-    expect(pluginIdentity("git:/tmp/repo")).toBe("/tmp/repo")
+    expect(pluginIdentity("git:https://github.com/owner/repo.git@main#sub/dir")).toBe("git/github.com/owner/repo/sub/dir")
+    expect(pluginIdentity("git:file:///tmp/repo")).toBe("git/tmp/repo")
+    expect(pluginIdentity("git:/tmp/repo")).toBe("git/tmp/repo")
     expect(pluginIdentity(42)).toBeUndefined()
   })
 
