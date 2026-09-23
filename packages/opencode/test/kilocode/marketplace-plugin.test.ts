@@ -7,25 +7,33 @@ import { Global } from "@opencode-ai/core/global"
 import { Filesystem } from "../../src/util/filesystem"
 import { detect } from "../../src/kilocode/marketplace/detection"
 import { install, remove } from "../../src/kilocode/marketplace/installer"
-import { pluginPackageName } from "../../src/kilocode/marketplace/plugin-spec"
+import { pluginIdentity } from "../../src/kilocode/marketplace/plugin-spec"
 import { patchPlugin } from "../../src/kilocode/marketplace/plugin-config"
 import { pluginFiles } from "../../src/kilocode/marketplace/paths"
 import type { MarketplaceRemoveResult } from "../../src/kilocode/marketplace/schema"
 import { tmpdir } from "../fixture/fixture"
 
 describe("marketplace plugin helpers", () => {
-  test("extracts package names from plugin specs", () => {
-    expect(pluginPackageName("opencode-models-discovery")).toBe("opencode-models-discovery")
-    expect(pluginPackageName("opencode-models-discovery@1.2.3")).toBe("opencode-models-discovery")
-    expect(pluginPackageName("@scope/plugin")).toBe("@scope/plugin")
-    expect(pluginPackageName("@scope/plugin@2.3.4")).toBe("@scope/plugin")
-    expect(pluginPackageName(["@scope/plugin@next", { option: true }])).toBe("@scope/plugin")
-    expect(pluginPackageName(["pkg", { option: true }])).toBe("pkg")
-    expect(pluginPackageName("file:///tmp/plugin")).toBe("file:///tmp/plugin")
-    expect(pluginPackageName(42)).toBeUndefined()
+  test("extracts identities from plugin specs", () => {
+    expect(pluginIdentity("opencode-models-discovery")).toBe("opencode-models-discovery")
+    expect(pluginIdentity("opencode-models-discovery@1.2.3")).toBe("opencode-models-discovery")
+    expect(pluginIdentity("@scope/plugin")).toBe("@scope/plugin")
+    expect(pluginIdentity("@scope/plugin@2.3.4")).toBe("@scope/plugin")
+    expect(pluginIdentity(["@scope/plugin@next", { option: true }])).toBe("@scope/plugin")
+    expect(pluginIdentity(["pkg", { option: true }])).toBe("pkg")
+    expect(pluginIdentity("file:///tmp/plugin")).toBe("file:///tmp/plugin")
+    expect(pluginIdentity("git:github.com/owner/repo")).toBe("github.com/owner/repo")
+    expect(pluginIdentity("git:github.com/owner/repo@v1.2.3")).toBe("github.com/owner/repo")
+    expect(pluginIdentity("git:github.com/owner/repo#plugins/my-plugin")).toBe(
+      "github.com/owner/repo/plugins/my-plugin",
+    )
+    expect(pluginIdentity("git:https://github.com/owner/repo.git@main#sub/dir")).toBe("github.com/owner/repo/sub/dir")
+    expect(pluginIdentity("git:file:///tmp/repo")).toBe("/tmp/repo")
+    expect(pluginIdentity("git:/tmp/repo")).toBe("/tmp/repo")
+    expect(pluginIdentity(42)).toBeUndefined()
   })
 
-  test("rejects plugin items whose id is not the package name", async () => {
+  test("rejects plugin items whose id is not the plugin identity", async () => {
     const out = await Effect.runPromise(
       install({} as never, {
         item: { type: "plugin", id: "slug", content: "opencode-models-discovery" },
@@ -33,7 +41,7 @@ describe("marketplace plugin helpers", () => {
       }),
     )
     expect(out.success).toBe(false)
-    expect(out.error).toContain("must match the package name")
+    expect(out.error).toContain("must match the plugin identity")
   })
 
   test.each(["{ not valid json", '{"plugin":["other-plugin"], "bad": }'])(
