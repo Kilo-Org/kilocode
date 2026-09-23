@@ -115,37 +115,37 @@ export const Info = Schema.Struct({
           }),
         }),
       ),
-      worker_max_attempts: Schema.optional(PositiveInt).annotate({
+      worker_max_attempts: Schema.optional(PositiveInt.annotate({
         description: "Local attempts per task before escalation. Defaults 2.",
-      }),
+      })),
       routing: Schema.optional(
         Schema.Struct({
-          local_small_max_complexity: Schema.optional(NonNegativeInt).annotate({
+          local_small_max_complexity: Schema.optional(NonNegativeInt.annotate({
             description: "Highest task complexity routed to local_small. Defaults 0.",
-          }),
-          local_coder_max_complexity: Schema.optional(NonNegativeInt).annotate({
+          })),
+          local_coder_max_complexity: Schema.optional(NonNegativeInt.annotate({
             description: "Highest task complexity routed to local_coder. Defaults 2.",
-          }),
+          })),
         }),
       ),
       stuck: Schema.optional(
         Schema.Struct({
-          same_error_limit: Schema.optional(PositiveInt).annotate({
+          same_error_limit: Schema.optional(PositiveInt.annotate({
             description: "Identical failures before escalating. Defaults 2.",
-          }),
+          })),
         }),
       ),
       budget: Schema.optional(
         Schema.Struct({
-          cloud_task_max_usd: Schema.optional(NonNegativeMoney).annotate({ description: "Defaults 2." }),
-          cloud_goal_max_usd: Schema.optional(NonNegativeMoney).annotate({ description: "Defaults 10." }),
-          max_cloud_calls_per_task: Schema.optional(NonNegativeInt).annotate({ description: "Defaults 3." }),
-          max_cloud_calls_per_goal: Schema.optional(NonNegativeInt).annotate({ description: "Defaults 20." }),
+          cloud_task_max_usd: Schema.optional(NonNegativeMoney.annotate({ description: "Defaults 2." })),
+          cloud_goal_max_usd: Schema.optional(NonNegativeMoney.annotate({ description: "Defaults 10." })),
+          max_cloud_calls_per_task: Schema.optional(NonNegativeInt.annotate({ description: "Defaults 3." })),
+          max_cloud_calls_per_goal: Schema.optional(NonNegativeInt.annotate({ description: "Defaults 20." })),
         }),
       ),
-      final_review_cloud_at_complexity: Schema.optional(NonNegativeInt).annotate({
+      final_review_cloud_at_complexity: Schema.optional(NonNegativeInt.annotate({
         description: "Use cloud_reasoner for the final review when any task complexity reaches this. Defaults 3.",
-      }),
+      })),
       checks: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
         description: "Shell commands run as mechanical checks. Overrides automatic detection.",
       }),

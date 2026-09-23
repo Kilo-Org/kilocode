@@ -174,8 +174,15 @@ Each package is one commit with tests. Order is top to bottom.
 - [x] `autonomous/issue.ts`: `/goal #123`, `owner/repo#123`, or an issue URL resolves to the issue title and body through the `gh` CLI.
 - [x] Tests: stats recording, history-aware routing, issue parsing and resolution, memory round-trip, planner prompt content.
 
+### P17 – Review hardening (PR #14499 findings)
+- [x] Headless: engine-only controls gated on the server flag; config errors surface; goal wait has a deadline and closes the drain.
+- [x] Budget: failed runner calls are charged; prototype task ids rejected; numeric config knobs constrained.
+- [x] Loop: duplicate deps are not cycles; worker error vs reported block; resume retries failed tasks; start refuses a live run.
+- [x] Safety: worker bash denies cover option-prefixed git, absolute paths, wrappers, nested shells, all `rm -r/-f` forms; shell runner uses a process group, kills on interrupt, escalates to SIGKILL, hides Windows consoles.
+- [x] Data: verifier finds the program behind env/cd prefixes; reviewer bounds untracked reads; worker parses renames; stats keyed by the first-attempt class and merged on write; memory counts goals once.
+
 ### Later (not MVP)
-- Parallel workers with worktrees; benchmark mode; opening a PR from a completed goal.
+- Parallel workers with worktrees; benchmark mode; opening a PR from a completed goal (conflicts with the no-autonomous-push guardrail; would need an explicit opt-in).
 
 ## 8. Execution loop
 
