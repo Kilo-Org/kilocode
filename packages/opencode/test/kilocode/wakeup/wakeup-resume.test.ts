@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import fs from "fs"
-import { rm } from "fs/promises"
+import { remove as cleanup } from "../cleanup"
 import os from "os"
 import path from "path"
 import { Effect } from "effect"
@@ -197,7 +197,7 @@ describe("wakeup resume", () => {
       expect(pending.map((item) => item.id)).not.toContain(info.id)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -280,7 +280,7 @@ describe("wakeup resume", () => {
       expect(bodies.some((body) => body.includes("[scheduled wakeup]"))).toBe(false)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -386,7 +386,7 @@ describe("wakeup resume", () => {
       expect(done.text).toBe(objective)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -493,7 +493,7 @@ describe("wakeup resume", () => {
       expect(done.text).toBe(objective)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -603,7 +603,7 @@ describe("wakeup resume", () => {
       expect(done.status).not.toBe("waiting")
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -694,7 +694,7 @@ describe("wakeup resume", () => {
       expect(bodies.some((body) => body.includes("[scheduled wakeup]"))).toBe(false)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -819,7 +819,7 @@ describe("wakeup resume", () => {
       expect(done.active).toBe(false)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -937,7 +937,7 @@ describe("wakeup resume", () => {
       expect(ids).not.toContain(awaited.id)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 })

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import fs from "fs"
-import { rm } from "fs/promises"
+import { remove as cleanup } from "../cleanup"
 import os from "os"
 import path from "path"
 import { Context, Effect, Layer } from "effect"
@@ -87,7 +87,7 @@ const dirLayer = Layer.effect(
     Effect.sync(() => ({ dir: fs.mkdtempSync(path.join(os.tmpdir(), "opencode-wakeup-cron-")) })),
     ({ dir }) =>
       Effect.promise(() =>
-        rm(dir, { recursive: true, force: true }).catch(() => {
+        cleanup(dir).catch(() => {
           // best effort cleanup of a temp directory
         }),
       ),
@@ -781,7 +781,7 @@ describe("Wakeup cron goal resume", () => {
       expect(done.text).toBe(objective)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -897,7 +897,7 @@ describe("Wakeup cron goal resume", () => {
       expect(done.text).toBe(objective)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 45_000)
 })
