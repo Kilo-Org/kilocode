@@ -20,12 +20,12 @@ type Call = { part?: Tool; raw: string; timer?: ReturnType<typeof setTimeout>; s
 const INTERVAL = 50
 // Keep at most this many open calls, so an aborted stream cannot grow the map.
 const CAP = 50
-// Strings that show while they stream. Other fields show once complete.
+// Strings that count while they stream. Other fields show once complete.
 const LIVE = new Set(["content", "command"])
-// Large fields the webview does not render while a call is pending.
-const HIDDEN = new Set(["oldString", "newString", "patchText", "edits"])
+// Large fields the webview does not render while a call is pending. Written
+// content only feeds the line count, so the header grows without sending text.
+const HIDDEN = new Set(["content", "oldString", "newString", "patchText", "edits"])
 const CHARS = 2400
-const TAIL = 12
 
 function tool(part: unknown): part is Tool {
   if (!part || typeof part !== "object") return false
@@ -41,35 +41,28 @@ function lines(text: string) {
   return count
 }
 
-function tail(text: string) {
-  let at = text.length
-  for (let i = 0; i < TAIL && at > 0; i++) at = text.lastIndexOf("\n", at - 1)
-  const start = Math.max(at + 1, text.length - CHARS)
-  return text.slice(start)
-}
-
 function shape(name: string, input: Record<string, unknown>): Shown {
   const next: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(input)) {
     if (HIDDEN.has(key)) continue
-    next[key] = typeof value === "string" && key !== "content" && value.length > CHARS ? value.slice(0, CHARS) : value
+    next[key] = typeof value === "string" && value.length > CHARS ? value.slice(0, CHARS) : value
   }
   const content = input.content
   if (name !== "write" || typeof content !== "string") return { input: next }
-  return { input: { ...next, content: tail(content) }, lines: lines(content) }
+  return { input: next, lines: lines(content) }
 }
 
 function show<T extends Tool>(part: T, shown: Shown, merge: boolean): T {
-  const input = merge ? { ...part.state.input, content: shown.input.content } : shown.input
+  const input = merge ? part.state.input : shown.input
   const metadata = shown.lines === undefined ? part.state.metadata : { ...part.state.metadata, lines: shown.lines }
   return { ...part, state: { ...part.state, input, ...(metadata ? { metadata } : {}) } }
 }
 
 /**
  * Turns streamed tool input fragments into pending part updates, so a tool
- * row shows its file path, command, or written content while the model still
- * generates the arguments. A running `write` keeps the last streamed content
- * tail, because part updates strip the full content.
+ * row shows its file path, command, or the line count of written content while
+ * the model still generates the arguments. A running `write` keeps the line
+ * count until its diff arrives.
  */
 export class ToolInputStream {
   private readonly calls = new Map<string, Call>()
@@ -94,7 +87,7 @@ export class ToolInputStream {
     if (!call) return part
     if (call.timer) clearTimeout(call.timer)
     call.timer = undefined
-    if (status !== "running" || part.tool !== "write" || !call.shown) {
+    if (status !== "running" || part.tool !== "write" || call.shown?.lines === undefined) {
       this.calls.delete(part.callID)
       return part
     }

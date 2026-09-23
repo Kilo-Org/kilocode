@@ -43,7 +43,8 @@ describe("ToolInputStream", () => {
     expect(pushed).toHaveLength(1)
     const state = (pushed[0]!.part as Part).state
     expect(state.status).toBe("pending")
-    expect(state.input).toEqual({ filePath: "src/a.ts", content: "one\ntwo\nthr" })
+    // Written content only feeds the line count; the text itself stays on the host.
+    expect(state.input).toEqual({ filePath: "src/a.ts" })
     expect(state.metadata).toEqual({ lines: 3 })
     stream.dispose()
   })
@@ -57,37 +58,24 @@ describe("ToolInputStream", () => {
     stream.track(part("write", "pending"))
     stream.delta({ callID: "call_1", delta: '"content":"x' })
     await wait()
-    expect((pushed[0]!.part as Part).state.input).toEqual({ filePath: "src/a.ts", content: "x" })
+    expect((pushed[0]!.part as Part).state.input).toEqual({ filePath: "src/a.ts" })
+    expect((pushed[0]!.part as Part).state.metadata).toEqual({ lines: 1 })
     stream.dispose()
   })
 
-  test("keeps only the last lines of long written content", async () => {
-    const { pushed, stream } = setup()
-    stream.track(part("write", "pending"))
-    const body = Array.from({ length: 40 }, (_, i) => `line ${i + 1}`).join("\\n")
-    stream.delta({ callID: "call_1", delta: `{"filePath":"a.ts","content":"${body}` })
-    await wait()
-
-    const input = (pushed[0]!.part as Part).state.input!
-    expect((input.content as string).split("\n")).toHaveLength(12)
-    expect(input.content).toEndWith("line 40")
-    expect((pushed[0]!.part as Part).state.metadata).toEqual({ lines: 40 })
-    stream.dispose()
-  })
-
-  test("keeps the streamed tail on a running write and forgets the call when it settles", async () => {
+  test("keeps the line count on a running write and forgets the call when it settles", async () => {
     const { stream } = setup()
     stream.track(part("write", "pending"))
     stream.delta({ callID: "call_1", delta: '{"filePath":"a.ts","content":"a\\nb\\n"}' })
     await wait()
 
     const running = stream.track(part("write", "running", { filePath: "a.ts" }))
-    expect(running.state.input).toEqual({ filePath: "a.ts", content: "a\nb\n" })
+    expect(running.state.input).toEqual({ filePath: "a.ts" })
     expect(running.state.metadata).toEqual({ lines: 2 })
 
     const done = part("write", "completed", { filePath: "a.ts" })
     expect(stream.track(done)).toBe(done)
-    expect(stream.track(part("write", "running", { filePath: "a.ts" })).state.input).toEqual({ filePath: "a.ts" })
+    expect(stream.track(part("write", "running", { filePath: "a.ts" })).state.metadata).toBeUndefined()
     stream.dispose()
   })
 

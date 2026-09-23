@@ -3000,8 +3000,8 @@ ToolRegistry.register({
     const path = createMemo(() => props.input.filePath || "")
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
-    // While the model streams the file, the host sends the last lines as
-    // `input.content` and the full line count as `metadata.lines`.
+    // While the model streams the file, the host sends its line count as
+    // `metadata.lines`, so the header counts up before the diff exists.
     const streamed = () =>
       pending() && typeof props.metadata?.lines === "number" ? { additions: props.metadata.lines, deletions: 0 } : undefined
     // Lazy like the edit card: only parsed when the deferred body mounts or the
@@ -3078,11 +3078,6 @@ ToolRegistry.register({
             </div>
           }
         >
-          <Show when={pending() && !path() && props.input.content}>
-            <div data-component="write-content">
-              <pre data-component="write-stream">{props.input.content}</pre>
-            </div>
-          </Show>
           <Show when={(props.input.content || view()) && path()}>
             <ToolFileAccordion
               path={path()}
@@ -3094,24 +3089,16 @@ ToolRegistry.register({
                 <Show
                   when={view()}
                   fallback={
-                    <Show
-                      when={!pending()}
-                      fallback={
-                        // Plain text while streaming: re-highlighting a growing file on every update would flicker.
-                        <pre data-component="write-stream">{props.input.content}</pre>
-                      }
-                    >
-                      <Dynamic
-                        component={fileComponent}
-                        mode="text"
-                        file={{
-                          name: props.input.filePath,
-                          contents: props.input.content,
-                          cacheKey: checksum(props.input.content),
-                        }}
-                        overflow="scroll"
-                      />
-                    </Show>
+                    <Dynamic
+                      component={fileComponent}
+                      mode="text"
+                      file={{
+                        name: props.input.filePath,
+                        contents: props.input.content,
+                        cacheKey: checksum(props.input.content),
+                      }}
+                      overflow="scroll"
+                    />
                   }
                 >
                   {(diff) => (
