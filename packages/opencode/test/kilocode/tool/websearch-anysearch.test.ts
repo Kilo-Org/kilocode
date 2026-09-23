@@ -11,6 +11,7 @@ import type { Tool } from "../../../src/tool/tool"
 import { Truncate } from "../../../src/tool/truncate"
 import { WebSearchTool, selectWebSearchProvider, webSearchProviderLabel } from "../../../src/tool/websearch"
 import {
+  ANYSEARCH_CLIENT,
   ANYSEARCH_URL,
   MAX_ANYSEARCH_RESULTS,
   callAnySearch,
@@ -152,10 +153,14 @@ describe("AnySearch request", () => {
     const recorded: Recorded = {}
     const exit = await run({ query: "Kilo Code" }, json(200, ok([])), undefined, recorded)
 
-    expect(value(exit)).toBe("No search results found. Please try a different query.")
+    expect(value(exit)).toBe(`No search results found. Please try a different query.\n\nRequest ID: ${id}`)
     expect(recorded.url).toBe(ANYSEARCH_URL)
     expect(recorded.method).toBe("POST")
-    expect(recorded.headers).toMatchObject({ accept: "application/json", "content-type": "application/json" })
+    expect(recorded.headers).toMatchObject({
+      accept: "application/json",
+      "content-type": "application/json",
+      "x-anysearch-client": ANYSEARCH_CLIENT,
+    })
     expect(recorded.headers).not.toHaveProperty("authorization")
     expect(recorded.body).toEqual({ query: "Kilo Code", max_results: 8 })
   })
@@ -171,6 +176,7 @@ describe("AnySearch request", () => {
     )
 
     expect(recorded.headers?.authorization).toBe(`Bearer ${key}`)
+    expect(recorded.headers?.["x-anysearch-client"]).toBe(ANYSEARCH_CLIENT)
     expect(recorded.body).toEqual({ query: "Kilo Code", max_results: 3 })
     expect(value(exit)).toContain("[1] Result")
     expect(value(exit)).not.toContain(key)
@@ -232,9 +238,14 @@ describe("AnySearch results", () => {
     expect(value(exit)).not.toContain("No URL")
   })
 
-  test("uses the no-results fallback when every item is unusable", async () => {
-    const exit = await run({ query: "x" }, json(200, ok([{ title: "No URL" }])))
-    expect(value(exit)).toBe("No search results found. Please try a different query.")
+  test("rejects a nonempty result set when every item is unusable", async () => {
+    const exit = await run({ query: "x" }, json(200, ok([{ title: "No URL" }, null, 42])))
+    expect(failure(exit)).toContain("invalid response")
+  })
+
+  test("keeps request_id on genuine empty results", async () => {
+    const exit = await run({ query: "x" }, json(200, ok([])))
+    expect(value(exit)).toBe(`No search results found. Please try a different query.\n\nRequest ID: ${id}`)
   })
 
   test("redacts a configured key even if it appears in result text", async () => {
@@ -260,6 +271,46 @@ describe("AnySearch failures", () => {
     const exit = await Effect.runPromiseExit(callAnySearch(http, { query: "x" }, key))
     expect(failure(exit)).toContain("could not be sent")
     expect(failure(exit)).not.toContain(key)
+  })
+
+  test("times out when no response headers arrive", async () => {
+    const http = HttpClient.make(() => Effect.never)
+    const exit = await Effect.runPromiseExit(callAnySearch(http, { query: "x" }, undefined, 30))
+    expect(failure(exit)).toContain("timed out")
+  })
+
+  test("times out when the response body stalls after headers", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"code":0,"data":{"results":['))
+      },
+    })
+    const http = HttpClient.make((request) =>
+      Effect.succeed(
+        HttpClientResponse.fromWeb(
+          request,
+          new Response(body, { status: 200, headers: { "content-type": "application/json" } }),
+        ),
+      ),
+    )
+    const exit = await Effect.runPromiseExit(callAnySearch(http, { query: "x" }, undefined, 30))
+    expect(failure(exit)).toContain("timed out")
+  })
+
+  test("redacts a configured UUID-shaped key from business-error diagnostics", async () => {
+    const key = id
+    const exit = await run({ query: "x" }, json(200, { code: 41, message: "failure", request_id: id }), key)
+    expect(failure(exit)).toContain("code 41")
+    expect(failure(exit)).not.toContain(key)
+    expect(failure(exit)).toContain("[redacted]")
+  })
+
+  test("redacts a configured UUID-shaped key from malformed-response diagnostics", async () => {
+    const key = id
+    const exit = await run({ query: "x" }, json(200, { code: 0, message: "success", request_id: id, data: {} }), key)
+    expect(failure(exit)).toContain("invalid response")
+    expect(failure(exit)).not.toContain(key)
+    expect(failure(exit)).toContain("[redacted]")
   })
 
   test.each([401, 403])("reports HTTP %i without echoing provider content", async (status) => {

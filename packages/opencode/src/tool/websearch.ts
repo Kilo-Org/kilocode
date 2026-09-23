@@ -1,4 +1,4 @@
-import { Effect, Option, Schema } from "effect" // kilocode_change - Option added for kilo-exa transport dispatch
+import { Effect, Schema } from "effect" // kilocode_change - Kilo websearch provider dispatch
 import { HttpClient } from "effect/unstable/http"
 import * as Tool from "./tool"
 import * as McpWebSearch from "./mcp-websearch"
@@ -20,13 +20,15 @@ export const Parameters = Schema.Struct({
   }),
   livecrawl: Schema.optional(Schema.Literals(["fallback", "preferred"])).annotate({
     description:
-      "Live crawl mode - 'fallback': use live crawling as backup if cached content unavailable, 'preferred': prioritize live crawling (default: 'fallback')",
+      "Live crawl mode when supported by the selected provider - 'fallback': use live crawling as backup if cached content unavailable, 'preferred': prioritize live crawling. AnySearch does not support this option.",
   }),
   type: Schema.optional(Schema.Literals(["auto", "fast", "deep"])).annotate({
-    description: "Search type - 'auto': balanced search (default), 'fast': quick results, 'deep': comprehensive search",
+    description:
+      "Search type when supported by the selected provider - 'auto': balanced, 'fast': quick results, 'deep': comprehensive search. AnySearch does not support this option.",
   }),
   contextMaxCharacters: Schema.optional(Schema.Number).annotate({
-    description: "Maximum characters for context string optimized for LLMs (default: 10000)",
+    description:
+      "Maximum characters for context string optimized for LLMs when supported by the selected provider. AnySearch does not support this option.",
   }),
 })
 
