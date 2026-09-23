@@ -68,16 +68,6 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     () => session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
   )
 
-  const permissionsBySession = createMemo(() => {
-    const grouped: Record<string, any[]> = {}
-    for (const p of session.permissions()) {
-      const sid = p.sessionID
-      if (!sid) continue
-      ;(grouped[sid] ??= []).push(p)
-    }
-    return grouped
-  })
-
   const providerData = createMemo(() => ({
     all: new Map(Object.entries(prov.providers())),
     connected: prov.connected(),
@@ -105,29 +95,9 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     get part() {
       return session.allParts() as unknown as Record<string, SDKPart[]>
     },
-    get permission() {
-      return permissionsBySession()
-    },
-    // Questions are handled directly by QuestionDock via session.questions(),
-    // not through DataProvider. The DataProvider's question field is unused here.
-    get question() {
-      return {}
-    },
     get provider() {
       return providerData() as unknown as any
     },
-  }
-
-  const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
-    session.respondToPermission(input.permissionID, input.response, [], [])
-  }
-
-  const reply = (input: { requestID: string; answers: string[][] }) => {
-    session.replyToQuestion(input.requestID, input.answers)
-  }
-
-  const reject = (input: { requestID: string }) => {
-    session.rejectQuestion(input.requestID)
   }
 
   const openAgent = (id: string, title?: string) => {
@@ -222,10 +192,6 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     <DataProvider
       data={data}
       directory={directory()}
-      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
-      onPermissionRespond={respond}
-      onQuestionReply={reply}
-      onQuestionReject={reject}
       onOpenFile={open}
       onOpenDiff={openDiff}
       onOpenUrl={openUrl}
