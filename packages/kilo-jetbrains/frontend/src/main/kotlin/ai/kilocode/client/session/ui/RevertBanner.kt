@@ -123,7 +123,7 @@ class RevertBanner(
         setActionVisible("all", total > 1)
         val message = workspaceNotice(revert)
         notice.isVisible = message != null
-        if (message != null) notice.text = message
+        notice.text = message ?: ""
         val diffs = resolveDiffs(revert)
         val names = disambiguate(diffs.map { it.file })
         diff.isVisible = diffs.isNotEmpty()
