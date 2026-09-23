@@ -12,7 +12,7 @@ import { Skill } from "@/skill"
 import { Process } from "@/util/process"
 import { Filesystem } from "@/util/filesystem"
 import { installPlugin as stagePlugin, readPluginManifest } from "@/plugin/install"
-import { pluginPackageName } from "./plugin-spec"
+import { pluginIdentity } from "./plugin-spec"
 import { patchPlugin } from "./plugin-config"
 import type {
   AgentInstallItem,
@@ -288,11 +288,15 @@ function installPlugin(svc: Services, item: PluginInstallItem, scope: Scope) {
       if (!spec) return { success: false, slug: item.id, error: "Plugin has no package spec" }
 
       // Installed state is keyed by catalog id, so it must equal the resolved
-      // package name or detection and removal cannot find the entry again.
-      const pkg = pluginPackageName(spec)
-      if (!pkg) return { success: false, slug: item.id, error: `Plugin spec ${spec} is not a valid package` }
-      if (pkg !== item.id) {
-        return { success: false, slug: item.id, error: `Plugin id ${item.id} must match the package name ${pkg}` }
+      // plugin identity or detection and removal cannot find the entry again.
+      const identity = pluginIdentity(spec)
+      if (!identity) return { success: false, slug: item.id, error: `Plugin spec ${spec} is not a valid package` }
+      if (identity !== item.id) {
+        return {
+          success: false,
+          slug: item.id,
+          error: `Plugin id ${item.id} must match the plugin identity ${identity}`,
+        }
       }
 
       const staged = await stagePlugin(spec)
@@ -329,7 +333,7 @@ function lockPath(file: string) {
   return path.join(path.dirname(file), path.basename(file).replace(/\.jsonc?$/, ""))
 }
 
-async function stripPluginFromFile(file: string, pkg: string) {
+async function stripPluginFromFile(file: string, identity: string) {
   // Take the same lock runtime-backed installs use so a concurrent install and
   // remove cannot interleave and drop an entry.
   await using _ = await Flock.acquire(`plug-config:${Filesystem.resolve(lockPath(file))}`)
@@ -348,7 +352,7 @@ async function stripPluginFromFile(file: string, pkg: string) {
       ? (data as { plugin: unknown[] }).plugin
       : undefined
   if (!list) return "missing"
-  const next = list.filter((entry) => pluginPackageName(entry) !== pkg)
+  const next = list.filter((entry) => pluginIdentity(entry) !== identity)
   if (next.length === list.length) return "missing"
   const out = applyEdits(
     text,
@@ -360,12 +364,12 @@ async function stripPluginFromFile(file: string, pkg: string) {
 
 function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   return Effect.promise(async (): Promise<MarketplaceRemoveResult> => {
-    const pkg = pluginPackageName(item.id) ?? item.id
+    const identity = pluginIdentity(item.id) ?? item.id
     const removed: string[] = []
     const errors: string[] = []
     for (const file of Paths.pluginFiles(scope, svc.directory, svc.worktree)) {
       try {
-        if ((await stripPluginFromFile(file, pkg)) === "removed") removed.push(file)
+        if ((await stripPluginFromFile(file, identity)) === "removed") removed.push(file)
       } catch (err) {
         errors.push(`${file}: ${errorText(err)}`)
       }
