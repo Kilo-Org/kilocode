@@ -200,6 +200,8 @@ export namespace AutonomousEngine {
               parent: id,
               state,
               model: models["cloud-reasoner"],
+              steps: cfg.steps.planner,
+              maxCost: AutonomousBudget.left(state, cfg, "cloud-reasoner"),
               maxAttempts: cfg.worker_max_attempts,
               replan: input,
               memory: memory?.summary,
@@ -228,6 +230,8 @@ export namespace AutonomousEngine {
             parent: id,
             state,
             model: models["cloud-reasoner"],
+            steps: cfg.steps.planner,
+            maxCost: AutonomousBudget.left(state, cfg, "cloud-reasoner"),
             maxAttempts: cfg.worker_max_attempts,
             memory: memory?.summary,
             history: AutonomousStats.summary(stats),
@@ -283,7 +287,15 @@ export namespace AutonomousEngine {
           state.status = "reviewing"
           yield* persist(state)
           yield* progress(state, "All tasks done. Checking the goal against its acceptance criteria.")
-          const check = yield* billed("cloud-reasoner", AutonomousChecker.check({ parent: id, dir, state, model: models["cloud-reasoner"] }))
+          const check = yield* billed("cloud-reasoner", AutonomousChecker.check({
+              parent: id,
+              dir,
+              state,
+              model: models["cloud-reasoner"],
+              steps: cfg.steps.reviewer,
+              maxCost: AutonomousBudget.left(state, cfg, "cloud-reasoner"),
+            }),
+          )
           charge("cloud-reasoner", check)
           log("goal.checked", { detail: check.complete ? "complete" : `unmet: ${state.criteria.filter((c) => c.status !== "satisfied").map((c) => c.id).join(",")}` })
           if (!check.complete) {
@@ -297,7 +309,8 @@ export namespace AutonomousEngine {
           const cls = AutonomousFinal.modelClass(state, cfg.final_review_cloud_at_complexity)
           if (cls === "cloud-reasoner" && !AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
           yield* progress(state, `Checks pass. Final review with ${AutonomousModels.format(models[cls])}.`)
-          const fin = yield* billed(cls, AutonomousFinal.review({ parent: id, dir, state, model: models[cls] }))
+          const fin = yield* billed(cls, AutonomousFinal.review({ parent: id, dir, state, model: models[cls], steps: cfg.steps.reviewer, maxCost: AutonomousBudget.left(state, cfg, cls) }),
+          )
           charge(cls, fin)
           if (fin.blocking.length) {
             const findings = fin.blocking.map((f) => `${f.file ? `${f.file}: ` : ""}${f.description}`)
@@ -324,7 +337,18 @@ export namespace AutonomousEngine {
         yield* progress(state, AutonomousProgress.start(state, task, route))
 
         const repair = task.failures.length ? AutonomousRepair.instructions(task) : undefined
-        const work = yield* Effect.result(AutonomousWorker.run({ parent: id, dir, state, task, model: route.model, repair }))
+        const work = yield* Effect.result(
+          AutonomousWorker.run({
+            parent: id,
+            dir,
+            state,
+            task,
+            model: route.model,
+            repair,
+            steps: cfg.steps.worker,
+            maxCost: AutonomousBudget.left(state, cfg, route.modelClass, task.id),
+          }),
+        )
         if (Result.isFailure(work)) {
           charge(route.modelClass, AutonomousRunner.spent(work.failure), task.id)
           yield* fail(task, "worker", String(work.failure), route.modelClass)
@@ -344,8 +368,11 @@ export namespace AutonomousEngine {
           yield* fail(task, "check", AutonomousVerifier.summary(report), route.modelClass, AutonomousVerifier.fingerprint(report))
           continue
         }
-        const reviewClass: AutonomousState.ModelClass = route.modelClass === "cloud-reasoner" ? "cloud-reasoner" : "local-coder"
-        const review = yield* Effect.result(AutonomousReviewer.review({ parent: id, dir, state, task, model: models[reviewClass], checks: report }))
+        // Per-task review stays local; the goal check and final review are the cloud gates.
+        const reviewClass: AutonomousState.ModelClass = "local-coder"
+        const review = yield* Effect.result(
+          AutonomousReviewer.review({ parent: id, dir, state, task, model: models[reviewClass], checks: report, steps: cfg.steps.reviewer }),
+        )
         if (Result.isFailure(review)) {
           charge(reviewClass, AutonomousRunner.spent(review.failure), task.id)
           yield* fail(task, "review", String(review.failure), reviewClass)

@@ -35362,6 +35362,30 @@
                     "type": "integer",
                     "minimum": 0,
                     "description": "Highest task complexity routed to local_coder. Defaults 2."
+                  },
+                  "planner_cloud": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "steps": {
+                "type": "object",
+                "properties": {
+                  "planner": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "Model steps per planner turn. Defaults 40."
+                  },
+                  "worker": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "Model steps per worker turn. Defaults 60."
+                  },
+                  "reviewer": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "Model steps per review, goal check and final review turn. Defaults 25."
                   }
                 },
                 "additionalProperties": false

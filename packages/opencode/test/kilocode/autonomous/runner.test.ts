@@ -78,3 +78,51 @@ it.instance(
   }),
   30_000,
 )
+
+it.instance(
+  "stops a child at the step limit and asks for the structured reply",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    // The forced reply is matched by content, so it cannot be consumed by a step the runner cut off.
+    yield* run.llm.pushMatch(
+      (hit) => JSON.stringify(hit.body).includes("Step limit reached"),
+      reply().tool("StructuredOutput", { ok: true, items: [] }),
+    )
+    yield* run.llm.push(reply().tool("glob", { pattern: "*.md" }), reply().tool("glob", { pattern: "*.ts" }), reply().hang())
+    const out = yield* AutonomousRunner.run({
+      parent: run.root.id,
+      title: "sample",
+      agent: AutonomousAgents.REVIEWER,
+      model,
+      schema: Sample,
+      text: "Reply",
+      steps: 2,
+    })
+    expect(out.value).toEqual({ ok: true, items: [] })
+    const hits = yield* run.llm.hits
+    expect(JSON.stringify(hits.at(-1)?.body.messages)).toContain("Step limit reached")
+  }),
+  30_000,
+)
+
+it.instance(
+  "fails when the child spends past the cost cap",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    yield* run.llm.push(reply().tool("glob", { pattern: "*.md" }).usage({ input: 1_000_000, output: 0 }), reply().hang())
+    const err = yield* Effect.flip(
+      AutonomousRunner.run({
+        parent: run.root.id,
+        title: "sample",
+        agent: AutonomousAgents.REVIEWER,
+        model,
+        schema: Sample,
+        text: "Reply",
+        maxCost: 0.5,
+      }),
+    )
+    expect(err.message).toContain("Cost cap")
+    expect(AutonomousRunner.spent(err).cost).toBeGreaterThan(0.5)
+  }),
+  30_000,
+)

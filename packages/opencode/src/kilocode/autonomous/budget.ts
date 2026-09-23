@@ -46,6 +46,15 @@ export namespace AutonomousBudget {
     return undefined
   }
 
+  /** USD a single cloud call may still spend, or undefined for local classes. */
+  export function left(state: AutonomousState.Info, cfg: AutonomousConfig.Info, modelClass: AutonomousState.ModelClass, taskID?: string) {
+    if (!cloud(modelClass)) return undefined
+    const goal = cfg.budget.cloud_goal_max_usd - state.budget.cloud.cost
+    if (!taskID || !safe(taskID)) return Math.max(0, goal)
+    const per = Object.hasOwn(state.budget.perTask, taskID) ? state.budget.perTask[taskID]!.cost : 0
+    return Math.max(0, Math.min(goal, cfg.budget.cloud_task_max_usd - per))
+  }
+
   export const allow = (state: AutonomousState.Info, cfg: AutonomousConfig.Info, taskID?: string) =>
     reason(state, cfg, taskID) === undefined
 

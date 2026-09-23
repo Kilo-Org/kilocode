@@ -87,6 +87,9 @@ export namespace AutonomousReviewer {
     state: AutonomousState.Info
     task: AutonomousState.Task
     model: AutonomousModels.Ref
+    /** Hard step and USD caps for the child session. */
+    steps?: number
+    maxCost?: number
     checks?: AutonomousVerifier.Report
   }) {
     const files = input.task.result?.changedFiles ?? []
@@ -99,6 +102,8 @@ export namespace AutonomousReviewer {
       schema: Review,
       text: text({ task: input.task, state: input.state, diff: body, checks: input.checks, summary: input.task.result?.summary }),
       retries: 1,
+      steps: input.steps,
+      maxCost: input.maxCost,
     })
     const blocking = out.value.findings.filter((f) => f.blocking)
     return { review: out.value, blocking, cost: out.cost, tokens: out.tokens }

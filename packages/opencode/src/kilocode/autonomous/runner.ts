@@ -50,6 +50,14 @@ export namespace AutonomousRunner {
     text: string
     /** Re-prompts after an invalid or missing structured reply. Default 1. */
     retries?: number
+    /**
+     * Hard cap on model steps per turn. The agent `steps` setting only adds a
+     * reminder, so the runner stops the child itself and asks once for a
+     * StructuredOutput reply before failing.
+     */
+    steps?: number
+    /** Stops the child as soon as its spend passes this many USD. */
+    maxCost?: number
   }
 
   export type Output<A> = {
@@ -67,6 +75,10 @@ export namespace AutonomousRunner {
     }
     return std.jsonSchema.input({ target: "draft-07" })
   }
+
+  /** Extra steps granted after the step limit to produce the StructuredOutput reply. */
+  const GRACE = 3
+  const POLL = "500 millis"
 
   const usage = (messages: SessionV1.WithParts[], seen: Set<string>) => {
     const out = { cost: 0, tokens: { input: 0, output: 0 }, text: "" }
@@ -119,10 +131,31 @@ export namespace AutonomousRunner {
           Effect.onInterrupt(() => prompt.cancel(session.id, "tree")),
         )
 
+    // Polls the child while a turn runs; resolves when a limit is crossed.
+    const watch = (steps: number | undefined) =>
+      Effect.gen(function* () {
+        while (true) {
+          yield* Effect.sleep(POLL)
+          const messages = yield* sessions.messages({ sessionID: session.id }).pipe(Effect.orDie)
+          const fresh = messages.filter((m) => m.info.role === "assistant" && !seen.has(m.info.id))
+          const cost = total.cost + fresh.reduce((sum, m) => sum + (m.info.role === "assistant" ? m.info.cost : 0), 0)
+          if (input.maxCost !== undefined && cost > input.maxCost) return { kind: "cost" as const }
+          if (steps !== undefined && fresh.length > steps) return { kind: "steps" as const }
+        }
+      })
+
+    const step = (text: string, steps: number | undefined) => {
+      const done = turn(text).pipe(Effect.map((result) => ({ kind: "done" as const, result })))
+      if (steps === undefined && input.maxCost === undefined) return done
+      return done.pipe(Effect.raceFirst(watch(steps)))
+    }
+
     let text = input.text
     let last = ""
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      const result = yield* turn(text)
+    let forced = false
+    let attempt = 0
+    while (attempt <= retries) {
+      const out = yield* step(text, forced ? GRACE : input.steps)
       yield* drain.wait(session.id)
       const messages = yield* sessions.messages({ sessionID: session.id }).pipe(Effect.orDie)
       const used = usage(messages, seen)
@@ -130,6 +163,14 @@ export namespace AutonomousRunner {
       total.tokens.input += used.tokens.input
       total.tokens.output += used.tokens.output
       if (used.text) total.text = used.text
+      if (out.kind === "cost") return yield* fail(`Cost cap of $${input.maxCost?.toFixed(2)} reached ($${total.cost.toFixed(2)} spent).`)
+      if (out.kind === "steps") {
+        if (forced) return yield* fail(`Step limit of ${input.steps} reached without a structured reply.`)
+        forced = true
+        text = "Step limit reached. Stop exploring and call the StructuredOutput tool now with your best answer."
+        continue
+      }
+      const result = out.result
       if (result.info.role !== "assistant") return yield* fail("Child session produced no assistant reply.")
       const err = result.info.error
       if (err && err.name !== "StructuredOutputError") return yield* fail(`${err.name}: ${"message" in err.data ? String(err.data.message) : ""}`)
@@ -139,6 +180,7 @@ export namespace AutonomousRunner {
       }
       last = exit ? String(exit.cause) : "no structured output was returned"
       text = `Your previous reply was rejected: ${last}\nCall the StructuredOutput tool again with a value that matches the schema exactly.`
+      attempt++
     }
     return yield* new Invalid({ sessionID: String(session.id), attempts: retries + 1, message: last, usage: { cost: total.cost, tokens: { ...total.tokens } } })
   })

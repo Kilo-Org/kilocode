@@ -89,6 +89,9 @@ export namespace AutonomousPlanner {
     parent: SessionID
     state: AutonomousState.Info
     model: AutonomousModels.Ref
+    /** Hard step and USD caps for the child session. */
+    steps?: number
+    maxCost?: number
     maxAttempts: number
     replan?: { findings?: string[]; newWork?: string[] }
     memory?: string
@@ -108,6 +111,8 @@ export namespace AutonomousPlanner {
         schema: Plan,
         text,
         retries: 1,
+        steps: input.steps,
+        maxCost: input.maxCost === undefined ? undefined : Math.max(0, input.maxCost - cost),
       })
       cost += out.cost
       tokens.input += out.tokens.input

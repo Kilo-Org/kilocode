@@ -53,6 +53,9 @@ export namespace AutonomousWorker {
     state: AutonomousState.Info
     task: AutonomousState.Task
     model: AutonomousModels.Ref
+    /** Hard step and USD caps for the child session. */
+    steps?: number
+    maxCost?: number
     agent?: string
     repair?: string
   }) {
@@ -65,6 +68,8 @@ export namespace AutonomousWorker {
       schema: AutonomousState.Result,
       text: text(input.task, input.state, { repair: input.repair }),
       retries: 1,
+      steps: input.steps,
+      maxCost: input.maxCost,
     })
     const after = yield* changed(input.dir)
     const detected = after.filter((f) => !before.has(f))

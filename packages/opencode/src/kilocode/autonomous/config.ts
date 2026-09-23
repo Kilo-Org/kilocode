@@ -7,7 +7,8 @@ export namespace AutonomousConfig {
     enabled: boolean
     models: { local_small?: string; local_coder?: string; cloud_reasoner?: string }
     worker_max_attempts: number
-    routing: { local_small_max_complexity: number; local_coder_max_complexity: number }
+    routing: { local_small_max_complexity: number; local_coder_max_complexity: number; planner_cloud: boolean }
+    steps: { planner: number; worker: number; reviewer: number }
     stuck: { same_error_limit: number }
     budget: {
       cloud_task_max_usd: number
@@ -23,7 +24,8 @@ export namespace AutonomousConfig {
     enabled: false,
     models: {},
     worker_max_attempts: 2,
-    routing: { local_small_max_complexity: 0, local_coder_max_complexity: 2 },
+    routing: { local_small_max_complexity: 0, local_coder_max_complexity: 2, planner_cloud: true },
+    steps: { planner: 40, worker: 60, reviewer: 25 },
     stuck: { same_error_limit: 2 },
     budget: {
       cloud_task_max_usd: 2,
@@ -41,6 +43,7 @@ export namespace AutonomousConfig {
       models: { ...raw.models },
       worker_max_attempts: raw.worker_max_attempts ?? defaults.worker_max_attempts,
       routing: { ...defaults.routing, ...strip(raw.routing) },
+      steps: { ...defaults.steps, ...strip(raw.steps) },
       stuck: { ...defaults.stuck, ...strip(raw.stuck) },
       budget: { ...defaults.budget, ...strip(raw.budget) },
       final_review_cloud_at_complexity: raw.final_review_cloud_at_complexity ?? defaults.final_review_cloud_at_complexity,

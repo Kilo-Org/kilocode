@@ -52,6 +52,9 @@ export namespace AutonomousChecker {
     dir: string
     state: AutonomousState.Info
     model: AutonomousModels.Ref
+    /** Hard step and USD caps for the child session. */
+    steps?: number
+    maxCost?: number
   }) {
     const diff = yield* AutonomousReviewer.diff(input.dir)
     const out = yield* AutonomousRunner.run({
@@ -62,6 +65,8 @@ export namespace AutonomousChecker {
       schema: Check,
       text: text(input.state, diff),
       retries: 1,
+      steps: input.steps,
+      maxCost: input.maxCost,
     })
     const complete = apply(input.state, out.value)
     return { check: out.value, complete, cost: out.cost, tokens: out.tokens }

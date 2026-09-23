@@ -113,11 +113,11 @@ Set `autonomous_goal.enabled: true` in your config to route `/goal` to the auton
 
 1. Plans with a read-only planner (`cloud_reasoner` model): a goal summary, acceptance criteria, and a dependency-ordered task list.
 2. Runs one task at a time with a worker that may edit files and run commands but can never push, commit, publish, or use `sudo`.
-3. Runs the project's checks after every task (detected from `package.json` scripts, `pyproject.toml`, `pubspec.yaml`, `Cargo.toml`, `go.mod`, or the `autonomous_goal.checks` list) and a read-only reviewer over the diff.
+3. Runs the project's checks after every task (detected from `package.json` scripts, `pyproject.toml`, `pubspec.yaml`, `Cargo.toml`, `go.mod`, or the `autonomous_goal.checks` list) and a read-only reviewer (`local_coder` model) over the diff.
 4. Retries a failed task locally, escalates to the cloud model when the same failure repeats or attempts run out, and blocks the goal when the cloud attempt also fails.
 5. After all tasks, re-checks every acceptance criterion against the actual diff, replans missing work, and finishes only after a final review.
 
-Model classes come from `autonomous_goal.models` (`local_small`, `local_coder`, `cloud_reasoner`) and fall back to `small_model`, `subagent_model`, and `model`. Cloud usage is limited by `autonomous_goal.budget`; when a limit is reached the goal pauses with the reason.
+Model classes come from `autonomous_goal.models` (`local_small`, `local_coder`, `cloud_reasoner`) and fall back to `small_model`, `subagent_model`, and `model`. Cloud usage is limited by `autonomous_goal.budget`; when a limit is reached the goal pauses with the reason. A cloud call that runs past the remaining budget is stopped mid-run. Each sub-agent turn is also capped at `autonomous_goal.steps` model steps (`planner` 40, `worker` 60, `reviewer` 25, the last also covering the goal check and final review); at the cap the agent is stopped and asked once for its answer. The planner may mark a task for `cloud_reasoner`; set `autonomous_goal.routing.planner_cloud: false` to ignore that and route by complexity only.
 
 The engine remembers each repository: the planner writes a short summary of the project that later goals receive as notes, and a per-project routing history moves a task complexity to a stronger model class once a local class has failed it repeatedly. An objective of the form `#123`, `owner/repo#123`, or a GitHub issue URL is resolved to the issue title and body through the `gh` CLI.
 

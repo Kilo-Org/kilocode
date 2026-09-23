@@ -20,7 +20,7 @@ export namespace AutonomousRouter {
 
   const base = (task: AutonomousState.Task, cfg: AutonomousConfig.Info): { modelClass: AutonomousState.ModelClass; reason: string } => {
     if (task.escalated) return { modelClass: "cloud-reasoner", reason: "escalated after repeated failures" }
-    if (task.preferredModelClass === "cloud-reasoner") return { modelClass: "cloud-reasoner", reason: "planner requested cloud reasoning" }
+    if (task.preferredModelClass === "cloud-reasoner" && cfg.routing.planner_cloud) return { modelClass: "cloud-reasoner", reason: "planner requested cloud reasoning" }
     if (risky(task)) return { modelClass: "cloud-reasoner", reason: "task carries a risk flag" }
     if (task.type === "research") return { modelClass: "cloud-reasoner", reason: "research needs reasoning" }
     if (task.complexity <= cfg.routing.local_small_max_complexity) return { modelClass: "local-small", reason: `complexity ${task.complexity}` }

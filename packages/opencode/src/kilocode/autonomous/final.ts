@@ -40,6 +40,9 @@ export namespace AutonomousFinal {
     dir: string
     state: AutonomousState.Info
     model: AutonomousModels.Ref
+    /** Hard step and USD caps for the child session. */
+    steps?: number
+    maxCost?: number
   }) {
     const diff = yield* AutonomousReviewer.diff(input.dir)
     const out = yield* AutonomousRunner.run({
@@ -50,6 +53,8 @@ export namespace AutonomousFinal {
       schema: AutonomousReviewer.Review,
       text: text(input.state, diff),
       retries: 1,
+      steps: input.steps,
+      maxCost: input.maxCost,
     })
     const blocking = out.value.findings.filter((f) => f.blocking)
     return { review: out.value, blocking, cost: out.cost, tokens: out.tokens }

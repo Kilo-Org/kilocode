@@ -2554,6 +2554,21 @@ export type Config = {
        * Highest task complexity routed to local_coder. Defaults 2.
        */
       local_coder_max_complexity?: number
+      planner_cloud?: boolean
+    }
+    steps?: {
+      /**
+       * Model steps per planner turn. Defaults 40.
+       */
+      planner?: number
+      /**
+       * Model steps per worker turn. Defaults 60.
+       */
+      worker?: number
+      /**
+       * Model steps per review, goal check and final review turn. Defaults 25.
+       */
+      reviewer?: number
     }
     stuck?: {
       /**

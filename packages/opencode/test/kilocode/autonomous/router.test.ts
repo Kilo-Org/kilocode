@@ -65,6 +65,12 @@ describe("AutonomousRouter", () => {
     expect(route(task({ complexity: 0, preferredModelClass: "cloud-reasoner" }))).toMatchObject({ modelClass: "cloud-reasoner" })
   })
 
+  test("planner cloud preference is ignored when planner_cloud is off", () => {
+    const off = { ...cfg, routing: { ...cfg.routing, planner_cloud: false } }
+    const t = task({ complexity: 1, preferredModelClass: "cloud-reasoner" })
+    expect(AutonomousRouter.route({ task: t, state: state(), cfg: off, models })).toMatchObject({ ok: true, modelClass: "local-coder" })
+  })
+
   test("escalated task goes to the cloud", () => {
     expect(route(task({ complexity: 0, escalated: true }))).toMatchObject({ modelClass: "cloud-reasoner", reason: expect.stringContaining("escalated") })
   })
@@ -78,6 +84,15 @@ describe("AutonomousRouter", () => {
 })
 
 describe("AutonomousBudget", () => {
+  test("left caps a cloud call by the tighter of goal and task budget", () => {
+    const s = state()
+    expect(AutonomousBudget.left(s, cfg, "local-coder", "t")).toBeUndefined()
+    expect(AutonomousBudget.left(s, cfg, "cloud-reasoner")).toBe(cfg.budget.cloud_goal_max_usd)
+    AutonomousBudget.charge(s, { modelClass: "cloud-reasoner", taskID: "t", cost: 1.5 })
+    expect(AutonomousBudget.left(s, cfg, "cloud-reasoner", "t")).toBeCloseTo(cfg.budget.cloud_task_max_usd - 1.5)
+    expect(AutonomousBudget.left(s, cfg, "cloud-reasoner")).toBeCloseTo(cfg.budget.cloud_goal_max_usd - 1.5)
+  })
+
   test("ignores prototype-polluting task ids", () => {
     const s = state()
     AutonomousBudget.charge(s, { modelClass: "cloud-reasoner", taskID: "__proto__", cost: 1 })

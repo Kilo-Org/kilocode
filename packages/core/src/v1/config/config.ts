@@ -126,6 +126,18 @@ export const Info = Schema.Struct({
           local_coder_max_complexity: Schema.optional(NonNegativeInt.annotate({
             description: "Highest task complexity routed to local_coder. Defaults 2.",
           })),
+          planner_cloud: Schema.optional(Schema.Boolean).annotate({
+            description: "Honor the planner asking for cloud_reasoner on a task. Defaults true.",
+          }),
+        }),
+      ),
+      steps: Schema.optional(
+        Schema.Struct({
+          planner: Schema.optional(PositiveInt.annotate({ description: "Model steps per planner turn. Defaults 40." })),
+          worker: Schema.optional(PositiveInt.annotate({ description: "Model steps per worker turn. Defaults 60." })),
+          reviewer: Schema.optional(PositiveInt.annotate({
+            description: "Model steps per review, goal check and final review turn. Defaults 25.",
+          })),
         }),
       ),
       stuck: Schema.optional(
