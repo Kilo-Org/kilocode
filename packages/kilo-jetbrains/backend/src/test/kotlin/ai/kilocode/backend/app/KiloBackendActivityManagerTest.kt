@@ -3,11 +3,13 @@ package ai.kilocode.backend.app
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionStatusDto
+import ai.kilocode.rpc.dto.ToolRefDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -67,6 +69,95 @@ class KiloBackendActivityManagerTest {
         events.emit(ChatEventDto.PermissionReplied("ses_1", "perm_1"))
 
         await("ses_1", SessionActivityKindDto.RUNNING)
+    }
+
+    @Test
+    fun `explicit resolution clears only its matching permission without a reply event`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        directories["ses_barrier"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        events.emit(ChatEventDto.PermissionAsked("ses_1", permission("perm_1", "ses_1", "call_1")))
+        events.emit(ChatEventDto.PermissionAsked("ses_1", permission("perm_2", "ses_1", "call_1")))
+        await("ses_1", SessionActivityKindDto.PERMISSION)
+        events.emit(ChatEventDto.Error("ses_barrier"))
+        await("ses_barrier", SessionActivityKindDto.ERROR)
+
+        manager.resolve("perm_1")
+        assertEquals(SessionActivityKindDto.PERMISSION, manager.activity.value["ses_1"]?.kind)
+        manager.resolve("perm_2")
+        await("ses_1", SessionActivityKindDto.RUNNING)
+    }
+
+    @Test
+    fun `explicit resolution suppresses an asked event still queued behind its reply`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        directories["ses_barrier"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        manager.resolve("perm_1")
+        events.emit(ChatEventDto.PermissionAsked("ses_1", permission("perm_1", "ses_1", "call_1")))
+        events.emit(ChatEventDto.Error("ses_barrier"))
+        await("ses_barrier", SessionActivityKindDto.ERROR)
+
+        assertEquals(SessionActivityKindDto.RUNNING, manager.activity.value["ses_1"]?.kind)
+    }
+
+    @Test
+    fun `running question tool remains pending until it completes`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        directories["ses_barrier"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        events.emit(ChatEventDto.QuestionAsked("ses_1", question("q_1", "ses_1", tool = ToolRefDto("msg_1", "call_1"))))
+        await("ses_1", SessionActivityKindDto.QUESTION)
+
+        events.emit(tool("ses_1", "call_1", "running"))
+        events.emit(ChatEventDto.Error("ses_barrier"))
+        await("ses_barrier", SessionActivityKindDto.ERROR)
+        assertEquals(SessionActivityKindDto.QUESTION, manager.activity.value["ses_1"]?.kind)
+
+        events.emit(tool("ses_1", "call_1", "completed"))
+        await("ses_1", SessionActivityKindDto.RUNNING)
+    }
+
+    @Test
+    fun `turn close clears a permission even without an idle event`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        events.emit(ChatEventDto.PermissionAsked("ses_1", PermissionRequestDto("perm_1", "ses_1", "edit", emptyList())))
+        await("ses_1", SessionActivityKindDto.PERMISSION)
+
+        events.emit(ChatEventDto.TurnClose("ses_1", "completed"))
+
+        await("ses_1", SessionActivityKindDto.RUNNING)
+    }
+
+    @Test
+    fun `completed turn clears tool-less ordinary question but preserves plan followup`() = runBlocking<Unit> {
+        directories["ses_plain"] = "/repo/a"
+        directories["ses_plan"] = "/repo/b"
+        statuses.value = mapOf(
+            "ses_plain" to SessionStatusDto("busy"),
+            "ses_plan" to SessionStatusDto("busy"),
+        )
+        start()
+
+        events.emit(ChatEventDto.QuestionAsked("ses_plain", question("q_plain", "ses_plain")))
+        events.emit(ChatEventDto.QuestionAsked("ses_plan", question("q_plan", "ses_plan", plan = true)))
+        await("ses_plain", SessionActivityKindDto.QUESTION)
+        await("ses_plan", SessionActivityKindDto.PLAN)
+
+        events.emit(ChatEventDto.TurnClose("ses_plan", "completed"))
+        events.emit(ChatEventDto.TurnClose("ses_plain", "completed"))
+
+        await("ses_plain", SessionActivityKindDto.RUNNING)
+        assertEquals(SessionActivityKindDto.PLAN, manager.activity.value["ses_plan"]?.kind)
     }
 
     @Test
@@ -311,7 +402,33 @@ class KiloBackendActivityManagerTest {
         manager.activity.first { it[id]?.kind == kind }
     }
 
-    private fun question(id: String, session: String, plan: Boolean = false): QuestionRequestDto {
+    private fun permission(id: String, session: String, call: String) = PermissionRequestDto(
+        id = id,
+        sessionID = session,
+        permission = "edit",
+        patterns = emptyList(),
+        tool = ToolRefDto("msg_1", call),
+    )
+
+    private fun tool(session: String, call: String, state: String) = ChatEventDto.PartUpdated(
+        sessionID = session,
+        part = PartDto(
+            id = "part_$call",
+            sessionID = session,
+            messageID = "msg_1",
+            type = "tool",
+            tool = "edit",
+            callID = call,
+            state = state,
+        ),
+    )
+
+    private fun question(
+        id: String,
+        session: String,
+        plan: Boolean = false,
+        tool: ToolRefDto? = null,
+    ): QuestionRequestDto {
         val info = if (plan) {
             QuestionInfoDto(
                 question = "Ready to implement?",
@@ -322,6 +439,6 @@ class KiloBackendActivityManagerTest {
         } else {
             QuestionInfoDto(question = "Pick one", header = "Choice")
         }
-        return QuestionRequestDto(id = id, sessionID = session, questions = listOf(info))
+        return QuestionRequestDto(id = id, sessionID = session, questions = listOf(info), tool = tool)
     }
 }

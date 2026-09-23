@@ -291,6 +291,21 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.AwaitingPermission)
     }
 
+    fun `test auto approve surfaces sandbox escalation for a human reply`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        emit(
+            ChatEventDto.PermissionAsked(
+                "ses_test",
+                permission("perm1").copy(metadata = mapOf("sandboxEscalation" to "true")),
+            ),
+        )
+
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
     fun `test disabling auto approve before reply restores awaiting permission`() {
         val (m, _, _) = prompted()
 

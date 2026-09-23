@@ -182,7 +182,9 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenameBody: String? = null
     @Volatile var lastSessionRenameMethod: String? = null
     @Volatile var pendingPermissions = "[]"
+    @Volatile var pendingPermissionsStatus = 200
     @Volatile var pendingQuestions = "[]"
+    @Volatile var pendingQuestionsStatus = 200
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -508,8 +510,10 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
-                bare == "/permission" && method == "GET" -> respond(output, 200, pendingPermissions)
-                bare == "/question" && method == "GET" -> respond(output, 200, pendingQuestions)
+                bare == "/permission" && method == "GET" ->
+                    respond(output, pendingPermissionsStatus, pendingPermissions)
+                bare == "/question" && method == "GET" ->
+                    respond(output, pendingQuestionsStatus, pendingQuestions)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->
