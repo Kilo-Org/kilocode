@@ -46,6 +46,7 @@ export const States: Story = {
           <IconButton icon="database" variant="ghost" aria-label="Indexing" />
           <IconButton icon="globe" variant="ghost" aria-label="Browser" />
           <IconButton icon="wand-sparkles" variant="ghost" aria-label="Enhance" />
+          <IconButton icon="information" variant="ghost" aria-label="Information" />
           <IconButton icon="send" variant="ghost" aria-label="Send" />
         </div>
         <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>

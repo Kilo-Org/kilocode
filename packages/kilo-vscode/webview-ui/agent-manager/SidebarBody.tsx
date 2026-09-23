@@ -41,6 +41,7 @@ import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
+import type { KilocodeWorktreeUsageSummary } from "@kilocode/sdk/v2/client"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -54,6 +55,7 @@ export interface SidebarBodyProps {
   selectWorktree: (id: string) => void
   onOpenComments?: (id: string) => void
   onOpenPR?: (id: string) => void
+  onOpenEconomics?: () => void
   activityFor: (id: string | null) => Activity
   repoBranch: () => string | undefined
   localStats: () => LocalGitStats | undefined
@@ -99,6 +101,7 @@ export interface SidebarBodyProps {
   onRemoveStaleKeepSessions?: (id: string) => void
   shortcutMap: () => Map<string, number>
   worktreeStats: () => Record<string, WorktreeGitStats>
+  worktreeUsage: () => Record<string, KilocodeWorktreeUsageSummary>
   prStatuses: () => Record<string, PRStatus | null>
   runStatuses: () => Record<string, RunStatus>
   cancelPendingDelete: () => void
@@ -388,6 +391,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 health={props.worktreeHealth?.(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}
+                                usage={props.worktreeUsage()[wt.id]}
                                 navHint={navHint()}
                                 sessions={wtSessions().length}
                                 grouped={isGrouped(wt)}
@@ -405,6 +409,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 }
                                 runStatus={props.runStatuses()[wt.id]}
                                 onOpenComments={() => props.onOpenComments?.(wt.id)}
+                                onOpenEconomics={props.onOpenEconomics}
                                 onOpenPR={props.track("open_pull_request", "worktree_menu", () =>
                                   props.onOpenPR?.(wt.id),
                                 )}

@@ -16,10 +16,27 @@ import { description, label, running, strongest, type Activity } from "../src/ut
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
+import type { KilocodeWorktreeUsageSummary } from "@kilocode/sdk/v2/client"
 
 import { parseBindingTokens } from "./keybind-tokens"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+const money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 })
+
+function duration(ms?: number) {
+  if (!ms) return "0m"
+  const min = Math.max(1, Math.round(ms / 60_000))
+  const hr = Math.floor(min / 60)
+  const rest = min % 60
+  return hr ? `${hr}h ${rest}m` : `${min}m`
+}
+
+function tokens(total: KilocodeWorktreeUsageSummary["totals"]["tokens"]) {
+  const count = total.input + total.output + total.reasoning + total.cache.read + total.cache.write
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M tokens`
+  if (count >= 1_000) return `${Math.round(count / 1_000)}k tokens`
+  return `${count} tokens`
+}
 
 type WorktreeHealth = "absent-restorable" | "absent-gone" | "unregistered" | "unavailable"
 type Translate = (key: string, params?: Record<string, string | number>) => string
@@ -163,10 +180,12 @@ interface WorktreeItemProps {
   openKeybind: string
   /** PR status for this worktree's branch, or null if no PR. */
   pr?: PRStatus
+  usage?: KilocodeWorktreeUsageSummary
   runStatus?: RunStatus
   /** Callback when the PR badge is clicked. */
   onOpenPR?: () => void
   onOpenComments?: () => void
+  onOpenEconomics?: () => void
   /** Available sections for the "Move to Section" submenu. */
   sections?: SectionState[]
   /** ID of the section this worktree currently belongs to (for disabling current item). */
@@ -520,6 +539,16 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                       <span class="am-worktree-subtitle">{props.subtitle}</span>
                     </Show>
                     <RunBadge status={props.runStatus} />
+                    <Show when={props.usage}>
+                      {(usage) => (
+                        <span
+                          class="am-wt-usage-badge"
+                          aria-label={`${money.format(usage().totals.cost)} retained cost · ${tokens(usage().totals.tokens)} · ${usage().rootSessions} sessions · ${usage().subagents} subagents · ${duration(usage().time.activeMs)} active`}
+                        >
+                          {money.format(usage().totals.cost)} · {duration(usage().time.activeMs)}
+                        </span>
+                      )}
+                    </Show>
                     <Show
                       when={props.pr}
                       fallback={
@@ -712,6 +741,36 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                     <span class="am-hover-card-row-value">
                       {pr().checks.passed}/{pr().checks.total} passed
                     </span>
+                  </div>
+                </>
+              )}
+            </Show>
+            <Show when={props.usage}>
+              {(usage) => (
+                <>
+                  <div class="am-hover-card-divider" />
+                  <div class="am-hover-card-row">
+                    <span class="am-hover-card-row-label">Retained cost</span>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      class="am-wt-usage-badge am-wt-usage-badge-button"
+                      onClick={(event: MouseEvent) => {
+                        event.stopPropagation()
+                        props.onClick()
+                        props.onOpenEconomics?.()
+                      }}
+                    >
+                      {money.format(usage().totals.cost)}
+                    </Button>
+                  </div>
+                  <div class="am-hover-card-row">
+                    <span class="am-hover-card-row-label">Total elapsed time</span>
+                    <span class="am-hover-card-row-value">{duration(usage().time.wallMs)}</span>
+                  </div>
+                  <div class="am-hover-card-row">
+                    <span class="am-hover-card-row-label">Active time</span>
+                    <span class="am-hover-card-row-value">{duration(usage().time.activeMs)}</span>
                   </div>
                 </>
               )}

@@ -1,5 +1,6 @@
 import { For, Show, type Component, type JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
@@ -61,6 +62,10 @@ export interface TabBarProps {
   documentsOpen: () => boolean
   documentsAvailable: () => boolean
   onToggleDocuments: () => void
+  economicsOpen: () => boolean
+  economicsAvailable: () => boolean
+  economicsCost: () => number | undefined
+  onToggleEconomics: () => void
   subagentsAvailable: () => boolean
   subagentsOpen: () => boolean
   onToggleSubagents: () => void
@@ -136,7 +141,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
               if (!state) return false
               return state.status === "checking" || state.status === "applying"
             }
-            const panels = () => props.documentsAvailable() || props.subagentsAvailable()
+            const panels = () => props.documentsAvailable() || props.economicsAvailable() || props.subagentsAvailable()
             return (
               <>
                 {/* Session panels: re-open handles for panels this session produced.
@@ -154,6 +159,21 @@ export const TabBar: Component<TabBarProps> = (props) => (
                           data-active={props.documentsOpen() ? "" : undefined}
                           onClick={props.onToggleDocuments}
                         />
+                      </Tooltip>
+                    </Show>
+                    <Show when={props.economicsAvailable()}>
+                      <Tooltip value="Worktree economics" placement="bottom" openDelay={0}>
+                        <Button
+                          size="small"
+                          variant="ghost"
+                          class="am-economics-toggle"
+                          aria-label="Worktree economics"
+                          aria-pressed={props.economicsOpen()}
+                          data-active={props.economicsOpen() ? "" : undefined}
+                          onClick={props.onToggleEconomics}
+                        >
+                          {props.economicsCost() === undefined ? "Cost" : `$${props.economicsCost()!.toFixed(2)}`}
+                        </Button>
                       </Tooltip>
                     </Show>
                     <Show when={props.subagentsAvailable()}>

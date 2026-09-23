@@ -23,6 +23,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 20 20",
     path: `<path d="M17.0837 10.0003C17.0837 13.9123 13.9123 17.0837 10.0003 17.0837C6.08833 17.0837 2.91699 13.9123 2.91699 10.0003C2.91699 6.08833 6.08833 2.91699 10.0003 2.91699C12.3717 2.91699 14.4722 4.07428 15.7698 5.83366M15.7698 5.83366V2.91699M15.7698 5.83366H12.8532" stroke="currentColor" stroke-linecap="square"/>`,
   },
+  information: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.25"/><circle cx="10" cy="6.25" r="0.75" fill="currentColor"/><path d="M10 9V14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
+  },
   memory: {
     viewBox: "0 0 24 24",
     path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="1.5"/>`,
