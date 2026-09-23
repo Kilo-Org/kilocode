@@ -51,8 +51,12 @@ export const dict = {
     "Datoteke projekta mogu se dodati u kontrolu verzija. Ne čuvajte tajne ovdje osim ako konfiguracija upućuje na varijablu okruženja.",
   "marketplace.install.learnMore": "Saznajte kako funkcionišu instalacije s Marketplacea",
   "marketplace.install.learnMcp": "Saznajte više o MCP-u",
+  "marketplace.install.about.plugin":
+    "Dodatak dodaje prilagođene alate i integracije u Kilo. Dodaci se izvršavaju sa svim dozvolama.",
+  "marketplace.install.plugin.warning":
+    "Dodaci izvršavaju kod sa svim dozvolama. Mogu čitati i mijenjati vaše datoteke, pokretati naredbe i pristupati vašim pristupnim podacima i mreži. Instalirajte samo dodatke kojima vjerujete.",
   "marketplace.install.installedAt": "Instalirano u {{path}}",
-  "marketplace.intro": "Instalirajte višekratne agente, vještine i MCP alate za jedan ili sve projekte.",
+  "marketplace.intro": "Instalirajte višekratne agente, vještine, MCP alate i dodatke za jedan ili sve projekte.",
   "marketplace.intro.learnMore": "O Marketplaceu",
   "marketplace.install.prerequisites": "Preduslovi",
   "marketplace.install.installing": "Instalacija...",
@@ -80,6 +84,7 @@ export const dict = {
   "marketplace.scope.project": "projekat",
   "marketplace.scope.global": "globalno",
   "marketplace.remove.type.mcp": "MCP server",
+  "marketplace.remove.type.plugin": "dodatak",
   "marketplace.remove.type.skill": "vještina",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Uklanjanje {{name}} nije uspjelo",
@@ -90,7 +95,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "marketplace.warning.installAnyway": "Instaliraj svejedno",
   "marketplace.warning.cancel": "Otkaži",
-  "marketplace.contribute.prompt": "Nedostaje vještina, agent ili MCP server?",
+  "marketplace.contribute.prompt": "Nedostaje vještina, agent, MCP server ili dodatak?",
   "marketplace.contribute.cta": "Doprinesi na GitHub-u",
   "marketplace.migration.notice":
     "Modovi su zamijenjeni agentima. Ako ste prethodno instalirali marketplace modove, uklonite ih i ponovo instalirajte kao agente da biste prešli na novi format.",

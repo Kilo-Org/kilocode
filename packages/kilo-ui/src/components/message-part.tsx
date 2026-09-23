@@ -71,6 +71,7 @@ export type { ReasoningDisplay } from "./reasoning-open"
 import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
+import { createAutoScroll } from "../hooks/create-auto-scroll"
 import { escapeHtml } from "../util/escape-html"
 import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 
@@ -2700,7 +2701,13 @@ function markBashHighlighted(container: HTMLElement) {
   container.querySelector("code")?.removeAttribute("data-lang")
 }
 
-function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
+function BashHighlightedOutput(props: {
+  cmd: string
+  output: string
+  outputPath?: string
+  active?: boolean
+  running?: boolean
+}) {
   const data = useData()
   const i18n = useI18n()
   const cmdState = { signal: { aborted: false } }
@@ -2709,15 +2716,47 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
   let renderedLines: string[] = []
   let version = 0
 
+  // Follow new output inside the box while the command runs. The box scrolls
+  // independently of the transcript, so pinning it does not move the transcript.
+  const autoScroll = createAutoScroll({ working: () => !!props.running })
+
+  const bindOutput = (el: HTMLDivElement) => {
+    outRef = el
+    autoScroll.scrollRef(el)
+    autoScroll.contentRef(el)
+  }
+
+  // Drop the first `count` line nodes with their trailing separators.
+  const dropLeading = (code: Element, count: number) => {
+    const first = code.children.item(count)
+    const range = document.createRange()
+    range.setStart(code, 0)
+    if (first) range.setEndBefore(first)
+    else if (code.lastChild) range.setEndAfter(code.lastChild)
+    range.deleteContents()
+  }
+
+  // Drop line nodes from `start` to the end, each with its trailing separator.
+  const dropTail = (code: Element, start: number) => {
+    const first = code.children.item(start)
+    if (!first || !code.lastChild) return
+    const range = document.createRange()
+    range.setStartBefore(first)
+    range.setEndAfter(code.lastChild)
+    range.deleteContents()
+  }
+
   const paintOutput = async (container: HTMLDivElement, out: string, id: number) => {
     const lines = out.split("\n")
     // Without an existing block there is nothing to patch into, so highlight the
     // whole output instead of a tail fragment. `renderedLines` may still hold
     // lines from a block that was unmounted, and diffing against them would drop
     // the prefix.
-    const { start, skip } = container.querySelector("code") ? bashLineUpdate(renderedLines, lines) : { start: 0, skip: false }
-    if (skip) return
-    const inner = await highlightBashFragment(lines.slice(start).join("\n"))
+    const plan = container.querySelector("code")
+      ? bashLineUpdate(renderedLines, lines)
+      : { start: 0, skip: false, shift: 0 }
+    if (plan.skip) return
+    const inner = await highlightBashFragment(lines.slice(plan.start).join("\n"))
     if (id !== version || !container.isConnected) return
     if (inner === undefined) {
       renderedLines = []
@@ -2731,20 +2770,16 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
       markBashHighlighted(container)
       // Record only what was actually rendered. A later chunk then rebuilds the
       // missing prefix instead of patching lines that are not in the DOM.
-      renderedLines = lines.slice(start)
+      renderedLines = lines.slice(plan.start)
       return
     }
-    if (start === 0) {
+    if (plan.start === 0) {
       // Full render: drop everything, including a plain-text fallback block.
       code.textContent = ""
-    } else if (code.children.length > start) {
-      // Drop the stale tail in one DOM operation. The range starts before the
-      // first stale line and ends after the last child, so each removed line
-      // takes its trailing "\n" separator with it instead of leaving a blank line.
-      const range = document.createRange()
-      range.setStartBefore(code.children.item(start)!)
-      range.setEndAfter(code.lastChild!)
-      range.deleteContents()
+    } else {
+      // A sliding tail window drops whole leading lines in one DOM operation.
+      if (plan.shift > 0) dropLeading(code, plan.shift)
+      if (code.children.length > plan.start) dropTail(code, plan.start)
     }
     const tail = code.lastChild
     const separator = code.childNodes.length > 0 && !(tail?.nodeType === Node.TEXT_NODE && tail.textContent === "\n") ? "\n" : ""
@@ -2810,7 +2845,7 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
       <Show when={props.output}>
         <div data-slot="bash-terminal" data-kind="output">
           <div data-slot="bash-section" data-kind="output">
-            <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+            <div data-slot="bash-section-code" data-scrollable ref={bindOutput} />
             <div data-slot="bash-section-actions">
               <Show when={data.openContent || (props.outputPath && data.openFile)}>
                 <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
@@ -2892,6 +2927,7 @@ ToolRegistry.register({
             output={out()}
             outputPath={props.metadata.outputPath}
             active={open() || !!props.forceOpen}
+            running={pending()}
           />
         </Show>
       </BasicTool>

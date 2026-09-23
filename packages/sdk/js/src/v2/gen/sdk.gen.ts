@@ -7337,7 +7337,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Install a marketplace item
    *
-   * Install a marketplace MCP server, agent, or skill into project or global Kilo config.
+   * Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.
    */
   public install<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7384,7 +7384,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Remove a marketplace item
    *
-   * Remove a marketplace MCP server, agent, or skill from project or global Kilo config.
+   * Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
