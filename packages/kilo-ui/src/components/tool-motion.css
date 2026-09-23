@@ -44,8 +44,8 @@
   animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step) + 60ms);
 }
 
-/* Controls and counters that appear when the tool completes. They follow the
-   completion beat, so parallel tools that finish together ripple in order. */
+/* Controls that appear when the tool completes. They follow the completion
+   beat, so parallel tools that finish together ripple in order. */
 [data-tool-live]
   [data-component="tool-trigger"]
   :is(
@@ -53,10 +53,16 @@
     [data-slot="basic-tool-tool-action"],
     [data-component="icon-button"],
     [data-component="tool-action"]
-  ),
-[data-tool-live] [data-component="diff-changes"] {
+  ) {
   animation: tool-motion-fade var(--tool-motion-fast) var(--tool-motion-ease) backwards;
   animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step) + 40ms);
+}
+
+/* The diff count reveals as soon as its value arrives instead of waiting for
+   the completion beat: a streamed count appears while the tool still runs, and
+   the final count should not hide behind the icon pop and row settle. */
+[data-tool-live] [data-component="diff-changes"] {
+  animation: tool-motion-fade var(--tool-motion-fast) var(--tool-motion-ease) backwards;
 }
 
 /* Result rows under the trigger rise into place. */

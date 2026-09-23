@@ -135,6 +135,21 @@ function getDiagnostics(
   return diagnostics.filter((d) => d.severity === 1).slice(0, 3)
 }
 
+/**
+ * The host streams a provisional diff count while a write, edit, or
+ * apply_patch runs, so the header counts up before the final diff exists. It
+ * can differ from the final metadata and is replaced by it at completion.
+ */
+function streamedChanges(
+  metadata: Record<string, any>,
+  pending: boolean,
+): { additions: number; deletions: number } | undefined {
+  if (!pending) return undefined
+  const changes = metadata?.streamChanges
+  if (!changes || typeof changes.additions !== "number" || typeof changes.deletions !== "number") return undefined
+  return changes
+}
+
 function DiagnosticsDisplay(props: { diagnostics: Diagnostic[] }): JSX.Element {
   const i18n = useI18n()
   return (
@@ -2217,6 +2232,21 @@ function ToolMetaLine(props: {
   )
 }
 
+function ToolFileMeta(props: { filePath?: string; changes?: DiffValue; fallback?: JSX.Element }) {
+  const filename = () => getFilename(props.filePath ?? "")
+  return (
+    <Show when={filename()} fallback={props.fallback}>
+      {(name) => (
+        <ToolMetaLine
+          filename={name()}
+          path={props.filePath?.includes("/") ? getDirectory(props.filePath!) : undefined}
+          changes={props.changes}
+        />
+      )}
+    </Show>
+  )
+}
+
 function ToolChanges(props: { changes: DiffValue; slot?: string }) {
   return (
     <div data-slot={props.slot}>
@@ -2899,8 +2929,10 @@ ToolRegistry.register({
     const fileComponent = useFileComponent()
     const diagnostics = createMemo(() => getDiagnostics(props.metadata.diagnostics, props.input.filePath))
     const path = createMemo(() => props.metadata?.filediff?.file || props.input.filePath || "")
-    const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
+    // The host streams a provisional count from oldString/newString until the
+    // permission ask returns the real filediff.
+    const streamed = () => streamedChanges(props.metadata, pending())
     // A plain function, not `createMemo`: Solid evaluates a memo eagerly on
     // render, which parsed the patch with Pierre even while the card stayed
     // collapsed. This is only read when the deferred body mounts or the user
@@ -2959,15 +2991,7 @@ ToolRegistry.register({
                   <span data-slot="message-part-title-text">
                     <TextShimmer text={i18n.t("ui.messagePart.title.edit")} active={pending()} />
                   </span>
-                  <Show when={filename()}>
-                    {(name) => (
-                      <ToolMetaLine
-                        filename={name()}
-                        path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
-                        changes={props.metadata.filediff}
-                      />
-                    )}
-                  </Show>
+                  <ToolFileMeta filePath={props.input.filePath} changes={props.metadata.filediff ?? streamed()} />
                 </div>
               </div>
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
@@ -3005,12 +3029,10 @@ ToolRegistry.register({
     const fileComponent = useFileComponent()
     const diagnostics = createMemo(() => getDiagnostics(props.metadata.diagnostics, props.input.filePath))
     const path = createMemo(() => props.input.filePath || "")
-    const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
-    // While the model streams the file, the host sends its line count as
-    // `metadata.lines`, so the header counts up before the diff exists.
-    const streamed = () =>
-      pending() && typeof props.metadata?.lines === "number" ? { additions: props.metadata.lines, deletions: 0 } : undefined
+    // While the model streams the file, the host sends a provisional count as
+    // `metadata.streamChanges`, so the header counts up before the diff exists.
+    const streamed = () => streamedChanges(props.metadata, pending())
     // A write that leaves the file as it was has an empty diff: show only the header.
     const unchanged = () => {
       const diff = props.metadata?.filediff
@@ -3057,21 +3079,14 @@ ToolRegistry.register({
                   <span data-slot="message-part-title-text">
                     <TextShimmer text={i18n.t("ui.messagePart.title.write")} active={pending()} />
                   </span>
-                  <Show
-                    when={filename()}
+                  <ToolFileMeta
+                    filePath={props.input.filePath}
+                    changes={props.metadata.filediff ?? streamed()}
                     fallback={
                       // Some models stream the content before the file path.
                       <Show when={streamed()}>{(changes) => <ToolChanges changes={changes()} />}</Show>
                     }
-                  >
-                    {(name) => (
-                      <ToolMetaLine
-                        filename={name()}
-                        path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
-                        changes={props.metadata.filediff ?? streamed()}
-                      />
-                    )}
-                  </Show>
+                  />
                 </div>
               </div>
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
@@ -3193,6 +3208,16 @@ ToolRegistry.register({
       />
     )
     const pending = createMemo(() => busy(props.status))
+    // The host streams a provisional count from patchText until the parsed
+    // files metadata arrives at completion.
+    const streamed = () => streamedChanges(props.metadata, pending())
+    // The aggregate count shows the parsed files once they exist, and the
+    // provisional streamed count while the patch is still being generated.
+    const triggerChanges = () => {
+      const list = files()
+      if (list.some((file) => file.additions > 0 || file.deletions > 0)) return list
+      return streamed()
+    }
     const single = createMemo(() => {
       const list = files()
       if (list.length !== 1) return
@@ -3242,15 +3267,9 @@ ToolRegistry.register({
                       />
                     )}
                   </Show>
-                  <Show when={!single() && subtitle()}>
-                    {(text) => (
-                      <>
-                        <ToolText text={text()} />
-                        <Show when={files().some((file) => file.additions > 0 || file.deletions > 0)}>
-                          <ToolChanges changes={files()} slot="message-part-tool-changes" />
-                        </Show>
-                      </>
-                    )}
+                  <Show when={!single() && subtitle()}>{(text) => <ToolText text={text()} />}</Show>
+                  <Show when={!single() && triggerChanges()}>
+                    {(changes) => <ToolChanges changes={changes()} slot="message-part-tool-changes" />}
                   </Show>
                 </div>
               </div>

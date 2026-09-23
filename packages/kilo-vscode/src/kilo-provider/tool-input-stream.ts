@@ -11,7 +11,9 @@ type Tool = {
   state: { status: string; input?: Record<string, unknown>; metadata?: Record<string, unknown> }
 }
 
-type Shown = { input: Record<string, unknown>; lines?: number }
+type StreamChanges = { additions: number; deletions: number }
+
+type Shown = { input: Record<string, unknown>; changes?: StreamChanges }
 
 type Call = { part?: Tool; raw: string; timer?: ReturnType<typeof setTimeout>; shown?: Shown; key?: string }
 
@@ -21,10 +23,13 @@ const INTERVAL = 50
 // Keep at most this many open calls, so an aborted stream cannot grow the map.
 const CAP = 50
 // Strings that count while they stream. Other fields show once complete.
-const LIVE = new Set(["content", "command"])
-// Large fields the webview does not render while a call is pending. Written
-// content only feeds the line count, so the header grows without sending text.
+const LIVE = new Set(["content", "command", "oldString", "newString", "patchText"])
+// Large fields the webview does not render while a call is pending. They only
+// feed the provisional diff count, so the header grows without sending text.
 const HIDDEN = new Set(["content", "oldString", "newString", "patchText", "edits"])
+// Tools whose streamed input can show a provisional diff count before the
+// final filediff or files metadata arrives.
+const COUNTED = new Set(["write", "edit", "apply_patch"])
 const CHARS = 2400
 
 function tool(part: unknown): part is Tool {
@@ -41,28 +46,63 @@ function lines(text: string) {
   return count
 }
 
+// Count added and removed lines in a streamed patch. The `+++` and `---` file
+// headers are not changes, so they are skipped.
+function patch(text: string): StreamChanges {
+  let additions = 0
+  let deletions = 0
+  for (const line of text.split("\n")) {
+    if (line.startsWith("+++") || line.startsWith("---")) continue
+    if (line.startsWith("+")) additions++
+    else if (line.startsWith("-")) deletions++
+  }
+  return { additions, deletions }
+}
+
+// A provisional diff count from the arguments streamed so far. It can differ
+// from the final metadata because of context, replaceAll, or formatting.
+function counts(name: string, input: Record<string, unknown>): StreamChanges | undefined {
+  if (name === "write") {
+    const content = input.content
+    return typeof content === "string" ? { additions: lines(content), deletions: 0 } : undefined
+  }
+  if (name === "edit") {
+    const before = input.oldString
+    const after = input.newString
+    if (typeof before !== "string" && typeof after !== "string") return undefined
+    return {
+      additions: lines(typeof after === "string" ? after : ""),
+      deletions: lines(typeof before === "string" ? before : ""),
+    }
+  }
+  if (name === "apply_patch") {
+    const text = input.patchText
+    return typeof text === "string" ? patch(text) : undefined
+  }
+  return undefined
+}
+
 function shape(name: string, input: Record<string, unknown>): Shown {
   const next: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(input)) {
     if (HIDDEN.has(key)) continue
     next[key] = typeof value === "string" && value.length > CHARS ? value.slice(0, CHARS) : value
   }
-  const content = input.content
-  if (name !== "write" || typeof content !== "string") return { input: next }
-  return { input: next, lines: lines(content) }
+  return { input: next, changes: counts(name, input) }
 }
 
 function show<T extends Tool>(part: T, shown: Shown, merge: boolean): T {
   const input = merge ? part.state.input : shown.input
-  const metadata = shown.lines === undefined ? part.state.metadata : { ...part.state.metadata, lines: shown.lines }
+  const metadata =
+    shown.changes === undefined ? part.state.metadata : { ...part.state.metadata, streamChanges: shown.changes }
   return { ...part, state: { ...part.state, input, ...(metadata ? { metadata } : {}) } }
 }
 
 /**
  * Turns streamed tool input fragments into pending part updates, so a tool
- * row shows its file path, command, or the line count of written content while
- * the model still generates the arguments. A running `write` keeps the line
- * count until its diff arrives.
+ * row shows its file path, command, or a provisional diff count while the
+ * model still generates the arguments. A running write, edit, or apply_patch
+ * keeps the count until its final diff arrives.
  */
 export class ToolInputStream {
   private readonly calls = new Map<string, Call>()
@@ -87,7 +127,7 @@ export class ToolInputStream {
     if (!call) return part
     if (call.timer) clearTimeout(call.timer)
     call.timer = undefined
-    if (status !== "running" || part.tool !== "write" || call.shown?.lines === undefined) {
+    if (status !== "running" || !COUNTED.has(part.tool) || call.shown?.changes === undefined) {
       this.calls.delete(part.callID)
       return part
     }
