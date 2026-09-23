@@ -90,6 +90,8 @@ export const dict = {
     "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.unavailable":
     "Konuşma geri alındı. Dosya kontrol noktası olmadığından çalışma alanı değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.notAGitRepo":
+    "Konuşma geri alındı. Dosya kontrol noktaları bir Git deposu gerektirir, bu nedenle çalışma alanı değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.legacy":
     "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
   "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",

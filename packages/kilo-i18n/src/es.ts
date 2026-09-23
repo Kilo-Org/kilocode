@@ -46,8 +46,13 @@ export const dict = {
     "Los archivos del proyecto pueden añadirse al control de versiones. No guardes secretos aquí, a menos que la configuración haga referencia a una variable de entorno.",
   "marketplace.install.learnMore": "Descubre cómo funcionan las instalaciones de Marketplace",
   "marketplace.install.learnMcp": "Más información sobre MCP",
+  "marketplace.install.about.plugin":
+    "Un complemento npm añade herramientas e integraciones personalizadas a Kilo. Los complementos se ejecutan con todos los permisos.",
+  "marketplace.install.plugin.warning":
+    "Los complementos ejecutan código con todos los permisos. Pueden leer y modificar tus archivos, ejecutar comandos y acceder a tus credenciales y a tu red. Instala solo complementos en los que confíes.",
   "marketplace.install.installedAt": "Instalado en {{path}}",
-  "marketplace.intro": "Instala agentes, habilidades y herramientas MCP reutilizables en uno o todos los proyectos.",
+  "marketplace.intro":
+    "Instala agentes, habilidades, herramientas MCP y complementos reutilizables en uno o todos los proyectos.",
   "marketplace.intro.learnMore": "Acerca de Marketplace",
   "marketplace.install.prerequisites": "Requisitos previos",
   "marketplace.install.installing": "Instalando...",
@@ -75,6 +80,7 @@ export const dict = {
   "marketplace.scope.project": "proyecto",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "servidor MCP",
+  "marketplace.remove.type.plugin": "complemento",
   "marketplace.remove.type.skill": "habilidad",
   "marketplace.remove.type.agent": "agente",
   "marketplace.remove.failed": "Error al eliminar {{name}}",
@@ -85,7 +91,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Varias sesiones están en ejecución y se interrumpirán",
   "marketplace.warning.installAnyway": "Instalar de todas formas",
   "marketplace.warning.cancel": "Cancelar",
-  "marketplace.contribute.prompt": "¿Falta una skill, agente o servidor MCP?",
+  "marketplace.contribute.prompt": "¿Falta una skill, agente, servidor MCP o complemento?",
   "marketplace.contribute.cta": "Contribuir en GitHub",
   "marketplace.migration.notice":
     "Los modos han sido reemplazados por agentes. Si anteriormente instalaste modos del marketplace, elimínalos y reinstálalos como agentes para migrar al nuevo formato.",

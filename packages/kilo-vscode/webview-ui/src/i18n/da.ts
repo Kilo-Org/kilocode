@@ -90,6 +90,8 @@ export const dict = {
     "Samtalen blev gendannet. Filændringer blev ikke gendannet, fordi snapshots er deaktiveret.",
   "revert.banner.workspace.unavailable":
     "Samtalen blev gendannet. Der var intet filkontrolpunkt tilgængeligt, så ændringer i arbejdsområdet blev ikke gendannet.",
+  "revert.banner.workspace.notAGitRepo":
+    "Samtalen blev gendannet. Filkontrolpunkter kræver et Git-repository, så ændringer i arbejdsområdet blev ikke gendannet.",
   "revert.banner.workspace.legacy":
     "Samtalen blev gendannet. Status for gendannelse af arbejdsområdet er ikke tilgængelig for denne tidligere gendannelse.",
   "revert.banner.workspace.enableSnapshots": "Aktivér snapshots",

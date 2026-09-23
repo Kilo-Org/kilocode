@@ -94,6 +94,8 @@ export const dict = {
     "대화를 되돌렸습니다. 스냅샷이 비활성화되어 있어 파일 변경 사항은 복원되지 않았습니다.",
   "revert.banner.workspace.unavailable":
     "대화를 되돌렸습니다. 사용 가능한 파일 체크포인트가 없어 작업 공간 변경 사항은 복원되지 않았습니다.",
+  "revert.banner.workspace.notAGitRepo":
+    "대화를 되돌렸습니다. 파일 체크포인트를 사용하려면 Git 저장소가 필요하므로 작업 공간 변경 사항은 복원되지 않았습니다.",
   "revert.banner.workspace.legacy":
     "대화가 되돌려졌습니다. 이 이전 되돌리기에서는 작업 영역 복원 상태를 확인할 수 없습니다.",
   "revert.banner.workspace.enableSnapshots": "스냅샷 활성화",

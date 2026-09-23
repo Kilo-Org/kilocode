@@ -368,6 +368,13 @@ describe("slimPart", () => {
       output: BIG,
       metadata: { output: BIG },
     })
+    const LINES = Array.from({ length: 500 }, (_, i) => `line-${i}-${"x".repeat(20)}`).join("\n")
+    const long = part("bash", {
+      status: "completed",
+      input: { command: "seq" },
+      output: LINES,
+      metadata: { output: LINES },
+    })
 
     it("truncates metadata.output and state.output", () => {
       const slim = slimPart(heavy) as Record<string, any>
@@ -377,6 +384,36 @@ describe("slimPart", () => {
 
     it("stays under size cap", () => {
       expect(bytes(slimPart(heavy))).toBeLessThan(MAX_SLIM_BYTES)
+    })
+
+    it("keeps the end of metadata.output and state.output", () => {
+      const slim = slimPart(long) as Record<string, any>
+      expect(slim.state.metadata.output).toContain("line-499-")
+      expect(slim.state.output).toContain("line-499-")
+      expect(slim.state.metadata.output).not.toContain("line-0-")
+      expect(slim.state.output).not.toContain("line-0-")
+    })
+
+    it("starts the retained tail on a whole line", () => {
+      const slim = slimPart(long) as Record<string, any>
+      const out = slim.state.output as string
+      expect(out.length).toBeLessThanOrEqual(4000)
+      expect(out.startsWith("line-")).toBe(true)
+      expect(out.split("\n")[0]).toMatch(/^line-\d+-x+$/)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // head cap for other tools
+  // -----------------------------------------------------------------------
+  describe("non-bash output", () => {
+    const LINES = Array.from({ length: 500 }, (_, i) => `line-${i}-${"x".repeat(20)}`).join("\n")
+
+    it("keeps the head cap for read", () => {
+      const read = slimPart(part("read", { status: "completed", output: LINES, metadata: {} })) as Record<string, any>
+      expect(read.state.output.startsWith("line-0-")).toBe(true)
+      expect(read.state.output).not.toContain("line-499-")
+      expect(read.state.output).toContain("chars omitted")
     })
   })
 })

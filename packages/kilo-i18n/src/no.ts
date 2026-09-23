@@ -46,8 +46,13 @@ export const dict = {
     "Prosjektfiler kan legges til i versjonskontroll. Ikke lagre hemmeligheter her med mindre konfigurasjonen viser til en miljøvariabel.",
   "marketplace.install.learnMore": "Finn ut hvordan installasjoner fra Marketplace fungerer",
   "marketplace.install.learnMcp": "Finn ut mer om MCP",
+  "marketplace.install.about.plugin":
+    "Et npm-programtillegg legger til tilpassede verktøy og integrasjoner i Kilo. Programtillegg kjører med fulle tillatelser.",
+  "marketplace.install.plugin.warning":
+    "Programtillegg kjører kode med fulle tillatelser. De kan lese og endre filene dine, kjøre kommandoer og få tilgang til påloggingsopplysningene dine og nettverket ditt. Installer bare programtillegg du stoler på.",
   "marketplace.install.installedAt": "Installert i {{path}}",
-  "marketplace.intro": "Installer gjenbrukbare agenter, ferdigheter og MCP-verktøy for ett eller alle prosjekter.",
+  "marketplace.intro":
+    "Installer gjenbrukbare agenter, ferdigheter, MCP-verktøy og programtillegg for ett eller alle prosjekter.",
   "marketplace.intro.learnMore": "Om Marketplace",
   "marketplace.install.prerequisites": "Forutsetninger",
   "marketplace.install.installing": "Installerer...",
@@ -75,6 +80,7 @@ export const dict = {
   "marketplace.scope.project": "prosjekt",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
+  "marketplace.remove.type.plugin": "programtillegg",
   "marketplace.remove.type.skill": "ferdighet",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Kunne ikke fjerne {{name}}",
@@ -85,7 +91,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere økter kjører og vil bli avbrutt",
   "marketplace.warning.installAnyway": "Installer uansett",
   "marketplace.warning.cancel": "Avbryt",
-  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent, MCP-server eller et programtillegg?",
   "marketplace.contribute.cta": "Bidra på GitHub",
   "marketplace.migration.notice":
     "Modi er erstattet av agenter. Hvis du tidligere har installert marketplace-modi, fjern dem og installer dem på nytt som agenter for å migrere til det nye formatet.",

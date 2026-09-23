@@ -37,6 +37,14 @@ const agent = {
   category: "development",
   content: { mode: "all" as const, description: "Reviews code", prompt: "Review code" },
 }
+const plugin = {
+  id: "@acme/deploy",
+  type: "plugin" as const,
+  name: "Deploy Toolkit",
+  description: "",
+  category: "devops",
+  content: "@acme/deploy",
+}
 const fs = vscode.workspace.fs as unknown as {
   readFile: (uri: vscode.Uri) => Promise<Uint8Array>
   writeFile: (uri: vscode.Uri, data: Uint8Array) => Promise<void>
@@ -126,6 +134,15 @@ describe("Marketplace installation metadata", () => {
         githubUrl: "https://example.com",
         content: "https://example.com/skill.tar.gz",
       },
+      {
+        type: "plugin",
+        id: "@acme/deploy",
+        name: "Deploy Toolkit",
+        description: "Deploys services",
+        category: "devops",
+        content: "@acme/deploy",
+        url: "https://example.com/deploy",
+      },
     ]
     const metadata = { project: { "mcp:warehouse": { type: "mcp" } }, global: {} }
 
@@ -141,6 +158,8 @@ describe("Marketplace installation metadata", () => {
     ])
     expect(filterItems(items, metadata, "", "installed", [], []).map((entry) => entry.id)).toEqual(["warehouse"])
     expect(filterItems(items, metadata, "", "all", [], ["mcp"]).map((entry) => entry.id)).toEqual(["warehouse"])
+    expect(filterItems(items, metadata, "", "all", [], ["plugin"]).map((entry) => entry.id)).toEqual(["@acme/deploy"])
+    expect(filterItems(items, metadata, "deploy", "all", [], []).map((entry) => entry.id)).toEqual(["@acme/deploy"])
     expect(
       filterItems(items, metadata, "", "all", [], [], {}, true, {
         "agent:reviewer": { filename: ["*.review.ts"] },
@@ -183,6 +202,21 @@ describe("Marketplace removal actions", () => {
     expect(has(files, local)).toBe(false)
     expect(has(files, legacy)).toBe(false)
     expect(has(files, global)).toBe(false)
+  })
+})
+
+describe("Marketplace plugin removal", () => {
+  it("uses the generic CLI-backed path without touching legacy MCP files", async () => {
+    const files = setup()
+    const remove = mock(async () => ({ success: true, slug: plugin.id }))
+
+    const result = await removeMarketplaceItem(ctx(remove), plugin, "project", project, project)
+
+    expect(result).toEqual({ success: true, slug: plugin.id })
+    expect(remove).toHaveBeenCalledTimes(1)
+    expect(has(files, local)).toBe(true)
+    expect(has(files, legacy)).toBe(true)
+    expect(has(files, global)).toBe(true)
   })
 })
 
