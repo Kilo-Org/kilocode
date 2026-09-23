@@ -211,19 +211,6 @@ async function cloneInto(repo: string, ref: string | undefined, dir: string, mar
   }
 }
 
-// Remove the cached clone for a git plugin spec. Callers must confirm the
-// plugin is not installed in any other scope before calling this.
-export async function removeGitPluginCache(spec: string): Promise<void> {
-  const hit = parseGitPluginSpec(spec)
-  const identity = gitPluginIdentity(spec)
-  if (!hit || !identity) return
-  const { dir, marker } = cachePaths(identity, hit.ref)
-  // Take the same lock a clone uses so removal cannot race an install.
-  await using _ = await Flock.acquire(`plugin-git:${dir}`)
-  await rm(dir, { recursive: true, force: true })
-  await rm(marker, { force: true })
-}
-
 export async function resolveGitPluginTarget(spec: string): Promise<GitPluginResult> {
   const hit = parseGitPluginSpec(spec)
   const identity = gitPluginIdentity(spec)

@@ -12,9 +12,7 @@ import { Skill } from "@/skill"
 import { Process } from "@/util/process"
 import { Filesystem } from "@/util/filesystem"
 import { installPlugin as stagePlugin, readPluginManifest } from "@/plugin/install"
-import { isGitPluginSpec, removeGitPluginCache } from "@/kilocode/plugin/git-source"
 import { pluginIdentity } from "./plugin-spec"
-import { detect } from "./detection"
 import { patchPlugin } from "./plugin-config"
 import type {
   AgentInstallItem,
@@ -345,7 +343,7 @@ async function stripPluginFromFile(file: string, identity: string) {
       if (err.code === "ENOENT") return undefined
       throw err
     })
-  if (text === undefined) return { status: "missing" as const, specs: [] as string[] }
+  if (text === undefined) return "missing"
   const errors: JsoncParseError[] = []
   const data = parseJsonc(text, errors, { allowTrailingComma: true })
   if (errors.length > 0) throw new Error("Invalid JSON; file left unchanged and plugin removal could not be verified")
@@ -353,49 +351,25 @@ async function stripPluginFromFile(file: string, identity: string) {
     data && typeof data === "object" && Array.isArray((data as { plugin?: unknown }).plugin)
       ? (data as { plugin: unknown[] }).plugin
       : undefined
-  if (!list) return { status: "missing" as const, specs: [] as string[] }
-  const specs: string[] = []
-  const next = list.filter((entry) => {
-    if (pluginIdentity(entry) !== identity) return true
-    if (typeof entry === "string") specs.push(entry)
-    else if (Array.isArray(entry) && typeof entry[0] === "string") specs.push(entry[0])
-    return false
-  })
-  if (next.length === list.length) return { status: "missing" as const, specs: [] as string[] }
+  if (!list) return "missing"
+  const next = list.filter((entry) => pluginIdentity(entry) !== identity)
+  if (next.length === list.length) return "missing"
   const out = applyEdits(
     text,
     modify(text, ["plugin"], next, { formattingOptions: { tabSize: 2, insertSpaces: true } }),
   )
   await Filesystem.write(file, out)
-  return { status: "removed" as const, specs }
-}
-
-// A git plugin is cloned into a shared cache. Delete that cache only when the
-// plugin is not installed in any remaining scope, so removal does not break
-// another install that still references the same clone.
-async function removeUnusedPluginCache(svc: Services, identity: string, specs: string[]) {
-  if (specs.length === 0) return
-  const meta = await detect({ directory: svc.directory, worktree: svc.worktree })
-  const key = `plugin:${identity}`
-  if (meta.project[key] || meta.global[key]) return
-  for (const spec of specs) {
-    if (isGitPluginSpec(spec)) await removeGitPluginCache(spec)
-  }
+  return "removed"
 }
 
 function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   return Effect.promise(async (): Promise<MarketplaceRemoveResult> => {
     const identity = pluginIdentity(item.id) ?? item.id
     const removed: string[] = []
-    const specs: string[] = []
     const errors: string[] = []
     for (const file of Paths.pluginFiles(scope, svc.directory, svc.worktree)) {
       try {
-        const out = await stripPluginFromFile(file, identity)
-        if (out.status === "removed") {
-          removed.push(file)
-          specs.push(...out.specs)
-        }
+        if ((await stripPluginFromFile(file, identity)) === "removed") removed.push(file)
       } catch (err) {
         errors.push(`${file}: ${errorText(err)}`)
       }
@@ -408,9 +382,6 @@ function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
         error: `Plugin removal incomplete.${changed} Could not verify removal from: ${errors.join("; ")}`,
       }
     }
-    await removeUnusedPluginCache(svc, identity, specs).catch((err) =>
-      console.warn("Failed to clean plugin clone cache", err),
-    )
     return { success: true, slug: item.id }
   })
 }

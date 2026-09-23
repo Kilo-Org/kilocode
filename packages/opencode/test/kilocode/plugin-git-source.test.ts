@@ -245,12 +245,6 @@ describe("git plugin resolution", () => {
     expect(id).toBeDefined()
     if (!id) return
 
-    const resolved = await resolveGitPluginTarget(spec)
-    expect(resolved.ok).toBe(true)
-    if (!resolved.ok) return
-    const clone = fileURLToPath(resolved.target)
-    expect(await Filesystem.exists(clone)).toBe(true)
-
     const out = await Effect.runPromise(
       install({ directory: tmp.path, worktree: tmp.path } as never, {
         item: { type: "plugin", id, content: spec },
@@ -268,38 +262,5 @@ describe("git plugin resolution", () => {
     )
     expect(removed.success).toBe(true)
     expect((await detect({ directory: tmp.path, worktree: tmp.path })).project[`plugin:${id}`]).toBeUndefined()
-    // Uninstalling the only install removes the shared clone cache.
-    expect(await Filesystem.exists(clone)).toBe(false)
-  })
-
-  test("keeps the clone cache while another scope still installs the plugin", async () => {
-    await using repo = await tmpdir({
-      git: true,
-      init: (dir) => commit(dir, { "package.json": plugin, "server.js": source }),
-    })
-    await using tmp = await tmpdir()
-    const spec = `git:${repo.path}`
-    const id = pluginIdentity(spec)
-    if (!id) return
-
-    const resolved = await resolveGitPluginTarget(spec)
-    expect(resolved.ok).toBe(true)
-    if (!resolved.ok) return
-    const clone = fileURLToPath(resolved.target)
-
-    const svc = { directory: tmp.path, worktree: tmp.path } as never
-    const item = { type: "plugin" as const, id, content: spec }
-    const project = await Effect.runPromise(install(svc, { item, target: "project" }))
-    const global = await Effect.runPromise(install(svc, { item, target: "global" }))
-    expect(project.success).toBe(true)
-    expect(global.success).toBe(true)
-
-    const removed = await Effect.runPromise(remove(svc, { id, type: "plugin" }, "project"))
-    expect(removed.success).toBe(true)
-    // The global install still references the clone, so the cache must remain.
-    expect((await detect({ directory: tmp.path, worktree: tmp.path })).global[`plugin:${id}`]).toEqual({
-      type: "plugin",
-    })
-    expect(await Filesystem.exists(clone)).toBe(true)
   })
 })
