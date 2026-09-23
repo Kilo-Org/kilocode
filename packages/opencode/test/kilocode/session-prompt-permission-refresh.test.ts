@@ -247,7 +247,7 @@ it.live(
         const sessions = yield* Session.Service
         const permission = yield* Permission.Service
         const commands = yield* Command.Service
-        const state = {
+        const state: { info: Command.Info } = {
           info: {
             name: "probe",
             source: "skill" as const,
