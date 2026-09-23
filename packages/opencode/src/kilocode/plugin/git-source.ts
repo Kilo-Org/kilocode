@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "crypto"
 import { mkdir, realpath, rename, rm } from "fs/promises"
+import { homedir } from "os"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Global } from "@opencode-ai/core/global"
@@ -100,12 +101,19 @@ export function parseGitPluginSpec(spec: string): GitPluginSpec | undefined {
   return { repo, ref, subpath }
 }
 
+// A backslash is a path separator only on Windows. Normalizing it on POSIX
+// would rewrite a legal filename, so only Windows-style paths are converted.
+function isWindowsPath(repo: string) {
+  return /^[A-Za-z]:[\\/]/.test(repo) || repo.startsWith("\\\\")
+}
+
 function normalizeRepo(repo: string) {
   const base = repo.startsWith("file:")
     ? (fileUrlPath(repo) ?? repo.replace(/^file:\/*/, "/"))
     : repo.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "")
   // Use forward slashes so a plain Windows path and its `file://` URL form
   // resolve to the same identity and cache entry.
+  if (!isWindowsPath(base)) return base
   return base.replace(/\\/g, "/")
 }
 
@@ -131,6 +139,8 @@ function cloneUrl(repo: string) {
   // the other form reuses the first clone instead of cloning again.
   if (repo.startsWith("file:")) return fileUrlPath(repo) ?? repo
   if (repo.startsWith("./") || repo.startsWith("../")) return repo
+  // `~` is only meaningful as a local home path, so expand it here.
+  if (repo.startsWith("~/")) return path.join(homedir(), repo.slice(2))
   if (path.isAbsolute(repo) || /^[A-Za-z]:[\\/]/.test(repo)) return normalizeRepo(repo)
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(repo)) return repo
   // Shorthand like `github.com/owner/repo` would otherwise resolve as a local path.
@@ -177,21 +187,28 @@ async function cloneInto(repo: string, ref: string | undefined, dir: string, mar
   const tmp = `${dir}.tmp-${randomUUID().slice(0, 8)}`
   await rm(tmp, { recursive: true, force: true })
   await mkdir(path.dirname(dir), { recursive: true })
-  // `--` stops git from treating the repo or ref as an option.
-  await git(["clone", "--depth", "1", "--", repo, tmp])
-  if (ref) {
-    // A shallow clone carries only the default branch; fetch the requested ref
-    // (branch or tag) and detach onto it.
-    await git(["fetch", "--depth", "1", "origin", "--", ref], tmp)
-    await git(["checkout", "--detach", "FETCH_HEAD"], tmp)
+  try {
+    // `--` stops git from treating the repo or ref as an option.
+    await git(["clone", "--depth", "1", "--", repo, tmp])
+    if (ref) {
+      // A shallow clone carries only the default branch; fetch the requested ref
+      // (branch or tag) and detach onto it.
+      await git(["fetch", "--depth", "1", "origin", "--", ref], tmp)
+      await git(["checkout", "--detach", "FETCH_HEAD"], tmp)
+    }
+    const sha = (await git(["rev-parse", "HEAD"], tmp)).trim()
+    // Drop git metadata so the cached plugin directory is plain files.
+    await rm(path.join(tmp, ".git"), { recursive: true, force: true })
+    // Swap the finished clone into place so a reader never sees a half-cloned dir.
+    await rm(dir, { recursive: true, force: true })
+    await rename(tmp, dir)
+    await Filesystem.writeJson(marker, { repo, ...(ref ? { ref } : {}), sha, updatedAt: Date.now() })
+  } catch (err) {
+    // A failed clone must not leave a staging directory behind. After a
+    // successful rename the staging path is already gone.
+    await rm(tmp, { recursive: true, force: true })
+    throw err
   }
-  const sha = (await git(["rev-parse", "HEAD"], tmp)).trim()
-  // Drop git metadata so the cached plugin directory is plain files.
-  await rm(path.join(tmp, ".git"), { recursive: true, force: true })
-  // Swap the finished clone into place so a reader never sees a half-cloned dir.
-  await rm(dir, { recursive: true, force: true })
-  await rename(tmp, dir)
-  await Filesystem.writeJson(marker, { repo, ...(ref ? { ref } : {}), sha, updatedAt: Date.now() })
 }
 
 export async function resolveGitPluginTarget(spec: string): Promise<GitPluginResult> {
