@@ -453,11 +453,7 @@ export const RunCommand = effectCmd({
         UI.error("You must provide a message or a command")
         process.exit(1)
       }
-      if (args.command === "goal") {
-        await loadInput()
-        const error = KiloRun.validateGoal(message)
-        if (error) die(error)
-      }
+      if (args.command === "goal") await loadInput()
       // kilocode_change end
 
       if (args.fork && !args.continue && !args.session) {
@@ -759,6 +755,13 @@ export const RunCommand = effectCmd({
       }
 
       async function execute(sdk: KiloClient) {
+        // kilocode_change start - headless goal start/resume needs the autonomous engine; reject before any session work
+        const autonomous = args.command === "goal" && !KiloRun.goalControl(message) ? await KiloRun.goalEnabled(sdk) : false
+        if (args.command === "goal") {
+          const error = KiloRun.validateGoal(message, autonomous)
+          if (error) die(error)
+        }
+        // kilocode_change end
         // kilocode_change start - preserve custom command precedence and avoid reading stdin for built-ins
         const deferred = Boolean(args.attach && args.session && !directory)
         const initial = deferred ? undefined : await KiloRun.resolveBuiltin(sdk, args.command, directory)
@@ -1051,7 +1054,7 @@ export const RunCommand = effectCmd({
 
         // kilocode_change start
         if (args.command === "goal") {
-          await KiloRun.goal(client, sessionID, message, emit)
+          await KiloRun.goal(client, sessionID, message, emit, { autonomous, signal: drain.signal })
           return
         }
         // kilocode_change end

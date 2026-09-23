@@ -164,7 +164,7 @@ Each package is one commit with tests. Order is top to bottom.
 ### P15 – `/goal` integration, status, docs
 - [x] Branch at `session/prompt.ts:2314` (`kilocode_change`): when enabled, `Engine.command(input)`; args `<objective>`, `status` (bare default), `pause`, `resume`, `clear`, `tasks`, `budget`.
 - [x] `autonomous/status.ts`: text renderer (progress bar, criteria, tasks, models, usage, escalations) emitted as a synthetic assistant notice.
-- [ ] Allow `kilo run --command goal <objective>` when enabled (deferred: the headless CLI must reject before any request, so it cannot read the server config; start and resume stay TUI-only for now).
+- [x] Allow `kilo run --command goal <objective>` when enabled: the CLI reads the server config first, then starts the goal and waits for it to settle, exiting non-zero unless it completes.
 - [x] Docs: "Autonomous engine (experimental)" section in `packages/kilo-docs/pages/code-with-ai/agents/goals.md`.
 - [x] Tests: command routing, status snapshot, existing goal tests unchanged with the flag off.
 

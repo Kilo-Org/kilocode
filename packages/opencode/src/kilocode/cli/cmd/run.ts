@@ -23,10 +23,59 @@ export namespace KiloRun {
     process.exit(1)
   }
 
-  export function validateGoal(text: string) {
-    return ["", "pause", "clear"].includes(text.trim())
-      ? undefined
-      : "Goal start and resume require the TUI. Run kilo, then use /goal <text> or /goal resume."
+  const GOAL_CONTROLS = ["", "pause", "clear", "status", "tasks", "budget"]
+
+  /**
+   * Headless goal arguments. Status controls are always allowed. Start and
+   * resume need the autonomous engine, because the standard goal loop expects an
+   * interactive client; pass `autonomous` when the server config enables it.
+   */
+  export function validateGoal(text: string, autonomous = false) {
+    const action = text.trim()
+    if (GOAL_CONTROLS.includes(action)) return undefined
+    if (autonomous) return undefined
+    return "Goal start and resume require the TUI. Run kilo, then use /goal <text> or /goal resume."
+  }
+
+  export const goalControl = (text: string) => GOAL_CONTROLS.includes(text.trim())
+
+  export async function goalEnabled(sdk: KiloClient) {
+    const cfg = await sdk.config.get()
+    return cfg.data?.autonomous_goal?.enabled === true
+  }
+
+  type GoalStatus = { status: string; reason?: string }
+
+  const goalState = (metadata: unknown): GoalStatus | undefined => {
+    const goal = (metadata as Record<string, unknown> | undefined)?.["kilo.goal"]
+    if (!goal || typeof goal !== "object" || typeof (goal as { status?: unknown }).status !== "string") return undefined
+    const value = goal as { status: string; reason?: unknown }
+    return { status: value.status, ...(typeof value.reason === "string" ? { reason: value.reason } : {}) }
+  }
+
+  /** Poll the session goal row until the engine settles, then print the final status. */
+  export async function goalWait(
+    sdk: KiloClient,
+    sessionID: string,
+    emit: (type: string, data: Record<string, unknown>) => boolean,
+    opts: { interval?: number; signal?: AbortSignal } = {},
+  ) {
+    const interval = opts.interval ?? 2000
+    for (;;) {
+      if (opts.signal?.aborted) return
+      const session = await sdk.session.get({ sessionID }, { throwOnError: true })
+      const goal = goalState(session.data.metadata)
+      if (!goal || goal.status !== "active") {
+        const result = await sdk.session.command({ sessionID, command: "goal", arguments: "status" }, { throwOnError: true })
+        for (const part of result.data.parts) {
+          if (part.type !== "text") continue
+          if (!emit("text", { part })) process.stdout.write(part.text + "\n")
+        }
+        if (!goal || goal.status !== "complete") process.exitCode = 1
+        return
+      }
+      await new Promise((resolve) => setTimeout(resolve, interval))
+    }
   }
 
   export async function goal(
@@ -34,10 +83,12 @@ export namespace KiloRun {
     sessionID: string,
     text: string,
     emit: (type: string, data: Record<string, unknown>) => boolean,
+    opts: { autonomous?: boolean; wait?: boolean; signal?: AbortSignal } = {},
   ) {
     try {
       const action = text.trim()
-      const error = validateGoal(action)
+      const autonomous = opts.autonomous ?? false
+      const error = validateGoal(action, autonomous)
       if (error) throw new Error(error)
       const result = await sdk.session.command(
         { sessionID, command: "goal", arguments: action },
@@ -47,6 +98,7 @@ export namespace KiloRun {
         if (part.type !== "text") continue
         if (!emit("text", { part })) process.stdout.write(part.text + "\n")
       }
+      if (autonomous && opts.wait !== false) await goalWait(sdk, sessionID, emit, { signal: opts.signal })
     } catch (err) {
       const error = FormatError(err) ?? (err instanceof Error ? err.message : FormatUnknownError(err))
       if (!emit("error", { error })) UI.error(error)
