@@ -20,6 +20,7 @@ import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
 import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
+import { GlobalBus, type GlobalEvent } from "../../src/bus/global"
 
 Log.init({ print: false })
 
@@ -216,7 +217,7 @@ describe("plan_exit detection", () => {
       await expect(pending).resolves.toBe("break")
     }))
 
-  test("KiloSessionPrompt resolves plan follow-up through the supplied question service", () =>
+  test("KiloSessionPrompt routes listener-local plan follow-up events to the active directory", () =>
     withInstance(async () => {
       const seeded = await seed({
         text: "Here is the plan",
@@ -228,30 +229,43 @@ describe("plan_exit detection", () => {
           },
         ],
       })
+      const events: GlobalEvent[] = []
+      const listener = (event: GlobalEvent) => events.push(event)
+      GlobalBus.on("event", listener)
 
-      const result = await Effect.runPromise(
-        Effect.gen(function* () {
-          const question = yield* Question.Service
-          const pending = KiloSessionPrompt.askPlanFollowup({
-            sessionID: seeded.sessionID,
-            messages: seeded.messages,
-            abort: AbortSignal.any([]),
-            question,
-          })
-          const item = yield* Effect.gen(function* () {
-            for (let i = 0; i < 50; i++) {
-              const request = (yield* question.list()).find((entry) => entry.sessionID === seeded.sessionID)
-              if (request) return request
-              yield* Effect.sleep("10 millis")
-            }
-            throw new Error("timed out waiting for listener-local plan follow-up question")
-          })
-          yield* question.reply({ requestID: item.id, answers: [[PlanFollowup.ANSWER_CONTINUE]] })
-          return yield* Effect.promise(() => pending)
-        }).pipe(Effect.provide(Question.defaultLayer)),
-      )
+      try {
+        const result = await Effect.runPromise(
+          Effect.gen(function* () {
+            const question = yield* Question.Service
+            const pending = KiloSessionPrompt.askPlanFollowup({
+              sessionID: seeded.sessionID,
+              messages: seeded.messages,
+              abort: AbortSignal.any([]),
+              question,
+            })
+            const item = yield* Effect.gen(function* () {
+              for (let i = 0; i < 50; i++) {
+                const request = (yield* question.list()).find((entry) => entry.sessionID === seeded.sessionID)
+                if (request) return request
+                yield* Effect.sleep("10 millis")
+              }
+              throw new Error("timed out waiting for listener-local plan follow-up question")
+            })
+            yield* question.reply({ requestID: item.id, answers: [[PlanFollowup.ANSWER_CONTINUE]] })
+            return yield* Effect.promise(() => pending)
+          }).pipe(Effect.provide(Question.defaultLayer)),
+        )
 
-      expect(result).toBe("continue")
+        expect(result).toBe("continue")
+        expect(
+          events.find(
+            (event) =>
+              event.payload?.type === "question.asked" && event.payload.properties?.sessionID === seeded.sessionID,
+          )?.directory,
+        ).toBe(Instance.directory)
+      } finally {
+        GlobalBus.off("event", listener)
+      }
     }))
 
   test("KiloSessionPrompt cleans listener-local plan follow-up when aborted outside instance context", () => {
