@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { $ } from "bun"
-import { mkdir } from "fs/promises"
+import { mkdir, symlink } from "fs/promises"
 import path from "path"
 import { fileURLToPath } from "url"
 import { Effect } from "effect"
@@ -61,18 +61,29 @@ describe("git plugin spec parsing", () => {
     expect(parseGitPluginSpec("git:user@host/repo@main")).toBeUndefined()
   })
 
+  test("rejects option-injection refs and malformed repos", () => {
+    expect(parseGitPluginSpec("git:github.com/owner/repo@--upload-pack=/bin/sh")).toBeUndefined()
+    expect(parseGitPluginSpec("git:github.com/owner/repo@-x")).toBeUndefined()
+    expect(parseGitPluginSpec("git:github.com/owner/repo@feat..ure")).toBeUndefined()
+    expect(parseGitPluginSpec("git:https://user:pass@host/repo")).toBeUndefined()
+    expect(parseGitPluginSpec("git:git@github.com:owner/repo")).toBeUndefined()
+    expect(parseGitPluginSpec("git:vendor/plugin")).toBeUndefined()
+  })
+
   test("normalizes identity without scheme or .git suffix", () => {
-    expect(gitPluginIdentity("git:github.com/owner/repo")).toBe("github.com/owner/repo")
-    expect(gitPluginIdentity("git:https://github.com/owner/repo.git")).toBe("github.com/owner/repo")
-    expect(gitPluginIdentity("git:github.com/owner/repo@v1.2.3")).toBe("github.com/owner/repo")
+    expect(gitPluginIdentity("git:github.com/owner/repo")).toBe("git/github.com/owner/repo")
+    expect(gitPluginIdentity("git:https://github.com/owner/repo.git")).toBe("git/github.com/owner/repo")
+    expect(gitPluginIdentity("git:github.com/owner/repo@v1.2.3")).toBe("git/github.com/owner/repo")
     expect(gitPluginIdentity("git:github.com/owner/repo#plugins/my-plugin")).toBe(
-      "github.com/owner/repo/plugins/my-plugin",
+      "git/github.com/owner/repo/plugins/my-plugin",
     )
     expect(gitPluginIdentity("git:https://github.com/owner/repo.git@main#sub/dir")).toBe(
-      "github.com/owner/repo/sub/dir",
+      "git/github.com/owner/repo/sub/dir",
     )
-    expect(gitPluginIdentity("git:file:///tmp/repo")).toBe("/tmp/repo")
-    expect(gitPluginIdentity("git:/tmp/repo")).toBe("/tmp/repo")
+    expect(gitPluginIdentity("git:file:///tmp/repo")).toBe("git/tmp/repo")
+    expect(gitPluginIdentity("git:/tmp/repo")).toBe("git/tmp/repo")
+    // A trailing slash must not defeat the `.git` normalization.
+    expect(gitPluginIdentity("git:github.com/owner/repo.git/")).toBe("git/github.com/owner/repo")
   })
 })
 
@@ -102,7 +113,9 @@ describe("git plugin resolution", () => {
     expect(path.basename(target)).toBe("my-plugin")
     expect(await Filesystem.exists(path.join(target, "package.json"))).toBe(true)
     expect(await Filesystem.exists(path.join(target, ".git"))).toBe(false)
-    expect(pluginIdentity(`git:${repo.path}#plugins/my-plugin`)).toBe(`${repo.path}/plugins/my-plugin`)
+    expect(pluginIdentity(`git:${repo.path}#plugins/my-plugin`)).toBe(
+      `git/${repo.path.replace(/^\/+/, "")}/plugins/my-plugin`,
+    )
 
     // resolvePluginTarget is the shared entrypoint used by the loader and installer.
     expect(await resolvePluginTarget(`git:${repo.path}#plugins/my-plugin`)).toBe(out.target)
@@ -138,6 +151,42 @@ describe("git plugin resolution", () => {
     expect(head.ok).toBe(true)
     if (!head.ok) return
     expect((await Bun.file(path.join(fileURLToPath(head.target), "package.json")).json()).version).toBe("2.0.0")
+  })
+
+  test("keeps different refs of one repo in separate cache entries", async () => {
+    await using repo = await tmpdir({ git: true })
+    await commit(repo.path, { "package.json": JSON.stringify({ name: "git-plugin", version: "1.0.0" }) }, "one")
+    await $`git tag v1`.cwd(repo.path).quiet()
+    await commit(repo.path, { "package.json": JSON.stringify({ name: "git-plugin", version: "2.0.0" }) }, "two")
+    await $`git tag v2`.cwd(repo.path).quiet()
+
+    const a = await resolveGitPluginTarget(`git:${repo.path}@v1`)
+    const b = await resolveGitPluginTarget(`git:${repo.path}@v2`)
+    expect(a.ok).toBe(true)
+    expect(b.ok).toBe(true)
+    if (!a.ok || !b.ok) return
+    expect(a.target).not.toBe(b.target)
+    expect((await Bun.file(path.join(fileURLToPath(a.target), "package.json")).json()).version).toBe("1.0.0")
+    expect((await Bun.file(path.join(fileURLToPath(b.target), "package.json")).json()).version).toBe("2.0.0")
+  })
+
+  test("rejects a symlinked subpath that escapes the clone", async () => {
+    await using outside = await tmpdir()
+    await Bun.write(path.join(outside.path, "package.json"), plugin)
+    await Bun.write(path.join(outside.path, "server.js"), source)
+    await using repo = await tmpdir({
+      git: true,
+      init: async (dir) => {
+        await commit(dir, { "package.json": plugin, "server.js": source })
+        await symlink(outside.path, path.join(dir, "escape"))
+        await $`git add -A`.cwd(dir).quiet()
+        await $`git commit -m escape`.cwd(dir).quiet()
+      },
+    })
+
+    const out = await resolveGitPluginTarget(`git:${repo.path}#escape`)
+    expect(out.ok).toBe(false)
+    if (!out.ok) expect(out.code).toBe("subpath_missing")
   })
 
   test("installs, detects, and removes a git plugin", async () => {

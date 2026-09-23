@@ -22,7 +22,7 @@ describe("marketplace plugin helpers", () => {
     expect(pluginIdentity(["@scope/plugin@next", { option: true }])).toBe("@scope/plugin")
     expect(pluginIdentity(["pkg", { option: true }])).toBe("pkg")
     expect(pluginIdentity("file:///tmp/plugin")).toBe("file:///tmp/plugin")
-    expect(pluginIdentity("git:github.com/owner/repo")).toBe("github.com/owner/repo")
+    expect(pluginIdentity("git:github.com/owner/repo")).toBe("git/github.com/owner/repo")
     expect(pluginIdentity("git:github.com/owner/repo@v1.2.3")).toBe("github.com/owner/repo")
     expect(pluginIdentity("git:github.com/owner/repo#plugins/my-plugin")).toBe(
       "github.com/owner/repo/plugins/my-plugin",
