@@ -13,6 +13,10 @@ Schedule:
 - `delay` fires once after a relative span, e.g. `30s`, `5m`, `2h`, `1d`; a bare number is seconds. A delay under 10 seconds is raised to the 10-second minimum.
 - Give exactly one of `cron`, `when`, or `delay`.
 
+Goals:
+- In a session goal, creating a task suspends the goal until it fires, including every later fire of a recurring task: the goal shows as waiting and resumes itself each time. Do not report a time-based wait as blocked when a cron task can carry the goal forward. When the session goal is to wait for a deploy, build, CI job, or other time-based event, schedule that wait immediately. Do not explore the repository, search for a deploy, or poll with bash first. Do not report blocked because no deploy is visible.
+- A one-shot `when` or `delay` wait longer than the 7-day horizon is clamped to it, and the reported next fire time shows the clamped value. A recurring `cron` schedule whose next fire falls past the task's 7-day expiry is rejected instead, not clamped.
+
 Limits and behavior:
 - A session may hold at most 10 scheduled tasks; cancel one with `cron_delete` first when it is full.
 - A task expires seven days after it is created, so a forgotten loop cannot run forever. A schedule whose next fire would fall past that expiry is rejected: pick a schedule that fires within seven days.
