@@ -433,7 +433,7 @@ export namespace Wakeup {
           )
         })
 
-      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID) {
+      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID, notifyGoal = true) {
         const info = yield* lookup(id)
         if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
         const fiber = timers.get(id)
@@ -444,11 +444,11 @@ export namespace Wakeup {
         entries.delete(id)
         yield* storage.remove(key(info)).pipe(Effect.ignore)
         yield* announce(info.sessionID)
-        yield* notify(info.sessionID, info.id, info.directory, "wakeup")
+        if (notifyGoal) yield* notify(info.sessionID, info.id, info.directory, "wakeup")
         return info
       })
 
-      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID) {
+      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID, notifyGoal = true) {
         const task = yield* cronLookup(id)
         if (!task || (sessionID && task.sessionID !== sessionID)) return undefined
         const fiber = cronTimers.get(id)
@@ -458,26 +458,30 @@ export namespace Wakeup {
         }
         cronEntries.delete(id)
         yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
-        yield* notify(task.sessionID, task.id, task.directory, "cron")
+        if (notifyGoal) yield* notify(task.sessionID, task.id, task.directory, "cron")
         return task
       })
 
       // Called when a session is removed so its wakeups stop holding Keep Awake
       // and can never resume a session that no longer exists. Cron tasks never
       // hold Keep Awake, but they must still be cancelled with the session.
+      // The bulk cancel is teardown, so it never fires the per-id cancel
+      // notification (`cancel`/`cronCancel` keep it for the user cancel path):
+      // re-hydrating the session's persisted waiting goal would undo
+      // `GoalLink.release` and re-arm a goal whose session is gone or settled.
       const cancelSession = Effect.fn("Wakeup.cancelSession")(function* (sessionID: SessionID) {
         const held = yield* list({ sessionID })
-        for (const info of held) yield* cancel(info.id)
+        for (const info of held) yield* cancel(info.id, undefined, false)
         const scheduled = yield* cronList({ sessionID })
-        for (const task of scheduled) yield* cronCancel(task.id)
+        for (const task of scheduled) yield* cronCancel(task.id, undefined, false)
         return held.length + scheduled.length
       })
 
       // Register once per Wakeup layer build so a goal that settles, pauses, or
       // clears cancels the session's timers through the same service that armed
-      // them (D11). Clearing the wait record first in the goal's cleanup path
-      // makes the cancel notify above a no-op during teardown. The disposer
-      // drops the handler on teardown so a rebuilt layer does not stack one.
+      // them (D11). The bulk cancel above does not notify, so teardown cannot
+      // resume the goal it ends. The disposer drops the handler on teardown so a
+      // rebuilt layer does not stack one.
       const unregisterCleanup = GoalLink.registerCleanup((id) => cancelSession(id))
       yield* Effect.addFinalizer(() => Effect.sync(unregisterCleanup))
 

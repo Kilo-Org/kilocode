@@ -3,8 +3,11 @@ export namespace GoalInstructions {
     // The time-based event must be the object of "wait for" ("wait for the
     // deploy"). A passing mention inside 80 chars, such as "wait for the
     // reviewer to approve, then fix the build", must not curb the goal and hide
-    // the read/edit/bash tools the work needs.
-    return /\bwait for (?:the |a |an |my |our )?(?:deploy|build|ci\b)/i.test(text)
+    // the read/edit/bash tools the work needs. The trailing boundary keeps a
+    // longer word that merely starts with one of these from arming the curb
+    // ("wait for the builder to finish", "wait for the buildings to render"),
+    // while the inflections that name the same event (deployment, builds) count.
+    return /\bwait for (?:the |a |an |my |our )?(?:deploy(?:ment|s|ed|ing)?|build(?:s|ed|ing)?|ci)\b/i.test(text)
   }
 
   export const help =

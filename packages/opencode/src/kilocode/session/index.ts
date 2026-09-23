@@ -307,8 +307,9 @@ export namespace KiloSession {
         ])
         // Drop the per-session goal link state (the arm closure that retains this
         // process's service graph, the wait record, and any queued fire) before
-        // cancelling timers, so a cancel notification cannot resume a goal whose
-        // session no longer exists.
+        // cancelling timers. The bulk cancel is silent, so no cancel
+        // notification can re-hydrate the removed session's persisted waiting
+        // goal and undo the release.
         goal.GoalLink.release(id)
         await app.AppRuntime.runPromise(
           wake.Wakeup.Service.use((svc) => svc.cancelSession(id)).pipe(Effect.provideService(InstanceRef, inst)),

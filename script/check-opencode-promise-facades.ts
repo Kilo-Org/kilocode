@@ -98,7 +98,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "resumes the waiting goal; scoped layers cannot express the boundary under test.",
   },
   "kilocode/wakeup/wakeup-resume.test.ts": {
-    count: 47,
+    count: 53,
     reason:
       "the wakeup resume integration test schedules through the production Wakeup service and asserts the mock " +
       "model receives the scheduled prompt, so it must run the production Fire/resume path " +
@@ -111,8 +111,9 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "dropping the wake. Goal-wait cases start or seed a waiting goal, fire or cancel the awaited wakeup, and " +
       "assert GoalState through that same runtime because resume.ts hydrates and resumes via GoalLink against " +
       "Session.Service in AppRuntime; a waiting goal with no in-memory handler, a cancel of the awaited id, " +
-      "an archived session that must settle paused with a readable reason, and an in-flight goal turn that must " +
-      "queue a fire onto the next goal cycle all observe that production path.",
+      "an archived session that must settle paused with a readable reason, an in-flight goal turn that must " +
+      "queue a fire onto the next goal cycle, and a removed session whose bulk cancel must not re-hydrate the " +
+      "goal link state release dropped all observe that production path.",
   },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
 }

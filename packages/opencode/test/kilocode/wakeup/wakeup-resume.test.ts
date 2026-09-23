@@ -9,6 +9,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AppRuntime } from "@/effect/app-runtime"
 import { InstanceRef } from "@/effect/instance-ref"
+import { GoalInstructions } from "@/kilocode/session/goal/instructions"
 import { GoalLink } from "@/kilocode/session/goal/link"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { Wakeup } from "@/kilocode/wakeup"
@@ -940,4 +941,99 @@ describe("wakeup resume", () => {
       await cleanup(dir)
     }
   }, 30_000)
+
+  test("removing a session's timers does not re-create the goal state release dropped", async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch: () => new Response("not found", { status: 404 }),
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-remove-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup remove" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      const info = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "poll the deploy",
+            when: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const metadata = {
+        "kilo.goal": {
+          text: "Wait for the deploy to finish",
+          status: "waiting",
+          active: false,
+          wait: { kind: "wakeup", id: info.id, label: "poll the deploy" },
+        },
+      }
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.setMetadata({ sessionID: session.id, metadata })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      // The goal loop hydrates a waiting session at boot, so its wait record is
+      // live before the session is removed.
+      GoalLink.hydrate(session.id, metadata)
+      expect(GoalLink.get(session.id)).toMatchObject({ id: info.id })
+
+      // Record any resume the bulk cancel tries, so a cancel notification that
+      // re-hydrates the persisted waiting goal is observable rather than only
+      // leaking state.
+      const resumed: string[] = []
+      GoalLink.bind(dir, (input) =>
+        Effect.sync(() => {
+          resumed.push(input.note ?? "")
+        }),
+      )
+
+      // The removal path (KiloSession.cancelWakeups): drop the session's goal
+      // link state, then cancel its timers through the bulk cancel.
+      GoalLink.release(session.id)
+      await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) => wake.cancelSession(session.id)).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const pending = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) => wake.list({ sessionID: session.id })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+      expect(pending).toEqual([])
+      // The bulk cancel is teardown: it must not re-hydrate the released wait or
+      // arm a goal whose session is being removed.
+      expect(GoalLink.get(session.id)).toBeUndefined()
+      expect(resumed).toEqual([])
+      GoalLink.clear(session.id)
+      GoalState.pause(session.id)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("the timed-goal heuristic ignores a longer word that merely starts with one", () => {
+    // The curb hides read/edit/bash, so "builder" or "buildings" must not read
+    // as a deploy/build wait.
+    expect(GoalInstructions.timed("Wait for the builder to finish")).toBe(false)
+    expect(GoalInstructions.timed("wait for the buildings to render")).toBe(false)
+    // The inflections that name the same event still count.
+    expect(GoalInstructions.timed("Wait for the deploy to finish")).toBe(true)
+    expect(GoalInstructions.timed("wait for the deployment to land")).toBe(true)
+    expect(GoalInstructions.timed("wait for the builds to pass")).toBe(true)
+    expect(GoalInstructions.timed("wait for the CI job")).toBe(true)
+  })
 })
