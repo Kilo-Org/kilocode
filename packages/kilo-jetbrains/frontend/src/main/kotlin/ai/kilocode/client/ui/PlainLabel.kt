@@ -32,8 +32,11 @@ open class PlainLabel(text: String = "") : JBLabel() {
             restyle()
         }
 
-    // The last font decorated for painting and its result, so painting does not derive a new font per frame.
+    // The last font decorated for painting, the resolved size/style it was decorated at, and the result, so
+    // painting does not derive a new font per frame.
     private var base: Font? = null
+    private var baseSize = -1
+    private var baseStyle = -1
     private var styled: Font? = null
 
     init {
@@ -52,15 +55,23 @@ open class PlainLabel(text: String = "") : JBLabel() {
         return out
     }
 
+    /**
+     * A `JBFont` is one instance whose [Font.getSize]/[Font.getStyle] resolve dynamically off the current IDE
+     * zoom (`JBFont.refreshScaledFont` mutates its own `size`/`pointSize` fields in place). Font identity alone
+     * would keep serving a decorated size from before a zoom change, so the cache is keyed on the resolved size
+     * and style read through the (possibly overridden) getters, not on object identity.
+     */
     private fun decorate(font: Font): Font {
         val cached = styled
-        if (font === base && cached != null) return cached
+        if (font === base && font.size == baseSize && font.style == baseStyle && cached != null) return cached
         val attrs = buildMap<TextAttribute, Any> {
             if (underline) put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON)
             if (strike) put(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON)
         }
         return font.deriveFont(attrs).also {
             base = font
+            baseSize = font.size
+            baseStyle = font.style
             styled = it
         }
     }

@@ -207,11 +207,18 @@ internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List
 
 internal fun activeListCellGap() = JBUI.scale(CELL_GAP)
 
-/** Whether [item] paints an animated glyph anywhere in its row, so an animation frame has to repaint it. */
+/**
+ * Whether [item] paints an animated glyph anywhere in its row, so an animation frame has to repaint it.
+ *
+ * Runs per visible row on every animation frame, so this checks each badge list directly instead of wrapping
+ * them in a `listOf(...)` first — the wrapper and its iterator would otherwise be allocated every frame.
+ */
 internal fun activeListAnimated(item: ActiveListItem): Boolean {
     if (animated(item.icon)) return true
     if (item.cells.any { animated(it.icon) }) return true
-    return listOf(item.leading, item.badges, item.secondaryBadges).any { list -> list.any { animated(it.icon) } }
+    if (item.leading.any { animated(it.icon) }) return true
+    if (item.badges.any { animated(it.icon) }) return true
+    return item.secondaryBadges.any { animated(it.icon) }
 }
 
 private fun animated(icon: Icon?): Boolean = when (icon) {

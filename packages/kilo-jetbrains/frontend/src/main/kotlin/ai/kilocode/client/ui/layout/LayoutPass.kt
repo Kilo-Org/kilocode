@@ -39,6 +39,11 @@ object LayoutPass {
         }
     }
 
+    // Reached from LayoutManager2 callbacks (minimumLayoutSize, preferredLayoutSize, maximumLayoutSize,
+    // invalidateLayout), which Swing invokes on the EDT. Annotated rather than left implicit so an off-EDT
+    // caller — which would otherwise race the EDT's memo instead of merely reading a stale answer — fails loud,
+    // matching the "all Swing access is EDT-only" policy the rest of the plugin enforces the same way.
+    @RequiresEdt
     internal fun size(parent: Container, kind: Int, compute: () -> Dimension): Dimension {
         val map = memo ?: return compute()
         val hit = map[parent]?.takeIf { it.width == parent.width && it.height == parent.height }?.sizes?.get(kind)
@@ -52,6 +57,7 @@ object LayoutPass {
         return out
     }
 
+    @RequiresEdt
     internal fun forget(parent: Container) {
         memo?.remove(parent)
     }

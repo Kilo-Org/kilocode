@@ -243,6 +243,15 @@ internal class ActiveListView(
         wired = true
     }
 
+    // The delegate closes over this view's model/renderer/items. It costs nothing while the view stays attached
+    // — the platform only reads it during its own paint/animation cycle — but clearing it on detach makes the
+    // delegate's lifetime match the view's instead of depending on how long the platform's animation registry
+    // happens to retain it.
+    override fun removeNotify() {
+        super.removeNotify()
+        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, null)
+    }
+
     /**
      * Refreshes and re-measures the rows after a Look-and-Feel or IDE-zoom change.
      *
