@@ -125,9 +125,13 @@ export function gitPluginIdentity(spec: string): string | undefined {
 }
 
 function cloneUrl(repo: string) {
-  if (repo.startsWith("file:")) return repo
+  // Local repos are cloned from a plain filesystem path: Git for Windows is
+  // inconsistent with `file:///C:/...` URLs. normalizeRepo also makes the
+  // `file://` form and the plain path share one marker, so a later resolve of
+  // the other form reuses the first clone instead of cloning again.
+  if (repo.startsWith("file:")) return fileUrlPath(repo) ?? repo
   if (repo.startsWith("./") || repo.startsWith("../")) return repo
-  if (path.isAbsolute(repo) || /^[A-Za-z]:[\\/]/.test(repo)) return repo
+  if (path.isAbsolute(repo) || /^[A-Za-z]:[\\/]/.test(repo)) return normalizeRepo(repo)
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(repo)) return repo
   // Shorthand like `github.com/owner/repo` would otherwise resolve as a local path.
   return `https://${repo}`
