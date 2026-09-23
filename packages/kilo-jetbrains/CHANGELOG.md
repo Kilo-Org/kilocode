@@ -522,6 +522,32 @@
 
 ## [Unreleased]
 
+## [7.1.7-rc.5] - 2026-09-23
+
+### Added
+- feat(marketplace): support installing npm plugins by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14281
+- feat(marketplace): install plugins from git repositories by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14485
+
+### Fixed
+- fix: explain file checkpoints require Git in revert notice by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14464
+- fix(jetbrains): fix board dialog icon alignment, resize, and tooltips by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14472
+- fix(jetbrains): keep worktree tab switches responsive by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14473
+- fix(jetbrains): guard release locale keys by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14471
+- fix(jetbrains): sync agent permission attention by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14474
+- fix(vscode): show latest live bash output in chat by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14482
+- fix(vscode): keep session cost totals complete on restart by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14484
+- fix(vscode): remount transcript virtualizer per session by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14486
+- fix(agent-manager): keep status icons current for other projects by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14487
+- fix(marketplace): harden git plugin install and cleanup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14492
+- fix(kilo-docs): update next to 16.3.5 for GHSA-p293-qw3h-jr36 by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14494
+- fix(cli): route plan follow-up events by directory by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14480
+
+### Changed
+- release(jetbrains): v7.1.7-rc.4 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14466
+- docs: feature Kilo Marketplace plugins in README by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14495
+- chore(jetbrains): bump CLI pin to v7.7.9 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14496
+
+
 ## [7.1.7-rc.4] - 2026-09-22
 
 ### Added
