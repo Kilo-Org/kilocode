@@ -53,6 +53,13 @@ describe("AutonomousVerifier", () => {
     expect(AutonomousVerifier.summary(report)).toContain("failed with exit 3")
   })
 
+  test("finds the real program behind env prefixes and cd chains", () => {
+    expect(AutonomousVerifier.binary("NODE_ENV=test bun test")).toBe("bun")
+    expect(AutonomousVerifier.binary("cd packages/app && bun test")).toBe("bun")
+    expect(AutonomousVerifier.binary("FOO=1 BAR=2 cd x && npm run lint; echo done")).toBe("npm")
+    expect(AutonomousVerifier.binary("pytest -q")).toBe("pytest")
+  })
+
   test("skips checks whose binary is missing", async () => {
     const report = await Effect.runPromise(
       AutonomousVerifier.run({ dir: tmp({}), checks: [{ name: "x", command: "definitely-not-a-binary-xyz --version" }] }),

@@ -40,12 +40,19 @@ describe("AutonomousRepair", () => {
     expect(AutonomousRepair.decide(t, cfg)).toMatchObject({ action: "escalate", reason: expect.stringContaining("same failure") })
   })
 
+  test("a worker run error retries like any other failure", () => {
+    const t = task({ attempts: 1, maxAttempts: 3 })
+    AutonomousRepair.record(t, { stage: "worker", message: "model timed out", modelClass: "local-coder" })
+    expect(AutonomousRepair.decide(t, cfg)).toMatchObject({ action: "retry" })
+    expect(AutonomousRepair.instructions(t)).toContain("failed before finishing")
+  })
+
   test("exhausted local attempts escalate, blocked worker escalates", () => {
     const t = task({ attempts: 2 })
     AutonomousRepair.record(t, { stage: "review", message: "bad", modelClass: "local-coder" })
     expect(AutonomousRepair.decide(t, cfg)).toMatchObject({ action: "escalate", reason: expect.stringContaining("exhausted") })
     const b = task({ attempts: 1 })
-    AutonomousRepair.record(b, { stage: "worker", message: "cannot", modelClass: "local-small" })
+    AutonomousRepair.record(b, { stage: "blocked", message: "cannot", modelClass: "local-small" })
     expect(AutonomousRepair.decide(b, cfg)).toMatchObject({ action: "escalate" })
   })
 

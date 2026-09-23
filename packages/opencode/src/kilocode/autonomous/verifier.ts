@@ -61,7 +61,13 @@ export namespace AutonomousVerifier {
 
   export const fromConfig = (commands: string[]): Check[] => commands.map((command, i) => ({ name: `check${i + 1}`, command }))
 
-  const binary = (command: string) => command.trim().split(/\s+/)[0] ?? ""
+  /** First real program of a shell line, skipping `VAR=value` prefixes and a leading `cd dir &&`. */
+  export function binary(command: string) {
+    const program = (segment: string) => segment.trim().split(/\s+/).find((t) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(t)) ?? ""
+    const parts = command.trim().split(/\s*(?:&&|;)\s*/)
+    const first = parts.find((p) => program(p) !== "cd") ?? parts[0] ?? ""
+    return program(first)
+  }
 
   export const run = Effect.fn("AutonomousVerifier.run")(function* (input: { dir: string; checks: Check[]; timeout?: number }) {
     const results: Outcome[] = []

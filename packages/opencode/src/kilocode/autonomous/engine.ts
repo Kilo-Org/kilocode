@@ -126,13 +126,28 @@ export namespace AutonomousEngine {
       let stats = yield* AutonomousStats.load(projectID)
       const learn = (task: AutonomousState.Task) =>
         Effect.gen(function* () {
-          stats = AutonomousStats.record(stats, task)
-          yield* AutonomousStats.save(stats)
+          stats = yield* AutonomousStats.learn(projectID, task)
         })
+      // The first plan of this goal counts it toward the memory; replans only refresh the summary.
+      let counted = state.revision > 0
       const remember = (summary: string) =>
-        summary.trim().length ? AutonomousMemory.save({ projectID, summary }).pipe(Effect.asVoid) : Effect.void
+        Effect.gen(function* () {
+          if (!summary.trim().length) return
+          yield* AutonomousMemory.save({ projectID, summary, count: !counted })
+          counted = true
+        })
       const charge = (modelClass: AutonomousState.ModelClass, out: { cost: number; tokens: { input: number; output: number } }, taskID?: string) =>
         AutonomousBudget.charge(state, { modelClass, taskID, cost: out.cost, tokens: out.tokens })
+      /** Charge the usage of a failed runner call before the error propagates, so budgets hold under repeated failure. */
+      const billed = <A, E, R>(modelClass: AutonomousState.ModelClass, effect: Effect.Effect<A, E, R>, taskID?: string) =>
+        effect.pipe(
+          Effect.tapError((err) =>
+            Effect.gen(function* () {
+              charge(modelClass, AutonomousRunner.spent(err), taskID)
+              yield* persist(state)
+            }),
+          ),
+        )
       const log = (event: string, opts?: { taskID?: string; detail?: string }) => AutonomousLog.record(state, event, opts)
       const paused = (reason: string) => settle(state, "paused", reason)
       const blocked = (reason: string) => settle(state, "blocked", reason)
@@ -142,15 +157,18 @@ export namespace AutonomousEngine {
           if (state.revision >= MAX_REVISIONS) return false
           if (!AutonomousBudget.allow(state, cfg)) return false
           state.revision++
-          const planned = yield* AutonomousPlanner.plan({
-            parent: id,
-            state,
-            model: models["cloud-reasoner"],
-            maxAttempts: cfg.worker_max_attempts,
-            replan: input,
-            memory: memory?.summary,
-            history: AutonomousStats.summary(stats),
-          })
+          const planned = yield* billed(
+            "cloud-reasoner",
+            AutonomousPlanner.plan({
+              parent: id,
+              state,
+              model: models["cloud-reasoner"],
+              maxAttempts: cfg.worker_max_attempts,
+              replan: input,
+              memory: memory?.summary,
+              history: AutonomousStats.summary(stats),
+            }),
+          )
           charge("cloud-reasoner", planned)
           yield* remember(planned.plan.repo_summary)
           state.tasks = AutonomousScheduler.merge(state, planned.tasks)
@@ -165,14 +183,17 @@ export namespace AutonomousEngine {
 
       if (state.status === "planning") {
         if (!AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
-        const planned = yield* AutonomousPlanner.plan({
-          parent: id,
-          state,
-          model: models["cloud-reasoner"],
-          maxAttempts: cfg.worker_max_attempts,
-          memory: memory?.summary,
-          history: AutonomousStats.summary(stats),
-        })
+        const planned = yield* billed(
+          "cloud-reasoner",
+          AutonomousPlanner.plan({
+            parent: id,
+            state,
+            model: models["cloud-reasoner"],
+            maxAttempts: cfg.worker_max_attempts,
+            memory: memory?.summary,
+            history: AutonomousStats.summary(stats),
+          }),
+        )
         charge("cloud-reasoner", planned)
         yield* remember(planned.plan.repo_summary)
         state.summary = planned.plan.goal_summary
@@ -214,13 +235,13 @@ export namespace AutonomousEngine {
           const dead = state.tasks.filter((t) => t.status === "failed" || t.status === "blocked")
           if (dead.length) {
             return yield* blocked(
-              `Tasks could not be completed: ${dead.map((t) => `${t.id} (${t.failures.at(-1)?.message.split("\n")[0] ?? t.status})`).join("; ")}. Review the conversation and resume or clear the goal.`,
+              `Tasks could not be completed: ${dead.map((t) => `${t.id} (${t.failures.at(-1)?.message.split("\n")[0] ?? t.status})`).join("; ")}. Fix the cause, then /goal resume retries the failed tasks, or /goal clear drops the goal.`,
             )
           }
           if (!AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
           state.status = "reviewing"
           yield* persist(state)
-          const check = yield* AutonomousChecker.check({ parent: id, dir, state, model: models["cloud-reasoner"] })
+          const check = yield* billed("cloud-reasoner", AutonomousChecker.check({ parent: id, dir, state, model: models["cloud-reasoner"] }))
           charge("cloud-reasoner", check)
           log("goal.checked", { detail: check.complete ? "complete" : `unmet: ${state.criteria.filter((c) => c.status !== "satisfied").map((c) => c.id).join(",")}` })
           if (!check.complete) {
@@ -233,7 +254,7 @@ export namespace AutonomousEngine {
           if (reasons.length) return yield* blocked(`Final gate failed: ${reasons.join("; ")}`)
           const cls = AutonomousFinal.modelClass(state, cfg.final_review_cloud_at_complexity)
           if (cls === "cloud-reasoner" && !AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
-          const fin = yield* AutonomousFinal.review({ parent: id, dir, state, model: models[cls] })
+          const fin = yield* billed(cls, AutonomousFinal.review({ parent: id, dir, state, model: models[cls] }))
           charge(cls, fin)
           if (fin.blocking.length) {
             const findings = fin.blocking.map((f) => `${f.file ? `${f.file}: ` : ""}${f.description}`)
@@ -252,6 +273,7 @@ export namespace AutonomousEngine {
         const route = AutonomousRouter.route({ task, state, cfg, models, stats })
         if (!route.ok) return yield* paused(route.reason)
         task.route = { modelClass: route.modelClass, model: AutonomousModels.format(route.model), reason: route.reason }
+        if (!task.first) task.first = route.modelClass
         task.status = "running"
         task.attempts++
         log("task.start", { taskID: task.id, detail: `${route.modelClass} (${route.reason}), attempt ${task.attempts}` })
@@ -260,13 +282,14 @@ export namespace AutonomousEngine {
         const repair = task.failures.length ? AutonomousRepair.instructions(task) : undefined
         const work = yield* Effect.result(AutonomousWorker.run({ parent: id, dir, state, task, model: route.model, repair }))
         if (Result.isFailure(work)) {
+          charge(route.modelClass, AutonomousRunner.spent(work.failure), task.id)
           yield* fail(task, "worker", String(work.failure), route.modelClass)
           continue
         }
         const worked = work.success
         charge(route.modelClass, worked, task.id)
         if (worked.result.status === "blocked") {
-          yield* fail(task, "worker", `${worked.result.summary}\n${worked.result.unresolved.join("\n")}`, route.modelClass)
+          yield* fail(task, "blocked", `${worked.result.summary}\n${worked.result.unresolved.join("\n")}`, route.modelClass)
           continue
         }
         task.status = "verifying"
@@ -279,6 +302,7 @@ export namespace AutonomousEngine {
         const reviewClass: AutonomousState.ModelClass = route.modelClass === "cloud-reasoner" ? "cloud-reasoner" : "local-coder"
         const review = yield* Effect.result(AutonomousReviewer.review({ parent: id, dir, state, task, model: models[reviewClass], checks: report }))
         if (Result.isFailure(review)) {
+          charge(reviewClass, AutonomousRunner.spent(review.failure), task.id)
           yield* fail(task, "review", String(review.failure), reviewClass)
           continue
         }
@@ -345,6 +369,9 @@ export namespace AutonomousEngine {
       const resolved = yield* AutonomousIssue.resolve(raw, dir)
       const text = resolved.objective
       if (text.length > 10_000) return yield* Effect.fail(new Error("Keep the goal under 10,000 characters."))
+      if (runs.has(id)) return yield* Effect.fail(new Error("A goal is already running. Pause or clear it before starting another."))
+      // Stop any previous run before persisting so its pause cannot overwrite the new state.
+      yield* stop(id)
       const state = AutonomousState.create({ sessionID: id, objective: text })
       AutonomousLog.record(state, "goal.started", resolved.issue ? { detail: `from ${resolved.issue.url}` } : undefined)
       yield* persist(state)
@@ -380,7 +407,16 @@ export namespace AutonomousEngine {
       if (state.status === "completed") return yield* Effect.fail(new Error("The goal is complete. Start a new one with /goal <objective>."))
       state.status = state.tasks.length ? "running" : "planning"
       state.reason = undefined
-      for (const t of state.tasks) if (t.status === "running" || t.status === "verifying") t.status = "repairing"
+      for (const t of state.tasks) {
+        if (t.status === "running" || t.status === "verifying") t.status = "repairing"
+        // A blocked goal is resumed to retry: failed tasks get a fresh local attempt budget, blocked dependents reopen.
+        if (t.status === "failed") {
+          t.status = "repairing"
+          t.attempts = 0
+          t.escalated = false
+        }
+        if (t.status === "blocked") t.status = "pending"
+      }
       AutonomousLog.record(state, "goal.resumed")
       yield* persist(state)
       yield* launch(id, state)

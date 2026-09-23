@@ -27,14 +27,15 @@ export namespace AutonomousMemory {
     return parsed._tag === "Some" ? parsed.value : undefined
   })
 
-  export const save = Effect.fn("AutonomousMemory.save")(function* (input: { projectID: string; summary: string }) {
+  /** Store the summary; `count` (default true) adds one to the number of goals that contributed. */
+  export const save = Effect.fn("AutonomousMemory.save")(function* (input: { projectID: string; summary: string; count?: boolean }) {
     const storage = yield* Storage.Service
     const prior = yield* load(input.projectID)
     const info: Info = {
       version: 1,
       projectID: input.projectID,
       summary: input.summary.trim().slice(0, MAX),
-      goals: (prior?.goals ?? 0) + 1,
+      goals: (prior?.goals ?? 0) + (input.count === false ? 0 : 1),
       updated: Date.now(),
     }
     yield* storage.write(key(input.projectID), info).pipe(Effect.orDie)

@@ -19,7 +19,7 @@ export namespace AutonomousScheduler {
     }
     if (out.length) return out
     // Kahn's algorithm: anything left after peeling in-degree-0 nodes is in a cycle.
-    const degree = new Map(tasks.map((t) => [t.id, t.dependsOn.length]))
+    const degree = new Map(tasks.map((t) => [t.id, new Set(t.dependsOn).size]))
     const queue = tasks.filter((t) => t.dependsOn.length === 0).map((t) => t.id)
     const done = new Set<string>()
     while (queue.length) {

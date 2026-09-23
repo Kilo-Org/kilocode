@@ -35346,79 +35346,19 @@
                 "additionalProperties": false
               },
               "worker_max_attempts": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["NaN"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["-Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity", "-Infinity", "NaN"]
-                  }
-                ],
-                "description": "Local attempts per task before escalation. Defaults 2."
+                "type": "integer",
+                "exclusiveMinimum": 0
               },
               "routing": {
                 "type": "object",
                 "properties": {
                   "local_small_max_complexity": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["NaN"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["-Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity", "-Infinity", "NaN"]
-                      }
-                    ],
-                    "description": "Highest task complexity routed to local_small. Defaults 0."
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "local_coder_max_complexity": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["NaN"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["-Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity", "-Infinity", "NaN"]
-                      }
-                    ],
-                    "description": "Highest task complexity routed to local_coder. Defaults 2."
+                    "type": "integer",
+                    "minimum": 0
                   }
                 },
                 "additionalProperties": false
@@ -35427,28 +35367,8 @@
                 "type": "object",
                 "properties": {
                   "same_error_limit": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["NaN"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["-Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity", "-Infinity", "NaN"]
-                      }
-                    ],
-                    "description": "Identical failures before escalating. Defaults 2."
+                    "type": "integer",
+                    "exclusiveMinimum": 0
                   }
                 },
                 "additionalProperties": false
@@ -35505,79 +35425,19 @@
                     "description": "Defaults 10."
                   },
                   "max_cloud_calls_per_task": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["NaN"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["-Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity", "-Infinity", "NaN"]
-                      }
-                    ],
-                    "description": "Defaults 3."
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "max_cloud_calls_per_goal": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["NaN"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["-Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity", "-Infinity", "NaN"]
-                      }
-                    ],
-                    "description": "Defaults 20."
+                    "type": "integer",
+                    "minimum": 0
                   }
                 },
                 "additionalProperties": false
               },
               "final_review_cloud_at_complexity": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["NaN"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["-Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity", "-Infinity", "NaN"]
-                  }
-                ],
-                "description": "Use cloud_reasoner for the final review when any task complexity reaches this. Defaults 3."
+                "type": "integer",
+                "minimum": 0
               },
               "checks": {
                 "type": "array",

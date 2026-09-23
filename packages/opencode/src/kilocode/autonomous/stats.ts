@@ -34,9 +34,9 @@ export namespace AutonomousStats {
     return stats?.cells[cell(modelClass, complexity)]
   }
 
-  /** Record a finished task under the class that first attempted it. */
+  /** Record a finished task under the class that ran its first attempt. */
   export function record(stats: Info, task: AutonomousState.Task): Info {
-    const first = task.failures.find((f) => f.modelClass !== "cloud-reasoner")?.modelClass ?? task.route?.modelClass
+    const first = task.first ?? task.failures.find((f) => f.routed)?.routed ?? task.route?.modelClass
     if (!first) return stats
     const id = cell(first, task.complexity)
     const prior = stats.cells[id] ?? { runs: 0, ok: 0, repairs: 0, escalations: 0 }
@@ -52,6 +52,15 @@ export namespace AutonomousStats {
     }
     return { ...stats, cells, updated: Date.now() }
   }
+
+  /** Add one finished task to the stored document, re-reading it first so concurrent goals do not drop each other's runs. */
+  export const learn = Effect.fn("AutonomousStats.learn")(function* (projectID: string, task: AutonomousState.Task) {
+    const storage = yield* Storage.Service
+    const current = yield* load(projectID)
+    const next = record(current, task)
+    yield* storage.write(key(projectID), next).pipe(Effect.orDie)
+    return next
+  })
 
   export const save = Effect.fn("AutonomousStats.save")(function* (stats: Info) {
     const storage = yield* Storage.Service

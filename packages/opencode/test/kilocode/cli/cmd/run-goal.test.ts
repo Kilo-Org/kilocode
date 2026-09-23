@@ -82,6 +82,23 @@ for (const text of ["Fix failing tests\n", " resume\n"]) {
 }
 
 cliIt.concurrent(
+  "headless engine-only controls are rejected when the engine is disabled",
+  ({ opencode }) =>
+    Effect.gen(function* () {
+      const calls: string[] = []
+      using server = listen(calls)
+      for (const action of ["status", "tasks", "budget"]) {
+        const result = yield* opencode.spawn(["run", "--attach", server.url.toString(), "--session", "ses_goal", "--command", "goal", action])
+        opencode.expectExit(result, 1)
+        expect(result.stderr).toContain("needs autonomous_goal.enabled")
+        expect(calls).toEqual(["GET /config"])
+        calls.length = 0
+      }
+    }),
+  60_000,
+)
+
+cliIt.concurrent(
   "headless goal status, pause, and clear still dispatch without sharing or draining",
   ({ opencode }) =>
     Effect.gen(function* () {

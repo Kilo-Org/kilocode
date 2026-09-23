@@ -34,14 +34,29 @@ const task = (over: Partial<AutonomousState.Task> = {}): AutonomousState.Task =>
 })
 
 describe("AutonomousStats and history-aware routing", () => {
-  test("records outcomes under the first local class that tried the task", () => {
+  test("records outcomes under the class that ran the first attempt", () => {
     let stats = AutonomousStats.empty("proj")
-    stats = AutonomousStats.record(stats, task())
-    stats = AutonomousStats.record(stats, task({ attempts: 3, escalated: true, route: { modelClass: "cloud-reasoner", model: "c", reason: "escalated" }, failures: [{ attempt: 1, stage: "check", fingerprint: "f", message: "m", modelClass: "local-coder" }] }))
-    stats = AutonomousStats.record(stats, task({ status: "failed", attempts: 2, failures: [{ attempt: 1, stage: "check", fingerprint: "f", message: "m", modelClass: "local-coder" }] }))
+    stats = AutonomousStats.record(stats, task({ first: "local-coder" }))
+    stats = AutonomousStats.record(stats, task({ first: "local-coder", attempts: 3, escalated: true, route: { modelClass: "cloud-reasoner", model: "c", reason: "escalated" } }))
+    stats = AutonomousStats.record(stats, task({ first: "local-coder", status: "failed", attempts: 2 }))
     expect(AutonomousStats.get(stats, "local-coder", 1)).toEqual({ runs: 3, ok: 1, repairs: 3, escalations: 1 })
     expect(AutonomousStats.summary(stats)).toContain("local-coder:1: 1/3 ok")
+    // A review failure is attributed to the class that implemented the attempt, not the reviewer's class.
+    const reviewed = task({ complexity: 0, first: "local-small", status: "failed", route: { modelClass: "local-small", model: "s", reason: "" }, failures: [{ attempt: 1, stage: "review", fingerprint: "f", message: "m", modelClass: "local-coder", routed: "local-small" }] })
+    const s2 = AutonomousStats.record(AutonomousStats.empty("p"), reviewed)
+    expect(AutonomousStats.get(s2, "local-small", 0)?.runs).toBe(1)
+    expect(AutonomousStats.get(s2, "local-coder", 0)).toBeUndefined()
   })
+
+  it.effect("learn merges into the stored document instead of overwriting a stale snapshot", () =>
+    Effect.gen(function* () {
+      yield* AutonomousStats.learn("shared", task({ first: "local-coder" }))
+      // A second goal holding an older snapshot adds its own task; both must survive.
+      yield* AutonomousStats.learn("shared", task({ first: "local-coder", status: "failed" }))
+      const stored = yield* AutonomousStats.load("shared")
+      expect(AutonomousStats.get(stored, "local-coder", 1)).toMatchObject({ runs: 2, ok: 1 })
+    }),
+  )
 
   test("router escalates a local class with a poor track record, never below the base class", () => {
     let stats = AutonomousStats.empty("proj")
@@ -87,6 +102,8 @@ describe("AutonomousMemory and planner notes", () => {
     Effect.gen(function* () {
       expect(yield* AutonomousMemory.load("proj-a")).toBeUndefined()
       yield* AutonomousMemory.save({ projectID: "proj-a", summary: "node project, npm test" })
+      const refreshed = yield* AutonomousMemory.save({ projectID: "proj-a", summary: "refined", count: false })
+      expect(refreshed.goals).toBe(1)
       const second = yield* AutonomousMemory.save({ projectID: "proj-a", summary: "x".repeat(AutonomousMemory.MAX + 10) })
       expect(second.goals).toBe(2)
       expect(second.summary.length).toBe(AutonomousMemory.MAX)

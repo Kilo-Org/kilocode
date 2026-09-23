@@ -1,6 +1,20 @@
 import { describe, expect, test } from "bun:test"
 import { AutonomousConfig } from "../../../src/kilocode/autonomous/config"
 
+import { Schema } from "effect"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+
+describe("autonomous_goal config schema", () => {
+  test("rejects negative or fractional attempt counts", () => {
+    const decode = Schema.decodeUnknownOption(ConfigV1.Info)
+    expect(decode({ autonomous_goal: { worker_max_attempts: 2 } })._tag).toBe("Some")
+    expect(decode({ autonomous_goal: { worker_max_attempts: -1 } })._tag).toBe("None")
+    expect(decode({ autonomous_goal: { worker_max_attempts: 2.5 } })._tag).toBe("None")
+    expect(decode({ autonomous_goal: { budget: { cloud_goal_max_usd: -5 } } })._tag).toBe("None")
+    expect(decode({ autonomous_goal: { budget: { cloud_goal_max_usd: 0.5 } } })._tag).toBe("Some")
+  })
+})
+
 describe("AutonomousConfig.resolve", () => {
   test("returns defaults when the section is missing", () => {
     const info = AutonomousConfig.resolve({})

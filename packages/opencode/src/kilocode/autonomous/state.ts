@@ -73,7 +73,8 @@ export namespace AutonomousState {
   })
   export type Result = Types.DeepMutable<typeof Result.Type>
 
-  export const Stage = Schema.Literals(["worker", "check", "review", "escalation"])
+  /** `worker` = the worker run errored; `blocked` = the worker deliberately reported the task as blocked. */
+  export const Stage = Schema.Literals(["worker", "blocked", "check", "review", "escalation"])
   export type Stage = typeof Stage.Type
 
   export const Failure = Schema.Struct({
@@ -81,7 +82,10 @@ export namespace AutonomousState {
     stage: Stage,
     fingerprint: Schema.String,
     message: Schema.String,
+    /** Class of the model that produced the failure (a review failure is attributed to the reviewer's class). */
     modelClass: ModelClass,
+    /** Class that implemented the attempt, for routing history. */
+    routed: optionalOmitUndefined(ModelClass),
   })
   export type Failure = Types.DeepMutable<typeof Failure.Type>
 
@@ -94,6 +98,8 @@ export namespace AutonomousState {
 
   export const Task = Schema.Struct({
     id: Schema.String,
+    /** Class that ran the first attempt; routing history is keyed by it. */
+    first: optionalOmitUndefined(ModelClass),
     title: Schema.String,
     description: Schema.String,
     type: TaskType,

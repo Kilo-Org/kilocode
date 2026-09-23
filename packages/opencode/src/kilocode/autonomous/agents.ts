@@ -19,34 +19,87 @@ export namespace AutonomousAgents {
   export const names = [PLANNER, WORKER, REVIEWER, CHECKER, FINAL] as const
   export type Name = (typeof names)[number]
 
-  /** Commands a worker may never run, whatever the user config says. Applied last. */
+  /**
+   * Commands a worker may never run, whatever the user config says. Applied last.
+   *
+   * Bash patterns match each parsed pipeline command from its first token, so
+   * every spelling that could reach a forbidden program is listed: option-prefixed
+   * git (`git -C dir push`, `git -c k=v push`), absolute paths, `command`/`env`/
+   * `exec` wrappers, and nested shells. Wrappers and nested shells are denied
+   * outright because their arguments cannot be inspected. This is a best-effort
+   * barrier; the reviewer and final gate remain the safety net.
+   */
   export const forbidden: Record<string, "deny"> = {
-    "git push *": "deny",
-    "git push": "deny",
-    "git reset --hard *": "deny",
-    "git clean *": "deny",
-    "git checkout -- *": "deny",
-    "git commit *": "deny",
-    "git rebase *": "deny",
+    ...git("git"),
+    ...git("/usr/bin/git"),
+    ...git("/usr/local/bin/git"),
+    ...git("/opt/homebrew/bin/git"),
     "sudo *": "deny",
-    "rm -rf *": "deny",
-    "rm -fr *": "deny",
-    "npm publish *": "deny",
-    "npm publish": "deny",
-    "pnpm publish *": "deny",
-    "yarn publish *": "deny",
-    "bun publish *": "deny",
-    "cargo publish *": "deny",
-    "terraform apply *": "deny",
-    "terraform destroy *": "deny",
-    "kubectl delete *": "deny",
-    "kubectl apply *": "deny",
-    "docker push *": "deny",
-    "gh pr merge *": "deny",
-    "gh release create *": "deny",
-    "curl * | sh": "deny",
-    "curl * | bash": "deny",
-    "wget * | sh": "deny",
+    "sudo": "deny",
+    "doas *": "deny",
+    "su *": "deny",
+    "su": "deny",
+    // Wrappers and nested shells hide the real command from pattern matching.
+    "command *": "deny",
+    "env *": "deny",
+    "exec *": "deny",
+    "eval *": "deny",
+    "xargs *": "deny",
+    "nohup *": "deny",
+    "sh *": "deny",
+    "bash *": "deny",
+    "zsh *": "deny",
+    "dash *": "deny",
+    "fish *": "deny",
+    "/bin/sh *": "deny",
+    "/bin/bash *": "deny",
+    "/bin/zsh *": "deny",
+    "/usr/bin/env *": "deny",
+    "/usr/bin/sudo *": "deny",
+    // rm with any recursive/force flag combination.
+    "rm -r*": "deny",
+    "rm -f*": "deny",
+    "rm --recursive*": "deny",
+    "rm --force*": "deny",
+    "rm * -r*": "deny",
+    "rm * -f*": "deny",
+    "rm * --recursive*": "deny",
+    "rm * --force*": "deny",
+    "npm publish*": "deny",
+    "pnpm publish*": "deny",
+    "yarn publish*": "deny",
+    "yarn npm publish*": "deny",
+    "bun publish*": "deny",
+    "cargo publish*": "deny",
+    "gem push*": "deny",
+    "twine upload*": "deny",
+    "terraform apply*": "deny",
+    "terraform destroy*": "deny",
+    "kubectl delete*": "deny",
+    "kubectl apply*": "deny",
+    "docker push*": "deny",
+    "gh pr merge*": "deny",
+    "gh release create*": "deny",
+    "gh repo delete*": "deny",
+    // Piping downloads into an interpreter is covered by the shell/interpreter denies
+    // above (`sh`, `bash`) since each pipeline stage is matched on its own.
+    "curl * | *": "deny",
+    "wget * | *": "deny",
+  }
+
+  /** Every forbidden git form for one git binary, with room for `-c`/`-C`/`--git-dir` before the subcommand. */
+  function git(bin: string): Record<string, "deny"> {
+    const subs = ["push", "reset --hard", "clean", "checkout --", "commit", "rebase", "branch -D", "branch -d", "stash drop", "stash clear", "filter-branch", "gc --prune"]
+    const out: Record<string, "deny"> = {}
+    for (const sub of subs) {
+      out[`${bin} ${sub}`] = "deny"
+      out[`${bin} ${sub} *`] = "deny"
+      out[`${bin} -* ${sub}`] = "deny"
+      out[`${bin} -* ${sub} *`] = "deny"
+      out[`${bin} --* ${sub}`] = "deny"
+      out[`${bin} --* ${sub} *`] = "deny"
+    }
+    return out
   }
 
   /** Tools no engine child may use: they need a human or spawn more agents. */

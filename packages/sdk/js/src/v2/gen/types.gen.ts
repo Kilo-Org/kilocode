@@ -2541,25 +2541,13 @@ export type Config = {
       local_coder?: string
       cloud_reasoner?: string
     }
-    /**
-     * Local attempts per task before escalation. Defaults 2.
-     */
-    worker_max_attempts?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    worker_max_attempts?: number
     routing?: {
-      /**
-       * Highest task complexity routed to local_small. Defaults 0.
-       */
-      local_small_max_complexity?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      /**
-       * Highest task complexity routed to local_coder. Defaults 2.
-       */
-      local_coder_max_complexity?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      local_small_max_complexity?: number
+      local_coder_max_complexity?: number
     }
     stuck?: {
-      /**
-       * Identical failures before escalating. Defaults 2.
-       */
-      same_error_limit?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      same_error_limit?: number
     }
     budget?: {
       /**
@@ -2570,19 +2558,10 @@ export type Config = {
        * Defaults 10.
        */
       cloud_goal_max_usd?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      /**
-       * Defaults 3.
-       */
-      max_cloud_calls_per_task?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      /**
-       * Defaults 20.
-       */
-      max_cloud_calls_per_goal?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      max_cloud_calls_per_task?: number
+      max_cloud_calls_per_goal?: number
     }
-    /**
-     * Use cloud_reasoner for the final review when any task complexity reaches this. Defaults 3.
-     */
-    final_review_cloud_at_complexity?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    final_review_cloud_at_complexity?: number
     checks?: Array<string>
   }
   plugin?: Array<

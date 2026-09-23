@@ -28,6 +28,7 @@ describe("AutonomousScheduler", () => {
     const cycle = AutonomousScheduler.validate([task("a", ["c"]), task("b", ["a"]), task("c", ["b"]), task("d")])
     expect(cycle.map((p) => p.taskID).sort()).toEqual(["a", "b", "c"])
     expect(AutonomousScheduler.validate([task("a"), task("a")])[0]?.message).toContain("Duplicate")
+    expect(AutonomousScheduler.validate([task("a"), task("b", ["a", "a"])])).toEqual([])
   })
 
   test("chain, fan-out and fan-in ordering", () => {

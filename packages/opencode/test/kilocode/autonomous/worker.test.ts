@@ -8,6 +8,11 @@ import { it, setup } from "./fixture"
 
 const model = { providerID: "test", modelID: "coder" }
 
+import { test } from "bun:test"
+test("porcelain parsing handles renames and untracked files", () => {
+  expect(AutonomousWorker.porcelain("R  old.ts -> new.ts\n M a.ts\n?? b.ts\nC  c.ts -> d.ts\n")).toEqual(["new.ts", "a.ts", "b.ts", "d.ts"])
+})
+
 it.instance(
   "records the worker result and detects changed files from git",
   Effect.gen(function* () {

@@ -1054,7 +1054,11 @@ export const RunCommand = effectCmd({
 
         // kilocode_change start
         if (args.command === "goal") {
-          await KiloRun.goal(client, sessionID, message, emit, { autonomous, signal: drain.signal })
+          try {
+            await KiloRun.goal(client, sessionID, message, emit, { autonomous, signal: drain.signal })
+          } finally {
+            drain.close()
+          }
           return
         }
         // kilocode_change end

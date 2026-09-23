@@ -28,6 +28,7 @@ export namespace AutonomousRepair {
       fingerprint: input.fingerprint ?? fingerprint(input.stage, input.message),
       message: AutonomousShell.truncate(input.message, 4000),
       modelClass: input.modelClass,
+      ...(task.route ? { routed: task.route.modelClass } : {}),
     }
     task.failures.push(failure)
     return failure
@@ -39,7 +40,7 @@ export namespace AutonomousRepair {
     const same = last.fingerprint ? task.failures.filter((f) => f.fingerprint === last.fingerprint).length : 1
     const stuck = same >= cfg.stuck.same_error_limit
     const exhausted = task.attempts >= task.maxAttempts
-    const blocked = last.stage === "worker"
+    const blocked = last.stage === "blocked"
     const cloud = last.modelClass === "cloud-reasoner"
     if (cloud) {
       if (blocked) return { action: "fail", reason: "cloud worker reported the task as blocked" }
@@ -62,8 +63,10 @@ export namespace AutonomousRepair {
         ? "The mechanical checks failed after your last attempt. Make them pass without disabling or deleting tests."
         : last.stage === "review"
           ? "The reviewer rejected the last attempt. Address every blocking finding."
-          : last.stage === "worker"
+          : last.stage === "blocked"
             ? "The previous worker reported the task as blocked. Reconsider the approach and find a safe way to complete it."
+            : last.stage === "worker"
+              ? "The previous worker run failed before finishing. Complete the task."
             : "The escalated attempt failed. Fix the root cause."
     return `${head}\n\n${AutonomousShell.truncate(last.message, 6000)}`
   }

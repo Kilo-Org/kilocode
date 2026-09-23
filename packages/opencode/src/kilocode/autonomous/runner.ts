@@ -21,18 +21,25 @@ export namespace AutonomousRunner {
   }
   export class Ops extends Context.Service<Ops, OpsShape>()("@kilo/AutonomousRunnerOps") {}
 
+  export type Tokens = { input: number; output: number }
+  export type Usage = { cost: number; tokens: Tokens }
+
+  /** Errors carry the usage spent so far so the engine can charge it. */
   export class Invalid extends Schema.TaggedErrorClass<Invalid>()("AutonomousRunnerInvalid", {
     sessionID: Schema.String,
     attempts: Schema.Number,
     message: Schema.String,
+    usage: Schema.Struct({ cost: Schema.Number, tokens: Schema.Struct({ input: Schema.Number, output: Schema.Number }) }),
   }) {}
 
   export class Failed extends Schema.TaggedErrorClass<Failed>()("AutonomousRunnerFailed", {
     sessionID: Schema.String,
     message: Schema.String,
+    usage: Schema.Struct({ cost: Schema.Number, tokens: Schema.Struct({ input: Schema.Number, output: Schema.Number }) }),
   }) {}
 
-  export type Tokens = { input: number; output: number }
+  export const spent = (err: unknown): Usage =>
+    err instanceof Invalid || err instanceof Failed ? err.usage : { cost: 0, tokens: { input: 0, output: 0 } }
 
   export type Input<S extends Schema.Decoder<unknown>> = {
     parent: SessionID
@@ -81,7 +88,10 @@ export namespace AutonomousRunner {
     const drain = yield* SessionDrain.Service
     const agents = yield* Agent.Service
     const agent = yield* agents.get(input.agent).pipe(
-      Effect.mapError((err) => new Failed({ sessionID: String(input.parent), message: `Agent ${input.agent} unavailable: ${String(err)}` })),
+      Effect.mapError(
+        (err) =>
+          new Failed({ sessionID: String(input.parent), message: `Agent ${input.agent} unavailable: ${String(err)}`, usage: { cost: 0, tokens: { input: 0, output: 0 } } }),
+      ),
     )
     const session = yield* sessions.create({ parentID: input.parent, title: input.title, agent: agent.name })
     KiloSession.register({ id: session.id, parentID: input.parent, platform: KiloSession.resolvePlatform(input.parent) })
@@ -92,7 +102,7 @@ export namespace AutonomousRunner {
     const retries = Math.max(0, input.retries ?? 1)
     const seen = new Set<string>()
     const total = { cost: 0, tokens: { input: 0, output: 0 }, text: "" }
-    const fail = (message: string) => new Failed({ sessionID: String(session.id), message })
+    const fail = (message: string) => new Failed({ sessionID: String(session.id), message, usage: { cost: total.cost, tokens: { ...total.tokens } } })
 
     const turn = (text: string) =>
       prompt
@@ -130,6 +140,6 @@ export namespace AutonomousRunner {
       last = exit ? String(exit.cause) : "no structured output was returned"
       text = `Your previous reply was rejected: ${last}\nCall the StructuredOutput tool again with a value that matches the schema exactly.`
     }
-    return yield* new Invalid({ sessionID: String(session.id), attempts: retries + 1, message: last })
+    return yield* new Invalid({ sessionID: String(session.id), attempts: retries + 1, message: last, usage: { cost: total.cost, tokens: { ...total.tokens } } })
   })
 }

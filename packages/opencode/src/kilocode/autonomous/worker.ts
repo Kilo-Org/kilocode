@@ -8,16 +8,22 @@ import { AutonomousState } from "./state"
 
 /** Runs one task in a worker child session and records the result on the task. */
 export namespace AutonomousWorker {
+  /** Paths from `git status --porcelain`; renames and copies yield the new path. */
+  export function porcelain(out: string) {
+    return out
+      .split("\n")
+      .filter((l) => l.length > 3)
+      .map((l) => {
+        const path = l.slice(3)
+        const arrow = /^[RC]/.test(l.slice(0, 2)) ? path.indexOf(" -> ") : -1
+        return (arrow >= 0 ? path.slice(arrow + 4) : path).trim()
+      })
+      .filter((p) => p.length > 0)
+  }
+
   export const changed = (dir: string) =>
     AutonomousShell.git(["status", "--porcelain", "--untracked-files=all"], dir).pipe(
-      Effect.map((r) =>
-        r.code === 0
-          ? r.stdout
-              .split("\n")
-              .filter((l) => l.trim().length > 0)
-              .map((l) => l.slice(3).trim())
-          : [],
-      ),
+      Effect.map((r) => (r.code === 0 ? porcelain(r.stdout) : [])),
     )
 
   export function text(task: AutonomousState.Task, state: AutonomousState.Info, opts?: { repair?: string }) {

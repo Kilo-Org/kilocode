@@ -78,6 +78,14 @@ describe("AutonomousRouter", () => {
 })
 
 describe("AutonomousBudget", () => {
+  test("ignores prototype-polluting task ids", () => {
+    const s = state()
+    AutonomousBudget.charge(s, { modelClass: "cloud-reasoner", taskID: "__proto__", cost: 1 })
+    expect(Object.keys(s.budget.perTask)).toEqual([])
+    expect((Object.prototype as unknown as { cost?: number }).cost).toBeUndefined()
+    expect(AutonomousBudget.allow(s, cfg, "constructor")).toBe(true)
+  })
+
   test("tracks cloud and local separately and enforces per-task limits", () => {
     const s = state()
     AutonomousBudget.charge(s, { modelClass: "local-coder", taskID: "a", cost: 100, tokens: { input: 5, output: 6 } })

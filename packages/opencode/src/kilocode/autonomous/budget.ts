@@ -12,6 +12,9 @@ export namespace AutonomousBudget {
 
   export const cloud = (modelClass: AutonomousState.ModelClass) => modelClass === "cloud-reasoner"
 
+  /** Task ids come from the planner; never let one address Object.prototype. */
+  export const safe = (id: string) => id !== "__proto__" && id !== "constructor" && id !== "prototype"
+
   export function charge(state: AutonomousState.Info, input: Charge) {
     const bucket = cloud(input.modelClass) ? state.budget.cloud : state.budget.local
     const add = (u: AutonomousState.Usage) => {
@@ -21,8 +24,8 @@ export namespace AutonomousBudget {
       u.output += input.tokens?.output ?? 0
     }
     add(bucket)
-    if (input.taskID && cloud(input.modelClass)) {
-      const per = state.budget.perTask[input.taskID] ?? { cost: 0, calls: 0, input: 0, output: 0 }
+    if (input.taskID && cloud(input.modelClass) && safe(input.taskID)) {
+      const per = Object.hasOwn(state.budget.perTask, input.taskID) ? state.budget.perTask[input.taskID]! : { cost: 0, calls: 0, input: 0, output: 0 }
       add(per)
       state.budget.perTask[input.taskID] = per
     }
@@ -35,7 +38,7 @@ export namespace AutonomousBudget {
     const goal = state.budget.cloud
     if (goal.cost >= b.cloud_goal_max_usd) return `Cloud budget for the goal reached ($${goal.cost.toFixed(2)} of $${b.cloud_goal_max_usd}).`
     if (goal.calls >= b.max_cloud_calls_per_goal) return `Cloud call limit for the goal reached (${goal.calls} of ${b.max_cloud_calls_per_goal}).`
-    if (!taskID) return undefined
+    if (!taskID || !safe(taskID) || !Object.hasOwn(state.budget.perTask, taskID)) return undefined
     const per = state.budget.perTask[taskID]
     if (!per) return undefined
     if (per.cost >= b.cloud_task_max_usd) return `Cloud budget for task ${taskID} reached ($${per.cost.toFixed(2)} of $${b.cloud_task_max_usd}).`

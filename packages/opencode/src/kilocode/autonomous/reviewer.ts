@@ -26,15 +26,38 @@ export namespace AutonomousReviewer {
   export type Review = typeof Review.Type
 
   export const DIFF_LIMIT = 40_000
+  /** Largest untracked file shown inline; bigger or unreadable ones are listed by name only. */
+  export const FILE_LIMIT = 64_000
 
   export const diff = (dir: string, files?: string[]) =>
     Effect.gen(function* () {
       const tracked = yield* AutonomousShell.git(["diff", "HEAD", "--", ...(files ?? [])], dir)
-      const untracked = yield* AutonomousShell.git(["ls-files", "--others", "--exclude-standard", "--", ...(files ?? [])], dir)
+      const untracked = yield* AutonomousShell.git(["ls-files", "--others", "--exclude-standard", "-z", "--", ...(files ?? [])], dir)
       const extra: string[] = []
-      for (const file of untracked.stdout.split("\n").filter((f) => f.trim().length)) {
-        const body = yield* Effect.promise(() => Bun.file(`${dir}/${file}`).text()).pipe(Effect.catch(() => Effect.succeed("")))
-        extra.push(`--- /dev/null\n+++ b/${file}\n${body.split("\n").map((l) => `+${l}`).join("\n")}`)
+      const skipped: string[] = []
+      let budget = DIFF_LIMIT
+      for (const file of untracked.stdout.split("\0").filter((f) => f.length)) {
+        if (budget <= 0) {
+          skipped.push(`${file} (diff limit reached)`)
+          continue
+        }
+        const body = yield* Effect.promise(async () => {
+          const f = Bun.file(`${dir}/${file}`)
+          if (f.size > FILE_LIMIT) return undefined
+          const text = await f.text()
+          return text.includes("\u0000") ? undefined : text
+        }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+        if (body === undefined) {
+          skipped.push(`${file} (binary, too large, or unreadable)`)
+          continue
+        }
+        const chunk = `--- /dev/null\n+++ b/${file}\n${body.split("\n").map((l) => `+${l}`).join("\n")}`
+        budget -= chunk.length
+        extra.push(chunk)
+      }
+      if (skipped.length) {
+        yield* Effect.logInfo("autonomous diff skipped untracked files", { count: skipped.length })
+        extra.push(`New files not shown inline:\n${skipped.map((s) => `- ${s}`).join("\n")}`)
       }
       return AutonomousShell.truncate([tracked.stdout, ...extra].filter((s) => s.trim().length).join("\n"), DIFF_LIMIT)
     })
