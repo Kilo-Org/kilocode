@@ -706,6 +706,7 @@
 }
 
 [data-slot="cost-notice-icon"] {
+  display: flex;
   flex-shrink: 0;
   color: var(--icon-warning-base);
 }

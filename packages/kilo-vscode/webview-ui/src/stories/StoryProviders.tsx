@@ -269,6 +269,7 @@ export function mockSessionValue(overrides?: {
     modelUsageHistory: () => ({}),
     toggleFavorite: noop,
     variantList: () => [],
+    submission: () => ({}),
     currentVariant: () => undefined,
     variantForAgent: () => undefined,
     variantPreference: () => undefined,

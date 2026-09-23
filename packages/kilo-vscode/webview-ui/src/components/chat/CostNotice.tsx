@@ -57,7 +57,9 @@ export const CostNotice: Component = () => {
     <Show when={reset() ?? notice()}>
       {(item) => (
         <div data-component="cost-notice" role="status">
-          <Icon name="warning" size="small" data-slot="cost-notice-icon" />
+          <span data-slot="cost-notice-icon">
+            <Icon name="warning" size="small" />
+          </span>
           <span>{item().text}</span>
           <IconButton
             icon="close"
