@@ -212,20 +212,6 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   overflow: visible;
 }
 
-/* Write tool: the last lines of a file while the model streams it. */
-[data-component="write-stream"] {
-  margin: 0;
-  padding: 8px 12px 10px;
-  overflow: hidden;
-  color: var(--text-base);
-  font-family: var(--font-family-mono);
-  font-feature-settings: var(--font-family-mono--font-feature-settings);
-  font-size: var(--kilo-font-size-12);
-  line-height: var(--line-height-large);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 [data-component="bash-output"] [data-slot="bash-terminal"] {
   border-radius: 0;
   border: 1px solid var(--border-weak-base);
