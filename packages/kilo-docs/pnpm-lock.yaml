@@ -33,7 +33,7 @@ importers:
         specifier: 11.17.2
         version: 11.17.2
       next:
-        specifier: ^16.3.3
+        specifier: ^16.3.5
         version: 16.3.5(@types/node@25.9.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       posthog-js:
         specifier: ^1.335.3
