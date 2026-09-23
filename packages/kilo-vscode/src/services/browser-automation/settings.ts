@@ -13,6 +13,7 @@ export function playwrightCommand(input: { headless: boolean; useSystemChrome: b
   const command = ["npx", "@playwright/mcp@latest"]
   if (input.headless) command.push("--headless")
   if (input.useSystemChrome) command.push("--browser", "chrome")
+  command.push("--extension")
   command.push("--output-dir", PLAYWRIGHT_OUTPUT_DIR)
   return command
 }

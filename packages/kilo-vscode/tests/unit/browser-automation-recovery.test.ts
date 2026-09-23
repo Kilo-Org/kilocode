@@ -8,6 +8,7 @@ describe("Playwright MCP command", () => {
       "@playwright/mcp@latest",
       "--browser",
       "chrome",
+      "--extension",
       "--output-dir",
       PLAYWRIGHT_OUTPUT_DIR,
     ])
@@ -18,6 +19,7 @@ describe("Playwright MCP command", () => {
       "npx",
       "@playwright/mcp@latest",
       "--headless",
+      "--extension",
       "--output-dir",
       PLAYWRIGHT_OUTPUT_DIR,
     ])

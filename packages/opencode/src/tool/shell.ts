@@ -532,7 +532,7 @@ export const ShellTool = Tool.define(
     const plugin = yield* Plugin.Service
     const flags = yield* RuntimeFlags.Service
     const permission = yield* ShellPermission // kilocode_change
-    const defaultTimeoutMs = flags.bashDefaultTimeoutMs ?? 2 * 60 * 1000
+    const defaultTimeoutMs = flags.bashDefaultTimeoutMs ?? 10 * 60 * 1000
 
     const shellEnv = Effect.fn("ShellTool.shellEnv")(function* (ctx: Tool.Context, cwd: string) {
       const extra = yield* plugin.trigger(
