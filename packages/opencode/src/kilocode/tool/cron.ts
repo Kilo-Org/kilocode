@@ -32,6 +32,7 @@ export type CronCreateMeta = {
   id?: Wakeup.ID
   dueAt?: number
   prompt?: string
+  recurring?: boolean
 }
 
 export const CronListParams = Schema.Struct({})
@@ -85,7 +86,7 @@ function created(info: Wakeup.CronInfo, now: number) {
       `Scheduled cron task ${info.id}, schedule ${info.schedule}, next fire ${due} (${relative(info.dueAt, now)}).`,
       `When it fires this session resumes with: ${info.prompt}`,
     ].join("\n"),
-    metadata: { id: info.id, dueAt: info.dueAt, prompt: info.prompt },
+    metadata: { id: info.id, dueAt: info.dueAt, prompt: info.prompt, recurring: info.recurring },
   }
 }
 

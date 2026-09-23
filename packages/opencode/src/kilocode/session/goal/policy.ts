@@ -6,6 +6,7 @@ import { KiloSessionPromptQueue } from "../prompt-queue"
 import { GoalState } from "./state"
 
 export namespace GoalPolicy {
+  const WAIT = new Set(["schedule_wakeup", "cron_create"])
   export type Report = { status: "complete" | "blocked"; reason: string }
   export type Owner = {
     root: SessionID
@@ -30,8 +31,9 @@ export namespace GoalPolicy {
       const owner = base ? owners.get(base) : undefined
       return owner?.root === id && owner.current()
     }
+    if (GoalState.curbed(id) && !WAIT.has(tool)) return false
     if (tool !== "question" && tool !== "goal") return true
-    if (GoalState.active(id)) return false
+    if (GoalState.hold(id)) return false
     const base = KiloSessionPromptQueue.active(id)
     return !base || !owners.get(base)?.current()
   }

@@ -4,4 +4,6 @@ Use this tool to:
 - See every scheduled task with its id, schedule, next fire time, and prompt
 - Find the id to pass to `cron_delete`
 
+In a session goal, list the goal's own cron tasks here. A task the goal waits for suspends the goal until it fires, and a goal's tasks are cancelled when it completes, blocks, or is cleared.
+
 Do NOT use this tool as a poll loop while waiting — the harness resumes the session when a task fires.
