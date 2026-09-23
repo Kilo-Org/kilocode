@@ -1,10 +1,13 @@
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { GoalLink } from "@/kilocode/session/goal/link"
+import { GoalState } from "@/kilocode/session/goal/state"
+import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { WakeupEvent } from "@opencode-ai/schema/kilocode/wakeup-event"
-import { Context, Effect, Fiber, Layer, Semaphore } from "effect"
+import { Context, Effect, Fiber, Layer, Option, Semaphore } from "effect"
 import { fireLayer, text as wakeupText } from "./resume"
 import * as schema from "./schema"
 
@@ -45,7 +48,7 @@ export namespace Wakeup {
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
     readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
     readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
-    readonly cancelSession: (sessionID: SessionID) => Effect.Effect<number>
+    readonly cancelSession: (sessionID: SessionID, options?: { notify?: boolean }) => Effect.Effect<number>
     readonly adopt: (directory: string) => Effect.Effect<void>
     readonly cronCreate: (
       input: CronInput,
@@ -373,7 +376,64 @@ export namespace Wakeup {
         )
       })
 
-      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID) {
+      // Drop the persisted wait for a cancelled id so drive cannot re-suspend
+      // a recurring task that no longer exists (D5). Session is optional: the
+      // isolated wakeup tests have no session layer.
+      const forget = (sessionID: SessionID, id: ID) =>
+        Effect.gen(function* () {
+          const sessions = Option.getOrUndefined(yield* Effect.serviceOption(Session.Service))
+          if (!sessions) return
+          const session = yield* sessions.get(sessionID).pipe(Effect.catch(() => Effect.succeed(undefined)))
+          if (!session) return
+          const goal = GoalState.read(session.metadata)
+          if (!goal?.wait || goal.wait.id !== id) return
+          yield* sessions.setMetadata({
+            sessionID,
+            metadata: {
+              ...session.metadata,
+              "kilo.goal": {
+                text: goal.text,
+                status: goal.status,
+                active: goal.active,
+                ...(goal.reason ? { reason: goal.reason } : {}),
+              },
+            },
+          })
+        }).pipe(Effect.catchCause((cause) => Effect.logError("wakeup drop wait failed", { sessionID, id, cause })))
+
+      const recover = (sessionID: SessionID, id: ID): Effect.Effect<GoalLink.Wait | undefined> =>
+        Effect.gen(function* () {
+          const sessions = Option.getOrUndefined(yield* Effect.serviceOption(Session.Service))
+          if (!sessions) return undefined
+          const session = yield* sessions.get(sessionID).pipe(Effect.catch(() => Effect.succeed(undefined)))
+          if (!session) return undefined
+          const wait = GoalLink.hydrate(sessionID, session.metadata)
+          if (wait?.id !== id) return undefined
+          return wait
+        })
+
+      const notifyGoal = (
+        sessionID: SessionID,
+        id: ID,
+        directory: string,
+        kind: "wakeup" | "cron",
+      ): Effect.Effect<void> =>
+        Effect.gen(function* () {
+          const known = GoalLink.get(sessionID)
+          const wait = known?.id === id ? known : yield* recover(sessionID, id)
+          if (!wait || wait.id !== id) return
+          yield* forget(sessionID, id)
+          yield* GoalLink.resumeOrQueue(sessionID, "[cancelled] " + id, wait, directory).pipe(
+            Effect.catchCause((cause) =>
+              Effect.logError(kind === "cron" ? "cron cancel notify failed" : "wakeup cancel notify failed", {
+                id,
+                cause,
+              }),
+            ),
+          )
+        })
+
+      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const info = yield* lookup(id)
         if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
         const fiber = timers.get(id)
@@ -384,10 +444,11 @@ export namespace Wakeup {
         entries.delete(id)
         yield* storage.remove(key(info)).pipe(Effect.ignore)
         yield* announce(info.sessionID)
+        if (notify) yield* notifyGoal(info.sessionID, info.id, info.directory, "wakeup")
         return info
       })
 
-      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID) {
+      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const task = yield* cronLookup(id)
         if (!task || (sessionID && task.sessionID !== sessionID)) return undefined
         const fiber = cronTimers.get(id)
@@ -397,19 +458,35 @@ export namespace Wakeup {
         }
         cronEntries.delete(id)
         yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
+        if (notify) yield* notifyGoal(task.sessionID, task.id, task.directory, "cron")
         return task
       })
 
       // Called when a session is removed so its wakeups stop holding Keep Awake
       // and can never resume a session that no longer exists. Cron tasks never
       // hold Keep Awake, but they must still be cancelled with the session.
-      const cancelSession = Effect.fn("Wakeup.cancelSession")(function* (sessionID: SessionID) {
+      // The removal path passes `notify: false`: the session record still exists
+      // while this runs, so the cancel notification's `recover` would re-hydrate
+      // the persisted waiting goal and resume a session that is being deleted.
+      const cancelSession = Effect.fn("Wakeup.cancelSession")(function* (
+        sessionID: SessionID,
+        options?: { notify?: boolean },
+      ) {
+        const notify = options?.notify !== false
         const held = yield* list({ sessionID })
-        for (const info of held) yield* cancel(info.id)
+        for (const info of held) yield* cancel(info.id, undefined, notify)
         const scheduled = yield* cronList({ sessionID })
-        for (const task of scheduled) yield* cronCancel(task.id)
+        for (const task of scheduled) yield* cronCancel(task.id, undefined, notify)
         return held.length + scheduled.length
       })
+
+      // Register once per Wakeup layer build so a goal that settles, pauses, or
+      // clears cancels the session's timers through the same service that armed
+      // them (D11). Clearing the wait record first in the goal's cleanup path
+      // makes the cancel notify above a no-op during teardown. The disposer
+      // drops the handler on teardown so a rebuilt layer does not stack one.
+      const unregisterCleanup = GoalLink.registerCleanup((id) => cancelSession(id))
+      yield* Effect.addFinalizer(() => Effect.sync(unregisterCleanup))
 
       const adopt = Effect.fn("Wakeup.adopt")(function* (directory: string) {
         const keys = yield* storage.list(["wakeup"]).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
