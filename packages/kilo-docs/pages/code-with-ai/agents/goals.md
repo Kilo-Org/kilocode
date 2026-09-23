@@ -107,6 +107,20 @@ Goal-composer mode accepts multiline objectives and file or image attachments. I
 - The goal is stored under the `kilo.goal` session metadata key.
 - Headless mode supports only status and controls through `kilo run --command goal`, which accepts no argument, `pause`, or `clear`. The agent can still start or resume a goal itself with the `goal` tool.
 
+## Autonomous engine (experimental)
+
+Set `autonomous_goal.enabled: true` in your config to route `/goal` to the autonomous engine instead of the loop above. The engine:
+
+1. Plans with a read-only planner (`cloud_reasoner` model): a goal summary, acceptance criteria, and a dependency-ordered task list.
+2. Runs one task at a time with a worker that may edit files and run commands but can never push, commit, publish, or use `sudo`.
+3. Runs the project's checks after every task (detected from `package.json` scripts, `pyproject.toml`, `pubspec.yaml`, `Cargo.toml`, `go.mod`, or the `autonomous_goal.checks` list) and a read-only reviewer over the diff.
+4. Retries a failed task locally, escalates to the cloud model when the same failure repeats or attempts run out, and blocks the goal when the cloud attempt also fails.
+5. After all tasks, re-checks every acceptance criterion against the actual diff, replans missing work, and finishes only after a final review.
+
+Model classes come from `autonomous_goal.models` (`local_small`, `local_coder`, `cloud_reasoner`) and fall back to `small_model`, `subagent_model`, and `model`. Cloud usage is limited by `autonomous_goal.budget`; when a limit is reached the goal pauses with the reason.
+
+Controls: `/goal <objective>` starts, `/goal status` (or bare `/goal`), `/goal tasks`, and `/goal budget` report progress, `/goal pause`, `/goal resume`, and `/goal clear` work as before. State is saved after every step, so a paused or restarted goal resumes from its task list. The session goal row shows `active`, `paused`, `blocked`, or `complete` as with the standard loop; `complete` here means the checks, goal check, and final review all passed.
+
 ## Related
 
 - [Using Agents](/docs/code-with-ai/agents/using-agents) for agent selection and tool access

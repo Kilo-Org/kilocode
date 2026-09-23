@@ -94,79 +94,79 @@ Each package is one commit with tests. Order is top to bottom.
 
 ### P0 – Plan + architecture notes
 - [x] Rewrite this plan into packaged form.
-- [ ] `docs/autonomous-goal/current-architecture.md`: existing goal loop, session/prompt primitives, agents/permissions, persistence, cost, config, tests, with file paths.
+- [x] `docs/autonomous-goal/current-architecture.md`: existing goal loop, session/prompt primitives, agents/permissions, persistence, cost, config, tests, with file paths.
 
 ### P1 – Config
-- [ ] Add `autonomous_goal` to `packages/core/src/v1/config/config.ts`: `enabled`, `models: {local_small?, local_coder?, cloud_reasoner?}`, `worker_max_attempts` (2), `routing: {local_small_max_complexity: 0, local_coder_max_complexity: 2}`, `stuck: {same_error_limit: 2}`, `budget: {cloud_task_max_usd: 2, cloud_goal_max_usd: 10, max_cloud_calls_per_task: 3, max_cloud_calls_per_goal: 20}`, `final_review_cloud_at_complexity` (3), `checks?: string[]`.
-- [ ] `autonomous/config.ts`: `resolve(cfg)` returns a fully defaulted object.
-- [ ] Regenerate SDK (`./script/generate.ts`); note the cloud `extras.ts` mirror in the PR.
-- [ ] Test: defaults and override merge.
+- [x] Add `autonomous_goal` to `packages/core/src/v1/config/config.ts`: `enabled`, `models: {local_small?, local_coder?, cloud_reasoner?}`, `worker_max_attempts` (2), `routing: {local_small_max_complexity: 0, local_coder_max_complexity: 2}`, `stuck: {same_error_limit: 2}`, `budget: {cloud_task_max_usd: 2, cloud_goal_max_usd: 10, max_cloud_calls_per_task: 3, max_cloud_calls_per_goal: 20}`, `final_review_cloud_at_complexity` (3), `checks?: string[]`.
+- [x] `autonomous/config.ts`: `resolve(cfg)` returns a fully defaulted object.
+- [x] Regenerate SDK (`./script/generate.ts`); note the cloud `extras.ts` mirror in the PR.
+- [x] Test: defaults and override merge.
 
 ### P2 – State + store
-- [ ] `autonomous/state.ts`: Effect `Schema` for the types in §6.
-- [ ] `autonomous/store.ts`: `load`, `save`, `update`, `remove` via `Storage.Service` key `["autonomous", sessionID]`; decode with schema; reject malformed documents.
-- [ ] `autonomous/log.ts`: `record(state, event, detail)` appends to a capped event log and logs via Effect.
-- [ ] Tests: round-trip; restore keeps dependencies, attempts, budget; malformed doc rejected.
+- [x] `autonomous/state.ts`: Effect `Schema` for the types in §6.
+- [x] `autonomous/store.ts`: `load`, `save`, `update`, `remove` via `Storage.Service` key `["autonomous", sessionID]`; decode with schema; reject malformed documents.
+- [x] `autonomous/log.ts`: `record(state, event, detail)` appends to a capped event log and logs via Effect.
+- [x] Tests: round-trip; restore keeps dependencies, attempts, budget; malformed doc rejected.
 
 ### P3 – Scheduler (DAG, pure)
-- [ ] `autonomous/scheduler.ts`: `validate(tasks)` (unknown/self dependency, cycle via Kahn), `ready(state)`, `next(state)`, `propagate(state)` (failed → dependents blocked), `merge(state, planned)` for replanning (keep completed/failed, replace pending).
-- [ ] Tests: chain, fan-out, fan-in, cycle rejected, failed dependency blocks, replan merge keeps completed work.
+- [x] `autonomous/scheduler.ts`: `validate(tasks)` (unknown/self dependency, cycle via Kahn), `ready(state)`, `next(state)`, `propagate(state)` (failed → dependents blocked), `merge(state, planned)` for replanning (keep completed/failed, replace pending).
+- [x] Tests: chain, fan-out, fan-in, cycle rejected, failed dependency blocks, replan merge keeps completed work.
 
 ### P4 – Router + model classes
-- [ ] `autonomous/models.ts`: `resolve(cfg, provider)` → `{local-small, local-coder, cloud-reasoner}` as `{providerID, modelID}` with fallbacks.
-- [ ] `autonomous/router.ts` (pure): `route({task, attempts, escalated, budget, cfg})` → `{modelClass, reason}`. Complexity 0 → local-small; 1–2 → local-coder; ≥3, any risk flag, preferred cloud, or escalated → cloud-reasoner; cloud budget exhausted → `blocked` with reason.
-- [ ] Tests: routing matrix, security escalation, retry escalation, budget constraint.
+- [x] `autonomous/models.ts`: `resolve(cfg, provider)` → `{local-small, local-coder, cloud-reasoner}` as `{providerID, modelID}` with fallbacks.
+- [x] `autonomous/router.ts` (pure): `route({task, attempts, escalated, budget, cfg})` → `{modelClass, reason}`. Complexity 0 → local-small; 1–2 → local-coder; ≥3, any risk flag, preferred cloud, or escalated → cloud-reasoner; cloud budget exhausted → `blocked` with reason.
+- [x] Tests: routing matrix, security escalation, retry escalation, budget constraint.
 
 ### P5 – Budget
-- [ ] `autonomous/budget.ts`: `charge(state, {modelClass, taskID, cost, tokens})`, `allow(state, cfg, taskID)` for cloud calls, `reason(state, cfg)`. Local and cloud tracked separately.
-- [ ] Tests: per-task and per-goal USD and call limits; local unlimited.
+- [x] `autonomous/budget.ts`: `charge(state, {modelClass, taskID, cost, tokens})`, `allow(state, cfg, taskID)` for cloud calls, `reason(state, cfg)`. Local and cloud tracked separately.
+- [x] Tests: per-task and per-goal USD and call limits; local unlimited.
 
 ### P6 – Agents + permissions
-- [ ] Register hidden subagents in `patchAgents`: `autonomous-planner` (read-only), `autonomous-worker` (edit/write allow; bash allow with deny list; `question`, `task`, `suggest`, `goal*` deny), `autonomous-reviewer` and `autonomous-checker` (read-only). Prompts in `autonomous/prompt/*.txt`.
-- [ ] Register only when `autonomous_goal.enabled`.
-- [ ] Tests: worker ruleset denies push/sudo and allows edit; reviewer cannot edit.
+- [x] Register hidden subagents in `patchAgents`: `autonomous-planner` (read-only), `autonomous-worker` (edit/write allow; bash allow with deny list; `question`, `task`, `suggest`, `goal*` deny), `autonomous-reviewer`, `autonomous-checker` and `autonomous-final` (read-only). Prompts in `autonomous/prompt/*.txt`.
+- [x] Register only when `autonomous_goal.enabled`.
+- [x] Tests: worker ruleset denies push/sudo and allows edit; reviewer cannot edit.
 
 ### P7 – Session runner
-- [ ] `autonomous/runner.ts`: `run({parent, agent, model, schema, text, retries})` creates a child session (`parentID`, `KiloHeadless.mark`), prompts with `format: json_schema`, waits for drain, decodes `info.structured`; on invalid output re-prompts the same session with the error up to `retries`; returns `{value, cost, tokens, sessionID, text}`; honours cancellation.
-- [ ] Tests with `TestLLMServer`: valid first try; invalid then valid; retries exhausted.
+- [x] `autonomous/runner.ts`: `run({parent, agent, model, schema, text, retries})` creates a child session (`parentID`, `KiloHeadless.mark`), prompts with `format: json_schema`, waits for drain, decodes `info.structured`; on invalid output re-prompts the same session with the error up to `retries`; returns `{value, cost, tokens, sessionID, text}`; honours cancellation.
+- [x] Tests with `TestLLMServer`: valid first try; invalid then valid; retries exhausted.
 
 ### P8 – Planner
-- [ ] `autonomous/planner.ts`, `planner-schema.ts`, `prompt/planner.txt`: input objective (plus prior state and goal-checker findings on replan); output `{goal_summary, acceptance_criteria, tasks, risks}`; validate with scheduler; on DAG error retry with the message; `replan` uses `merge`.
-- [ ] Tests: valid plan accepted; invalid dependency retried; planner cannot edit.
+- [x] `autonomous/planner.ts`, `planner-schema.ts`, `prompt/planner.txt`: input objective (plus prior state and goal-checker findings on replan); output `{goal_summary, acceptance_criteria, tasks, risks}`; validate with scheduler; on DAG error retry with the message; `replan` uses `merge`.
+- [x] Tests: valid plan accepted; invalid dependency retried; planner cannot edit.
 
 ### P9 – Worker executor
-- [ ] `autonomous/worker.ts`: minimal-context prompt (task, criteria, relevant files, prior failure summaries); `git status --porcelain` before/after → `changedFiles`; result via runner with `TaskResult` schema; stored on the task.
-- [ ] Tests: result recorded; changed files detected in a temporary git repo.
+- [x] `autonomous/worker.ts`: minimal-context prompt (task, criteria, relevant files, prior failure summaries); `git status --porcelain` before/after → `changedFiles`; result via runner with `TaskResult` schema; stored on the task.
+- [x] Tests: result recorded; changed files detected in a temporary git repo.
 
 ### P10 – Mechanical verifier
-- [ ] `autonomous/verifier.ts`: `detect(dir)` from `package.json` scripts (`test`, `lint`, `typecheck`), `pyproject.toml`/`pytest.ini` (`pytest`, `ruff check .`), `pubspec.yaml` (`flutter analyze`, `flutter test`), `Cargo.toml` (`cargo check`, `cargo test`); `cfg.checks` overrides. `run(dir, commands, timeout)` via `Bun.spawn`, truncated stdout/stderr, exit code; skip when the binary is missing.
-- [ ] Tests: detection fixtures; pass/fail with a fake script; missing tool skipped.
+- [x] `autonomous/verifier.ts`: `detect(dir)` from `package.json` scripts (`test`, `lint`, `typecheck`), `pyproject.toml`/`pytest.ini` (`pytest`, `ruff check .`), `pubspec.yaml` (`flutter analyze`, `flutter test`), `Cargo.toml` (`cargo check`, `cargo test`); `cfg.checks` overrides. `run(dir, commands, timeout)` via `Bun.spawn`, truncated stdout/stderr, exit code; skip when the binary is missing.
+- [x] Tests: detection fixtures; pass/fail with a fake script; missing tool skipped.
 
 ### P11 – Reviewer
-- [ ] `autonomous/reviewer.ts`, `prompt/reviewer.txt`: input task, criteria, bounded `git diff`, check output, worker summary; output `{ok, severity, findings[{id,type,file?,description,blocking}], confidence}`; blocking findings appended to task failures and `openFindings`.
-- [ ] Tests: blocking finding fails the task; pass path.
+- [x] `autonomous/reviewer.ts`, `prompt/reviewer.txt`: input task, criteria, bounded `git diff`, check output, worker summary; output `{ok, severity, findings[{id,type,file?,description,blocking}], confidence}`; blocking findings appended to task failures and `openFindings`.
+- [x] Tests: blocking finding fails the task; pass path.
 
 ### P12 – Repair + escalation (includes stuck detection)
-- [ ] `autonomous/repair.ts`: `fingerprint(failure)`; `decide(task, cfg)` → `retry-local` | `escalate` | `fail`. Escalate when same fingerprint ≥ limit, attempts ≥ max, worker reports blocked, reviewer confidence low, or a risk flag appears. Escalated attempt uses cloud-reasoner with minimal context (task, criteria, diff, failures, findings). Records escalations and repair history.
-- [ ] Tests: first failure → local retry; same error twice → escalate; escalation fails → task failed → dependents blocked.
+- [x] `autonomous/repair.ts`: `fingerprint(failure)`; `decide(task, cfg)` → `retry-local` | `escalate` | `fail`. Escalate when same fingerprint ≥ limit, attempts ≥ max, worker reports blocked, reviewer confidence low, or a risk flag appears. Escalated attempt uses cloud-reasoner with minimal context (task, criteria, diff, failures, findings). Records escalations and repair history.
+- [x] Tests: first failure → local retry; same error twice → escalate; escalation fails → task failed → dependents blocked.
 
 ### P13 – Goal checker + final review
-- [ ] `autonomous/checker.ts`, `prompt/checker.txt`: output `{complete, criteria[{id,status,evidence?,reason?}], new_work[]}`; updates criteria; `new_work` triggers replan.
-- [ ] `autonomous/final.ts`: gate = checks pass on whole tree, no blocking findings, all criteria satisfied, no failed required tasks; final reviewer over the full diff (cloud when max complexity ≥ threshold, else local); evidence stored in state.
-- [ ] Tests: worker cannot complete the goal; missing criterion creates work; gate blocks on a failing check.
+- [x] `autonomous/checker.ts`, `prompt/checker.txt`: output `{complete, criteria[{id,status,evidence?,reason?}], new_work[]}`; updates criteria; `new_work` triggers replan.
+- [x] `autonomous/final.ts`: gate = checks pass on whole tree, no blocking findings, all criteria satisfied, no failed required tasks; final reviewer over the full diff (cloud when max complexity ≥ threshold, else local); evidence stored in state.
+- [x] Tests: worker cannot complete the goal; missing criterion creates work; gate blocks on a failing check.
 
 ### P14 – Engine loop + end-to-end tests
-- [ ] `autonomous/engine.ts`: `{start, pause, resume, clear, status}`; forked fiber in instance scope; loop per §8 with persistence after every transition; `GoalState.start/pause` and metadata mirror `kilo.goal = {text, status, active, reason}`; pause stops after the current task; budget exceeded → `paused` with reason; unresolvable → `blocked` with a concise question.
-- [ ] E2E test (scripted `TestLLMServer`): plan → two tasks → worker → check fails once → local repair → review ok → checker complete → final review → `completed` with cost summary.
-- [ ] E2E test: same error twice → escalation → completion.
-- [ ] Restart test: state restored, active → paused, resume continues from persisted tasks.
+- [x] `autonomous/engine.ts`: `{start, pause, resume, clear, status}`; forked fiber in instance scope; loop per §8 with persistence after every transition; `GoalState.start/pause` and metadata mirror `kilo.goal = {text, status, active, reason}`; pause stops after the current task; budget exceeded → `paused` with reason; unresolvable → `blocked` with a concise question.
+- [x] E2E test (scripted `TestLLMServer`): plan → two tasks → worker → check fails once → local repair → review ok → checker complete → final review → `completed` with cost summary.
+- [x] E2E test: same error twice → escalation → completion.
+- [x] Restart test: state restored, active → paused, resume continues from persisted tasks.
 
 ### P15 – `/goal` integration, status, docs
-- [ ] Branch at `session/prompt.ts:2314` (`kilocode_change`): when enabled, `Engine.command(input)`; args `<objective>`, `status` (bare default), `pause`, `resume`, `clear`, `tasks`, `budget`.
-- [ ] `autonomous/status.ts`: text renderer (progress bar, criteria, tasks, models, usage, escalations) emitted as a synthetic assistant notice.
-- [ ] Allow `kilo run --command goal <objective>` when enabled (`kilocode/cli/cmd/run.ts` `validateGoal`).
-- [ ] Docs: "Autonomous engine (experimental)" section in `packages/kilo-docs/pages/code-with-ai/agents/goals.md`.
-- [ ] Tests: command routing, status snapshot, existing goal tests unchanged with the flag off.
+- [x] Branch at `session/prompt.ts:2314` (`kilocode_change`): when enabled, `Engine.command(input)`; args `<objective>`, `status` (bare default), `pause`, `resume`, `clear`, `tasks`, `budget`.
+- [x] `autonomous/status.ts`: text renderer (progress bar, criteria, tasks, models, usage, escalations) emitted as a synthetic assistant notice.
+- [ ] Allow `kilo run --command goal <objective>` when enabled (deferred: the headless CLI must reject before any request, so it cannot read the server config; start and resume stay TUI-only for now).
+- [x] Docs: "Autonomous engine (experimental)" section in `packages/kilo-docs/pages/code-with-ai/agents/goals.md`.
+- [x] Tests: command routing, status snapshot, existing goal tests unchanged with the flag off.
 
 ### Later (not MVP)
 - Parallel workers with worktrees; learned router; repository memory; GitHub issue → PR; benchmark mode.

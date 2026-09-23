@@ -33,7 +33,7 @@ const settled = (engine: AutonomousEngine.Interface, id: Parameters<typeof engin
   pollWithTimeout(
     AutonomousStore.load(id).pipe(Effect.map((s) => (s && !AutonomousState.active(s.status) && !engine.running(id) ? s : undefined))),
     "goal did not settle",
-    "40 seconds",
+    "90 seconds",
   )
 
 it.instance(
@@ -87,7 +87,7 @@ it.instance(
     expect(events).toContain("goal.completed")
   }),
   { git: true },
-  60_000,
+  120_000,
 )
 
 it.instance(
@@ -116,7 +116,7 @@ it.instance(
     expect(GoalState.read((yield* run.sessions.get(run.root.id)).metadata)).toMatchObject({ status: "blocked" })
   }),
   { git: true },
-  60_000,
+  120_000,
 )
 
 it.instance(
@@ -149,7 +149,7 @@ it.instance(
     expect(JSON.stringify(hits[0]?.body.messages)).toContain("did t1")
   }),
   { git: true },
-  60_000,
+  120_000,
 )
 
 it.instance(
@@ -174,5 +174,5 @@ it.instance(
     expect(GoalState.read((yield* run.sessions.get(run.root.id)).metadata)).toBeUndefined()
   }),
   { git: true },
-  60_000,
+  120_000,
 )

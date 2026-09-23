@@ -97,6 +97,10 @@ import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_chan
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
+import { AutonomousEngine } from "@/kilocode/autonomous/engine" // kilocode_change
+import { AutonomousConfig } from "@/kilocode/autonomous/config" // kilocode_change
+import { AutonomousRunner } from "@/kilocode/autonomous/runner" // kilocode_change
+import { Storage } from "@/storage/storage" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -228,6 +232,14 @@ export const layer = Layer.effect(
       create: (input) => prepare(input, true).pipe(Effect.scoped),
       prompt: (input, ticket) => prompt(input, ticket),
     })
+    // Autonomous goal engine: takes over /goal when autonomous_goal.enabled is set.
+    const engine = yield* AutonomousEngine.make().pipe(
+      Effect.provideService(Storage.Service, yield* Storage.Service),
+      Effect.provideService(
+        AutonomousRunner.Ops,
+        AutonomousRunner.Ops.of({ prompt: (input) => prompt(input), cancel: (id, scope) => cancel(id, scope) }),
+      ),
+    )
     // kilocode_change end
 
     // kilocode_change start - preserve configured reference mentions on the Core reference architecture
@@ -2311,7 +2323,13 @@ export const layer = Layer.effect(
     // kilocode_change end
 
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
-      if (input.command === "goal") return yield* goals.command(input) // kilocode_change
+      // kilocode_change start - route /goal to the autonomous engine when enabled
+      if (input.command === "goal") {
+        const cfg = yield* config.get()
+        if (AutonomousConfig.enabled(cfg)) return yield* engine.command(input)
+        return yield* goals.command(input)
+      }
+      // kilocode_change end
       const ticket = yield* control.begin(input.sessionID, false) // kilocode_change
       yield* Effect.logInfo("command", {
         "session.id": input.sessionID,
@@ -2667,6 +2685,7 @@ export const node = LayerNode.make({
     Database.node,
     Question.node, // kilocode_change
     repositoryCacheNode, // kilocode_change
+    Storage.node, // kilocode_change - autonomous goal engine state
   ],
 })
 

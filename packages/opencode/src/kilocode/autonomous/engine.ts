@@ -1,12 +1,15 @@
 import { Cause, Deferred, Effect, Exit, Fiber, Result, Scope } from "effect"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
+import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { KiloHeadless } from "@/kilocode/permission/headless"
+import { SessionDrain } from "@/kilocode/session/drain"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { Session } from "@/session/session"
+import { Storage } from "@/storage/storage"
 import type { CommandInput } from "@/session/prompt"
 import { MessageID, PartID, type SessionID } from "@/session/schema"
 import { Provider } from "@/provider/provider"
@@ -20,6 +23,7 @@ import { AutonomousPlanner } from "./planner"
 import { AutonomousRepair } from "./repair"
 import { AutonomousReviewer } from "./reviewer"
 import { AutonomousRouter } from "./router"
+import { AutonomousRunner } from "./runner"
 import { AutonomousScheduler } from "./scheduler"
 import { AutonomousState } from "./state"
 import { AutonomousStatus } from "./status"
@@ -44,8 +48,26 @@ export namespace AutonomousEngine {
     const config = yield* Config.Service
     const provider = yield* Provider.Service
     const events = yield* EventV2Bridge.Service
+    const storage = yield* Storage.Service
+    const agents = yield* Agent.Service
+    const drain = yield* SessionDrain.Service
+    const ops = yield* AutonomousRunner.Ops
     const scopes = yield* InstanceState.make(() => Scope.Scope)
     const runs = new Map<SessionID, Run>()
+
+    // Engine work runs in forked fibers and from callers outside this layer, so
+    // every service it needs is captured here and provided explicitly.
+    const provide = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+      effect.pipe(
+        Effect.provideService(Session.Service, sessions),
+        Effect.provideService(Config.Service, config),
+        Effect.provideService(Provider.Service, provider),
+        Effect.provideService(EventV2Bridge.Service, events),
+        Effect.provideService(Storage.Service, storage),
+        Effect.provideService(Agent.Service, agents),
+        Effect.provideService(SessionDrain.Service, drain),
+        Effect.provideService(AutonomousRunner.Ops, ops),
+      )
     const settling = new Set<SessionID>()
 
     const mirror = Effect.fn("AutonomousEngine.mirror")(function* (state: AutonomousState.Info) {
@@ -272,7 +294,7 @@ export namespace AutonomousEngine {
           }),
         ),
       )
-      const fiber = yield* body.pipe(Effect.forkIn(scope))
+      const fiber = yield* provide(body).pipe(Effect.forkIn(scope))
       runs.set(id, { fiber, stopped })
     })
 
@@ -404,7 +426,16 @@ export namespace AutonomousEngine {
       )
     })
 
-    return { command, start, pause, resume, clear, status, stop, running: (id: SessionID) => runs.has(id) }
+    return {
+      command: (input: CommandInput) => provide(command(input)),
+      start: (id: SessionID, objective: string) => provide(start(id, objective)),
+      pause: (id: SessionID) => provide(pause(id)),
+      resume: (id: SessionID) => provide(resume(id)),
+      clear: (id: SessionID) => provide(clear(id)),
+      status: (id: SessionID) => provide(status(id)),
+      stop,
+      running: (id: SessionID) => runs.has(id),
+    }
   })
 
   export type Interface = Effect.Success<ReturnType<typeof make>>
