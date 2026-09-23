@@ -64,16 +64,30 @@ export function useToolMotion(props: { id: string; status: () => string | undefi
   const [stagger, setStagger] = createSignal(enter ? slot() : 0)
   const [entering, setEntering] = createSignal(enter)
   const [changed, setChanged] = createSignal(false)
-  createEffect(on(props.status, () => setChanged(true), { defer: true }))
+  // Rows that complete in the same frame (parallel tool calls) beat one after another.
+  const [beat, setBeat] = createSignal(0)
+  createEffect(
+    on(
+      props.status,
+      (value) => {
+        setChanged(true)
+        if (value === "completed") setBeat(slot())
+      },
+      { defer: true },
+    ),
+  )
   return {
     entering,
     stagger,
+    beat,
     live: () => enter || changed(),
     // Call from the wrapper's animationend so later reveals do not inherit the stagger delay.
     entered: () => {
       setEntering(false)
       setStagger(0)
     },
+    // Call when the completion beat ends so later reveals do not inherit its delay.
+    beaten: () => setBeat(0),
   }
 }
 

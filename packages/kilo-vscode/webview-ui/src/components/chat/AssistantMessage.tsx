@@ -116,6 +116,7 @@ const still = {
   live: () => undefined,
   status: () => undefined,
   stagger: () => undefined,
+  beat: () => undefined,
   end: () => {},
 }
 
@@ -139,7 +140,9 @@ function useRowMotion(props: {
     live: () => (motion.live() ? "" : undefined),
     status: () => tool.state?.status,
     stagger: () => (motion.stagger() ? String(motion.stagger()) : undefined),
+    beat: () => (motion.beat() ? String(motion.beat()) : undefined),
     end: (event: AnimationEvent) => {
+      if (event.animationName === "tool-motion-pop") return motion.beaten()
       if (event.target !== event.currentTarget || event.animationName !== "tool-motion-enter") return
       motion.entered()
     },
@@ -414,6 +417,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                 style={{
                   "--timeline-color": highlighted() ? timelineColor(part as unknown as TimelinePart) : undefined,
                   "--tool-stagger": motion.stagger(),
+                  "--tool-beat": motion.beat(),
                 }}
                 onAnimationEnd={motion.end}
               >

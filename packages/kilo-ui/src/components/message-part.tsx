@@ -122,6 +122,8 @@ type TodoView = {
 
 type TodoItem = Todo & {
   changed?: boolean
+  done?: boolean
+  started?: boolean
 }
 
 function getDiagnostics(
@@ -3386,11 +3388,18 @@ ToolRegistry.register({
   },
 })
 
-function TodoCheckbox(props: { checked: boolean; children: JSX.Element }) {
+function TodoCheckbox(props: { checked: boolean; done?: boolean; started?: boolean; children: JSX.Element }) {
   const id = createUniqueId()
   const state = () => (props.checked ? "" : undefined)
   return (
-    <div role="group" data-component="checkbox" data-readonly="" data-checked={state()}>
+    <div
+      role="group"
+      data-component="checkbox"
+      data-readonly=""
+      data-checked={state()}
+      data-done={props.done ? "" : undefined}
+      data-started={props.started ? "" : undefined}
+    >
       <input
         type="checkbox"
         id={`${id}-input`}
@@ -3411,6 +3420,7 @@ function TodoCheckbox(props: { checked: boolean; children: JSX.Element }) {
             <svg viewBox="0 0 12 12" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M3 7.17905L5.02703 8.85135L9 3.5"
+                pathLength="1"
                 stroke="currentColor"
                 stroke-width="1.5"
                 stroke-linecap="square"
@@ -3472,7 +3482,7 @@ ToolRegistry.register({
             </Show>
             <For each={shown()}>
               {(todo: TodoItem) => (
-                <TodoCheckbox checked={todo.status === "completed"}>
+                <TodoCheckbox checked={todo.status === "completed"} done={todo.done} started={todo.started}>
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}

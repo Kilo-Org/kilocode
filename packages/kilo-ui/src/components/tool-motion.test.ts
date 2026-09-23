@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { createRoot, createSignal } from "solid-js"
+import { batch, createRoot, createSignal } from "solid-js"
 import { touch, useToolMotion } from "./tool-motion"
 
 globalThis.requestAnimationFrame ??= (fn: FrameRequestCallback) =>
@@ -58,6 +58,16 @@ describe("useToolMotion", () => {
     expect(rows[1]!.motion.stagger()).toBe(0)
     expect(rows[1]!.motion.entering()).toBe(false)
     expect(rows[1]!.motion.live()).toBe(true)
+    rows.forEach((row) => row.dispose())
+  })
+
+  test("orders completion beats of rows that finish in the same frame", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    const rows = [mount(id()), mount(id()), mount(id())]
+    batch(() => rows.forEach((row) => row.setState("completed")))
+    expect(rows.map((row) => row.motion.beat())).toEqual([0, 1, 2])
+    rows[2]!.motion.beaten()
+    expect(rows[2]!.motion.beat()).toBe(0)
     rows.forEach((row) => row.dispose())
   })
 })

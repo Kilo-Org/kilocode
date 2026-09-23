@@ -19,6 +19,8 @@
   --tool-motion-scale: 0.75;
   --tool-motion-breathe: tool-motion-breathe;
   --tool-motion-pop: tool-motion-pop;
+  --tool-motion-tick: 0.6;
+  --tool-motion-draw: tool-motion-draw;
 }
 
 /* A new row rises into place. Rows that start in the same frame follow each other. */
@@ -40,7 +42,8 @@
   animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step) + 60ms);
 }
 
-/* Controls and counters that appear when the tool completes. */
+/* Controls and counters that appear when the tool completes. They follow the
+   completion beat, so parallel tools that finish together ripple in order. */
 [data-tool-live]
   [data-component="tool-trigger"]
   :is(
@@ -50,7 +53,8 @@
     [data-component="tool-action"]
   ),
 [data-tool-live] [data-component="diff-changes"] {
-  animation: tool-motion-fade var(--tool-motion-fast) var(--tool-motion-ease) 40ms backwards;
+  animation: tool-motion-fade var(--tool-motion-fast) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step) + 40ms);
 }
 
 /* Result rows under the trigger rise into place. */
@@ -62,7 +66,8 @@
     [data-component="tool-hint"],
     [data-component="card"][data-variant="error"]
   ) {
-  animation: tool-motion-enter var(--tool-motion-enter) var(--tool-motion-ease) 30ms backwards;
+  animation: tool-motion-enter var(--tool-motion-enter) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step) + 30ms);
 }
 
 /* Streaming lists (subagent tool calls, shell sections) sit in scroll boxes
@@ -74,7 +79,7 @@
 }
 
 [data-tool-live] [data-component="tool-loaded-file"] + [data-component="tool-loaded-file"] {
-  animation-delay: 60ms;
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step) + 60ms);
 }
 
 /* The tool icon breathes while the tool works and gives a short beat when it
@@ -91,6 +96,32 @@
   [data-component="tool-trigger"]
   [data-slot="basic-tool-icon"]:not(:has([data-component="agent-avatar"], [data-component="board-participant-stack"])) {
   animation: var(--tool-motion-pop) 320ms var(--tool-motion-ease);
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step));
+}
+
+/* A to-do that just got done ticks: its box pops, the check draws, and the
+   strike fades in. A to-do that just started lights up after it. The draw and
+   strike repaint only a 10px check and one line of text. */
+[data-tool-live] [data-component="todos"] [data-component="checkbox"][data-done] {
+  [data-slot="checkbox-checkbox-control"] {
+    animation: tool-motion-tick 260ms var(--tool-motion-ease) 120ms backwards;
+  }
+
+  [data-slot="checkbox-checkbox-indicator"] path {
+    stroke-dasharray: 1;
+    animation: var(--tool-motion-draw) 200ms var(--tool-motion-ease) 200ms backwards;
+  }
+
+  [data-slot="message-part-todo-content"] {
+    animation: tool-motion-strike 200ms ease-out 320ms backwards;
+  }
+}
+
+[data-tool-live]
+  [data-component="todos"]
+  [data-component="checkbox"][data-started]
+  [data-slot="message-part-todo-content"] {
+  animation: tool-motion-light 240ms ease-out 380ms backwards;
 }
 
 @keyframes tool-motion-enter {
@@ -141,6 +172,35 @@
   }
 }
 
+@keyframes tool-motion-tick {
+  from {
+    opacity: 0.4;
+    transform: scale(var(--tool-motion-tick));
+  }
+}
+
+@keyframes tool-motion-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes tool-motion-strike {
+  from {
+    text-decoration-color: transparent;
+  }
+}
+
+@keyframes tool-motion-light {
+  from {
+    opacity: 0.4;
+  }
+}
+
 /* The OS reduced motion setting keeps short fades and drops movement, loops,
    and delays. */
 @media (prefers-reduced-motion: reduce) {
@@ -151,5 +211,7 @@
     --tool-motion-step: 0ms;
     --tool-motion-breathe: none;
     --tool-motion-pop: none;
+    --tool-motion-tick: 1;
+    --tool-motion-draw: none;
   }
 }
