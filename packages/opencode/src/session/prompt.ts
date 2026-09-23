@@ -8,6 +8,7 @@ import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
+import { SkillInject } from "@/kilocode/skills/inject" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
@@ -2370,14 +2371,14 @@ export const layer = Layer.effect(
         template = template + "\n\n" + input.arguments
       }
 
-      const shellMatches = ConfigMarkdown.shell(template)
       // kilocode_change start - skill templates run !`cmd`` only when trusted and the kill-switch is off,
       // mirroring the skill tool's gate (the slash-command path is user-initiated, so it is not prompted).
       const skillTemplate = cmd.source === "skill"
+      const shellMatches = skillTemplate ? SkillInject.shell(template) : ConfigMarkdown.shell(template)
       const skillShellBlocked = skillTemplate && (cmd.trusted !== true || flags.disableSkillShell)
       if (shellMatches.length > 0 && skillShellBlocked) {
         const note = cmd.trusted !== true ? SKILL_SHELL_UNTRUSTED : SKILL_SHELL_DISABLED
-        template = template.replace(bashRegex, () => note)
+        template = SkillInject.rewrite(template, shellMatches, () => note)
       } else if (shellMatches.length > 0) {
         // kilocode_change end
         const cfg = yield* config.get()
@@ -2389,7 +2390,11 @@ export const layer = Layer.effect(
         ).pipe(Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner))
         // kilocode_change end
         let index = 0
-        template = template.replace(bashRegex, () => results[index++])
+        // kilocode_change start
+        template = skillTemplate
+          ? SkillInject.rewrite(template, shellMatches, () => results[index++])
+          : template.replace(bashRegex, () => results[index++])
+        // kilocode_change end
       }
       template = template.trim()
 

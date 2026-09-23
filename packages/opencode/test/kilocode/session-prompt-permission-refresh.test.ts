@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { NodeFileSystem } from "@effect/platform-node"
-import { expect } from "bun:test"
+import { expect, spyOn } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import fs, { rename, rm, symlink } from "fs/promises"
@@ -237,6 +237,72 @@ function providerCfg(url: string) {
     },
   }
 }
+
+it.live(
+  "#12868 keeps inline Markdown inert in skill slash commands",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const permission = yield* Permission.Service
+        const commands = yield* Command.Service
+        const state = {
+          info: {
+            name: "probe",
+            source: "skill" as const,
+            trusted: false,
+            template: "",
+            hints: [],
+          },
+        }
+        const probe = spyOn(commands, "get").mockImplementation((name) =>
+          Effect.succeed(name === "probe" ? state.info : undefined),
+        )
+        yield* Effect.addFinalizer(() => Effect.sync(() => probe.mockRestore()))
+
+        const docs = "Autosquash `fixup!` commits\nSome other valid `code` block"
+        const fence = "~~~\n!`echo LIVE`\n~~~"
+        const rows = [
+          { content: docs, trusted: false, source: "skill" as const, expected: docs },
+          { content: docs, trusted: true, source: "skill" as const, expected: docs },
+          {
+            content: docs + "\n!`echo LIVE`",
+            trusted: false,
+            source: "skill" as const,
+            expected: docs + "\n[skill shell execution disabled for untrusted skill]",
+          },
+          { content: docs + "\n!`echo LIVE`", trusted: true, source: "skill" as const, expected: docs + "\nLIVE" },
+          { content: fence, trusted: false, source: "skill" as const, expected: fence },
+          { content: fence, trusted: true, source: "skill" as const, expected: fence },
+          { content: fence, trusted: false, source: "command" as const, expected: "~~~\nLIVE\n\n~~~" },
+        ]
+
+        for (const row of rows) {
+          state.info = {
+            name: "probe",
+            source: row.source,
+            trusted: row.trusted,
+            template: row.content,
+            hints: [],
+          }
+          yield* llm.text("done")
+          const session = yield* sessions.create({})
+          yield* prompt.command({
+            sessionID: session.id,
+            command: "probe",
+            arguments: "",
+            model: "test/test-model",
+          })
+          const inputs = yield* llm.inputs
+          expect(JSON.stringify(inputs.at(-1)?.messages)).toContain(JSON.stringify(row.expected))
+          expect(yield* permission.list()).toEqual([])
+        }
+      }),
+      { git: true, config: providerCfg },
+    ),
+  30_000,
+)
 
 it.live(
   "blocks @file content denied by .kilocodeignore",
