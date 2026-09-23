@@ -20,10 +20,12 @@ describe("AutonomousShell.exec", () => {
 
   test("fiber interruption kills the child", async () => {
     const marker = `/tmp/kilo-shell-${process.pid}-${Date.now()}`
-    const fiber = Effect.runFork(AutonomousShell.sh(`sleep 30; touch ${marker}`, { cwd: process.cwd() }))
+    // The child would create the marker after 1s; interrupt at 200ms and check well after 1s,
+    // so a survivor is caught rather than masked by the test finishing first.
+    const fiber = Effect.runFork(AutonomousShell.sh(`sleep 1; touch ${marker}`, { cwd: process.cwd() }))
     await new Promise((r) => setTimeout(r, 200))
     await Effect.runPromise(Fiber.interrupt(fiber))
-    await new Promise((r) => setTimeout(r, 300))
+    await new Promise((r) => setTimeout(r, 1_500))
     expect(await Bun.file(marker).exists()).toBe(false)
   })
 })
