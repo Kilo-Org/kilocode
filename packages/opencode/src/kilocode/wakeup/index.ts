@@ -48,7 +48,7 @@ export namespace Wakeup {
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
     readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
     readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
-    readonly cancelSession: (sessionID: SessionID) => Effect.Effect<number>
+    readonly cancelSession: (sessionID: SessionID, options?: { notify?: boolean }) => Effect.Effect<number>
     readonly adopt: (directory: string) => Effect.Effect<void>
     readonly cronCreate: (
       input: CronInput,
@@ -412,7 +412,7 @@ export namespace Wakeup {
           return wait
         })
 
-      const notify = (
+      const notifyGoal = (
         sessionID: SessionID,
         id: ID,
         directory: string,
@@ -433,7 +433,7 @@ export namespace Wakeup {
           )
         })
 
-      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID) {
+      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const info = yield* lookup(id)
         if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
         const fiber = timers.get(id)
@@ -444,11 +444,11 @@ export namespace Wakeup {
         entries.delete(id)
         yield* storage.remove(key(info)).pipe(Effect.ignore)
         yield* announce(info.sessionID)
-        yield* notify(info.sessionID, info.id, info.directory, "wakeup")
+        if (notify) yield* notifyGoal(info.sessionID, info.id, info.directory, "wakeup")
         return info
       })
 
-      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID) {
+      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const task = yield* cronLookup(id)
         if (!task || (sessionID && task.sessionID !== sessionID)) return undefined
         const fiber = cronTimers.get(id)
@@ -458,18 +458,25 @@ export namespace Wakeup {
         }
         cronEntries.delete(id)
         yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
-        yield* notify(task.sessionID, task.id, task.directory, "cron")
+        if (notify) yield* notifyGoal(task.sessionID, task.id, task.directory, "cron")
         return task
       })
 
       // Called when a session is removed so its wakeups stop holding Keep Awake
       // and can never resume a session that no longer exists. Cron tasks never
       // hold Keep Awake, but they must still be cancelled with the session.
-      const cancelSession = Effect.fn("Wakeup.cancelSession")(function* (sessionID: SessionID) {
+      // The removal path passes `notify: false`: the session record still exists
+      // while this runs, so the cancel notification's `recover` would re-hydrate
+      // the persisted waiting goal and resume a session that is being deleted.
+      const cancelSession = Effect.fn("Wakeup.cancelSession")(function* (
+        sessionID: SessionID,
+        options?: { notify?: boolean },
+      ) {
+        const notify = options?.notify !== false
         const held = yield* list({ sessionID })
-        for (const info of held) yield* cancel(info.id)
+        for (const info of held) yield* cancel(info.id, undefined, notify)
         const scheduled = yield* cronList({ sessionID })
-        for (const task of scheduled) yield* cronCancel(task.id)
+        for (const task of scheduled) yield* cronCancel(task.id, undefined, notify)
         return held.length + scheduled.length
       })
 

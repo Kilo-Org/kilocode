@@ -9,6 +9,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AppRuntime } from "@/effect/app-runtime"
 import { InstanceRef } from "@/effect/instance-ref"
+import { KiloSession } from "@/kilocode/session"
 import { GoalLink } from "@/kilocode/session/goal/link"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { Wakeup } from "@/kilocode/wakeup"
@@ -935,6 +936,89 @@ describe("wakeup resume", () => {
       const ids = pending.map((item) => item.id)
       expect(ids).toContain(reminder.id)
       expect(ids).not.toContain(awaited.id)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("removing a session cancels its wakeups without re-creating the waiting goal", async () => {
+    const bodies: string[] = []
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        bodies.push(await req.text())
+        return new Response(reply("woke up"), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-remove-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup remove" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      const awaited = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "poll the deploy",
+            when: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.setMetadata({
+            sessionID: session.id,
+            metadata: {
+              "kilo.goal": {
+                text: "Wait for the deploy",
+                status: "waiting",
+                active: false,
+                wait: { kind: "wakeup", id: awaited.id, label: "poll the deploy" },
+              },
+            },
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+      // The live wait record a waiting goal holds, then the pause `remove` runs
+      // before it cancels the removed session's wakeups.
+      GoalLink.set(session.id, { kind: "wakeup", id: awaited.id, label: "poll the deploy" })
+      GoalState.pause(session.id)
+
+      await AppRuntime.runPromise(KiloSession.cancelWakeups(session.id).pipe(Effect.provideService(InstanceRef, ctx)))
+
+      await AppRuntime.runPromise(
+        pollWithTimeout(
+          Wakeup.Service.use((wake) => wake.list({ sessionID: session.id })).pipe(
+            Effect.provideService(InstanceRef, ctx),
+            Effect.map((pending) => (pending.some((item) => item.id === awaited.id) ? undefined : true)),
+          ),
+          "the removed session's wakeup was never cancelled",
+          "15 seconds",
+        ),
+      )
+
+      // A cancel notification would re-hydrate the persisted waiting goal from
+      // the still-present session record and resume a session being deleted.
+      expect(GoalLink.get(session.id)).toBeUndefined()
+      expect(GoalState.waiting(session.id)).toBe(false)
+      expect(bodies).toEqual([])
+      GoalLink.release(session.id)
     } finally {
       await server.stop(true)
       await cleanup(dir)
