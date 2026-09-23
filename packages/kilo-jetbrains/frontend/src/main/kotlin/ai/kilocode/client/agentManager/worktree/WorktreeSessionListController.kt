@@ -92,8 +92,8 @@ class WorktreeSessionListController(
      * Forks [id] into this list's directory, optionally truncating at [messageId].
      *
      * The forked session is inserted at the head the same way [create] does. That optimistic insert
-     * is what lets the panel's own promotion rule react right away instead of waiting for the CLI's
-     * `session.created` to arrive through [COALESCE_MS]; the later reload is idempotent.
+     * is what lets the panel's row list and toggle badge react right away instead of waiting for the
+     * CLI's `session.created` to arrive through [COALESCE_MS]; the later reload is idempotent.
      *
      * Unlike the neighbours here this reports no telemetry of its own: fork is reachable from three
      * different surfaces, so the event belongs where the surface and the outcome are both known

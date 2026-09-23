@@ -5,7 +5,6 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
-import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
@@ -18,7 +17,6 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.log.LogConfig
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
-import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -45,6 +43,7 @@ import com.intellij.openapi.project.RootsChangeRescanningInfo
 import com.intellij.openapi.roots.ex.ProjectRootManagerEx
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -63,7 +62,8 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
     override suspend fun connect() = app.connect()
 
     override suspend fun state(): Flow<KiloAppStateDto> =
-        app.appState.map(::dto).distinctUntilChanged()
+        combine(app.appState, app.capabilities) { state, caps -> appStateDto(state, caps) }
+            .distinctUntilChanged()
 
     override suspend fun health(): HealthDto = app.health()
 
@@ -106,7 +106,7 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
         app.requireReady()
-        return appStateDto(app.updateConfig(patch))
+        return appStateDto(app.updateConfig(patch), app.capabilities.value)
     }
 
     override suspend fun applyLogConfig(config: LogConfigDto) {
@@ -149,11 +149,9 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)
     }
 
-    private fun dto(state: KiloAppState): KiloAppStateDto =
-        appStateDto(state)
 }
 
-internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
+internal fun appStateDto(state: KiloAppState, backgroundSubagents: Boolean = false): KiloAppStateDto =
     when (state) {
         KiloAppState.Disconnected -> KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
         is KiloAppState.Downloading -> KiloAppStateDto(
@@ -179,9 +177,9 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
                 profile = if (state.data.profile != null) ProfileStatusDto.LOADED
                     else ProfileStatusDto.NOT_LOGGED_IN,
             ),
-            warnings = state.data.warnings.map(::warning),
             config = state.data.config,
             profile = state.data.profile?.let(::profileDto),
+            backgroundSubagents = backgroundSubagents,
         )
         is KiloAppState.Error -> KiloAppStateDto(
             status = KiloAppStatusDto.ERROR,
@@ -229,10 +227,4 @@ private fun error(e: LoadError) = LoadErrorDto(
     resource = e.resource,
     status = e.status,
     detail = e.detail,
-)
-
-private fun warning(w: ConfigWarning) = ConfigWarningDto(
-    path = w.path,
-    message = w.message,
-    detail = w.detail,
 )

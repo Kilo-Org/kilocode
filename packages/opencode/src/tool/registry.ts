@@ -3,6 +3,7 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // ki
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
+import { SessionCompaction } from "@/session/compaction" // kilocode_change - compaction service for the experimental compact tool
 import { QuestionTool } from "./question"
 // kilocode_change start
 import { SuggestTool } from "../kilocode/suggestion/tool"
@@ -31,10 +32,13 @@ import { Provider } from "@/provider/provider"
 
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
+import { KiloCodeMode } from "../kilocode/tool/code-mode" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
+import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
+import { ContextInfoTool, CompactTool } from "@/kilocode/tool/context" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
@@ -89,7 +93,12 @@ export function webSearchEnabled(
   providerID: ProviderV2.ID,
   flags = { exa: Flag.KILO_ENABLE_EXA, parallel: Flag.KILO_ENABLE_PARALLEL },
 ) {
-  return providerID === ProviderV2.ID.kilo || flags.exa || flags.parallel // kilocode_change
+  return (
+    providerID === ProviderV2.ID.kilo || // kilocode_change
+    providerID === ProviderV2.ID.make("opencode-go") ||
+    flags.exa ||
+    flags.parallel
+  )
 }
 
 type TaskDef = Tool.InferDef<typeof TaskTool>
@@ -142,6 +151,10 @@ const layer = Layer.effect(
     const websearch = yield* WebSearchTool
     const clone = yield* RepoCloneTool // kilocode_change
     const overview = yield* RepoOverviewTool // kilocode_change
+    // kilocode_change start - self-context tools
+    const contextInfoTool = yield* ContextInfoTool
+    const compactTool = yield* CompactTool
+    // kilocode_change end
     const shell = yield* ShellTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
@@ -160,8 +173,12 @@ const layer = Layer.effect(
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
-        const codeModeTool = codeMode
-          ? yield* codeMode.CodeModeTool.pipe(
+        // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
+        const kiloCfg = yield* config.get()
+        const mode = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, kiloCfg)))
+        const codeModeTool = mode
+          ? yield* mode.CodeModeTool.pipe(
+              // kilocode_change end
               Effect.provideService(MCP.Service, mcp),
               Effect.provideService(Agent.Service, agents),
               Effect.provideService(Session.Service, sessions),
@@ -320,7 +337,7 @@ const layer = Layer.effect(
         }
 
         // kilocode_change start
-        const cfg = yield* config.get()
+        const cfg = kiloCfg
         const global = yield* config.getGlobal()
         const indexing = KiloToolRegistry.indexing(cfg, global)
         // kilocode_change end
@@ -344,6 +361,8 @@ const layer = Layer.effect(
           patch: Tool.init(patchtool),
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
+          contextInfo: Tool.init(contextInfoTool), // kilocode_change
+          compact: Tool.init(compactTool), // kilocode_change
           plan: Tool.init(plan),
           suggest: Tool.init(suggesttool),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}), // kilocode_change
@@ -379,9 +398,10 @@ const layer = Layer.effect(
               tool.patch,
               tool.plan,
               ...(["cli", "vscode"].includes(flags.client) ? [tool.suggest] : []),
-              ...KiloToolRegistry.extra(kilo, cfg),
+              ...KiloToolRegistry.extra(kilo, cfg, flags),
               ...(tool.execute ? [tool.execute] : []),
               ...(flags.experimentalLspTool ? [tool.lsp] : []),
+              ...(flags.experimentalContextTools ? [tool.contextInfo, tool.compact] : []), // kilocode_change
             ],
             kilo,
           ),
@@ -416,23 +436,32 @@ const layer = Layer.effect(
       return ["Available agent types and the tools they have access to:", description].join("\n")
     })
 
-    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (input: {
-      agent: Agent.Info
-      permission?: PermissionV1.Ruleset
-      networkRestricted?: boolean // kilocode_change
-    }) {
-      if (!codeMode) return
+    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (
+      input: {
+        agent: Agent.Info
+        permission?: PermissionV1.Ruleset
+        networkRestricted?: boolean // kilocode_change
+      },
+      cfg: Config.Info,
+    ) {
+      // kilocode_change - reuse the config already fetched by the caller
       if (input.networkRestricted) return // kilocode_change
+      // kilocode_change start - Code Mode can also be enabled from the Kilo config toggle
+      const mode = codeMode ?? (yield* Effect.promise(() => KiloCodeMode.load(flags, cfg)))
+      if (!mode) return
+      // kilocode_change end
       const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
       const tools = Permission.visibleTools(yield* mcp.tools(), ruleset)
       if (Object.keys(tools).length === 0) return
-      return codeMode.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize))
+      // kilocode_change start - describe the catalog with the resolved Code Mode module
+      return mode.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize))
+      // kilocode_change end
     })
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const cfg = yield* config.get() // kilocode_change
       const filtered = (yield* all()).filter((tool) => {
-        if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
+        if (!KiloToolRegistry.available(tool)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
           if (cfg.web_search === true) return true // kilocode_change
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
@@ -447,7 +476,7 @@ const layer = Layer.effect(
       const kiloFiltered = yield* KiloToolRegistry.applyVisibility(filtered) // kilocode_change
 
       const codeModeDescription = filtered.some((tool) => tool.id === "execute")
-        ? yield* describeCodeMode(input)
+        ? yield* describeCodeMode(input, cfg) // kilocode_change - pass the config fetched above
         : undefined
       const visible = kiloFiltered.filter((tool) => tool.id !== "execute" || codeModeDescription) // kilocode_change
 
@@ -592,6 +621,7 @@ export const node = LayerNode.suspend(() =>
       Agent.node,
       Skill.node,
       Session.node,
+      SessionCompaction.node, // kilocode_change - compaction service for the experimental compact tool
       BackgroundJob.node,
       SessionDrain.node,
       Provider.node,
@@ -617,6 +647,7 @@ export const node = LayerNode.suspend(() =>
       Notebook.node,
       RepositoryCache.node,
       KiloSessions.node,
+      Wakeup.node, // kilocode_change - provides Wakeup.Service to the schedule_wakeup/cancel_wakeup tools
     ],
   }),
 )

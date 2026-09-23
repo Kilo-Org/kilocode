@@ -271,7 +271,6 @@ export const TaskTool = Tool.define(
             agent: next.name,
             tools: {
               question: false, // kilocode_change - subagents cannot prompt the user directly
-              interactive_terminal: false, // kilocode_change - subagents cannot take over the user's terminal
               ...(canTodo ? {} : { todowrite: false }),
               ...(canTask ? {} : { task: false }),
               ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
@@ -286,6 +285,10 @@ export const TaskTool = Tool.define(
           // including the resumable task_id so the parent agent can continue the subagent (#11620)
           if (result.info.role === "assistant" && result.info.error) {
             return yield* Effect.fail(new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`))
+          }
+          const failed = result.parts.findLast((item) => item.type === "tool" && item.state.status === "error")
+          if (failed?.type === "tool" && failed.state.status === "error") {
+            return yield* Effect.fail(new Error(`${failed.state.error}\n${resumeHint(nextSession.id)}`))
           }
           // kilocode_change end
           // kilocode_change start - ignore synthetic/ignored/empty text parts (e.g. the memory marker) when picking the task result (#13469)

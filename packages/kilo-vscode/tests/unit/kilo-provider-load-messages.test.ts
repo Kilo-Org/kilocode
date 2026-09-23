@@ -226,6 +226,7 @@ function createConnection(client: ReturnType<typeof createClient> | null) {
     getConnectionError: () => null,
     resolveEventSessionId: () => undefined,
     recordMessageSessionId: () => undefined,
+    prepareTools: async (_dir: string) => {},
     notifyNotificationDismissed: () => undefined,
     pruneSession: () => undefined,
     registerVisible: () => undefined,
@@ -294,7 +295,7 @@ function makeProvider(
       sent.push(message)
     },
   }
-  return { provider, internal, sent }
+  return { provider, internal, sent, connection }
 }
 
 function status(internal: ProviderInternals, type: "busy" | "idle", directory = "/repo", sessionID = "s1") {
@@ -581,7 +582,9 @@ describe("KiloProvider session status reconciliation", () => {
   })
 
   it("does not idle a worktree session from a root snapshot", async () => {
-    const client = createClient()
+    const client = createClient({
+      status: async ({ directory }) => ({ data: directory === "/repo/worktree" ? { s1: { type: "busy" } } : {} }),
+    })
     const { provider, internal } = makeProvider(client)
     provider.setSessionDirectory("s1", "/repo/worktree")
     internal.trackedSessionIds.add("s1")
@@ -590,6 +593,74 @@ describe("KiloProvider session status reconciliation", () => {
     await internal.seedSessionStatusMap()
 
     expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+  })
+
+  it("reconciles retained sessions from each owning directory after a project switch", async () => {
+    const calls: string[] = []
+    const pending = Promise.withResolvers<{ data: Record<string, SessionStatus> }>()
+    const client = createClient({
+      status: async ({ directory }) => {
+        calls.push(directory!)
+        if (directory === "/repo/project-a") return pending.promise
+        return { data: {} }
+      },
+    })
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/project-a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "routed" }, "/repo/project-a", 1)
+    const { internal, sent } = makeProvider(client, {
+      rootDirectory: () => "/repo/project-b",
+      projectQualifier: () => ({ projectId: "b" }),
+      routeService: routes,
+    })
+    internal.trackedSessionIds.add("routed")
+    internal.trackedSessionIds.add("worktree")
+    internal.sessionDirectories.set("worktree", "/repo/project-a/worktree")
+    internal.owners.set("released", { dir: "/repo/project-a/worktree", project: "a" })
+    for (const id of ["routed", "worktree", "released"]) internal.sessionStatusMap.set(id, "busy")
+
+    const recovering = internal.seedSessionStatusMap()
+    await Bun.sleep(0)
+    expect(internal.sessionStatusMap.get("routed")).toBe("busy")
+    expect(internal.sessionStatusMap.get("worktree")).toBe("idle")
+    expect(internal.sessionStatusMap.get("released")).toBe("idle")
+
+    pending.resolve({ data: {} })
+    await recovering
+
+    expect(calls.sort()).toEqual(["/repo/project-a", "/repo/project-a/worktree", "/repo/project-b"])
+    for (const id of ["routed", "worktree", "released"]) {
+      expect(internal.sessionStatusMap.get(id)).toBe("idle")
+      expect(sent).toContainEqual({ type: "sessionStatus", sessionID: id, status: "idle" })
+    }
+  })
+
+  it.each(["missing", "error"])("preserves status in a directory with a %s snapshot", async (failure) => {
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    const client = createClient({
+      status: async ({ directory }) => {
+        if (directory === "/repo/project-a") return { data: {} }
+        if (failure === "error") throw new Error("status unavailable")
+        return { data: null }
+      },
+    })
+    const { internal } = makeProvider(client, {
+      rootDirectory: () => "/repo/project-b",
+      projectQualifier: () => ({ projectId: "b" }),
+    })
+    for (const id of ["a", "b"]) {
+      internal.trackedSessionIds.add(id)
+      internal.sessionDirectories.set(id, `/repo/project-${id}`)
+      internal.sessionStatusMap.set(id, "busy")
+    }
+
+    try {
+      await internal.seedSessionStatusMap()
+      expect(internal.sessionStatusMap.get("a")).toBe("idle")
+      expect(internal.sessionStatusMap.get("b")).toBe("busy")
+    } finally {
+      log.mockRestore()
+    }
   })
 
   it("reconciles a released child from its owning directory snapshot", async () => {
@@ -1593,6 +1664,74 @@ describe("KiloProvider.handleLoadMessages / slim payload", () => {
     await internal.handleSendMessage("hello", "m1", "s1")
 
     expect(client.prompted).toHaveLength(1)
+  })
+
+  it("waits for browser tool readiness before submitting the prompt", async () => {
+    const client = createClient()
+    const { internal, connection } = makeProvider(client)
+    internal.currentSession = mkSession()
+    internal.gatherEditorContext = async () => ({})
+    const started = Promise.withResolvers<void>()
+    const ready = Promise.withResolvers<void>()
+    connection.prepareTools = async (dir) => {
+      expect(dir).toBe("/repo")
+      started.resolve()
+      await ready.promise
+    }
+    const send = internal.handleSendMessage("browser test", "m1", "s1")
+    await started.promise
+    expect(client.prompted).toHaveLength(0)
+    ready.resolve()
+    await send
+    expect(client.prompted).toHaveLength(1)
+  })
+
+  it("waits for browser tool readiness for Agent Manager worktree prompts too", async () => {
+    const client = createClient()
+    const { internal, connection } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+    const order: string[] = []
+    connection.prepareTools = async (dir) => {
+      order.push(`prepare:${dir}`)
+    }
+    client.session.promptAsync = async (params: Record<string, unknown>) => {
+      order.push(`prompt:${String(params.directory)}`)
+      return { data: undefined }
+    }
+    await internal.handleSendMessage(
+      "browser test",
+      "m1",
+      undefined,
+      "draft-1",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "worktree-ctx",
+      "/worktree",
+    )
+    expect(client.created).toEqual([expect.objectContaining({ directory: "/worktree" })])
+    expect(order).toEqual(["prepare:/worktree", "prompt:/worktree"])
+  })
+
+  it("reports a browser readiness failure instead of submitting without tools", async () => {
+    const client = createClient()
+    const { internal, connection, sent } = makeProvider(client)
+    internal.currentSession = mkSession()
+    internal.gatherEditorContext = async () => ({})
+    connection.prepareTools = async () => {
+      throw new Error("Playwright browser automation could not connect")
+    }
+    await internal.handleSendMessage("browser test", "m1", "s1")
+    expect(client.prompted).toHaveLength(0)
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "sendMessageFailed",
+        error: "Playwright browser automation could not connect",
+      }),
+    )
   })
 
   it("aborts when the cost alert is stopped", async () => {

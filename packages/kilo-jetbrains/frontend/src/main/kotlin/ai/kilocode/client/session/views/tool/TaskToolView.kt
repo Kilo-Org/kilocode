@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.AgentAvatar
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
@@ -11,9 +12,11 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.HeaderOpenAction
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -21,6 +24,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -40,6 +44,9 @@ class TaskToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
+    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
+    /** Sibling color slot for the task's child session's generated avatar. See [AgentAvatar]. */
+    private val avatarColor: (String) -> Int? = { null },
     private val parts: ToolParts = toolParts(tool),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
 ) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }, { footer }), UiDataProvider, ApprovalReasonTarget, SessionCopyTarget {
@@ -49,6 +56,12 @@ class TaskToolView(
     private var item = tool
     private var style = SessionEditorStyle.current()
     private val rows = LinkedHashMap<String, Row>()
+    // Recreated only when the child session id or its resolved sibling color changes; a state-only
+    // change (pending/running/completed/error) just swaps between these two retained icons.
+    private var avatarId = ""
+    private var avatarColorSlot: Int? = null
+    private var avatarStatic = AgentAvatar.static(avatarId, avatarColorSlot)
+    private var avatarRunning = AgentAvatar.running(avatarId, avatarColorSlot)
     private var following = false
     private var collapsed = false
     private var popup: HeaderPopupBody? = null
@@ -59,12 +72,22 @@ class TaskToolView(
         ::openSubagent,
     )
 
+    // A plain inline button, not a hover overlay: SessionCopyTarget only reserves the hover-copy
+    // slot for one control (open.anchor), and this action only applies to a running foreground task.
+    private val promoteButton = HoverIcon().apply {
+        icon = CONTINUE_IN_BACKGROUND_ICON
+        isFocusable = false
+        isVisible = false
+        toolTipText = KiloBundle.message("session.part.tool.continueInBackground")
+        addActionListener { promoteBackgroundAgent() }
+    }
+
     init {
         // Mirror the edit/patch cards: move the summary and the open action into the non-fit left
         // group so the anchor always reserves its width right after the text. Left in the fill slot
         // (a fitHorizontal stack), a long summary would clip the trailing anchor to zero width and
         // the hover open control could fail to appear.
-        parts.header.left(parts.sub, open.anchor)
+        parts.header.left(parts.sub, promoteButton, open.anchor)
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()
@@ -153,21 +176,56 @@ class TaskToolView(
         var changed = false
         changed = syncExpandable(item.childTools.isNotEmpty()) || changed
         changed = setVisible(parts.state, item.childTools.isEmpty()) || changed
-        changed = setIcon(parts.glyph, icon(item)) || changed
-        changed = setForeground(parts.glyph, color(item)) || changed
+        changed = syncAvatar() || changed
         changed = setText(parts.title, agentTitle(item)) || changed
         changed = setText(parts.sub, summary(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        changed = setVisible(promoteButton, canPromote(item)) || changed
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
+
+    /**
+     * Generated per-subagent avatar (see [AgentAvatar]): the neutral unknown glyph before
+     * `childSessionId` is known, then a stable shape/hue keyed by that id. Running/pending shows the
+     * pulsing variant; completed/error settle on the same static glyph. Never tints through
+     * `parts.glyph.foreground` — the identity's color is baked into the icon itself.
+     */
+    @RequiresEdt
+    private fun syncAvatar(): Boolean {
+        val id = item.childSessionId ?: ""
+        val colorSlot = if (id.isEmpty()) null else avatarColor(id)
+        if (id != avatarId || colorSlot != avatarColorSlot) {
+            avatarId = id
+            avatarColorSlot = colorSlot
+            avatarStatic = AgentAvatar.static(id, colorSlot)
+            avatarRunning = AgentAvatar.running(id, colorSlot)
+        }
+        val running = item.state == ToolExecState.PENDING || item.state == ToolExecState.RUNNING
+        return setIcon(parts.glyph, if (running) avatarRunning else avatarStatic)
+    }
+
+    /**
+     * Visible only when the CLI allows background subagents and this is a running foreground task
+     * with a child session that is not already in the background. Without the capability check the
+     * button would be offered on a CLI whose kill switch is off, where promoting always fails.
+     */
+    private fun canPromote(tool: Tool): Boolean = onPromoteBackgroundAgent?.available() == true &&
+        tool.childSessionId != null &&
+        tool.state == ToolExecState.RUNNING &&
+        tool.metadata["background"] != "true"
 
     private fun openSubagent() {
         val id = item.childSessionId ?: return
         val title = listOf(agentTitle(item), summary(item)).filter { it.isNotBlank() }.joinToString(" - ")
         onOpenSubagent?.invoke(id, title)
+    }
+
+    private fun promoteBackgroundAgent() {
+        val id = item.childSessionId ?: return
+        onPromoteBackgroundAgent?.promote(id)
     }
 
     private fun syncRows(): Boolean {
@@ -359,6 +417,7 @@ class TaskToolView(
 
     companion object {
         private const val POPUP_MIN_CHARS = 60
+        private val CONTINUE_IN_BACKGROUND_ICON = IconLoader.getIcon("/icons/arrow-down-to-line.svg", TaskToolView::class.java)
         fun canRender(content: Tool): Boolean = content.name == "task"
     }
 }
@@ -369,7 +428,7 @@ private class TaskBody(glyph: JBLabel) {
         override fun updateUI() {
             super.updateUI()
             background = SessionUiStyle.Colors.codeBlockBackground()
-            border = taskBodyBorder(glyph)
+            border = toolBodyBorder(glyph)
         }
     }.apply {
         add(rows, BorderLayout.CENTER)
@@ -416,20 +475,6 @@ private fun rowTitleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
     UiStyle.Colors.errorLabelForeground()
 } else {
     SessionUiStyle.Text.Secondary.foreground()
-}
-
-private fun taskBodyBorder(glyph: JBLabel) = run {
-    val width = maxOf(
-        glyph.preferredSize.width,
-        glyph.icon?.iconWidth ?: 0,
-        JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
-    )
-    JBUI.Borders.empty(
-        UiStyle.Gap.sm(),
-        width + JBUI.scale(SessionUiStyle.View.Layout.GAP) + UiStyle.Gap.md(),
-        UiStyle.Gap.sm(),
-        UiStyle.Gap.md(),
-    )
 }
 
 private fun agentTitle(tool: Tool): String {

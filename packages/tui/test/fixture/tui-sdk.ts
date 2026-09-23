@@ -88,8 +88,7 @@ export function createFetch(override?: FetchHandler, events?: ReturnType<typeof 
     )
       return json({})
     // kilocode_change start - Kilo bootstrap endpoints
-    if (["/network", "/background-process", "/interactive-terminal", "/config/warnings"].includes(url.pathname))
-      return json([])
+    if (["/network", "/background-process", "/config/warnings"].includes(url.pathname)) return json([])
     if (url.pathname === "/indexing/status")
       return json({ state: "Disabled", message: "Indexing disabled.", processedFiles: 0, totalFiles: 0, percent: 0 })
     // kilocode_change end

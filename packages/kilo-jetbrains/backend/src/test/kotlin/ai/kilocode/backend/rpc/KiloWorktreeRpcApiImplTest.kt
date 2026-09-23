@@ -1,6 +1,15 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.diff.GIT_PROBE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_READ_TIMEOUT_MS
+import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
+import ai.kilocode.backend.diff.failure
+import ai.kilocode.backend.diff.gitBudget
+import ai.kilocode.backend.worktree.WorktreeTrash
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
+import ai.kilocode.rpc.parseRepoSlug
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
@@ -10,15 +19,29 @@ import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.orphans.OrphanKind
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.util.SystemInfo
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
@@ -60,6 +83,282 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `git budgets separate cheap metadata from content reads`() {
+        // One 30s budget for everything let a wedged `git --version` hold a poll slot as long as a
+        // diff of a huge worktree legitimately needs.
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("--version")))
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("rev-parse", "HEAD")))
+        assertEquals(GIT_PROBE_TIMEOUT_MS, gitBudget(listOf("worktree", "list", "--porcelain")))
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("diff", "--numstat")))
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("show", "HEAD:file")))
+        // A status scans the working tree, so its cost follows the checkout, not `.git`. On the probe
+        // budget a large or cold worktree reported unavailable for a measurement that would have
+        // succeeded — the failure these budgets exist to report, caused by the budget itself.
+        assertEquals(GIT_READ_TIMEOUT_MS, gitBudget(listOf("status", "--porcelain=v2")))
+        assertTrue(GIT_PROBE_TIMEOUT_MS < GIT_READ_TIMEOUT_MS)
+    }
+
+    @Test
+    fun `the prune a poll runs is budgeted as metadata, not as a write`() {
+        // This prune is the one command a poll runs while holding the repository's mutation lock, so
+        // its budget is also the longest a user-initiated create or remove can be made to wait. A
+        // prune rewrites `$GIT_DIR/worktrees` bookkeeping and nothing else, so it belongs with the
+        // metadata probes rather than with `worktree add` and `fetch`.
+        assertEquals(GIT_PROBE_TIMEOUT_MS, GIT_PRUNE_TIMEOUT_MS)
+        assertTrue(GIT_PRUNE_TIMEOUT_MS < GIT_WRITE_TIMEOUT_MS)
+    }
+
+    @Test
+    fun `a failed command says whether it timed out`() {
+        // `Git comparison failed (exit=-1):` with empty stderr is what a timeout used to look like.
+        val timedOut = CmdOut(-1, "", "", timeout = true).failure()
+        assertTrue(timedOut.contains("timed out"), "a timeout must say so: $timedOut")
+        assertFalse(timedOut.contains("exit=-1"), "an unexplained exit code is not a reason: $timedOut")
+
+        val failed = CmdOut(128, "", "fatal: not a git repository").failure()
+        assertTrue(failed.contains("exit=128"), failed)
+        assertTrue(failed.contains("not a git repository"), failed)
+
+        // An empty stderr still has to read as something.
+        assertTrue(CmdOut(1, "", "").failure().contains("no stderr output"))
+    }
+
+    @Test
+    fun `gh classification separates a timeout from a healthy gh`() {
+        // Reported as OK, a timeout reset the probe's failure counter and defeated its own backoff.
+        assertEquals(GhAvailability.TIMEOUT, classifyGhError(CmdOut(-1, "", "", timeout = true)))
+        assertEquals(GhAvailability.OK, classifyGhError(CmdOut(1, "", "no pull requests found")))
+        assertEquals(GhAvailability.MISSING, classifyGhError(CmdOut(-1, "", "Cannot run program \"gh\"")))
+        assertEquals(GhAvailability.UNAUTH, classifyGhError(CmdOut(1, "", "gh auth login required")))
+    }
+
+    @Test
+    fun `a timed-out PR list is kept only long enough to spare the other pollers a fan-out`() {
+        // A fan-out that timed out learned nothing about these pull requests. Served for the full
+        // PR_TTL it republished one `gh` overrun as a fresh verdict long after gh recovered, which is
+        // what made the banner come back on its own with no gh process involved.
+        val timeout = api.prTtl(GhAvailability.TIMEOUT)
+        assertTrue(timeout < api.prTtl(GhAvailability.OK), "a non-answer must not outlive an answer: $timeout")
+
+        // Every other verdict is an answer and keeps the ordinary lifetime — including the ones that
+        // also mean "no pull requests", so a genuine auth problem is not re-probed per poll.
+        for (value in GhAvailability.entries.filter { it != GhAvailability.TIMEOUT }) {
+            assertEquals(api.prTtl(GhAvailability.OK), api.prTtl(value), "unexpected short TTL for $value")
+        }
+
+        // Not zero, and the reason is the other attached projects: they all poll the same root, so a
+        // spent entry is what stops each of them paying its own fan-out the moment one of them times
+        // out. It only has to outlive that burst, never reach the next poll — so it is a small fraction
+        // of the ordinary lifetime rather than merely shorter than it.
+        assertTrue(timeout > 0, "a dropped entry lets every other poller re-run the fan-out")
+        assertTrue(timeout * 4 <= api.prTtl(GhAvailability.OK), "not short enough to be a burst absorber: $timeout")
+    }
+
+    @Test
+    fun `list reports leftover directories under the worktrees folder without removing them`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val leftover = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(leftover.resolve(".kilo-dev"))
+
+        val listed = api.list(repo.toString())
+
+        // Orphan paths are resolved the way git reports worktree paths (realpath), so they compare
+        // equal to the other DTOs' paths on a symlinked temp dir.
+        assertEquals(listOf(leftover.toRealPath().toString()), listed.orphans.map { it.path })
+        assertEquals(listOf(OrphanKind.LEFTOVER), listed.orphans.map { it.kind }, "a plain directory is a leftover, not a broken checkout")
+        assertTrue(listed.worktrees.any { it.path == created.path }, "a live worktree is not an orphan")
+        // Reported, never deleted: a leftover directory can hold files that exist nowhere else.
+        assertTrue(Files.isDirectory(leftover.resolve(".kilo-dev")))
+    }
+
+    @Test
+    fun `list classifies an orphan that still holds a git checkout as broken`() = runBlocking {
+        initRepo()
+        val broken = repo.resolve(".kilo").resolve("worktrees").resolve("broken")
+        Files.createDirectories(broken)
+        // A plain file named `.git` is what a linked worktree checkout actually has (it points back
+        // at the shared `.git` dir) — a directory named `.git` is the primary repo's own shape. Either
+        // is enough to call the leftover "still holds a checkout".
+        Files.writeString(broken.resolve(".git"), "gitdir: /nowhere\n")
+
+        val listed = api.list(repo.toString())
+
+        assertEquals(listOf(broken.toRealPath().toString()), listed.orphans.map { it.path })
+        assertEquals(listOf(OrphanKind.BROKEN), listed.orphans.map { it.kind })
+    }
+
+    @Test
+    fun `orphanSizes sums regular file sizes and never follows symlinks`() = runBlocking {
+        initRepo()
+        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(orphan)
+        Files.write(orphan.resolve("a.bin"), ByteArray(10))
+        Files.write(orphan.resolve("b.bin"), ByteArray(20))
+        val target = Files.createTempDirectory("kilo-orphan-symlink-target")
+        Files.write(target.resolve("outside.bin"), ByteArray(1_000))
+        runCatching { Files.createSymbolicLink(orphan.resolve("link"), target) }
+        try {
+            val sizes = api.orphanSizes(repo.toString(), listOf(orphan.toString()))
+            assertEquals(30L, sizes[orphan.toString()], "size must exclude the symlinked tree entirely")
+        } finally {
+            delete(target)
+        }
+    }
+
+    @Test
+    fun `orphanSizes omits a path that fails to walk instead of failing the batch`() = runBlocking {
+        initRepo()
+        val ok = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(ok)
+        Files.write(ok.resolve("a.bin"), ByteArray(5))
+        val missing = repo.resolve(".kilo").resolve("worktrees").resolve("does-not-exist")
+
+        val sizes = api.orphanSizes(repo.toString(), listOf(ok.toString(), missing.toString()))
+
+        assertEquals(5L, sizes[ok.toString()])
+        assertFalse(sizes.containsKey(missing.toString()), "a path that could not be measured must be omitted, not zero")
+    }
+
+    /**
+     * The frontend cancels a size pass whenever the orphan set changes or a delete starts, and
+     * `Files.walkFileTree` cannot be interrupted — so the walk has to check cancellation itself rather
+     * than leave a cancelled coroutine walking every remaining path on Dispatchers.IO.
+     *
+     * Cancelling before the call is ever reached (`job.cancel()` then `withContext(job) { ... }`) would
+     * only prove that `withContext` on an already-dead job throws without entering the block — true of
+     * any suspend function and unrelated to the `ensureActive()`/`isActive` checks this is meant to
+     * cover. This instead cancels a walk that is demonstrably still running: a full, uncancelled pass
+     * over a large tree is timed first, then a second pass over the same tree is cancelled partway
+     * through and shown to finish in a small fraction of that baseline — which a walk with no
+     * cancellation checks could not do, since nothing would tell it to stop.
+     */
+    @Test
+    fun `orphanSizes stops mid-walk once cancelled, instead of running to completion`() = runBlocking {
+        initRepo()
+        val big = repo.resolve(".kilo").resolve("worktrees").resolve("big")
+        Files.createDirectories(big)
+        repeat(20_000) { i -> Files.write(big.resolve("f$i.bin"), ByteArray(1)) }
+        val target = listOf(big.toString())
+
+        val baselineStart = System.nanoTime()
+        api.orphanSizes(repo.toString(), target)
+        val baseline = System.nanoTime() - baselineStart
+
+        val job = Job()
+        val cancelledStart = System.nanoTime()
+        val deferred = CoroutineScope(Dispatchers.IO + job).async { api.orphanSizes(repo.toString(), target) }
+        // A quarter of the uncancelled duration is comfortably inside the walk, not before or after it.
+        delay(TimeUnit.NANOSECONDS.toMillis(baseline / 4).coerceAtLeast(1))
+        job.cancel()
+        val outcome = runCatching { deferred.await() }
+        val elapsed = System.nanoTime() - cancelledStart
+
+        assertTrue(
+            outcome.exceptionOrNull() is CancellationException,
+            "a cancelled pass must not answer with sizes -> ${outcome.getOrNull()}",
+        )
+        assertTrue(
+            elapsed < baseline * 3 / 4,
+            "cancelling took ${elapsed / 1_000_000}ms against an uncancelled ${baseline / 1_000_000}ms " +
+                "-- a walk with no cancellation checks would not finish any faster than the baseline",
+        )
+    }
+
+    @Test
+    fun `removeOrphans deletes a validated leftover directory`() = runBlocking {
+        initRepo()
+        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(orphan.resolve("nested"))
+        Files.writeString(orphan.resolve("nested").resolve("file.txt"), "hi")
+        val real = orphan.toRealPath().toString()
+
+        val result = api.removeOrphans(repo.toString(), listOf(real))
+
+        assertEquals(listOf(OrphanRemoveResultDto(real, ok = true)), result.results)
+        assertFalse(Files.exists(orphan), "the trash-unavailable fallback must delete synchronously, not defer")
+        assertTrue(api.list(repo.toString()).orphans.isEmpty())
+    }
+
+    @Test
+    fun `removeOrphans refuses a path outside managed storage`() = runBlocking {
+        initRepo()
+        val outside = repo.resolve("outside")
+        Files.createDirectories(outside)
+
+        val result = api.removeOrphans(repo.toString(), listOf(outside.toString()))
+
+        val entry = result.results.single()
+        assertFalse(entry.ok)
+        assertTrue(entry.error?.contains("Refusing") == true, entry.error)
+        assertTrue(Files.isDirectory(outside), "unmanaged directory must not be touched")
+    }
+
+    @Test
+    fun `removeOrphans refuses a path that is actually a registered worktree`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        val result = api.removeOrphans(repo.toString(), listOf(created.path))
+
+        val entry = result.results.single()
+        assertFalse(entry.ok)
+        assertTrue(entry.error?.contains("managed worktree") == true, entry.error)
+        assertTrue(Files.isDirectory(Path.of(created.path)), "a live managed worktree must not be touched")
+    }
+
+    @Test
+    fun `removeOrphans rejects a stale selection that is no longer an orphan`() = runBlocking {
+        initRepo()
+        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(orphan)
+        val real = orphan.toRealPath().toString()
+        // Someone else already cleaned it up between the dialog's scan and this call.
+        delete(orphan)
+
+        val result = api.removeOrphans(repo.toString(), listOf(real))
+
+        val entry = result.results.single()
+        assertFalse(entry.ok)
+        assertTrue(entry.error?.contains("No longer an orphan") == true, entry.error)
+    }
+
+    @Test
+    fun `removeOrphans reports independent results per path`() = runBlocking {
+        initRepo()
+        val ok = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        Files.createDirectories(ok)
+        val okReal = ok.toRealPath().toString()
+        val outside = repo.resolve("outside")
+        Files.createDirectories(outside)
+
+        val result = api.removeOrphans(repo.toString(), listOf(okReal, outside.toString()))
+
+        assertEquals(2, result.results.size)
+        assertTrue(result.results.first { it.path == okReal }.ok)
+        assertFalse(result.results.first { it.path == outside.toString() }.ok)
+        assertFalse(Files.exists(ok))
+        assertTrue(Files.isDirectory(outside))
+    }
+
+    @Test
+    fun `list and the polls agree on which worktrees exist`() = runBlocking {
+        initRepo()
+        val kept = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("kept")).worktree)
+        val removed = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("gone")).worktree)
+        delete(Path.of(removed.path))
+
+        // list() used to reconcile differently from the stats/dirty polls, so a row could exist that
+        // nothing would ever report status for.
+        val listed = api.list(repo.toString()).worktrees.map { it.path }.toSet()
+        val dirty = api.dirty(repo.toString()).items.map { it.path }.toSet()
+
+        assertTrue(listed.contains(kept.path))
+        assertFalse(listed.contains(removed.path), "a directory that is gone must not be listed")
+        assertEquals(listed, dirty, "rows and polled paths must not disagree")
+    }
+
+    @Test
     fun `a cache entry is usable only within both the ttl and the caller ceiling`() {
         assertTrue(usable(time = 0, now = 89_999, ttl = 90_000, maxAge = null))
         assertFalse(usable(time = 0, now = 90_000, ttl = 90_000, maxAge = null))
@@ -76,6 +375,96 @@ class KiloWorktreeRpcApiImplTest {
         // the comparison into "always fresh".
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = 0))
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = -1))
+    }
+
+    @Test
+    fun `reason reports a timeout instead of falling through to the fallback text`() {
+        assertEquals("timed out", api.reason(CmdOut(-1, "", "", timeout = true), "git worktree remove failed"))
+        assertEquals("boom", api.reason(CmdOut(1, "", "boom"), "git worktree remove failed"))
+        assertEquals("git worktree remove failed", api.reason(CmdOut(1, "", ""), "git worktree remove failed"))
+    }
+
+    @Test
+    fun `fetchReason turns known git failures into actionable text instead of raw stderr`() {
+        val timeout = CmdOut(-1, "", "", timeout = true)
+        assertTrue(api.fetchReason(timeout, "feature/x").contains("timed out"))
+
+        val conflict = CmdOut(
+            1,
+            "",
+            "error: 'refs/remotes/origin/docs/auto-sync' exists; cannot create 'refs/remotes/origin/docs/auto-sync/jetbrains'",
+        )
+        val conflictText = api.fetchReason(conflict, "docs/auto-sync/jetbrains")
+        assertTrue(conflictText.contains("docs/auto-sync"), conflictText)
+        assertTrue(conflictText.contains("docs/auto-sync/jetbrains"), conflictText)
+        assertFalse(conflictText.contains("refs/remotes"), "should read as a branch name, not a raw ref path")
+
+        val missing = CmdOut(1, "", "fatal: couldn't find remote ref refs/pull/7/head")
+        assertTrue(api.fetchReason(missing, "feature/x").contains("no longer on the remote"))
+
+        val unknown = CmdOut(1, "", "fatal: something unexpected happened")
+        assertTrue(api.fetchReason(unknown, "feature/x").contains("something unexpected happened"))
+    }
+
+    @Test
+    fun `refConflict matches the summary form some git builds report on its own`() {
+        // Verbatim stderr from the Linux CI image, where the fetch printed no "exists; cannot create"
+        // detail line at all. Matching only that line made the prune recovery platform-dependent.
+        val summaryOnly = CmdOut(
+            1,
+            "",
+            "From /tmp/kilo-origin123\n" +
+                " * [new ref]         refs/pull/7/head -> origin/docs/auto-sync/jetbrains\n" +
+                "error: some local refs could not be updated; try running\n" +
+                " 'git remote prune origin' to remove any old, conflicting branches\n",
+        )
+        val detail = CmdOut(
+            1,
+            "",
+            "error: 'refs/remotes/origin/docs/auto-sync' exists; cannot create 'refs/remotes/origin/docs/auto-sync/jetbrains'",
+        )
+
+        assertTrue(refConflict(summaryOnly), "the prune advice alone identifies the conflict")
+        assertTrue(refConflict(detail))
+        assertFalse(refConflict(CmdOut(1, "", "fatal: unable to access remote: Could not resolve host")))
+    }
+
+    @Test
+    fun `fetchReason falls back to unnamed wording when git did not name the blocking ref`() {
+        val summaryOnly = CmdOut(1, "", "error: some local refs could not be updated; try running\n 'git remote prune origin' to remove any old, conflicting branches")
+
+        val text = api.fetchReason(summaryOnly, "docs/auto-sync/jetbrains")
+
+        // Naming the imported branch as its own blocker would read as nonsense.
+        assertFalse(text.contains("named"), text)
+        assertTrue(text.contains("blocks \"docs/auto-sync/jetbrains\""), text)
+    }
+
+    @Test
+    fun `fetchReason names a blocking local branch without its ref namespace`() {
+        // The cross-repo pull-ref fetch and the closing `branch --force` both write refs/heads/, so
+        // a conflict there must read as a branch name too, not as the raw ref path.
+        val local = CmdOut(
+            1,
+            "",
+            "error: 'refs/heads/alice/feature' exists; cannot create 'refs/heads/alice/feature/login'",
+        )
+
+        val text = api.fetchReason(local, "alice/feature/login")
+
+        assertTrue(text.contains("\"alice/feature\""), text)
+        assertFalse(text.contains("refs/heads"), text)
+    }
+
+    @Test
+    fun `cancellation checks in the poll wrappers also cover ProcessCanceledException`() {
+        // statsSafe/dirtySafe/prStatus isolate per-worktree failures behind runCatching and rethrow
+        // only CancellationException. That is enough to honor IntelliJ's "never swallow a PCE" rule
+        // solely because PCE extends java.util.concurrent.CancellationException, which is also what
+        // kotlinx.coroutines.CancellationException aliases on the JVM. Locked down here so a platform
+        // change that decoupled the two would fail this test instead of silently turning a cancelled
+        // progress indicator into a fake empty poll result.
+        assertTrue(ProcessCanceledException() is CancellationException)
     }
 
     @Test
@@ -186,6 +575,121 @@ class KiloWorktreeRpcApiImplTest {
     fun `badDir detects a missing working directory spawn failure`() {
         assertTrue(badDir("Cannot start a process, the working directory '/tmp/gone' does not exist"))
         assertFalse(badDir("Cannot run program \"git\": error=2, No such file or directory"))
+        // git's own message for the same race once the process has already started: the working
+        // directory disappeared before git called getcwd(), rather than before it was even spawned.
+        assertTrue(badDir("fatal: Unable to read current working directory: No such file or directory"))
+        assertFalse(badDir("fatal: index file corrupt"))
+        assertFalse(badDir("fatal: not a git repository (or any of the parent directories): .git"))
+    }
+
+    @Test
+    fun `a poll skips its prune while a mutation holds the repository lock`() {
+        // `git worktree prune` rewrites the same `$GIT_DIR/worktrees` bookkeeping create/import/remove
+        // are serialised on, and `git worktree add` registers a worktree before its checkout is
+        // written — so a poll that pruned mid-add would delete the metadata of a worktree being
+        // created. Polls take the lock only when it is free: never waiting behind a mutation budgeted
+        // in minutes, never pruning underneath one.
+        val mutex = Mutex()
+        var ran = 0
+
+        assertEquals(1, exclusive(mutex, "prune", "/repo") { ++ran })
+        assertEquals(1, ran, "a free lock must run the block")
+
+        assertTrue(mutex.tryLock(), "the helper must release the lock it took")
+        assertNull(exclusive(mutex, "prune", "/repo") { ++ran }, "a held lock must answer null, not wait")
+        assertEquals(1, ran, "the block must not run while a mutation holds the lock")
+        mutex.unlock()
+
+        assertEquals(2, exclusive(mutex, "prune", "/repo") { ++ran })
+    }
+
+    @Test
+    fun `a poll still prunes stale metadata once the mutation lock is free`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/prune")).worktree)
+        delete(Path.of(created.path))
+
+        // Nothing holds the lock here, so the opportunistic prune must actually happen — the skip is a
+        // deferral, not a new permanent behavior.
+        assertTrue(api.stats(repo.toString()).items.none { it.path == created.path })
+        val listed = output(repo, "worktree", "list", "--porcelain")
+        assertFalse(listed.contains(created.path), "a poll with a free lock should prune: $listed")
+    }
+
+    @Test
+    fun `checkReappearance re-stages and reaps once when the original path came back`() = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val trash = WorktreeTrash(scope)
+        val trashApi = KiloWorktreeRpcApiImpl(trash)
+        try {
+            val dir = repo.resolve("reappeared")
+            Files.createDirectories(dir)
+            // Simulate a reap that already settled (the sibling from the original stage is long gone)
+            // while something recreated the original path afterward — the exact race the guard exists
+            // to catch, made deterministic instead of racing a real background reap.
+            val temp = assertNotNull(trash.stage(dir))
+            trash.reap(temp)
+            trash.drain()
+            Files.createDirectories(dir)
+
+            trashApi.checkReappearance(dir.toString(), temp)
+            trash.drain()
+
+            assertFalse(Files.exists(dir), "a path that reappeared after reap must be staged and reaped once more")
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `checkReappearance does nothing when the original path did not come back`() = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val trash = WorktreeTrash(scope)
+        val trashApi = KiloWorktreeRpcApiImpl(trash)
+        try {
+            val dir = repo.resolve("gone-for-good")
+            Files.createDirectories(dir)
+            val temp = assertNotNull(trash.stage(dir))
+            trash.reap(temp)
+            trash.drain()
+
+            trashApi.checkReappearance(dir.toString(), temp)
+            trash.drain()
+
+            assertFalse(Files.exists(dir))
+            assertEquals(0, trash.pending(), "nothing should have been staged again")
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `staleWorktrees excludes a worktree already marked doomed in WorktreeTrash`() {
+        val trash = WorktreeTrash(CoroutineScope(Dispatchers.Default + SupervisorJob()))
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val gone = WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true)
+
+        assertEquals(listOf(gone.path), staleWorktrees(listOf(main, gone), trash).map { it.path })
+
+        trash.mark(gone.path)
+        // A worktree WorktreeTrash already knows is being removed is about to become stale by
+        // design (the removal renamed its directory away and will prune it itself); a concurrent
+        // poll's own prune must not race that in-flight removal.
+        assertTrue(staleWorktrees(listOf(main, gone), trash).isEmpty())
+    }
+
+    @Test
+    fun `managedWorktrees excludes a directory staged for delete even while git still lists it`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val staged = WorktreeDto(
+            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+            "${WorktreeTrash.PREFIX}abc",
+            "feature/x",
+            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+        )
+        val real = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+
+        assertEquals(listOf(real.path), managedWorktrees(listOf(main, staged, real)).filter { !it.main }.map { it.path })
     }
 
     @Test
@@ -720,6 +1224,7 @@ class KiloWorktreeRpcApiImplTest {
 
         assertFalse(result.ok)
         assertTrue(result.error?.contains(old.toString()) == true, "error should name the blocker: ${result.error}")
+        assertEquals(listOf(old.toString()), result.nestedPaths)
         assertTrue(Files.isDirectory(Path.of(parent.path)))
         assertTrue(Files.isDirectory(old))
     }
@@ -782,6 +1287,43 @@ class KiloWorktreeRpcApiImplTest {
         assertTrue(result.branches.contains("feature/x"), "should list feature/x: ${result.branches}")
         assertNotNull(result.current, "current branch should be reported")
         assertTrue(result.branches.contains(result.current), "current should be among branches")
+    }
+
+    @Test
+    fun `listBranches reports the origin repo slug`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
+
+        assertEquals("Kilo-Org/kilocode", api.listBranches(repo.toString()).origin)
+    }
+
+    @Test
+    fun `listBranches reports no origin when the repo has no remote`() = runBlocking {
+        initRepo()
+
+        assertNull(api.listBranches(repo.toString()).origin)
+    }
+
+    @Test
+    fun `importPr rejects a pull request url from a different repository`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", "git@github.com:Kilo-Org/kilocode.git")
+
+        val result = api.importPr(repo.toString(), "https://github.com/other/repo/pull/7")
+
+        assertNull(result.worktree, "a foreign pull request must not create a worktree")
+        val error = assertNotNull(result.error)
+        assertTrue(error.contains("other/repo"), error)
+        assertTrue(error.contains("Kilo-Org/kilocode"), error)
+    }
+
+    @Test
+    fun `foreignPr ignores slug case and an unknown origin`() {
+        // Driving this through importPr would fall past the guard into gh and `git fetch`, making the
+        // assertion depend on the machine's network and credentials rather than on the comparison.
+        assertFalse(foreignPr("kilo-org/KiloCode", "Kilo-Org/kilocode"), "GitHub slugs are case-insensitive")
+        assertFalse(foreignPr("other/repo", null), "an unknown origin is not evidence of a mismatch")
+        assertTrue(foreignPr("other/repo", "Kilo-Org/kilocode"))
     }
 
     @Test
@@ -920,6 +1462,47 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(0, item.files, "committed work is not uncommitted")
     }
 
+    /**
+     * [dirty] and [statsSafe]/[dirtySafe] via [api.dirty] and [api.stats] share the exact same
+     * `runCatching` isolation wrapper (see [statsSafe]/[dirtySafe] in the implementation), so proving
+     * it here for [dirty] covers the mechanism for both. [stats]'s own git calls compare two fully
+     * resolved commits (`GitComparison`'s two-revision form), which is why the same index corruption
+     * cannot be reused to force a throw there: a tree-to-tree diff never reads the index at all,
+     * unlike [dirty]'s working-tree comparison used below.
+     */
+    @Test
+    fun `dirty reports an unavailable entry for a worktree whose index is corrupted instead of failing the whole call`() = runBlocking {
+        initRepo()
+        val healthy = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("healthy")).worktree)
+        val broken = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("broken")).worktree)
+        Files.writeString(Path.of(healthy.path).resolve("tracked.txt"), "edit\n")
+        corruptIndex(Path.of(broken.path))
+
+        // GitComparison.open() succeeds for `broken` (HEAD resolves fine); the corrupted index only
+        // breaks the later `git diff`/`ls-files` calls inside files() -- exactly the "open succeeded,
+        // a later command threw" shape a real fault takes, as opposed to a directory that is simply
+        // gone (which open() already returns null for, no throw involved).
+        val dto = api.dirty(repo.toString())
+
+        val healthyItem = assertNotNull(dto.items.singleOrNull { it.path == healthy.path })
+        assertEquals(1, healthyItem.files, "a healthy sibling must still be reported correctly")
+        assertFalse(healthyItem.unavailable, "a worktree that answered is not unavailable")
+        val brokenItem = assertNotNull(dto.items.singleOrNull { it.path == broken.path })
+        // Isolated (no exception escapes) but not silent: zeros alone would render as a clean worktree
+        // and quietly replace whatever the row was showing.
+        assertTrue(brokenItem.unavailable, "a failed measurement must not read as a clean worktree")
+        assertTrue(brokenItem.reason.isNotBlank(), "the failure reason belongs in the DTO")
+        assertEquals(WorktreeDirtyDto(broken.path, unavailable = true, reason = brokenItem.reason), brokenItem)
+    }
+
+    /** Overwrites [dir]'s own worktree index with garbage so `git diff`/`ls-files` fail well after
+     * `rev-parse --is-inside-work-tree` and `rev-parse HEAD` (which don't read the index) already
+     * succeeded. */
+    private fun corruptIndex(dir: Path) {
+        val gitDir = Path.of(output(dir, "rev-parse", "--path-format=absolute", "--git-dir").trim())
+        Files.write(gitDir.resolve("index"), "not an index".toByteArray())
+    }
+
     @Test
     fun `create with existingBranch checks out an existing branch without creating one`() = runBlocking {
         initRepo()
@@ -953,6 +1536,34 @@ class KiloWorktreeRpcApiImplTest {
 
         assertNull(parsePrUrl("https://github.com/Kilo-Org/kilocode/issues/1"))
         assertNull(parsePrUrl("not a url"))
+    }
+
+    @Test
+    fun `parseRepoSlug reads owner repo from ssh and https remotes`() {
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("git@github.com:Kilo-Org/kilocode.git"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode.git"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://github.com/Kilo-Org/kilocode/"))
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("ssh://git@github.com:22/Kilo-Org/kilocode.git"))
+        // A subdomain is still GitHub. Returning null here would read as "cannot tell" and disable
+        // the cross-repo guard for that checkout entirely.
+        assertEquals("Kilo-Org/kilocode", parseRepoSlug("https://www.github.com/Kilo-Org/kilocode.git"))
+        assertNull(parseRepoSlug("https://gitlab.com/Kilo-Org/kilocode.git"))
+        // A host that merely ends in github.com is a different server, so the guard must skip it
+        // rather than compare this checkout against a slug it never published.
+        assertNull(parseRepoSlug("https://notgithub.com/Kilo-Org/kilocode.git"))
+        // The host must be the authority, not a path segment that happens to end in it.
+        assertNull(parseRepoSlug("https://gitlab.com/team/x.github.com/owner/repo.git"))
+        assertNull(parseRepoSlug("/tmp/local-origin"))
+        assertNull(parseRepoSlug("not a url"))
+    }
+
+    @Test
+    fun `parsePrUrl requires a github host boundary`() {
+        assertNull(parsePrUrl("https://notgithub.com/Kilo-Org/kilocode/pull/7"))
+        assertNull(parsePrUrl("https://gitlab.com/team/x.github.com/Kilo-Org/kilocode/pull/7"))
+        assertEquals(7, parsePrUrl("ssh://git@github.com:22/Kilo-Org/kilocode/pull/7")?.number)
+        assertEquals(7, parsePrUrl("https://www.github.com/Kilo-Org/kilocode/pull/7")?.number)
     }
 
     @Test
@@ -1068,6 +1679,45 @@ class KiloWorktreeRpcApiImplTest {
 
         assertNotNull(failure, "a repo without origin cannot fetch a pull request")
         assertFalse(failure.ok)
+    }
+
+    @Test
+    fun `fetchPrBranch prunes a stale remote-tracking ref and retries`() {
+        initRepo()
+        val origin = originWith(pull = 7, head = "docs/auto-sync/jetbrains")
+        // A branch deleted upstream ("docs/auto-sync") leaves this local tracking ref behind. It
+        // occupies the path a nested head ("docs/auto-sync/jetbrains") needs, the exact directory/
+        // file ref conflict reported against PR imports.
+        git(repo, "update-ref", "refs/remotes/origin/docs/auto-sync", "HEAD")
+
+        val failure = fetchPrBranch(runner(repo), 7, PrHead("docs/auto-sync/jetbrains"), "docs/auto-sync/jetbrains")
+
+        assertNull(failure, "a stale remote-tracking ref should be pruned and the fetch retried")
+        assertEquals(
+            head(origin, "refs/heads/docs/auto-sync/jetbrains"),
+            head(repo, "refs/heads/docs/auto-sync/jetbrains"),
+        )
+    }
+
+    @Test
+    fun `fetchPrBranch does not prune for a failure unrelated to a ref conflict`() {
+        // A repository cannot hold both `refs/heads/docs/auto-sync` and
+        // `refs/heads/docs/auto-sync/jetbrains` at once — the blocking side of a directory/file
+        // conflict against a single remote is therefore always stale relative to that remote's
+        // current state, so pruning always recovers it (see the test above). What still needs
+        // covering is that an unrelated failure (e.g. no network) is reported as-is, without
+        // speculatively running `remote prune` first.
+        val calls = mutableListOf<List<String>>()
+        val run = fun(args: List<String>): CmdOut {
+            calls += args
+            return if (args.first() == "fetch") CmdOut(1, "", "fatal: unable to access remote: Could not resolve host") else CmdOut(0, "", "")
+        }
+
+        val failure = fetchPrBranch(run, 7, PrHead("feature/login"), "feature/login")
+
+        assertNotNull(failure, "a network failure should be reported")
+        assertFalse(refConflict(failure), "this failure is not a ref conflict")
+        assertTrue(calls.none { it.firstOrNull() == "remote" }, "prune must only run after a confirmed ref conflict: $calls")
     }
 
     @Test

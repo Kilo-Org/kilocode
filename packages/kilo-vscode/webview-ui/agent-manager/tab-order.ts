@@ -2,7 +2,7 @@
  * Pure tab-ordering logic for the agent manager.
  */
 
-export { reorderTabs } from "../src/utils/tab-order"
+export { applyPinnedTabs, reorderTabs, togglePinnedTab } from "../src/utils/tab-order"
 
 /**
  * Apply a custom ordering to a list of items.

@@ -23,14 +23,17 @@ import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/kilocode/instance"
 import { Vcs } from "@/project/vcs"
+import { Git } from "@/git"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
-import { detectPrLink, readPrLinkOverride } from "@/kilo-sessions/pr-link"
+import { detectPrLinkState, persistRecordedPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
 import type { PrLink } from "@/kilo-sessions/pr-link"
+import { refreshPrLink, startPrLinkPoll } from "@/kilo-sessions/pr-link-poller"
 import { AttachedState } from "@/kilo-sessions/attached-state"
+import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import {
   clear as clearRenameMarks,
   consumeAutoTitle,
@@ -38,6 +41,7 @@ import {
   markAutoTitle,
   markRenameAdopted,
 } from "@/kilo-sessions/rename-adoptions"
+import { KiloSessionTitle } from "@/kilocode/session/title"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -94,6 +98,7 @@ export namespace KiloSessions {
   const orgKey = "kilo-sessions:org"
   const clientKey = "kilo-sessions:client"
   const gitUrlKeyPrefix = "kilo-sessions:git-url:"
+  const gitBranchKeyPrefix = "kilo-sessions:git-branch:"
 
   const ttlMs = 10_000
 
@@ -105,7 +110,16 @@ export namespace KiloSessions {
   function isPermanentHttpStatus(reason: string): boolean {
     const match = reason.match(/^http_(\d+)$/)
     if (!match) return false
-    const status = parseInt(match[1], 10)
+    return refusedByRelay(parseInt(match[1], 10))
+  }
+
+  /**
+   * A status the relay answered with is a definitive refusal: a permanent
+   * client error (4xx) other than 408 (Request Timeout) and 429 (Too Many
+   * Requests). Everything else — 5xx, 408, 429, a network failure — is
+   * transient and leaves the request retryable.
+   */
+  function refusedByRelay(status: number): boolean {
     return status >= 400 && status < 500 && status !== 408 && status !== 429
   }
 
@@ -119,16 +133,34 @@ export namespace KiloSessions {
   // single POST /api/session call. Entries resolve to the same share record or
   // a thrown error; on bootstrap failure the rejection is captured as a
   // `{ ok:false, reason }` outcome so callers can map it to the tool's failure
-  // text without re-throwing.
-  type BootstrapOutcome = { ok: true; ingestPath: string } | { ok: false; reason: string }
+  // text without re-throwing. `skipped` marks a bootstrap that never reached
+  // the relay (no credentials / ingest disabled) so the create_session gate
+  // below can tell "the relay refused this session" from "there was nothing to
+  // refuse". `refused` marks the explicit refusal itself: only that outcome may
+  // fail hosting, a transient failure must stay retryable.
+  type BootstrapOutcome =
+    | { ok: true; ingestPath: string }
+    | { ok: false; reason: string; skipped?: true; refused?: true }
   const bootstrapInflight = new Map<string, Promise<BootstrapOutcome>>()
+
+  // kilocode_change - `bootstrap` rejects with this when the relay answered the
+  // ingest POST with a definitive refusal (a permanent 4xx). `trackBootstrap`
+  // marks the outcome `refused` from this type, and only a refused outcome may
+  // fail the create_session command: a transient failure (5xx/408/429 or a
+  // network error) leaves the session hosted and retried on the next attempt.
+  class RelayRefusal extends Error {}
 
   function clearCache() {
     clearInFlightCache(tokenKey)
     clearInFlightCache(tokenValidKey)
     clearInFlightCache(clientKey)
     clearInFlightCache(orgKey)
+    // The git-url and per-directory branch caches are keyed per directory
+    // (`<prefix><directory>`); only the launch-directory entry is cleared here.
+    // Entries for other session directories expire via ttlMs (10 s) — there is
+    // intentionally no prefix-clear API.
     clearInFlightCache(gitUrlKeyPrefix + Instance.worktree)
+    clearInFlightCache(gitBranchKeyPrefix + Instance.worktree)
   }
 
   async function authValid(token: string) {
@@ -259,6 +291,11 @@ export namespace KiloSessions {
     (err) => log.warn("ingest drain failed", { err }),
   )
   KiloShutdown.register(drainIngest)
+
+  // Process-level, like the ingest drain: every exit path (Ctrl-C on
+  // `kilo remote`, TUI quit) closes the remote sessions this run started and
+  // still hosts, so a finished run always leaves an end line for what ran.
+  KiloShutdown.register(() => RemoteSessionLog.endAll(log, "shutdown"))
 
   export async function drainIngestForShutdown() {
     await drainIngest()
@@ -442,11 +479,12 @@ export namespace KiloSessions {
         triple: { platform: override.platform, prUrl: override.prUrl, prNumber: override.prNumber },
       }
     }
-    const detected = await detectPrLink()
-    if (detected) {
+    const state = await detectPrLinkState()
+    if (state.cleared) return { triple: { platform: null, prUrl: null, prNumber: null } }
+    if (state.link) {
       return {
-        prLink: detected,
-        triple: { platform: detected.platform, prUrl: detected.prUrl, prNumber: detected.prNumber },
+        prLink: state.link,
+        triple: { platform: state.link.platform, prUrl: state.link.prUrl, prNumber: state.link.prNumber },
       }
     }
     return {}
@@ -591,8 +629,12 @@ export namespace KiloSessions {
             knownTitles.delete(sessionID)
             lastPrLinkTriple.delete(sessionID)
             clearRenameMarks(sessionID)
+            KiloSessionTitle.clear(sessionID)
             // kilocode_change - detach a locally announced session on dispose.
             void detachLocalSession(sessionID)
+            // The row is gone, so this run stops hosting it. No-op unless this
+            // run started the session (see RemoteSessionLog.end).
+            RemoteSessionLog.end(log, { sessionID, reason: "deleted" })
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -600,9 +642,31 @@ export namespace KiloSessions {
             const mdl = await model(evt.properties.info.model.providerID, evt.properties.info.model.modelID)
             await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [mdl] }])
           })
-          watch(MessageV2.Event.PartUpdated, (evt) =>
-            ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
-          )
+          watch(MessageV2.Event.PartUpdated, async (evt) => {
+            const part = evt.properties.part
+            await ingest.sync(part.sessionID, [{ type: "part", data: part }])
+            // kilocode_change - PR link from the session's own output: agent text
+            // or a completed tool's output (e.g. the `gh pr create` URL). The
+            // regex prefilters before the record attempt and `recordPrLinkText`
+            // returns a link only when it is new or changed, so the next
+            // heartbeat advertises it and `syncPrLinkForSession` queues exactly
+            // one `session_pr_link` item (the triple dedupe suppresses repeats).
+            const text =
+              part.type === "text"
+                ? part.text
+                : part.type === "tool" && part.state.status === "completed"
+                  ? part.state.output
+                  : undefined
+            if (!text || !/\/pull\/|\/pull-requests\/|\/merge_requests\//.test(text)) return
+            const link = recordPrLinkText(Instance.worktree, text)
+            // kilocode_change - keep the link for the next process: a GitLab/
+            // Bitbucket link has no REST lookup to recover it after this
+            // process exits, so the CLI would print `no PR linked`. Persist for
+            // every part that carries a PR URL — an already-stored record is a
+            // no-op — so a failed write is retried instead of being lost.
+            await persistRecordedPrLink(Instance.worktree)
+            if (link) await syncPrLinkForSession(part.sessionID)
+          })
           watch(Session.Event.Diff, (evt) =>
             cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
@@ -681,6 +745,17 @@ export namespace KiloSessions {
             (handler) => Effect.sync(() => void GlobalBus.off("event", handler)),
           )
 
+          // One PR check per instance start plus one every 5 minutes. Never on a
+          // session update and never once per heartbeat/request.
+          yield* Effect.acquireRelease(
+            Effect.sync(() =>
+              startPrLinkPoll(async () => {
+                await Instance.restore(ctx, () => refreshPrLink(ctx.worktree))
+              }),
+            ),
+            (stop) => Effect.sync(stop),
+          )
+
           const cfg = yield* config.getGlobal()
           if (remoteEnabled || cfg.remote_control) {
             yield* Effect.sync(
@@ -690,7 +765,7 @@ export namespace KiloSessions {
           yield* Effect.addFinalizer(() =>
             Effect.sync(() => {
               statusSyncs.clear()
-              disableRemote()
+              disableRemote("shutdown")
             }),
           )
         }),
@@ -795,10 +870,10 @@ export namespace KiloSessions {
       // moment of sending. The flag may be set after this closure is created
       // (race-proof) — `getSessions` reads the current value each tick.
       const getSessions = async (): Promise<RemoteProtocol.Heartbeat> => {
-        const [gitUrl, gitBranch] = await Promise.all([
-          getGitUrl().catch(() => undefined),
-          branch().catch(() => undefined),
-        ])
+        // The instance advertisement describes the host process's own project,
+        // so it keeps the launch-directory (Vcs) branch. Session rows derive
+        // their repository metadata from each session's own directory below.
+        const gitBranch = await branch().catch(() => undefined)
         const { AppRuntime } = await import("@/effect/app-runtime")
         // Batch SessionStatus + attention lists once per heartbeat (not per session).
         // Permission/Question list() feeds the same precedence as deriveStatus().
@@ -819,17 +894,16 @@ export namespace KiloSessions {
             Effect.all(
               [...ids].map((id) =>
                 svc.get(SessionID.make(id)).pipe(
-                  Effect.map((session) => ({
-                    id,
-                    status: resolveDerivedSessionStatus({
+                Effect.map((session) => ({
+                  id,
+                  directory: session.directory,
+                  status: resolveDerivedSessionStatus({
                       hasPermission: permissionSessions.has(id),
                       hasQuestion: questionSessions.has(id),
                       statusType: statuses[id]?.type,
                     }),
                     title: session.title,
                     parentSessionId: session.parentID,
-                    gitUrl,
-                    gitBranch,
                     // kilocode_change - K1 W1: per-session platform, mirrors
                     // meta()'s resolution order so the live value always agrees
                     // with the session's stored created_on_platform.
@@ -841,7 +915,29 @@ export namespace KiloSessions {
             ),
           ),
         )
-        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
+        // Resolve repository metadata per distinct session directory: a host
+        // launched outside the selected repository must still publish each
+        // session's own repo. Directory-less sessions fall back to the launch
+        // worktree, and the in-flight cache collapses same-directory sessions
+        // into one git call per ttlMs.
+        const gitPairs = new Map<string, { gitUrl?: string; gitBranch?: string }>()
+        await Promise.all(
+          [...new Set(results.map((r) => r?.directory ?? Instance.worktree))].map(async (directory) => {
+            const [gitUrl, sessionGitBranch] = await Promise.all([
+              getGitUrl(directory).catch(() => undefined),
+              branchFor(directory).catch(() => undefined),
+            ])
+            gitPairs.set(directory, { gitUrl, gitBranch: sessionGitBranch })
+          }),
+        )
+        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r).map((r) => ({
+          id: r.id,
+          status: r.status,
+          title: r.title,
+          parentSessionId: r.parentSessionId,
+          ...gitPairs.get(r.directory ?? Instance.worktree),
+          platform: r.platform,
+        }))
         // kilocode_change - PR link advertise (plan 8.2): resolve once
         // (worktree-scoped) and attach to every advertised row, then ingest the
         // triple per session (deduped by last-sent triple).
@@ -852,7 +948,7 @@ export namespace KiloSessions {
         const advertised = pr.prLink ? sessions.map((row) => ({ ...row, prLink: pr.prLink })) : sessions
         const instance = instanceAdvertisement && {
           ...instanceAdvertisement,
-          // Reuse the current session branch without splitting a surrogate pair.
+          // Truncate the launch-directory branch without splitting a surrogate pair.
           gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
         }
         return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
@@ -887,7 +983,7 @@ export namespace KiloSessions {
           // Restore the directory context before dispatching an async remote message.
           void provide({ directory, fn: () => sender.handle(msg) })
         },
-        onClose: () => disableRemote(),
+        onClose: () => disableRemote("disconnected"),
       })
 
       const sender = RemoteSender.create({
@@ -898,7 +994,7 @@ export namespace KiloSessions {
         // back to KiloSessions. The sender does NOT spawn a process per
         // session — concurrent remote sessions share this CLI process with
         // per-directory InstanceRef isolation.
-        attachSession: (id) => KiloSessions.attachRemoteSession(id),
+        attachSession: (id, opts) => KiloSessions.attachRemoteSession(id, opts),
         detachSession: (id) => KiloSessions.detachRemoteSession(id),
         hasSession: (id) => KiloSessions.hasRemoteSession(id),
         ownedCount: () => KiloSessions.ownedRemoteSessionCount(),
@@ -956,7 +1052,16 @@ export namespace KiloSessions {
     return enabling
   }
 
-  export function disableRemote() {
+  // `reason` names why this run stopped hosting: "disabled" for the
+  // user-initiated `remote/disable` (the default — the caller turned remote off
+  // while the process stays up), "disconnected" when the relay connection went
+  // away, and "shutdown" for the process/instance teardown.
+  export function disableRemote(reason = "disabled") {
+    // kilocode_change - the attached state is cleared below, so this is the
+    // last moment this run hosts these sessions. Pair every open start line
+    // here; otherwise the entry survives the disconnect and a later `endAll`
+    // reports a stale end line whose duration spans the disconnected period.
+    RemoteSessionLog.endAll(log, reason)
     remoteSeq += 1
     const pending = !!enabling
     enabling = undefined
@@ -1013,11 +1118,53 @@ export namespace KiloSessions {
     instanceAdvertisement = undefined
   }
 
+  // kilocode_change - create_session gate: hosting a session on the relay only
+  // means something once the relay accepted its ingest bootstrap (POST
+  // /api/session). `create` coalesces onto the POST the Session.Event.Created
+  // watcher already started, so a healthy create_session adds no second
+  // request; an explicit relay refusal (e.g. 409) surfaces here so the command
+  // rolls the local session back instead of advertising and logging a session
+  // the relay never accepted. A bootstrap that never reached the relay (no
+  // credentials, ingest disabled) resolves like a success, and so does a
+  // transient failure (5xx/408/429/network): only an explicit refusal blocks
+  // hosting.
+  export async function ensureSharedSession(sessionId: string): Promise<void> {
+    const inflight = bootstrapInflight.get(sessionId)
+    if (inflight) {
+      assertShared(await inflight)
+      return
+    }
+    // Owner path: `create` registers the in-flight bootstrap synchronously, so
+    // a concurrent watcher call joins this same POST. It rejects on every
+    // bootstrap failure — the import path depends on that — but its rejection
+    // cannot tell a refusal from a transient error, so read the tracked
+    // outcome instead.
+    const created = create(sessionId)
+    const tracked = bootstrapInflight.get(sessionId)
+    void created.catch(() => undefined)
+    if (tracked) assertShared(await tracked)
+  }
+
+  // kilocode_change - only an explicit relay refusal fails hosting. A skipped
+  // bootstrap (never reached the relay) or a transient failure resolves like a
+  // success so the session stays hosted locally.
+  function assertShared(outcome: BootstrapOutcome): void {
+    if (outcome.ok || outcome.skipped || !outcome.refused) return
+    throw new Error(outcome.reason)
+  }
+
   // Duplicate-safe single-session attach used by the remote create_session command. Delegates to
   // the two-set state so the announcement is preserved across a concurrent presence replacement
   // and a heartbeat failure rolls back only the entry this call added (a presence-owned id is never
   // reachable here because the factory guards it).
-  export async function attachRemoteSession(id: string) {
+  //
+  // `opts.requireShare` is set by the create_session path: the session was just
+  // created for the relay, so the relay must have accepted its ingest bootstrap
+  // before this CLI announces it (see ensureSharedSession). The clone path and
+  // locally started sessions pass no opts — their session already exists on the
+  // relay or was never created for it.
+  export async function attachRemoteSession(id: string, opts?: { requireShare?: boolean }) {
+    if (opts?.requireShare) await ensureSharedSession(id)
     await attachedState.announce(id)
   }
 
@@ -1089,13 +1236,16 @@ export namespace KiloSessions {
     const task = start()
     const tracked: Promise<BootstrapOutcome> = task
       .then((value): BootstrapOutcome => {
-        if (!value) return { ok: false, reason: "not_connected" }
+        if (!value) return { ok: false, reason: "not_connected", skipped: true }
         return { ok: true, ingestPath: value.ingestPath }
       })
       .catch((error: unknown): BootstrapOutcome => {
         const reason = error instanceof Error ? error.message : String(error)
         log.warn("session bootstrap failed", { sessionId, reason })
-        return { ok: false, reason }
+        // kilocode_change - only a definitive refusal is marked. A transient
+        // failure (5xx/408/429/network) stays retryable and must not fail the
+        // create_session command (see ensureSharedSession).
+        return error instanceof RelayRefusal ? { ok: false, reason, refused: true } : { ok: false, reason }
       })
 
     // Register synchronously before any async work starts so concurrent
@@ -1132,7 +1282,11 @@ export namespace KiloSessions {
     })
 
     if (!response.ok) {
-      throw new Error(`Unable to create session ${sessionId}: ${response.status} ${response.statusText}`)
+      const message = `Unable to create session ${sessionId}: ${response.status} ${response.statusText}`
+      // kilocode_change - a permanent 4xx is the relay's answer and blocks
+      // hosting; 5xx/408/429 is transient and retried rather than rolled back.
+      if (refusedByRelay(response.status)) throw new RelayRefusal(message)
+      throw new Error(message)
     }
 
     const result = (await response.json()) as { id: string; ingestPath: string }
@@ -1466,9 +1620,9 @@ export namespace KiloSessions {
     }
   }
 
-  async function getGitUrl(): Promise<string | undefined> {
-    return withInFlightCache(gitUrlKeyPrefix + Instance.worktree, ttlMs, async () => {
-      const repo = simpleGit(Instance.worktree)
+  async function getGitUrl(directory: string): Promise<string | undefined> {
+    return withInFlightCache(gitUrlKeyPrefix + directory, ttlMs, async () => {
+      const repo = simpleGit(directory)
       const remotes = await repo.getRemotes(true).catch(() => [])
       if (remotes.length === 0) return undefined
 
@@ -1488,17 +1642,48 @@ export namespace KiloSessions {
     })
   }
 
+  // Context-scoped branch for the instance advertisement: the ad describes the
+  // host process's own project, so it keeps the launch-directory Vcs branch.
   async function branch() {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
+  }
+
+  // Per-directory branch for session rows and persisted kilo_meta: a session
+  // created in a nested repository must report that repository's branch, not
+  // the host's launch directory. `Git.branch` returns undefined for
+  // non-repositories, which collapses to "no branch metadata".
+  async function branchFor(directory: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return withInFlightCache(gitBranchKeyPrefix + directory, ttlMs, () =>
+      AppRuntime.runPromise(Git.Service.use((svc) => svc.branch(directory))),
+    )
+  }
+
+  // Non-throwing launch-directory read for `meta()`: when called outside any
+  // instance context (e.g. the API-robustness path where Session.get already
+  // failed), `Instance.worktree` throws synchronously — before, the only access
+  // sat inside an async closure so it degraded to "git metadata absent".
+  // Degrade the same way instead of throwing.
+  function launchDirectory(): string | undefined {
+    try {
+      return Instance.worktree
+    } catch {
+      return undefined
+    }
   }
 
   async function meta(sessionId?: string, info?: Session.Info | null) {
     const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId(sessionId, info)
-    const gitBranch = await branch().catch(() => undefined)
-    const gitUrl = await getGitUrl().catch(() => undefined)
+    // Repository metadata follows the session's own directory (a `kilo remote`
+    // host launched outside the selected repository must still publish the
+    // session's repo); directory-less sessions fall back to the launch worktree
+    // when an instance context exists, else to "no git metadata".
+    const directory = info?.directory ?? launchDirectory()
+    const gitBranch = directory ? await branchFor(directory).catch(() => undefined) : undefined
+    const gitUrl = directory ? await getGitUrl(directory).catch(() => undefined) : undefined
 
     return {
       platform,

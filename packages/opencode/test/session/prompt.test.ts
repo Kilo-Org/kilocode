@@ -10,7 +10,6 @@ import { Bus } from "@/bus"
 import { FetchHttpClient } from "effect/unstable/http"
 import { expect, spyOn } from "bun:test"
 import { Telemetry } from "@kilocode/kilo-telemetry"
-import { legacyReviewMessage } from "../../src/kilocode/review/command"
 import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
@@ -250,11 +249,11 @@ const promptRoot = LayerNode.group([
   memoryNode,
 ])
 
-function makePrompt(input?: { processor?: "blocking" }) {
+function makePrompt(input?: { mcpInstructions?: MCP.ServerInstructions[]; processor?: "blocking" }) {
   const replacements = [
     [SessionSummary.node, summary],
     [LSP.node, lsp],
-    [MCP.node, makeMcp()],
+    [MCP.node, makeMcp(input?.mcpInstructions)],
     [RuntimeFlags.node, runtimeFlags],
     [KiloSessions.node, KiloSessions.testLayer],
   ] as const
@@ -268,12 +267,12 @@ function makePrompt(input?: { processor?: "blocking" }) {
   return LayerNode.compile(promptRoot, replacements)
 }
 
-function makeHttp(input?: { processor?: "blocking" }) {
+function makeHttp(input?: { mcpInstructions?: MCP.ServerInstructions[]; processor?: "blocking" }) {
   const root = LayerNode.group([promptRoot, testLLMServerNode])
   const replacements = [
     [SessionSummary.node, summary],
     [LSP.node, lsp],
-    [MCP.node, makeMcp()],
+    [MCP.node, makeMcp(input?.mcpInstructions)],
     [RuntimeFlags.node, runtimeFlags],
     [KiloSessions.node, KiloSessions.testLayer],
   ] as const
@@ -287,7 +286,7 @@ function makeHttp(input?: { processor?: "blocking" }) {
   return LayerNode.compile(root, replacements)
 }
 
-function makeHttpNoLLMServer(input?: { processor?: "blocking" }) {
+function makeHttpNoLLMServer(input?: { mcpInstructions?: MCP.ServerInstructions[]; processor?: "blocking" }) {
   return makePrompt(input)
 }
 // kilocode_change end
@@ -295,6 +294,17 @@ function makeHttpNoLLMServer(input?: { processor?: "blocking" }) {
 const it = testEffect(makeHttp())
 const noLLMServer = testEffect(makeHttpNoLLMServer())
 const raceNoLLMServer = testEffect(makeHttpNoLLMServer({ processor: "blocking" }))
+const withMcpInstructions = testEffect(
+  makeHttp({
+    mcpInstructions: [
+      {
+        name: "guide-server",
+        instructions: "Use lookup before mutate.",
+        tools: ["guide-server_lookup"],
+      },
+    ],
+  }),
+)
 const unix = process.platform !== "win32" ? it.instance : it.instance.skip
 const unixNoLLMServer = process.platform !== "win32" ? noLLMServer.instance : noLLMServer.instance.skip
 
@@ -496,6 +506,46 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+noLLMServer.instance(
+  "loop exits for a completed parent turn with nonmonotonic message IDs",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+      const userID = MessageID.make("msg_z_user")
+      const assistantID = MessageID.make("msg_a_assistant")
+      yield* sessions.updateMessage({
+        id: userID,
+        role: "user",
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        time: { created: 100 },
+      })
+      yield* sessions.updateMessage({
+        id: assistantID,
+        role: "assistant",
+        parentID: userID,
+        sessionID: chat.id,
+        mode: "build",
+        agent: "build",
+        cost: 0,
+        path: { cwd: "/tmp", root: "/tmp" },
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        modelID: ref.modelID,
+        providerID: ref.providerID,
+        time: { created: 200, completed: 201 },
+        finish: "stop",
+      })
+
+      const result = yield* prompt.loop({ sessionID: chat.id })
+
+      expect(result.info.id).toBe(assistantID)
+    }),
+  { config: cfg },
+)
+
 it.instance("loop exits without an LLM request for interrupted orphan tool calls", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig(providerCfg)
@@ -548,6 +598,32 @@ it.instance("loop calls LLM and returns assistant message", () =>
     expect(parts.some((p) => p.type === "text" && p.text === "world")).toBe(true)
     expect(yield* llm.hits).toHaveLength(1)
   }),
+)
+
+withMcpInstructions.instance(
+  "loop includes MCP instructions in model system context",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({
+        title: "Pinned",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* llm.hang
+      yield* user(chat.id, "hello")
+
+      const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+      yield* awaitWithTimeout(llm.wait(1), "timed out waiting for MCP instruction request", "10 seconds")
+
+      const hits = yield* llm.hits
+      const body = JSON.stringify(hits[0]?.body)
+      expect(body).toContain('<server name=\\"guide-server\\">')
+      expect(body).toContain("Use lookup before mutate.")
+      yield* Fiber.interrupt(fiber)
+    }),
+  15_000,
 )
 
 // kilocode_change start - guard provider-compatible max-step request shape
@@ -3056,37 +3132,6 @@ noLLMServer.instance(
       },
     },
   },
-)
-
-noLLMServer.instance(
-  "deprecated review alias returns static message without LLM",
-  () =>
-    Effect.gen(function* () {
-      const prompt = yield* SessionPrompt.Service
-      const sessions = yield* Session.Service
-      const session = yield* sessions.create({})
-      const text = legacyReviewMessage("local-review-uncommitted")!
-
-      const result = yield* prompt.command({
-        sessionID: session.id,
-        command: "local-review-uncommitted",
-        arguments: "focus on tests",
-        model: "test/test-model",
-      })
-
-      expect(result.info.role).toBe("assistant")
-      expect(result.parts).toHaveLength(1)
-      expect(result.parts[0].type).toBe("text")
-      if (result.parts[0].type === "text") expect(result.parts[0].text).toBe(text)
-
-      const msgs = yield* sessions.messages({ sessionID: session.id })
-      const user = msgs.find((msg) => msg.info.role === "user")
-      expect(
-        user?.parts.some((part) => part.type === "text" && part.text === "/local-review-uncommitted focus on tests"),
-      ).toBe(true)
-    }),
-  { config: cfg },
-  30_000,
 )
 
 it.instance(

@@ -23,6 +23,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+/**
+ * [probe] always resolves its target directory from [target]'s [Project.kiloRoot], which is the
+ * project's main repository root, never a worktree — so this class does not need to know when a
+ * worktree is being deleted. The one case that still matters (the *open project itself* is a
+ * worktree that another window is deleting) is covered on the backend: `KiloWorktreeRpcApiImpl`'s
+ * `probeGh` checks `WorktreeTrash` before spawning `git`/`gh`, since the RPC is directory-scoped and
+ * cannot rely on this coordinator's behavior.
+ */
 @Service(Service.Level.APP)
 class GhStatusCoordinator(
     private val cs: CoroutineScope,
@@ -47,6 +55,25 @@ class GhStatusCoordinator(
         // the probe finishes, so timing from the start would let a sync clear this floor and still be
         // served that entry.
         private const val EVENT_THROTTLE = 3_000L
+        // Observations of [GhAvailability.TIMEOUT] required before it is published. A PR fan-out runs
+        // one `gh` process per worktree and reports the whole repository unavailable if any single one
+        // of them overruns its budget, so on a busy machine with many worktrees one slow process out of
+        // dozens raised a banner that the very next probe cleared. Two observations is the difference
+        // between "a command was slow once" and "gh is not answering", which is what the banner claims.
+        // Deliberately a count and not a timer: the PR poll is the only thing that can observe this
+        // state, so waiting on a clock would just publish whatever the same single overrun already said.
+        internal const val TIMEOUT_CONFIRMATIONS = 2
+
+        /**
+         * How long after a counted timeout further ones are read as echoes of it rather than as fresh
+         * observations. See [confirmed].
+         *
+         * Must exceed the longest the backend will re-serve a cached timed-out verdict, which is the PR
+         * list's own short timeout TTL — the auth probe's is far shorter. A genuinely unresponsive gh is
+         * observed again on the next poll, comfortably outside this window, so the cost of being wrong
+         * here is one extra poll before the banner appears.
+         */
+        internal const val TIMEOUT_WINDOW = 20_000L
     }
 
     /** An event-driven sync that could not run when it arrived, held for one trailing probe. */
@@ -66,6 +93,14 @@ class GhStatusCoordinator(
     /** When the last probe finished, whatever its outcome. See [EVENT_THROTTLE]. */
     private var probed = 0L
     private var pending: Sync? = null
+    /** Unpublished [GhAvailability.TIMEOUT] observations. See [TIMEOUT_CONFIRMATIONS]. */
+    private var slow = 0
+
+    /**
+     * When the most recent counted timeout was observed, to tell a fresh one from an echo. Only read
+     * while [slow] is above zero, so clearing the tally is enough to retire it.
+     */
+    private var slowAt = 0L
     private val away = Away { timers.now() }
     private val projects = linkedMapOf<Project, Int>()
 
@@ -233,7 +268,51 @@ class GhStatusCoordinator(
         job = null
         busy = false
         failures = 0
+        slow = 0
         LOG.info("gh probe loop stop")
+    }
+
+    /**
+     * Whether [next] may be published yet, holding back an unconfirmed [GhAvailability.TIMEOUT].
+     *
+     * Only TIMEOUT is rationed, and only on the way in: it is the one verdict a *single* slow process
+     * can produce out of a fan-out of dozens, and the only one the user can do nothing about. Every
+     * other state is either actionable (MISSING, UNAUTH, GIT_MISSING) or self-correcting on GitHub's
+     * own schedule (RATE_LIMITED), so delaying those would only make the banner slower to tell the
+     * user something true.
+     *
+     * Any other observation clears the tally, including OK. That is what makes this a run of
+     * consecutive timeouts rather than a lifetime count that eventually trips on unrelated blips.
+     * A TIMEOUT arriving while TIMEOUT is already published falls through to [apply]'s own
+     * `value == next` check and changes nothing.
+     *
+     * Two reports are not two observations. The backend caches a timed-out verdict — briefly for the
+     * auth probe, longer for a PR list — and hands the same one to whoever asks next, so a single
+     * overrun arrives here repeatedly: once from the probe that suffered it, again from a `prStatus`
+     * served the cached verdict, again from each of the other attached projects polling the same root.
+     * Counting those would confirm a timeout with itself and defeat the whole point, so reports within
+     * [TIMEOUT_WINDOW] of the one already counted are treated as echoes of it.
+     */
+    @RequiresEdt
+    private fun confirmed(next: GhAvailability): Boolean {
+        if (next != GhAvailability.TIMEOUT) {
+            slow = 0
+            return true
+        }
+        if (value == GhAvailability.TIMEOUT) return true
+        val now = timers.now()
+        if (slow > 0 && now - slowAt < TIMEOUT_WINDOW) {
+            LOG.info("gh timeout echo ignored, ${now - slowAt}ms after the counted one state=$value refs=$refs")
+            return false
+        }
+        slow++
+        slowAt = now
+        if (slow >= TIMEOUT_CONFIRMATIONS) return true
+        LOG.info("gh timeout held, unconfirmed count=$slow of $TIMEOUT_CONFIRMATIONS state=$value refs=$refs")
+        // Nothing is re-armed here on purpose. The probe loop's timer is owned by [schedule], which
+        // every probe completion path calls independently, and the next observation of this state comes
+        // from a PR fan-out rather than from this loop — so holding the verdict cannot strand the loop.
+        return false
     }
 
     @RequiresEdt
@@ -242,6 +321,7 @@ class GhStatusCoordinator(
         // resolves after the user turned the integration off — anything but OK/GIT_MISSING implies
         // gh ran, which cannot be trusted once disabled.
         if (!github && next != GhAvailability.OK && next != GhAvailability.GIT_MISSING) return
+        if (!confirmed(next)) return
         if (value == next) return
         val previous = value
         value = next
@@ -254,7 +334,10 @@ class GhStatusCoordinator(
         if (next == GhAvailability.OK) {
             notified = false
         } else if (!notified) {
-            notified = true
+            // TIMEOUT pops nothing (see [notify]), so it must not consume the one-shot either.
+            // `notified` only clears on a return to OK, so marking it here would silence an
+            // actionable MISSING/UNAUTH reached directly from TIMEOUT.
+            if (next != GhAvailability.TIMEOUT) notified = true
             notify(project, next)
         }
         schedule()
@@ -309,6 +392,9 @@ class GhStatusCoordinator(
         job = null
         busy = false
         failures = 0
+        // A timeout tally collected under the other setting says nothing about what gh does now, and
+        // must not let a single overrun after the toggle trip a verdict it only half-earned before it.
+        slow = 0
         generation++
         notified = false
         // The toggle probes (or publishes OK) on its own, so a sync held from before it is redundant
@@ -391,10 +477,16 @@ class GhStatusCoordinator(
         GhAvailability.MISSING -> SLOW
         GhAvailability.GIT_MISSING -> SLOW
         GhAvailability.RATE_LIMITED -> LIMITED
+        // A gh that does not answer is asked again rarely: each attempt costs a full budget, and the
+        // fast cadence is what turned one hanging command into a permanent stall.
+        GhAvailability.TIMEOUT -> SLOW
     }
 
     @RequiresEdt
     private fun notify(project: Project?, value: GhAvailability) {
+        // Nothing for the user to do about a slow gh, and a popup per stall would be pure noise. The
+        // banner still explains the degraded state.
+        if (value == GhAvailability.TIMEOUT) return
         val target = project ?: ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
         if (value == GhAvailability.GIT_MISSING) {
             KiloNotifications.suggestion(

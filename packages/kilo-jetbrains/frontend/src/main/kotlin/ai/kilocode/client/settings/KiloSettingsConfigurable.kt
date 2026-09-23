@@ -5,6 +5,7 @@ import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
 import ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable
 import ai.kilocode.client.settings.context.ContextConfigurable
 import ai.kilocode.client.settings.integrations.IntegrationsConfigurable
+import ai.kilocode.client.settings.marketplace.MarketplaceConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
@@ -67,6 +68,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         providers.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(providers)
+
+        val marketplace = ActionLink(KiloBundle.message("settings.marketplace.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, MarketplaceConfigurable.ID)
+        }
+        marketplace.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(marketplace)
 
         val behavior = ActionLink(KiloBundle.message("settings.agentBehavior.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink

@@ -1,17 +1,21 @@
 import { RecallTool } from "../../tool/recall"
+import { GoalReportTool, GoalTool } from "../session/goal/tool"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
+import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
+import { CronCreateTool, CronDeleteTool, CronListTool } from "./cron"
 import { GenerateImageTool } from "./generate-image"
-import { InteractiveTerminalTool } from "./interactive-terminal"
+import { LinkPrTool } from "./link-pr"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
 import { NotifyUserTool } from "./notify-user"
 import { OpenPlanTool } from "./open-plan"
+import { ScheduleWakeupTool } from "./schedule-wakeup"
 import { SendFileTool } from "./send-file"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -22,6 +26,8 @@ import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
+import { BoardEnabled } from "@/kilocode/board/enabled"
 import { Agent } from "@/agent/agent"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
@@ -80,7 +86,6 @@ export namespace KiloToolRegistry {
       const browser = Flag.KILO_CLIENT === "vscode" ? yield* BrowserOpenTool : undefined
       const chart = yield* ChartTool
       const image = yield* GenerateImageTool
-      const terminal = yield* InteractiveTerminalTool
       // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
       // via KiloSessions.defaultLayer (see src/tool/registry.ts). Grabs the service from the surrounding
       // context here and injects it into the tool's init Effect.
@@ -88,7 +93,19 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const openPlan = yield* OpenPlanTool
       const send = yield* SendFileTool
-      const board = yield* Effect.all({ boardRead: BoardReadTool, boardPost: BoardPostTool })
+      const linkPr = yield* LinkPrTool
+      // Wakeup.Service is provided by Wakeup.node in the tool-registry node graph.
+      const schedule = yield* ScheduleWakeupTool
+      const cancel = yield* CancelWakeupTool
+      const cronCreate = yield* CronCreateTool
+      const cronList = yield* CronListTool
+      const cronDelete = yield* CronDeleteTool
+      const board = yield* Effect.all({
+        boardRead: BoardReadTool,
+        boardPost: BoardPostTool,
+        goalReport: GoalReportTool,
+        goal: GoalTool,
+      })
       if (!notebook)
         return {
           recall,
@@ -100,10 +117,15 @@ export namespace KiloToolRegistry {
           browser,
           chart,
           image,
-          terminal,
           notify,
           openPlan,
           send,
+          linkPr,
+          schedule,
+          cancel,
+          cronCreate,
+          cronList,
+          cronDelete,
           ...board,
         }
       const tools = yield* Effect.all({
@@ -121,10 +143,15 @@ export namespace KiloToolRegistry {
         browser,
         chart,
         image,
-        terminal,
         notify,
         openPlan,
         send,
+        linkPr,
+        schedule,
+        cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
         ...board,
         ...tools,
       }
@@ -144,11 +171,18 @@ export namespace KiloToolRegistry {
       browser?: Tool.Info
       chart: Tool.Info
       image: Tool.Info
-      terminal?: Tool.Info
       notify: Tool.Info
       openPlan?: Tool.Info
       send: Tool.Info
+      linkPr: Tool.Info
+      schedule?: Tool.Info
+      cancel?: Tool.Info
+      cronCreate?: Tool.Info
+      cronList?: Tool.Info
+      cronDelete?: Tool.Info
       boardRead?: Tool.Info
+      goalReport?: Tool.Info
+      goal?: Tool.Info
       boardPost?: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
@@ -169,9 +203,16 @@ export namespace KiloToolRegistry {
         image: Tool.init(tools.image),
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
+        linkPr: Tool.init(tools.linkPr),
       })
       const openPlan = tools.openPlan ? yield* Tool.init(tools.openPlan) : undefined
-      const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
+      const schedule = tools.schedule ? yield* Tool.init(tools.schedule) : undefined
+      const cancel = tools.cancel ? yield* Tool.init(tools.cancel) : undefined
+      const cronCreate = tools.cronCreate ? yield* Tool.init(tools.cronCreate) : undefined
+      const cronList = tools.cronList ? yield* Tool.init(tools.cronList) : undefined
+      const cronDelete = tools.cronDelete ? yield* Tool.init(tools.cronDelete) : undefined
+      const report = tools.goalReport ? { goalReport: yield* Tool.init(tools.goalReport) } : {}
+      const goal = tools.goal ? { goal: yield* Tool.init(tools.goal) } : {}
       const board =
         tools.boardRead && tools.boardPost
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
@@ -189,11 +230,17 @@ export namespace KiloToolRegistry {
       return {
         ...base,
         ...board,
-        terminal,
+        ...report,
+        ...goal,
         browser,
         ...notebooks,
         semantic,
         openPlan,
+        schedule,
+        cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
         notify: base.notify,
         send: base.send,
       }
@@ -237,12 +284,10 @@ export namespace KiloToolRegistry {
     })
   }
 
-  /** Hide human-driven tools from agents that cannot interact with the user directly. */
-  export function available(tool: Tool.Def, agent: Agent.Info) {
+  export function available(tool: Tool.Def) {
     if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
     if (tool.id === "send_file") return KiloSessions.remoteStatus().connected
-    if (tool.id !== "interactive_terminal") return true
-    return agent.mode === "primary"
+    return true
   }
 
   /** Kilo-specific tools to append to the builtin list */
@@ -258,11 +303,18 @@ export namespace KiloToolRegistry {
       browser?: Tool.Def
       chart: Tool.Def
       image: Tool.Def
-      terminal?: Tool.Def
       notify: Tool.Def
       openPlan?: Tool.Def
       send: Tool.Def
+      linkPr: Tool.Def
+      schedule?: Tool.Def
+      cancel?: Tool.Def
+      cronCreate?: Tool.Def
+      cronList?: Tool.Def
+      cronDelete?: Tool.Def
       boardRead?: Tool.Def
+      goalReport?: Tool.Def
+      goal?: Tool.Def
       boardPost?: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
@@ -273,22 +325,28 @@ export namespace KiloToolRegistry {
         image_generation?: boolean
         native_notebook_tools?: boolean
         task_model_selection?: boolean
-        shared_agent_board?: boolean
       }
+      shared_agent_board?: boolean
     },
+    flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">,
   ): Tool.Def[] {
+    const enabled = BoardEnabled.on(cfg, flags)
     return [
+      ...(tools.goalReport ? [tools.goalReport] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.goal ? [tools.goal] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
-      ...(cfg.experimental?.shared_agent_board === true && tools.boardRead && tools.boardPost
-        ? [tools.boardRead, tools.boardPost]
-        : []),
+      ...(enabled && tools.boardRead && tools.boardPost ? [tools.boardRead, tools.boardPost] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,
       tools.recall,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
-      ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.schedule ? [tools.schedule] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cancel ? [tools.cancel] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronCreate ? [tools.cronCreate] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronList ? [tools.cronList] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronDelete ? [tools.cronDelete] : []),
       ...(Flag.KILO_CLIENT === "vscode" || cfg.experimental?.task_model_selection === true
         ? [tools.managerModels]
         : []),
@@ -304,6 +362,7 @@ export namespace KiloToolRegistry {
       tools.notify,
       ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
+      tools.linkPr,
     ]
   }
 

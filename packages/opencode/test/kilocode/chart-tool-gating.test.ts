@@ -18,13 +18,14 @@ const tools = {
   notify: stub("notify"),
   openPlan: stub("open_plan"),
   send: stub("send_file"),
+  linkPr: stub("link_pr"),
 }
 
 function ids(client: string) {
   const prev = process.env.KILO_CLIENT
   try {
     process.env.KILO_CLIENT = client
-    return KiloToolRegistry.extra(tools, {}).map((t) => t.id)
+    return KiloToolRegistry.extra(tools, {}, { experimentalSharedAgentBoard: false }).map((t) => t.id)
   } finally {
     if (prev === undefined) delete process.env.KILO_CLIENT
     else process.env.KILO_CLIENT = prev

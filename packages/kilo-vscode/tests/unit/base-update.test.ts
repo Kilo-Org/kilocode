@@ -119,9 +119,19 @@ it("asks the agent to resolve the saved base upstream and stop for local-only or
     "both branches' intent",
     "tests, lint, and type checks",
     "normal tool permissions",
-    "Do not push",
+    "Do not push, merge a PR, or apply this worktree into the base",
   ])
     expect(text).toContain(safeguard)
+})
+
+it("asks to push the branch only when the push setting is on", () => {
+  const manual = baseUpdatePrompt(wt)
+  expect(manual).not.toContain("push this branch")
+  expect(manual).toContain("Do not push, merge a PR, or apply this worktree into the base")
+  const text = baseUpdatePrompt(wt, true)
+  expect(text).toContain("push this branch so its pull request updates, if it has one")
+  expect(text).toContain("Do not force-push")
+  expect(text).not.toContain("Do not push, merge a PR")
 })
 
 it("asks the agent to preserve local work without asking the user to choose a method", () => {
@@ -185,8 +195,10 @@ it.each([
     await handleBaseUpdate(api.request, ctx, api.host)
     expect(api.errors).toEqual([])
     const sent = api.requests.find((item) => item.path.endsWith("/prompt_async"))
-    const text = (sent?.body as { parts: Array<{ text: string }> }).parts.at(0)?.text
+    const part = (sent?.body as { parts: Array<{ text: string; metadata?: unknown }> }).parts.at(0)
+    const text = part?.text
     expect(sent?.directory).toBe(wt.path)
+    expect(part?.metadata).toEqual({ kilo: { injected: { title: `Update from ${base}` } } })
     expect(text).toContain(`saved base branch "${base}"`)
     expect(text).toContain("worktree's current branch")
     expect(text).toContain("Do not switch branches")

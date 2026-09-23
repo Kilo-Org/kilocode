@@ -27,7 +27,10 @@ export const SortableTab: Component<{
   onMiddleClick: (e: MouseEvent) => void
   onClose: () => void
   onCloseOthers: () => void
+  onCloseToRight?: () => void
   onFork?: () => void
+  pinned?: boolean
+  onTogglePin?: () => void
   role?: "tab"
   selected?: boolean
   tabIndex?: number
@@ -41,6 +44,9 @@ export const SortableTab: Component<{
         onFork={props.onFork}
         onClose={props.onClose}
         onCloseOthers={props.onCloseOthers}
+        onCloseToRight={props.onCloseToRight}
+        pinned={props.pinned}
+        onTogglePin={props.onTogglePin}
         closeShortcut={
           props.closeKeybind ? (
             <span class="am-menu-shortcut">
@@ -54,6 +60,8 @@ export const SortableTab: Component<{
         <SessionTab
           title={props.tab.title || t("agentManager.session.untitled")}
           active={props.active}
+          pinned={props.pinned}
+          pinnedLabel={t("agentManager.tab.pinned")}
           state={props.state}
           stateLabel={props.stateLabel}
           keybind={props.keybind}

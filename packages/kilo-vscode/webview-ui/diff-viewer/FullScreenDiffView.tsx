@@ -13,8 +13,6 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
@@ -25,12 +23,16 @@ import {
   toggleOpenFiles,
 } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { DiffViewerNotice } from "./DiffViewerNotice"
 import { VirtualDiffList } from "./VirtualDiffList"
 import { createDiffViewport } from "./diff-requests"
 import { RemoteCommentsOutside } from "./remote-comment-renderer"
 import { ReviewDiffItem } from "./ReviewDiffItem"
-import { createReviewView, type ReviewViewProps } from "./review-controller"
-import { notice, reviewSendAllKeybind } from "./review-setup"
+import { type ReviewViewProps } from "./review-controller"
+import { focusDiff, pageDiff } from "./review-scroll"
+import { createReviewSurface } from "./review-surface"
+import { SendAllButton } from "./SendAllButton"
+import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 
 type DiffStyle = "unified" | "split"
 
@@ -49,15 +51,19 @@ interface FullScreenDiffViewProps extends ReviewViewProps {
   canRevert?: boolean
   /** Optional leading content rendered first in the toolbar's left group. */
   lead?: JSXElement
+  prTarget?: PRTarget
+  prSnapshot?: PRDiffSnapshot
+  prLoading?: boolean
+  prError?: string
   onClose: () => void
 }
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
-  const { t } = useLanguage()
-  const noticeText = () => notice(t, props.notice)
-  const sendAllKeybind = () => reviewSendAllKeybind(t)
   let rootRef: HTMLDivElement | undefined
   const {
+    t,
+    noticeText,
+    sendAllKeybind,
     open,
     setOpen,
     rows,
@@ -72,12 +78,16 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     pinned,
     render,
     request,
-    handleRootMouseDown,
     handleKeyDown,
     commentsByFile,
     handleGutterClick,
     sendAllClick,
-  } = createReviewView(props, () => rootRef)
+    sendAllToGithub,
+    sendAllGithubCount,
+    sendAllGithubAvailable,
+    sendAllPending,
+    sendAllError,
+  } = createReviewSurface(props, () => rootRef)
 
   const [manualActiveFile, setManualActiveFile] = createSignal<Record<string, string | null>>({})
   const activeFile = createMemo(() => {
@@ -180,17 +190,21 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
 
   return (
-    <div
-      class="am-review-layout"
-      onKeyDown={handleKeyDown}
-      onMouseDown={handleRootMouseDown}
-      tabIndex={-1}
-      ref={rootRef}
-    >
+    <div class="am-review-layout" onKeyDown={handleKeyDown} tabIndex={-1} ref={rootRef}>
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
           <Show when={props.lead}>{props.lead}</Show>
+          <Show when={props.prTarget}>
+            {(target) => (
+              <span class="am-review-pr-context" title={target().prUrl}>
+                {t("diffViewer.comment.prContext", { number: target().prNumber })}
+                <Show when={props.prLoading}>
+                  <Spinner />
+                </Show>
+              </span>
+            )}
+          </Show>
           <RadioGroup
             options={["unified", "split"] as const}
             current={props.diffStyle}
@@ -225,19 +239,26 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             {openLabel()}
           </Button>
           <Show when={comments().length > 0 && props.canComment !== false}>
-            <TooltipKeybind
-              title={t("agentManager.review.sendAllToChat")}
+            <SendAllButton
+              count={comments().length}
+              githubCount={sendAllGithubCount()}
+              githubNumber={sendAllGithubAvailable() ? props.prTarget?.prNumber : undefined}
+              pending={sendAllPending()}
+              onSendChat={sendAllClick}
+              onSendGithub={sendAllToGithub}
               keybind={sendAllKeybind()}
               placement="bottom"
-            >
-              <Button variant="primary" size="small" onClick={sendAllClick}>
-                {t("agentManager.review.sendAllToChatWithCount", { count: comments().length })}
-              </Button>
-            </TooltipKeybind>
+            />
+          </Show>
+          <Show when={sendAllError()}>
+            <span class="am-review-send-error" role="alert">
+              {sendAllError()}
+            </span>
           </Show>
           <IconButton icon="close" size="small" variant="ghost" label={t("common.close")} onClick={props.onClose} />
         </div>
       </div>
+      <DiffViewerNotice text={props.prError} role="alert" />
 
       {/* Body: file tree + diff viewer */}
       <div class="am-review-body">
@@ -261,74 +282,78 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             onResize={(w) => setTreeWidth(Math.max(160, Math.min(w, 400)))}
           />
         </div>
-        <div class="am-review-diff" ref={setScroller}>
-          <Show when={noticeText()}>
-            <div class="diff-viewer-notice" role="status">
-              <span class="diff-viewer-notice-icon">
-                <Icon name="warning" size="small" />
-              </span>
-              <span class="diff-viewer-notice-text">{noticeText()}</span>
-            </div>
-          </Show>
+        <div class="am-diff-viewport">
+          <div
+            class="am-review-diff"
+            onKeyDown={pageDiff}
+            onClick={focusDiff}
+            data-focus-region
+            tabIndex={0}
+            role="region"
+            aria-label={t("agentManager.hoverCard.changes")}
+            ref={setScroller}
+          >
+            <DiffViewerNotice text={noticeText()} role="status" />
 
-          <Show when={props.loading && props.diffs.length === 0}>
-            <div class="am-diff-loading">
-              <Spinner />
-              <span>{t("session.review.loadingChanges")}</span>
-            </div>
-          </Show>
+            <Show when={props.loading && props.diffs.length === 0}>
+              <div class="am-diff-loading">
+                <Spinner />
+                <span>{t("session.review.loadingChanges")}</span>
+              </div>
+            </Show>
 
-          <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
-            <div class="am-diff-empty">
-              <span>{t("session.review.noChanges")}</span>
-            </div>
-          </Show>
+            <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
+              <div class="am-diff-empty">
+                <span>{t("session.review.noChanges")}</span>
+              </div>
+            </Show>
 
-          <Show when={props.diffs.length > 0}>
-            <div class="am-review-diff-content" data-component="session-review">
-              <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
-                <VirtualDiffList
-                  context={props.sessionKey}
-                  data={rows()}
-                  scroll={scroller()}
-                  keep={pinned()}
-                  onReady={setVirtualizer}
-                  render={(diff) => {
-                    const viewport = createDiffViewport(scroller)
-                    const annotations = remote.annotations(diff.file)
-                    return (
-                      <ReviewDiffItem
-                        diff={diff}
-                        open={open}
-                        viewport={viewport}
-                        request={props.onRequestDiff ? request : undefined}
-                        loading={() => props.loadingFiles?.has(diff.file) ?? false}
-                        comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
-                        diffStyle={() => props.diffStyle}
-                        markdownRender={() => props.markdownRender ?? false}
-                        handle={(handle) => register(diff.file, handle)}
-                        scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
-                        annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
-                        renderAnnotation={render}
-                        onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                        onOpenFile={props.onOpenFile}
-                        onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
-                        reverting={() => props.revertingFiles?.has(diff.file) ?? false}
-                        onMarkdownRenderChange={props.onMarkdownRenderChange}
-                        canComment={() => props.canComment !== false}
-                        sessionKey={props.sessionKey}
-                        showLoadingSpinner
-                      />
-                    )
-                  }}
-                />
-              </Accordion>
-              <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
-                <DiffEndMarker />
-              </Show>
-            </div>
-          </Show>
-          <RemoteCommentsOutside controller={remote} />
+            <Show when={props.diffs.length > 0}>
+              <div class="am-review-diff-content" data-component="session-review">
+                <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
+                  <VirtualDiffList
+                    context={props.sessionKey}
+                    data={rows()}
+                    scroll={scroller()}
+                    keep={pinned()}
+                    onReady={setVirtualizer}
+                    render={(diff) => {
+                      const viewport = createDiffViewport(scroller)
+                      const annotations = remote.annotations(diff.file)
+                      return (
+                        <ReviewDiffItem
+                          diff={diff}
+                          open={open}
+                          viewport={viewport}
+                          request={props.onRequestDiff ? request : undefined}
+                          loading={() => props.loadingFiles?.has(diff.file) ?? false}
+                          comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
+                          diffStyle={() => props.diffStyle}
+                          markdownRender={() => props.markdownRender ?? false}
+                          handle={(handle) => register(diff.file, handle)}
+                          scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
+                          annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
+                          renderAnnotation={render}
+                          onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                          onOpenFile={props.onOpenFile}
+                          onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
+                          reverting={() => props.revertingFiles?.has(diff.file) ?? false}
+                          onMarkdownRenderChange={props.onMarkdownRenderChange}
+                          canComment={() => props.canComment !== false}
+                          sessionKey={props.sessionKey}
+                          showLoadingSpinner
+                        />
+                      )
+                    }}
+                  />
+                </Accordion>
+                <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
+                  <DiffEndMarker />
+                </Show>
+              </div>
+            </Show>
+            <RemoteCommentsOutside controller={remote} />
+          </div>
         </div>
       </div>
     </div>

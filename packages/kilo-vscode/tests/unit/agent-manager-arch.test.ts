@@ -11,7 +11,10 @@ import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
+import { createProjectWiring } from "../../src/agent-manager/project/wiring"
 import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
+import type { GitOps } from "../../src/agent-manager/GitOps"
+import type { Host } from "../../src/agent-manager/host"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -32,6 +35,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/NewProjectDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/CloneProjectDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectParentField.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
@@ -61,10 +67,14 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectsFooter.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
@@ -82,7 +92,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/shared/ActivityIcon.tsx"),
   path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
+  path.join(ROOT, "webview-ui/src/components/chat/SessionTab.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/SendAllButton.tsx"),
 ]
 const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
@@ -92,6 +104,7 @@ const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-co
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
+const TAB_LAYOUT_FILE = path.join(ROOT, "src/agent-manager/tab-layout.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
 const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
@@ -222,6 +235,114 @@ describe("Agent Manager edit preview", () => {
   })
 })
 
+describe("Agent Manager leftover worktree folders", () => {
+  const bodies = [
+    path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+    path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
+  ]
+
+  it("puts the notice above the worktrees instead of below them", () => {
+    for (const file of bodies) {
+      const source = fs.readFileSync(file, "utf-8")
+      const list = source.indexOf('<div class="am-worktree-list">')
+      const notice = source.indexOf("<OrphanNotice", list)
+      const first = source.indexOf("fallback={<WorktreeSkeleton />}", list)
+      expect(list, `${path.basename(file)} renders the worktree list`).toBeGreaterThan(-1)
+      expect(notice, `${path.basename(file)} renders the orphan notice inside the list`).toBeGreaterThan(list)
+      expect(notice, `${path.basename(file)} renders the orphan notice before the first worktree`).toBeLessThan(first)
+    }
+  })
+
+  it("offers the cleanup as an ordinary action button, not a ghost affordance", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"), "utf-8")
+    expect(source).toContain('<Button variant="primary" size="small" onClick={props.onResolve}>')
+  })
+
+  it("keeps the banner headline in the normal foreground", () => {
+    const css = readAllCss()
+    expect(css).toContain(".am-orphan-notice-title {\n  color: var(--text-base);\n}")
+  })
+
+  it("explains the list in the dialog header before offering a bulk delete", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
+    expect(source).toMatch(/description=\{<OrphanHelp\b/)
+    for (const key of ["helpIntro", "helpCheckout", "helpCauses", "helpDelete", "helpMore", "helpLess"]) {
+      expect(source, `header explanation covers ${key}`).toContain(`agentManager.orphans.${key}`)
+    }
+  })
+
+  it("collapses the bullet detail behind a toggle, keeping the intro sentence always visible", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
+    const helpIntro = source.indexOf("agentManager.orphans.helpIntro")
+    const showGate = source.indexOf("<Show when={props.expanded}>")
+    const toggle = source.indexOf('class="am-orphan-help-toggle"')
+    expect(helpIntro, "intro renders unconditionally").toBeGreaterThan(-1)
+    expect(showGate, "bullets are gated behind expanded state").toBeGreaterThan(helpIntro)
+    expect(toggle, "toggle button follows the bullets").toBeGreaterThan(showGate)
+
+    const css = readAllCss()
+    expect(css).toContain(".am-orphan-help-toggle {")
+  })
+
+  /**
+   * Sizing is kicked off by whichever reconcile runs first — startup, a repair, the doctor — and only
+   * one of those used to carry a push callback, so the first pass's results never reached the webview
+   * and the banner said "calculating size…" forever. This drives the real `createProjectWiring`
+   * (the only place a `ProjectContext`'s `sized` dep is set in production) end to end, so it fails on
+   * a broken wire regardless of how the fix is spelled — renaming the hook, restructuring the deps
+   * object, or reformatting the file all leave this red only if the push genuinely stops happening.
+   * `orphan-sizing.test.ts` covers the other half: that a completed pass actually calls the hook.
+   */
+  it("wires a fresh project context's sized hook to a webview push, through the real construction path", () => {
+    const pushed: unknown[] = []
+    const disposable = { dispose: () => undefined }
+    const host = {
+      workspacePath: () => "/repo",
+      multiProject: () => false,
+      onDidChangeWorkspaceFolders: () => disposable,
+      onDidChangeMultiProject: () => disposable,
+      onDidChangeWorktreePool: () => disposable,
+    } as unknown as Host
+
+    const wiring = createProjectWiring({
+      host,
+      git: undefined as unknown as GitOps,
+      log: () => undefined,
+      output: () => undefined,
+      activate: () => undefined,
+      expand: () => undefined,
+      ready: () => Promise.resolve({ ok: true, refsFixed: 0, current: true }),
+      push: () => undefined,
+      pushState: (ctx) => pushed.push(ctx),
+      changed: () => undefined,
+      selected: () => undefined,
+    })
+
+    const ctx = wiring.contexts.pinned()
+    ctx?.notifySized()
+
+    expect(ctx, "the fake host must be enough to produce a context").toBeDefined()
+    expect(pushed).toEqual([ctx])
+  })
+
+  it("uses the shared check glyph for selection instead of a bespoke one", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"), "utf-8")
+    expect(source).toContain('icon={<Icon name="check-small" size="small" />}')
+    expect(source).toContain('icon={<Icon name={someChecked() ? "dash" : "check-small"} size="small" />}')
+  })
+
+  it("gives the dialog body the same gutter as its header", () => {
+    const css = readAllCss()
+    expect(css).toContain('.am-orphan-dialog-root [data-slot="dialog-body"] {\n  padding: 0 20px 20px;\n}')
+  })
+
+  it("left-aligns every cell, including the git checkout flag", () => {
+    const css = readAllCss()
+    const table = css.slice(css.indexOf(".am-orphan-table th {"), css.indexOf(".am-orphan-table tbody tr:last-child"))
+    expect(table.match(/text-align: left;/g)?.length).toBe(2)
+  })
+})
+
 describe("Agent Manager Provider Messages", () => {
   function getMethodBody(name: string): string {
     const project = new Project({ compilerOptions: { allowJs: true } })
@@ -232,7 +353,7 @@ describe("Agent Manager Provider Messages", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted lifecycle module so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+)\(/)
     if (!delegated) return text
     const lifecycle = project.addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
     const fn = lifecycle.getFunction(delegated[1]!)
@@ -299,6 +420,7 @@ describe("Agent Manager Provider Messages", () => {
     const body = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/state-gate.ts"), "utf-8")
     const messages = [
       "agentManager.setTabOrder",
+      "agentManager.setPinnedTabs",
       "agentManager.setWorktreeOrder",
       "agentManager.persistSession",
       "agentManager.forgetSession",
@@ -532,7 +654,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted handler modules so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+|createMultiVersion)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+|createMultiVersion)\(/)
     if (!delegated) return text
     const module = delegated[1] === "createMultiVersion" ? "provider-multi-version.ts" : "provider-lifecycle.ts"
     const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))
@@ -560,7 +682,10 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("provider routing handles all documented agentManager.* message types", () => {
     const text =
-      provider() + fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") + fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8")
+      provider() +
+      fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") +
+      fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8") +
+      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -581,6 +706,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
+      "agentManager.setPinnedTabs",
       "agentManager.setDefaultBaseBranch",
       "agentManager.terminal.create",
       "agentManager.terminal.close",
@@ -697,13 +823,20 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 
-  it("limits snapshot cleanup to explicit worktree deletion without deleting sessions", () => {
-    const text = body("onDeleteWorktree")
-    expect(text).toContain(".kilocode.removeSnapshot")
-    expect(text).not.toContain("session.delete")
-    for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
-      expect(body(name)).not.toContain("removeSnapshot")
+  it("cleans worktree snapshots only after worktree removal without deleting sessions", () => {
+    const del = body("onDeleteWorktree")
+    expect(del).toContain("removeWorktreeSnapshot")
+    expect(del).not.toContain("session.delete")
+    for (const name of ["onCreateWorktree", "onCreateMultiVersion"]) {
+      const text = body(name)
+      expect(text, `${name} must not delete sessions`).not.toContain("session.delete")
+      const disk = text.indexOf(".removeWorktree(")
+      const snapshot = text.indexOf("removeWorktreeSnapshot(")
+      if (snapshot < 0) continue
+      expect(disk, `${name} must remove the worktree before its snapshots`).toBeGreaterThanOrEqual(0)
+      expect(snapshot, `${name} must remove the worktree before its snapshots`).toBeGreaterThan(disk)
     }
+    expect(body("onRemoveStaleWorktree")).not.toContain("removeWorktreeSnapshot")
   })
 
   // -- onCreateWorktree invariants -------------------------------------------
@@ -922,8 +1055,8 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
    * the pending refresh.
    */
   it("loadSessions sets pendingSessionRefresh when client is null", () => {
-    const start = utils.indexOf("export async function loadSessions")
-    expect(start, "loadSessions must exist in kilo-provider-utils").toBeGreaterThan(-1)
+    const start = utils.indexOf("async function loadPage")
+    expect(start, "loadPage must exist in kilo-provider-utils").toBeGreaterThan(-1)
     const snippet = utils.slice(start, start + 700)
     expect(snippet, "must set pendingSessionRefresh when client missing").toContain("ctx.pendingSessionRefresh = true")
     expect(snippet, "must avoid noisy errors while still connecting").toContain('ctx.connectionState !== "connecting"')
@@ -933,9 +1066,9 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
   })
 
   it("handleLoadSessions delegates to loadSessionsUtil", () => {
-    const start = provider.indexOf("private async handleLoadSessions()")
+    const start = provider.indexOf("private async handleLoadSessions(")
     expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
-    const snippet = provider.slice(start, start + 400)
+    const snippet = provider.slice(start, start + 700)
     expect(snippet, "must call loadSessionsUtil").toContain("loadSessionsUtil")
   })
 

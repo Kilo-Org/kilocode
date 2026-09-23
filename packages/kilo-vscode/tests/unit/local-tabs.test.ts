@@ -8,6 +8,7 @@ import {
   openSessionTab,
   insertSessionTabAfter,
   pendingTabForCreated,
+  pruneClosed,
   reconcileTabs,
   reconcileTrackedTabs,
   replacePendingTab,
@@ -185,6 +186,20 @@ describe("local session tabs", () => {
     const current = state(["s1", "s2"], "s1")
     expect(closeOtherTabs(current, "missing")).toBe(current)
   })
+
+  it("keeps pinned tabs open when closing the others", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s1"), "s1", ["s3"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s1",
+    })
+  })
+
+  it("activates the retained tab even when pinned neighbors survive", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s2"), "s3", ["s1"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s3",
+    })
+  })
 })
 
 describe("shared close selection", () => {
@@ -244,6 +259,32 @@ describe("tracked tab restore", () => {
       "s1",
       "s2",
     ])
+  })
+
+  it("never restores a local tab the user just closed while the host still lists it", () => {
+    // Close Others closed "s2"; an early host state push still lists it. The
+    // optimistic close must win, or the tab reappears and later pushes keep it.
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2"]), ["s1"], ["s1", "s2"], trackedPending, reorder, new Set(["s2"])),
+    ).toEqual(["s1"])
+  })
+
+  it("still restores other missing locals while a closed tab is suppressed", () => {
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2", "s3"]), ["s1"], undefined, trackedPending, identity, new Set(["s2"])),
+    ).toEqual(["s1", "s3"])
+  })
+
+  it("drops a closed id even when it is present in current and order", () => {
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2"]), ["s1", "s2"], ["s1", "s2"], trackedPending, reorder, new Set(["s2"])),
+    ).toEqual(["s1"])
+  })
+
+  it("prunes suppressed ids the host no longer tracks", () => {
+    const closed = new Set(["s1", "s2"])
+    pruneClosed(closed, [{ id: "s1" }])
+    expect([...closed]).toEqual(["s1"])
   })
 })
 

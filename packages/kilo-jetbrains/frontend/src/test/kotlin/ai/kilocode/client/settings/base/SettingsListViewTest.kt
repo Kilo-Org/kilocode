@@ -17,6 +17,7 @@ import ai.kilocode.client.ui.list.ActiveListBadgeCell
 import ai.kilocode.client.ui.list.ActiveListActive
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListIconAlignment
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMenu
 import ai.kilocode.client.ui.list.ActiveListMetrics
@@ -70,7 +71,14 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val bounds = view.list.getCellBounds(0, 0)
             val tip = view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4)))
 
-            assertEquals("<html>Use &lt;safe&gt; text<br>Across lines</html>", tip)
+            // Escaped, one line per source line, and capped so a long description wraps instead of
+            // stretching the tooltip off screen.
+            assertEquals(
+                "<html><body><div width=\"${UiStyle.Text.tipWidth()}\">" +
+                    "Use &lt;safe&gt; text<br/>Across lines" +
+                    "</div></body></html>",
+                tip,
+            )
         }
     }
 
@@ -343,6 +351,31 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val icon = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
 
             assertTrue(kotlin.math.abs(centerY(renderer, icon) - renderer.height / 2) <= 1)
+        }
+    }
+
+    fun `test renderer top aligns leading icon when configured`() {
+        edt {
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val description = "Description"
+                override val icon = AllIcons.Nodes.Plugin
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val cfg = ActiveListConfig.Equal.copy(iconAlignment = ActiveListIconAlignment.TOP)
+            val renderer = ActiveListRenderer(model, cfg)
+
+            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            renderer.setSize(320, renderer.preferredSize.height)
+            layout(renderer)
+
+            val icon = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
+            val title = rowTitle(renderer)
+
+            assertTrue(topY(renderer, icon) <= topY(renderer, title) + 1)
+            assertTrue(centerY(renderer, icon) < renderer.height / 2)
         }
     }
 

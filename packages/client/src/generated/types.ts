@@ -261,7 +261,7 @@ export type SessionsListOutput = {
         readonly deletions: number
         readonly patch: string
       }>
-      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
   }>
   readonly cursor: { readonly previous?: string | null; readonly next?: string | null }
@@ -324,7 +324,7 @@ export type SessionsCreateOutput = {
         readonly deletions: number
         readonly patch: string
       }>
-      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
   }
 }["data"]
@@ -363,7 +363,7 @@ export type SessionsGetOutput = {
         readonly deletions: number
         readonly patch: string
       }>
-      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
   }
 }["data"]
@@ -512,7 +512,7 @@ export type SessionsStageOutput = {
       readonly deletions: number
       readonly patch: string
     }>
-    readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }["data"]
 
@@ -1118,7 +1118,7 @@ export type SessionsHistoryOutput = {
               readonly deletions: number
               readonly patch: string
             }>
-            readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+            readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
           }
         }
       }
@@ -1605,7 +1605,7 @@ export type SessionsEventsOutput =
             readonly deletions: number
             readonly patch: string
           }>
-          readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+          readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
         }
       }
     }

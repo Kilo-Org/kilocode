@@ -34,6 +34,41 @@ function context(sent: unknown[]) {
 }
 
 describe("cloud session preview handler", () => {
+  it.each(["", "pause", "clear", "resume"])("only shows bare goal status after cloud import: %j", async (args) => {
+    const sent: unknown[] = []
+    const notices: string[] = []
+    const ctx: CloudSessionContext = {
+      ...context(sent),
+      client: {
+        kilo: {
+          cloud: {
+            session: { import: async () => ({ data: { id: "local", time: { created: 1, updated: 1 } } }) },
+          },
+        },
+        session: {
+          command: async () => ({ data: { parts: [{ type: "text", text: "Goal paused" }] } }),
+        },
+      } as unknown as CloudSessionContext["client"],
+      notify: (message) => notices.push(message),
+    }
+    await handleImportAndSend(
+      ctx,
+      "cloud",
+      "/goal",
+      "message",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "goal",
+      args,
+    )
+    expect(notices).toEqual(args ? [] : ["Goal paused"])
+    expect(sent).toContainEqual({ type: "sessionCommandCompleted", messageID: "message" })
+  })
+
   it("reports a failure when the CLI preview request stalls", async () => {
     const timeout = AbortSignal.timeout
     AbortSignal.timeout = () => {

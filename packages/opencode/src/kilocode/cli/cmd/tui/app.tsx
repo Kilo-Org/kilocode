@@ -27,9 +27,10 @@ import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 import { KiloTerminalTitle } from "./terminal-title"
 import type { KiloTitleIcon } from "./title-icon"
 import { Session as SessionApi } from "@/session/session"
+import { useCaffeination } from "./caffeination"
+import { useLinkInteractions } from "@tui/kilocode/link-interactions"
 
 // Re-export so upstream can render the route without importing directly
-export { KiloClawView } from "@/kilocode/claw/view"
 export { KiloTerminalTitle } from "./terminal-title"
 
 // Hot reload TUI-local settings (keybinds/theme/ui) when changed from the Kilo Console.
@@ -78,6 +79,7 @@ export function useSessionEffects(deps: {
   sdk: ReturnType<typeof useSDK>
   sync: ReturnType<typeof useSync>
 }) {
+  useLinkInteractions()
   const pty = process.env.KILO_PTY_ID
   const viewerId = crypto.randomUUID()
   const renderer = useRenderer()
@@ -208,14 +210,6 @@ export function getTerminalTitle(input: {
       indicator: "none",
     }
   }
-
-  if (input.route.data.type === "kiloclaw") {
-    return {
-      title: KiloTerminalTitle.format({ base: input.base, title: "KiloClaw", indicator: "none", icon: input.icon }),
-      active: false,
-      indicator: "none",
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +236,7 @@ export function handleSessionError(error: unknown, toast: ReturnType<typeof useT
  * One-shot initialiser called from the App component body.
  *
  * - Injects TUI dependencies into kilo-gateway
- * - Registers Kilo Gateway commands (profile, teams, kiloclaw, etc.)
+ * - Registers Kilo Gateway commands (profile, teams, etc.)
  * - Registers the auto-approve toggle command
  */
 export function init() {
@@ -268,8 +262,9 @@ export function init() {
     TextAttributes,
   })
 
-  // Register Kilo Gateway commands (profile, teams, kiloclaw, remote, etc.)
+  // Register Kilo Gateway commands (profile, teams, remote, etc.)
   registerKiloCommands(useSDK)
+  useCaffeination()
 
   // Register auto-approve toggle
   useBindings(() => ({

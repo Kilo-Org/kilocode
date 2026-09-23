@@ -46,9 +46,13 @@ export const dict = {
     "Pliki projektu mogą zostać dodane do systemu kontroli wersji. Nie przechowuj tutaj sekretów, chyba że konfiguracja odwołuje się do zmiennej środowiskowej.",
   "marketplace.install.learnMore": "Dowiedz się, jak działają instalacje z Marketplace",
   "marketplace.install.learnMcp": "Dowiedz się więcej o MCP",
+  "marketplace.install.about.plugin":
+    "Wtyczka dodaje niestandardowe narzędzia i integracje do Kilo. Wtyczki działają z pełnymi uprawnieniami.",
+  "marketplace.install.plugin.warning":
+    "Wtyczki wykonują kod z pełnymi uprawnieniami. Mogą odczytywać i zmieniać Twoje pliki, uruchamiać polecenia oraz uzyskiwać dostęp do Twoich danych uwierzytelniających i sieci. Instaluj tylko wtyczki, którym ufasz.",
   "marketplace.install.installedAt": "Zainstalowano w {{path}}",
   "marketplace.intro":
-    "Instaluj agentów, umiejętności i narzędzia MCP wielokrotnego użytku w jednym lub we wszystkich projektach.",
+    "Instaluj agentów, umiejętności, narzędzia MCP i wtyczki wielokrotnego użytku w jednym lub we wszystkich projektach.",
   "marketplace.intro.learnMore": "O Marketplace",
   "marketplace.install.prerequisites": "Wymagania wstępne",
   "marketplace.install.installing": "Instalowanie...",
@@ -76,6 +80,7 @@ export const dict = {
   "marketplace.scope.project": "projekt",
   "marketplace.scope.global": "globalny",
   "marketplace.remove.type.mcp": "serwer MCP",
+  "marketplace.remove.type.plugin": "wtyczka",
   "marketplace.remove.type.skill": "umiejętność",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Nie udało się usunąć {{name}}",
@@ -86,7 +91,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "marketplace.warning.installAnyway": "Zainstaluj mimo to",
   "marketplace.warning.cancel": "Anuluj",
-  "marketplace.contribute.prompt": "Brakuje umiejętności, agenta lub serwera MCP?",
+  "marketplace.contribute.prompt": "Brakuje umiejętności, agenta, serwera MCP lub wtyczki?",
   "marketplace.contribute.cta": "Wnieś wkład na GitHubie",
   "marketplace.migration.notice":
     "Tryby zostały zastąpione przez agentów. Jeśli wcześniej instalowałeś tryby z marketplace, usuń je i zainstaluj ponownie jako agenty, aby przejść na nowy format.",

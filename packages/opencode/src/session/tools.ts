@@ -1,5 +1,7 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
+import type { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
 import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -37,6 +39,8 @@ import * as ToolNetwork from "@/kilocode/sandbox/network"
 import type { SecurityDeniedError } from "@/kilocode/security/error"
 import { SecuritySessionState } from "@/kilocode/security/state/store" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { BoardEnabled } from "@/kilocode/board/enabled"
+import { KiloCodeMode } from "@/kilocode/tool/code-mode" // kilocode_change
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -76,6 +80,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   bypassAgentCheck: boolean
   messages: SessionV1.WithParts[]
   promptOps: TaskPromptOps
+  goalOps?: Goal.Ops // kilocode_change
   memoryCache: MemoryMarker.Cache // kilocode_change
   // kilocode_change start
   notify?: <T extends Tool.ExecuteResult>(tool: string, output: T, signal?: AbortSignal) => Effect.Effect<T>
@@ -94,9 +99,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const truncate = yield* Truncate.Service
   // kilocode_change start - permission provenance
   const config = yield* Config.Service
+  const flags = yield* RuntimeFlags.Service
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
-  const notify = cfg.experimental?.shared_agent_board === true ? input.notify : undefined
+  const notify = BoardEnabled.on(cfg, flags) ? input.notify : undefined
   type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
   const finish = <T extends Output>(name: string, output: T, opts: ToolExecutionOptions) =>
     Effect.gen(function* () {
@@ -111,7 +117,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       return result
     })
   // kilocode_change end
-  const flags = yield* RuntimeFlags.Service
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const sandboxed = (yield* SandboxPolicy.status(input.session.id)).enabled // kilocode_change
   // kilocode_change start - Security Auto Mode options resolved once per step (off by default)
@@ -224,6 +229,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       model: input.model,
       bypassAgentCheck: input.bypassAgentCheck,
       promptOps: input.promptOps,
+      goalOps: input.goalOps, // kilocode_change
       sandboxed, // kilocode_change
       security, // kilocode_change - lets a delegating tool build a descriptor for its real callee
       sandboxEscalation: false,
@@ -310,6 +316,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     permission: input.session.permission,
     networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
+    if (!GoalPolicy.available(input.session.id, item.id)) continue // kilocode_change
     const base = ToolJsonSchema.fromTool(item)
     const schema = ProviderTransform.schema(input.model, base)
     tools[item.id] = tool({
@@ -668,7 +675,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  if (flags.experimentalCodeMode) return tools
+  if (KiloCodeMode.wanted(flags, cfg)) return tools // kilocode_change
 
   mcpTools = restricted ? {} : yield* mcp.tools() // kilocode_change - assigned, declared above
   for (const [key, entry] of Object.entries(mcpTools)) {
@@ -727,7 +734,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               },
               denied,
               Effect.gen(function* () {
-                yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+                yield* ctx.ask({ permission: key, metadata: { mcpInput: args }, patterns: ["*"], always: ["*"] })
                 return yield* Effect.promise(() => execute(args, opts))
               }),
             ),

@@ -66,6 +66,18 @@ function meta(part: ToolPart, key: string): unknown {
   return (part.state as { metadata?: Record<string, unknown> }).metadata?.[key]
 }
 
+/** Child session IDs of Task tool parts. */
+export function taskChildren(tools: ToolPart[]): string[] {
+  const ids: string[] = []
+  for (const part of tools) {
+    if (part.tool !== "task") continue
+    const id = text(meta(part, "sessionId"))
+    if (!id || ids.includes(id)) continue
+    ids.push(id)
+  }
+  return ids
+}
+
 function working(status: SessionStatusInfo | undefined): boolean {
   return status?.type === "busy" || status?.type === "retry"
 }

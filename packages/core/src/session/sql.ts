@@ -14,6 +14,7 @@ import { Timestamps } from "../database/schema.sql"
 import type { SystemContext } from "../system-context/index"
 import type { Revert } from "@opencode-ai/schema/revert"
 import { RecallPartIndex } from "../kilocode/session/recall-part-index" // kilocode_change
+import { RecallMessageIndex } from "../kilocode/session/recall-message-index" // kilocode_change
 import { sql } from "drizzle-orm" // kilocode_change
 
 type SessionMessageData = Omit<(typeof SessionMessage.Message)["Encoded"], "type" | "id">
@@ -49,7 +50,7 @@ export const SessionTable = sqliteTable(
     tokens_cache_write: integer().notNull().default(0),
     // kilocode_change - Kilo also persists a workspace restore status on the revert record
     revert: text({ mode: "json" }).$type<
-      Revert.State & { workspace?: "restored" | "snapshots-disabled" | "unavailable" }
+      Revert.State & { workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo" } // kilocode_change
     >(),
     permission: text({ mode: "json" }).$type<PermissionV1.Ruleset>(),
     agent: text(),
@@ -80,7 +81,12 @@ export const MessageTable = sqliteTable(
     ...Timestamps,
     data: text({ mode: "json" }).notNull().$type<V1MessageData>(),
   },
-  (table) => [index("message_session_time_created_id_idx").on(table.session_id, table.time_created, table.id)],
+  // kilocode_change start
+  (table) => [
+    index("message_session_time_created_id_idx").on(table.session_id, table.time_created, table.id),
+    RecallMessageIndex.make(table),
+  ],
+  // kilocode_change end
 )
 
 export const PartTable = sqliteTable(

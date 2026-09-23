@@ -7,7 +7,7 @@
  * Usage:
  *   bun run script/upstream/analyze.ts --version v1.1.49
  *   bun run script/upstream/analyze.ts --commit abc123
- *   bun run script/upstream/analyze.ts --version v1.1.49 --base-branch catrielmuller/kilo-opencode-v1.1.44
+ *   bun run script/upstream/analyze.ts --version v1.1.49 --base-branch username/kilo-opencode-v1.1.44
  */
 
 import { $ } from "bun"

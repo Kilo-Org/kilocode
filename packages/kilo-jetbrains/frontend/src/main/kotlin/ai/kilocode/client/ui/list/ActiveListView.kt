@@ -24,6 +24,8 @@ import java.awt.Dimension
 import java.awt.Image
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
@@ -97,8 +99,7 @@ internal class ActiveListView(
             if (hit != null) return hit.tooltip?.takeIf { it.isNotBlank() }
             if (!cfg.description || !cfg.tooltip) return null
             val note = item.tooltip?.takeIf { it.isNotBlank() } ?: return null
-            val text = note.lines().joinToString("<br>") { XmlStringUtil.escapeString(it) }
-            return XmlStringUtil.wrapInHtml(text)
+            return UiStyle.Text.tipLines(note.lines())
         }
     }.apply {
         selectionMode = cfg.selection
@@ -117,6 +118,7 @@ internal class ActiveListView(
     private var restoring = false
     // Cursor for the row body; buttons override it on hover via [cursorAt].
     private var baseCursor: Cursor = Cursor.getDefaultCursor()
+    private var extent = -1
     // JBList's constructor calls updateUI() before the fields above exist, so guard the re-measure.
     private var wired = false
     internal var onSelect: (() -> Unit)? = null
@@ -224,6 +226,13 @@ internal class ActiveListView(
 
             override fun focusLost(e: FocusEvent) = list.repaint()
         })
+        list.addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) {
+                if (extent == list.width || !cfg.wrapDescription) return
+                extent = list.width
+                resetCellSizes()
+            }
+        })
         reorder?.let { installActiveListReorder(this, list, it) }
         ScrollingUtil.installActions(list)
         next(list)
@@ -268,6 +277,20 @@ internal class ActiveListView(
         heightKey = null
         renderer.setBodyHeight(null)
         sync()
+    }
+
+    @RequiresEdt
+    private fun resetCellSizes() {
+        checkEdt()
+        heightKey = null
+        renderer.setBodyHeight(null)
+        if (list.fixedCellHeight == -1) {
+            list.fixedCellHeight = 1
+            list.fixedCellHeight = -1
+        }
+        sync()
+        list.revalidate()
+        list.repaint()
     }
 
     @RequiresEdt

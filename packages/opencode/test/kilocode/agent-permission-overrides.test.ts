@@ -148,7 +148,6 @@ test("read-only agents keep guarded tools denied against colliding MCP server na
         agent: { type: "local", command: ["agent-mcp"] },
         notebook: { type: "local", command: ["notebook-mcp"] },
         repo: { type: "local", command: ["repo-mcp"] },
-        interactive: { type: "local", command: ["interactive-mcp"] },
       },
     },
   })
@@ -158,7 +157,7 @@ test("read-only agents keep guarded tools denied against colliding MCP server na
     fn: async () => {
       const ask = await load(tmp.path, (svc) => svc.get("ask"))
       const plan = await load(tmp.path, (svc) => svc.get("plan"))
-      for (const permission of ["agent_manager", "notebook_edit", "notebook_execute", "interactive_terminal"]) {
+      for (const permission of ["agent_manager", "notebook_edit", "notebook_execute"]) {
         expect(Permission.evaluate(permission, "start", ask!.permission).action).toBe("deny")
         expect(Permission.evaluate(permission, "start", plan!.permission).action).toBe("deny")
       }
@@ -365,7 +364,6 @@ test("read-only agents keep every mutating tool denied under a global allow", as
         "write",
         "agent_manager",
         "repo_clone",
-        "interactive_terminal",
       ]) {
         expect(Permission.evaluate(permission, "start", ask!.permission).action).toBe("deny")
         expect(Permission.evaluate(permission, "start", plan!.permission).action).toBe("deny")
@@ -426,7 +424,7 @@ test("plan carries guarded denies into delegated sessions under a global catch-a
       )
       // A subagent session is evaluated as merge(agent, session), so session rules win.
       const runtime = Permission.merge(explore!.permission, child)
-      for (const permission of ["agent_manager", "repo_clone", "write", "interactive_terminal", "bash", "edit"]) {
+      for (const permission of ["agent_manager", "repo_clone", "write", "bash", "edit"]) {
         expect(Permission.evaluate(permission, "*", runtime).action).toBe("deny")
       }
     },

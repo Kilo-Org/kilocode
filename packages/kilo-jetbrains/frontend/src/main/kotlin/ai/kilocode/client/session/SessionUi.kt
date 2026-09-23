@@ -17,6 +17,7 @@ import ai.kilocode.client.onboarding.OnboardingStep
 import ai.kilocode.client.onboarding.ui.OnboardingListCard
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -68,6 +69,7 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -247,6 +249,8 @@ class SessionUi(
     private var wasBusy = false
     private var refreshJob: Job? = null
     private var branchJob: Job? = null
+    private var boardJob: Job? = null
+    private var boardHasMessages = false
     private var disposed = false
 
     init {
@@ -303,6 +307,31 @@ class SessionUi(
     private val forkSurface: Boolean get() = manager?.supportsFork == true && !readonly
 
     override val forkable: Boolean get() = forkSurface && controller.id != null
+
+    /**
+     * Whether this session could own a board at all: enabled in config (Swarm is on unless config
+     * explicitly opts out, matching the CLI's `BoardEnabled.resolve`), created, writable, a root
+     * session rather than a subagent, and local rather than cloud — the CLI only serves a board to
+     * its owning top-level local session.
+     */
+    private val boardSurface: Boolean
+        get() {
+            if (readonly) return false
+            if (controller.id == null) return false
+            // Defensive: a still-unimported cloud ref already fails the id check above, because
+            // controller.id only resolves for a local ref. Once imported the session *is* local and
+            // legitimately owns a board, so this rejects only the pre-import window.
+            if (controller.refType == SessionRef.Type.CLOUD) return false
+            if (controller.model.session?.parentID != null) return false
+            return app.state.value.config?.shared_agent_board != false
+        }
+
+    /**
+     * Entry points only appear once the board actually has a message, matching VS Code. The board
+     * lives in the CLI and can be written by subagents whose posts never reach this transcript, so
+     * emptiness cannot be derived locally — [refreshBoard] probes for it.
+     */
+    override val board: Boolean get() = boardSurface && boardHasMessages
 
     @RequiresEdt
     override fun setAuto(value: Boolean) {
@@ -519,12 +548,23 @@ class SessionUi(
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
             banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
             onOpenSubagent = ::openSubagent,
+            onPromoteBackgroundAgent = if (readonly) null else BackgroundPromote(
+                available = { app.state.value.backgroundSubagents },
+                promote = controller::promoteBackgroundAgent,
+            ),
         ).also {
             it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this, readonly)
+        header = SessionHeaderPanel(
+            controller,
+            this,
+            readonly,
+            boardVisible = { board },
+            onShowBoard = ::showBoard,
+            onOpenSubagent = ::openSubagent,
+        )
         if (!readonly && showBranchDock()) {
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
@@ -742,6 +782,8 @@ class SessionUi(
                 is SessionControllerEvent.AppChanged -> {
                     if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
+                    // Config carries the Swarm toggle, so the entry points follow it without a restart.
+                    refreshBoard()
                 }
 
                 is SessionControllerEvent.WorkspaceChanged -> {
@@ -766,7 +808,12 @@ class SessionUi(
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
-                is SessionModelEvent.Cleared -> syncDock()
+                is SessionModelEvent.Cleared -> {
+                    syncDock()
+                    // Covers opening a session with an existing board, and this session's own first
+                    // board post; a subagent's post is caught by the busy->idle probe instead.
+                    refreshBoardIfEmpty()
+                }
 
                 is SessionModelEvent.QueueChanged -> Unit
 
@@ -780,6 +827,7 @@ class SessionUi(
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
             }
@@ -926,7 +974,7 @@ class SessionUi(
         // Only the prompt path uses editor context; gather after the command branches so slash
         // commands and client actions don't pay the editor-context cost or hit its failure modes.
         val editor = EditorContextGatherer.gather(project, workspace.directory)
-        val allFiles = files + listOfNotNull(editor.selection)
+        val allFiles = files + editor.selection
         LOG.debug {
             val parts = buildList {
                 text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
@@ -1071,8 +1119,41 @@ class SessionUi(
     }
 
     @RequiresEdt
+    override fun showBoard() {
+        openBoard()?.show()
+    }
+
+    /**
+     * Builds the board dialog and binds its lifetime, without showing it. Split from [showBoard] so
+     * the lifetime wiring is one statement both the caller and its test go through; showing a real
+     * window is the only part a test cannot exercise.
+     *
+     * Returns null when the board does not apply to this session.
+     */
+    @RequiresEdt
+    internal fun openBoard(): SessionBoardDialog? {
+        val session = controller.id ?: return null
+        if (!board) return null
+        val order = listOf("main") + controller.model.childSessions()
+        Telemetry.send("Swarm Board Opened", mapOf("sessionId" to session))
+        val dialog = SessionBoardDialog(this, project, session, title(), workspace.directory, order, sessions) { id, label ->
+            openSubagent(id, label ?: id)
+        }
+        // A non-modal dialog outlives show(), so bound it to this session: disposing the dialog's
+        // disposable calls DialogWrapper.dispose(), so closing the session tab closes the board too
+        // instead of leaving a window holding a disposed SessionUi and its coroutine scope.
+        Disposer.register(this, dialog.disposable)
+        // The board can be reset while the dialog is open, which must hide the entry points again,
+        // so re-probe when it closes. Skipped when the session itself is going away, since that path
+        // disposes the dialog too.
+        Disposer.register(dialog.disposable) { if (!disposed) refreshBoard() }
+        return dialog
+    }
+
+    @RequiresEdt
     private fun openSubagent(sessionId: String, title: String) {
-        service<SubagentTitleCache>().put(sessionId, title)
+        val color = AgentAvatarIdentity.palette(controller.model.childSessions())[sessionId]
+        service<SubagentTitleCache>().put(sessionId, title, color)
         ensureSubagentSessionEditorKind()
         project.service<KiloVfsManager>().open(
             SubagentSessionEditorKind.ID,
@@ -1174,6 +1255,57 @@ class SessionUi(
         }
     }
 
+    /**
+     * Probes whether this session's shared agent board holds anything, so the board entry points
+     * can hide on an empty board like VS Code's do. Asks for a single message because only the
+     * presence of one matters here.
+     *
+     * Not derivable from the transcript: a subagent's `board_post` is recorded in the subagent's own
+     * session, so the root transcript can stay empty while the board is not. Event-driven only —
+     * see the call sites — never polled.
+     */
+    @RequiresEdt
+    private fun refreshBoard() {
+        if (!boardSurface) {
+            setBoardHasMessages(false)
+            return
+        }
+        val session = controller.id ?: return
+        boardJob?.cancel()
+        boardJob = cs.launch {
+            val board = runCatching { sessions.sessionBoard(session, workspace.directory, before = null, limit = 1) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("session board probe failed session=$session", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                setBoardHasMessages(board.messages.isNotEmpty())
+            }
+        }
+    }
+
+    /**
+     * Probe only while the board is still believed empty. Message events fire many times per turn
+     * and the answer cannot change back to empty on its own, so re-probing once the icon already
+     * shows would be pure chatter.
+     */
+    @RequiresEdt
+    private fun refreshBoardIfEmpty() {
+        if (boardHasMessages) return
+        refreshBoard()
+    }
+
+    @RequiresEdt
+    private fun setBoardHasMessages(value: Boolean) {
+        if (boardHasMessages == value) return
+        boardHasMessages = value
+        // Re-runs the header sync so the icon's visibility follows the new value. The menu action
+        // reads `board` on demand and needs no notification.
+        if (::header.isInitialized) header.update(controller.model.header)
+    }
+
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
             LOG.info("kind=attachment-open skipped=true reason=blank-url message=$messageId part=${item.id} name=${attachmentName(item)} mime=${item.mime}")
@@ -1237,6 +1369,8 @@ class SessionUi(
         if (wasBusy && !busy) {
             refreshBranchChanges()
             refreshBranch()
+            // A turn that ran subagents may have added board messages this transcript never saw.
+            refreshBoard()
         }
         wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()

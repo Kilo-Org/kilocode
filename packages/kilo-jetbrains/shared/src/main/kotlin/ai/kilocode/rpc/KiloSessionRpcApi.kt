@@ -1,7 +1,9 @@
 package ai.kilocode.rpc
 
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -164,4 +166,31 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** List all pending question requests (caller filters by session). */
     suspend fun pendingQuestions(directory: String): List<QuestionRequestDto>
+
+    // ------ shared agent board ------
+
+    /**
+     * Load the shared agent board for root session [sessionID], paging backward from [before]
+     * (a cursor from a prior page) up to [limit] messages. Throws if [sessionID] is not the
+     * board's root session.
+     */
+    suspend fun sessionBoard(sessionID: String, directory: String, before: String?, limit: Int?): SessionBoardDto
+
+    /**
+     * Clear the shared agent board for root session [sessionID], guarded by [revision]. Returns
+     * null when the board changed since [revision] was read (HTTP 409); callers should reload
+     * instead of retrying blindly. Throws on any other failure.
+     */
+    suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto?
+
+    // ------ background subagents ------
+
+    /** Observe background subagent jobs owned by root session [id]. */
+    suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>>
+
+    /** Cancel one background subagent job and its child session tree. */
+    suspend fun cancelBackgroundJob(id: String, directory: String): Boolean
+
+    /** Continue one foreground subagent job in the background. Returns false when the CLI's background-subagent kill switch is off. */
+    suspend fun promoteBackgroundJob(id: String, directory: String): Boolean
 }

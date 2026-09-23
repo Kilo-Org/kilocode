@@ -6,9 +6,18 @@
  */
 
 import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+import { permissionSettled, respondToPermission } from "@kilocode/sdk/permission"
+import { retry } from "../../services/cli-backend/retry"
 import { isNotFoundError } from "./not-found"
 
 export type RecoverablePermission = PermissionRequest
+export type PermissionResponse = "once" | "always" | "reject"
+export type PermissionResponseResult =
+  | { kind: "resolved"; sessionID: string; response: PermissionResponse }
+  | { kind: "stale" }
+  | { kind: "error" }
+
+const CANCELLED = "permission reply cancelled"
 
 export interface PermissionContext {
   readonly client: KiloClient | null
@@ -18,21 +27,62 @@ export interface PermissionContext {
   readonly extraDirectories?: () => string[]
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
-  recordPermissionDirectory(requestID: string, directory: string): void
+  recordPermissionDirectory(requestID: string, directory: string, sessionID?: string): void
   getPermissionDirectory(requestID: string): string | undefined
+  getPermissionSession?(requestID: string): string | undefined
   clearPermissionDirectory(requestID: string): void
   getPermissionRevision(): number
   prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void
+  runPermissionResponse?: (
+    requestID: string,
+    sessionID: string,
+    action: () => Promise<PermissionResponseResult>,
+  ) => Promise<PermissionResponseResult>
+  isPermissionResponseClaimed?: (requestID: string) => boolean
+  clearPermissionResponse?: (requestID: string) => void
 }
 
 export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>, extra: string[] = []) {
   return [...new Set([workspace, ...dirs.values(), ...extra])]
 }
 
-export function recoverablePermissions(perms: RecoverablePermission[], tracked: Set<string>, seen: Set<string>) {
+/**
+ * Reply "once" to a permission request, retrying transient transport drops.
+ * A dropped pooled socket must not strand the request while the agent waits.
+ * When shouldContinue returns false the reply stops before the next attempt, so
+ * disabling auto-approve cancels an in-flight retry. Its message is not
+ * transient on purpose, so the retry helper stops instead of looping.
+ */
+export async function replyOnce(
+  client: KiloClient,
+  requestID: string,
+  directory: string,
+  shouldContinue?: () => boolean,
+): Promise<boolean> {
+  try {
+    await retry(() => {
+      if (shouldContinue && !shouldContinue()) throw new Error(CANCELLED)
+      return client.permission.reply({ requestID, directory, reply: "once" }, { throwOnError: true })
+    })
+    return true
+  } catch (error) {
+    if (!(error instanceof Error && error.message === CANCELLED)) {
+      console.error("[Kilo New] permission-handler: failed to reply once:", error)
+    }
+    return false
+  }
+}
+
+export function recoverablePermissions(
+  perms: RecoverablePermission[],
+  tracked: Set<string>,
+  seen: Set<string>,
+  claimed: (requestID: string) => boolean = () => false,
+) {
   return perms.filter((perm) => {
     if (seen.has(perm.id)) return false
     seen.add(perm.id)
+    if (claimed(perm.id)) return false
     return tracked.has(perm.sessionID)
   })
 }
@@ -45,68 +95,80 @@ export async function handlePermissionResponse(
   ctx: PermissionContext,
   permissionId: string,
   sessionID: string,
-  response: "once" | "always" | "reject",
+  response: PermissionResponse,
   approvedAlways: string[],
   deniedAlways: string[],
+  feedback?: string,
 ): Promise<void> {
-  if (!ctx.client) {
+  const client = ctx.client
+  if (!client) {
     ctx.postMessage({ type: "permissionError", permissionID: permissionId })
     return
   }
 
-  const target = sessionID || ctx.currentSessionId
-  if (!target) {
-    console.error("[Kilo New] KiloProvider: No sessionID for permission response")
+  const dir = ctx.getPermissionDirectory(permissionId)
+  const target = ctx.getPermissionSession?.(permissionId) ?? sessionID
+  const claimed = ctx.isPermissionResponseClaimed?.(permissionId) ?? false
+  if (!target || (!dir && !claimed) || (ctx.getPermissionSession?.(permissionId) && target !== sessionID)) {
+    console.error("[Kilo New] KiloProvider: Unknown permission route")
     ctx.postMessage({ type: "permissionError", permissionID: permissionId })
     return
   }
 
-  const dir = ctx.getPermissionDirectory(permissionId) ?? ctx.getWorkspaceDirectory(target)
+  const run =
+    ctx.runPermissionResponse ??
+    ((_requestID: string, _sessionID: string, action: () => Promise<PermissionResponseResult>) => action())
+  const action = async (): Promise<PermissionResponseResult> => {
+    if (!dir) return { kind: "error" }
 
-  const staleCleanup = () => {
-    ctx.clearPermissionDirectory(permissionId)
-    ctx.postMessage({ type: "permissionError", permissionID: permissionId, stale: true })
-    void fetchAndSendPendingPermissions(ctx)
-  }
-
-  if (approvedAlways.length > 0 || deniedAlways.length > 0) {
-    const saveResult = await ctx.client.permission
-      .saveAlwaysRules(
-        {
-          requestID: permissionId,
-          directory: dir,
-          approvedAlways,
-          deniedAlways,
-        },
-        { throwOnError: true },
-      )
-      .then(() => "ok" as const)
-      .catch((error: unknown) => {
-        if (isNotFoundError(error)) return "stale" as const
-        console.error("[Kilo New] KiloProvider: Failed to save always-rules:", error)
-        ctx.postMessage({ type: "permissionError", permissionID: permissionId })
-        return "error" as const
-      })
-    if (saveResult === "stale") {
-      staleCleanup()
-      return
-    }
-    if (saveResult === "error") return
-  }
-
-  const replyResult = await ctx.client.permission
-    .reply({ requestID: permissionId, reply: response, directory: dir, interactive: true }, { throwOnError: true })
-    .then(() => "ok" as const)
-    .catch((error: unknown) => {
-      if (isNotFoundError(error)) return "stale" as const
-      console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
-      ctx.postMessage({ type: "permissionError", permissionID: permissionId })
-      return "error" as const
+    const { error, saved } = await respondToPermission(client, {
+      requestID: permissionId,
+      directory: dir,
+      reply: response,
+      approvedAlways,
+      deniedAlways,
+      message: feedback,
     })
-  if (replyResult === "stale") staleCleanup()
-  if (replyResult !== "ok") return
-  ctx.clearPermissionDirectory(permissionId)
-  ctx.postMessage({ type: "permissionResolved", permissionID: permissionId, sessionID: target, response })
+    if (error) {
+      if (isNotFoundError(error)) {
+        ctx.clearPermissionDirectory(permissionId)
+        void fetchAndSendPendingPermissions(ctx)
+        return { kind: "stale" }
+      }
+      // An aborted rule save may still complete on the server. If the request
+      // is no longer pending it was applied, so report stale instead of
+      // letting the user retry with a decision that could conflict with it.
+      if (saved && (await permissionSettled(client, dir, permissionId))) {
+        ctx.clearPermissionDirectory(permissionId)
+        void fetchAndSendPendingPermissions(ctx)
+        return { kind: "stale" }
+      }
+      console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+      return { kind: "error" }
+    }
+    ctx.clearPermissionDirectory(permissionId)
+    return { kind: "resolved", sessionID: target, response }
+  }
+
+  const result = await run(permissionId, target, action).catch((error: unknown) => {
+    console.error("[Kilo New] KiloProvider: Failed to process permission response:", error)
+    return { kind: "error" } as const
+  })
+  if (result.kind === "error") {
+    ctx.clearPermissionResponse?.(permissionId)
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+    return
+  }
+  if (result.kind === "stale") {
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId, stale: true })
+    return
+  }
+  ctx.postMessage({
+    type: "permissionResolved",
+    permissionID: permissionId,
+    sessionID: result.sessionID,
+    response: result.response,
+  })
 }
 
 /**
@@ -116,7 +178,8 @@ export async function handlePermissionResponse(
  * recovered instead of leaving the server blocked indefinitely.
  */
 export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Promise<void> {
-  if (!ctx.client) return
+  const client = ctx.client
+  if (!client) return
   try {
     const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories, ctx.extraDirectories?.() ?? [])
 
@@ -126,18 +189,28 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
       const valid = new Set<string>()
       const pending: Array<{ perm: RecoverablePermission; dir: string }> = []
       for (const dir of dirs) {
-        const { data, error } = await ctx.client.permission.list({ directory: dir })
-        if (error) {
+        let data: RecoverablePermission[] | undefined
+        try {
+          data = await retry(() => client.permission.list({ directory: dir }, { throwOnError: true })).then(
+            (result) => result.data,
+          )
+        } catch (error) {
           console.error(`[Kilo New] KiloProvider: Failed to fetch pending permissions for ${dir}:`, error)
           continue
         }
         valid.add(dir)
         if (!data) continue
-        for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) pending.push({ perm, dir })
+        for (const perm of recoverablePermissions(
+          data,
+          ctx.trackedSessionIds,
+          seen,
+          (id) => ctx.isPermissionResponseClaimed?.(id) ?? false,
+        ))
+          pending.push({ perm, dir })
       }
       if (ctx.getPermissionRevision() !== revision) continue
       for (const { perm, dir } of pending) {
-        ctx.recordPermissionDirectory(perm.id, dir)
+        ctx.recordPermissionDirectory(perm.id, dir, perm.sessionID)
         ctx.postMessage({
           type: "permissionRequest",
           permission: {

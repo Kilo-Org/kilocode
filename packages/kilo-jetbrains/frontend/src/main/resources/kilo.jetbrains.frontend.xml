@@ -13,6 +13,7 @@
         <applicationService serviceImplementation="ai.kilocode.client.onboarding.KiloOnboardingService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
         <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
+        <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptTextPasteProvider"/>
 
         <notificationGroup id="Kilo Code"
                            displayType="BALLOON"
@@ -28,6 +29,7 @@
         <fileEditorProvider id="KiloVfsSourceEditor"
                             order="after KiloVfsEditor"
                             implementation="ai.kilocode.client.vfs.KiloSourceEditorProvider"/>
+        <fileIconProvider implementation="ai.kilocode.client.vfs.KiloFileIconProvider"/>
         <fileType name="KILO_WORKTREE_SESSION"
                   implementationClass="ai.kilocode.client.agentManager.worktree.WorktreeSessionFileType"
                   fieldName="INSTANCE"/>
@@ -58,10 +60,18 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.providers"
-                groupWeight="2"
+                groupWeight="3"
                 instance="ai.kilocode.client.settings.providers.ProvidersConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.providers.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.marketplace"
+                groupWeight="2"
+                instance="ai.kilocode.client.settings.marketplace.MarketplaceConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.marketplace.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
@@ -189,6 +199,12 @@
                 class="ai.kilocode.client.actions.OpenSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
 
+        <action id="Kilo.OpenUserProfileSettings"
+                class="ai.kilocode.client.actions.OpenUserProfileSettingsAction"/>
+
+        <action id="Kilo.OpenMarketplaceSettings"
+                class="ai.kilocode.client.actions.OpenMarketplaceSettingsAction"/>
+
         <action id="Kilo.OpenLocalConfig"
                 class="ai.kilocode.client.actions.OpenLocalConfigAction"/>
 
@@ -217,6 +233,9 @@
 
         <group id="Kilo.SettingsGroup">
             <reference ref="Kilo.OpenSettings"/>
+            <separator/>
+            <reference ref="Kilo.OpenUserProfileSettings"/>
+            <reference ref="Kilo.OpenMarketplaceSettings"/>
             <separator/>
             <reference ref="Kilo.OpenConfigGroup"/>
             <separator/>
@@ -392,12 +411,13 @@
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
-            <reference ref="Kilo.Worktree.CopyPrRef"/>
+            <separator/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
             <reference ref="Kilo.Worktree.OpenLocalDiff"/>
             <separator/>
             <reference ref="Kilo.Worktree.CopyBranchName"/>
             <reference ref="Kilo.Worktree.CopyBranchPath"/>
+            <reference ref="Kilo.Worktree.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>
@@ -426,6 +446,9 @@
 
         <action id="Kilo.Session.Fork"
                 class="ai.kilocode.client.actions.ForkSessionAction"/>
+
+        <action id="Kilo.Session.Board"
+                class="ai.kilocode.client.actions.ShowSessionBoardAction"/>
 
         <action id="Kilo.Session.CompareToBase"
                 class="ai.kilocode.client.actions.CompareToBaseAction"/>
@@ -456,16 +479,18 @@
             <reference ref="Kilo.Session.AutoApprove"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
+            <reference ref="Kilo.Session.Board"/>
             <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
+            <reference ref="Kilo.OpenSettings"/>
+            <separator/>
             <reference ref="$Copy"/>
             <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.CopyShareLink"/>
-            <separator/>
             <reference ref="Kilo.Session.Share"/>
             <separator/>
             <reference ref="Kilo.StopSession"/>
@@ -479,14 +504,16 @@
             <reference ref="Kilo.Session.AutoApprove"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
+            <reference ref="Kilo.Session.Board"/>
             <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
+            <reference ref="Kilo.OpenSettings"/>
+            <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.CopyShareLink"/>
-            <separator/>
             <reference ref="Kilo.Session.Share"/>
         </group>
     </actions>

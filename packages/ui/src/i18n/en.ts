@@ -170,6 +170,10 @@ export const dict: Record<string, string> = {
   "ui.mermaid.copyPng": "Copy PNG",
   "ui.mermaid.downloadSvg": "Download SVG",
   "ui.mermaid.downloadPng": "Download PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Zoom in",
+  "ui.mermaid.zoomOut": "Zoom out",
+  "ui.mermaid.zoomReset": "Reset zoom",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollable content",
 

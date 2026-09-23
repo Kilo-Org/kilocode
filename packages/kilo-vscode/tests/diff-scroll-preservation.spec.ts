@@ -77,14 +77,12 @@ for (const width of [420, 200]) {
     await header.scrollIntoViewIfNeeded()
     await header.focus()
     const original = await header.evaluateHandle((el) => el)
-    const title = await header.locator(".am-pr-comment-preview").textContent()
     const position = await header.evaluate((el) => ({
       x: el.getBoundingClientRect().x,
       y: el.getBoundingClientRect().y,
     }))
 
     async function stable() {
-      await expect(header.locator(".am-pr-comment-preview")).toHaveText(title!)
       await expect(card).toHaveCount(1)
       await expect(header).toHaveCount(1)
       await expect(header).toBeFocused()
@@ -95,6 +93,7 @@ for (const width of [420, 200]) {
 
     async function inline() {
       await expect(header).toHaveAttribute("aria-expanded", "true")
+      await expect(header.locator(".am-pr-comment-preview")).toHaveCount(0)
       await expect(diff.locator(".am-pr-diff-context-marker + [data-component='diff']")).toHaveCount(0)
       await expect(annotation.locator(".am-pr-comment-head")).toHaveCount(0)
       await expect(annotation.locator(".am-pr-comment-body").first()).toContainText("This throws when")
@@ -142,6 +141,7 @@ for (const width of [420, 200]) {
       await expect(diff).toHaveCount(0)
       await expect(card.locator(".am-pr-comment-body")).toHaveCount(0)
       await expect(header).toHaveAttribute("aria-expanded", "false")
+      await expect(header.locator(".am-pr-comment-preview")).toContainText("This throws when")
       await stable()
       if (input === "click") await header.click()
       if (input !== "click") await page.keyboard.press(input)
@@ -198,18 +198,18 @@ test("preserves scroll while adding and editing a review comment", async ({ page
   const line = target.locator('[data-line="1"]').last()
   await line.hover()
   await target.locator("[data-utility-button]").last().click()
-  await expect(target.locator(".am-annotation-textarea")).toBeVisible()
-  await target.locator(".am-annotation-textarea").fill("Keep this stable")
+  await expect(target.locator(".am-annotation-draft textarea")).toBeVisible()
+  await target.locator(".am-annotation-draft textarea").fill("Keep this stable")
   const top = await target.evaluate((el) => el.getBoundingClientRect().top)
   const before = await scroller.evaluate((el) => el.scrollTop)
 
   await page.getByRole("button", { name: "Apply agent edit" }).click()
   await expect(page.getByTestId("agent-edit-version")).toHaveText("after")
-  await expect(target.locator(".am-annotation-textarea")).toHaveValue("Keep this stable")
+  await expect(target.locator(".am-annotation-draft textarea")).toHaveValue("Keep this stable")
   await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeCloseTo(before, 0)
   await expect.poll(async () => target.evaluate((el) => el.getBoundingClientRect().top)).toBeCloseTo(top, 0)
 
-  await target.getByRole("button", { name: "Comment" }).click()
+  await target.locator('[data-action="save"]').click()
   await expect(target.getByText("Keep this stable")).toBeVisible()
   const saved = await scroller.evaluate((el) => el.scrollTop)
 
@@ -229,15 +229,15 @@ for (const modifier of ["Meta", "Control"] as const) {
     for (const text of ["First comment", "Second comment"]) {
       await target.locator('[data-line="1"]').last().hover()
       await target.locator("[data-utility-button]").last().click()
-      await target.locator(".am-annotation-textarea").fill(text)
+      await target.locator(".am-annotation-draft textarea").fill(text)
       if (text === "First comment") {
-        await target.getByRole("button", { name: "Comment", exact: true }).click()
+        await target.locator('[data-action="save"]').click()
         await expect(target.getByText(text, { exact: true })).toBeVisible()
       }
     }
 
     await page.keyboard.press("Shift+Enter")
-    await expect(target.locator(".am-annotation-textarea")).toHaveValue("Second comment\n")
+    await expect(target.locator(".am-annotation-draft textarea")).toHaveValue("Second comment\n")
 
     const result = await page.evaluate((modifier) => {
       const sent: Array<{ comments: Array<{ comment: string }>; autoSend: boolean }> = []
@@ -364,6 +364,71 @@ test("keeps the inline diff position stable while scrolling upward", async ({ pa
     observer.disconnect()
     return { correction, range, remounts }
   })
+
+  expect(result.remounts).toBeGreaterThan(0)
+  expect(result.correction).toBeLessThanOrEqual(1)
+  expect(result.range).toBeLessThanOrEqual(1)
+})
+
+test("keeps the inline diff position stable when the row width changes", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 760 })
+  await page.goto(inlineStoryUrl(), { waitUntil: "load" })
+  await disableAnimations(page)
+  await page.waitForSelector(".am-diff-content diffs-container", { state: "attached" })
+
+  const scroll = page.locator(".am-diff-content")
+  // Materialize every row at the wider layout so each row records its height.
+  const mounted = await scroll.evaluate(async (el) => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+    const initial = Array.from(el.querySelectorAll("[data-file-path]"), (row) => row.getAttribute("data-file-path"))
+    while (el.scrollTop < el.scrollHeight - el.clientHeight - 1) {
+      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
+      await frame()
+    }
+    for (let index = 0; index < 30; index++) await frame()
+    return initial
+  })
+
+  // A width change (panel resize or scrollbar toggle) leaves the measured
+  // heights on a different width, so a remounted row must reuse the last
+  // measured height instead of collapsing to the capped estimate.
+  await page.setViewportSize({ width: 880, height: 760 })
+
+  const result = await scroll.evaluate(async (el, initial) => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+    const settle = async (count: number) => {
+      for (let index = 0; index < count; index++) await frame()
+    }
+    const seen = new Set(initial)
+    let remounts = 0
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue
+          const rows = node.matches("[data-file-path]") ? [node] : Array.from(node.querySelectorAll("[data-file-path]"))
+          for (const row of rows) {
+            const file = row.getAttribute("data-file-path")
+            if (seen.has(file)) remounts++
+            seen.add(file)
+          }
+        }
+      }
+    })
+    observer.observe(el, { childList: true, subtree: true })
+
+    let correction = 0
+    let range = 0
+    while (el.scrollTop > 0) {
+      const height = el.scrollHeight
+      const intended = Math.max(0, el.scrollTop - 80)
+      el.scrollTop = intended
+      await settle(2)
+      correction = Math.max(correction, Math.abs(el.scrollTop - intended))
+      range = Math.max(range, Math.abs(el.scrollHeight - height))
+    }
+    observer.disconnect()
+    return { correction, range, remounts }
+  }, mounted)
 
   expect(result.remounts).toBeGreaterThan(0)
   expect(result.correction).toBeLessThanOrEqual(1)

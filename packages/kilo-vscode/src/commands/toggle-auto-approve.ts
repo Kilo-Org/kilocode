@@ -1,5 +1,7 @@
 import * as vscode from "vscode"
 import type { Event, KiloClient } from "@kilocode/sdk/v2/client"
+import { replyOnce } from "../kilo-provider/handlers/permission-handler"
+import { retry } from "../services/cli-backend/retry"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 
 /**
@@ -63,22 +65,18 @@ export function registerToggleAutoApprove(
       return active
     }
 
-    vscode.window.showInformationMessage("Auto-approve enabled")
+    vscode.window.showInformationMessage("Auto-approve enabled. Sandbox escalation prompts are excluded.")
     // Drain any already-pending permission requests across all tracked directories
     const client = tryGetClient(connectionService)
     if (!client) return active
     for (const dir of directories()) {
       if (generation !== snapshot) break
       try {
-        const { data: pending } = await client.permission.list({ directory: dir }, { throwOnError: true })
+        const { data: pending } = await retry(() => client.permission.list({ directory: dir }, { throwOnError: true }))
         for (const req of pending) {
           if (generation !== snapshot) break
           if (req.metadata?.["sandboxEscalation"] === true) continue
-          await client.permission
-            .reply({ requestID: req.id, directory: dir, reply: "once" }, { throwOnError: true })
-            .catch((err) => {
-              console.error("[Kilo New] toggleAutoApprove: failed to drain pending:", err)
-            })
+          await replyOnce(client, req.id, dir, () => generation === snapshot)
         }
       } catch (err) {
         console.error("[Kilo New] toggleAutoApprove: failed to list pending permissions:", err)
@@ -95,15 +93,7 @@ export function registerToggleAutoApprove(
     if (event.properties.metadata?.["sandboxEscalation"] === true) return false
     const dir =
       directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
-    return client.permission
-      .reply({ requestID: event.properties.id, directory: dir, reply: "once" }, { throwOnError: true })
-      .then(
-        () => true,
-        (err) => {
-          console.error("[Kilo New] toggleAutoApprove: failed to auto-reply:", err)
-          return false
-        },
-      )
+    return replyOnce(client, event.properties.id, dir)
   }
 
   context.subscriptions.push(

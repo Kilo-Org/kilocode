@@ -172,7 +172,7 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
             : undefined
           yield* input.ctx.ask({
             permission: input.entry.key,
-            metadata: {},
+            metadata: { mcpInput: input.args }, // kilocode_change - expose MCP arguments in the permission prompt
             patterns: ["*"],
             always: ["*"],
             ...(security ? { security } : {}),

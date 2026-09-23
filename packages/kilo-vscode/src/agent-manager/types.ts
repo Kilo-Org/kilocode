@@ -14,6 +14,7 @@ import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
+import type { OrphanDirectory, WorktreeHealth } from "./worktree-reconcile"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
@@ -59,9 +60,18 @@ import type {
   PRComment,
   ReviewerState,
   PRReviewer,
+  PRStatus,
   PRConversationComment,
+  PRCommitItem,
+  PREventItem,
+  PREventKind,
+  PRTimelineItem,
   PRReaction,
   PRReactionContent,
+  PRMergeMethod,
+  PRMergeability,
+  PRMergeState,
+  PRMergeStatus,
 } from "../../webview-ui/agent-manager/pr/pr-types"
 
 export type {
@@ -74,39 +84,18 @@ export type {
   PRComment,
   ReviewerState,
   PRReviewer,
+  PRStatus,
   PRConversationComment,
+  PRCommitItem,
+  PREventItem,
+  PREventKind,
+  PRTimelineItem,
   PRReaction,
   PRReactionContent,
-}
-
-export interface PRStatus {
-  number: number
-  baseRefOid?: string
-  headRefOid?: string
-  title: string
-  body?: string
-  url: string
-  state: PRState
-  review: ReviewDecision | null
-  checks: {
-    status: AggregateCheckStatus
-    total: number
-    passed: number
-    failed: number
-    pending: number
-    checks: PRCheck[]
-  }
-  reviewers: PRReviewer[]
-  unresolvedThreads?: number
-  comments?: {
-    total: number
-    unresolved: number
-    comments: PRComment[]
-  }
-  conversation?: PRConversationComment[]
-  additions: number
-  deletions: number
-  files: number
+  PRMergeMethod,
+  PRMergeability,
+  PRMergeState,
+  PRMergeStatus,
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +145,12 @@ interface StateMessage {
   sessions: ManagedSession[]
   sections?: Section[]
   staleWorktreeIds?: string[]
+  /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
+  worktreeHealth?: Record<string, WorktreeHealth>
+  /** Directories under `.kilo/worktrees/` that no worktree claims. Never removed automatically. */
+  orphanDirectories?: OrphanDirectory[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -174,6 +168,7 @@ interface StateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   browserAutomation?: boolean
+  restricted?: boolean
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -187,6 +182,13 @@ interface ProjectsMessage {
 interface SelectionActivatedMessage {
   type: "agentManager.selectionActivated"
   target: SidebarTarget
+}
+
+/** Default (or picked) parent folder for the new-project dialog. */
+interface ProjectParentMessage {
+  type: "agentManager.projectParent"
+  /** Omitted when the user cancelled the native folder picker. */
+  parent?: string
 }
 
 interface ProjectSessionsMessage {
@@ -315,6 +317,9 @@ interface SendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -511,6 +516,7 @@ interface RunStatusMessage extends RunStatus {
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeDeletedMessage
+  | import("../shared/pr-comment-actions").PRCommentResult
   | WorktreeActivityMessage
   | WorktreeStatsMessage
   | LocalStatsMessage
@@ -518,6 +524,7 @@ export type AgentManagerOutMessage =
   | StateMessage
   | ProjectsMessage
   | SelectionActivatedMessage
+  | ProjectParentMessage
   | ProjectSessionsMessage
   | ErrorOutMessage
   | SessionAddedMessage
@@ -577,6 +584,31 @@ interface AddProjectIn {
   type: "agentManager.addProject"
 }
 
+/** Create a local project in the given parent folder. */
+interface CreateProjectIn {
+  type: "agentManager.createProject"
+  parent: string
+  name: string
+}
+
+/** Clone a repository into the given parent folder. */
+interface CloneProjectIn {
+  type: "agentManager.cloneProject"
+  url: string
+  parent: string
+}
+
+/** Request the default parent folder for a new project. */
+interface RequestProjectParentIn {
+  type: "agentManager.requestProjectParent"
+}
+
+/** Pick a parent folder through the native folder picker. */
+interface PickProjectParentIn {
+  type: "agentManager.pickProjectParent"
+  defaultPath?: string
+}
+
 /** Remove a project from the catalog. Never deletes repository data. */
 interface RemoveProjectIn {
   type: "agentManager.removeProject"
@@ -620,6 +652,29 @@ interface RemoveStaleWorktreeIn {
   type: "agentManager.removeStaleWorktree"
   projectId?: string
   worktreeId: string
+  /** Move the worktree's sessions to Local instead of dropping them with the row. */
+  keepSessions?: boolean
+}
+
+/** Re-create a worktree directory that was deleted outside Agent Manager, from its branch. */
+interface RestoreWorktreeIn {
+  type: "agentManager.restoreWorktree"
+  projectId?: string
+  worktreeId: string
+}
+
+/** Delete directories under `.kilo/worktrees/` that no worktree claims. */
+interface CleanOrphanDirectoriesIn {
+  type: "agentManager.cleanOrphanDirectories"
+  projectId?: string
+  paths: string[]
+}
+
+/** Reveal an orphaned directory in the OS file manager. */
+interface RevealPathIn {
+  type: "agentManager.revealPath"
+  projectId?: string
+  path: string
 }
 
 interface PromoteSessionIn {
@@ -724,6 +779,9 @@ interface CreateMultiVersionIn {
   type: "agentManager.createMultiVersion"
   projectId?: string
   text?: string
+  /** Server command to execute as the first prompt instead of `text`. */
+  command?: string
+  arguments?: string
   name?: string
   versions?: number
   providerID?: string
@@ -764,6 +822,12 @@ interface SetTabOrderIn {
   type: "agentManager.setTabOrder"
   key: string
   order: string[]
+}
+
+interface SetPinnedTabsIn {
+  type: "agentManager.setPinnedTabs"
+  key: string
+  ids: string[]
 }
 
 interface SetWorktreeOrderIn {
@@ -932,6 +996,7 @@ interface GenericOpenFileIn {
   filePath: string
   line?: number
   column?: number
+  sessionID?: string
 }
 
 interface PreviewImageIn {
@@ -984,6 +1049,7 @@ interface SendMessageIn {
 
 interface SendCommandIn {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string
@@ -1174,10 +1240,15 @@ interface BrowserRequestIn {
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
+  | import("../shared/pr-comment-actions").PRCommentRequest
   | import("../../webview-ui/src/types/messages/agent-manager").BaseUpdateRequest
   | CreateWorktreeIn
   | RequestProjectsIn
   | AddProjectIn
+  | CreateProjectIn
+  | CloneProjectIn
+  | RequestProjectParentIn
+  | PickProjectParentIn
   | RemoveProjectIn
   | SelectProjectIn
   | ActivateSelectionIn
@@ -1185,6 +1256,9 @@ export type AgentManagerInMessage =
   | SetProjectExpandedIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
+  | RestoreWorktreeIn
+  | CleanOrphanDirectoriesIn
+  | RevealPathIn
   | PromoteSessionIn
   | OpenLocallyIn
   | OpenSessionLocallyIn
@@ -1210,6 +1284,7 @@ export type AgentManagerInMessage =
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
+  | SetPinnedTabsIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetSidebarCollapsedIn

@@ -60,11 +60,11 @@ class AppWatchingTest : SessionControllerTestBase() {
         assertTrue(events.any { it is SessionControllerEvent.ConnectionChanged.ShowConnecting })
     }
 
-    fun `test retry connection uses app retry when app has warnings`() {
+    fun `test retry connection reloads workspace when workspace has warnings`() {
         val m = controller()
         val events = collect(m)
-        appRpc.state.value = KiloAppStateDto(
-            status = KiloAppStatusDto.READY,
+        appRpc.state.value = KiloAppStateDto(status = KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady(
             warnings = listOf(ConfigWarningDto(path = ".kilo/kilo.json", message = "Invalid JSON")),
         )
 
@@ -73,8 +73,8 @@ class AppWatchingTest : SessionControllerTestBase() {
         edt { m.retryConnection() }
         flush()
 
-        assertEquals(1, appRpc.retries)
-        assertEquals(0, projectRpc.reloads)
+        assertEquals(0, appRpc.retries)
+        assertEquals(1, projectRpc.reloads)
         assertTrue(events.any { it is SessionControllerEvent.ConnectionChanged.ShowConnecting })
     }
 
