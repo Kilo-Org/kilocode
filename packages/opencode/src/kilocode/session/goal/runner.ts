@@ -5,6 +5,7 @@ import type { EventV2 } from "@opencode-ai/core/event"
 import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { Command } from "@/command"
 import { EffectBridge } from "@/effect/bridge"
+import { InstanceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Permission } from "@/permission"
@@ -17,6 +18,7 @@ import { MessageID, PartID, SessionID } from "@/session/schema"
 import { Suggestion } from "@/kilocode/suggestion"
 import { KiloSessionControl } from "../control"
 import { GoalState } from "./state"
+import { GoalLink } from "./link"
 import { GoalPolicy } from "./policy"
 import { GoalInstructions } from "./instructions"
 import { SessionDrain } from "../drain"
@@ -31,6 +33,7 @@ export namespace Goal {
     action: Action
     objective?: string
     snapshotInitialization?: "wait"
+    note?: string
   }
   export type ArmResult = { text: string }
   export type Ops = { arm: (input: ArmInput) => Effect.Effect<ArmResult, Error> }
@@ -61,6 +64,18 @@ export namespace Goal {
     if (["question", "suggest", "todowrite", "board_post", "board_read", "goal_report"].includes(part.tool))
       return "none"
     if (part.tool === "task" && meta?.background === true) return "none"
+    // A scheduling call that arms a timer is a wait the goal suspends on; the
+    // calls that only inspect or cancel a wait are bookkeeping, not progress.
+    if (GoalLink.bookkeeping(part.tool)) return "none"
+    if (part.tool === "schedule_wakeup" || part.tool === "cron_create") return GoalLink.waitFor(part) ? "wait" : "none"
+    if (part.tool === "background_process") {
+      if (GoalLink.waitFor(part)) return "wait"
+      // A start or monitor that already reached a terminal status is done work;
+      // list, status, logs, stop and restart are bookkeeping.
+      const call = part.state.input?.action
+      if (call === "start" || call === "monitor") return "success"
+      return "none"
+    }
     return "success"
   }
 
@@ -81,6 +96,7 @@ export namespace Goal {
     let errored = false
     let open = true
     let report: GoalPolicy.Report | undefined
+    let wait: GoalLink.Wait | undefined
     const owner: GoalPolicy.Owner = {
       root: id,
       report: (message, value) => {
@@ -151,6 +167,17 @@ export namespace Goal {
       call.settled = true
       if (result === "failed") failure = ++sequence
       if (result === "success") success = Math.max(success, call.start)
+      // A wait is never progress, but it is the last thing to happen in the
+      // turn: the loop suspends on it instead of counting it or settling.
+      // Record it immediately so a fire during this turn can claim it (D3)
+      // even before waiting metadata is written at suspend.
+      if (result === "wait") {
+        const next = GoalLink.waitFor(part)
+        if (next) {
+          wait = next
+          GoalLink.set(id, next)
+        }
+      }
     }
 
     return {
@@ -171,6 +198,7 @@ export namespace Goal {
       blocked: () => blocked,
       failed: () => errored || failure > success,
       report: () => report,
+      waiting: () => wait,
     }
   }
 
@@ -214,7 +242,12 @@ export namespace Goal {
       }
 
       const pause = Effect.fn("Goal.pause")(function* (id: SessionID, preserve = false) {
-        if (!GoalState.pause(id, preserve)) return
+        yield* ensure()
+        // A waiting goal holds no run token but must still settle to paused and
+        // release its timers, so read the hold before dropping it.
+        const held = GoalState.hold(id)
+        GoalState.pause(id, preserve)
+        if (!held) return
         yield* commit(
           id,
           Effect.gen(function* () {
@@ -223,8 +256,20 @@ export namespace Goal {
             if (!goal) return
             yield* sessions.setMetadata({
               sessionID: id,
-              metadata: { ...session.metadata, "kilo.goal": { ...goal, status: "paused", active: false } },
+              metadata: {
+                ...session.metadata,
+                "kilo.goal": {
+                  text: goal.text,
+                  status: "paused",
+                  active: false,
+                  ...(goal.reason ? { reason: goal.reason } : {}),
+                },
+              },
             })
+            // Clear the wait record before cancelling: the wakeup side's cancel
+            // notification must not re-resume the goal this teardown ends.
+            GoalLink.clear(id)
+            yield* GoalLink.cleanup(id)
           }),
         )
       })
@@ -248,6 +293,7 @@ export namespace Goal {
         agent: string
         model: RunModel
         snapshotInitialization?: "wait"
+        note?: string
         current: () => boolean
         ticket: KiloSessionControl.Ticket
         cancelled: Effect.Effect<never>
@@ -258,6 +304,9 @@ export namespace Goal {
           current: () => input.current() && input.ticket.current(),
           running: () => input.current() && input.ticket.running(),
         }
+        // A recurring task keeps firing after it resumed the goal, so the goal
+        // re-suspends on it at the end of each resumed turn.
+        const resumeWait = GoalState.read((yield* sessions.get(input.id).pipe(Effect.orDie)).metadata)?.wait
         const settle = (status: GoalState.Status, reason: string) =>
           commit(
             input.id,
@@ -272,15 +321,67 @@ export namespace Goal {
                   "kilo.goal": { text: input.text, status, active: status === "active", reason },
                 },
               })
+              // Clear the wait record before cancelling so the wakeup side's
+              // cancel notification cannot re-resume the goal being torn down.
+              GoalLink.clear(input.id)
+              yield* GoalLink.cleanup(input.id)
             }),
           )
+        const suspend = (id: SessionID, text: string, wait: GoalLink.Wait) =>
+          commit(
+            id,
+            Effect.gen(function* () {
+              const session = yield* sessions.get(id).pipe(Effect.orDie)
+              if (!guard.running()) return
+              // Publish the wait before dropping the run token so a fire that
+              // arrives during this write can still claim it (D3).
+              GoalLink.set(id, wait)
+              // Drop the run token before writing: the session metadata mapper
+              // projects a goal with a live run token to "active", so only a
+              // token-less goal keeps the persisted "waiting" status.
+              GoalState.pause(id, true)
+              const reason =
+                "Waiting for " +
+                wait.kind +
+                " " +
+                wait.id +
+                (wait.dueAt ? " until " + new Date(wait.dueAt).toISOString() : "")
+              yield* sessions.setMetadata({
+                sessionID: id,
+                metadata: {
+                  ...session.metadata,
+                  "kilo.goal": { text, status: "waiting", active: false, reason, wait },
+                },
+              })
+              // Hold the goal so the question gate stays closed while it waits.
+              GoalState.markWaiting(id)
+              // A process wait outlives the loop fiber, so watch it in the
+              // instance scope and resume the goal when the process is gone.
+              // The watch stops once this wait is cleared or replaced, so a
+              // paused, cleared or replaced goal never restarts itself.
+              if (wait.kind === "process") {
+                const superseded = Effect.gen(function* () {
+                  while (GoalLink.get(id)?.id === wait.id) yield* Effect.sleep("250 millis")
+                })
+                yield* GoalLink.processWatch(id, wait).pipe(Effect.raceFirst(superseded), Effect.forkIn(scope))
+              }
+            }),
+          )
+        type Step = { run: boolean; note?: string }
+        // The fired note a resumed or pending fire left for the next goal turn.
+        let note = input.note
+        const queued = () => {
+          const list = GoalLink.takePending(input.id)
+          if (!list.length) return undefined
+          return { run: true as const, note: list.map((entry) => entry.note).join("\n\n") }
+        }
         yield* Effect.gen(function* () {
           while (input.current() && input.ticket.running()) {
             yield* drain.wait(input.id).pipe(Effect.raceFirst(input.cancelled))
             const session = yield* sessions.get(input.id).pipe(Effect.orDie)
             if (!input.current() || !input.ticket.running() || session.time.archived || session.revert) break
             const messageID = MessageID.ascending()
-            const next = yield* Effect.gen(function* () {
+            const step: Step = yield* Effect.gen(function* () {
               const cycle = yield* Effect.acquireRelease(
                 Effect.sync(() => outcome(input.id, messageID, guard.running)),
                 (cycle) => Effect.sync(cycle.dispose),
@@ -306,7 +407,7 @@ export namespace Goal {
                       {
                         type: "text",
                         synthetic: true,
-                        text: GoalInstructions.prompt(input.text),
+                        text: GoalInstructions.prompt(input.text) + (note ? "\n\n" + note : ""),
                       },
                     ],
                   },
@@ -324,20 +425,54 @@ export namespace Goal {
                   "blocked",
                   "A request was rejected or execution was blocked. Resolve the blocker before resuming.",
                 )
-                return false
+                return { run: false }
               }
               if (cycle.failed() || result.info.role !== "assistant" || result.info.error) {
                 yield* settle("paused", "Work failed. Review the conversation before resuming.")
-                return false
+                return { run: false }
               }
-              if (preempted) return true
+              if (preempted) return { run: true }
+              // A fire that reached this in-flight turn is carried into the
+              // next cycle instead of starting a second run or being dropped
+              // by a same-turn complete report (D3).
+              const fire = queued()
+              if (fire) return fire
               const report = cycle.report()
               if (report && result.info.finish === "stop") {
+                const late = queued()
+                if (late) return late
                 yield* settle(
                   report.status,
                   `Reported by the working model, not independently verified: ${report.reason}`,
                 )
-                return false
+                return { run: false }
+              }
+              // A turn that armed a timer is not progress: suspend on it and
+              // run no further goal turn until it fires.
+              const wait = cycle.waiting()
+              if (wait) {
+                const late = queued()
+                if (late) return late
+                yield* suspend(input.id, input.text, wait)
+                const extra = queued()
+                if (extra) {
+                  yield* GoalLink.arm(input.id, { sessionID: input.id, action: "resume", note: extra.note })
+                  return { run: false }
+                }
+                return { run: false }
+              }
+              // A recurring task survives the resume it caused, so the goal
+              // waits for its next fire too.
+              if (resumeWait?.recurring) {
+                const late = queued()
+                if (late) return late
+                yield* suspend(input.id, input.text, resumeWait)
+                const extra = queued()
+                if (extra) {
+                  yield* GoalLink.arm(input.id, { sessionID: input.id, action: "resume", note: extra.note })
+                  return { run: false }
+                }
+                return { run: false }
               }
               const next = cycle.completed(result)
               if (!next)
@@ -345,9 +480,13 @@ export namespace Goal {
                   "paused",
                   "No successful action or explicit completion report. Review the conversation before resuming.",
                 )
-              return next
+              return { run: next }
             }).pipe(Effect.scoped)
-            if (!next) break
+            if (!step.run) break
+            if (step.note) {
+              note = step.note
+              continue
+            }
             yield* Effect.sleep("5 seconds").pipe(Effect.raceFirst(input.cancelled))
           }
         }).pipe(
@@ -368,6 +507,7 @@ export namespace Goal {
       })
 
       const command = Effect.fn("Goal.command")(function* (input: CommandInput) {
+        yield* ensure()
         const id = input.sessionID
         const args = input.arguments.trim()
         // The composer uses a delimiter so objectives can also be control words.
@@ -434,7 +574,13 @@ export namespace Goal {
           if (intent && !intent.current()) return yield* Effect.interrupt
           const ticket = starting ? yield* ops.control.begin(id, true, prior) : prior
           if (!ticket.current() || (intent && !intent.current())) return yield* Effect.interrupt
+          // A held goal (active or waiting) is the one a new objective replaces,
+          // and its timers must go with it.
+          const wasHeld = GoalState.hold(id)
           const current = starting ? GoalState.start(id, end) : undefined
+          if (starting && args !== "resume" && text && GoalInstructions.timed(text)) GoalState.curb(id)
+          // The wakeup side resumes this goal through the registered handler.
+          if (starting) GoalLink.registerArm(id, (next) => arm({ sessionID: id, action: next.action, note: next.note }))
           const valid = () => ticket.current() && (!intent || intent.current()) && (!current || current())
           let started = false
           const work = Effect.gen(function* () {
@@ -445,7 +591,23 @@ export namespace Goal {
                   const fresh = yield* sessions.get(id).pipe(Effect.orDie)
                   if (!valid()) return yield* Effect.interrupt
                   const metadata = { ...fresh.metadata }
-                  if (starting) metadata["kilo.goal"] = { text, status: "active", active: true }
+                  if (starting) {
+                    // Only a resume keeps the wait a recurring task needs; a new
+                    // objective must not inherit the replaced goal's timer.
+                    const resumeWait = args === "resume" ? GoalState.read(fresh.metadata)?.wait : undefined
+                    if (wasHeld && !resumeWait) {
+                      // The replaced goal's timers go with it, so its fire cannot
+                      // resume a goal it no longer belongs to.
+                      GoalLink.clear(id)
+                      yield* GoalLink.cleanup(id)
+                    }
+                    metadata["kilo.goal"] = {
+                      text,
+                      status: "active",
+                      active: true,
+                      ...(resumeWait ? { wait: resumeWait } : {}),
+                    }
+                  }
                   if (args === "clear") delete metadata["kilo.goal"]
                   return yield* sessions.setMetadata({ sessionID: id, metadata })
                 }),
@@ -454,10 +616,10 @@ export namespace Goal {
             const notice = !args
               ? `${text ? `Goal ${saved?.status}: ${text}\n${saved?.reason ?? ""}\n` : ""}${GoalInstructions.help}`
               : args === "clear"
-                ? "Goal cleared."
+                ? "Goal cleared. Cancelled the armed wakeups and cron tasks."
                 : starting
                   ? "Goal active. The working model reports completion or blockers with goal_report; completion is not independently verified. No progress or errors pause the goal. Use Stop or /goal pause to pause."
-                  : "Goal paused. Use /goal resume to continue."
+                  : "Goal paused. Cancelled the armed wakeups and cron tasks. Use /goal resume to continue."
             const user = prepared ? (yield* prepared).info : undefined
             if (user && user.role !== "user") return yield* Effect.die(new Error("Expected a user message"))
             if (!valid()) return yield* Effect.interrupt
@@ -532,6 +694,7 @@ export namespace Goal {
       // the current turn: it arms the goal and lets the loop continue after the
       // turn drains, so the model can start or resume a goal itself.
       const arm = Effect.fn("Goal.arm")(function* (input: ArmInput) {
+        yield* ensure()
         const id = input.sessionID
         const session = yield* sessions.get(id).pipe(Effect.orDie)
         if (session.parentID) {
@@ -565,7 +728,13 @@ export namespace Goal {
         return yield* Effect.gen(function* () {
           const ticket = yield* ops.control.begin(id, true)
           if (!claim.current() || !ticket.current()) return yield* Effect.interrupt
+          // A held goal (active or waiting) is the one a new objective replaces,
+          // and its timers must go with it.
+          const wasHeld = GoalState.hold(id)
           const current = GoalState.start(id, end)
+          if (input.action !== "resume" && !input.note && GoalInstructions.timed(text)) GoalState.curb(id)
+          // The wakeup side resumes this goal through the registered handler.
+          GoalLink.registerArm(id, (next) => arm({ sessionID: id, action: next.action, note: next.note }))
           const valid = () => claim.current() && current() && ticket.current()
           const body = Effect.gen(function* () {
             yield* commit(
@@ -573,9 +742,31 @@ export namespace Goal {
               Effect.gen(function* () {
                 const fresh = yield* sessions.get(id).pipe(Effect.orDie)
                 if (!valid()) return yield* Effect.interrupt
+                // Only a resume keeps the wait a recurring task needs; a new
+                // objective must not inherit the replaced goal's timer.
+                const resumeWait = input.action === "resume" ? GoalState.read(fresh.metadata)?.wait : undefined
+                // A resume continues the same goal and never replaces one, so it
+                // must not sweep the session's timers. A cancel notification
+                // strips the wait before resuming (D5); without this guard that
+                // path landed here and cancelled every unrelated wakeup and cron
+                // task the session held alongside the awaited one.
+                if (wasHeld && input.action !== "resume") {
+                  // The replaced goal's timers go with it, so its fire cannot
+                  // resume a goal it no longer belongs to.
+                  GoalLink.clear(id)
+                  yield* GoalLink.cleanup(id)
+                }
                 yield* sessions.setMetadata({
                   sessionID: id,
-                  metadata: { ...fresh.metadata, "kilo.goal": { text, status: "active", active: true } },
+                  metadata: {
+                    ...fresh.metadata,
+                    "kilo.goal": {
+                      text,
+                      status: "active",
+                      active: true,
+                      ...(resumeWait ? { wait: resumeWait } : {}),
+                    },
+                  },
                 })
               }),
             )
@@ -585,6 +776,7 @@ export namespace Goal {
               agent,
               model,
               snapshotInitialization: input.snapshotInitialization,
+              note: input.note,
               current,
               ticket,
               cancelled,
@@ -598,6 +790,18 @@ export namespace Goal {
           )
         }).pipe(Effect.ensuring(Effect.sync(() => claim.release())))
       })
+
+      const factory: GoalLink.Arm = (next) => arm({ sessionID: next.sessionID, action: next.action, note: next.note })
+      const ensure = Effect.fn("Goal.ensure")(function* () {
+        const ctx = yield* InstanceRef
+        if (!ctx) return
+        GoalLink.bind(ctx.directory, factory)
+        for (const session of yield* sessions.list()) {
+          GoalLink.hydrate(session.id, session.metadata, factory)
+        }
+      })
+      GoalLink.bind("", factory)
+      yield* ensure()
 
       return { command, pause, arm }
     })

@@ -1,17 +1,26 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import fs from "fs"
-import { rm } from "fs/promises"
+import { remove as cleanup } from "../cleanup"
 import os from "os"
 import path from "path"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AppRuntime } from "@/effect/app-runtime"
 import { InstanceRef } from "@/effect/instance-ref"
+import { GoalLink } from "@/kilocode/session/goal/link"
+import { GoalState } from "@/kilocode/session/goal/state"
 import { Wakeup } from "@/kilocode/wakeup"
 import { InstanceStore } from "@/project/instance-store"
 import { Session } from "@/session/session"
 import { SessionPrompt } from "@/session/prompt"
 import { pollWithTimeout } from "../../lib/effect"
+
+const saved = {
+  id: ModelV2.ID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+}
 
 const model = {
   name: "Test Model",
@@ -50,6 +59,60 @@ function reply(text: string) {
       ctrl.close()
     },
   })
+}
+
+function tool(name: string, input: unknown) {
+  const enc = new TextEncoder()
+  return new ReadableStream<Uint8Array>({
+    start(ctrl) {
+      ctrl.enqueue(enc.encode(line(chunk({ delta: { role: "assistant" } }))))
+      ctrl.enqueue(
+        enc.encode(
+          line(
+            chunk({
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: `call_${name}_${crypto.randomUUID()}`,
+                    type: "function",
+                    function: { name, arguments: "" },
+                  },
+                ],
+              },
+            }),
+          ),
+        ),
+      )
+      ctrl.enqueue(
+        enc.encode(
+          line(
+            chunk({
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    function: { arguments: JSON.stringify(input) },
+                  },
+                ],
+              },
+            }),
+          ),
+        ),
+      )
+      ctrl.enqueue(enc.encode(line(chunk({ finish: "tool_calls" }))))
+      ctrl.enqueue(enc.encode("data: [DONE]\n\n"))
+      ctrl.close()
+    },
+  })
+}
+
+function transcript(body: string) {
+  try {
+    return JSON.stringify((JSON.parse(body) as { messages?: unknown }).messages ?? [])
+  } catch {
+    return body
+  }
 }
 
 // The runtime holds the wakeup timer's scope; dispose it once for the file.
@@ -134,7 +197,7 @@ describe("wakeup resume", () => {
       expect(pending.map((item) => item.id)).not.toContain(info.id)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
     }
   }, 30_000)
 
@@ -217,7 +280,664 @@ describe("wakeup resume", () => {
       expect(bodies.some((body) => body.includes("[scheduled wakeup]"))).toBe(false)
     } finally {
       await server.stop(true)
-      await rm(dir, { recursive: true, force: true })
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("a fired wakeup for a waiting goal resumes the goal as a goal turn", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        const stream = history.includes("Report recorded")
+          ? reply("Final report")
+          : history.includes("[scheduled wakeup]") && history.includes("Continue working toward this session goal")
+            ? tool("goal_report", { status: "complete", reason: "The deploy check passed." })
+            : history.includes("Scheduled wakeup")
+              ? reply("Scheduled the check")
+              : tool("schedule_wakeup", {
+                  prompt: "Check the deploy",
+                  when: new Date(Date.now() + 3000).toISOString(),
+                  reason: "deploy",
+                })
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-goal-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup goal" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      await AppRuntime.runPromise(
+        SessionPrompt.Service.use((svc) =>
+          svc.command({
+            sessionID: session.id,
+            command: "goal",
+            arguments: objective,
+            agent: "code",
+            model: "test/test-model",
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, ctx),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(Effect.map((goal) => (goal?.status === "waiting" ? goal : undefined))),
+          "goal never reached waiting",
+          "15 seconds",
+        ),
+      )
+
+      await Effect.runPromise(
+        pollWithTimeout(
+          Effect.sync(() =>
+            bodies.some(
+              (body) =>
+                body.includes("Continue working toward this session goal") &&
+                body.includes(objective) &&
+                body.includes("[scheduled wakeup]") &&
+                body.includes("goal_report"),
+            )
+              ? true
+              : undefined,
+          ),
+          "the fired wakeup did not resume as a goal turn",
+          "15 seconds",
+        ),
+      )
+
+      const done = await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(Effect.map((goal) => (goal?.status === "complete" ? goal : undefined))),
+          "goal never reached complete",
+          "15 seconds",
+        ),
+      )
+      expect(done.active).toBe(false)
+      expect(done.text).toBe(objective)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("a waiting goal with no in-memory handler resumes as a goal turn when its wakeup fires", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        const stream = history.includes("Report recorded")
+          ? reply("Final report")
+          : history.includes("[scheduled wakeup]") && history.includes("Continue working toward this session goal")
+            ? tool("goal_report", { status: "complete", reason: "The deploy check passed." })
+            : reply("Working")
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-restart-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup restart", agent: "code", model: saved })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      const info = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "poll the deploy",
+            when: new Date(Date.now() + 1200).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.setMetadata({
+            sessionID: session.id,
+            metadata: {
+              "kilo.goal": {
+                text: objective,
+                status: "waiting",
+                active: false,
+                wait: { kind: "wakeup", id: info.id, label: "poll the deploy" },
+              },
+            },
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, ctx),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      await Effect.runPromise(
+        pollWithTimeout(
+          Effect.sync(() =>
+            bodies.some(
+              (body) =>
+                body.includes("Continue working toward this session goal") &&
+                body.includes(objective) &&
+                body.includes("[scheduled wakeup]") &&
+                body.includes("goal_report"),
+            )
+              ? true
+              : undefined,
+          ),
+          "the fired wakeup did not resume as a goal turn",
+          "15 seconds",
+        ),
+      )
+
+      const done = await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(Effect.map((goal) => (goal?.status === "complete" ? goal : undefined))),
+          "goal never left waiting",
+          "15 seconds",
+        ),
+      )
+      expect(done.active).toBe(false)
+      expect(done.text).toBe(objective)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("cancelling the awaited wakeup resumes a waiting goal that has no in-memory handler", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        const stream = history.includes("Report recorded")
+          ? reply("Final report")
+          : history.includes("[cancelled]") && history.includes("Continue working toward this session goal")
+            ? tool("goal_report", { status: "complete", reason: "Rescheduled after cancel." })
+            : reply("Working")
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-cancel-restart-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.create({ title: "Wakeup cancel restart", agent: "code", model: saved }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const info = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "poll the deploy",
+            when: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.setMetadata({
+            sessionID: session.id,
+            metadata: {
+              "kilo.goal": {
+                text: objective,
+                status: "waiting",
+                active: false,
+                wait: { kind: "wakeup", id: info.id, label: "poll the deploy" },
+              },
+            },
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) => wake.cancel(info.id)).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, ctx),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      await Effect.runPromise(
+        pollWithTimeout(
+          Effect.sync(() =>
+            bodies.some(
+              (body) =>
+                body.includes("Continue working toward this session goal") &&
+                body.includes(objective) &&
+                body.includes("[cancelled]") &&
+                body.includes(info.id),
+            )
+              ? true
+              : undefined,
+          ),
+          "cancel did not resume as a goal turn",
+          "15 seconds",
+        ),
+      )
+
+      const done = await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(Effect.map((goal) => (goal && goal.status !== "waiting" ? goal : undefined))),
+          "goal stayed waiting after cancel",
+          "15 seconds",
+        ),
+      )
+      expect(done.status).not.toBe("waiting")
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("a waiting goal that cannot resume settles paused with a readable reason", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        bodies.push(await req.text())
+        return new Response(reply("should not run"), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-archived-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup archived" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      const info = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "poll the deploy",
+            when: new Date(Date.now() + 1200).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.setMetadata({
+            sessionID: session.id,
+            metadata: {
+              "kilo.goal": {
+                text: objective,
+                status: "waiting",
+                active: false,
+                wait: { kind: "wakeup", id: info.id, label: "poll the deploy" },
+              },
+            },
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.setArchived({ sessionID: session.id, time: Date.now() })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, ctx),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      const settled = await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(
+            Effect.map((goal) =>
+              goal?.status === "paused" && goal.reason?.includes("Restore this session") ? goal : undefined,
+            ),
+          ),
+          "archived waiting goal was not settled with a readable reason",
+          "15 seconds",
+        ),
+      )
+      expect(settled.status).toBe("paused")
+      expect(settled.reason).toContain("Restore this session")
+      // The failed resume must undo hydrate's hold and wait record, or the
+      // question tool stays filtered out for the paused goal and the wait leaks.
+      expect(GoalState.hold(session.id)).toBe(false)
+      expect(GoalLink.get(session.id)).toBeUndefined()
+      expect(bodies.some((body) => body.includes("[scheduled wakeup]"))).toBe(false)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("a fire during an in-flight goal turn queues onto the next goal cycle", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        const stream = history.includes("Report recorded")
+          ? reply("Final report")
+          : history.includes("[scheduled wakeup]") && history.includes("Continue working toward this session goal")
+            ? tool("goal_report", { status: "complete", reason: "Resumed after the fire." })
+            : history.includes("Hold the turn")
+              ? reply("Slept")
+              : tool("bash", {
+                  command: `sleep 5 # goal-${crypto.randomUUID()}`,
+                  description: "Hold the turn",
+                })
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-inflight-"))
+    try {
+      const cfg = JSON.parse(config(`${server.url.origin}/v1`)) as Record<string, unknown>
+      cfg.permission = { bash: "allow" }
+      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify(cfg))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup inflight" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      await AppRuntime.runPromise(
+        SessionPrompt.Service.use((svc) =>
+          svc.command({
+            sessionID: session.id,
+            command: "goal",
+            arguments: objective,
+            agent: "code",
+            model: "test/test-model",
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        pollWithTimeout(
+          Effect.sync(() => (GoalState.active(session.id) ? true : undefined)),
+          "goal never became active",
+          "10 seconds",
+        ),
+      )
+
+      // Absolute `when` is honored as given, so this fires in ~1.2s while the
+      // bash sleep still holds the in-flight goal turn (no persisted wait yet).
+      await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "fired note",
+            when: new Date(Date.now() + 1200).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await Effect.runPromise(
+        pollWithTimeout(
+          Effect.sync(() =>
+            bodies.some(
+              (body) =>
+                body.includes("Continue working toward this session goal") &&
+                body.includes("[scheduled wakeup]") &&
+                body.includes("fired note") &&
+                body.includes("goal_report"),
+            )
+              ? true
+              : undefined,
+          ),
+          "the in-flight fire did not resume as a goal turn",
+          "15 seconds",
+        ),
+      )
+
+      const stranger = bodies.filter((body) => {
+        const history = transcript(body)
+        return history.includes("[scheduled wakeup]") && !history.includes("Continue working toward this session goal")
+      })
+      expect(stranger).toEqual([])
+
+      const done = await AppRuntime.runPromise(
+        pollWithTimeout(
+          Session.Service.use((svc) => svc.get(session.id)).pipe(
+            Effect.provideService(InstanceRef, ctx),
+            Effect.map((value) => {
+              const goal = GoalState.read(value.metadata)
+              return goal?.status === "complete" ? goal : undefined
+            }),
+          ),
+          "goal never reached complete",
+          "15 seconds",
+        ),
+      )
+      expect(done.active).toBe(false)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("cancelling the awaited wakeup leaves the session's other timers alone", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        // The cancelled wait resumes the goal, and this turn arms a new wait
+        // instead of settling, so the session keeps the timers it already held.
+        const stream = history.includes("Scheduled wakeup")
+          ? reply("Scheduled the check")
+          : history.includes("[cancelled]") && history.includes("Continue working toward this session goal")
+            ? tool("schedule_wakeup", {
+                prompt: "check again",
+                when: new Date(Date.now() + 60_000).toISOString(),
+                reason: "again",
+              })
+            : reply("Working")
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-cancel-others-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.create({ title: "Wakeup cancel others", agent: "code", model: saved }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const awaited = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "poll the deploy",
+            when: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+      const reminder = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "user reminder",
+            when: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.setMetadata({
+            sessionID: session.id,
+            metadata: {
+              "kilo.goal": {
+                text: objective,
+                status: "waiting",
+                active: false,
+                wait: { kind: "wakeup", id: awaited.id, label: "poll the deploy" },
+              },
+            },
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) => wake.cancel(awaited.id)).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, ctx),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(
+            Effect.map((goal) => (goal?.status === "waiting" && goal.wait?.id !== awaited.id ? goal : undefined)),
+          ),
+          "the cancelled wait did not resume into a new goal wait",
+          "15 seconds",
+        ),
+      )
+
+      const pending = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) => wake.list({ sessionID: session.id })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+      const ids = pending.map((item) => item.id)
+      expect(ids).toContain(reminder.id)
+      expect(ids).not.toContain(awaited.id)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
     }
   }, 30_000)
 })
