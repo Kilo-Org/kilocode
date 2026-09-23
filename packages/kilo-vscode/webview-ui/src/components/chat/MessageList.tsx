@@ -689,10 +689,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
     active = { id, keys: current, fingerprint: value }
   })
 
-  const save = (id: string | undefined, saved = active) => {
+  const save = (id: string | undefined, handle?: VirtualizerHandle, saved = active) => {
     const el = scrollEl()
     if (!id || !el || saved.id !== id) return
-    const handle = virtualizer()
     const token = layout()
     if (handle && token && saved.keys.length > 0) {
       setMeasurement(id, saved.fingerprint, token, handle.cache)
@@ -808,6 +807,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
   onCleanup(() => save(session.currentSessionID()))
 
   const handoff = createRowHandoff()
+  // Virtua keeps measured sizes by index, not by key. Give each session its
+  // own instance so rows never inherit another session's sizes, which left
+  // blank gaps above the last message until the user scrolled.
+  const instance = () => (scrollEl() && partition().virtual.length > 0 ? session.currentSessionID() : undefined)
   const Row: Component<{ id: string }> = (entry) => {
     const key = entry.id
     const initial: TranscriptRow = lookup().get(key)!
@@ -900,18 +903,39 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 data-direct-count={partition().direct.length}
                 data-queued-count={partition().queued.length}
               >
-                <Show when={scrollEl() && partition().virtual.length > 0}>
-                  <Virtualizer
-                    ref={setVirtualizer}
-                    data={keys()}
-                    scrollRef={scrollEl()}
-                    shift={session.messageMutation() === "prepend"}
-                    cache={measurement()}
-                    bufferSize={520}
-                    itemSize={260}
-                  >
-                    {(key) => <Row id={key} />}
-                  </Virtualizer>
+                <Show when={instance()} keyed>
+                  {(id) => {
+                    let handle: VirtualizerHandle | undefined
+                    // The old instance is gone before the switch effect runs,
+                    // so persist its sizes and position from its own handle.
+                    onCleanup(() => save(id, handle))
+                    const ref = (next?: VirtualizerHandle) => {
+                      if (next) handle = next
+                      setVirtualizer(next)
+                      const el = scrollEl()
+                      if (!next || !el) return
+                      // A new instance starts at offset 0. If the scroller is
+                      // already elsewhere and does not move again, no scroll
+                      // event would sync it, so report the position once.
+                      queueMicrotask(() => {
+                        if (virtualizer() !== next || Math.abs(el.scrollTop - next.scrollOffset) < 1) return
+                        el.dispatchEvent(new Event("scroll"))
+                      })
+                    }
+                    return (
+                      <Virtualizer
+                        ref={ref}
+                        data={keys()}
+                        scrollRef={scrollEl()}
+                        shift={session.messageMutation() === "prepend"}
+                        cache={measurement()}
+                        bufferSize={520}
+                        itemSize={260}
+                      >
+                        {(key) => <Row id={key} />}
+                      </Virtualizer>
+                    )
+                  }}
                 </Show>
                 <For each={tail()}>{(key) => <Row id={key} />}</For>
               </div>
