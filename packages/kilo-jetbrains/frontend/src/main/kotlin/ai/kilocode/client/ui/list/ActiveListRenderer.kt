@@ -103,7 +103,7 @@ internal class ActiveListRenderer(
     // Pin the glyph to the top of the label so a stretched icon column keeps the icon on the
     // first text line instead of centering it across a multi-line row.
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
-    private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
+    private val mark = icon.align(HAlign.CENTER, cfg.iconAlignment.align())
     private val title = FadeText()
     private val leading = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val badges = Stack.horizontal(JBUI.scale(activeListIconGap()))
@@ -635,6 +635,11 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     override fun cellTooltip(): String? = badge?.tooltip?.takeIf { it.isNotBlank() }
 
     override fun cellAction(): (() -> Unit)? = badge?.action
+}
+
+private fun ActiveListIconAlignment.align(): VAlign = when (this) {
+    ActiveListIconAlignment.CENTER -> VAlign.CENTER
+    ActiveListIconAlignment.TOP -> VAlign.TOP
 }
 
 /**

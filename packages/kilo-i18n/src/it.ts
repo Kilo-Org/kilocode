@@ -50,7 +50,7 @@ export const dict = {
   "marketplace.install.learnMore": "Scopri come funzionano le installazioni dal Marketplace",
   "marketplace.install.learnMcp": "Scopri di più su MCP",
   "marketplace.install.about.plugin":
-    "Un plugin npm aggiunge strumenti e integrazioni personalizzati a Kilo. I plugin vengono eseguiti con tutte le autorizzazioni.",
+    "Un plugin aggiunge strumenti e integrazioni personalizzati a Kilo. I plugin vengono eseguiti con tutte le autorizzazioni.",
   "marketplace.install.plugin.warning":
     "I plugin eseguono codice con tutte le autorizzazioni. Possono leggere e modificare i tuoi file, eseguire comandi e accedere alle tue credenziali e alla tua rete. Installa solo plugin di cui ti fidi.",
   "marketplace.install.installedAt": "Installato in {{path}}",

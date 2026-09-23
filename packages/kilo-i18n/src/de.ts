@@ -48,7 +48,7 @@ export const dict = {
   "marketplace.install.learnMore": "Erfahren Sie, wie Installationen aus dem Marketplace funktionieren",
   "marketplace.install.learnMcp": "Mehr über MCP erfahren",
   "marketplace.install.about.plugin":
-    "Ein npm-Plugin fügt Kilo benutzerdefinierte Werkzeuge und Integrationen hinzu. Plugins werden mit vollständigen Berechtigungen ausgeführt.",
+    "Ein Plugin fügt Kilo benutzerdefinierte Werkzeuge und Integrationen hinzu. Plugins werden mit vollständigen Berechtigungen ausgeführt.",
   "marketplace.install.plugin.warning":
     "Plugins führen Code mit vollständigen Berechtigungen aus. Sie können Ihre Dateien lesen und ändern, Befehle ausführen und auf Ihre Zugangsdaten und Ihr Netzwerk zugreifen. Installieren Sie nur Plugins, denen Sie vertrauen.",
   "marketplace.install.installedAt": "Installiert unter {{path}}",

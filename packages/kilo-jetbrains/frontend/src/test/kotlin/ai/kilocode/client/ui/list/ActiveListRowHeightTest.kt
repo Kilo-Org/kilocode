@@ -1,12 +1,14 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.util.edtWait
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.UIUtil
+import java.awt.event.ComponentEvent
 import javax.swing.Icon
 import javax.swing.JPanel
 
@@ -149,6 +151,43 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
 
         assertEquals(UiStyle.Colors.weak(), unselected.foreground)
         assertEquals(UiStyle.Colors.weak(), selected.foreground)
+    }
+
+    fun `test wrapDescription remeasures cached preferred heights when the list narrows`() {
+        edtWait {
+            val view = ActiveListView("", ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true)) { _, _ -> }
+            val pane = JPanel()
+            pane.add(view)
+            pane.setSize(600, 400)
+            view.setSize(600, 400)
+            view.list.setSize(600, 400)
+            view.update(listOf(wrapRow("word ".repeat(60).trim())))
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val wide = view.list.getCellBounds(0, 0).height
+
+            view.list.setSize(180, 400)
+            view.list.componentListeners.forEach { it.componentResized(ComponentEvent(view.list, ComponentEvent.COMPONENT_RESIZED)) }
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val narrow = view.list.getCellBounds(0, 0).height
+
+            assertTrue("a narrower list must invalidate the old preferred row height: wide=$wide narrow=$narrow", narrow > wide)
+        }
+    }
+
+    fun `test resize leaves non-wrapping cell measurements unchanged`() {
+        edtWait {
+            val view = ActiveListView("", ActiveListConfig.Equal) { _, _ -> }
+            view.list.setSize(600, 400)
+            view.update(listOf(wrapRow("Description")))
+            view.list.fixedCellHeight = 777
+
+            view.list.setSize(180, 400)
+            view.list.componentListeners.forEach { it.componentResized(ComponentEvent(view.list, ComponentEvent.COMPONENT_RESIZED)) }
+
+            assertEquals(777, view.list.fixedCellHeight)
+        }
     }
 
     private fun wrapRow(description: String): ActiveListItem = object : ActiveListItem {

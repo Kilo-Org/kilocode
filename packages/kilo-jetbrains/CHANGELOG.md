@@ -1,5 +1,37 @@
 # Changelog
 
+## 7.8.0
+
+### Minor Changes
+
+- [#14438](https://github.com/Kilo-Org/kilocode/pull/14438) [`cf07d9c`](https://github.com/Kilo-Org/kilocode/commit/cf07d9c6c97e80d59c61803231bb416ef9e15967) - Preview background agents in the collapsed session header and summarize agents that do not fit.
+
+- [#14452](https://github.com/Kilo-Org/kilocode/pull/14452) [`2c79e26`](https://github.com/Kilo-Org/kilocode/commit/2c79e263f5eb4e9a3e86d0a89d46590ee38ec229) - Wrap full message bodies in the Swarm board instead of clipping them to one line, keep the board open when opening an agent from it, and add a "Copy all" action that copies the entire board history as plain text.
+
+### Patch Changes
+
+- [#14472](https://github.com/Kilo-Org/kilocode/pull/14472) [`e0022c6`](https://github.com/Kilo-Org/kilocode/commit/e0022c687b5224bbe7146b712e1820dc001e72f3) - Fix the JetBrains shared board dialog layout when resizing and remove redundant message hover tooltips.
+
+- [#14474](https://github.com/Kilo-Org/kilocode/pull/14474) [`be65f5e`](https://github.com/Kilo-Org/kilocode/commit/be65f5e40c55dd03566d16becfbf2bd1ef0e88fb) - Keep Agent Manager attention badges in sync with resolved prompts, surface sandbox escalation permissions, and center status glyphs.
+
+- [#14457](https://github.com/Kilo-Org/kilocode/pull/14457) [`3adc432`](https://github.com/Kilo-Org/kilocode/commit/3adc432d3a3c9bdba71d23b84fd08d6daceb3488) - Fix removed model IDs reappearing on a custom OpenAI-compatible provider after saving or restarting, and save edits to a workspace-scoped custom provider back to the workspace config instead of the global one.
+
+- [#14434](https://github.com/Kilo-Org/kilocode/pull/14434) [`9fd9bb7`](https://github.com/Kilo-Org/kilocode/commit/9fd9bb754410709fe498d439fb861b7b8f680049) - Explicitly identify selected editor code sent as automatic context, so prompts like "explain this", "fix this code", or "use the selection" reliably target the selected range instead of being ambiguous.
+
+- [#14471](https://github.com/Kilo-Org/kilocode/pull/14471) [`7ce49cc`](https://github.com/Kilo-Org/kilocode/commit/7ce49ccfadc911c5776cbd1af994d0fc005cb242) - Add missing JetBrains release locale keys and guard localized bundles against stale entries.
+
+- [#14439](https://github.com/Kilo-Org/kilocode/pull/14439) [`d2727d2`](https://github.com/Kilo-Org/kilocode/commit/d2727d2df31f911fceb5a1f31a71c12bcd310266) - Prevent JetBrains chat code blocks from crashing when generated content contains CRLF or mixed line endings.
+
+- [#14368](https://github.com/Kilo-Org/kilocode/pull/14368) [`dca646a`](https://github.com/Kilo-Org/kilocode/commit/dca646a16dd091a06a187e9ba7f703ab06c04f68) - Add Copy Path and Reveal in Finder/Explorer actions to the notification shown when deleting a worktree is blocked by a nested worktree
+
+- [#14440](https://github.com/Kilo-Org/kilocode/pull/14440) [`0800c04`](https://github.com/Kilo-Org/kilocode/commit/0800c04549cfac5bf36e861b8046a9190f4fd3e7) - Restore pending permission and question cards after a backend reconnect, so a completed plan no longer gets stuck showing "Considering next steps" when its follow-up question was missed during the reconnect.
+
+- [#14435](https://github.com/Kilo-Org/kilocode/pull/14435) [`4dd6905`](https://github.com/Kilo-Org/kilocode/commit/4dd6905165a12eab690fdfd7a7dfda398d49c1c9) - Wrap long retry and offline status messages in narrow JetBrains session views.
+
+- [#14441](https://github.com/Kilo-Org/kilocode/pull/14441) [`e2db8e1`](https://github.com/Kilo-Org/kilocode/commit/e2db8e17eea47c291979a14bd03a040ee54eb31b) - Use the normal session mode, model, and reasoning defaults when creating a worktree.
+
+- [#14473](https://github.com/Kilo-Org/kilocode/pull/14473) [`51cc307`](https://github.com/Kilo-Org/kilocode/commit/51cc3076c3f867d72f52cace32f241371f4ded13) - Keep JetBrains worktree session tabs responsive by deferring and batching transcript updates accumulated while a tab is hidden.
+
 ## 7.7.7
 
 ### Patch Changes
@@ -489,6 +521,78 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.7] - 2026-09-23
+
+### Added
+
+- Fold and unfold large pasted text blocks directly from the prompt input and transcript.
+- Add a Marketplace page to JetBrains settings for browsing, installing, and removing marketplace agents, MCP servers, and skills without leaving the IDE.
+- Install Marketplace plugins from npm packages or from a git repository (for example `git:github.com/owner/repo@v1.2.3#subdir`).
+- Add Kilo Swarm support to JetBrains, including an Agent Behavior toggle, readable board tool cards, and a board viewer for session collaboration.
+- Add a cleanup flow for leftover Agent Manager worktree folders, with size reporting, git-checkout warnings, and safe removal from JetBrains.
+- Add unique avatars for subagents and a background agents strip in the session header, with a collapsed preview so active work stays visible without expanding the panel.
+- Add copy path and reveal actions when nested worktree deletion is blocked.
+- Add CLI support for background process monitoring, session cron scheduling, pull request linking, and experimental self-context tools.
+
+### Fixed
+
+- Pause the working timer while waiting on a permission prompt or a question.
+- Prevent snapshot progress from hanging a session.
+- Keep diagnostics edits responsive during large edits.
+- Warn when posting to the shared board targets a stopped subagent.
+- Keep a session goal running when a new message arrives instead of dropping it.
+- Only route auxiliary tasks to `kilo-auto/small` when using Kilo credentials.
+- Stop looping on repeated malformed tool calls.
+- Keep Keep Awake active while a wakeup is scheduled, and clear it when a session with pending wakeups is deleted.
+- Speed up local recall searches and improve match ranking.
+- Link sessions to their pull requests without a slow, timed `gh pr view` probe.
+- Submit and cancel custom answers correctly in the question dialog.
+- Format detailed code review findings as distinct sections.
+- Collapse pasted text in JetBrains only after larger 15-line or 4000-character blocks, matching VS Code and avoiding over-folding ordinary snippets.
+- Recover shared agent board reads when a stale or foreign cursor appears, instead of leaving a sub-agent stuck on repeated tool errors.
+- Reduce unnecessary sandbox escalation prompts for read-only `git` and `gh` commands while keeping mutating commands protected.
+- Stop a slow `gh` lookup from blanking PR badges.
+- Make worktree runs use the worktree's own logs and npm configs.
+- Wrap long session status messages instead of clipping them in the JetBrains UI.
+- Normalize markdown line endings before rendering, preventing unexpected formatting breaks in JetBrains chat.
+- Recover pending questions and permission prompts after reconnecting to an existing session.
+- Use normal session model defaults when creating sessions in new worktrees.
+- Ground selected-code prompts in the active editor selection so the agent receives the intended context.
+- Remove deselected models from custom OpenAI-compatible providers, including delete-and-recreate flows and providers saved in another settings scope.
+- Improve Swarm board readability by wrapping long messages, keeping the board open while navigating, and adding copy-all.
+- Explain that file checkpoints require Git when a revert cannot restore files, showing "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+- Keep Agent Manager attention badges in sync with resolved prompts, surface sandbox escalation permissions, and center status glyphs.
+- Keep JetBrains worktree session tabs responsive by deferring and batching transcript updates accumulated while a tab is hidden.
+- Fix the JetBrains shared board dialog layout when resizing and remove redundant message hover tooltips.
+- Add missing JetBrains release locale keys and guard localized bundles against stale entries.
+- Fix git-hosted Marketplace plugins so `~/` repository paths resolve, a failed clone leaves no staging directory, POSIX paths with a backslash are preserved, and uninstalling a plugin deletes its cloned cache when no scope still uses it.
+
+### Changed
+
+- Speed up the first worktree snapshot by skipping unnecessary re-hashing of the checkout.
+- Skip resolving the source project when moving sessions without changes, for faster session moves.
+
+## [7.1.7-rc.5] - 2026-09-23
+
+### Added
+
+- Install Marketplace plugins from a git repository, using a git source such as `git:github.com/owner/repo@v1.2.3#subdir` so a plugin can be distributed without publishing to npm.
+- Install plugins from the Kilo Marketplace via npm packages, alongside agents, skills, and MCP servers.
+
+### Fixed
+
+- Fix git-hosted Marketplace plugins so `~/` repository paths resolve, a failed clone leaves no staging directory, POSIX paths with a backslash are preserved, and uninstalling a plugin deletes its cloned cache when no scope still uses it. The plugin install dialog no longer describes every plugin as an npm plugin.
+- Deliver plan completion questions to directory-scoped clients such as JetBrains without requiring a reconnect.
+- Explain that file checkpoints require Git when a revert cannot restore files, showing "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+- Keep Agent Manager attention badges in sync with resolved prompts, surface sandbox escalation permissions, and center status glyphs.
+- Keep JetBrains worktree session tabs responsive by deferring and batching transcript updates accumulated while a tab is hidden.
+- Fix the JetBrains shared board dialog layout when resizing and remove redundant message hover tooltips.
+- Add missing JetBrains release locale keys and guard localized bundles against stale entries.
+
+### Changed
+
+- Update the bundled JetBrains CLI pin to Kilo CLI v7.7.9.
 
 ## [7.1.7-rc.4] - 2026-09-22
 

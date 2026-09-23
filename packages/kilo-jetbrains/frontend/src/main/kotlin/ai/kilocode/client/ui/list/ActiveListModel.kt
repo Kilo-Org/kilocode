@@ -66,11 +66,14 @@ internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
 internal enum class ActiveListWeight { PLAIN, BOLD }
 
+internal enum class ActiveListIconAlignment { CENTER, TOP }
+
 internal data class ActiveListConfig(
     val height: ActiveListRowHeight = ActiveListRowHeight.EQUAL,
     val description: Boolean = true,
     val descriptionIndent: Boolean = true,
     val tooltip: Boolean = true,
+    val iconAlignment: ActiveListIconAlignment = ActiveListIconAlignment.CENTER,
     val selection: Int = ListSelectionModel.SINGLE_SELECTION,
     val hoverActions: Boolean = false,
     /** Weight used for the primary row title. */
