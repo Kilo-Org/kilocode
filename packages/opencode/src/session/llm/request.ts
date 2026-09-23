@@ -23,6 +23,7 @@ import {
   HEADER_PROJECTID,
   HEADER_MACHINEID,
   HEADER_TASKID,
+  providerRoutingHeaders,
 } from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { KiloSession } from "@/kilocode/session"
@@ -253,6 +254,9 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
       ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),
       ...(isKilo && parent ? { [HEADER_PARENT_TASKID]: parent } : {}),
       ...(isKilo && attr.feature ? { [HEADER_FEATURE]: attr.feature } : {}),
+      // The effective routing (model options, agent options, variant, chat.params)
+      // travels as a header so the gateway applies it on every transport.
+      ...(isKilo ? providerRoutingHeaders(params.options?.provider) : {}),
       // kilocode_change end
       ...input.model.headers,
       ...headers,

@@ -8,6 +8,7 @@ import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 import { transformRequestBody } from "./responses.js"
+import { takeProviderRouting } from "./provider-routing.js"
 import * as GatewayMetadata from "./gateway-metadata.js"
 
 export function buildRequestHeaders(defaultHeaders: Record<string, string>, requestHeaders?: HeadersInit): Headers {
@@ -50,13 +51,16 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     ...options.headers,
   }
 
-  // Create custom fetch wrapper to add dynamic headers
   const originalFetch = options.fetch ?? fetch
+  // Fetch wrapper adding the dynamic headers and authorization. The routing
+  // header carries the request's provider preferences (see provider-routing.ts);
+  // it is consumed here and merged into the body so routing behaves the same
+  // on every transport.
   const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
     const headers = buildRequestHeaders(customHeaders, init?.headers)
-    const body = transformRequestBody(input, init?.body, options.dataCollection)
+    const routing = takeProviderRouting(headers)
+    const body = transformRequestBody(input, init?.body, options.dataCollection, routing)
 
-    // Add authorization if API key exists
     if (apiKey) {
       headers.set("Authorization", `Bearer ${apiKey}`)
     }

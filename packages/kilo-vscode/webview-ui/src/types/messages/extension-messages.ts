@@ -47,7 +47,7 @@ export interface BackgroundJobInfo {
   }
 }
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
-import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
+import type { ModelEndpoint, ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
@@ -742,6 +742,8 @@ export interface SettingsConfigBinding {
 
 export interface ConfigLoadedMessage {
   type: "configLoaded"
+  /** Workspace directory the effective and project configs were resolved in. */
+  directory?: string
   config: Config
   globalConfig?: Config
   projectConfig?: Config
@@ -753,6 +755,7 @@ export interface ConfigLoadedMessage {
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
+  directory?: string
   config: Config
   globalConfig?: Config
   projectConfig?: Config
@@ -1143,6 +1146,31 @@ export interface AgentManagerMultiVersionProgressMessage {
 export interface VariantsLoadedMessage {
   type: "variantsLoaded"
   variants: Record<string, string>
+}
+
+// Upstream endpoints for a model loaded from the CLI backend (extension → webview).
+// `error: true` marks a transient failure (no backend, network error) that must
+// not be cached as a result.
+export interface ModelEndpointsLoadedMessage {
+  type: "modelEndpointsLoaded"
+  providerID: string
+  modelID: string
+  requestID: number
+  /** Workspace directory whose configuration resolved the catalog. */
+  directory?: string
+  endpoints: ModelEndpoint[]
+  error?: boolean
+}
+
+// Project-level config file of a workspace (extension → webview), for controls
+// that must reflect a worktree rather than the config context's directory.
+// `error: true` marks a failed lookup.
+export interface WorkspaceConfigLoadedMessage {
+  type: "workspaceConfigLoaded"
+  requestID: number
+  directory: string
+  projectConfig?: Config
+  error?: boolean
 }
 
 export interface RecentsLoadedMessage {
@@ -1778,6 +1806,8 @@ export type ExtensionMessage =
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
+  | ModelEndpointsLoadedMessage
+  | WorkspaceConfigLoadedMessage
   | CloudSessionDataLoadedMessage
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage
