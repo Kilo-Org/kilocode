@@ -3,7 +3,7 @@ import fs from "fs"
 import { remove as cleanup } from "../cleanup"
 import os from "os"
 import path from "path"
-import { Effect } from "effect"
+import { Effect, Fiber } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -1000,7 +1000,9 @@ describe("wakeup resume", () => {
       GoalLink.set(session.id, { kind: "wakeup", id: awaited.id, label: "poll the deploy" })
       GoalState.pause(session.id)
 
-      await AppRuntime.runPromise(KiloSession.cancelWakeups(session.id).pipe(Effect.provideService(InstanceRef, ctx)))
+      const cancel = await AppRuntime.runPromise(
+        KiloSession.cancelWakeups(session.id).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
 
       await AppRuntime.runPromise(
         pollWithTimeout(
@@ -1012,6 +1014,13 @@ describe("wakeup resume", () => {
           "15 seconds",
         ),
       )
+
+      // `cancelWakeups` detaches its body, so the wait-list poll above returns as
+      // soon as `cancel` deletes the in-memory entry, possibly before the
+      // detached fiber reaches its notify step. Join that fiber so the
+      // assertions below see a settled cancel: a notify that re-hydrates would
+      // otherwise run after they pass, and the guard would prove nothing.
+      await AppRuntime.runPromise(Fiber.join(cancel))
 
       // A cancel notification would re-hydrate the persisted waiting goal from
       // the still-present session record and resume a session being deleted.
