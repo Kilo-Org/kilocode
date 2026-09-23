@@ -522,6 +522,27 @@
 
 ## [Unreleased]
 
+## [7.1.7-rc.5] - 2026-09-23
+
+### Added
+
+- Install Marketplace plugins from a git repository, using a git source such as `git:github.com/owner/repo@v1.2.3#subdir` so a plugin can be distributed without publishing to npm.
+- Install plugins from the Kilo Marketplace via npm packages, alongside agents, skills, and MCP servers.
+
+### Fixed
+
+- Fix git-hosted Marketplace plugins so `~/` repository paths resolve, a failed clone leaves no staging directory, POSIX paths with a backslash are preserved, and uninstalling a plugin deletes its cloned cache when no scope still uses it. The plugin install dialog no longer describes every plugin as an npm plugin.
+- Deliver plan completion questions to directory-scoped clients such as JetBrains without requiring a reconnect.
+- Explain that file checkpoints require Git when a revert cannot restore files, showing "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+- Keep Agent Manager attention badges in sync with resolved prompts, surface sandbox escalation permissions, and center status glyphs.
+- Keep JetBrains worktree session tabs responsive by deferring and batching transcript updates accumulated while a tab is hidden.
+- Fix the JetBrains shared board dialog layout when resizing and remove redundant message hover tooltips.
+- Add missing JetBrains release locale keys and guard localized bundles against stale entries.
+
+### Changed
+
+- Update the bundled JetBrains CLI pin to Kilo CLI v7.7.9.
+
 ## [7.1.7-rc.4] - 2026-09-22
 
 ### Added
