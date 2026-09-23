@@ -85,6 +85,17 @@ it.instance(
     expect(events).toContain("planned")
     expect(events).toContain("task.check.failed")
     expect(events).toContain("goal.completed")
+    // Progress is posted into the goal's own session so the user can follow along.
+    const posted = (yield* run.sessions.messages({ sessionID: run.root.id }))
+      .flatMap((m) => m.parts)
+      .flatMap((p) => (p.type === "text" ? [p.text] : []))
+      .join("\n")
+    expect(posted).toContain("Plan ready: 2 tasks")
+    expect(posted).toContain("Task 1/2 started")
+    expect(posted).toContain("Task 1/2 check failed")
+    expect(posted).toContain("Next: retrying locally")
+    expect(posted).toContain("Task 2/2 done")
+    expect(posted).toContain("Goal completed")
   }),
   { git: true },
   120_000,

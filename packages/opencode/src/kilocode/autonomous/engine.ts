@@ -22,6 +22,7 @@ import { AutonomousMemory } from "./memory"
 import { AutonomousLog } from "./log"
 import { AutonomousModels } from "./models"
 import { AutonomousPlanner } from "./planner"
+import { AutonomousProgress } from "./progress"
 import { AutonomousRepair } from "./repair"
 import { AutonomousReviewer } from "./reviewer"
 import { AutonomousRouter } from "./router"
@@ -88,6 +89,41 @@ export namespace AutonomousEngine {
 
     const persist = (state: AutonomousState.Info) => AutonomousStore.save(state).pipe(Effect.andThen(mirror(state)), Effect.orDie)
 
+    /** Append a synthetic assistant message to the goal's session. Never fails the caller. */
+    const post = (sessionID: SessionID, text: string, input?: { messageID?: MessageID; agent?: string; model?: string }) =>
+      Effect.gen(function* () {
+        const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
+        const ctx = yield* InstanceState.context
+        const model = input?.model ? Provider.parseModel(input.model) : session.model ? { providerID: session.model.providerID, modelID: session.model.id } : yield* provider.defaultModel()
+        const now = Date.now()
+        const info: SessionV1.Assistant = {
+          id: MessageID.ascending(),
+          sessionID,
+          parentID: input?.messageID ?? MessageID.ascending(),
+          role: "assistant",
+          mode: input?.agent ?? session.agent ?? "code",
+          agent: input?.agent ?? session.agent ?? "code",
+          providerID: model.providerID,
+          modelID: model.modelID,
+          path: { cwd: ctx.directory, root: ctx.worktree },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          time: { created: now, completed: now },
+          finish: "stop",
+        }
+        const part: SessionV1.TextPart = { id: PartID.ascending(), messageID: info.id, sessionID, type: "text", text }
+        yield* sessions.updateMessage(info)
+        yield* sessions.updatePart(part)
+        return { info, parts: [part] } satisfies SessionV1.WithParts
+      })
+
+    /** Live progress line in the goal's session so the user can follow the run. */
+    const progress = (state: AutonomousState.Info, text: string) =>
+      post(state.sessionID, `**Goal** · ${text}`).pipe(
+        Effect.asVoid,
+        Effect.catchCause((cause) => Effect.logWarning("autonomous progress message failed", { cause })),
+      )
+
     const settle = (state: AutonomousState.Info, status: AutonomousState.GoalStatus, reason: string) =>
       Effect.gen(function* () {
         // Session metadata writes are re-projected through GoalState.project, which
@@ -100,6 +136,7 @@ export namespace AutonomousEngine {
         state.reason = reason
         AutonomousLog.record(state, `goal.${status}`, { detail: reason })
         yield* persist(state).pipe(Effect.ensuring(Effect.sync(() => settling.delete(state.sessionID))))
+        yield* progress(state, `${AutonomousProgress.outcome(status)}: ${reason}`)
       })
 
     const stop = Effect.fn("AutonomousEngine.stop")(function* (id: SessionID) {
@@ -178,11 +215,13 @@ export namespace AutonomousEngine {
           state.status = "running"
           log("replanned", { detail: `revision ${state.revision}, ${state.tasks.length} tasks` })
           yield* persist(state)
+          yield* progress(state, AutonomousProgress.plan(state, `Replanned (revision ${state.revision})`))
           return true
         })
 
       if (state.status === "planning") {
         if (!AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
+        yield* progress(state, `Planning with ${AutonomousModels.format(models["cloud-reasoner"])}. The planner reads the repository first; this can take a few minutes.`)
         const planned = yield* billed(
           "cloud-reasoner",
           AutonomousPlanner.plan({
@@ -202,6 +241,7 @@ export namespace AutonomousEngine {
         state.status = "running"
         log("planned", { detail: `${state.tasks.length} tasks, ${state.criteria.length} criteria` })
         yield* persist(state)
+        yield* progress(state, AutonomousProgress.plan(state, "Plan ready"))
       }
       if (state.status !== "running" && state.status !== "reviewing") {
         state.status = "running"
@@ -214,6 +254,7 @@ export namespace AutonomousEngine {
           AutonomousRepair.record(task, { stage, message, modelClass, fingerprint })
           const decision = AutonomousRepair.decide(task, cfg)
           log(`task.${stage}.failed`, { taskID: task.id, detail: `${decision.action}: ${decision.reason}` })
+          yield* progress(state, AutonomousProgress.failed(state, task, stage, message, decision))
           if (decision.action === "retry") task.status = "repairing"
           if (decision.action === "escalate") {
             task.status = "repairing"
@@ -241,6 +282,7 @@ export namespace AutonomousEngine {
           if (!AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
           state.status = "reviewing"
           yield* persist(state)
+          yield* progress(state, "All tasks done. Checking the goal against its acceptance criteria.")
           const check = yield* billed("cloud-reasoner", AutonomousChecker.check({ parent: id, dir, state, model: models["cloud-reasoner"] }))
           charge("cloud-reasoner", check)
           log("goal.checked", { detail: check.complete ? "complete" : `unmet: ${state.criteria.filter((c) => c.status !== "satisfied").map((c) => c.id).join(",")}` })
@@ -254,6 +296,7 @@ export namespace AutonomousEngine {
           if (reasons.length) return yield* blocked(`Final gate failed: ${reasons.join("; ")}`)
           const cls = AutonomousFinal.modelClass(state, cfg.final_review_cloud_at_complexity)
           if (cls === "cloud-reasoner" && !AutonomousBudget.allow(state, cfg)) return yield* paused(AutonomousBudget.reason(state, cfg)!)
+          yield* progress(state, `Checks pass. Final review with ${AutonomousModels.format(models[cls])}.`)
           const fin = yield* billed(cls, AutonomousFinal.review({ parent: id, dir, state, model: models[cls] }))
           charge(cls, fin)
           if (fin.blocking.length) {
@@ -278,6 +321,7 @@ export namespace AutonomousEngine {
         task.attempts++
         log("task.start", { taskID: task.id, detail: `${route.modelClass} (${route.reason}), attempt ${task.attempts}` })
         yield* persist(state)
+        yield* progress(state, AutonomousProgress.start(state, task, route))
 
         const repair = task.failures.length ? AutonomousRepair.instructions(task) : undefined
         const work = yield* Effect.result(AutonomousWorker.run({ parent: id, dir, state, task, model: route.model, repair }))
@@ -294,6 +338,7 @@ export namespace AutonomousEngine {
         }
         task.status = "verifying"
         yield* persist(state)
+        yield* progress(state, AutonomousProgress.worked(task, worked.result))
         const report = yield* AutonomousVerifier.run({ dir, checks })
         if (!report.ok) {
           yield* fail(task, "check", AutonomousVerifier.summary(report), route.modelClass, AutonomousVerifier.fingerprint(report))
@@ -316,6 +361,7 @@ export namespace AutonomousEngine {
         for (const f of state.findings) if (f.taskID === task.id) f.resolved = true
         task.status = "completed"
         log("task.completed", { taskID: task.id, detail: worked.result.summary })
+        yield* progress(state, AutonomousProgress.done(state, task))
         yield* learn(task)
         yield* persist(state)
       }
@@ -434,30 +480,9 @@ export namespace AutonomousEngine {
     })
 
     const notice = Effect.fn("AutonomousEngine.notice")(function* (input: CommandInput, text: string) {
-      const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
-      const ctx = yield* InstanceState.context
-      const model = input.model ? Provider.parseModel(input.model) : session.model ? { providerID: session.model.providerID, modelID: session.model.id } : yield* provider.defaultModel()
-      const now = Date.now()
-      const info: SessionV1.Assistant = {
-        id: MessageID.ascending(),
-        sessionID: input.sessionID,
-        parentID: input.messageID ?? MessageID.ascending(),
-        role: "assistant",
-        mode: input.agent ?? session.agent ?? "code",
-        agent: input.agent ?? session.agent ?? "code",
-        providerID: model.providerID,
-        modelID: model.modelID,
-        path: { cwd: ctx.directory, root: ctx.worktree },
-        cost: 0,
-        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-        time: { created: now, completed: now },
-        finish: "stop",
-      }
-      const part: SessionV1.TextPart = { id: PartID.ascending(), messageID: info.id, sessionID: input.sessionID, type: "text", text }
-      yield* sessions.updateMessage(info)
-      yield* sessions.updatePart(part)
-      yield* events.publish(Command.Event.Executed, { name: "goal", sessionID: input.sessionID, arguments: input.arguments, messageID: info.id })
-      return { info, parts: [part] } satisfies SessionV1.WithParts
+      const out = yield* post(input.sessionID, text, input)
+      yield* events.publish(Command.Event.Executed, { name: "goal", sessionID: input.sessionID, arguments: input.arguments, messageID: out.info.id })
+      return out
     })
 
     /** `/goal` handling when the engine is enabled. */
