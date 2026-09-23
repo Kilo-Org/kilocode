@@ -49,6 +49,16 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
 
+## Background agents
+
+When Kilo runs an agent in the background, a collapsible strip appears in the session header and stays visible while the transcript scrolls. While the strip is collapsed, it previews the agents that fit and collects the rest into **+N more**; select **+N more** to expand the strip and see every agent. When no agent fits, the strip shows a summary caption instead.
+
+Select a previewed agent, or a row in the expanded strip, to open that agent's read-only transcript. The strip also provides:
+
+- **Open all** — opens every visible agent's transcript.
+- **Stop** / **Stop all (N)** — cancels one or every running agent without stopping the main session.
+- **Dismiss** / **Clear finished** — hides finished agents from the strip. They do not delete the agent's transcript or record.
+
 ## Diagrams in chat
 
 Ask Kilo for a Mermaid diagram to visualize a workflow, architecture, data relationship, or timeline. Chat renders `mermaid` and `mmd` code blocks inline, with source shown while streaming or if rendering fails.

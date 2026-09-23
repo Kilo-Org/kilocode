@@ -81,6 +81,10 @@ Double-click the current session title at the top of the chat to edit it inline.
 
 You can also rename local sessions from **History** using the edit button or the session's context menu.
 
+**Session tabs:**
+
+Open local sessions appear as tabs above the chat. Right-click a tab for **Pin** / **Unpin**, **Close**, **Close Others**, and **Close to the Right**. Pinned tabs stay at the front with a pin marker and no close button, and they survive Close Others and Close to the Right. Close to the Right closes the tabs after the target and hides when nothing closable is to the right. Tab order and pins persist across webview reloads.
+
 {% /tab %}
 {% tab label="CLI" %}
 

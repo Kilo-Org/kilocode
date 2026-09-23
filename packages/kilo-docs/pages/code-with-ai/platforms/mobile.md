@@ -27,6 +27,7 @@ The mobile app lets you:
 - Review GitHub pull requests, GitLab merge requests, and Bitbucket pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 - Browse the files an agent produced straight from your phone's file browser — see [Agent artifacts in your file browser](#agent-artifacts-in-your-file-browser).
+- Use the Kilo tools from a signed-in chat, with no key or URL to configure — see [Kilo tools in chat](#kilo-tools-in-chat).
 
 ## App actions
 
@@ -133,6 +134,16 @@ The session context sheet has an **Auto-approve** row at the top. Turn it on to 
 Auto-approve applies to one session only, so other sessions keep prompting. Clarification questions always show their card and are never auto-answered. The row shows whether auto-approve is on, off, or unavailable, and warns that tools then run without a prompt; sessions that cannot auto-approve, such as read-only sessions, show the row disabled with the reason.
 
 The toggle is kept in memory for the session and never changes your global auto-approve configuration. Signing out or switching accounts turns auto-approve off for every session.
+
+## Kilo tools in chat
+
+A signed-in chat can reach the Kilo tools automatically using your signed-in session — there is no key to paste and no URL to enter. The model sees the available Kilo tools (named `mcp_kilo_*`) and can call them, reading their answers in the reply.
+
+Every chat has a **Kilo tools** switch in its Kilo tools sheet. It is on by default, and your choice is kept when you reopen the chat or switch models. With the switch off, the chat sends no Kilo tool to the model and contacts no server.
+
+The Kilo tools sheet names the connection state and offers **Retry** only when retrying can help. If the server is slow, refuses the session, or disappears mid-chat, the chat stays usable and reports what happened; a failed call reaches the model as a failed tool result.
+
+Signing out drops the connection and its tools, and signing in as another user never shows the previous account's tools.
 
 ## Hiding thinking details
 

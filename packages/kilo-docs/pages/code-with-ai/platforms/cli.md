@@ -183,6 +183,16 @@ Review your code locally before pushing — catch issues early without waiting f
 | `/review <commit-hash>` | Review a specific commit |
 | `/review <PR URL or number>` | Review a pull request |
 
+## Linking a session to a pull request
+
+Kilo can tie a session to the pull request or merge request it is working on, so the session row shows the right change and stays current.
+
+The agent links a session when you give it the URL, or after it opens the pull request, by calling the `link_pr` tool with the full URL. An explicit link wins over any link Kilo detects, and later checks keep it.
+
+Kilo also checks the session's own git host once every 5 minutes for an open pull request on the current branch. The check reads the worktree's own remote and branch and works with GitHub, GitLab, and Bitbucket. It never runs per request. Run `kilo pr status` to check on demand — it queries the host immediately, so a pull request opened since the last check is found.
+
+When the host no longer reports the linked pull request open, Kilo clears the link and the session row updates, so a closed pull request does not stay linked. Use `kilo pr link <url>` to link the current worktree yourself, or `kilo pr unlink` to clear the link. See the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference#kilo-pr).
+
 ## Config Reference
 
 Configuration is managed through:

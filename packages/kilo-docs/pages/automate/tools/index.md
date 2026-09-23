@@ -22,6 +22,7 @@ Tools are organized into logical groups based on their functionality:
 | **Browser Preview** | Agent Manager's built-in browser preview | `browser_open` | Previewing and checking locally running apps |
 | **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
 | **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager`, `board_post`, `board_read` | Context switching and task organization |
+| **Process Group** | Long-running processes and scheduled session resumption | `background_process`, `schedule_wakeup`, `cancel_wakeup`, `cron_create`, `cron_list`, `cron_delete` | Dev servers, builds, reminders, recurring checks |
 
 ### Always Available Tools
 
@@ -60,6 +61,16 @@ These tools help Kilo Code run commands:
 {% callout type="info" %}
 The `interactive_terminal` tool and the in-session terminal controls were removed, along with their API endpoints and SDK types. Run commands that need keyboard input in your own terminal, and use the `bash` tool for non-interactive shell commands. See [Shell Integration](/docs/automate/extending/shell-integration) for details.
 {% /callout %}
+
+### Background Process Tools
+
+The `background_process` tool runs and manages long-running processes such as development servers, watchers, and test runs.
+
+- `start` - Starts a process that keeps running after the tool call returns.
+- `monitor` - Starts the same kind of process but waits for its output, streaming progress back as it arrives so you read it instead of polling `logs`. It stops when the process exits, or when it reaches a line or wall-time cap. Reaching a cap does not stop the process: it keeps running as a normal background process, and the result names its `id` for `logs`, `status`, or `stop`.
+- `list` / `status` / `logs` / `stop` / `restart` - Inspect and control tracked processes by `id`.
+
+`monitor` returns up to 200 output lines by default (`lines`, from 1 to 1000) and waits up to 120000 ms by default (`timeout`, from 5000 to 600000).
 
 ### Web Tools
 
@@ -118,7 +129,20 @@ These tools help manage the conversation and task flow:
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 - `open_plan` - Opens a saved plan for review in the VS Code extension
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
+- `link_pr` - Links the session to a pull request or merge request from its full URL; an explicit link wins over a detected one
 - `board_post` / `board_read` - Exchange messages on the Kilo Swarm board
+
+### Scheduling Tools
+
+Kilo can resume a session on its own schedule. A wakeup fires once; a cron task repeats.
+
+- `schedule_wakeup` - Resumes the session once after a `delay` (for example `30m`) or at an absolute `when`. A session holds at most 10 pending wakeups.
+- `cancel_wakeup` - Lists or cancels a pending wakeup by `id`.
+- `cron_create` - Schedules a recurring task from a five-field cron expression, or a one-shot from `when` or `delay`. Provide exactly one of `cron`, `when`, or `delay`.
+- `cron_list` - Lists the session's scheduled tasks with each task's `id`, schedule, next fire time, and prompt.
+- `cron_delete` - Cancels a scheduled task by `id`.
+
+A session holds at most 10 scheduled cron tasks, and each task expires seven days after it is created. A schedule whose next fire would fall past that expiry is rejected, so pick a schedule that fires within seven days. A due task fires between turns after the session goes idle; missed fires are not replayed one-for-one, and fire times carry a small deterministic jitter so many sessions do not fire at once. Scheduled tasks are restored when the session resumes.
 
 ### Task tool
 
