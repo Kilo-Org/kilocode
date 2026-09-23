@@ -130,6 +130,10 @@ internal class ActiveListView(
     init {
         if (surface == ActiveListSurface.ToolWindow) isOpaque = true
         list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
+        // Without a delegate every animation frame repaints the whole list, and every row re-renders and
+        // re-lays out its stamp at the frame rate of whichever spinner is running. Only rows that show an
+        // animated glyph need the next frame. REFRESH_DELEGATE is an experimental platform hook.
+        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, Runnable { repaintAnimated() })
         list.cellRenderer = renderer
         list.registerKeyboardAction(
             { open(enter()) },
@@ -569,6 +573,18 @@ internal class ActiveListView(
         checkEdt()
         if (idx < 0) return
         list.getCellBounds(idx, idx)?.let { list.repaint(it) }
+    }
+
+    /** Advances an animation frame: repaints only the visible rows that paint an animated glyph. */
+    @RequiresEdt
+    private fun repaintAnimated() {
+        checkEdt()
+        val first = list.firstVisibleIndex
+        val last = list.lastVisibleIndex
+        if (first < 0 || last < first) return
+        for (idx in first..last) {
+            if (activeListAnimated(model.getElementAt(idx))) repaintRow(idx)
+        }
     }
 
     @RequiresEdt
