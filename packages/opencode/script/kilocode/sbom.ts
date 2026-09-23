@@ -397,13 +397,6 @@ async function wrapper(input: { version: string; subject: string }): Promise<Gra
 }
 
 /**
- * Describe a pushed container image by digest.
- *
- * The image is not an unpacked release archive: it has a floating Alpine base,
- * installs OS packages, and copies only a subset of the CLI resources, so its
- * inventory has to come from the image itself.
- */
-/**
  * Evidence name for an image manifest. Shared with the publish script so a
  * failed description is recorded under the same name a success would use.
  */
@@ -412,6 +405,13 @@ export function ociName(digest: string, platform?: string) {
   return `kilo-oci-${label}@${digest.replace(/^sha256:/, "").slice(0, 12)}`
 }
 
+/**
+ * Describe a pushed container image by digest.
+ *
+ * The image is not an unpacked release archive: it has a floating Alpine base,
+ * installs OS packages, and copies only a subset of the CLI resources, so its
+ * inventory has to come from the image itself.
+ */
 export async function ociImage(input: {
   reference: string
   digest: string

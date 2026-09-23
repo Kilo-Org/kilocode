@@ -3,6 +3,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import * as Sbom from "../../script/kilocode/sbom"
+import { LanceDBRuntime } from "../../src/kilocode/lancedb"
 import { validate } from "../../../../script/kilocode/sbom/index"
 
 const release = { version: "9.9.9", channel: "latest", commit: "d".repeat(40) }
@@ -85,8 +86,12 @@ describe("archive", () => {
       await Bun.write(file, "a")
       const result = await Sbom.archive({ file, target: Sbom.target("linux-x64"), release })
       const bom = await Bun.file(result.sidecar).json()
-      const lance = bom.dependencies.find((item: any) => item.ref === "pkg:npm/%40lancedb/lancedb@0.26.2")
-      expect(lance?.dependsOn.length).toBeGreaterThan(0)
+      // Located by name rather than a pinned purl so a LanceDB version bump
+      // cannot turn this into a false failure; the assertion is about the edge.
+      const lance = bom.components.find((item: any) => item.name === LanceDBRuntime.pkg)
+      expect(lance?.scope).toBe("optional")
+      const edges = bom.dependencies.find((item: any) => item.ref === lance?.["bom-ref"])
+      expect(edges?.dependsOn.length).toBeGreaterThan(0)
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }
