@@ -2,9 +2,9 @@ package ai.kilocode.client.plugin
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.charset.StandardCharsets
 import java.text.MessageFormat
 import java.util.Locale
 import java.util.Properties
@@ -124,6 +124,20 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         assertTrue("Missing base bundle keys: $missing", missing.isEmpty())
     }
 
+    fun `test source scan keeps every when branch after comma separated conditions`() {
+        val source = """
+            KiloBundle.message(
+                when (value) {
+                    Mode.FIRST, Mode.SECOND -> "bundle.choice"
+                    else -> "bundle.fallback"
+                },
+                "FORMAT_ARG",
+            )
+        """.trimIndent()
+
+        assertEquals(setOf("bundle.choice", "bundle.fallback"), extractKeys(source))
+    }
+
     private fun format(pattern: String, vararg args: String) =
         MessageFormat(pattern, Locale.ROOT).format(args)
 
@@ -221,17 +235,23 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
     /**
      * The call's first top-level argument, between its `(` at [open] and either its first
      * top-level comma or its closing `)` at [close] — i.e. the key expression, excluding any
-     * later format-args.
+     * later format-args. Parentheses, braces, and brackets can all contain nested commas.
      */
     private fun firstArgument(text: String, open: Int, close: Int): String {
-        var depth = 0
+        var parens = 0
+        var braces = 0
+        var brackets = 0
         var i = open + 1
         while (i < close) {
             when (text[i]) {
                 '"' -> i = skipString(text, i)
-                '(' -> depth++
-                ')' -> depth--
-                ',' -> if (depth == 0) return text.substring(open + 1, i)
+                '(' -> parens++
+                ')' -> parens--
+                '{' -> braces++
+                '}' -> braces--
+                '[' -> brackets++
+                ']' -> brackets--
+                ',' -> if (parens == 0 && braces == 0 && brackets == 0) return text.substring(open + 1, i)
             }
             i++
         }
