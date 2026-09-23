@@ -100,6 +100,29 @@ describe("jetbrains plugin", () => {
     }
   })
 
+  test("resolves a native package's licence across platforms via the host's own installed variant", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, "kilo.jetbrains-1.2.3-signed.zip")
+      await Bun.write(file, "lean")
+      const result = await JetBrains.plugin({ file, variant: "lean", version: "1.2.3", cli: "9.9.9" })
+      const bom = await Bun.file(result.sidecar).json()
+
+      // @opentui/core ships one npm package per platform; only the test
+      // runner's own platform is ever locally installed, so every other
+      // variant depends on the cross-platform reconciliation pass in `clis()`.
+      const host = bom.components.find((item: any) => item.name.startsWith("@opentui/core-") && item.licenses)
+      expect(host).toBeDefined()
+      const others = bom.components.filter(
+        (item: any) => item.name.startsWith("@opentui/core-") && item.name !== host.name,
+      )
+      expect(others.length).toBeGreaterThan(0)
+      for (const item of others) expect(item.licenses).toEqual(host.licenses)
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
   test("marks the six CLI builds as contained for the bundled ZIP", async () => {
     const dir = await scratch()
     try {
@@ -130,6 +153,25 @@ describe("jetbrains plugin", () => {
       expect(names(bom)).not.toContain("junit")
       expect(scope(bom, "intellij-platform")).toBe("excluded")
       expect(scope(bom, "kotlinx-coroutines")).toBe("excluded")
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("records a gap for declared libraries instead of silently leaving no licence", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, "plugin.zip")
+      await Bun.write(file, "zip")
+      const result = await JetBrains.plugin({ file, variant: "lean", version: "1.2.3", cli: "9.9.9" })
+      const bom = await Bun.file(result.sidecar).json()
+
+      const okhttp = bom.components.find((item: any) => item.name === "okhttp")
+      expect(okhttp.licenses).toBeUndefined()
+      expect(bom.metadata.properties).toContainEqual({
+        name: "kilocode:coverage:gap:com.squareup.okhttp3:okhttp@4.12.0",
+        value: "licence unknown: not tracked by the Gradle version catalog",
+      })
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }

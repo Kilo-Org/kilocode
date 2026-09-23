@@ -278,6 +278,20 @@ function storeName(name: string) {
   return name.replace("/", "+")
 }
 
+// Read once per root instead of per lookup: a full glob walk over `.bun` (order
+// 1,000-2,000 entries) for every unresolved package made a multi-platform
+// closure -- the JetBrains plugin merges six of them -- take tens of seconds.
+const storeCache = new Map<string, string[]>()
+
+function storeEntries(root: string) {
+  const cached = storeCache.get(root)
+  if (cached) return cached
+  const dir = path.join(root, ".bun")
+  const entries = fs.existsSync(dir) ? fs.readdirSync(dir) : []
+  storeCache.set(root, entries)
+  return entries
+}
+
 /**
  * Look up a package inside Bun's isolated-linker store.
  *
@@ -292,10 +306,14 @@ function storeName(name: string) {
  * version is matched as a prefix rather than an exact directory name.
  */
 function fromStore(root: string, name: string, version: string) {
-  const pattern = `.bun/${storeName(name)}@${version}*/node_modules/${name}/package.json`
-  // `.bun` is a dot-directory; Bun.Glob skips those unless `dot` is set.
-  const matches = [...new Bun.Glob(pattern).scanSync({ cwd: root, dot: true })].sort()
-  return matches.length ? path.join(root, matches[0]) : undefined
+  const prefix = `${storeName(name)}@${version}`
+  const match = storeEntries(root)
+    .filter((entry) => entry === prefix || entry.startsWith(`${prefix}+`))
+    .sort()
+    .at(0)
+  if (!match) return undefined
+  const file = path.join(root, ".bun", match, "node_modules", name, "package.json")
+  return fs.existsSync(file) ? file : undefined
 }
 
 /**
@@ -356,5 +374,58 @@ export async function enrich(components: Component[], modules: string | string[]
       ...(author ? { author } : {}),
     })
   }
-  return { components: out, gaps }
+  return reconcile(out, gaps)
+}
+
+/**
+ * Strips a trailing `-<os>-<arch>[-<libc>]` suffix, e.g.
+ * `@opentui/core-linux-x64-musl` -> `@opentui/core`. `@parcel/watcher` names
+ * its glibc variant `-glibc` where most other native packages use `-gnu`.
+ */
+const PLATFORM_SUFFIX = /-(?:darwin|linux|win32)-(?:x64|arm64)(?:-(?:gnu|glibc|musl|msvc))?$/
+function family(name: string) {
+  return name.replace(PLATFORM_SUFFIX, "")
+}
+
+/**
+ * Borrow a licence from a resolved sibling platform package of the same
+ * family and version.
+ *
+ * A project that ships native binaries typically publishes one npm package per
+ * (os, cpu[, libc]) combination -- the same convention as `@esbuild/*` or
+ * `@rollup/rollup-*` -- all from the same release under the same licence. A
+ * single host can only ever install its own platform's variant, so composing a
+ * closure for every shipped target from one machine otherwise leaves every
+ * non-host variant unresolved even though the licence is already known from
+ * whichever variant the host did install.
+ *
+ * `enrich` applies this within its own input, which is a no-op for a
+ * single-platform closure (CLI archives, one VSIX) since at most one variant
+ * per family is ever present there. Composing several platforms' closures
+ * separately -- the JetBrains plugin merges all six CLI platforms one call at
+ * a time -- needs this run again on the combined result, which is why it is
+ * exported rather than kept private to `enrich`.
+ */
+export function reconcile(components: Component[], gaps: Gap[]) {
+  const known = new Map<string, Component>()
+  for (const item of components) {
+    if (item.licenses?.length && family(item.name) !== item.name)
+      known.set(`${family(item.name)}@${item.version}`, item)
+  }
+
+  const borrowed = new Set<string>()
+  const out = components.map((item) => {
+    if (item.licenses?.length || family(item.name) === item.name) return item
+    const sibling = known.get(`${family(item.name)}@${item.version}`)
+    if (!sibling) return item
+    borrowed.add(`${item.name}@${item.version}`)
+    return {
+      ...item,
+      licenses: sibling.licenses,
+      ...(sibling.description ? { description: sibling.description } : {}),
+      ...(sibling.author ? { author: sibling.author } : {}),
+    }
+  })
+
+  return { components: out, gaps: gaps.filter((gap) => !borrowed.has(gap.component)) }
 }

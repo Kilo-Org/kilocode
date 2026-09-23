@@ -65,18 +65,29 @@ export function catalog(text: string) {
 /** Test-only fixtures and mock servers are not shipped inside the plugin. */
 const EXCLUDED = /mockwebserver|junit|coroutines-test|detekt/
 
-function declared(text: string): Component[] {
-  return catalog(text)
+/**
+ * The version catalog carries no licence metadata, so declared components
+ * always report an explicit gap. This matches how `Deps.enrich` handles an
+ * npm package it cannot resolve: the limitation is recorded rather than left
+ * as a silently blank field with no explanation.
+ */
+function declared(text: string): { components: Component[]; gaps: Gap[] } {
+  const components = catalog(text)
     .libraries.filter((item) => !EXCLUDED.test(`${item.group}:${item.name}`))
     .map((item) => ({
-      type: "library",
+      type: "library" as const,
       name: item.name,
       group: item.group,
       version: item.version,
       purl: `pkg:maven/${item.group}/${item.name}@${item.version}`,
-      delivery: "contained",
+      delivery: "contained" as const,
       properties: { origin: "gradle-version-catalog" },
     }))
+  const gaps = components.map((item) => ({
+    component: `${item.group}:${item.name}@${item.version}`,
+    reason: "licence unknown: not tracked by the Gradle version catalog",
+  }))
+  return { components, gaps }
 }
 
 /**
@@ -174,7 +185,12 @@ async function clis(input: {
     gaps.push(...graph.gaps)
   }
 
-  return { components, dependencies, gaps }
+  // Each platform's closure was enriched in isolation, so a package's licence
+  // is only known from whichever single platform happened to match the build
+  // host. Reconciling the merged, six-platform result lets every sibling
+  // variant borrow it.
+  const reconciled = Deps.reconcile(components, gaps)
+  return { components: reconciled.components, dependencies, gaps: reconciled.gaps }
 }
 
 export type Options = {
@@ -196,6 +212,7 @@ export async function plugin(input: Options) {
   const rootRef = `kilocode:artifact:${subject.name}`
   const text = await Bun.file(path.join(root, "gradle/libs.versions.toml")).text()
   const lock = await Deps.load(path.join(repo, "bun.lock"))
+  const libraries = declared(text)
 
   const [embedded, scan] = await Promise.all([
     clis({
@@ -232,9 +249,9 @@ export async function plugin(input: Options) {
       },
     },
     tools: scan.tools,
-    components: [...declared(text), ...provided(text), ...embedded.components, ...scan.components],
+    components: [...libraries.components, ...provided(text), ...embedded.components, ...scan.components],
     dependencies: embedded.dependencies,
-    gaps: [...embedded.gaps, ...scan.gaps],
+    gaps: [...libraries.gaps, ...embedded.gaps, ...scan.gaps],
   })
 
   const out = Artifact.sidecar(input.file)

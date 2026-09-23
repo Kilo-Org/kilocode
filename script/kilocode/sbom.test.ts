@@ -228,6 +228,54 @@ describe("validate", () => {
   })
 })
 
+describe("reconcile", () => {
+  test("resolves a sibling across two independently-enriched batches", async () => {
+    // Reproduces the JetBrains shape: each platform's closure is enriched
+    // separately (a package's own platform variant is never in another
+    // platform's closure at all, so `enrich`'s own internal reconciliation
+    // sees nothing to borrow from). Only a second pass across the merged
+    // result can resolve it.
+    const darwin = await scratch()
+    const linux = await scratch()
+    try {
+      await Bun.write(
+        path.join(darwin, "@opentui", "core-darwin-arm64", "package.json"),
+        JSON.stringify({ license: "MIT" }),
+      )
+      const a = await Deps.enrich(
+        [
+          {
+            type: "library",
+            name: "@opentui/core-darwin-arm64",
+            version: "0.5.11",
+            purl: "pkg:npm/%40opentui/core-darwin-arm64@0.5.11",
+          },
+        ],
+        darwin,
+      )
+      const b = await Deps.enrich(
+        [
+          {
+            type: "library",
+            name: "@opentui/core-linux-x64",
+            version: "0.5.11",
+            purl: "pkg:npm/%40opentui/core-linux-x64@0.5.11",
+          },
+        ],
+        linux,
+      )
+      expect(b.components[0].licenses).toBeUndefined()
+
+      const merged = Deps.reconcile([...a.components, ...b.components], [...a.gaps, ...b.gaps])
+      expect(merged.components.find((item) => item.name === "@opentui/core-linux-x64")?.licenses).toEqual(["MIT"])
+      expect(merged.gaps).toEqual([])
+    } finally {
+      await fs.promises.rm(darwin, { recursive: true, force: true })
+      await fs.promises.rm(linux, { recursive: true, force: true })
+    }
+  })
+})
+
 describe("deps", () => {
   const lock: Deps.Lock = {
     lockfileVersion: 1,
@@ -416,6 +464,138 @@ describe("deps", () => {
       const result = await Deps.enrich(input, dir)
       expect(result.gaps).toEqual([
         { component: "missing@1.0.0", reason: "licence unknown: package not installed locally" },
+      ])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("borrows a licence from a resolved sibling platform package of the same family and version", async () => {
+    const dir = await scratch()
+    try {
+      // Only the host's own platform variant is installed -- the situation
+      // when one runner composes closures for every shipped target, as the
+      // JetBrains plugin does for all six CLI platforms.
+      await Bun.write(
+        path.join(dir, "@opentui", "core-darwin-arm64", "package.json"),
+        JSON.stringify({ license: "MIT" }),
+      )
+      const input: Component[] = [
+        {
+          type: "library",
+          name: "@opentui/core-darwin-arm64",
+          version: "0.5.11",
+          purl: "pkg:npm/%40opentui/core-darwin-arm64@0.5.11",
+        },
+        {
+          type: "library",
+          name: "@opentui/core-linux-x64",
+          version: "0.5.11",
+          purl: "pkg:npm/%40opentui/core-linux-x64@0.5.11",
+        },
+        {
+          type: "library",
+          name: "@opentui/core-win32-arm64",
+          version: "0.5.11",
+          purl: "pkg:npm/%40opentui/core-win32-arm64@0.5.11",
+        },
+      ]
+      const result = await Deps.enrich(input, dir)
+      expect(result.components.map((item) => item.licenses)).toEqual([["MIT"], ["MIT"], ["MIT"]])
+      expect(result.gaps).toEqual([])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("does not borrow across a version mismatch", async () => {
+    const dir = await scratch()
+    try {
+      await Bun.write(
+        path.join(dir, "@opentui", "core-darwin-arm64", "package.json"),
+        JSON.stringify({ license: "MIT" }),
+      )
+      const input: Component[] = [
+        {
+          type: "library",
+          name: "@opentui/core-darwin-arm64",
+          version: "0.5.11",
+          purl: "pkg:npm/%40opentui/core-darwin-arm64@0.5.11",
+        },
+        {
+          type: "library",
+          name: "@opentui/core-linux-x64",
+          version: "0.6.0",
+          purl: "pkg:npm/%40opentui/core-linux-x64@0.6.0",
+        },
+      ]
+      const result = await Deps.enrich(input, dir)
+      expect(result.gaps).toEqual([
+        { component: "@opentui/core-linux-x64@0.6.0", reason: "licence unknown: package not installed locally" },
+      ])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("does not borrow across a different package family", async () => {
+    const dir = await scratch()
+    try {
+      await Bun.write(path.join(dir, "cors", "package.json"), JSON.stringify({ license: "MIT" }))
+      const input: Component[] = [
+        { type: "library", name: "cors", version: "2.8.6", purl: "pkg:npm/cors@2.8.6" },
+        {
+          type: "library",
+          name: "@opentui/core-linux-x64",
+          version: "2.8.6",
+          purl: "pkg:npm/%40opentui/core-linux-x64@2.8.6",
+        },
+      ]
+      const result = await Deps.enrich(input, dir)
+      expect(result.gaps).toEqual([
+        { component: "@opentui/core-linux-x64@2.8.6", reason: "licence unknown: package not installed locally" },
+      ])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("recognises @parcel/watcher's non-standard '-glibc' libc suffix", async () => {
+    const dir = await scratch()
+    try {
+      await Bun.write(
+        path.join(dir, "@parcel", "watcher-darwin-arm64", "package.json"),
+        JSON.stringify({ license: "MIT" }),
+      )
+      const input: Component[] = [
+        {
+          type: "library",
+          name: "@parcel/watcher-darwin-arm64",
+          version: "2.5.1",
+          purl: "pkg:npm/%40parcel/watcher-darwin-arm64@2.5.1",
+        },
+        {
+          type: "library",
+          name: "@parcel/watcher-linux-x64-glibc",
+          version: "2.5.1",
+          purl: "pkg:npm/%40parcel/watcher-linux-x64-glibc@2.5.1",
+        },
+      ]
+      const result = await Deps.enrich(input, dir)
+      expect(result.components[1].licenses).toEqual(["MIT"])
+      expect(result.gaps).toEqual([])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("does not apply the family heuristic to a plain, non-platform-suffixed name", async () => {
+    const dir = await scratch()
+    try {
+      const input: Component[] = [{ type: "library", name: "cors", version: "1.0.0", purl: "pkg:npm/cors@1.0.0" }]
+      const result = await Deps.enrich(input, dir)
+      expect(result.gaps).toEqual([
+        { component: "cors@1.0.0", reason: "licence unknown: package not installed locally" },
       ])
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
