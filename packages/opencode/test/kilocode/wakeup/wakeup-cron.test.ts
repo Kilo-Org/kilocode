@@ -703,11 +703,11 @@ describe("Wakeup cron goal resume", () => {
           ? reply("Final report")
           : history.includes("[scheduled cron task]") && history.includes("Continue working toward this session goal")
             ? tool("goal_report", { status: "complete", reason: "The deploy check passed." })
-            : history.includes("cron_create") || history.includes("Scheduled task")
+            : history.includes("Scheduled cron task")
               ? reply("Scheduled the task")
               : tool("cron_create", {
                   prompt: "Poll the deploy",
-                  when: new Date(Date.now() + 1200).toISOString(),
+                  when: new Date(Date.now() + 3000).toISOString(),
                 })
         return new Response(stream, {
           status: 200,
@@ -806,7 +806,7 @@ describe("Wakeup cron goal resume", () => {
           ? reply("Final report")
           : history.includes("[scheduled wakeup]") && history.includes("Continue working toward this session goal")
             ? tool("goal_report", { status: "complete", reason: "The deploy check passed." })
-            : history.includes("schedule_wakeup") || history.includes("Scheduled wakeup")
+            : history.includes("Scheduled wakeup")
               ? reply("Scheduled the check")
               : tool("schedule_wakeup", {
                   prompt: "Check the deploy",

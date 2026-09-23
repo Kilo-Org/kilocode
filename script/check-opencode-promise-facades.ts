@@ -98,7 +98,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "resumes the waiting goal; scoped layers cannot express the boundary under test.",
   },
   "kilocode/wakeup/wakeup-resume.test.ts": {
-    count: 39,
+    count: 47,
     reason:
       "the wakeup resume integration test schedules through the production Wakeup service and asserts the mock " +
       "model receives the scheduled prompt, so it must run the production Fire/resume path " +

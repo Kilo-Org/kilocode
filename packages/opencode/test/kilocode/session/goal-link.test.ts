@@ -206,19 +206,53 @@ describe("GoalLink.cleanup", () => {
   test("runs every registered handler even after one fails", async () => {
     const id = sid("cleanup")
     const seen: string[] = []
-    GoalLink.registerCleanup(() =>
+    const off1 = GoalLink.registerCleanup(() =>
       Effect.sync(() => {
         seen.push("first")
       }),
     )
-    GoalLink.registerCleanup(() => Effect.die(new Error("boom")))
-    GoalLink.registerCleanup(() =>
+    const off2 = GoalLink.registerCleanup(() => Effect.die(new Error("boom")))
+    const off3 = GoalLink.registerCleanup(() =>
       Effect.sync(() => {
         seen.push("last")
       }),
     )
+    try {
+      await Effect.runPromise(GoalLink.cleanup(id))
+      expect(seen).toEqual(["first", "last"])
+    } finally {
+      off1()
+      off2()
+      off3()
+    }
+  })
+
+  test("the returned disposer unregisters a handler so a rebuild cannot stack", async () => {
+    const id = sid("cleanup-off")
+    const seen: string[] = []
+    const off = GoalLink.registerCleanup(() =>
+      Effect.sync(() => {
+        seen.push("once")
+      }),
+    )
+    off()
     await Effect.runPromise(GoalLink.cleanup(id))
-    expect(seen).toEqual(["first", "last"])
+    expect(seen).toEqual([])
+  })
+})
+
+describe("GoalLink.release", () => {
+  test("drops the wait, queued fire and arm for a removed session", async () => {
+    const id = sid("release")
+    const wait: GoalLink.Wait = { kind: "wakeup", id: "wku_r", label: "later" }
+    GoalLink.set(id, wait)
+    GoalLink.pushPending(id, { note: "go", wait })
+    GoalLink.registerArm(id, () => Effect.void)
+    GoalLink.release(id)
+    expect(GoalLink.get(id)).toBeUndefined()
+    expect(GoalLink.takePending(id)).toEqual([])
+    const exit = await Effect.runPromiseExit(GoalLink.arm(id, { sessionID: id, action: "resume" }))
+    expect(Exit.isFailure(exit)).toBe(true)
   })
 })
 
@@ -281,15 +315,17 @@ describe("GoalPolicy.available", () => {
     expect(GoalPolicy.available(id, "question")).toBe(true)
   })
 
-  test("a wait-for-deploy goal hides explore tools until a wait is armed", () => {
+  test("a wait-for-deploy goal hides explore tools but keeps every scheduling wait", () => {
     const id = sid("curb")
     expect(GoalPolicy.available(id, "bash")).toBe(true)
     GoalState.curb(id)
     expect(GoalPolicy.available(id, "bash")).toBe(false)
     expect(GoalPolicy.available(id, "read")).toBe(false)
-    expect(GoalPolicy.available(id, "background_process")).toBe(false)
     expect(GoalPolicy.available(id, "schedule_wakeup")).toBe(true)
     expect(GoalPolicy.available(id, "cron_create")).toBe(true)
+    // The instruction text names background_process as a valid first call; a
+    // non-terminal start or a monitor arms a process wait, so the curb allows it.
+    expect(GoalPolicy.available(id, "background_process")).toBe(true)
     GoalLink.set(id, { kind: "wakeup", id: "wku_c", label: "x" })
     expect(GoalPolicy.available(id, "bash")).toBe(false)
     GoalState.pause(id)

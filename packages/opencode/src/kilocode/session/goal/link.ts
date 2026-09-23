@@ -104,6 +104,17 @@ export namespace GoalLink {
   }
 
   /**
+   * Drop the per-session state once the session is gone: the arm closure that
+   * retains this process's service graph, the wait record, and any queued fire.
+   * The directory factory is keyed by directory, not session, so it stays.
+   */
+  export function release(sessionID: SessionID) {
+    waits.delete(sessionID)
+    pending.delete(sessionID)
+    arms.delete(sessionID)
+  }
+
+  /**
    * Restore a persisted waiting goal: the wait record, the question-gate hold,
    * and a per-session arm hook when the caller supplies one.
    */
@@ -185,13 +196,22 @@ export namespace GoalLink {
 
   const cleanups: Cleanup[] = []
 
-  /** Every Wakeup layer build registers once, so whichever build owns the timer can interrupt it. */
+  /**
+   * Every Wakeup layer build registers once, so whichever build owns the timer
+   * can interrupt it. The returned disposer removes the handler again, so a
+   * rebuilt layer does not stack another closure onto the list.
+   */
   export function registerCleanup(fn: Cleanup) {
     cleanups.push(fn)
+    return () => {
+      const index = cleanups.indexOf(fn)
+      if (index !== -1) cleanups.splice(index, 1)
+    }
   }
 
   export function cleanup(sessionID: SessionID) {
-    return Effect.forEach(cleanups, (fn) => Effect.catchCause(fn(sessionID), () => Effect.void), { discard: true })
+    // Snapshot: a handler may unregister itself while the batch runs.
+    return Effect.forEach([...cleanups], (fn) => Effect.catchCause(fn(sessionID), () => Effect.void), { discard: true })
   }
 
   /**

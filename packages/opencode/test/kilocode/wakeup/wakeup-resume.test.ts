@@ -9,6 +9,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AppRuntime } from "@/effect/app-runtime"
 import { InstanceRef } from "@/effect/instance-ref"
+import { GoalLink } from "@/kilocode/session/goal/link"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { Wakeup } from "@/kilocode/wakeup"
 import { InstanceStore } from "@/project/instance-store"
@@ -686,6 +687,10 @@ describe("wakeup resume", () => {
       )
       expect(settled.status).toBe("paused")
       expect(settled.reason).toContain("Restore this session")
+      // The failed resume must undo hydrate's hold and wait record, or the
+      // question tool stays filtered out for the paused goal and the wait leaks.
+      expect(GoalState.hold(session.id)).toBe(false)
+      expect(GoalLink.get(session.id)).toBeUndefined()
       expect(bodies.some((body) => body.includes("[scheduled wakeup]"))).toBe(false)
     } finally {
       await server.stop(true)
@@ -812,6 +817,124 @@ describe("wakeup resume", () => {
         ),
       )
       expect(done.active).toBe(false)
+    } finally {
+      await server.stop(true)
+      await rm(dir, { recursive: true, force: true })
+    }
+  }, 30_000)
+
+  test("cancelling the awaited wakeup leaves the session's other timers alone", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        // The cancelled wait resumes the goal, and this turn arms a new wait
+        // instead of settling, so the session keeps the timers it already held.
+        const stream = history.includes("Scheduled wakeup")
+          ? reply("Scheduled the check")
+          : history.includes("[cancelled]") && history.includes("Continue working toward this session goal")
+            ? tool("schedule_wakeup", {
+                prompt: "check again",
+                when: new Date(Date.now() + 60_000).toISOString(),
+                reason: "again",
+              })
+            : reply("Working")
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-cancel-others-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.create({ title: "Wakeup cancel others", agent: "code", model: saved }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const awaited = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "poll the deploy",
+            when: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+      const reminder = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) =>
+          wake.schedule({
+            sessionID: session.id,
+            directory: dir,
+            prompt: "user reminder",
+            when: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Session.Service.use((svc) =>
+          svc.setMetadata({
+            sessionID: session.id,
+            metadata: {
+              "kilo.goal": {
+                text: objective,
+                status: "waiting",
+                active: false,
+                wait: { kind: "wakeup", id: awaited.id, label: "poll the deploy" },
+              },
+            },
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) => wake.cancel(awaited.id)).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, ctx),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(
+            Effect.map((goal) => (goal?.status === "waiting" && goal.wait?.id !== awaited.id ? goal : undefined)),
+          ),
+          "the cancelled wait did not resume into a new goal wait",
+          "15 seconds",
+        ),
+      )
+
+      const pending = await AppRuntime.runPromise(
+        Wakeup.Service.use((wake) => wake.list({ sessionID: session.id })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+      const ids = pending.map((item) => item.id)
+      expect(ids).toContain(reminder.id)
+      expect(ids).not.toContain(awaited.id)
     } finally {
       await server.stop(true)
       await rm(dir, { recursive: true, force: true })

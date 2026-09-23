@@ -476,8 +476,10 @@ export namespace Wakeup {
       // Register once per Wakeup layer build so a goal that settles, pauses, or
       // clears cancels the session's timers through the same service that armed
       // them (D11). Clearing the wait record first in the goal's cleanup path
-      // makes the cancel notify above a no-op during teardown.
-      yield* Effect.sync(() => GoalLink.registerCleanup((id) => cancelSession(id)))
+      // makes the cancel notify above a no-op during teardown. The disposer
+      // drops the handler on teardown so a rebuilt layer does not stack one.
+      const unregisterCleanup = GoalLink.registerCleanup((id) => cancelSession(id))
+      yield* Effect.addFinalizer(() => Effect.sync(unregisterCleanup))
 
       const adopt = Effect.fn("Wakeup.adopt")(function* (directory: string) {
         const keys = yield* storage.list(["wakeup"]).pipe(Effect.catch(() => Effect.succeed([] as string[][])))

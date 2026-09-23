@@ -745,7 +745,12 @@ export namespace Goal {
                 // Only a resume keeps the wait a recurring task needs; a new
                 // objective must not inherit the replaced goal's timer.
                 const resumeWait = input.action === "resume" ? GoalState.read(fresh.metadata)?.wait : undefined
-                if (wasHeld && !resumeWait) {
+                // A resume continues the same goal and never replaces one, so it
+                // must not sweep the session's timers. A cancel notification
+                // strips the wait before resuming (D5); without this guard that
+                // path landed here and cancelled every unrelated wakeup and cron
+                // task the session held alongside the awaited one.
+                if (wasHeld && input.action !== "resume") {
                   // The replaced goal's timers go with it, so its fire cannot
                   // resume a goal it no longer belongs to.
                   GoalLink.clear(id)

@@ -1,6 +1,10 @@
 export namespace GoalInstructions {
   export function timed(text: string) {
-    return /wait for .{0,80}(deploy|build|\bci\b)/i.test(text)
+    // The time-based event must be the object of "wait for" ("wait for the
+    // deploy"). A passing mention inside 80 chars, such as "wait for the
+    // reviewer to approve, then fix the build", must not curb the goal and hide
+    // the read/edit/bash tools the work needs.
+    return /\bwait for (?:the |a |an |my |our )?(?:deploy|build|ci\b)/i.test(text)
   }
 
   export const help =

@@ -46,6 +46,12 @@ async function resume(info: Info, inst?: InstanceContext, inPlace = false, kind?
             directory: info.directory,
             err,
           })
+          // `hydrate` armed the question-gate hold and the wait record. The goal
+          // is not resuming, so undo both: a paused goal that still reads as held
+          // keeps the question tool filtered out and leaks the wait record.
+          GoalLink.clear(info.sessionID)
+          GoalState.clearWaiting(info.sessionID)
+          GoalState.clearCurb(info.sessionID)
           const latest = await AppRuntime.runPromise(Session.Service.use((svc) => svc.get(info.sessionID)))
           const saved = GoalState.read(latest.metadata)
           if (saved) {

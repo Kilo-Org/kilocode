@@ -30,6 +30,14 @@ test("a wait-for-deploy objective is a timed goal", () => {
   expect(GoalInstructions.timed("Improve the validation workflow")).toBe(false)
 })
 
+test("a passing mention of build or ci is not a timed goal", () => {
+  // The curb hides read/edit/bash, so a false positive would stop a normal
+  // coding goal from doing its work.
+  expect(GoalInstructions.timed("Wait for the reviewer to approve, then fix the build")).toBe(false)
+  expect(GoalInstructions.timed("Wait for approval, then build the release")).toBe(false)
+  expect(GoalInstructions.timed("Wait for the user, then run CI")).toBe(false)
+})
+
 test("every goal and timing description names the session goal", () => {
   expect(GoalInstructions.help).toMatch(/goal/i)
   expect(goalPrompt).toMatch(/goal/i)
