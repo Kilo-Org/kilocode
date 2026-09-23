@@ -69,6 +69,10 @@ import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SandboxConfigDto
+import ai.kilocode.rpc.dto.SandboxConfigPatchDto
+import ai.kilocode.rpc.dto.SandboxNetworkDto
+import ai.kilocode.rpc.dto.SandboxStatusDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionBoardDto
@@ -381,6 +385,27 @@ object KiloCliDataParser {
     }
 
     /**
+     * Parse an SSE `sandbox.status.changed` event into a [SandboxStatusDto]. Handles the
+     * GlobalEvent wrapper `{ directory, payload: { properties } }` the same way [parseSessionStatus]
+     * does. Returns null when the event is missing a session id or directory.
+     */
+    fun parseSandboxStatusChanged(data: String): SandboxStatusDto? {
+        val obj = tryParseObject(data) ?: return null
+        val payload = obj["payload"]?.jsonObject ?: obj
+        val props = payload["properties"]?.jsonObject ?: obj
+        val sessionID = props.str("sessionID") ?: return null
+        val directory = props.str("directory") ?: return null
+        return SandboxStatusDto(
+            sessionID = sessionID,
+            directory = directory,
+            enabled = runCatching { props.flagOrNull("enabled") }.getOrNull() ?: false,
+            available = runCatching { props.flagOrNull("available") }.getOrNull() ?: false,
+            reason = props.str("reason"),
+            version = props.long("version") ?: 0,
+        )
+    }
+
+    /**
      * Parse an SSE `session.created` / `session.updated` / `session.deleted` event into a
      * [SessionChangeDto]. All three carry the full session `info`, which is where the directory
      * comes from. Returns null for any other type, or when there is no id or directory to act on.
@@ -634,8 +659,28 @@ object KiloCliDataParser {
             agent = parseAgentConfig(obj["agent"].obj()),
             permission = parsePermissionConfig(obj["permission"].obj()),
             shared_agent_board = runCatching { obj.flagOrNull("shared_agent_board") }.getOrNull(),
+            sandbox = parseSandboxConfig(obj["sandbox"].obj()),
         )
     }.getOrDefault(ConfigDto())
+
+    private fun parseSandboxConfig(obj: JsonObject?): SandboxConfigDto? {
+        if (obj == null) return null
+        val network = when (obj.str("network")) {
+            "allow" -> SandboxNetworkDto.ALLOW
+            "deny" -> SandboxNetworkDto.DENY
+            else -> null
+        }
+        return SandboxConfigDto(
+            enabled = runCatching { obj.flagOrNull("enabled") }.getOrNull(),
+            network = network,
+            writablePaths = obj["writable_paths"].arr()
+                ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                ?: emptyList(),
+            allowedHosts = obj["allowed_hosts"].arr()
+                ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                ?: emptyList(),
+        )
+    }
 
     private fun parseWatcherConfig(obj: JsonObject?): WatcherConfigDto? {
         if (obj == null) return null
@@ -962,6 +1007,24 @@ object KiloCliDataParser {
     /** Body for `POST /session/{id}/fork`. A whole-session fork sends no body at all; see the caller. */
     fun buildForkJson(messageId: String): String = """{"messageID":${escape(messageId)}}"""
 
+    /**
+     * Body for `POST /session?directory=`. Null [sandbox] omits the field entirely (CLI applies its
+     * own default precedence); a non-null value is sent as versioned create-time metadata so the
+     * server confines the session before its first tool call. See
+     * packages/opencode/src/kilocode/sandbox/state.ts (key "kilocode.sandbox").
+     */
+    fun buildSessionCreateJson(sandbox: Boolean?): String {
+        if (sandbox == null) return "{}"
+        return buildJsonObject {
+            put("metadata", buildJsonObject {
+                put("kilocode.sandbox", buildJsonObject {
+                    put("enabled", sandbox)
+                    put("version", 0)
+                })
+            })
+        }.toString()
+    }
+
     /** Body for `POST /kilocode/session/{id}/board/reset`. */
     fun buildResetSessionBoardJson(revision: Int): String = """{"revision":$revision}"""
 
@@ -1064,6 +1127,18 @@ object KiloCliDataParser {
             if (permission != null) put("permission", buildPermission(permission))
 
             if (patch.shared_agent_board != null) put("shared_agent_board", patch.shared_agent_board)
+
+            val sandbox = patch.sandbox
+            if (sandbox != null) {
+                put("sandbox", buildJsonObject {
+                    if (sandbox.enabled != null) put("enabled", sandbox.enabled)
+                    if (sandbox.network != null) put("network", if (sandbox.network == SandboxNetworkDto.ALLOW) "allow" else "deny")
+                    val writablePaths = sandbox.writablePaths
+                    if (writablePaths != null) put("writable_paths", JsonArray(writablePaths.map(::JsonPrimitive)))
+                    val allowedHosts = sandbox.allowedHosts
+                    if (allowedHosts != null) put("allowed_hosts", JsonArray(allowedHosts.map(::JsonPrimitive)))
+                })
+            }
 
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {

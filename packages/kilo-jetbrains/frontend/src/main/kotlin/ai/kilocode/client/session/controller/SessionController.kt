@@ -2,6 +2,7 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
@@ -22,6 +23,7 @@ import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.model.SandboxUiState
 import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.Text
@@ -58,6 +60,9 @@ import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SandboxStatusDto
+import ai.kilocode.rpc.dto.SandboxSupportDto
+import ai.kilocode.rpc.dto.SandboxNetworkDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.Disposable
@@ -98,6 +103,7 @@ class SessionController(
   private val sessions: KiloSessionService,
   private val workspace: Workspace,
   private val app: KiloAppService,
+  private val sandbox: KiloSandboxService? = null,
   private val cs: CoroutineScope,
   private val comp: Component? = null,
   private val flushMs: Long = EVENT_FLUSH_MS,
@@ -165,6 +171,9 @@ class SessionController(
     private var partType: String? = null
     private var tool: String? = null
     private var eventJob: Job? = null
+    private var sandboxJob: Job? = null
+    private var sandboxToggleJob: Job? = null
+    private var sandboxSupport: SandboxSupportDto? = null
     private var backgroundJobsJob: Job? = null
     private var backgroundJobsRaw: List<BackgroundJobDto> = emptyList()
     private var drainJob: Job? = null
@@ -220,6 +229,14 @@ class SessionController(
 
     val ready: Boolean get() = model.isReady()
     val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
+    // Interactive sandbox controls (button + /sandbox) are exposed when the feature service exists
+    // and the global config does not explicitly disable it. Missing config resolves to visible —
+    // an intentional first-run improvement over VS Code's stricter "missing == hidden" coupling.
+    // A session that is already sandboxed (or unavailable while desired-on) still reports its
+    // status through `model.sandbox` even when this is false; only the action is hidden.
+    val sandboxVisible: Boolean get() = sandbox != null && app.state.value.config?.sandbox?.enabled != false
+    val sandboxNetworkRestricted: Boolean
+        get() = app.state.value.config?.sandbox?.network != SandboxNetworkDto.ALLOW
     internal val blank: Boolean get() = ref == null && model.isEmpty() && !model.showSession
     internal val id: String? get() = sid
     internal val sessionDirectory: String get() = model.session?.directory ?: (ref as? SessionRef.Local)?.session?.directory ?: directory
@@ -380,13 +397,41 @@ class SessionController(
     }
 
     private suspend fun createSession(): String? {
-        val session = sessions.create(directory)
+        val svc = sandbox
+        val desired = svc?.newSessionDefault() ?: false
+        if (desired) {
+            val support = svc.support(directory)
+            check(support.available) {
+                support.reason ?: KiloBundle.message("session.sandbox.error.unavailable")
+            }
+        }
+        // Always send the project choice as create-time metadata so the first tool call is already
+        // governed by it and a stale CLI directory preference cannot silently change this IDE's
+        // selected policy.
+        val session = sessions.create(directory, desired)
+        val status = if (desired) {
+            try {
+                svc.status(session.id, directory).also {
+                    check(it.available && it.enabled) {
+                        it.reason ?: KiloBundle.message("session.sandbox.error.unavailable")
+                    }
+                }
+            } catch (err: Exception) {
+                runCatching { sessions.deleteSession(session.id, directory) }
+                throw err
+            }
+        } else null
+        if (disposed) {
+            runCatching { sessions.deleteSession(session.id, directory) }
+            return null
+        }
         runEdt {
             if (disposed) return@runEdt
             ref = SessionRef.Local(session)
             setRecentSessionsState(RecentsState.Idle)
             updateModel {
                 model.setSession(session)
+                status?.let(::applySandboxStatus)
             }
         }
         if (disposed) return null
@@ -945,11 +990,12 @@ class SessionController(
     private fun approve(id: String, restore: () -> Permission) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
-        // Skill-shell batches must be answered by a human: the server refuses non-interactive
-        // approvals, so show the card (its manual reply sets interactive=true) rather than send a
-        // machine reply. Decide and enqueue synchronously on the EDT so back-to-back asks keep
-        // arrival (FIFO) order, matching asked()'s non-auto path; only the RPC needs a coroutine.
-        if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
+        // Skill-shell batches and sandbox escalation must be answered by a human: the server
+        // refuses non-interactive approvals for both, so show the card (its manual reply sets
+        // interactive=true) rather than send a machine reply. Decide and enqueue synchronously on
+        // the EDT so back-to-back asks keep arrival (FIFO) order, matching asked()'s non-auto path;
+        // only the RPC needs a coroutine.
+        if (!autoApprove || needsHumanApproval(restore())) {
             show(restore())
             return
         }
@@ -983,9 +1029,10 @@ class SessionController(
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
                 val count = replyAll(permissions)
-                // Skill-shell requests are skipped by replyAll; queue all of them so they aren't
-                // stranded (never machine-approved, never shown) or overwritten by later cards.
-                val cards = permissions.filter { it.metadata["skillShell"] == "true" }.map(::toPermission)
+                // Skill-shell and sandbox-escalation requests are skipped by replyAll; queue all of
+                // them so they aren't stranded (never machine-approved, never shown) or overwritten
+                // by later cards.
+                val cards = permissions.filter(::needsHumanApproval).map(::toPermission)
                 if (count == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
@@ -1020,8 +1067,9 @@ class SessionController(
         var count = 0
         for (request in permissions) {
             if (!autoApprove) return count
-            // Skill-shell batches need a human; skip them here (callers surface the card).
-            if (request.metadata["skillShell"] == "true") continue
+            // Skill-shell batches and sandbox escalation need a human; skip them here (callers
+            // surface the card).
+            if (needsHumanApproval(request)) continue
             sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
             count++
@@ -1029,10 +1077,11 @@ class SessionController(
         return count
     }
 
-    // A skill-shell request is never machine-approved (the server refuses non-interactive
-    // approvals); after draining, callers must surface one as a card so a human can answer.
+    // A skill-shell request or sandbox escalation is never machine-approved (the server refuses
+    // non-interactive approvals for both); after draining, callers must surface one as a card so a
+    // human can answer.
     private fun skillShellCard(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
-        permissions.lastOrNull { it.metadata["skillShell"] == "true" }
+        permissions.lastOrNull(::needsHumanApproval)
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
@@ -1213,6 +1262,7 @@ class SessionController(
                     fire(SessionControllerEvent.WorkspaceReady)
                     edt {
                         if (canUseRecents()) refreshRecents()
+                        refreshSandboxSupport()
                     }
                 }
             }
@@ -1409,6 +1459,168 @@ class SessionController(
                 log.warn("${ChatLogSummary.sid(id)} kind=subscription route=background-jobs failed message=${e.message}", e)
             }
         }
+        subscribeSandbox(id)
+    }
+
+    /**
+     * Seed [SessionModel.sandbox] with the session's current authoritative status, then keep it
+     * live from `sandbox.status.changed`. A no-op when the sandbox feature service is absent
+     * (existing tests that do not inject one).
+     */
+    private fun subscribeSandbox(id: String) {
+        val svc = sandbox ?: return
+        cs.launch {
+            try {
+                val status = svc.status(id, directory)
+                runEdt {
+                    if (disposed || sid != id) return@runEdt
+                    updateModel { applySandboxStatus(status) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("${ChatLogSummary.sid(id)} kind=sandbox-status dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                runEdt {
+                    if (disposed || sid != id) return@runEdt
+                    val current = model.sandbox as? SandboxUiState.Known ?: return@runEdt
+                    updateModel {
+                        model.setSandbox(current.copy(available = false, reason = e.message, pending = false))
+                    }
+                }
+            }
+        }
+        sandboxJob = cs.launch {
+            try {
+                svc.statusChanges.collect { status ->
+                    if (status.sessionID != id || status.directory != directory) return@collect
+                    runEdt {
+                        if (disposed || sid != id) return@runEdt
+                        updateModel { applySandboxStatus(status) }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("${ChatLogSummary.sid(id)} kind=subscription route=sandbox-status failed message=${e.message}", e)
+            }
+        }
+    }
+
+    /** Must run inside [updateModel]. */
+    @RequiresEdt
+    private fun applySandboxStatus(status: SandboxStatusDto) {
+        model.setSandbox(SandboxUiState.Known(status.enabled, status.available, status.reason, status.version))
+    }
+
+    /**
+     * Probe backend-host sandbox capability for a session that does not exist yet. Capability is
+     * always evaluated on the connected backend host (relevant in Remote Development split mode);
+     * never inferred from the frontend's own OS. A no-op once a real session exists — from then on
+     * [subscribeSandbox] is authoritative.
+     */
+    private fun refreshSandboxSupport() {
+        val svc = sandbox ?: return
+        if (sid != null) return
+        cs.launch {
+            try {
+                val support = svc.support(directory)
+                runEdt {
+                    if (disposed || sid != null) return@runEdt
+                    sandboxSupport = support
+                    updateModel { applyPendingSandboxState() }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("kind=sandbox-support dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Render the project-scoped new-session default as the prompt control's state before any
+     * session exists. Must run inside [updateModel].
+     */
+    @RequiresEdt
+    private fun applyPendingSandboxState() {
+        val svc = sandbox ?: return
+        val support = sandboxSupport
+        model.setSandbox(
+            SandboxUiState.Known(
+                enabled = svc.newSessionDefault(),
+                available = support?.available ?: false,
+                reason = support?.reason,
+                version = 0,
+            ),
+        )
+    }
+
+    /**
+     * Toggle sandbox confinement.
+     *
+     * Before any session exists, this flips the project-scoped default for the *next* session
+     * (chat or Worktree Run) and never talks to the server. Once a session exists, it reconciles
+     * that session's actual state through [KiloSandboxService.setEnabled] and is ignored while a
+     * turn is active — the server rejects a mid-turn change, so the action is disabled first.
+     */
+    fun toggleSandbox() {
+        assertEdt()
+        val svc = sandbox ?: return
+        if (!sandboxVisible) {
+            notify(
+                KiloBundle.message("session.sandbox.error.title"),
+                sandboxSupport?.reason ?: KiloBundle.message("session.sandbox.error.unavailable"),
+            )
+            return
+        }
+        val id = sid
+        if (id == null) {
+            val next = !svc.newSessionDefault()
+            svc.setNewSessionDefault(next)
+            updateModel { applyPendingSandboxState() }
+            return
+        }
+        if (sandboxBusy() || sandboxToggleJob?.isActive == true) return
+        val target = !((model.sandbox as? SandboxUiState.Known)?.enabled ?: false)
+        LOG.info("${ChatLogSummary.sid(id)} kind=sandbox-toggle target=$target")
+        val current = model.sandbox as? SandboxUiState.Known
+        if (current != null) updateModel { model.setSandbox(current.copy(pending = true)) }
+        sandboxToggleJob = cs.launch {
+            try {
+                val status = svc.setEnabled(id, directory, target)
+                if (status.available) svc.setNewSessionDefault(status.enabled)
+                runEdt {
+                    if (disposed || sid != id) return@runEdt
+                    updateModel { applySandboxStatus(status) }
+                    if (status.enabled != target) {
+                        notify(
+                            KiloBundle.message("session.sandbox.error.title"),
+                            status.reason ?: KiloBundle.message("session.sandbox.error.unavailable"),
+                        )
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(id)} kind=sandbox-toggle target=$target dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt {
+                    if (disposed || sid != id) return@edt
+                    notify(KiloBundle.message("session.sandbox.error.title"), e.message ?: KiloBundle.message("session.sandbox.error.unavailable"))
+                }
+            } finally {
+                edt {
+                    if (sid != id) return@edt
+                    sandboxToggleJob = null
+                    val latest = model.sandbox as? SandboxUiState.Known ?: return@edt
+                    if (latest.pending) updateModel { model.setSandbox(latest.copy(pending = false)) }
+                }
+            }
+        }
+    }
+
+    /** Whether the sandbox action should be disabled because a turn/permission/question is active. */
+    fun sandboxBusy(): Boolean = model.state.let {
+        it is SessionState.Busy || it is SessionState.AwaitingPermission || it is SessionState.AwaitingQuestion
     }
 
     @RequiresEdt
@@ -1473,6 +1685,10 @@ class SessionController(
         assertEdt()
         eventJob?.cancel()
         eventJob = null
+        sandboxJob?.cancel()
+        sandboxJob = null
+        sandboxToggleJob?.cancel()
+        sandboxToggleJob = null
         backgroundJobsJob?.cancel()
         backgroundJobsJob = null
         backgroundJobsRaw = emptyList()
@@ -1567,10 +1783,11 @@ class SessionController(
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
             // Under auto-approve, replyAll approves the ordinary permissions and skips skill-shell
-            // ones (they need a human); queue only those. Otherwise queue every pending permission.
+            // and sandbox-escalation ones (they need a human); queue only those. Otherwise queue
+            // every pending permission.
             val queue = if (autoApprove) {
                 replyAll(permissions)
-                permissions.filter { it.metadata["skillShell"] == "true" }
+                permissions.filter(::needsHumanApproval)
             } else {
                 permissions
             }
@@ -1633,8 +1850,9 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
-            // replyAll auto-approves the ordinary permissions and skips skill-shell ones. A
-            // skill-shell request must then fall through to a human card rather than go Busy.
+            // replyAll auto-approves the ordinary permissions and skips skill-shell and
+            // sandbox-escalation ones. Those must then fall through to a human card rather than go
+            // Busy.
             val skillCard = skillShellCard(permissions)
             if (permissions.isNotEmpty() && autoApprove) {
                 val count = replyAll(permissions)
@@ -1648,9 +1866,10 @@ class SessionController(
                     return
                 }
             }
-            // After auto-approve only skill-shell permissions still need a human card; queue those.
-            // Otherwise queue the whole pending set so each request is resolved in turn.
-            val queue = if (autoApprove) permissions.filter { it.metadata["skillShell"] == "true" } else permissions
+            // After auto-approve only skill-shell/sandbox-escalation permissions still need a human
+            // card; queue those. Otherwise queue the whole pending set so each request is resolved
+            // in turn.
+            val queue = if (autoApprove) permissions.filter(::needsHumanApproval) else permissions
             // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
             // must not shadow the transcript: a session reopened after a failed turn is idle on the
             // server and would otherwise recover as if it had never failed.
@@ -3105,6 +3324,15 @@ private fun ConfigWarningDto.toDetailLine(): String {
     val tail = detail?.trim()?.ifEmpty { null } ?: return head
     return "$head\n$tail"
 }
+
+// Skill-shell batches and sandbox escalation both require a human, interactive reply — the CLI
+// permission layer rejects a non-interactive ("machine") approval for either, so auto-approve must
+// never answer them. See packages/opencode/src/permission/index.ts forceAsk.
+private fun needsHumanApproval(dto: PermissionRequestDto): Boolean =
+    dto.metadata["skillShell"] == "true" || dto.permission == "sandbox_escalation"
+
+private fun needsHumanApproval(permission: Permission): Boolean =
+    permission.meta.raw["skillShell"] == "true" || permission.name == "sandbox_escalation"
 
 private fun toPermission(dto: PermissionRequestDto): Permission {
     val ref = dto.tool?.let { ToolCallRef(it.messageID, it.callID) }

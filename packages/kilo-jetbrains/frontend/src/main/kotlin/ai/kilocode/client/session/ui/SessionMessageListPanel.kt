@@ -191,7 +191,8 @@ class SessionMessageListPanel(
                 is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
-                is SessionModelEvent.Compacted -> Unit
+                is SessionModelEvent.Compacted,
+                is SessionModelEvent.SandboxChanged -> Unit
 
                 is SessionModelEvent.MessageUpdated -> {
                     // message.updated fires on every streamed metadata delta (time/tokens/cost). Only

@@ -113,7 +113,10 @@ object KiloRepoCli {
         }
         target.parentFile.mkdirs()
         target.outputStream().use(copy)
-        if (!SystemInfo.isWindows && (target.name == "kilo" || target.name == "bwrap")) {
+        // See KiloCliDownloader.write: the seccomp helper needs its executable bit restored the
+        // same as `kilo`/`bwrap`, or Linux `allowed_hosts`/proxy network mode can report available
+        // and then fail to spawn it.
+        if (!SystemInfo.isWindows && target.name in KiloCliDownloader.EXECUTABLE_NAMES) {
             target.setExecutable(true)
         }
     }

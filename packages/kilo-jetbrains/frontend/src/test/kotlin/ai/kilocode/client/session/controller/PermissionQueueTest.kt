@@ -142,6 +142,33 @@ class PermissionQueueTest : SessionControllerTestBase() {
         assertPermission(m, "perm2")
     }
 
+    fun `test auto approve sandbox escalation permissions stay queued in FIFO order`() {
+        edt { KiloPluginSettings.setAutoApprove(true) }
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", sandboxPermission("perm1")))
+        emit(ChatEventDto.PermissionAsked("ses_test", sandboxPermission("perm2")))
+
+        assertPermission(m, "perm1", "sandbox_escalation")
+
+        emit(ChatEventDto.PermissionReplied("ses_test", "perm1"))
+        assertPermission(m, "perm2", "sandbox_escalation")
+    }
+
+    fun `test auto approve drain queues sandbox escalation permissions`() {
+        rpc.pendingPermissionList.add(sandboxPermission("perm1"))
+        rpc.pendingPermissionList.add(sandboxPermission("perm2"))
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        assertPermission(m, "perm1", "sandbox_escalation")
+
+        emit(ChatEventDto.PermissionReplied("ses_test", "perm1"))
+        assertPermission(m, "perm2", "sandbox_escalation")
+    }
+
     fun `test auto approve failure card is queued and purged by stop`() {
         edt { KiloPluginSettings.setAutoApprove(true) }
         rpc.replyPermissionThrows = RuntimeException("boom")
@@ -282,6 +309,8 @@ class PermissionQueueTest : SessionControllerTestBase() {
     )
 
     private fun skillPermission(id: String) = permission(id).copy(metadata = mapOf("skillShell" to "true"))
+
+    private fun sandboxPermission(id: String) = permission(id, "sandbox_escalation")
 
     private fun question(id: String) = QuestionRequestDto(
         id = id,

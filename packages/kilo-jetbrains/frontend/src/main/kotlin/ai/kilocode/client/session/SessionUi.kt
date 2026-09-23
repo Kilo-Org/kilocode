@@ -2,6 +2,7 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -176,6 +177,7 @@ class SessionUi(
         sessions = sessions,
         workspace = workspace,
         app = app,
+        sandbox = project.service<KiloSandboxService>(),
         cs = cs,
         comp = this,
         flushMs = flushMs,
@@ -702,6 +704,8 @@ class SessionUi(
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
+            prompt.onSandboxToggle = { controller.toggleSandbox() }
+            syncSandbox()
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
                 Telemetry.send(
@@ -784,6 +788,8 @@ class SessionUi(
                     prompt.setReady(controller.model.isReady())
                     // Config carries the Swarm toggle, so the entry points follow it without a restart.
                     refreshBoard()
+                    // Config also carries sandbox.enabled, which gates whether the control is shown.
+                    syncSandbox()
                 }
 
                 is SessionControllerEvent.WorkspaceChanged -> {
@@ -799,7 +805,10 @@ class SessionUi(
 
         controller.model.addListener(this) { event ->
             when (event) {
-                is SessionModelEvent.StateChanged -> onStateChanged(event.state)
+                is SessionModelEvent.StateChanged -> {
+                    onStateChanged(event.state)
+                    syncSandbox()
+                }
 
                 is SessionModelEvent.SessionUpdated -> onSessionUpdated()
 
@@ -817,6 +826,8 @@ class SessionUi(
 
                 is SessionModelEvent.QueueChanged -> Unit
 
+                is SessionModelEvent.SandboxChanged -> syncSandbox()
+
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
@@ -832,6 +843,17 @@ class SessionUi(
                 is SessionModelEvent.Compacted -> Unit
             }
         }
+    }
+
+    @RequiresEdt
+    private fun syncSandbox() {
+        if (readonly) return
+        prompt.setSandbox(
+            controller.sandboxVisible,
+            controller.model.sandbox,
+            controller.sandboxBusy(),
+            controller.sandboxNetworkRestricted,
+        )
     }
 
     @RequiresEdt
@@ -1060,6 +1082,7 @@ class SessionUi(
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
             SlashAction.COMPACT to { controller.compact() },
+            SlashAction.SANDBOX to { controller.toggleSandbox() },
             SlashAction.SETTINGS to { openKiloSettings() },
             SlashAction.HELP to { BrowserUtil.browse("https://kilo.ai/docs") },
         )

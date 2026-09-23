@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -45,7 +46,12 @@ object WorktreeSessionEditorKind : KiloEditorKind {
         val worktree = service<KiloWorkspaceService>().workspace(path)
         val cs = service<SessionUiFactory>().scope()
         Disposer.register(parent) { cs.cancel() }
-        val controller = WorktreeSessionListController(project.service<KiloSessionService>(), path, cs)
+        val controller = WorktreeSessionListController(
+            project.service<KiloSessionService>(),
+            path,
+            cs,
+            sandbox = project.service<KiloSandboxService>(),
+        )
         val manager = WorktreeSessionEditorManager(parent, project, worktree, controller, session = session)
         return WorktreeSessionEditorPanel(parent, manager, controller, worktree, project)
     }

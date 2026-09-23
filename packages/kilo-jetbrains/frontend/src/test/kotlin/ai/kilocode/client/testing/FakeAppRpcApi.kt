@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.PermissionConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.SandboxConfigDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import ai.kilocode.rpc.dto.WatcherConfigDto
@@ -268,6 +269,15 @@ class FakeAppRpcApi : KiloAppRpcApi {
                 prune = item.prune ?: cfg.prune,
             )
         } ?: config.compaction
+        val sandbox = patch.sandbox?.let { item ->
+            val cfg = config.sandbox ?: SandboxConfigDto()
+            cfg.copy(
+                enabled = item.enabled ?: cfg.enabled,
+                network = item.network ?: cfg.network,
+                writablePaths = item.writablePaths ?: cfg.writablePaths,
+                allowedHosts = item.allowedHosts ?: cfg.allowedHosts,
+            )
+        } ?: config.sandbox
         return config.copy(
             defaultAgent = if (values.containsKey("default_agent")) values["default_agent"] else config.defaultAgent,
             model = if (values.containsKey("model")) values["model"] else config.model,
@@ -282,6 +292,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
             agent = agents,
             permission = mergePermission(config.permission, patch.permission),
             shared_agent_board = patch.shared_agent_board ?: config.shared_agent_board,
+            sandbox = sandbox,
         )
     }
 

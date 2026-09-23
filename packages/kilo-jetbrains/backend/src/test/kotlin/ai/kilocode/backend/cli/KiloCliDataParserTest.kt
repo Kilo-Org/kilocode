@@ -21,6 +21,8 @@ import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.SandboxConfigPatchDto
+import ai.kilocode.rpc.dto.SandboxNetworkDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SkillsPatchDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
@@ -1367,6 +1369,18 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - sandbox preserves missing enabled and policy lists`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"sandbox":{"network":"deny","allowed_hosts":["api.example.com:443"],"writable_paths":["/tmp/build"]}}""",
+            )
+
+            assertNull(cfg.sandbox?.enabled)
+            assertEquals(SandboxNetworkDto.DENY, cfg.sandbox?.network)
+            assertEquals(listOf("api.example.com:443"), cfg.sandbox?.allowedHosts)
+            assertEquals(listOf("/tmp/build"), cfg.sandbox?.writablePaths)
+        }
+
+        @Test
         fun `parseConfig - retired experimental shared_agent_board is ignored`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"model":"openai/gpt","experimental":{"shared_agent_board":false}}"""
@@ -2522,6 +2536,25 @@ class KiloCliDataParserTest {
         fun `buildConfigPatch - top-level model set`() {
             val patch = ConfigPatchDto(values = linkedMapOf("model" to "anthropic/claude"))
             assertEquals("{\"model\":\"anthropic/claude\"}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - sandbox writes current global schema`() {
+            val raw = KiloCliDataParser.buildConfigPatch(
+                ConfigPatchDto(
+                    sandbox = SandboxConfigPatchDto(
+                        enabled = false,
+                        network = SandboxNetworkDto.DENY,
+                        allowedHosts = listOf("api.example.com:443"),
+                        writablePaths = listOf("/tmp/build"),
+                    ),
+                ),
+            )
+
+            assertEquals(
+                """{"sandbox":{"enabled":false,"network":"deny","writable_paths":["/tmp/build"],"allowed_hosts":["api.example.com:443"]}}""",
+                raw,
+            )
         }
 
         @Test

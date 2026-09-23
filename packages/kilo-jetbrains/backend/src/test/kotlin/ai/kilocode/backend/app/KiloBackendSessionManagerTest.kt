@@ -402,6 +402,20 @@ class KiloBackendSessionManagerTest {
         assertEquals("/test", session.directory)
     }
 
+    @Test
+    fun `create sends sandbox state as versioned metadata before first prompt`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.create("/test", sandbox = true)
+
+        assertEquals("/session?directory=%2Ftest", mock.lastSessionCreatePath)
+        assertEquals(
+            """{"metadata":{"kilocode.sandbox":{"enabled":true,"version":0}}}""",
+            mock.lastSessionCreateBody,
+        )
+    }
+
     // ------ Session fork ------
 
     @Test

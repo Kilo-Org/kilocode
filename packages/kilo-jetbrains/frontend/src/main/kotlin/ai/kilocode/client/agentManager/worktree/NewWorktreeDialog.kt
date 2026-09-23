@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
@@ -19,7 +20,9 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsRows
+import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsStackedRow
+import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -55,9 +58,17 @@ private const val NAME_COLUMNS = 67
 
 /** What the user confirmed in the New Worktree dialog. */
 sealed interface NewWorktreePlan {
-    data class Create(val branch: String, val base: String?, val prompt: PendingPrompt?) : NewWorktreePlan
-    data class Branch(val branch: String) : NewWorktreePlan
-    data class Pr(val url: String) : NewWorktreePlan
+    val sandbox: Boolean
+
+    data class Create(
+        val branch: String,
+        val base: String?,
+        val prompt: PendingPrompt?,
+        override val sandbox: Boolean,
+    ) : NewWorktreePlan
+
+    data class Branch(val branch: String, override val sandbox: Boolean) : NewWorktreePlan
+    data class Pr(val url: String, override val sandbox: Boolean) : NewWorktreePlan
 }
 
 /**
@@ -98,6 +109,7 @@ internal class NewWorktreeDialog(
     private val origin: String? = null,
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
+    private val sandbox: KiloSandboxService = project.service(),
 ) : DialogWrapper(parent, false), NewWorktreeHandle {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -130,7 +142,18 @@ internal class NewWorktreeDialog(
         emptyText.text = KiloBundle.message("worktree.import.pr.placeholder")
     }
     private val pick = BranchPicker(branches)
+    private val sandboxToggle = SettingsToggle { enabled -> sandbox.setNewSessionDefault(enabled) }.apply {
+        isSelected = sandbox.newSessionDefault()
+        isEnabled = false
+    }
+    private val sandboxRow = SettingsRow(
+        KiloBundle.message("worktree.sandbox.title"),
+        KiloBundle.message("worktree.sandbox.description"),
+        sandboxToggle,
+    )
     private var tab = DialogTab.NEW
+    private var sandboxReason: String? = null
+    private var sandboxReady = false
 
     private var plan: NewWorktreePlan? = null
 
@@ -159,9 +182,13 @@ internal class NewWorktreeDialog(
         title = KiloBundle.message("worktree.configure.title")
         init()
         setOKButtonText(KiloBundle.message("worktree.dialog.create"))
+        loadSandboxSupport()
     }
 
-    override fun createCenterPanel(): JComponent = tabs().also { center = it }
+    override fun createCenterPanel(): JComponent = Stack.vertical(gap = UiStyle.Gap.sm())
+        .next(tabs())
+        .next(sandboxRow)
+        .also { center = it }
 
     /** The built content, so tests can drive the real Swing tree before the dialog is shown. */
     internal fun centerComponent(): JComponent = center ?: error("center panel not built")
@@ -171,7 +198,7 @@ internal class NewWorktreeDialog(
     override fun getPreferredFocusedComponent(): JComponent = focus()
 
     // Versioned: DialogWrapper persists the size per key, so a stale entry would keep the old width.
-    override fun getDimensionServiceKey(): String = "ai.kilocode.NewWorktreeDialog.v3"
+    override fun getDimensionServiceKey(): String = "ai.kilocode.NewWorktreeDialog.v4"
 
     override fun doOKAction() = submit()
 
@@ -285,8 +312,29 @@ internal class NewWorktreeDialog(
 
     private fun watchModels() {
         scope.launch {
-            combine(app.state, app.models) { _, _ -> Unit }.collect { ui(::syncSelection) }
+            combine(app.state, app.models) { _, _ -> Unit }.collect {
+                ui {
+                    syncSelection()
+                    syncSandboxVisibility()
+                }
+            }
         }
+    }
+
+    private fun loadSandboxSupport() {
+        scope.launch {
+            val result = runCatching { sandbox.support(directory) }
+            ui {
+                sandboxReady = result.getOrNull()?.available == true
+                sandboxReason = result.getOrNull()?.reason ?: result.exceptionOrNull()?.message
+                sandboxToggle.isEnabled = sandboxReady
+                syncSandboxVisibility()
+            }
+        }
+    }
+
+    private fun syncSandboxVisibility() {
+        sandboxRow.isVisible = app.state.value.config?.sandbox?.enabled != false
     }
 
     private fun loadModels() {
@@ -368,7 +416,8 @@ internal class NewWorktreeDialog(
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
         val target = base.resolve()
         if (!validBase(target)) return
-        plan = NewWorktreePlan.Create(resolved, target, pending(text))
+        if (!validateSandbox()) return
+        plan = NewWorktreePlan.Create(resolved, target, pending(text), sandboxToggle.isSelected)
         close(OK_EXIT_CODE)
     }
 
@@ -393,7 +442,8 @@ internal class NewWorktreeDialog(
             url.selectAll()
             return
         }
-        plan = NewWorktreePlan.Pr(value)
+        if (!validateSandbox()) return
+        plan = NewWorktreePlan.Pr(value, sandboxToggle.isSelected)
         close(OK_EXIT_CODE)
     }
 
@@ -404,8 +454,18 @@ internal class NewWorktreeDialog(
             pick.focusText()
             return
         }
-        plan = NewWorktreePlan.Branch(target)
+        if (!validateSandbox()) return
+        plan = NewWorktreePlan.Branch(target, sandboxToggle.isSelected)
         close(OK_EXIT_CODE)
+    }
+
+    private fun validateSandbox(): Boolean {
+        if (!sandboxToggle.isSelected || sandboxReady) return true
+        setErrorText(
+            sandboxReason ?: KiloBundle.message("worktree.sandbox.unavailable"),
+            sandboxToggle,
+        )
+        return false
     }
 
     private fun focus(): JComponent = when (tab) {
@@ -440,6 +500,12 @@ internal class NewWorktreeDialog(
             SlashAction.MODELS to { prompt.model.open() },
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
+            SlashAction.SANDBOX to {
+                if (sandboxToggle.isEnabled) {
+                    sandboxToggle.isSelected = !sandboxToggle.isSelected
+                    sandbox.setNewSessionDefault(sandboxToggle.isSelected)
+                }
+            },
         )
         return SlashAction.ALL.map { spec ->
             SlashAction(spec.name, KiloBundle.message(spec.descriptionKey), spec.hints, actions[spec] ?: {})

@@ -291,6 +291,23 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.AwaitingPermission)
     }
 
+    fun `test auto approve does not machine-reply a sandbox escalation`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        // The CLI refuses a non-interactive reply to sandbox_escalation; auto-approve must show the
+        // card instead of sending one.
+        emit(
+            ChatEventDto.PermissionAsked(
+                "ses_test",
+                permission("perm1").copy(permission = "sandbox_escalation"),
+            ),
+        )
+
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
     fun `test disabling auto approve before reply restores awaiting permission`() {
         val (m, _, _) = prompted()
 
@@ -355,6 +372,31 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         flush()
 
         // skill-shell must not be machine-approved; it surfaces as a human card instead
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
+    fun `test enabling auto approve surfaces a pending sandbox escalation as a card`() {
+        val (m, _, _) = prompted()
+        rpc.pendingPermissionList.add(permission("perm_sandbox").copy(permission = "sandbox_escalation"))
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        // sandbox_escalation must not be machine-approved; it surfaces as a human card instead
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
+    fun `test recovery surfaces a pending sandbox escalation as a card under auto approve`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        rpc.pendingPermissionList.add(permission("perm_sandbox").copy(permission = "sandbox_escalation"))
+        edt { KiloPluginSettings.setAutoApprove(true) }
+
+        val m = controller("ses_test")
+        flush()
+
         assertTrue(rpc.permissionReplies.isEmpty())
         assertTrue(m.model.state is SessionState.AwaitingPermission)
     }
