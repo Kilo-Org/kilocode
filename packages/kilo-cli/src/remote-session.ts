@@ -738,7 +738,7 @@ function descendantSessions(ctx: RemoteSessionContext, client: Pick<OpenCodeClie
       frontier = next
     }
     return found
-  }).pipe(Effect.catch(() => Effect.succeed([] as string[])))
+  }).pipe(Effect.orElseSucceed(() => [] as string[]))
 }
 
 function rename(ctx: RemoteSessionContext, client: Pick<OpenCodeClient, "session">, data: unknown) {
@@ -1573,7 +1573,7 @@ function subscribedRoot(
       parent = ancestor.parentID
     }
     return undefined
-  }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+  }).pipe(Effect.orElseSucceed(() => undefined))
 }
 
 function eventFrame(
@@ -1926,7 +1926,7 @@ function replayPending(
               .catch(() => [])
           : Promise.resolve([]),
       ]),
-    ).pipe(Effect.catch(() => Effect.succeed(undefined)))
+    ).pipe(Effect.orElseSucceed(() => undefined))
     // Replay is bound to the subscription it belongs to: an immediate
     // unsubscribe supersedes it before any frame is sent.
     if (!listed || !isActive() || transport() !== atTransport) return
@@ -1995,7 +1995,7 @@ function hasValidatedAncestor(
       current = parent
     }
     return false
-  }).pipe(Effect.catch(() => Effect.succeed(false)))
+  }).pipe(Effect.orElseSucceed(() => false))
 }
 
 function resolvePermission(
@@ -2120,7 +2120,7 @@ function resolveForm(
       if (!descendant) return undefined
     }
     return { form }
-  }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+  }).pipe(Effect.orElseSucceed(() => undefined))
 }
 
 function questionReply(

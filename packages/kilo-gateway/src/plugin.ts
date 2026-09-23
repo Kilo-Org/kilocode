@@ -236,7 +236,7 @@ export const registerGateway = Effect.fn(function* (
                   server: current.server,
                   token: current.token,
                   organizationID: selected.currentOrganizationID,
-                }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+                }).pipe(Effect.orElseSucceed(() => undefined))
               : undefined
             // A credential or selection can change while the network request is pending.
             // Discard that response before it can repopulate the new account's catalog.

@@ -78,6 +78,7 @@ Implemented slices include native conversations, tools and permissions, Gateway 
 
 Start with the migration plan and test plans for this branch's status. The general Kilo documentation describes the released product and may differ from this preview.
 
+- [Developer overview](docs/overview.md) — repository layout, core concepts, execution flows, builds, upstream dependencies, and CI gates.
 - [Migration progress (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
 - [Migration tracking](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
   - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)

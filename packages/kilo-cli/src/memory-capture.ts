@@ -131,7 +131,7 @@ function capture(
       const diffs =
         turn.snapshots && readSnapshotDiff
           ? yield* readSnapshotDiff({ sessionID, ...turn.snapshots }).pipe(
-              Effect.catch(() => Effect.succeed(undefined)),
+              Effect.orElseSucceed(() => undefined),
             )
           : undefined
       const sessionPort: MemoryPorts.SessionPort = {

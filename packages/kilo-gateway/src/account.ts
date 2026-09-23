@@ -27,7 +27,7 @@ export function fetchAccountBalance(server: string, token: string, organizationI
 }
 
 function optional<A, E, R>(effect: Effect.Effect<A, E, R>) {
-  return effect.pipe(Effect.catch(() => Effect.succeed(null)))
+  return effect.pipe(Effect.orElseSucceed(() => null))
 }
 
 export function parseKiloPass(input: unknown) {
