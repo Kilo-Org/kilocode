@@ -231,10 +231,10 @@ class KiloBackendActivityManager(
             questions.remove(event.sessionID)
             return
         }
-        // Plan follow-ups are deliberately asked after the turn and have no tool reference. A
-        // tool-backed question cannot outlive a completed turn, even if its terminal part was missed.
+        // Plan follow-ups are deliberately asked after the turn. Every ordinary question must be
+        // cleared, including one whose optional tool reference was absent from the event.
         val items = questions[event.sessionID] ?: return
-        items.entries.removeIf { it.value.tool != null }
+        items.entries.removeIf { !it.value.plan }
         if (items.isEmpty()) questions.remove(event.sessionID)
     }
 

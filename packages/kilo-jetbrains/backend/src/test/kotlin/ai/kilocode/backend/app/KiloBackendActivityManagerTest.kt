@@ -74,12 +74,15 @@ class KiloBackendActivityManagerTest {
     @Test
     fun `explicit resolution clears only its matching permission without a reply event`() = runBlocking<Unit> {
         directories["ses_1"] = "/repo/wt"
+        directories["ses_barrier"] = "/repo/wt"
         statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         start()
 
         events.emit(ChatEventDto.PermissionAsked("ses_1", permission("perm_1", "ses_1", "call_1")))
         events.emit(ChatEventDto.PermissionAsked("ses_1", permission("perm_2", "ses_1", "call_1")))
         await("ses_1", SessionActivityKindDto.PERMISSION)
+        events.emit(ChatEventDto.Error("ses_barrier"))
+        await("ses_barrier", SessionActivityKindDto.ERROR)
 
         manager.resolve("perm_1")
         assertEquals(SessionActivityKindDto.PERMISSION, manager.activity.value["ses_1"]?.kind)
@@ -136,29 +139,24 @@ class KiloBackendActivityManagerTest {
     }
 
     @Test
-    fun `completed turn clears linked question but preserves plan followup`() = runBlocking<Unit> {
-        directories["ses_linked"] = "/repo/a"
+    fun `completed turn clears tool-less ordinary question but preserves plan followup`() = runBlocking<Unit> {
+        directories["ses_plain"] = "/repo/a"
         directories["ses_plan"] = "/repo/b"
         statuses.value = mapOf(
-            "ses_linked" to SessionStatusDto("busy"),
+            "ses_plain" to SessionStatusDto("busy"),
             "ses_plan" to SessionStatusDto("busy"),
         )
         start()
 
-        events.emit(
-            ChatEventDto.QuestionAsked(
-                "ses_linked",
-                question("q_linked", "ses_linked", tool = ToolRefDto("msg_1", "call_1")),
-            ),
-        )
+        events.emit(ChatEventDto.QuestionAsked("ses_plain", question("q_plain", "ses_plain")))
         events.emit(ChatEventDto.QuestionAsked("ses_plan", question("q_plan", "ses_plan", plan = true)))
-        await("ses_linked", SessionActivityKindDto.QUESTION)
+        await("ses_plain", SessionActivityKindDto.QUESTION)
         await("ses_plan", SessionActivityKindDto.PLAN)
 
         events.emit(ChatEventDto.TurnClose("ses_plan", "completed"))
-        events.emit(ChatEventDto.TurnClose("ses_linked", "completed"))
+        events.emit(ChatEventDto.TurnClose("ses_plain", "completed"))
 
-        await("ses_linked", SessionActivityKindDto.RUNNING)
+        await("ses_plain", SessionActivityKindDto.RUNNING)
         assertEquals(SessionActivityKindDto.PLAN, manager.activity.value["ses_plan"]?.kind)
     }
 

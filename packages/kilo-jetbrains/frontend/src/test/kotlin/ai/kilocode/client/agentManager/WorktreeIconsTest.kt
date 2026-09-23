@@ -220,11 +220,12 @@ class WorktreeIconsTest : BasePlatformTestCase() {
             g.dispose()
         }
 
-        val inset = JBUI.scale(4)
         val pixels = buildList {
-            for (y in inset until icon.iconHeight - inset) {
-                for (x in inset until icon.iconWidth - inset) {
-                    if (image.getRGB(x, y) != background.rgb) add(x to y)
+            for (y in 0 until icon.iconHeight) {
+                for (x in 0 until icon.iconWidth) {
+                    val pixel = image.getRGB(x, y)
+                    val alpha = pixel ushr 24 and 0xff
+                    if (alpha == 0xff && pixel != background.rgb) add(x to y)
                 }
             }
         }

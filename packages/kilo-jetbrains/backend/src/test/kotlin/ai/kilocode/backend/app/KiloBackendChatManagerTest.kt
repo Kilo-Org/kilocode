@@ -170,6 +170,10 @@ class KiloBackendChatManagerTest {
 
         mock.pendingPermissionsStatus = 500
         mock.pendingQuestionsStatus = 500
+        mock.pendingPermissions =
+            """[{"id":"perm_1","sessionID":"ses_1","permission":"edit","patterns":[]}]"""
+        mock.pendingQuestions =
+            """[{"id":"q_1","sessionID":"ses_1","questions":[{"question":"Pick one","header":"Choice"}]}]"""
         assertEquals(null, chat.permissionPending("perm_1", "/test/project"))
         assertEquals(null, chat.questionPending("q_1", "/test/project"))
     }
