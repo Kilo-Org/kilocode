@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.7.10
+
+### Patch Changes
+
+- [#14515](https://github.com/Kilo-Org/kilocode/pull/14515) [`dfa67d0`](https://github.com/Kilo-Org/kilocode/commit/dfa67d022ac7d63a75a8bd863a34a209b0fe8ce6) - Fix a runtime exception thrown when switching editor tabs while the Kilo Code plugin is being reloaded or unloaded.
+
+- [#14520](https://github.com/Kilo-Org/kilocode/pull/14520) [`ceb83ea`](https://github.com/Kilo-Org/kilocode/commit/ceb83ea1a5f8ec32526f0100404d8384c29c050a) - Speed up switching between JetBrains session and worktree editor tabs, and reduce Agent Manager list repaint cost while sessions are running.
+
 ## 7.8.0
 
 ### Minor Changes

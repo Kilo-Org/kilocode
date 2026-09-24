@@ -1,5 +1,38 @@
 # kilo-code
 
+## 7.7.12
+
+### Minor Changes
+
+- [#14510](https://github.com/Kilo-Org/kilocode/pull/14510) [`c06228d`](https://github.com/Kilo-Org/kilocode/commit/c06228d6a0090307331a572d726348b7ad3df722) - Install MCP servers with companion skills from the marketplace, preview the included skills, and remove owned skills with the server.
+
+- [#14490](https://github.com/Kilo-Org/kilocode/pull/14490) [`bfa384d`](https://github.com/Kilo-Org/kilocode/commit/bfa384dc326ecb1146933f80670755117a048deb) - Animate tool calls in chat more smoothly. New tool rows rise into place, their details reveal as input arrives, the icon shows when a tool is working and when it finishes, and the transcript glides instead of jumping when output or results appear. To-dos tick off as they finish, and write, edit, and patch rows show the file path, command, and a live change count while the model is still writing them. History and session switches stay still. The reasoning headline no longer jumps between a long and a short title while it streams.
+
+- [#14533](https://github.com/Kilo-Org/kilocode/pull/14533) [`3380e16`](https://github.com/Kilo-Org/kilocode/commit/3380e167c2aef2c0232f49cacdc3fe5e1d87f63e) - Enable task subagent model selection by default and remove the `experimental.task_model_selection` flag. You can now request a model, provider, or reasoning effort for an individual subagent task without enabling an experiment.
+
+### Patch Changes
+
+- [#14535](https://github.com/Kilo-Org/kilocode/pull/14535) [`3499a48`](https://github.com/Kilo-Org/kilocode/commit/3499a48d97cc3dd38f14c1432fc63e0d03d591c6) - Preserve the loaded page in the Agent Manager browser panel when switching between worktrees, projects, or sessions.
+
+- [#14531](https://github.com/Kilo-Org/kilocode/pull/14531) [`89f0cba`](https://github.com/Kilo-Org/kilocode/commit/89f0cbad721733723191a436b91c435dfe9de714) - Fix Agent Manager session recovery and model providers when the CLI backend reconnects during startup.
+
+- [#14529](https://github.com/Kilo-Org/kilocode/pull/14529) [`df604a1`](https://github.com/Kilo-Org/kilocode/commit/df604a1710869e29f24fe87e4246cea724b36bb3) - Preserve selected tabs, tab order, and review context when switching between projects and worktrees in Agent Manager.
+
+- [#14532](https://github.com/Kilo-Org/kilocode/pull/14532) [`4e86042`](https://github.com/Kilo-Org/kilocode/commit/4e86042270437c3251250559c67f336b43e7ec89) - Keep Agent Manager session tab titles in sync after renaming a session.
+
+- [#14534](https://github.com/Kilo-Org/kilocode/pull/14534) [`4bbed24`](https://github.com/Kilo-Org/kilocode/commit/4bbed242e2a56476c6e091d689c4163a95032f5f) - Fix the chat transcript getting stuck in a constant re-render after switching to some sessions with expanded edit diffs, which made worktree and session switching slow.
+
+- [#14530](https://github.com/Kilo-Org/kilocode/pull/14530) [`9394c52`](https://github.com/Kilo-Org/kilocode/commit/9394c523380f9b6bbeb887f54f4c394e1ffa1901) - Do not create the `.kilo/worktrees` directory when worktree pre-warming is turned off.
+
+- Updated dependencies [[`c06228d`](https://github.com/Kilo-Org/kilocode/commit/c06228d6a0090307331a572d726348b7ad3df722)]:
+  - @kilocode/sdk@7.8.0
+  - @kilocode/kilo-ui@7.7.10
+  - @kilocode/plugin@7.7.10
+  - @opencode-ai/ui@7.7.10
+  - @opencode-ai/core@7.7.10
+  - @kilocode/kilo-gateway@7.7.10
+  - @kilocode/kilo-indexing@7.7.10
+
 ## 7.7.9
 
 ### Minor Changes

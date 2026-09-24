@@ -1,5 +1,30 @@
 # @kilocode/cli
 
+## 7.7.12
+
+### Minor Changes
+
+- [#14508](https://github.com/Kilo-Org/kilocode/pull/14508) [`e09883c`](https://github.com/Kilo-Org/kilocode/commit/e09883c19ac7e1e1ba895b217cbb9f6dcf8aa13d) - Support MCP OAuth client metadata documents while preserving dynamic registration and configured client credentials.
+
+- [#14510](https://github.com/Kilo-Org/kilocode/pull/14510) [`c06228d`](https://github.com/Kilo-Org/kilocode/commit/c06228d6a0090307331a572d726348b7ad3df722) - Install MCP servers with companion skills from the marketplace, preview the included skills, and remove owned skills with the server.
+
+- [#14533](https://github.com/Kilo-Org/kilocode/pull/14533) [`3380e16`](https://github.com/Kilo-Org/kilocode/commit/3380e167c2aef2c0232f49cacdc3fe5e1d87f63e) - Enable task subagent model selection by default and remove the `experimental.task_model_selection` flag. You can now request a model, provider, or reasoning effort for an individual subagent task without enabling an experiment.
+
+### Patch Changes
+
+- [#14480](https://github.com/Kilo-Org/kilocode/pull/14480) [`5e05988`](https://github.com/Kilo-Org/kilocode/commit/5e05988b17ced03fb040476c8748c86eae992e31) - Deliver plan completion questions to directory-scoped clients such as JetBrains without requiring a reconnect.
+
+- Updated dependencies [[`c06228d`](https://github.com/Kilo-Org/kilocode/commit/c06228d6a0090307331a572d726348b7ad3df722)]:
+  - @kilocode/sdk@7.8.0
+  - @kilocode/plugin@7.7.10
+  - @opencode-ai/tui@7.7.10
+  - @opencode-ai/ui@7.7.10
+  - @kilocode/kilo-gateway@7.7.10
+  - @kilocode/kilo-indexing@7.7.10
+  - @kilocode/plugin-atomic-chat@7.7.10
+  - @opencode-ai/server@7.7.10
+  - @kilocode/kilo-telemetry@7.7.10
+
 ## 7.7.9
 
 ### Minor Changes
