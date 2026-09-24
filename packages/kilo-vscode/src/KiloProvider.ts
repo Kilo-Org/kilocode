@@ -2022,6 +2022,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const target = this.indexingScope
           this.fetchAndSendIndexingStatus(target.directory, target.projectId)
           this.flushPendingKiloModel()
+          // If an earlier fetch ran without a usable client, nothing was cached
+          // and the webview retries are spent. Fetch again so the model picker
+          // does not stay on "No providers".
+          if (!this.cachedProvidersMessage) void this.fetchAndSendProviders()
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
           void this.checkConfigWarnings("state")
