@@ -133,7 +133,7 @@ internal class CheckpointsSettingsUi(
     override fun syncContent() {
         val ready = appState.status == KiloAppStatusDto.READY
         val available = ready && !saving && (!hasProjectDirectory || workspaceLoaded)
-        form.sync(draft, available, modified(), saving, retention, pending, retentionError)
+        form.sync(draft, available, retention, pending, retentionError)
         top.hideBanner()
         if (saving) {
             showProgress(KiloBundle.message("settings.checkpoints.saving"))
@@ -169,7 +169,7 @@ internal class CheckpointsSettingsUi(
         syncContent()
         startRetentionPoll()
         LOG.info("manual session cleanup: confirmed")
-        val policy = RetentionPatchDto(enabled = draft.cleanup, maxAgeDays = draft.days)
+        val policy = RetentionPatchDto(enabled = baseline.cleanup, maxAgeDays = baseline.days)
         jobs += app.runManualRetentionAsync(policy) { result ->
             ApplicationManager.getApplication().invokeLater({
                 if (isDisposed) return@invokeLater
@@ -267,8 +267,6 @@ internal class CheckpointsContent(
     fun sync(
         draft: CheckpointsDraft,
         available: Boolean,
-        dirty: Boolean,
-        saving: Boolean,
         status: RetentionStatusDto?,
         pending: Boolean,
         error: Boolean,
@@ -280,7 +278,7 @@ internal class CheckpointsContent(
         days.sync(draft.days)
         days.isEnabled = available && draft.cleanup
         val running = pending || status?.progress != null
-        runButton.isEnabled = available && days.valid() && !dirty && !running
+        runButton.isEnabled = available && days.valid() && !running
         runButton.text = KiloBundle.message(if (running) "settings.checkpoints.cleanup.running" else "settings.checkpoints.cleanup.run")
         last.update(
             KiloBundle.message("settings.checkpoints.cleanup.last"),

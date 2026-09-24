@@ -50,6 +50,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
         set(value) {
             state.draft = value
         }
+    protected val baseline: D get() = state.baseline
     protected val saving get() = state.saving
     protected val saveError get() = state.error
     protected var appState: KiloAppStateDto = app.state.value

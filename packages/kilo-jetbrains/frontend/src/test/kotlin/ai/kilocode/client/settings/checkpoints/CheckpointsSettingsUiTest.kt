@@ -149,6 +149,16 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test cleanup action stays enabled while automatic toggle is dirty`() {
+        start(ConfigDto(retention = RetentionConfigDto(enabled = true, maxAgeDays = 30)))
+
+        edt {
+            cleanup().doClick()
+            assertTrue(requireNotNull(ui).modified())
+            assertTrue(runButton().isEnabled)
+        }
+    }
+
     fun `test idle cleanup status is fetched once instead of polled`() {
         start(ConfigDto())
 
