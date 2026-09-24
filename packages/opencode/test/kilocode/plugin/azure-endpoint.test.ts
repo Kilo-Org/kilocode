@@ -52,6 +52,16 @@ describe("azure Entra endpoint resolution", () => {
     expect(scopes).toEqual(["https://cognitiveservices.azure.com/.default"])
   })
 
+  test("stores a resource name from Entra ID prompts", async () => {
+    clearEnv()
+    const hooks = createAzureAuthHooks(shell([]), fetch, true)
+
+    expect(await callback(hooks, { resourceName: "dialog-resource" })).toMatchObject({
+      type: "success",
+      accountId: "dialog-resource",
+    })
+  })
+
   test("resolves the resource name from AZURE_OPENAI_RESOURCE_NAME", async () => {
     clearEnv()
     process.env.AZURE_OPENAI_RESOURCE_NAME = "env-resource"

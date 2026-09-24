@@ -135,6 +135,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   function optional(prompt: Prompt) {
     if (bedrockKeys() && prompt.key === "sessionToken") return true
     if (vertexCredentials() && prompt.key === "project") return true
+    if (props.providerID === "snowflake-cortex" && prompt.key === "role") return true
     return false
   }
 
@@ -676,7 +677,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
       const inputs: Record<string, string> = {}
       for (const prompt of prompts()) {
         const value = (fields[prompt.key] ?? "").trim()
-        if (!value) {
+        if (!value && !optional(prompt)) {
           setState({
             ...state,
             error: language.t("provider.connect.prompt.required", { field: promptLabel(prompt) }),
@@ -684,6 +685,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           })
           return
         }
+        if (!value) continue
         inputs[prompt.key] = value
       }
       authorize(Object.keys(inputs).length > 0 ? inputs : undefined)

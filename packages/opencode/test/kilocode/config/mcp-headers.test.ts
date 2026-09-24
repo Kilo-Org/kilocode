@@ -182,7 +182,21 @@ test("drops nested V2 mcp.servers entries with variable headers", () => {
   expect(JSON.stringify(config)).not.toContain("secret")
 })
 
-test("keeps a flat server literally named servers", () => {
+test("keeps a flat server literally named servers with literal headers", () => {
+  const input = {
+    mcp: {
+      servers: remote("https://flat.example.com/mcp", { Authorization: "Bearer literal" }),
+      keep: remote("https://good.example.com/mcp"),
+    },
+  }
+
+  const { config, warnings } = sanitizeProjectMcpHeaders(input, "kilo.jsonc")
+
+  expect(config).toEqual(input)
+  expect(warnings).toEqual([])
+})
+
+test("drops a flat server literally named servers when it carries a variable header", () => {
   const { config, warnings } = sanitizeProjectMcpHeaders(
     {
       mcp: {
