@@ -42,7 +42,7 @@ import javax.swing.SwingUtilities
  * Background subagent status strip: a collapsible one-line summary of running/finished background
  * agents, matching [TodoStrip]'s chrome (see [Strip]). Reachable actions:
  *
- * - Clicking a row opens that agent's read-only transcript via [onOpen].
+ * - Clicking an expanded row opens that agent's read-only transcript via [onOpen].
  * - "Stop" / "Stop all" cancel one or every running agent via [onCancel] / [onCancelAll].
  * - "Dismiss" / "Clear finished" hide finished rows locally via [onDismiss] — this never deletes
  *   the child session or the backend job record.
@@ -94,7 +94,6 @@ class BackgroundAgentStrip(
 
     init {
         summary.add(preview.panel, BorderLayout.CENTER)
-        watch(preview.panel)
         preview.applyStyle(style)
         summary.toolTipText = KiloBundle.message("session.header.agents.toggle")
         summary.accessibleContext.accessibleName = KiloBundle.message("session.header.agents.toggle")
@@ -380,20 +379,16 @@ class BackgroundAgentStrip(
     }
 
     private inner class Chip {
-        private var agent = BackgroundAgent("", "", null, BackgroundAgentStatus.RUNNING)
         private var id = ""
         private var slot: Int? = null
         private var static = AgentAvatar.static(id, slot)
         private var running = AgentAvatar.running(id, slot)
         private val avatar = JBLabel()
         private val label = JBLabel()
-        val area = HoverArea(Stack.horizontal(UiStyle.Gap.sm()).next(avatar).next(label)).apply {
-            action = { onOpen(agent.session, title(agent)) }
-        }
+        val area = Stack.horizontal(UiStyle.Gap.sm()).next(avatar).next(label)
 
         @RequiresEdt
         fun update(next: BackgroundAgent) {
-            agent = next
             val color = avatarColor(next.session)
             if (next.session != id || color != slot) {
                 id = next.session
@@ -403,7 +398,9 @@ class BackgroundAgentStrip(
             }
             avatar.icon = if (next.status == BackgroundAgentStatus.RUNNING) running else static
             label.text = title(next)
-            area.tooltip(label.text, KiloBundle.message("session.header.agents.open", label.text))
+            area.name = "background-agent-preview"
+            area.toolTipText = label.text
+            area.accessibleContext.accessibleName = KiloBundle.message("session.header.agents.toggle")
         }
 
         @RequiresEdt

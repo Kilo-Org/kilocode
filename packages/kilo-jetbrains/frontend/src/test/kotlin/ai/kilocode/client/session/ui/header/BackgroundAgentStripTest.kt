@@ -117,9 +117,10 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
     private fun compactControls(strip: BackgroundAgentStrip): List<HoverArea> =
         descendants(strip.rowComponent()).filterIsInstance<HoverArea>()
 
-    private fun compactAgents(strip: BackgroundAgentStrip): List<HoverArea> = compactControls(strip).filter {
-        it.accessibleContext.accessibleName?.startsWith("Open background agent ") == true
-    }
+    private fun compactAgents(strip: BackgroundAgentStrip): List<JComponent> =
+        descendants(strip.rowComponent()).filterIsInstance<JComponent>().filter {
+            it.name == "background-agent-preview"
+        }
 
     private fun aggregate(strip: BackgroundAgentStrip, panel: JComponent): Component {
         var component: Component = strip.labelComponent()
@@ -247,7 +248,7 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         assertFalse(strip.expanded())
     }
 
-    fun `test collapsed preview shows a fitting prefix and overflow expands the strip`() {
+    fun `test collapsed preview agents expand the strip without opening a session`() {
         val opened = mutableListOf<String>()
         val strip = strip(onOpen = { session, _ -> opened.add(session) })
         strip.update(
@@ -274,8 +275,11 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         assertEquals("+2 more", label.text)
         assertEquals("Show 2 more background agents", more.accessibleContext.accessibleName)
 
-        assertTrue(action(agents[0]).doAccessibleAction(0))
-        assertEquals(listOf("ses1"), opened)
+        click(agents[0])
+        assertTrue(opened.isEmpty())
+        assertTrue(strip.expanded())
+
+        click(strip.rowComponent())
         assertFalse(strip.expanded())
 
         assertTrue(action(more).doAccessibleAction(0))
@@ -350,7 +354,7 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
 
         assertSame(before[1], after[0])
         assertSame(before[0], after[1])
-        assertEquals("Open background agent First finished", after[1].accessibleContext.accessibleName)
+        assertEquals("First finished", after[1].toolTipText)
     }
 
     fun `test compact preview never displaces east actions`() {

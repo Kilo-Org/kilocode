@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.header
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
@@ -160,8 +161,29 @@ class StripTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test hovering any summary part paints the transcript header hover fill`() {
+        val strip = TestStrip()
+        val row = strip.rowComponent().also { it.setSize(400, 24) }
+
+        enter(strip.labelComponent())
+
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+
+        exit(strip.labelComponent(), 10_000, 10_000)
+
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+    }
+
     private fun click(component: Component) {
         component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
+    }
+
+    private fun enter(component: Component) {
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_ENTERED, System.currentTimeMillis(), 0, 1, 1, 0, false))
+    }
+
+    private fun exit(component: Component, x: Int, y: Int) {
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_EXITED, System.currentTimeMillis(), 0, x, y, 0, false))
     }
 
     /**
