@@ -16,7 +16,7 @@ concurrency:
 
 permissions:
   contents: read
-  security-events: read
+  vulnerability-alerts: read
 
 jobs:
   list-findings:
@@ -34,7 +34,9 @@ jobs:
           CRIT_DAYS: ${{ vars.SECURITY_SLA_CRITICAL_DAYS || '15' }}
           HIGH_DAYS: ${{ vars.SECURITY_SLA_HIGH_DAYS || '30' }}
         run: |
-          alerts=$(gh api --paginate -f state=open -f per_page=100 "repos/$REPO/dependabot/alerts")
+          # --method GET is required: gh api auto-switches to POST whenever
+          # -f is passed, which would 404 against this GET-only endpoint.
+          alerts=$(gh api --paginate --method GET -f state=open -f per_page=100 "repos/$REPO/dependabot/alerts")
           now=$(date -u +%s)
           matrix=$(echo "$alerts" | jq -c --argjson now "$now" --argjson critDays "$CRIT_DAYS" --argjson highDays "$HIGH_DAYS" '
             map(select(.security_advisory.severity == "critical" or .security_advisory.severity == "high"))

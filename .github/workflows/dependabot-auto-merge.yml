@@ -45,7 +45,13 @@ jobs:
           while IFS= read -r pr_url; do
             [ -z "$pr_url" ] && continue
 
-            unsafe=$(gh pr diff "$pr_url" --name-only | grep -v '^bun\.lock$' | grep -vi 'kilo' || true)
+            # Fetch the diff separately so a transient `gh pr diff` failure
+            # (empty stdout) can never collapse into "no unsafe paths found".
+            if ! diff_files=$(gh pr diff "$pr_url" --name-only); then
+              echo "::warning::could not fetch diff for $pr_url, skipping"
+              continue
+            fi
+            unsafe=$(echo "$diff_files" | grep -v '^bun\.lock$' | grep -vi 'kilo' || true)
             if [ -n "$unsafe" ]; then
               echo "::warning::skipping $pr_url, touches shared/upstream path(s): $(echo "$unsafe" | tr '\n' ' ')"
               continue
