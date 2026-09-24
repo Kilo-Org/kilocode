@@ -117,6 +117,17 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test checkpoint settings keys are mirrored in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for (key in CHECKPOINTS) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+            }
+        }
+    }
+
     fun `test source bundle literals exist in base bundle`() {
         val base = load("en").stringPropertyNames()
         val missing = bundleKeys().filter { "$" !in it }.filter { it !in base }.sorted()
@@ -296,6 +307,17 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.header.agents.more.one",
             "session.header.agents.more.accessible.one",
             "session.header.agents.running.one",
+        )
+
+        val CHECKPOINTS = listOf(
+            "revert.banner.workspace.enableSnapshots",
+            "settings.checkpoints.displayName",
+            "settings.checkpoints.description",
+            "settings.checkpoints.enable.title",
+            "settings.checkpoints.enable.description",
+            "settings.checkpoints.save.failed",
+            "settings.checkpoints.saving",
+            "settings.checkpoints.loading",
         )
 
         val RELEASE_7_1_7 = mapOf(
