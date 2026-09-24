@@ -26,9 +26,9 @@ type Internals = {
   startStatsPolling: () => void
 }
 
-function connection(online = true) {
+function connection(online = true, custom?: unknown) {
   let listener: ((state: State, error?: Error) => void) | undefined
-  const client = { kilo: { profile: async () => ({ data: null }) } }
+  const client = custom ?? { kilo: { profile: async () => ({ data: null }) } }
   return {
     emitState(next: State) {
       if (!listener) throw new Error("expected a connection state subscription")
@@ -88,6 +88,23 @@ function stub(internal: Internals) {
 describe("KiloProvider providers on reconnect", () => {
   it("marks a retry when providers are fetched without a client", async () => {
     const internal = provider(connection(false))
+    stub(internal)
+
+    await internal.fetchAndSendProviders()
+
+    expect(internal.providersRetry).toBe(true)
+  })
+
+  it("marks a retry when the provider fetch rejects with a client", async () => {
+    const reject = {
+      kilo: { authStatus: async () => ({ data: undefined }) },
+      provider: {
+        list: async () => {
+          throw new Error("backend gone")
+        },
+      },
+    }
+    const internal = provider(connection(true, reject))
     stub(internal)
 
     await internal.fetchAndSendProviders()
