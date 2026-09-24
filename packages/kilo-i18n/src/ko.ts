@@ -34,6 +34,7 @@ export const dict = {
     "이 프로젝트에만 적용됩니다. 설치된 파일을 버전 관리에 추가하고 팀과 공유할 수 있습니다.",
   "marketplace.install.scope.global.description": "이 컴퓨터의 모든 프로젝트에 적용됩니다. 사용자 구성에 저장됩니다.",
   "marketplace.install.destination": "설치 위치",
+  "marketplace.install.includedSkills": "포함된 스킬",
   "marketplace.install.about.mcp":
     "MCP 서버는 외부 서비스나 로컬 프로그램과 작업할 수 있는 추가 도구를 Kilo에 제공합니다.",
   "marketplace.install.about.agent": "에이전트는 자체 지침과 권한을 가진 재사용 가능한 역할을 추가합니다.",
@@ -62,6 +63,7 @@ export const dict = {
   "marketplace.remove.title": "{{name}}을(를) 제거하시겠습니까?",
   "marketplace.remove.confirm": "이 {{type}}을(를) 제거하시겠습니까? {{scope}} 구성에서 제거됩니다.",
   "marketplace.remove.cancel": "취소",
+  "marketplace.remove.mcp.skills": "이 설치에 속한 동반 스킬도 제거됩니다. 별도로 설치된 스킬은 유지됩니다.",
   "marketplace.remove.confirm.button": "제거",
   "marketplace.search": "검색...",
   "marketplace.filter.all": "모든 항목",
@@ -70,6 +72,7 @@ export const dict = {
   "marketplace.empty": "항목을 찾을 수 없음",
   "marketplace.empty.relevant": "이 작업 영역과 관련된 마켓플레이스 항목을 찾을 수 없습니다.",
   "marketplace.badge.mcpServer": "MCP 서버",
+  "marketplace.badge.skills": "스킬 포함",
   "marketplace.card.by": "제작: {{author}}",
   "marketplace.install.method": "설치 방법",
   "marketplace.install.parameters": "매개변수",
