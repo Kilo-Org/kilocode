@@ -787,9 +787,6 @@ export const dict = {
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
   "settings.experimental.multiProject.description":
     "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
-  "settings.experimental.taskModelSelection.title": "Selezione del modello del sub-agent Task",
-  "settings.experimental.taskModelSelection.description":
-    "Consente di selezionare esplicitamente modello, provider e sforzo di ragionamento per i sub-agent Task.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",
