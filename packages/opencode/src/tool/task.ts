@@ -529,6 +529,7 @@ export const TaskTool = Tool.define(
         return {
           description: [
             DESCRIPTION,
+            KiloTask.usageDescription, // kilocode_change - distinguish internal subagents from user-visible Agent Manager sessions
             ...(flags.experimentalBackgroundSubagents ? [BACKGROUND_DESCRIPTION] : []),
             ...(selection ? [KiloTask.modelDescription] : []),
           ].join("\n\n"),
