@@ -126,7 +126,7 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
             assertEquals(
-                listOf("User Profile", "Models", "Providers", "Marketplace", "Checkpoints", "Agent Behavior", "Auto-Approve", "Context", "Integrations", "Advanced"),
+                listOf("User Profile", "Models", "Providers", "Marketplace", "Agent Behavior", "Auto-Approve", "Context", "Checkpoints", "Integrations", "Advanced"),
                 labels,
             )
         }

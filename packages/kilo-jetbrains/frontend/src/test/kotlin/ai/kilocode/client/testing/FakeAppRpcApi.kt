@@ -19,12 +19,15 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.PermissionConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.RetentionConfigDto
+import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import ai.kilocode.rpc.dto.WatcherConfigDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Fake [KiloAppRpcApi] for testing.
@@ -51,6 +54,9 @@ class FakeAppRpcApi : KiloAppRpcApi {
     val cleared = mutableListOf<String>()
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
+    var retention = RetentionStatusDto()
+    val retentionForces = CopyOnWriteArrayList<Boolean>()
+    var retentionError: Exception? = null
     val logConfigs = mutableListOf<LogConfigDto>()
     var configUpdateAttempts = 0
         private set
@@ -174,6 +180,19 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return next
     }
 
+    override suspend fun retentionStatus(): RetentionStatusDto {
+        assertNotEdt("retentionStatus")
+        retentionError?.let { throw it }
+        return retention
+    }
+
+    override suspend fun runRetention(force: Boolean): RetentionStatusDto {
+        assertNotEdt("runRetention")
+        retentionError?.let { throw it }
+        retentionForces.add(force)
+        return retention
+    }
+
     override suspend fun applyLogConfig(config: LogConfigDto) {
         assertNotEdt("applyLogConfig")
         logConfigs.add(config)
@@ -283,6 +302,13 @@ class FakeAppRpcApi : KiloAppRpcApi {
             permission = mergePermission(config.permission, patch.permission),
             shared_agent_board = patch.shared_agent_board ?: config.shared_agent_board,
             snapshot = patch.snapshot ?: config.snapshot,
+            retention = patch.retention?.let { item ->
+                val current = config.retention ?: RetentionConfigDto()
+                current.copy(
+                    enabled = item.enabled ?: current.enabled,
+                    maxAgeDays = item.maxAgeDays ?: current.maxAgeDays,
+                )
+            } ?: config.retention,
         )
     }
 

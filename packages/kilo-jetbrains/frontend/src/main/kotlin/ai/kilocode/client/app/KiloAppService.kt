@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
 import ai.kilocode.client.settings.KiloLogSettingsService
@@ -24,6 +25,7 @@ import com.intellij.openapi.components.service
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -337,6 +339,28 @@ class KiloAppService internal constructor(
         done(state)
     }
 
+    suspend fun retentionStatus(): RetentionStatusDto? = try {
+        call { fetchRetention() }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("Session cleanup status failed", e)
+        null
+    }
+
+    suspend fun runRetention(force: Boolean): RetentionStatusDto? = try {
+        call { triggerRetention(force) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("Session cleanup run failed", e)
+        null
+    }
+
+    fun runRetentionAsync(force: Boolean, done: (RetentionStatusDto?) -> Unit): Job = cs.launch {
+        done(runRetention(force))
+    }
+
     fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {
         try {
             call { applyLogConfig(config) }
@@ -443,6 +467,9 @@ class KiloAppService internal constructor(
         _state.value = current.copy(profile = profile, progress = progress)
     }
 }
+
+private suspend fun KiloAppRpcApi.fetchRetention(): RetentionStatusDto = retentionStatus()
+private suspend fun KiloAppRpcApi.triggerRetention(force: Boolean): RetentionStatusDto = runRetention(force)
 
 data class CoreInfo(val version: String, val platform: String)
 

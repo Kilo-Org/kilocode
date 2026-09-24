@@ -78,14 +78,6 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         marketplace.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(marketplace)
 
-        val checkpoints = ActionLink(KiloBundle.message("settings.checkpoints.displayName")) { e ->
-            val src = e.source as? JComponent ?: return@ActionLink
-            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
-            open(settings, CheckpointsConfigurable.ID)
-        }
-        checkpoints.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
-        panel.next(checkpoints)
-
         val behavior = ActionLink(KiloBundle.message("settings.agentBehavior.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink
             val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
@@ -109,6 +101,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         context.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(context)
+
+        val checkpoints = ActionLink(KiloBundle.message("settings.checkpoints.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, CheckpointsConfigurable.ID)
+        }
+        checkpoints.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(checkpoints)
 
         val integrations = ActionLink(KiloBundle.message("settings.integrations.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink

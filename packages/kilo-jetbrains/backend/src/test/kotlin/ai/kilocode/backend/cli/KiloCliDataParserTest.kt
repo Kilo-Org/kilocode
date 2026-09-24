@@ -7,6 +7,7 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
@@ -1400,6 +1401,21 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - retention reads valid values and normalizes invalid days`() {
+            val enabled = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":true,"maxAgeDays":45}}""",
+            ).retention
+            val invalid = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":false,"maxAgeDays":0}}""",
+            ).retention
+
+            assertEquals(true, enabled?.enabled)
+            assertEquals(45, enabled?.maxAgeDays)
+            assertEquals(false, invalid?.enabled)
+            assertNull(invalid?.maxAgeDays)
+        }
+
+        @Test
         fun `parseConfig - agent overrides and permissions`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""
@@ -2642,6 +2658,16 @@ class KiloCliDataParserTest {
             assertEquals(
                 "{\"snapshot\":false}",
                 KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = false)),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - retention writes nested policy`() {
+            assertEquals(
+                "{\"retention\":{\"enabled\":true,\"maxAgeDays\":30}}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(
+                    retention = RetentionPatchDto(enabled = true, maxAgeDays = 30),
+                )),
             )
         }
 

@@ -11,6 +11,7 @@ import com.intellij.ide.DataManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
@@ -39,7 +40,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     private val loginBanner: Boolean = true,
     scroll: Boolean = true,
     pad: Boolean = true,
-) : SettingsPanel(scroll, pad), SettingsDraftPage {
+) : SettingsPanel(scroll, pad), SettingsDraftPage, Disposable {
     protected lateinit var form: C
         private set
     protected val jobs = mutableListOf<Job>()
@@ -65,6 +66,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
         private set
 
     private var disposed = false
+    protected val isDisposed get() = disposed
 
     @RequiresEdt
     protected fun startSettings(content: C) {
@@ -201,7 +203,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     }
 
     @RequiresEdt
-    fun dispose() {
+    override fun dispose() {
         checkEdt()
         disposed = true
         jobs.forEach { it.cancel() }

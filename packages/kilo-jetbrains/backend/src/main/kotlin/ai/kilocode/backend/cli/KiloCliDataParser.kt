@@ -69,6 +69,7 @@ import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionBoardDto
@@ -635,6 +636,12 @@ object KiloCliDataParser {
             permission = parsePermissionConfig(obj["permission"].obj()),
             shared_agent_board = runCatching { obj.flagOrNull("shared_agent_board") }.getOrNull(),
             snapshot = runCatching { obj.flagOrNull("snapshot") }.getOrNull(),
+            retention = obj["retention"].obj()?.let { retention ->
+                RetentionConfigDto(
+                    enabled = runCatching { retention.flagOrNull("enabled") }.getOrNull(),
+                    maxAgeDays = retention.long("maxAgeDays")?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
+                )
+            },
         )
     }.getOrDefault(ConfigDto())
 
@@ -1066,6 +1073,11 @@ object KiloCliDataParser {
 
             if (patch.shared_agent_board != null) put("shared_agent_board", patch.shared_agent_board)
             if (patch.snapshot != null) put("snapshot", patch.snapshot)
+            val retention = patch.retention
+            if (retention != null) put("retention", buildJsonObject {
+                if (retention.enabled != null) put("enabled", retention.enabled)
+                if (retention.maxAgeDays != null) put("maxAgeDays", retention.maxAgeDays)
+            })
 
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {

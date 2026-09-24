@@ -1,22 +1,34 @@
 package ai.kilocode.client.settings.checkpoints
 
 import ai.kilocode.rpc.dto.ConfigDto
-import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 
 internal data class CheckpointsDraft(
-    val enabled: Boolean = true,
+    val snapshot: Boolean = true,
+    val cleanup: Boolean = false,
+    val days: Int = 30,
 )
 
 /** Snapshots are enabled unless config explicitly opts out, matching the CLI and VS Code. */
-internal fun checkpointsDraft(config: ConfigDto?): CheckpointsDraft = CheckpointsDraft(
-    enabled = config?.snapshot ?: true,
+internal fun checkpointsDraft(effective: ConfigDto?, global: ConfigDto? = effective): CheckpointsDraft = CheckpointsDraft(
+    snapshot = effective?.snapshot ?: true,
+    cleanup = global?.retention?.enabled == true,
+    days = global?.retention?.maxAgeDays?.takeIf { it >= 1 } ?: 30,
 )
 
-/** Always writes an explicit boolean so disabling snapshots survives the default-on resolution. */
-internal fun patch(from: CheckpointsDraft, to: CheckpointsDraft): ConfigPatchDto? {
-    if (from.enabled == to.enabled) return null
-    return ConfigPatchDto(snapshot = to.enabled)
+internal data class CheckpointsChange(
+    val snapshot: Boolean? = null,
+    val retention: RetentionPatchDto? = null,
+)
+
+internal fun patch(from: CheckpointsDraft, to: CheckpointsDraft): CheckpointsChange? {
+    val snapshot = to.snapshot.takeIf { from.snapshot != to.snapshot }
+    val retention = if (from.cleanup != to.cleanup || from.days != to.days) {
+        RetentionPatchDto(enabled = to.cleanup, maxAgeDays = to.days)
+    } else null
+    if (snapshot == null && retention == null) return null
+    return CheckpointsChange(snapshot, retention)
 }
 
 internal fun savedMatches(base: CheckpointsDraft, draft: CheckpointsDraft): Boolean =
-    base.enabled == draft.enabled
+    base == draft
