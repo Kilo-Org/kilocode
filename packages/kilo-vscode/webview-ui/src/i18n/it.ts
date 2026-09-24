@@ -1007,6 +1007,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Esegui pulizia ora",
   "settings.autoCleanup.runNow.confirm":
     "Eliminare definitivamente le sessioni scadute in tutti i progetti e in tutti i client Kilo di questo computer?",
+  "settings.autoCleanup.stop": "Interrompi pulizia",
+  "settings.autoCleanup.progress.cancelling": "Interruzione della pulizia delle sessioni...",
+  "settings.autoCleanup.lastRun.cancelled": "interrotta",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
   "settings.context.compaction.title": "Compattazione",

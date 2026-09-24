@@ -1111,6 +1111,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
   "settings.autoCleanup.runNow.confirm":
     "Verlopen sessies definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",
+  "settings.autoCleanup.stop": "Opschonen stoppen",
+  "settings.autoCleanup.progress.cancelling": "Sessie-opschoning wordt gestopt...",
+  "settings.autoCleanup.lastRun.cancelled": "afgebroken",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",

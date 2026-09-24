@@ -42,6 +42,32 @@ it("retention HTTP status accepts idle and individual-session progress", () => {
   expect(decode({ policy })).toEqual({ policy })
   const progress = { phase: "deleting" as const, total: 10, processed: 4, deleted: 3, failed: 1, skippedActive: 2 }
   expect(decode({ policy, progress })).toEqual({ policy, progress })
+  const halting = { ...progress, phase: "cancelling" as const }
+  expect(decode({ policy, progress: halting })).toEqual({ policy, progress: halting })
+  expect(
+    decode({
+      policy,
+      last: { at: 1, scanned: 2, deleted: 1, skippedActive: 0, failed: 0, durationMs: 3, reclaimedBytes: 4 },
+    }),
+  ).toEqual({
+    policy,
+    last: { at: 1, scanned: 2, deleted: 1, skippedActive: 0, failed: 0, durationMs: 3, reclaimedBytes: 4 },
+  })
+  expect(
+    decode({
+      policy,
+      last: { at: 1, scanned: 2, deleted: 1, skippedActive: 0, failed: 0, durationMs: 3, cancelled: true },
+    }),
+  ).toEqual({
+    policy,
+    last: { at: 1, scanned: 2, deleted: 1, skippedActive: 0, failed: 0, durationMs: 3, cancelled: true },
+  })
+  expect(
+    decode({ policy, last: { at: 1, scanned: 2, deleted: 1, skippedActive: 0, failed: 0, durationMs: 3 } }),
+  ).toEqual({
+    policy,
+    last: { at: 1, scanned: 2, deleted: 1, skippedActive: 0, failed: 0, durationMs: 3 },
+  })
   expect(() => decode({ policy, progress: { ...progress, deleted: -1 } })).toThrow()
 })
 
@@ -555,5 +581,90 @@ dbIt.live("run clears deleting progress after interruption without replacing the
     yield* Fiber.interrupt(fiber)
     expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
     expect(yield* KiloSessionRetention.readState()).toEqual(previous)
+  }),
+)
+
+dbIt.live("cancel with no active pass reports false", () =>
+  Effect.gen(function* () {
+    expect(KiloSessionRetention.cancel()).toBe(false)
+  }),
+)
+
+dbIt.live("cancel during deleting keeps completed removals, stops the rest, records a partial result", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const first = `ses_retention_stop_a_${crypto.randomUUID()}`
+    const second = `ses_retention_stop_b_${crypto.randomUUID()}`
+    const updated = Date.now() - 40 * KiloSessionRetention.DAY_MS
+    yield* seed({
+      directory: "/tmp/retention-stop",
+      rows: [
+        { id: first, updated },
+        { id: second, updated },
+      ],
+    })
+    const reached = yield* Deferred.make<void>()
+    const resume = yield* Deferred.make<void>()
+    let removed = 0
+    const sessions = Layer.mock(Session.Service, {
+      remove: (id) =>
+        Effect.gen(function* () {
+          if (++removed === 1) {
+            yield* Deferred.succeed(reached, undefined)
+            yield* Deferred.await(resume)
+          }
+          yield* db.delete(SessionTable).where(eq(SessionTable.id, id)).run().pipe(Effect.orDie)
+        }),
+    })
+    const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(enabled, sessions)),
+      Effect.forkChild,
+    )
+    yield* awaitWithTimeout(Deferred.await(reached), "first removal did not start")
+    expect(KiloSessionRetention.cancel()).toBe(true)
+    expect((yield* KiloSessionRetention.readProgress())?.phase).toBe("cancelling")
+    yield* Deferred.succeed(resume, undefined)
+    const outcome = yield* Fiber.join(fiber)
+    expect(outcome.ran && outcome.result).toMatchObject({ scanned: 2, deleted: 1, failed: 0, cancelled: true })
+    expect(yield* KiloSessionRetention.readState()).toMatchObject({ deleted: 1, cancelled: true })
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+    const rows = yield* db
+      .select({ id: SessionTable.id })
+      .from(SessionTable)
+      .where(inArray(SessionTable.id, [SessionID.make(first), SessionID.make(second)]))
+      .all()
+      .pipe(Effect.orDie)
+    expect(rows.map((row) => row.id)).toEqual([SessionID.make(second)])
+    expect(KiloSessionRetention.cancel()).toBe(false)
+  }),
+)
+
+dbIt.live("cancel during scanning aborts before any deletion", () =>
+  Effect.gen(function* () {
+    const id = `ses_retention_stop_scan_${crypto.randomUUID()}`
+    yield* seed({
+      directory: "/tmp/retention-stop-scan",
+      rows: [{ id, updated: Date.now() - 40 * KiloSessionRetention.DAY_MS }],
+    })
+    const gate = yield* Deferred.make<void>()
+    const entered = yield* Deferred.make<void>()
+    const config = Layer.mock(Config.Service, {
+      get: () =>
+        Deferred.succeed(entered, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as({ retention: { enabled: true, maxAgeDays: 30 } }),
+        ),
+    })
+    const sessions = Layer.mock(Session.Service, { remove: () => Effect.die("no session should be removed") })
+    const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(config, sessions)),
+      Effect.forkChild,
+    )
+    yield* awaitWithTimeout(Deferred.await(entered), "scan did not start")
+    expect(KiloSessionRetention.cancel()).toBe(true)
+    yield* Deferred.succeed(gate, undefined)
+    const outcome = yield* Fiber.join(fiber)
+    expect(outcome.ran && outcome.result).toMatchObject({ deleted: 0, failed: 0, cancelled: true })
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
   }),
 )

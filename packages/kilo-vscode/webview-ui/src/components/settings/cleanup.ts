@@ -5,6 +5,7 @@ export class CleanupPoll {
   private timer?: ReturnType<typeof setTimeout>
   private request?: string
   private run?: string
+  private halt?: string
   private disposed = false
   private stale = false
   private failure?: AutoCleanupStateLoadedMessage["error"]
@@ -29,6 +30,12 @@ export class CleanupPoll {
     this.post({ type: "runAutoCleanupNow", requestID: this.run })
   }
 
+  stop(): void {
+    if (this.disposed || this.halt || !this.state?.progress) return
+    this.halt = crypto.randomUUID()
+    this.post({ type: "stopAutoCleanupNow", requestID: this.halt })
+  }
+
   receive(message: AutoCleanupStateLoadedMessage): void {
     if (this.disposed || !message.requestID) return
     if (message.requestID === this.run) {
@@ -43,7 +50,8 @@ export class CleanupPoll {
         this.start()
         return
       }
-    } else return
+    } else if (message.requestID !== this.halt) return
+    if (message.requestID === this.halt) this.halt = undefined
     const unavailable = message.error === "status" || message.error === "timeout"
     this.state = {
       ...message,

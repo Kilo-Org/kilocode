@@ -1145,6 +1145,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Uruchom czyszczenie teraz",
   "settings.autoCleanup.runNow.confirm":
     "Trwale usunąć wygasłe sesje we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze?",
+  "settings.autoCleanup.stop": "Zatrzymaj czyszczenie",
+  "settings.autoCleanup.progress.cancelling": "Zatrzymywanie czyszczenia sesji...",
+  "settings.autoCleanup.lastRun.cancelled": "przerwane",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
   "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
   "settings.context.compaction.title": "Kompaktowanie",

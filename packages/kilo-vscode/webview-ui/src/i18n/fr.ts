@@ -1171,6 +1171,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Lancer le nettoyage maintenant",
   "settings.autoCleanup.runNow.confirm":
     "Supprimer définitivement les sessions expirées dans tous les projets et tous les clients Kilo de cette machine ?",
+  "settings.autoCleanup.stop": "Arrêter le nettoyage",
+  "settings.autoCleanup.progress.cancelling": "Arrêt du nettoyage des sessions...",
+  "settings.autoCleanup.lastRun.cancelled": "interrompu",
   "settings.context.autoCompaction.title": "Compaction automatique",
   "settings.context.autoCompaction.description":
     "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",

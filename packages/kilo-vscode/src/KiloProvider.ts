@@ -3553,6 +3553,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
       return true
     }
+    if (message.type === "stopAutoCleanupNow") {
+      const service = this.autoCleanup()
+      const requested = await service?.cancel().then(
+        () => true,
+        () => false,
+      )
+      const status = await service?.status().catch(() => null)
+      this.postMessage({
+        type: "autoCleanupStateLoaded",
+        requestID,
+        last: status?.last ?? service?.lastResult() ?? null,
+        progress: status?.progress,
+        pending: service?.running,
+        ...(!requested && !status ? { error: "run" } : {}),
+      })
+      return true
+    }
     return false
   }
 

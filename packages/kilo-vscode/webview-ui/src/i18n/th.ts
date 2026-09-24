@@ -1118,6 +1118,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "รันการล้างเดี๋ยวนี้",
   "settings.autoCleanup.runNow.confirm":
     "ลบเซสชันที่หมดอายุอย่างถาวรทั่วทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้หรือไม่?",
+  "settings.autoCleanup.stop": "หยุดการล้างข้อมูล",
+  "settings.autoCleanup.progress.cancelling": "กำลังหยุดการล้างเซสชัน...",
+  "settings.autoCleanup.lastRun.cancelled": "ถูกยกเลิก",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
   "settings.context.compaction.title": "การบีบอัด",
