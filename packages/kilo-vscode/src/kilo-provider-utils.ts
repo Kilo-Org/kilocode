@@ -111,11 +111,13 @@ export function getConfigErrorDetails(error: unknown): string | undefined {
   if (!data || typeof data !== "object") return undefined
   const scoped = data as Record<string, unknown>
   const path = typeof scoped.path === "string" ? scoped.path : undefined
+  const shadowedBy = typeof scoped.shadowedBy === "string" ? scoped.shadowedBy : undefined
   const issues = Array.isArray(scoped.issues) ? scoped.issues : undefined
-  if (!path && (!issues || issues.length === 0)) return undefined
+  if (!path && !shadowedBy && (!issues || issues.length === 0)) return undefined
 
   const out: string[] = []
   if (path) out.push(`File: ${path}`)
+  if (shadowedBy) out.push(`Shadowed by: ${shadowedBy}`)
   if (issues && issues.length > 0) {
     if (out.length > 0) out.push("")
     // prettifyError accepts any object with an `issues` array; the cast is
