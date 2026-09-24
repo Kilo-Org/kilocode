@@ -115,12 +115,12 @@ describe("ToolInputStream", () => {
     stream.dispose()
   })
 
-  test("does not parse fragments that only carry other fields", async () => {
+  test("shows a complete non-live field while the call is pending", async () => {
     const { pushed, stream } = setup()
-    stream.track(part("write", "pending"))
+    stream.track(part("read", "pending"))
     stream.delta({ callID: "call_1", delta: '{"filePath":"src/a.ts"' })
     await wait()
-    expect(pushed).toHaveLength(0)
+    expect((pushed[0]!.part as Part).state.input).toEqual({ filePath: "src/a.ts" })
     stream.dispose()
   })
 })

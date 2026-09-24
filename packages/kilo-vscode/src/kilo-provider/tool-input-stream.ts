@@ -15,26 +15,19 @@ type StreamChanges = { additions: number; deletions: number }
 
 type Shown = { input: Record<string, unknown>; changes?: StreamChanges }
 
-type Call = {
-  part?: Tool
-  raw: string
-  tail?: string
-  timer?: ReturnType<typeof setTimeout>
-  shown?: Shown
-  key?: string
-  live?: boolean
-}
+type Call = { part?: Tool; raw: string; timer?: ReturnType<typeof setTimeout>; shown?: Shown; key?: string }
 
-// Streamed input is parsed at most this often per call. The session stream
-// scheduler then coalesces the pending part update with the rest of the frame.
+// Streamed input is parsed at most this often per call, and less often as the
+// accumulated input grows so a large stream is not re-parsed on every tick.
+// The session stream scheduler then coalesces the pending part update with the
+// rest of the frame.
 const INTERVAL = 50
+const MAX_INTERVAL = 400
+const CHUNK = 32_000
 // Keep at most this many open calls, so an aborted stream cannot grow the map.
 const CAP = 50
 // Strings that count while they stream. Other fields show once complete.
 const LIVE = new Set(["content", "command", "oldString", "newString", "patchText"])
-// A live key name in a fragment. A fragment that only carries other fields
-// skips the parse, so a large stream is not re-parsed while it is unchanged.
-const LIVE_KEY = /"(?:content|command|oldString|newString|patchText)"/
 // Large fields the webview does not render while a call is pending. They only
 // feed the provisional diff count, so the header grows without sending text.
 const HIDDEN = new Set(["content", "oldString", "newString", "patchText", "edits"])
@@ -55,6 +48,12 @@ function lines(text: string) {
   let count = text.endsWith("\n") ? 0 : 1
   for (let i = text.indexOf("\n"); i !== -1; i = text.indexOf("\n", i + 1)) count++
   return count
+}
+
+// Re-parsing the whole accumulated input is O(n), so the interval grows with it.
+// Work per second stays roughly constant for a large stream.
+function interval(size: number) {
+  return Math.min(MAX_INTERVAL, INTERVAL * Math.max(1, Math.floor(size / CHUNK)))
 }
 
 // Count added and removed lines in a streamed patch. The `***` and `@@`
@@ -132,7 +131,7 @@ export class ToolInputStream {
       }
       call.part = part
       // Fragments can arrive before the part that owns them.
-      if (call.raw && call.live && !call.shown) this.schedule(part.callID, call)
+      if (call.raw && !call.shown) this.schedule(part.callID, call)
       return call.shown ? show(part, call.shown, false) : part
     }
     if (!call) return part
@@ -152,13 +151,7 @@ export class ToolInputStream {
     if (call.part && call.part.state.status !== "pending") return
     if (!props.delta) return
     call.raw += props.delta
-    // Only a fragment that carries a live field can change what is shown, so
-    // other fields (a path, flags, a nested value) never trigger a parse.
-    if (!call.live) {
-      if (LIVE_KEY.test((call.tail ?? "") + props.delta)) call.live = true
-      call.tail = props.delta.slice(-16)
-    }
-    if (call.part && call.live) this.schedule(props.callID, call)
+    if (call.part) this.schedule(props.callID, call)
   }
 
   dispose() {
@@ -176,7 +169,7 @@ export class ToolInputStream {
   }
 
   private schedule(id: string, call: Call) {
-    call.timer ??= setTimeout(() => this.flush(id), INTERVAL)
+    call.timer ??= setTimeout(() => this.flush(id), interval(call.raw.length))
   }
 
   private drop(id: string) {
@@ -190,7 +183,7 @@ export class ToolInputStream {
     if (!call) return
     call.timer = undefined
     const part = call.part
-    if (!part || part.state.status !== "pending" || !call.live) return
+    if (!part || part.state.status !== "pending") return
     const input = partial(call.raw, LIVE)
     if (!input) return
     const shown = shape(part.tool, input)
