@@ -24,12 +24,12 @@ describe("webview notification sounds", () => {
   it("delivers a sound to only the most recent ready webview", async () => {
     const previous = target("previous")
     const recent = target("recent")
-    previous.registration.ready()
     recent.registration.ready()
+    previous.registration.ready()
 
     expect(await playWebviewSound("bip-bop-01")).toBe(true)
-    expect(previous.messages).toEqual([])
-    expect(recent.messages).toEqual([{ type: "playNotificationSound", uri: "sound://recent/bip-bop-01.wav" }])
+    expect(recent.messages).toEqual([])
+    expect(previous.messages).toEqual([{ type: "playNotificationSound", uri: "sound://previous/bip-bop-01.wav" }])
   })
 
   it("skips webviews that are not ready", async () => {
@@ -53,6 +53,20 @@ describe("webview notification sounds", () => {
     expect(fallback.messages).toEqual([{ type: "playNotificationSound", uri: "sound://fallback/staplebops-06.wav" }])
   })
 
+  it("falls back when the preferred webview rejects the message", async () => {
+    const fallback = target("fallback")
+    const failed = registerSoundWebview(
+      () => Promise.reject(new Error("disposed")),
+      (id) => `sound://failed/${id}.wav`,
+    )
+    disposables.push(failed)
+    fallback.registration.ready()
+    failed.ready()
+
+    expect(await playWebviewSound("staplebops-06")).toBe(true)
+    expect(fallback.messages).toEqual([{ type: "playNotificationSound", uri: "sound://fallback/staplebops-06.wav" }])
+  })
+
   it("falls back when the preferred webview cannot resolve the sound URI", async () => {
     const fallback = target("fallback")
     const failed = registerSoundWebview(
@@ -72,5 +86,15 @@ describe("webview notification sounds", () => {
   it("returns false when no ready webview exists", async () => {
     target("pending")
     expect(await playWebviewSound("yup-01")).toBe(false)
+  })
+
+  it("does not restore a disposed webview when a late ready message arrives", async () => {
+    const stale = target("stale")
+    stale.registration.ready()
+    stale.registration.dispose()
+    stale.registration.ready()
+
+    expect(await playWebviewSound("yup-01")).toBe(false)
+    expect(stale.messages).toEqual([])
   })
 })

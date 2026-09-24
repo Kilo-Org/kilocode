@@ -847,6 +847,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.panel = undefined
     this.webview = webviewView.webview
     this.registerSound(webviewView.webview)
+    const sound = this.sound
+    webviewView.onDidDispose(() => {
+      sound?.dispose()
+      if (this.sound === sound) this.sound = null
+    })
 
     webviewView.webview.options = {
       enableScripts: true,

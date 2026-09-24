@@ -260,6 +260,7 @@ describe("webview stats visibility", () => {
     const editor = attach(create())
     editor.internal._getHtmlForWebview = () => ""
     const listeners = new Set<() => void>()
+    const disposed = new Set<() => void>()
     const subscribe = (listener: () => void) => {
       listeners.add(listener)
       return { dispose: () => listeners.delete(listener) }
@@ -270,6 +271,10 @@ describe("webview stats visibility", () => {
       visible,
       onDidChangeViewState: subscribe,
       onDidChangeVisibility: subscribe,
+      onDidDispose: (listener: () => void) => {
+        disposed.add(listener)
+        return { dispose: () => disposed.delete(listener) }
+      },
     }
     const resolve = () => {
       if (kind === "sidebar") {
@@ -283,6 +288,7 @@ describe("webview stats visibility", () => {
       ...editor,
       view,
       listeners,
+      disposed,
       resolve,
       change: (visible: boolean) => {
         view.visible = visible
@@ -290,6 +296,24 @@ describe("webview stats visibility", () => {
       },
     }
   }
+
+  it("releases sidebar sounds on view disposal without clearing a replacement", () => {
+    const editor = surface("sidebar", true)
+    const internal = editor.provider as unknown as { sound: { dispose(): void } | null }
+    const first = internal.sound
+    const release = [...editor.disposed].at(0)
+    expect(release).toBeDefined()
+
+    editor.resolve()
+    const second = internal.sound
+    expect(second).not.toBe(first)
+    release?.()
+    expect(internal.sound).toBe(second)
+
+    const current = [...editor.disposed].at(-1)
+    current?.()
+    expect(internal.sound).toBeNull()
+  })
 
   it.each(["sidebar", "panel"] as const)("keeps initially hidden %s stats disabled", (kind) => {
     const editor = surface(kind, false)
