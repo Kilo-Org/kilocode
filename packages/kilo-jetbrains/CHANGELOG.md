@@ -533,29 +533,15 @@
 ## [7.1.8-rc.1] - 2026-09-24
 
 ### Added
-- feat(cli): support MCP client ID metadata documents by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14508
-- feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14462
-- feat(vscode): animate tool calls and stream live tool input by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14490
-- feat(marketplace): install MCP servers with companion skills by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14510
-- feat: make task subagent model selection the default by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14533
-- feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14543
 
 ### Fixed
-- fix(agent-manager): avoid creating .kilo/worktrees when worktree pool is off by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14530
-- fix(agent-manager): preserve tab and panel state across project switches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14529
-- fix(vscode): recover Agent Manager requests and providers after reconnect by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14531
-- fix(agent-manager): keep session tab title in sync on rename by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14532
-- fix(vscode): stop transcript re-render loop on session switch by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14534
-- fix(agent-manager): keep the loaded browser page across context switches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14535
-- fix(jetbrains): avoid crash when vfs kind service is unresolvable during plugin unload by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14515
+
+- Avoid a crash when reloading or unloading the JetBrains plugin while editor history still references Kilo virtual files.
 
 ### Changed
-- release(jetbrains): v7.1.7 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14509
-- docs: auto-sync cloud-mobile with merged PRs (through 2026-09-23) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14198
-- docs: auto-sync cloud-web with merged PRs (through 2026-09-23) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14219
-- Revert "feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate" by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14541
-- perf(jetbrains): speed up transcript tab switching and list painting by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14520
 
+- Speed up switching between worktree session editor tabs with long transcripts and reduce unnecessary Agent Manager list repainting.
+- Trim single-line transcript labels more consistently with an ellipsis when they overflow.
 
 ## [7.1.7] - 2026-09-23
 
