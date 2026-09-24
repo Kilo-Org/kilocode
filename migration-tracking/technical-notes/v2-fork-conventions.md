@@ -24,6 +24,15 @@ conventions.
 - `upstream/dev` is a sibling line, not an ancestor. `upstream/dev` and
   `upstream/v2` diverged at `0e2dd4ad`; do not assume a dev fix reached v2.
 
+## Patched upstream dependencies
+
+- `virtua@0.49.1` is catalog-pinned for the preview packages (`kilo-vscode`,
+  `kilo-ide-ui`). `main` also carries `patches/virtua@0.49.1.patch`, which adds
+  `VirtualizerHandle.measure()` for the VS Code transcript handoff-flicker fix
+  (`fix(vscode): prevent transcript handoff flicker`). That fix is not in this v2
+  port, so the patch is intentionally not applied here. Do not bump `virtua`
+  without porting the patch and its `handle.measure()` call site together.
+
 ## Branches
 
 - **Integration branch:** `johnnyeric/kilo-opencode-v2`. Long-lived, based on

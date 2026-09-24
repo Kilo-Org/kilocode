@@ -18,6 +18,7 @@ import { createProcessMethods } from "./processes"
 import { createModelStateMethods } from "./model-state"
 import { viewEvents } from "./events"
 export type * from "./view-types"
+export type { SessionMetadata } from "@opencode-ai/client/promise"
 
 export function createKiloClient(input: { client: OpenCodeClient; directory: string }) {
   const settings = createSettingsMethods(input.client, input.directory)

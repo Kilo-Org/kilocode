@@ -1,4 +1,4 @@
-import type { KiloClient, Session } from "../backend/index"
+import type { KiloClient, Session, SessionMetadata } from "../backend/index"
 import { sanitizeBranchName, versionedName } from "./branch-name"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
@@ -54,7 +54,7 @@ export interface ToolDeps {
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
   setup: (dir: string, branch?: string, id?: string) => Promise<void>
   createSessionInWorktree: (dir: string, branch: string, id?: string, source?: ToolSource) => Promise<Session | null>
-  sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
+  sessionMetadata: (client: KiloClient, dir: string) => Promise<SessionMetadata>
   registerWorktreeSession: (sid: string, dir: string) => void
   notifyReady: (sid: string, result: CreateWorktreeResult, wid?: string) => void
   push: () => void
@@ -116,7 +116,6 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
       parts: [{ type: "text", text: body }],
       model: task.model,
       variant: task.variant,
-      snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
   )

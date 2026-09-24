@@ -577,7 +577,7 @@ export function transcriptFrames(
       default:
         return []
     }
-  }).pipe(Effect.catch(() => Effect.succeed([] as TranscriptFrame[])))
+  }).pipe(Effect.orElseSucceed(() => [] as TranscriptFrame[]))
 }
 
 async function recoverToolName(

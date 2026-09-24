@@ -219,7 +219,7 @@ These file counts are not interchangeable with the inventory rows above. They in
 
 Recorded verification includes focused package tests, isolated real-host execution, loopback service contracts, rendered UI fixtures, terminal round trips, and real local artifact apply/rollback. Earlier successful runs apply to their checkpoints and are not evidence that every current package is green.
 
-The original extension and its six webviews/two workers build. The latest lifecycle regression verifies completed responses return to idle and interruption succeeds even without cached local activity. Full extension typechecking still fails on incomplete port surfaces, and final desktop verification of that correction remains unrun.
+The original extension and its six webviews/two workers build. The latest lifecycle regression verifies completed responses return to idle and interruption succeeds even without cached local activity. Full extension typechecking still fails on incomplete port surfaces, so the preview package's `typecheck` script now skips with a pointer to #14016 while `typecheck:port` retains the real check. Final desktop verification of that correction remains unrun.
 
 No new runtime acceptance is claimed by this document update or by completion of the source audit. External service verification, production distribution, and full platform validation remain open.
 

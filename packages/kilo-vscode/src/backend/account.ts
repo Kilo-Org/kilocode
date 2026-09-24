@@ -139,9 +139,11 @@ export function createAccountMethods(client: OpenCodeClient, defaultDirectory: s
           // propagate as errors instead of masquerading as signed-out.
           const list = (await client.integration.list({ location: location(input) }, options)).data
           const kilo = list.find((item) => item.id === "kilo")
-          return {
+          // `type` (api vs oauth) is intentionally unset: v2 ConnectionCredentialInfo carries no discriminator yet.
+          const status: KiloAuthStatus = {
             authenticated: (kilo?.connections ?? []).some((connection) => connection.type === "credential"),
           }
+          return status
         }, options),
       organization: {
         set: <Throw extends boolean = false>(

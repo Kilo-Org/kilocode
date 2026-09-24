@@ -2,6 +2,8 @@ export type FileContent = {
   type: "text" | "binary"
   content: string
   diff?: string
+  encoding?: "base64"
+  mimeType?: string
   patch?: {
     oldFileName: string
     newFileName: string

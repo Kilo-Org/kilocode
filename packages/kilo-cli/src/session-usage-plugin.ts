@@ -20,7 +20,7 @@ export function createSessionUsagePlugin(options: SessionUsagePluginOptions): Pl
             Effect.gen(function* () {
               const session = yield* ctx.session
                 .get({ sessionID: input.sessionID })
-                .pipe(Effect.catch(() => Effect.fail(call.error("kilocode.session-usage", "Session is unavailable"))))
+                .pipe(Effect.mapError(() => call.error("kilocode.session-usage", "Session is unavailable")))
               if (
                 session.location.directory !== ctx.location.directory ||
                 session.location.workspaceID !== ctx.location.workspaceID

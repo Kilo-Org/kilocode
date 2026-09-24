@@ -728,7 +728,10 @@ export function createSettingsMethods(client: OpenCodeClient, defaultDirectory: 
     },
     global: {
       config: {
-        get: <Throw extends boolean = false>(_input: Record<string, never> = {}, options?: AdapterOptions<Throw>) =>
+        // Deliberate asymmetry: v1's SDK exposed `global.config.get(options)`, so the
+        // transplanted host callers pass options first here, while `config.get` below
+        // takes `(input, options)` with a location. Do not copy this shape onto new methods.
+        get: <Throw extends boolean = false>(options?: AdapterOptions<Throw>) =>
           result(async () => (await views(undefined, options)).globalView, options),
         update: <Throw extends boolean = false>(
           input: { config: Partial<Config>; directory?: string; workspace?: string },

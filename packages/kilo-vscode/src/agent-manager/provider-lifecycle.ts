@@ -1,4 +1,4 @@
-import type { KiloClient, Session } from "../backend/index"
+import type { KiloClient, Session, SessionMetadata } from "../backend/index"
 import { getErrorMessage } from "../kilo-provider-utils"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"
@@ -42,7 +42,7 @@ export interface LifecycleHost {
   capture: (event: string, props: Record<string, unknown>) => void
   autoName: () => { enabled: boolean }
   client: () => KiloClient
-  metadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
+  metadata: (client: KiloClient, dir: string) => Promise<SessionMetadata>
   post: (message: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
 }

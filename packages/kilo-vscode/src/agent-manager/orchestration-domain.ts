@@ -351,7 +351,6 @@ export async function prompt(input: {
       directory: dir,
       messageID: `msg_agent_manager_${input.messageID}`,
       parts: [{ type: "text", text: input.text }],
-      snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
   )
