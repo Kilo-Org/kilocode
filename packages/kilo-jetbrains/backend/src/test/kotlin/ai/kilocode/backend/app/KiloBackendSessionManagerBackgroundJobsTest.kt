@@ -93,16 +93,30 @@ class KiloBackendSessionManagerBackgroundJobsTest {
         val app = setup()
         ready(app)
 
-        // Guards the cache-eviction path: the entry is dropped when sharing stops, so a later
-        // subscriber must still get a working flow, and concurrent subscribers must still share one
-        // poller rather than each starting their own.
+        // The first subscriber leaves an empty value in the shared flow's replay cache. Later
+        // subscribers must wait for a newly polled value instead of treating that replay as proof
+        // that the poller restarted.
         withTimeout(10_000) { app.sessions.backgroundJobs("ses_root", "/repo").first() }
+        mock.backgroundJobs = """
+            [{
+                "id": "job2",
+                "type": "task",
+                "status": "completed",
+                "title": "Done",
+                "started_at": 2000,
+                "metadata": {"sessionId": "ses_child2", "parentSessionId": "ses_root", "background": true}
+            }]
+        """.trimIndent()
         val before = mock.backgroundJobsRequests.size
 
-        val a = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        val b = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        withTimeout(10_000) { awaitAll(a, b) }
+        // Resolve the manager flow once so both collectors exercise the same shared poller even if
+        // the previous cache entry is being evicted concurrently.
+        val jobs = app.sessions.backgroundJobs("ses_root", "/repo")
+        val a = async { jobs.first { it.singleOrNull()?.id == "job2" } }
+        val b = async { jobs.first { it.singleOrNull()?.id == "job2" } }
+        val results = withTimeout(10_000) { awaitAll(a, b) }
 
+        assertTrue(results.all { it.single().id == "job2" })
         assertEquals(1, mock.backgroundJobsRequests.size - before)
     }
 
