@@ -187,6 +187,10 @@ function BrowserAdapter(props: {
  * Keeps one browser panel alive per scope so switching to another worktree,
  * project, or session and back does not reload the page in the iframe. Only the
  * active scope is visible; the rest stay mounted but hidden.
+ *
+ * Eviction only drops the webview preview. The backend browser belongs to its
+ * session or project, so it is closed by the panel close action, session
+ * deletion, or project close, not by cache eviction.
  */
 function BrowserPanelCache(props: {
   active: Accessor<boolean>
@@ -227,7 +231,10 @@ function BrowserPanelCache(props: {
               <BrowserAdapter
                 sessionId={() => parts.session}
                 projectId={() => (parts.project === "single" ? undefined : parts.project)}
-                onClose={props.onClose}
+                onClose={() => {
+                  setEntries((prev) => prev.filter((item) => item !== entry))
+                  props.onClose()
+                }}
               />
             </div>
           )
