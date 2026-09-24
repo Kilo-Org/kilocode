@@ -17515,6 +17515,7 @@ export type KilocodeSessionModelUsageResponses = {
    */
   200: {
     sessionIDs: Array<string>
+    sessionCost?: number
     totals: {
       steps: number
       cost: number

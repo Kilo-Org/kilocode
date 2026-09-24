@@ -5,7 +5,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import type { Skill } from "@/skill"
 import type { MarketplaceInstalledMetadata, Scope } from "./schema"
 import * as Paths from "./paths"
-import { pluginPackageName } from "./plugin-spec"
+import { pluginIdentity } from "./plugin-spec"
 
 const log = Log.create({ service: "marketplace" })
 
@@ -99,7 +99,7 @@ async function pluginEntries(scope: Scope, input: DetectInput): Promise<Entry[]>
   const out: Entry[] = []
   for (const file of Paths.pluginFiles(scope, input.directory, input.worktree)) {
     for (const spec of await readPluginList(file)) {
-      const name = pluginPackageName(spec)
+      const name = pluginIdentity(spec)
       if (name) out.push(entry(name, "plugin"))
     }
   }

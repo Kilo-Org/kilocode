@@ -49,7 +49,7 @@ export const dict = {
   "marketplace.install.learnMore": "Lees hoe installaties vanuit Marketplace werken",
   "marketplace.install.learnMcp": "Meer informatie over MCP",
   "marketplace.install.about.plugin":
-    "Een npm-plugin voegt aangepaste hulpmiddelen en integraties toe aan Kilo. Plugins worden uitgevoerd met volledige machtigingen.",
+    "Een plugin voegt aangepaste hulpmiddelen en integraties toe aan Kilo. Plugins worden uitgevoerd met volledige machtigingen.",
   "marketplace.install.plugin.warning":
     "Plugins voeren code uit met volledige machtigingen. Ze kunnen je bestanden lezen en wijzigen, opdrachten uitvoeren en toegang krijgen tot je inloggegevens en netwerk. Installeer alleen plugins die je vertrouwt.",
   "marketplace.install.installedAt": "Geïnstalleerd in {{path}}",

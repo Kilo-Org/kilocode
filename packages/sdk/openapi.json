@@ -16410,6 +16410,9 @@
                         "pattern": "^ses"
                       }
                     },
+                    "sessionCost": {
+                      "type": "number"
+                    },
                     "totals": {
                       "type": "object",
                       "properties": {

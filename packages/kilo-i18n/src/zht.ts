@@ -41,7 +41,7 @@ export const dict = {
   "marketplace.install.project.warning": "專案檔案可能會提交至版本控制。除非設定引用了環境變數，否則請勿在此儲存密鑰。",
   "marketplace.install.learnMore": "瞭解 Marketplace 安裝的運作方式",
   "marketplace.install.learnMcp": "深入瞭解 MCP",
-  "marketplace.install.about.plugin": "npm 外掛可為 Kilo 新增自訂工具和整合功能。外掛以完整權限執行。",
+  "marketplace.install.about.plugin": "外掛可為 Kilo 新增自訂工具和整合功能。外掛以完整權限執行。",
   "marketplace.install.plugin.warning":
     "外掛以完整權限執行程式碼。它們可以讀取和修改你的檔案、執行命令，以及存取你的憑證和網路。請僅安裝你信任的外掛。",
   "marketplace.install.installedAt": "已安裝至 {{path}}",
