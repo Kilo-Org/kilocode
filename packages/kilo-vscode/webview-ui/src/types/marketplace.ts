@@ -7,6 +7,7 @@ export type {
   AgentContent,
   AgentMarketplaceItem,
   SkillMarketplaceItem,
+  PluginMarketplaceItem,
   MarketplaceItem,
   InstallMarketplaceItemOptions,
   MarketplaceInstalledMetadata,

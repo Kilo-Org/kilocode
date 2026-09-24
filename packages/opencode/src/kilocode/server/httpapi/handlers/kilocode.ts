@@ -327,10 +327,19 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         parameterCount: Object.keys(ctx.payload.parameters ?? {}).length,
       })
       const result = yield* MarketplaceInstaller.install(
-        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        {
+          config,
+          agents,
+          skills,
+          directory: instance.directory,
+          worktree: instance.worktree,
+          vcs: instance.project.vcs,
+        },
         ctx.payload,
       )
-      if (result.success) yield* store.dispose(instance)
+      // Plugin and MCP bundle writes can partially succeed, including on a failed request.
+      if (result.success || ctx.payload.item.type === "plugin" || ctx.payload.item.type === "mcp")
+        yield* store.dispose(instance)
       yield* Effect.logInfo("marketplace request complete", {
         endpoint: "install",
         directory: instance.directory,
@@ -357,11 +366,19 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         scope: ctx.payload.scope,
       })
       const result: MarketplaceRemoveResult = yield* MarketplaceInstaller.remove(
-        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        {
+          config,
+          agents,
+          skills,
+          directory: instance.directory,
+          worktree: instance.worktree,
+          vcs: instance.project.vcs,
+        },
         ctx.payload.item,
         ctx.payload.scope,
       )
-      if (result.success) yield* store.dispose(instance)
+      if (result.success || ctx.payload.item.type === "plugin" || ctx.payload.item.type === "mcp")
+        yield* store.dispose(instance)
       yield* Effect.logInfo("marketplace request complete", {
         endpoint: "remove",
         directory: instance.directory,

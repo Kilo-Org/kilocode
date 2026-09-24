@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Tous les projets sur cette machine. Enregistré dans votre configuration utilisateur.",
   "marketplace.install.destination": "Destination de l'installation",
+  "marketplace.install.includedSkills": "Compétences incluses",
   "marketplace.install.about.mcp":
     "Un serveur MCP fournit à Kilo des outils supplémentaires pour interagir avec des services externes ou des programmes locaux.",
   "marketplace.install.about.agent":
@@ -47,9 +48,13 @@ export const dict = {
     "Les fichiers du projet peuvent être ajoutés au contrôle de version. N'y stockez pas de secrets, sauf si la configuration fait référence à une variable d'environnement.",
   "marketplace.install.learnMore": "Découvrir le fonctionnement des installations depuis le Marketplace",
   "marketplace.install.learnMcp": "En savoir plus sur MCP",
+  "marketplace.install.about.plugin":
+    "Un plugin ajoute des outils et des intégrations personnalisés à Kilo. Les plugins s'exécutent avec toutes les autorisations.",
+  "marketplace.install.plugin.warning":
+    "Les plugins exécutent du code avec toutes les autorisations. Ils peuvent lire et modifier vos fichiers, exécuter des commandes et accéder à vos identifiants et à votre réseau. Installez uniquement des plugins auxquels vous faites confiance.",
   "marketplace.install.installedAt": "Installé dans {{path}}",
   "marketplace.intro":
-    "Installez des agents, des compétences et des outils MCP réutilisables pour un projet ou pour tous vos projets.",
+    "Installez des agents, des compétences, des outils MCP et des plugins réutilisables pour un projet ou pour tous vos projets.",
   "marketplace.intro.learnMore": "À propos du Marketplace",
   "marketplace.install.prerequisites": "Prérequis",
   "marketplace.install.installing": "Installation en cours...",
@@ -62,6 +67,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Êtes-vous sûr de vouloir supprimer ce {{type}} ? Cela le supprimera de votre configuration {{scope}}.",
   "marketplace.remove.cancel": "Annuler",
+  "marketplace.remove.mcp.skills":
+    "Cela supprime aussi les compétences associées qui appartiennent à cette installation. Les compétences installées indépendamment sont conservées.",
   "marketplace.remove.confirm.button": "Supprimer",
   "marketplace.search": "Rechercher...",
   "marketplace.filter.all": "Tous les éléments",
@@ -70,6 +77,7 @@ export const dict = {
   "marketplace.empty": "Aucun élément trouvé",
   "marketplace.empty.relevant": "Aucun élément pertinent du marketplace trouvé pour cet espace de travail.",
   "marketplace.badge.mcpServer": "Serveur MCP",
+  "marketplace.badge.skills": "Inclut des compétences",
   "marketplace.card.by": "par {{author}}",
   "marketplace.install.method": "Méthode d'installation",
   "marketplace.install.parameters": "Paramètres",
@@ -77,6 +85,7 @@ export const dict = {
   "marketplace.scope.project": "projet",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "serveur MCP",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "compétence",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Échec de la suppression de {{name}}",
@@ -87,7 +96,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Plusieurs sessions sont en cours et seront interrompues",
   "marketplace.warning.installAnyway": "Installer quand même",
   "marketplace.warning.cancel": "Annuler",
-  "marketplace.contribute.prompt": "Il manque une compétence, un agent ou un serveur MCP ?",
+  "marketplace.contribute.prompt": "Il manque une compétence, un agent, un serveur MCP ou un plugin ?",
   "marketplace.contribute.cta": "Contribuer sur GitHub",
   "marketplace.migration.notice":
     "Les modes ont été remplacés par des agents. Si vous avez précédemment installé des modes depuis le marketplace, veuillez les supprimer et les réinstaller en tant qu'agents pour migrer vers le nouveau format.",

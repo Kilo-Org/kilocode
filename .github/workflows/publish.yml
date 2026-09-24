@@ -133,7 +133,7 @@ jobs:
   # kilocode_change start - execute supported Unix CLI binaries before packaging VSIX artifacts
   validate-cli-unix:
     name: Validate CLI (${{ matrix.target }})
-    needs: pack-signed-cli
+    needs: build-cli
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     strategy:
@@ -175,14 +175,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli-signed.tar.zst
+          name: kilo-cli.tar.zst
           path: /tmp
           skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
           mkdir -p dist
-          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C dist
 
       - name: Run CLI smoke test
         run: |
@@ -258,7 +258,7 @@ jobs:
 
   validate-cli-windows:
     name: Validate CLI (windows-${{ matrix.arch }})
-    needs: pack-signed-cli # kilocode_change
+    needs: build-cli
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20 # kilocode_change
     strategy:
@@ -274,7 +274,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli-signed.tar.zst # kilocode_change
+          name: kilo-cli.tar.zst
           path: ${{ runner.temp }}
           skip-decompress: true
 
@@ -289,7 +289,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          zstd -d --stdout "$env:RUNNER_TEMP\kilo-cli-signed.tar.zst" | tar -xf - -C dist # kilocode_change
+          zstd -d --stdout "$env:RUNNER_TEMP\kilo-cli.tar.zst" | tar -xf - -C dist
 
       - name: Run CLI smoke test
         shell: pwsh
@@ -466,7 +466,6 @@ jobs:
   build-vscode:
     needs:
       - build-cli
-      - pack-signed-cli # kilocode_change
       - validate-cli-unix
       - validate-cli-windows
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -488,14 +487,14 @@ jobs:
       # then apply changesets so the packaged VSIX ships the current changelog
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli-signed.tar.zst
+          name: kilo-cli.tar.zst
           path: /tmp
           skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
-          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
 
       - name: Apply changesets to changelog
         run: bun script/kilocode/changeset-version.ts
@@ -525,7 +524,6 @@ jobs:
     needs:
       - version
       - build-cli
-      - sign-cli-windows
     if: github.repository == 'Kilo-Org/kilocode'
     uses: ./.github/workflows/smoke-test.yml
     with:
@@ -538,7 +536,6 @@ jobs:
       - version
       - build-cli
       - build-vscode
-      - pack-signed-cli # kilocode_change
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
@@ -586,14 +583,14 @@ jobs:
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli-signed.tar.zst
+          name: kilo-cli.tar.zst
           path: /tmp
           skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
-          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
       # kilocode_change end
       - uses: actions/download-artifact@v8
         with:

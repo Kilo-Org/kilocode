@@ -90,6 +90,8 @@ export const dict = {
     "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
   "revert.banner.workspace.unavailable":
     "Conversatie teruggedraaid. Er was geen bestandscheckpoint beschikbaar, dus wijzigingen in de werkruimte zijn niet hersteld.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversatie teruggedraaid. Bestandscheckpoints vereisen een Git-repository, dus wijzigingen in de werkruimte zijn niet hersteld.",
   "revert.banner.workspace.legacy":
     "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
   "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
@@ -936,9 +938,6 @@ export const dict = {
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
-  "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
-  "settings.experimental.taskModelSelection.description":
-    "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",

@@ -88,6 +88,7 @@ export const dict = {
   "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.banner.workspace.snapshotsDisabled": "会话已还原。由于快照已禁用，文件更改未恢复。",
   "revert.banner.workspace.unavailable": "会话已还原。没有可用的文件检查点，因此未恢复工作区更改。",
+  "revert.banner.workspace.notAGitRepo": "会话已还原。文件检查点需要 Git 仓库，因此未恢复工作区更改。",
   "revert.banner.workspace.legacy": "会话已还原。此次早期还原的工作区恢复状态不可用。",
   "revert.banner.workspace.enableSnapshots": "启用快照",
   "revert.disabled.agentBusy": "等待智能体完成",
@@ -898,8 +899,6 @@ export const dict = {
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
-  "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
-  "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

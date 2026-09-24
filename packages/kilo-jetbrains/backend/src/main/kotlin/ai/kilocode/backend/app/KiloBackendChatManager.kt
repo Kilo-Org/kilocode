@@ -15,12 +15,18 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -48,6 +54,7 @@ class KiloBackendChatManager(
 ) {
     companion object {
         private val JSON_TYPE = "application/json".toMediaType()
+        private val JSON = Json { ignoreUnknownKeys = true }
         private const val ENHANCE_TIMEOUT_MINUTES = 2L
         private const val REVERT_TIMEOUT_SECONDS = 35L
 
@@ -348,7 +355,7 @@ class KiloBackendChatManager(
 
     // ------ permission / question ------
 
-    fun replyPermission(requestId: String, dir: String, reply: PermissionReplyDto) {
+    suspend fun replyPermission(requestId: String, dir: String, reply: PermissionReplyDto) = withContext(Dispatchers.IO) {
         log.debug { "kind=permission rid=$requestId ${ChatLogSummary.dir(dir)} op=replyPermission reply=${reply.reply} send=true" }
         val body = KiloCliDataParser.buildPermissionReplyJson(reply)
         post("/permission/$requestId/reply?directory=${encode(dir)}", body, "replyPermission", "kind=permission rid=$requestId")
@@ -360,13 +367,13 @@ class KiloBackendChatManager(
         post("/permission/$requestId/always-rules?directory=${encode(dir)}", body, "savePermissionRules", "kind=permission rid=$requestId")
     }
 
-    fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) {
+    suspend fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) = withContext(Dispatchers.IO) {
         log.debug { "kind=question rid=$requestId ${ChatLogSummary.dir(dir)} op=replyQuestion answers=${answers.answers.size} send=true" }
         val body = KiloCliDataParser.buildQuestionReplyJson(answers)
         post("/question/$requestId/reply?directory=${encode(dir)}", body, "replyQuestion", "kind=question rid=$requestId")
     }
 
-    fun rejectQuestion(requestId: String, dir: String) {
+    suspend fun rejectQuestion(requestId: String, dir: String) = withContext(Dispatchers.IO) {
         log.debug { "kind=question rid=$requestId ${ChatLogSummary.dir(dir)} op=rejectQuestion send=true" }
         post("/question/$requestId/reject?directory=${encode(dir)}", "{}", "rejectQuestion", "kind=question rid=$requestId")
     }
@@ -378,11 +385,21 @@ class KiloBackendChatManager(
         return parsed
     }
 
+    suspend fun permissionPending(id: String, dir: String): Boolean? = withContext(Dispatchers.IO) {
+        val raw = get("/permission?directory=${encode(dir)}", "permissionPending") ?: return@withContext null
+        pending(raw, id) { KiloCliDataParser.parsePermissionRequest(it)?.id }
+    }
+
     fun pendingQuestions(dir: String): List<QuestionRequestDto> {
         val raw = get("/question?directory=${encode(dir)}", "pendingQuestions") ?: return emptyList()
         val parsed = KiloCliDataParser.parseQuestionRequests(raw)
         log.debug { "kind=question ${ChatLogSummary.dir(dir)} op=pendingQuestions ok=true count=${parsed.size}" }
         return parsed
+    }
+
+    suspend fun questionPending(id: String, dir: String): Boolean? = withContext(Dispatchers.IO) {
+        val raw = get("/question?directory=${encode(dir)}", "questionPending") ?: return@withContext null
+        pending(raw, id) { KiloCliDataParser.parseQuestionRequest(it)?.id }
     }
 
     // ------ utilities ------
@@ -467,6 +484,15 @@ class KiloBackendChatManager(
 
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, "UTF-8")
+
+    private fun pending(raw: String, id: String, parse: (JsonObject) -> String?): Boolean? {
+        val items = runCatching { JSON.parseToJsonElement(raw).jsonArray }.getOrNull() ?: return null
+        for (item in items) {
+            val found = runCatching { parse(item.jsonObject) }.getOrNull() ?: return null
+            if (found == id) return true
+        }
+        return false
+    }
 
     private fun attachmentKey(part: String, name: String, url: String): String {
         val value = listOf(part, name, url).joinToString("\u0000")

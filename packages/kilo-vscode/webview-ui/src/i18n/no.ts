@@ -93,6 +93,8 @@ export const dict = {
     "Samtalen ble tilbakestilt. Filendringer ble ikke gjenopprettet fordi øyeblikksbilder er deaktivert.",
   "revert.banner.workspace.unavailable":
     "Samtalen ble tilbakestilt. Ingen filkontrollpunkt var tilgjengelig, så endringer i arbeidsområdet ble ikke gjenopprettet.",
+  "revert.banner.workspace.notAGitRepo":
+    "Samtalen ble tilbakestilt. Filkontrollpunkter krever et Git-repositorium, så endringer i arbeidsområdet ble ikke gjenopprettet.",
   "revert.banner.workspace.legacy":
     "Samtalen er tilbakeført. Statusen for gjenoppretting av arbeidsområdet er ikke tilgjengelig for denne tidligere tilbakeføringen.",
   "revert.banner.workspace.enableSnapshots": "Aktiver øyeblikksbilder",
@@ -899,9 +901,6 @@ export const dict = {
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
-  "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
-  "settings.experimental.taskModelSelection.description":
-    "Tillat eksplisitt valg av modell, leverandør og resonneringsinnsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
