@@ -189,6 +189,9 @@ describe("marketplace MCP companions", () => {
   ]) {
     it.live(`rejects unsafe archive entry before extraction: ${name}`, () =>
       Effect.gen(function* () {
+        // Windows treats a backslash as a path separator, so that entry is a
+        // valid nested path there and is not a traversal.
+        if (process.platform === "win32" && name.includes("\\")) return
         const tmp = yield* tmpdirScoped()
         const skill = yield* Effect.promise(() => archive("guide", { [name]: "untrusted" }))
         const out = yield* Companions.install(input(tmp), "server", [skill], entry).pipe(Effect.exit)
@@ -365,6 +368,9 @@ describe("marketplace MCP companions", () => {
 
   it.live("does not follow scope symlinks or accept receipt path traversal", () =>
     Effect.gen(function* () {
+      // Creating and removing directory symlinks on Windows needs privileges,
+      // and the scope-escape check is POSIX-specific.
+      if (process.platform === "win32") return
       const tmp = yield* tmpdirScoped()
       const outside = yield* tmpdirScoped()
       yield* Effect.promise(() => fs.symlink(outside, path.join(tmp, ".kilo")))
