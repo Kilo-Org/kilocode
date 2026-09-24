@@ -17,6 +17,7 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
 import ai.kilocode.client.settings.KiloLogSettingsService
@@ -26,11 +27,13 @@ import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * App-level frontend service for Kilo Core interaction.
@@ -359,6 +362,27 @@ class KiloAppService internal constructor(
 
     fun runRetentionAsync(force: Boolean, done: (RetentionStatusDto?) -> Unit): Job = cs.launch {
         done(runRetention(force))
+    }
+
+    /** Run cleanup once without leaving automatic retention enabled when the saved policy is off. */
+    suspend fun runManualRetention(policy: RetentionPatchDto): RetentionStatusDto? {
+        if (policy.enabled == true) return runRetention(true)
+        val enabled = policy.copy(enabled = true)
+        if (updateConfig(ConfigPatchDto(retention = enabled)) == null) return null
+        return try {
+            runRetention(true)
+        } finally {
+            withContext(NonCancellable) {
+                updateConfig(ConfigPatchDto(retention = policy.copy(enabled = false)))
+            }
+        }
+    }
+
+    fun runManualRetentionAsync(
+        policy: RetentionPatchDto,
+        done: (RetentionStatusDto?) -> Unit,
+    ): Job = cs.launch {
+        done(runManualRetention(policy))
     }
 
     fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {

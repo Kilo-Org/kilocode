@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.RetentionPolicyDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.fields.IntegerField
 import com.intellij.util.ui.UIUtil
@@ -144,7 +145,7 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         edt {
             assertFalse(cleanup().isSelected)
             assertEquals(30, days().value)
-            assertFalse(runButton().isEnabled)
+            assertTrue(runButton().isEnabled)
         }
     }
 
@@ -225,6 +226,19 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         app.runRetentionAsync(true) { done.complete(Unit) }
         runBlocking(Dispatchers.Default) { done.await() }
 
+        assertEquals(listOf(true), rpc.retentionForces)
+    }
+
+    fun `test manual cleanup temporarily enables and restores a disabled policy`() {
+        start(ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)))
+        val done = CompletableDeferred<Unit>()
+
+        app.runManualRetentionAsync(RetentionPatchDto(enabled = false, maxAgeDays = 30)) {
+            done.complete(Unit)
+        }
+        runBlocking(Dispatchers.Default) { done.await() }
+
+        assertEquals(listOf(true, false), rpc.configPatches.map { it.retention?.enabled })
         assertEquals(listOf(true), rpc.retentionForces)
     }
 

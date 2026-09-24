@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ApplicationManager
@@ -168,7 +169,8 @@ internal class CheckpointsSettingsUi(
         syncContent()
         startRetentionPoll()
         LOG.info("manual session cleanup: confirmed")
-        jobs += app.runRetentionAsync(true) { result ->
+        val policy = RetentionPatchDto(enabled = draft.cleanup, maxAgeDays = draft.days)
+        jobs += app.runManualRetentionAsync(policy) { result ->
             ApplicationManager.getApplication().invokeLater({
                 if (isDisposed) return@invokeLater
                 pending = false
@@ -278,7 +280,7 @@ internal class CheckpointsContent(
         days.sync(draft.days)
         days.isEnabled = available && draft.cleanup
         val running = pending || status?.progress != null
-        runButton.isEnabled = available && draft.cleanup && days.valid() && !dirty && !running
+        runButton.isEnabled = available && days.valid() && !dirty && !running
         runButton.text = KiloBundle.message(if (running) "settings.checkpoints.cleanup.running" else "settings.checkpoints.cleanup.run")
         last.update(
             KiloBundle.message("settings.checkpoints.cleanup.last"),
