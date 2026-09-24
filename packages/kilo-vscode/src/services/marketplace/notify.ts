@@ -30,6 +30,7 @@ export interface SuggestionChoice {
 function describe(item: MarketplaceItem): string {
   if (item.type === "agent") return `the ${item.name} agent`
   if (item.type === "skill") return `the ${item.name} skill`
+  if (item.type === "plugin") return `the ${item.name} plugin`
   return `the ${item.name} MCP server`
 }
 

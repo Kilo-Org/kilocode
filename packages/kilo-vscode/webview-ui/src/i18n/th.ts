@@ -89,6 +89,8 @@ export const dict = {
     "ย้อนกลับการสนทนาแล้ว ไม่ได้กู้คืนการเปลี่ยนแปลงไฟล์เนื่องจากปิดใช้งานสแนปชอตอยู่",
   "revert.banner.workspace.unavailable":
     "ย้อนกลับการสนทนาแล้ว ไม่มีจุดตรวจสอบไฟล์ จึงไม่ได้กู้คืนการเปลี่ยนแปลงในพื้นที่ทำงาน",
+  "revert.banner.workspace.notAGitRepo":
+    "ย้อนกลับการสนทนาแล้ว จุดตรวจสอบไฟล์ต้องใช้รีโพซิทอรี Git จึงไม่ได้กู้คืนการเปลี่ยนแปลงในพื้นที่ทำงาน",
   "revert.banner.workspace.legacy":
     "ย้อนกลับการสนทนาแล้ว ไม่ทราบสถานะการกู้คืนพื้นที่ทำงานสำหรับการย้อนกลับก่อนหน้านี้",
   "revert.banner.workspace.enableSnapshots": "เปิดใช้งานสแนปชอต",
@@ -924,9 +926,6 @@ export const dict = {
     "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
-  "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
-  "settings.experimental.taskModelSelection.description":
-    "เปิดให้เลือกโมเดล ผู้ให้บริการ และระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ Task ได้อย่างชัดเจน",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",

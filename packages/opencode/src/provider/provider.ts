@@ -1657,7 +1657,12 @@ const layer = Layer.effect(
         for (const plugin of plugins) {
           if (!plugin.auth) continue
           const providerID = ProviderV2.ID.make(plugin.auth.provider)
-          if (disabled.has(providerID)) continue
+          if (!isProviderAllowed(providerID)) continue // kilocode_change - honor enabled_providers
+
+          // kilocode_change start - the catalog entry is absent when the provider is filtered out
+          const entry = database[plugin.auth.provider]
+          if (!entry) continue
+          // kilocode_change end
 
           const stored = yield* auth.get(providerID).pipe(Effect.orDie)
           if (!stored) continue
@@ -1666,7 +1671,7 @@ const layer = Layer.effect(
           const options = yield* Effect.promise(() =>
             plugin.auth!.loader!(
               () => bridge.promise(auth.get(providerID).pipe(Effect.orDie)) as any,
-              toPublicInfo(database[plugin.auth!.provider]),
+              toPublicInfo(entry), // kilocode_change - hide Kilo credentials from the loader input
             ),
           )
           const opts = options ?? {}

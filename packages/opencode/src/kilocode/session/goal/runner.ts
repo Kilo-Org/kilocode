@@ -25,6 +25,26 @@ import { KiloSessionPromptQueue } from "../prompt-queue"
 import { isRecord } from "@/util/record"
 
 export namespace Goal {
+  export type Action = "start" | "resume"
+  export type ArmInput = {
+    sessionID: SessionID
+    action: Action
+    objective?: string
+    snapshotInitialization?: "wait"
+  }
+  export type ArmResult = { text: string }
+  export type Ops = { arm: (input: ArmInput) => Effect.Effect<ArmResult, Error> }
+  type RunModel = ReturnType<typeof Provider.parseModel> & { variant?: string }
+
+  function runTarget(session: Session.Info, user?: SessionV1.User): { model: RunModel; agent: string } {
+    const model: RunModel =
+      user?.model ??
+      (session.model
+        ? { providerID: session.model.providerID, modelID: session.model.id, variant: session.model.variant }
+        : { ...Provider.parseModel("local/goal"), variant: undefined })
+    return { model, agent: user?.agent ?? session.agent ?? "code" }
+  }
+
   function matches<D extends EventV2.Definition>(event: EventV2.Payload, definition: D): event is EventV2.Payload<D> {
     return event.type === definition.type
   }
@@ -209,6 +229,144 @@ export namespace Goal {
         )
       })
 
+      const pendingFamily = Effect.fn("Goal.pendingFamily")(function* (id: SessionID) {
+        const pending = [
+          ...(yield* permission.list()),
+          ...(yield* question.list()),
+          ...(yield* Effect.promise(() => Suggestion.list())),
+        ]
+        const family = new Set([id])
+        for (const parent of family) {
+          for (const child of yield* sessions.children(parent)) family.add(child.id)
+        }
+        return pending.some((request) => family.has(request.sessionID))
+      })
+
+      const drive = Effect.fn("Goal.drive")(function* (input: {
+        id: SessionID
+        text: string
+        agent: string
+        model: RunModel
+        snapshotInitialization?: "wait"
+        current: () => boolean
+        ticket: KiloSessionControl.Ticket
+        cancelled: Effect.Effect<never>
+      }) {
+        const bridge = yield* EffectBridge.make()
+        const scope = yield* InstanceState.get(scopes)
+        const guard = {
+          current: () => input.current() && input.ticket.current(),
+          running: () => input.current() && input.ticket.running(),
+        }
+        const settle = (status: GoalState.Status, reason: string) =>
+          commit(
+            input.id,
+            Effect.gen(function* () {
+              const session = yield* sessions.get(input.id).pipe(Effect.orDie)
+              if (!guard.running()) return
+              if (status !== "active") GoalState.pause(input.id, true)
+              yield* sessions.setMetadata({
+                sessionID: input.id,
+                metadata: {
+                  ...session.metadata,
+                  "kilo.goal": { text: input.text, status, active: status === "active", reason },
+                },
+              })
+            }),
+          )
+        yield* Effect.gen(function* () {
+          while (input.current() && input.ticket.running()) {
+            yield* drain.wait(input.id).pipe(Effect.raceFirst(input.cancelled))
+            const session = yield* sessions.get(input.id).pipe(Effect.orDie)
+            if (!input.current() || !input.ticket.running() || session.time.archived || session.revert) break
+            const messageID = MessageID.ascending()
+            const next = yield* Effect.gen(function* () {
+              const cycle = yield* Effect.acquireRelease(
+                Effect.sync(() => outcome(input.id, messageID, guard.running)),
+                (cycle) => Effect.sync(cycle.dispose),
+              )
+              yield* Effect.acquireRelease(
+                events.listen((event) =>
+                  Effect.sync(() => {
+                    if (guard.running()) cycle.update(event)
+                  }),
+                ),
+                (off) => off,
+              )
+              const result = yield* bridge.run(
+                ops.prompt(
+                  {
+                    sessionID: input.id,
+                    messageID,
+                    agent: input.agent,
+                    model: input.model,
+                    variant: input.model.variant,
+                    snapshotInitialization: input.snapshotInitialization,
+                    parts: [
+                      {
+                        type: "text",
+                        synthetic: true,
+                        text: GoalInstructions.prompt(input.text),
+                      },
+                    ],
+                  },
+                  guard,
+                ),
+              )
+              // A real user prompt preempts this continuation for its turn.
+              // Keep the goal active and loop again after the user's turn
+              // instead of settling the goal to paused. A blocked or failed
+              // goal turn still wins, matching the documented pause rules.
+              const preempted = KiloSessionPromptQueue.consumeSuperseded(input.id, messageID)
+              yield* drain.wait(input.id).pipe(Effect.raceFirst(input.cancelled))
+              if (cycle.blocked()) {
+                yield* settle(
+                  "blocked",
+                  "A request was rejected or execution was blocked. Resolve the blocker before resuming.",
+                )
+                return false
+              }
+              if (cycle.failed() || result.info.role !== "assistant" || result.info.error) {
+                yield* settle("paused", "Work failed. Review the conversation before resuming.")
+                return false
+              }
+              if (preempted) return true
+              const report = cycle.report()
+              if (report && result.info.finish === "stop") {
+                yield* settle(
+                  report.status,
+                  `Reported by the working model, not independently verified: ${report.reason}`,
+                )
+                return false
+              }
+              const next = cycle.completed(result)
+              if (!next)
+                yield* settle(
+                  "paused",
+                  "No successful action or explicit completion report. Review the conversation before resuming.",
+                )
+              return next
+            }).pipe(Effect.scoped)
+            if (!next) break
+            yield* Effect.sleep("5 seconds").pipe(Effect.raceFirst(input.cancelled))
+          }
+        }).pipe(
+          Effect.catchCause((cause) =>
+            Effect.gen(function* () {
+              if (Cause.hasInterruptsOnly(cause)) return
+              yield* settle("paused", "Execution failed. Review the conversation before resuming.")
+              yield* Effect.logError("Goal paused", { sessionID: input.id, cause })
+              yield* events.publish(Session.Event.Error, {
+                sessionID: input.id,
+                error: new NamedError.Unknown({ message: "Goal paused after an error." }).toObject(),
+              })
+            }),
+          ),
+          Effect.ensuring(Effect.suspend(() => (input.current() ? pause(input.id, true) : Effect.void))),
+          Effect.forkIn(scope),
+        )
+      })
+
       const command = Effect.fn("Goal.command")(function* (input: CommandInput) {
         const id = input.sessionID
         const args = input.arguments.trim()
@@ -237,16 +395,7 @@ export namespace Goal {
                 yield* state
                   .assertNotBusy(id)
                   .pipe(Effect.mapError(() => new Error("Stop the current response before starting a goal.")))
-              const pending = [
-                ...(yield* permission.list()),
-                ...(yield* question.list()),
-                ...(yield* Effect.promise(() => Suggestion.list())),
-              ]
-              const family = new Set([id])
-              for (const parent of family) {
-                for (const child of yield* sessions.children(parent)) family.add(child.id)
-              }
-              if (pending.some((request) => family.has(request.sessionID))) {
+              if (yield* pendingFamily(id)) {
                 yield* Effect.fail(new Error("Resolve pending questions and permissions before starting a goal."))
               }
             })
@@ -312,12 +461,7 @@ export namespace Goal {
             const user = prepared ? (yield* prepared).info : undefined
             if (user && user.role !== "user") return yield* Effect.die(new Error("Expected a user message"))
             if (!valid()) return yield* Effect.interrupt
-            const model =
-              user?.model ??
-              (session.model
-                ? { providerID: session.model.providerID, modelID: session.model.id, variant: session.model.variant }
-                : { ...Provider.parseModel("local/goal"), variant: undefined })
-            const agent = user?.agent ?? session.agent ?? "code"
+            const { model, agent } = runTarget(session, user)
             const ctx = yield* InstanceState.context
             const now = Date.now()
             const info: SessionV1.Assistant = {
@@ -356,119 +500,16 @@ export namespace Goal {
             })
 
             if (current && text && current()) {
-              const bridge = yield* EffectBridge.make()
-              const scope = yield* InstanceState.get(scopes)
-              const guard = {
-                current: () => current() && ticket.current(),
-                running: () => current() && ticket.running(),
-              }
-              const settle = (status: GoalState.Status, reason: string) =>
-                commit(
-                  id,
-                  Effect.gen(function* () {
-                    const session = yield* sessions.get(id).pipe(Effect.orDie)
-                    if (!guard.running()) return
-                    if (status !== "active") GoalState.pause(id, true)
-                    yield* sessions.setMetadata({
-                      sessionID: id,
-                      metadata: {
-                        ...session.metadata,
-                        "kilo.goal": { text, status, active: status === "active", reason },
-                      },
-                    })
-                  }),
-                )
-              yield* Effect.gen(function* () {
-                while (current() && ticket.running()) {
-                  yield* drain.wait(id).pipe(Effect.raceFirst(cancelled))
-                  const session = yield* sessions.get(id).pipe(Effect.orDie)
-                  if (!current() || !ticket.running() || session.time.archived || session.revert) break
-                  const messageID = MessageID.ascending()
-                  const next = yield* Effect.gen(function* () {
-                    const cycle = yield* Effect.acquireRelease(
-                      Effect.sync(() => outcome(id, messageID, guard.running)),
-                      (cycle) => Effect.sync(cycle.dispose),
-                    )
-                    yield* Effect.acquireRelease(
-                      events.listen((event) =>
-                        Effect.sync(() => {
-                          if (guard.running()) cycle.update(event)
-                        }),
-                      ),
-                      (off) => off,
-                    )
-                    const result = yield* bridge.run(
-                      ops.prompt(
-                        {
-                          sessionID: id,
-                          messageID,
-                          agent,
-                          model,
-                          variant: model.variant,
-                          snapshotInitialization: input.snapshotInitialization,
-                          parts: [
-                            {
-                              type: "text",
-                              synthetic: true,
-                              text: GoalInstructions.prompt(text),
-                            },
-                          ],
-                        },
-                        guard,
-                      ),
-                    )
-                    // A real user prompt preempts this continuation for its turn.
-                    // Keep the goal active and loop again after the user's turn
-                    // instead of settling the goal to paused. A blocked or failed
-                    // goal turn still wins, matching the documented pause rules.
-                    const preempted = KiloSessionPromptQueue.consumeSuperseded(id, messageID)
-                    yield* drain.wait(id).pipe(Effect.raceFirst(cancelled))
-                    if (cycle.blocked()) {
-                      yield* settle(
-                        "blocked",
-                        "A request was rejected or execution was blocked. Resolve the blocker before resuming.",
-                      )
-                      return false
-                    }
-                    if (cycle.failed() || result.info.role !== "assistant" || result.info.error) {
-                      yield* settle("paused", "Work failed. Review the conversation before resuming.")
-                      return false
-                    }
-                    if (preempted) return true
-                    const report = cycle.report()
-                    if (report && result.info.finish === "stop") {
-                      yield* settle(
-                        report.status,
-                        `Reported by the working model, not independently verified: ${report.reason}`,
-                      )
-                      return false
-                    }
-                    const next = cycle.completed(result)
-                    if (!next)
-                      yield* settle(
-                        "paused",
-                        "No successful action or explicit completion report. Review the conversation before resuming.",
-                      )
-                    return next
-                  }).pipe(Effect.scoped)
-                  if (!next) break
-                  yield* Effect.sleep("5 seconds").pipe(Effect.raceFirst(cancelled))
-                }
-              }).pipe(
-                Effect.catchCause((cause) =>
-                  Effect.gen(function* () {
-                    if (Cause.hasInterruptsOnly(cause)) return
-                    yield* settle("paused", "Execution failed. Review the conversation before resuming.")
-                    yield* Effect.logError("Goal paused", { sessionID: id, cause })
-                    yield* events.publish(Session.Event.Error, {
-                      sessionID: id,
-                      error: new NamedError.Unknown({ message: "Goal paused after an error." }).toObject(),
-                    })
-                  }),
-                ),
-                Effect.ensuring(Effect.suspend(() => (current() ? pause(id, true) : Effect.void))),
-                Effect.forkIn(scope),
-              )
+              yield* drive({
+                id,
+                text,
+                agent,
+                model,
+                snapshotInitialization: input.snapshotInitialization,
+                current,
+                ticket,
+                cancelled,
+              })
               started = true
             }
             return { info, parts: [part] }
@@ -486,7 +527,79 @@ export namespace Goal {
           )
         }).pipe(Effect.ensuring(Effect.sync(() => intent?.release())))
       })
-      return { command, pause }
+
+      // Agent-facing goal control. Unlike the /goal command, this does not cancel
+      // the current turn: it arms the goal and lets the loop continue after the
+      // turn drains, so the model can start or resume a goal itself.
+      const arm = Effect.fn("Goal.arm")(function* (input: ArmInput) {
+        const id = input.sessionID
+        const session = yield* sessions.get(id).pipe(Effect.orDie)
+        if (session.parentID) {
+          return yield* Effect.fail(new Error("Start goals from the main session, not a delegated session."))
+        }
+        if (session.time.archived || session.revert) {
+          return yield* Effect.fail(new Error("Restore this session before starting a goal."))
+        }
+        if (GoalState.active(id)) {
+          return yield* Effect.fail(new Error("A goal is already active. Pause or clear it before starting another."))
+        }
+        const saved = GoalState.read(session.metadata)
+        const text = input.action === "resume" ? saved?.text : input.objective?.trim()
+        if (!text) {
+          return yield* Effect.fail(
+            new Error(
+              input.action === "resume" ? "There is no saved goal to resume." : "Provide an objective to start a goal.",
+            ),
+          )
+        }
+        if (text.length > 10_000) return yield* Effect.fail(new Error("Keep the goal under 10,000 characters."))
+        if (yield* pendingFamily(id)) {
+          return yield* Effect.fail(new Error("Resolve pending questions and permissions before starting a goal."))
+        }
+        const stopped = Deferred.makeUnsafe<void>()
+        const end = () => Deferred.doneUnsafe(stopped, Effect.void)
+        const cancelled = Deferred.await(stopped).pipe(Effect.andThen(Effect.interrupt))
+        // Claim the arm so concurrent starts serialize; a later claim cancels this one.
+        const claim = GoalState.prepare(id, end)
+        const { model, agent } = runTarget(session)
+        return yield* Effect.gen(function* () {
+          const ticket = yield* ops.control.begin(id, true)
+          if (!claim.current() || !ticket.current()) return yield* Effect.interrupt
+          const current = GoalState.start(id, end)
+          const valid = () => claim.current() && current() && ticket.current()
+          const body = Effect.gen(function* () {
+            yield* commit(
+              id,
+              Effect.gen(function* () {
+                const fresh = yield* sessions.get(id).pipe(Effect.orDie)
+                if (!valid()) return yield* Effect.interrupt
+                yield* sessions.setMetadata({
+                  sessionID: id,
+                  metadata: { ...fresh.metadata, "kilo.goal": { text, status: "active", active: true } },
+                })
+              }),
+            )
+            yield* drive({
+              id,
+              text,
+              agent,
+              model,
+              snapshotInitialization: input.snapshotInitialization,
+              current,
+              ticket,
+              cancelled,
+            })
+            return { text }
+          })
+          return yield* body.pipe(
+            Effect.onExit((exit) =>
+              Exit.isSuccess(exit) ? Effect.void : Effect.suspend(() => (current() ? pause(id, true) : Effect.void)),
+            ),
+          )
+        }).pipe(Effect.ensuring(Effect.sync(() => claim.release())))
+      })
+
+      return { command, pause, arm }
     })
   }
 }

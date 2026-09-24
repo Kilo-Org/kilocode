@@ -96,6 +96,8 @@ export const dict = {
     "Unterhaltung zurückgesetzt. Dateiänderungen wurden nicht wiederhergestellt, weil Snapshots deaktiviert sind.",
   "revert.banner.workspace.unavailable":
     "Unterhaltung zurückgesetzt. Es war kein Dateiwiederherstellungspunkt verfügbar, daher wurden Änderungen im Arbeitsbereich nicht wiederhergestellt.",
+  "revert.banner.workspace.notAGitRepo":
+    "Unterhaltung zurückgesetzt. Dateiwiederherstellungspunkte erfordern ein Git-Repository, daher wurden Änderungen im Arbeitsbereich nicht wiederhergestellt.",
   "revert.banner.workspace.legacy":
     "Unterhaltung zurückgesetzt. Der Status der Arbeitsbereichswiederherstellung ist für dieses frühere Zurücksetzen nicht verfügbar.",
   "revert.banner.workspace.enableSnapshots": "Snapshots aktivieren",
@@ -958,9 +960,6 @@ export const dict = {
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
-  "settings.experimental.taskModelSelection.title": "Task-Subagent-Modellauswahl",
-  "settings.experimental.taskModelSelection.description":
-    "Erlaubt die explizite Auswahl von Modell, Anbieter und Schlussfolgerungsaufwand für Task-Subagenten.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",

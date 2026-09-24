@@ -90,6 +90,8 @@ export const dict = {
     "会話を元に戻しました。スナップショットが無効になっているため、ファイルの変更は復元されませんでした。",
   "revert.banner.workspace.unavailable":
     "会話を元に戻しました。利用可能なファイルのチェックポイントがなかったため、ワークスペースの変更は復元されませんでした。",
+  "revert.banner.workspace.notAGitRepo":
+    "会話を元に戻しました。ファイルのチェックポイントには Git リポジトリが必要なため、ワークスペースの変更は復元されませんでした。",
   "revert.banner.workspace.legacy":
     "会話を元に戻しました。この以前の復元では、ワークスペースの復元状態を利用できません。",
   "revert.banner.workspace.enableSnapshots": "スナップショットを有効にする",
@@ -932,9 +934,6 @@ export const dict = {
     "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
-  "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
-  "settings.experimental.taskModelSelection.description":
-    "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",

@@ -90,6 +90,8 @@ export const dict = {
     "Razgovor je vraćen. Promjene datoteka nisu vraćene jer su snimci stanja onemogućeni.",
   "revert.banner.workspace.unavailable":
     "Razgovor je vraćen. Nije bila dostupna kontrolna tačka datoteka, pa promjene radnog prostora nisu vraćene.",
+  "revert.banner.workspace.notAGitRepo":
+    "Razgovor je vraćen. Kontrolne tačke datoteka zahtijevaju Git repozitorij, pa promjene radnog prostora nisu vraćene.",
   "revert.banner.workspace.legacy":
     "Razgovor je vraćen. Status vraćanja radnog prostora nije dostupan za ovo ranije vraćanje.",
   "revert.banner.workspace.enableSnapshots": "Omogući snimke stanja",
@@ -939,9 +941,6 @@ export const dict = {
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
-  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
-  "settings.experimental.taskModelSelection.description":
-    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",

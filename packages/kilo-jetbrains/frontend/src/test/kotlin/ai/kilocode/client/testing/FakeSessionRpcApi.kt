@@ -94,6 +94,17 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Pending questions returned by [pendingQuestions]. */
     val pendingQuestionList = mutableListOf<QuestionRequestDto>()
 
+    /**
+     * Held before [pendingPermissions]/[pendingQuestions] return, so a test can deliver a live
+     * event (e.g. `QuestionAsked`, `QuestionReplied`) into the gap between a recovery snapshot's
+     * fetch and its EDT commit, then release the gate to observe whether the stale snapshot won.
+     */
+    var pendingGate: CompletableDeferred<Unit>? = null
+    var pendingPermissionCalls = 0
+        private set
+    var pendingQuestionCalls = 0
+        private set
+
     /** Optional custom event stream factory for routing tests. */
     var eventFlow: ((String, String) -> Flow<ChatEventDto>)? = null
 
@@ -376,11 +387,15 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun pendingPermissions(directory: String): List<PermissionRequestDto> {
         assertNotEdt("pendingPermissions")
+        pendingPermissionCalls++
+        pendingGate?.await()
         return pendingPermissionList.toList()
     }
 
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> {
         assertNotEdt("pendingQuestions")
+        pendingQuestionCalls++
+        pendingGate?.await()
         return pendingQuestionList.toList()
     }
 
@@ -416,6 +431,15 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     /** The board returned by [sessionBoard] and, unless [resetSessionBoardReturnsConflict], by [resetSessionBoard]. */
     var board = SessionBoardDto(ownerSessionID = "ses_test", revision = 1, messages = emptyList(), hasMore = false)
+
+    /**
+     * Optional cursor-keyed page sequence for tests that need [sessionBoard] to answer more than one
+     * distinct page across a run (e.g. a full-history export walking several `before` cursors in one
+     * coroutine, faster than the existing single-page tests can drive by mutating [board] between
+     * user-triggered calls). Keyed by the request's `before` value (`null` for the first page); falls
+     * back to [board] for any cursor not present, so every existing single-page test is unaffected.
+     */
+    var boardPages: Map<String?, SessionBoardDto>? = null
     var sessionBoardThrows: Exception? = null
     var resetSessionBoardReturnsConflict = false
     var resetSessionBoardThrows: Exception? = null
@@ -426,7 +450,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("sessionBoard")
         sessionBoardThrows?.let { throw it }
         sessionBoardCalls.add(Triple(sessionID, before, limit))
-        return board
+        return boardPages?.get(before) ?: board
     }
 
     override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? {

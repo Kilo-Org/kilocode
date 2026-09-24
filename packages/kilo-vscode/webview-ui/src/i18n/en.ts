@@ -86,6 +86,8 @@ export const dict = {
     "Conversation reverted. File changes were not restored because snapshots are disabled.",
   "revert.banner.workspace.unavailable":
     "Conversation reverted. No file checkpoint was available, so workspace changes were not restored.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversation reverted. File checkpoints require a Git repository, so workspace changes were not restored.",
   "revert.banner.workspace.legacy":
     "Conversation reverted. Workspace restoration status is unavailable for this earlier revert.",
   "revert.banner.workspace.enableSnapshots": "Enable snapshots",
@@ -927,9 +929,6 @@ export const dict = {
   "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",
-  "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
-  "settings.experimental.taskModelSelection.description":
-    "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",

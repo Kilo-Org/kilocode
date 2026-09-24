@@ -3,6 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 
 const TAB_BAR = path.resolve(import.meta.dir, "../../webview-ui/agent-manager/TabBar.tsx")
+const TAB_RENDERING = path.resolve(import.meta.dir, "../../webview-ui/agent-manager/tab-rendering.tsx")
 const BROWSER_PANEL = path.resolve(import.meta.dir, "../../webview-ui/browser/BrowserPanel.tsx")
 const BROWSER_ADAPTER = path.resolve(import.meta.dir, "../../webview-ui/agent-manager/BrowserPanel.tsx")
 
@@ -72,5 +73,10 @@ describe("Agent Manager diff toggle", () => {
     expect(button).not.toContain("props.prStatus()")
     expect(button).not.toContain("pr().additions")
     expect(button).not.toContain("pr().deletions")
+  })
+
+  it("reads the session tab from the live lookup so rename reaches the label", () => {
+    const source = fs.readFileSync(TAB_RENDERING, "utf-8")
+    expect(source).toContain("tab={() => deps.tabLookup().get(s.id) ?? s}")
   })
 })

@@ -22,6 +22,12 @@ describe("reasoning heading", () => {
     expect(reasoningHeading(text, true)).toEqual({ body: text })
   })
 
+  test("keeps closed strong lead-in prose in the body while streaming", () => {
+    const text = "**Check the greeting.** The function should"
+    expect(reasoningHeading(text, true)).toEqual({ body: text })
+    expect(reasoningSummary(reasoningHeading(text, true).body)).toBe("Check the greeting.")
+  })
+
   test("promotes heading syntax and keeps the remaining markdown", () => {
     expect(reasoningHeading("## Check `Slack` [requests](https://example.com) ##\n\n- Inspect the command")).toEqual({
       title: "Check Slack requests",

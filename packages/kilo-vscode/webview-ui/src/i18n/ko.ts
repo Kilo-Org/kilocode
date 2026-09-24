@@ -94,6 +94,8 @@ export const dict = {
     "대화를 되돌렸습니다. 스냅샷이 비활성화되어 있어 파일 변경 사항은 복원되지 않았습니다.",
   "revert.banner.workspace.unavailable":
     "대화를 되돌렸습니다. 사용 가능한 파일 체크포인트가 없어 작업 공간 변경 사항은 복원되지 않았습니다.",
+  "revert.banner.workspace.notAGitRepo":
+    "대화를 되돌렸습니다. 파일 체크포인트를 사용하려면 Git 저장소가 필요하므로 작업 공간 변경 사항은 복원되지 않았습니다.",
   "revert.banner.workspace.legacy":
     "대화가 되돌려졌습니다. 이 이전 되돌리기에서는 작업 영역 복원 상태를 확인할 수 없습니다.",
   "revert.banner.workspace.enableSnapshots": "스냅샷 활성화",
@@ -929,9 +931,6 @@ export const dict = {
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
-  "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
-  "settings.experimental.taskModelSelection.description":
-    "Task 하위 에이전트에 대해 모델, 제공자 및 추론 수준을 명시적으로 선택합니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",

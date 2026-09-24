@@ -37,6 +37,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Alle projecten op deze computer. Wordt opgeslagen in je gebruikersconfiguratie.",
   "marketplace.install.destination": "Installatielocatie",
+  "marketplace.install.includedSkills": "Meegeleverde skills",
   "marketplace.install.about.mcp":
     "Een MCP-server geeft Kilo extra hulpmiddelen om met externe diensten of lokale programma's te werken.",
   "marketplace.install.about.agent": "Een agent voegt een herbruikbare rol toe met eigen instructies en machtigingen.",
@@ -48,9 +49,13 @@ export const dict = {
     "Projectbestanden kunnen aan versiebeheer worden toegevoegd. Sla hier geen geheimen op, tenzij de configuratie naar een omgevingsvariabele verwijst.",
   "marketplace.install.learnMore": "Lees hoe installaties vanuit Marketplace werken",
   "marketplace.install.learnMcp": "Meer informatie over MCP",
+  "marketplace.install.about.plugin":
+    "Een plugin voegt aangepaste hulpmiddelen en integraties toe aan Kilo. Plugins worden uitgevoerd met volledige machtigingen.",
+  "marketplace.install.plugin.warning":
+    "Plugins voeren code uit met volledige machtigingen. Ze kunnen je bestanden lezen en wijzigen, opdrachten uitvoeren en toegang krijgen tot je inloggegevens en netwerk. Installeer alleen plugins die je vertrouwt.",
   "marketplace.install.installedAt": "Geïnstalleerd in {{path}}",
   "marketplace.intro":
-    "Installeer herbruikbare agenten, vaardigheden en MCP-hulpmiddelen voor één project of voor alle projecten.",
+    "Installeer herbruikbare agenten, vaardigheden, MCP-hulpmiddelen en plugins voor één project of voor alle projecten.",
   "marketplace.intro.learnMore": "Over Marketplace",
   "marketplace.install.prerequisites": "Vereisten",
   "marketplace.install.installing": "Installeren...",
@@ -63,6 +68,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Weet je zeker dat je deze {{type}} wilt verwijderen? Dit verwijdert het uit je {{scope}} configuratie.",
   "marketplace.remove.cancel": "Annuleren",
+  "marketplace.remove.mcp.skills":
+    "Dit verwijdert ook de bijbehorende skills die bij deze installatie horen. Afzonderlijk geïnstalleerde skills blijven behouden.",
   "marketplace.remove.confirm.button": "Verwijderen",
   "marketplace.search": "Zoeken...",
   "marketplace.filter.all": "Alle items",
@@ -71,6 +78,7 @@ export const dict = {
   "marketplace.empty": "Geen items gevonden",
   "marketplace.empty.relevant": "Geen relevante marketplace-items gevonden voor deze werkruimte.",
   "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.skills": "Inclusief skills",
   "marketplace.card.by": "door {{author}}",
   "marketplace.install.method": "Installatiemethode",
   "marketplace.install.parameters": "Parameters",
@@ -78,6 +86,7 @@ export const dict = {
   "marketplace.scope.project": "project",
   "marketplace.scope.global": "globaal",
   "marketplace.remove.type.mcp": "MCP server",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.type.skill": "skill",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Verwijderen van {{name}} mislukt",
@@ -88,7 +97,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Er zijn meerdere sessies actief en deze zullen worden onderbroken",
   "marketplace.warning.installAnyway": "Toch installeren",
   "marketplace.warning.cancel": "Annuleren",
-  "marketplace.contribute.prompt": "Mist u een skill, agent of MCP-server?",
+  "marketplace.contribute.prompt": "Mist u een skill, agent, MCP-server of plugin?",
   "marketplace.contribute.cta": "Bijdragen op GitHub",
   "marketplace.migration.notice":
     "Modi zijn vervangen door agenten. Als u eerder marketplace-modi hebt geïnstalleerd, verwijder ze dan en installeer ze opnieuw als agenten om naar het nieuwe formaat te migreren.",

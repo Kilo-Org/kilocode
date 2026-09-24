@@ -139,6 +139,8 @@
 - <https://kilo.ai/docs/getting-started/settings>
   <!-- packages/opencode/src/kilocode/config/claude-migration.ts -->
   <!-- packages/opencode/src/kilocode/config/config.ts -->
+- <https://kilo.ai/docs/oauth/kilo/client.json>
+  <!-- packages/opencode/src/kilocode/mcp/client-metadata.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
 - <https://kilo.ai/pricing/kilo-pass>
