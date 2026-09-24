@@ -2701,7 +2701,6 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
-    task_model_selection?: boolean
     code_mode?: boolean
     speech_to_text_model?: string
     speech_to_text_base_url?: string
@@ -4201,6 +4200,11 @@ export type McpInstallationMethod = {
   prerequisites?: Array<string>
 }
 
+export type McpSkill = {
+  id: string
+  content: string
+}
+
 export type McpMarketplaceItem = {
   id: string
   name: string
@@ -4214,6 +4218,7 @@ export type McpMarketplaceItem = {
   url: string
   content: string | Array<McpInstallationMethod>
   parameters?: Array<McpParameter>
+  skills?: Array<McpSkill>
 }
 
 export type AgentMarketplaceItem = {
@@ -4302,6 +4307,7 @@ export type McpInstallItem = {
   type: "mcp"
   id: string
   content: string | Array<McpInstallationMethod>
+  skills?: Array<McpSkill>
 }
 
 export type AgentInstallItem = {

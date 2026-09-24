@@ -444,8 +444,14 @@ describe("i18n key validation — no missing translation keys", () => {
 })
 
 describe("i18n locale completeness — every English key exists in all locales", () => {
-  it("translates the plugin description and security warning instead of copying English", () => {
-    const keys = ["marketplace.install.about.plugin", "marketplace.install.plugin.warning"] as const
+  it("translates marketplace descriptions and notices instead of copying English", () => {
+    const keys = [
+      "marketplace.install.about.plugin",
+      "marketplace.install.plugin.warning",
+      "marketplace.install.includedSkills",
+      "marketplace.remove.mcp.skills",
+      "marketplace.badge.skills",
+    ] as const
     for (const [locale, dict] of Object.entries(kiloLocales)) {
       if (locale === "en") continue
       for (const key of keys) {

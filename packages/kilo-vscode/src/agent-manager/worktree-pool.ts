@@ -113,6 +113,11 @@ export class WorktreePool {
     return this.size() > 0 && this.slots.length > 0
   }
 
+  /** True when the pool is configured to hold at least one slot. */
+  enabled(): boolean {
+    return this.size() > 0
+  }
+
   /** Adopt leftover pooled slots from a previous run and discard broken ones. */
   async reconcile(): Promise<void> {
     await this.deps.lock(() => this.adopt())
