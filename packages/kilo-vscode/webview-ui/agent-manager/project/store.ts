@@ -1,6 +1,7 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
 import { isTerminalTabId } from "../../src/utils/terminal-tab-id"
 import { mergeTransientTabs } from "../tab-order"
+import { PENDING_PREFIX, REVIEW_TAB_ID } from "../tab-ids"
 import type {
   AgentManagerStateMessage,
   LocalGitStats,
@@ -103,7 +104,7 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
             mergeTransientTabs(
               previous[key] ?? [],
               order,
-              (id) => id === "review" || isTerminalTabId(id) || id.startsWith("pending:"),
+              (id) => id === REVIEW_TAB_ID || isTerminalTabId(id) || id.startsWith(PENDING_PREFIX),
             ),
           ]),
         ),

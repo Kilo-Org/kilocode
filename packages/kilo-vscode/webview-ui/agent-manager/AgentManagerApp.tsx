@@ -230,7 +230,7 @@ import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
 import { createSidebarScrollPreserver } from "./sidebar-scroll"
-const REVIEW_TAB_ID = "review"
+import { PENDING_PREFIX, REVIEW_TAB_ID } from "./tab-ids"
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -484,7 +484,6 @@ const AgentManagerContent: Component = () => {
     active: isActivePayload,
     branch: (branch) => setRepoBranch(branch),
   })
-  const PENDING_PREFIX = "pending:"
   const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
   const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({
