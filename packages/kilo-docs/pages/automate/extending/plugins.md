@@ -46,7 +46,8 @@ Add an array of plugin specifiers to your config file:
     "your-plugin@1.2.3",
     ["your-plugin", { "apiKey": "{env:MY_API_KEY}" }],
     "./plugins/local.ts",
-    "file:///abs/path/plugin.ts"
+    "file:///abs/path/plugin.ts",
+    "git:github.com/owner/repo@v1.2.3"
   ]
 }
 ```
@@ -59,6 +60,11 @@ Each entry can be:
 | `"package-name@1.2.3"` | Pinned version from npm |
 | `["package-name", { options }]` | npm package with options passed to the plugin function |
 | `"./path/plugin.ts"` / `"file:///..."` | Local file (relative to the config file or absolute `file:` URL) |
+| `"git:github.com/owner/repo@v1.2.3#subdir"` | Git repository, cloned at the pinned ref into the plugin cache |
+
+Git specifiers work in the config array and with the `kilo plugin` command, the same as npm and local plugins. See [Publish your plugin to the Marketplace](#publish-your-plugin-to-the-marketplace) for the full git spec grammar.
+
+A git specifier's repository can also be a local repository. Use an absolute path, a `~/` home path, a `./` or `../` relative path, or a `file:` URL — for example `git:~/repos/my-plugin` or `git:file:///opt/plugins/my-plugin`. Kilo clones the local repository into the plugin cache instead of fetching it from a remote host.
 
 Config files live in the same locations as the rest of your CLI configuration — see the [CLI configuration reference](/docs/code-with-ai/platforms/cli#configuration).
 
