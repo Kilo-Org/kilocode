@@ -78,15 +78,17 @@ export namespace KiloSessionRetention {
     | undefined
 
   let halting = false
+  // Set once the deletion sweep is over; cancel only makes sense before that.
+  let sealed = false
 
   /**
    * Ask the active pass to stop before removing more sessions. Cooperative:
    * the pass checks between removals, keeps what it already deleted, and
    * still records its partial result so the spacing gate holds. Returns false
-   * when no pass is running.
+   * when no pass is running or its deletions already finished.
    */
   export function cancel(): boolean {
-    if (!current) return false
+    if (!current || sealed) return false
     halting = true
     current.phase = "cancelling"
     return true
@@ -97,7 +99,9 @@ export namespace KiloSessionRetention {
   export const readProgress = Effect.fn("KiloSessionRetention.readProgress")(function* () {
     const state = current
     if (!state) return undefined
-    if (state.phase === "deleting") {
+    // Refresh during cancelling too, so a cancelled pass's final counts
+    // include children removed by earlier root cascades.
+    if (state.phase === "deleting" || state.phase === "cancelling") {
       const { db } = yield* Database.Service
       const ids = [...state.pending]
       for (let start = 0; start < ids.length; start += 500) {
@@ -287,7 +291,9 @@ export namespace KiloSessionRetention {
         page_count: number
         freelist_count: number
         file: string
-      }>("SELECT page_size, page_count, freelist_count, (SELECT file FROM pragma_database_list WHERE name = 'main') AS file FROM pragma_page_size, pragma_page_count, pragma_freelist_count")
+      }>(
+        "SELECT page_size, page_count, freelist_count, (SELECT file FROM pragma_database_list WHERE name = 'main') AS file FROM pragma_page_size, pragma_page_count, pragma_freelist_count",
+      )
       .pipe(Effect.orDie)
     if (!page?.file) return { vacuumed: false as const, reclaimedBytes: 0 }
     if (!worthVacuuming(page.page_count, page.freelist_count, page.page_size))
@@ -323,6 +329,7 @@ export namespace KiloSessionRetention {
     function* (input: { force?: boolean } = {}) {
       const started = Date.now()
       halting = false
+      sealed = false
       const progress = (current = {
         phase: "scanning" as Progress["phase"],
         total: 0,
@@ -364,10 +371,12 @@ export namespace KiloSessionRetention {
       progress.total = expired.size
       progress.pending = new Set([...expired].map((id) => SessionID.make(id)))
       progress.skippedActive = skipped.length
-      progress.phase = "deleting"
+      // A cancel that landed during scanning keeps its phase; the loops
+      // below break before removing anything.
+      if (!halting) progress.phase = "deleting"
 
       const sessions = yield* Session.Service
-      const remove = Effect.fn("KiloSessionRetention.remove")(function* (id: SessionID, final: boolean) {
+      const remove = Effect.fn("KiloSessionRetention.remove")(function* (id: SessionID) {
         yield* sessions.remove(id).pipe(
           Effect.catchCause((cause) => {
             if (Cause.hasInterrupts(cause)) return Effect.interrupt
@@ -388,11 +397,14 @@ export namespace KiloSessionRetention {
           progress.failed.delete(id)
           return
         }
-        if (final && progress.pending.has(id)) progress.failed.add(id)
+        // Count the loss even on a non-final attempt: the leftover sweep
+        // retries it and clears the mark on success, but a cancelled pass
+        // never retries, so the root failure must already be recorded.
+        if (progress.pending.has(id)) progress.failed.add(id)
       })
       for (const id of roots) {
         if (halting) break
-        yield* remove(SessionID.make(id), false)
+        yield* remove(SessionID.make(id))
       }
       // Children stored in another project are not covered by the parent's
       // cascade — sweep whatever expired rows are still present. NotFound here
@@ -410,9 +422,10 @@ export namespace KiloSessionRetention {
           .pipe(Effect.orDie)
         for (const row of leftover) {
           if (halting) break
-          yield* remove(row.id, true)
+          yield* remove(row.id)
         }
       }
+      sealed = true
 
       yield* readProgress()
       const cancelled = halting
@@ -420,10 +433,12 @@ export namespace KiloSessionRetention {
         ? Effect.succeed({ vacuumed: false as const, reclaimedBytes: 0 })
         : reclaim().pipe(
             Effect.catchCause((cause) =>
-              Effect.sync(() => {
-                log.error("retention reclaim failed", { cause })
-                return { vacuumed: false as const, reclaimedBytes: 0 }
-              }),
+              Cause.hasInterrupts(cause)
+                ? Effect.interrupt
+                : Effect.sync(() => {
+                    log.error("retention reclaim failed", { cause })
+                    return { vacuumed: false as const, reclaimedBytes: 0 }
+                  }),
             ),
           )
       const result: State = {
@@ -448,6 +463,7 @@ export namespace KiloSessionRetention {
           Effect.ensuring(
             Effect.sync(() => {
               halting = false
+              sealed = false
               current = undefined
             }),
           ),

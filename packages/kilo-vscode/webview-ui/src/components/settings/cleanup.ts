@@ -31,7 +31,7 @@ export class CleanupPoll {
   }
 
   stop(): void {
-    if (this.disposed || this.halt || !this.state?.progress) return
+    if (this.disposed || this.halt || !(this.run || this.state?.progress)) return
     this.halt = crypto.randomUUID()
     this.post({ type: "stopAutoCleanupNow", requestID: this.halt })
   }
@@ -52,6 +52,8 @@ export class CleanupPoll {
       }
     } else if (message.requestID !== this.halt) return
     if (message.requestID === this.halt) this.halt = undefined
+    // A pass that no longer reports progress cannot be stopped anymore.
+    if (!message.progress) this.halt = undefined
     const unavailable = message.error === "status" || message.error === "timeout"
     this.state = {
       ...message,

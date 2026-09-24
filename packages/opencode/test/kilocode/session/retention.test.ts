@@ -639,6 +639,81 @@ dbIt.live("cancel during deleting keeps completed removals, stops the rest, reco
   }),
 )
 
+dbIt.live("cancelled pass still counts children removed by earlier root cascades", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const parent = `ses_retention_cascade_p_${crypto.randomUUID()}`
+    const child = `ses_retention_cascade_c_${crypto.randomUUID()}`
+    const updated = Date.now() - 40 * KiloSessionRetention.DAY_MS
+    yield* seed({
+      directory: "/tmp/retention-cascade",
+      rows: [
+        { id: parent, updated },
+        { id: child, updated, parent },
+      ],
+    })
+    const reached = yield* Deferred.make<void>()
+    const resume = yield* Deferred.make<void>()
+    let removed = 0
+    const sessions = Layer.mock(Session.Service, {
+      remove: (id) =>
+        Effect.gen(function* () {
+          if (++removed === 1) {
+            yield* Deferred.succeed(reached, undefined)
+            yield* Deferred.await(resume)
+          }
+          // Removing the parent cascades the child, as the real service does.
+          yield* db
+            .delete(SessionTable)
+            .where(inArray(SessionTable.id, [id, SessionID.make(child)]))
+            .run()
+            .pipe(Effect.orDie)
+        }),
+    })
+    const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(enabled, sessions)),
+      Effect.forkChild,
+    )
+    yield* awaitWithTimeout(Deferred.await(reached), "root removal did not start")
+    expect(KiloSessionRetention.cancel()).toBe(true)
+    yield* Deferred.succeed(resume, undefined)
+    const outcome = yield* Fiber.join(fiber)
+    expect(outcome.ran && outcome.result).toMatchObject({ scanned: 2, deleted: 2, failed: 0, cancelled: true })
+  }),
+)
+
+dbIt.live("cancelled pass counts a root removal that failed before the cancel", () =>
+  Effect.gen(function* () {
+    const id = `ses_retention_rootfail_${crypto.randomUUID()}`
+    yield* seed({
+      directory: "/tmp/retention-rootfail",
+      rows: [{ id, updated: Date.now() - 40 * KiloSessionRetention.DAY_MS }],
+    })
+    const reached = yield* Deferred.make<void>()
+    const resume = yield* Deferred.make<void>()
+    let removed = 0
+    const sessions = Layer.mock(Session.Service, {
+      remove: () =>
+        Effect.gen(function* () {
+          if (++removed === 1) {
+            yield* Deferred.succeed(reached, undefined)
+            yield* Deferred.await(resume)
+          }
+          // Failed removal: the row stays in place.
+        }),
+    })
+    const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
+      Effect.provide(Layer.merge(enabled, sessions)),
+      Effect.forkChild,
+    )
+    yield* awaitWithTimeout(Deferred.await(reached), "root removal did not start")
+    expect(KiloSessionRetention.cancel()).toBe(true)
+    yield* Deferred.succeed(resume, undefined)
+    const outcome = yield* Fiber.join(fiber)
+    expect(outcome.ran && outcome.result).toMatchObject({ deleted: 0, failed: 1, cancelled: true })
+  }),
+)
+
 dbIt.live("cancel during scanning aborts before any deletion", () =>
   Effect.gen(function* () {
     const id = `ses_retention_stop_scan_${crypto.randomUUID()}`
