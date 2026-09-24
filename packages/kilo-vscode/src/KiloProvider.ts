@@ -63,6 +63,7 @@ import { integratedBrowserUseSystemChrome } from "./services/browser-automation/
 import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
+import { ToolInputStream } from "./kilo-provider/tool-input-stream"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
@@ -483,6 +484,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private lastReconciledAt = new Map<string, number>() // Per-session focus-mode reconcile timestamp.
   private pendingSessionRefresh = false // Refresh requested before the client is ready.
   private readonly streams = new SessionStreamScheduler((msg) => this.postMessage(msg))
+  private readonly inputs = new ToolInputStream((msg) => this.streams.push(msg))
   private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
   private readonly confirmations = new MessageConfirmation()
   private readonly costs = new MaxCostNudge()
@@ -5323,6 +5325,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.postModelUsageChanged(event, sessionID)) return
     if (event.type !== "session.deleted" && sessionID && !this.trackedSessionIds.has(sessionID)) return
 
+    // Streamed tool input becomes pending part updates, so a tool row shows its
+    // arguments while the model still generates them.
+    if (event.type === "session.next.tool.input.delta") {
+      if (sessionID) this.inputs.delta(event.properties)
+      return
+    }
+
     if (event.type === "message.part.updated") this.refreshGitStatusFromPart(event, sessionID)
 
     if (event.type === "session.updated" && typeof event.properties.info.cost === "number") {
@@ -5439,7 +5448,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       : mapSSEEventToWebviewMessage(event, sessionID)
     if (!msg) return
     if (msg.type === "partUpdated") {
-      this.streams.push({ ...msg, part: this.slimPart(msg.part) })
+      this.streams.push({ ...msg, part: this.inputs.track(this.slimPart(msg.part)) })
       return
     }
     const next = msg.type === "messageCreated" ? { ...msg, message: this.slimInfo(msg.message) } : msg
@@ -6017,6 +6026,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autoApproveBridge?.dispose()
     this.marketplace.dispose()
     this.visibleTaskStreams.clear()
+    this.inputs.dispose()
     this.streams.dispose()
     this.isWebviewReady = false
     this.webview = null
