@@ -17460,6 +17460,193 @@
         ]
       }
     },
+    "/kilocode/worktree/usage/summaries": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.worktreeUsage.summaries",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retained usage summaries for every worktree in the project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KilocodeWorktreeUsageSummaries"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get retained cost, token, time, and communication activity summaries for the primary checkout and every linked worktree in the routed project.",
+        "summary": "List worktree usage summaries",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.worktreeUsage.summaries({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/worktree/usage": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.worktreeUsage.get",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retained usage detail for the routed worktree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KilocodeWorktreeUsageDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get retained cost/model/agent/session breakdowns for the routed worktree, including direct and subtree cost per session.",
+        "summary": "Get worktree usage detail",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.worktreeUsage.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/worktree/usage/timeline": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.worktreeUsage.timeline",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated worktree usage timeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KilocodeWorktreeUsageTimeline"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Get a paginated, content-free timeline of generation, tool, subagent, and communication activity for the routed worktree, newest first.",
+        "summary": "Get worktree usage timeline",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.worktreeUsage.timeline({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/anaconda-desktop/status": {
       "get": {
         "tags": ["anaconda-desktop"],
@@ -41763,6 +41950,835 @@
           }
         },
         "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageSummary": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["primary", "linked"]
+          },
+          "rootSessions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sessions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "subagents": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "steps": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cost": {
+                "type": "number"
+              },
+              "tokens": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "output": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reasoning": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cache": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "write": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["read", "write"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["input", "output", "reasoning", "cache"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["steps", "cost", "tokens"],
+            "additionalProperties": false
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "firstActivity": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "lastActivity": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "wallMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "modelMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "toolMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "activeMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "coverage": {
+                "type": "object",
+                "properties": {
+                  "timedSteps": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "totalSteps": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "closedTools": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "totalTools": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["timedSteps", "totalSteps", "closedTools", "totalTools"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["modelMs", "toolMs", "activeMs", "coverage"],
+            "additionalProperties": false
+          },
+          "communication": {
+            "type": "object",
+            "properties": {
+              "boardPosts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "boardReads": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentManagerPrompts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentManagerReplies": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "boardBytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "directCost": {
+                "type": "number",
+                "enum": [0]
+              }
+            },
+            "required": [
+              "boardPosts",
+              "boardReads",
+              "agentManagerPrompts",
+              "agentManagerReplies",
+              "boardBytes",
+              "directCost"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["directory", "kind", "rootSessions", "sessions", "subagents", "totals", "time", "communication"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageSummaries": {
+        "type": "object",
+        "properties": {
+          "projectID": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "string",
+            "enum": ["retained"]
+          },
+          "currency": {
+            "type": "string",
+            "enum": ["USD"]
+          },
+          "asOf": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "worktrees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeWorktreeUsageSummary"
+            }
+          }
+        },
+        "required": ["projectID", "basis", "currency", "asOf", "worktrees"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageModelGroup": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "modelID": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "number"
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "output": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reasoning": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cache": {
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "write": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["read", "write"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["input", "output", "reasoning", "cache"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["providerID", "modelID", "steps", "cost", "tokens"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageAgentGroup": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "number"
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "output": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reasoning": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cache": {
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "write": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["read", "write"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["input", "output", "reasoning", "cache"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["agent", "steps", "cost", "tokens"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageSessionRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "parentID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "rootID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "title": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "archivedAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "direct": {
+            "type": "object",
+            "properties": {
+              "steps": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cost": {
+                "type": "number"
+              },
+              "tokens": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "output": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reasoning": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cache": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "write": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["read", "write"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["input", "output", "reasoning", "cache"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["steps", "cost", "tokens"],
+            "additionalProperties": false
+          },
+          "subtree": {
+            "type": "object",
+            "properties": {
+              "steps": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cost": {
+                "type": "number"
+              },
+              "tokens": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "output": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reasoning": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cache": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "write": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["read", "write"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["input", "output", "reasoning", "cache"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["steps", "cost", "tokens"],
+            "additionalProperties": false
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeWorktreeUsageModelGroup"
+            }
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "firstActivity": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "lastActivity": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "wallMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "modelMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "toolMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "activeMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "coverage": {
+                "type": "object",
+                "properties": {
+                  "timedSteps": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "totalSteps": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "closedTools": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "totalTools": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["timedSteps", "totalSteps", "closedTools", "totalTools"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["modelMs", "toolMs", "activeMs", "coverage"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "rootID", "title", "createdAt", "direct", "subtree", "models", "time"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageDetail": {
+        "type": "object",
+        "properties": {
+          "projectID": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "string",
+            "enum": ["retained"]
+          },
+          "currency": {
+            "type": "string",
+            "enum": ["USD"]
+          },
+          "asOf": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "worktree": {
+            "$ref": "#/components/schemas/KilocodeWorktreeUsageSummary"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeWorktreeUsageModelGroup"
+            }
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeWorktreeUsageAgentGroup"
+            }
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeWorktreeUsageSessionRow"
+            }
+          }
+        },
+        "required": ["projectID", "basis", "currency", "asOf", "worktree", "models", "agents", "sessions"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageGenerationEvent": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["generation"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "rootID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "modelID": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "output": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reasoning": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cache": {
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "write": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["read", "write"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["input", "output", "reasoning", "cache"],
+            "additionalProperties": false
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["start"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["kind", "id", "sessionID", "rootID", "cost", "tokens", "time"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageToolEvent": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["tool"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "rootID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "completed", "error"]
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["start"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["kind", "id", "sessionID", "rootID", "tool", "status"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageSubagentEvent": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["subagent"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "parentSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "childSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "rootID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "agentType": {
+            "type": "string"
+          },
+          "background": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "completed", "error"]
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["start"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["kind", "id", "parentSessionID", "childSessionID", "rootID", "background", "status"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageCommunicationEvent": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["communication"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "enum": ["board", "agent_manager"]
+          },
+          "action": {
+            "type": "string",
+            "enum": ["post", "read", "prompt", "reply"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "rootID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "target": {
+            "type": "string"
+          },
+          "replyTo": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "messageType": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["start"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["kind", "id", "channel", "action", "sessionID", "rootID", "time"],
+        "additionalProperties": false
+      },
+      "KilocodeWorktreeUsageTimelineEvent": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/KilocodeWorktreeUsageGenerationEvent"
+          },
+          {
+            "$ref": "#/components/schemas/KilocodeWorktreeUsageToolEvent"
+          },
+          {
+            "$ref": "#/components/schemas/KilocodeWorktreeUsageSubagentEvent"
+          },
+          {
+            "$ref": "#/components/schemas/KilocodeWorktreeUsageCommunicationEvent"
+          }
+        ]
+      },
+      "KilocodeWorktreeUsageTimeline": {
+        "type": "object",
+        "properties": {
+          "projectID": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "string",
+            "enum": ["retained"]
+          },
+          "worktree": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["primary", "linked"]
+              }
+            },
+            "required": ["directory", "kind"],
+            "additionalProperties": false
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeWorktreeUsageTimelineEvent"
+            }
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": ["projectID", "basis", "worktree", "events", "hasMore"],
         "additionalProperties": false
       },
       "AnacondaDesktopStatus": {
