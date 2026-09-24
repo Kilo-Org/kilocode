@@ -35,6 +35,9 @@ const ModelState = z
   .passthrough()
 
 export namespace KiloTask {
+  export const usageDescription =
+    "Subagents launched with this tool are internal to the current session: they do not create worktrees or interactive sessions, and only their final report returns to you. Routine subtask decomposition is expected and does not need user confirmation. Do not confuse this with agent_manager: starting Agent Manager sessions or worktrees is user-visible and requires an explicit user request, or you must confirm with the user first."
+
   export const ModelFields = {
     model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:
