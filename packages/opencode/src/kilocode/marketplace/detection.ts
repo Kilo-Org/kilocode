@@ -5,6 +5,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import type { Skill } from "@/skill"
 import type { MarketplaceInstalledMetadata, Scope } from "./schema"
 import * as Paths from "./paths"
+import { pluginIdentity } from "./plugin-spec"
 
 const log = Log.create({ service: "marketplace" })
 
@@ -16,7 +17,9 @@ type DetectInput = {
   skills?: readonly Pick<Skill.Info, "name" | "location">[]
 }
 
-function entry(id: string, type: "agent" | "mcp" | "skill"): Entry {
+const TYPES = ["mcp", "agent", "skill", "plugin"] as const
+
+function entry(id: string, type: (typeof TYPES)[number]): Entry {
   return [`${type}:${id}`, { type }]
 }
 
@@ -72,8 +75,35 @@ async function detectScope(scope: Scope, input: DetectInput): Promise<Record<str
   return Object.fromEntries([
     ...(await agentFiles(scope, input.directory)),
     ...(await configEntries(scope, input.directory, input.worktree)),
+    ...(await pluginEntries(scope, input)),
     ...skillEntries(input.skills, input.directory, scope === "project"),
   ])
+}
+
+async function readPluginList(file: string): Promise<unknown[]> {
+  try {
+    const cfg = Bun.file(file)
+    if (!(await cfg.exists())) return []
+    const parsed = parseJsonc(await cfg.text())
+    if (parsed && typeof parsed === "object" && Array.isArray((parsed as { plugin?: unknown }).plugin)) {
+      return (parsed as { plugin: unknown[] }).plugin
+    }
+    return []
+  } catch (err) {
+    log.warn("plugin detection failed", { file, err })
+    return []
+  }
+}
+
+async function pluginEntries(scope: Scope, input: DetectInput): Promise<Entry[]> {
+  const out: Entry[] = []
+  for (const file of Paths.pluginFiles(scope, input.directory, input.worktree)) {
+    for (const spec of await readPluginList(file)) {
+      const name = pluginIdentity(spec)
+      if (name) out.push(entry(name, "plugin"))
+    }
+  }
+  return out
 }
 
 export async function detect(input: DetectInput): Promise<MarketplaceInstalledMetadata> {

@@ -18,6 +18,7 @@ import ai.kilocode.client.ui.list.activeListVisibleCells
 import ai.kilocode.rpc.dto.CustomModelFetchDto
 import ai.kilocode.rpc.dto.CustomModelFetchResultDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.ProviderActionResultDto
 import ai.kilocode.rpc.dto.ProviderAuthMethodDto
@@ -300,6 +301,35 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             assertEquals("", fields[4].text)
             assertEquals("gpt-4o", fields[5].text)
             assertEquals(KiloBundle.message("settings.providers.customSave"), dialog.okText())
+            dispose(dialog)
+        }
+    }
+
+    fun `test editing a custom provider and deselecting a model submits only the surviving IDs`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        var saved: CustomProviderSaveDto? = null
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o", "gpt-3.5-turbo")) },
+                {
+                    saved = it
+                    ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI")))
+                },
+                CustomProviderEdit("my-openai", "My OpenAI", "https://example.com/v1", null, listOf("gpt-4o", "gpt-3.5-turbo")),
+            )
+            // Simulate the user removing "gpt-3.5-turbo" from the model list before saving.
+            components(center(dialog)).filterIsInstance<JTextField>()[5].text = "gpt-4o"
+            submit(dialog)
+            dialog
+        }
+
+        flushUntil { edt { dialog.outcome != null } }
+
+        edt {
+            assertEquals(listOf("gpt-4o"), saved?.models?.map { it.id })
             dispose(dialog)
         }
     }

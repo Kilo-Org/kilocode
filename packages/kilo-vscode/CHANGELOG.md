@@ -1,5 +1,92 @@
 # kilo-code
 
+## 7.7.9
+
+### Minor Changes
+
+- [#14444](https://github.com/Kilo-Org/kilocode/pull/14444) [`f85f62c`](https://github.com/Kilo-Org/kilocode/commit/f85f62ca72b24d41e09cc1a7f8b2b3b15109bc87) - Add Close to the Right to the Agent Manager tab menu. It closes the session, terminal, and review tabs that sit after the target tab and keeps pinned tabs open.
+
+- [#14485](https://github.com/Kilo-Org/kilocode/pull/14485) [`9088b7d`](https://github.com/Kilo-Org/kilocode/commit/9088b7d0b261f725505cdb6a3da906ab885d0680) - Install Marketplace plugins from a git repository. Plugin catalog entries can now use a git source such as `git:github.com/owner/repo@v1.2.3#subdir`, so a plugin can be distributed from a public repository without publishing to npm. The client clones the repository at the pinned ref into the plugin cache and loads the plugin from there.
+
+- [#14281](https://github.com/Kilo-Org/kilocode/pull/14281) [`7c59855`](https://github.com/Kilo-Org/kilocode/commit/7c59855ff37416ff40e9ef2b47b851d1ed01634e) - Install plugins from the Kilo Marketplace. The Marketplace now lists plugin items alongside agents, skills, and MCP servers, and installing one adds the npm package to Kilo's plugin configuration for the chosen project or global scope. Removing a plugin item cleans the configuration entry again.
+
+- [#14446](https://github.com/Kilo-Org/kilocode/pull/14446) [`fccda25`](https://github.com/Kilo-Org/kilocode/commit/fccda25ca19275156714c0b6195f558934957423) - Add pinning and Close to the Right to the sidebar session tabs. Pinned tabs stay at the front and survive Close Others and Close to the Right.
+
+### Patch Changes
+
+- [#14482](https://github.com/Kilo-Org/kilocode/pull/14482) [`ae5cfbc`](https://github.com/Kilo-Org/kilocode/commit/ae5cfbc53156bbb2be362b2650372bf97e5a7ece) - Show the latest output of long-running terminal commands in chat. Bash output now keeps the end of the stream instead of the start, follows new lines while the command runs, and stops following while you scroll up.
+
+- [#14487](https://github.com/Kilo-Org/kilocode/pull/14487) [`c887e66`](https://github.com/Kilo-Org/kilocode/commit/c887e66c88d0d8a6b901d15cea68c2d69f4e5ea4) - Keep Agent Manager status icons current for sessions in other projects. A session that reconnects after a network drop no longer shows "Error or connection lost.", and completed, failed, waiting, and scheduled states now also update while another project is selected.
+
+- [#14447](https://github.com/Kilo-Org/kilocode/pull/14447) [`390b92c`](https://github.com/Kilo-Org/kilocode/commit/390b92cf974da361dcfeed52e45582bf745d1715) - Show the full arguments of a pending MCP tool call in the permission prompt so they can be inspected before approval, including nested objects and arrays.
+
+- [#13513](https://github.com/Kilo-Org/kilocode/pull/13513) [`3add597`](https://github.com/Kilo-Org/kilocode/commit/3add59707346f6f14f33c3dd6e7c4132d578e301) - Adopt OpenCode v1.18.19 through v1.18.20 improvements, including subagent error and permission handling in non-interactive runs, network and stream error retry coverage, Cerebras completion limit handling, Cloudflare AI Gateway support, and TUI reasoning status updates.
+
+- [#14464](https://github.com/Kilo-Org/kilocode/pull/14464) [`b9dc741`](https://github.com/Kilo-Org/kilocode/commit/b9dc741b11a5e86db1832e60cac1de1fc9c326b9) - Explain that file checkpoints require Git when a revert cannot restore files. Reverting in a folder that is not a Git repository now shows "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+
+- [#14484](https://github.com/Kilo-Org/kilocode/pull/14484) [`065bc5c`](https://github.com/Kilo-Org/kilocode/commit/065bc5c2e7a0779853f6231a215f2a1990c5fdd3) - Keep session costs complete after reopening paginated conversations, including nested subagents without counting their parents or siblings.
+
+- [#14486](https://github.com/Kilo-Org/kilocode/pull/14486) [`d52cd88`](https://github.com/Kilo-Org/kilocode/commit/d52cd889df656d5624c8ad5242e178f8db2a1f0f) - Fix messages and tool calls above the last reply sometimes disappearing after switching sessions until the transcript was scrolled.
+
+- [#14361](https://github.com/Kilo-Org/kilocode/pull/14361) [`f27140a`](https://github.com/Kilo-Org/kilocode/commit/f27140aceff68b4bdd0862eb1cb35a0c93ed307e) - Render streaming shell output faster in the chat transcript by highlighting only the lines that changed since the previous chunk instead of rebuilding the whole output block on every update.
+
+- Updated dependencies [[`065bc5c`](https://github.com/Kilo-Org/kilocode/commit/065bc5c2e7a0779853f6231a215f2a1990c5fdd3)]:
+  - @kilocode/sdk@7.7.8
+  - @kilocode/kilo-ui@7.7.8
+  - @kilocode/plugin@7.7.8
+  - @opencode-ai/ui@7.7.8
+  - @opencode-ai/core@7.7.8
+  - @kilocode/kilo-gateway@7.7.8
+  - @kilocode/kilo-indexing@7.7.8
+
+## 7.7.7
+
+### Patch Changes
+
+- Adopt OpenCode v1.18.14 through v1.18.15 improvements, including message ordering fixes, compaction serialization, locale coverage, and TUI enhancements.
+
+- Adopt OpenCode v1.18.16 through v1.18.18 improvements, including conversation-aware compaction, expanded reasoning effort support, provider compatibility fixes, and retry handling.
+
+- [#14360](https://github.com/Kilo-Org/kilocode/pull/14360) [`675ed4b`](https://github.com/Kilo-Org/kilocode/commit/675ed4b12d9a11d4fa1c103ee3f2dc24e417a550) - Retry transient connection drops when approving permissions so auto-approve and manual approvals no longer leave agents waiting.
+
+## 7.7.6
+
+### Minor Changes
+
+- [#14054](https://github.com/Kilo-Org/kilocode/pull/14054) [`3b6746c`](https://github.com/Kilo-Org/kilocode/commit/3b6746c05aa631c10d2132f09e0d66cd8355e1eb) Thanks [@vkeerthivikram](https://github.com/vkeerthivikram)! - Reintroduce automatic session cleanup in Settings > Checkpoints. Keep it off by default and apply the configured retention period across all projects and Kilo clients on the machine. Protect running sessions and sessions with a recent fork, confirm manual cleanup, and show live session-level progress with a spinner and processed, deleted, and failed counts. Avoid scanning unrelated session history and preserve progress when status updates are delayed.
+
+- [#14301](https://github.com/Kilo-Org/kilocode/pull/14301) [`f03ebe3`](https://github.com/Kilo-Org/kilocode/commit/f03ebe3cfef67c1b0da07b84a1ecfa185a1b9942) - Create new Git projects and clone repositories directly from Agent Manager. Choose where projects are stored and attach them without changing the VS Code workspace. Adding a project or cloning a repository that is already present opens the existing project instead of creating a duplicate, and a repository whose checkout failed can still be attached.
+
+  Create empty, unsigned bootstrap commits without normal commit hooks, while preserving staged files and Git configuration.
+
+- [#14282](https://github.com/Kilo-Org/kilocode/pull/14282) [`d0475a6`](https://github.com/Kilo-Org/kilocode/commit/d0475a6f5ca7081a0fbc117b73d79e6adf913d95) - Label prompts that Kilo sends on your behalf, such as worktree updates from base, expanded slash commands, and editor or terminal code actions, with a "Sent by Kilo" header. Long prompts collapse to their first paragraph with a "Show prompt" toggle to inspect the full text, and reverting or editing a turn restores the command instead of the full template.
+
+- [#14344](https://github.com/Kilo-Org/kilocode/pull/14344) [`83d276a`](https://github.com/Kilo-Org/kilocode/commit/83d276a8701bea1d1cfe180821562b2833870fdf) - Load older chats on demand in the session history with a "Load more" control instead of stopping at the 100 most recent. Paging works across the workspace and every worktree directory.
+
+- [#14346](https://github.com/Kilo-Org/kilocode/pull/14346) [`65702ab`](https://github.com/Kilo-Org/kilocode/commit/65702ab0decee832217288d8d21ba5194cf24163) - Preview session display settings with an automatic sample conversation that streams reasoning, tool progress, and an answer beside the controls.
+
+  Apply review-focused or compact display presets from settings, and use the same display defaults during onboarding.
+
+- [#14292](https://github.com/Kilo-Org/kilocode/pull/14292) [`8c724ef`](https://github.com/Kilo-Org/kilocode/commit/8c724efe59222fc6e448f9e6c429a9c9eec09f27) - Show a clock status on Agent Manager tabs and worktrees when a session is waiting for a scheduled wakeup.
+
+### Patch Changes
+
+- [#13979](https://github.com/Kilo-Org/kilocode/pull/13979) [`fbdbe11`](https://github.com/Kilo-Org/kilocode/commit/fbdbe11082e172b9ddcdb93dd9492e7ef0d98827) Thanks [@mardausdennis](https://github.com/mardausdennis)! - Pin Agent Manager session tabs. Right-click a session tab and choose Pin to move it to the front of the tab bar; pinned tabs keep that position across reloads, survive Close Others, and can be dragged among themselves. Unpin returns the tab to its normal spot.
+
+- [#14349](https://github.com/Kilo-Org/kilocode/pull/14349) [`1030bdb`](https://github.com/Kilo-Org/kilocode/commit/1030bdbe52885bce040e4bbb36ea871fbaf17600) - Focus the Changes diff viewport when the diff shortcut opens it or its reading content is clicked, show its complete focus border only while it owns reading focus, and restore the previous prompt or opener when it closes. Keep delayed prompt recovery from stealing diff focus, release diff focus on outside clicks, and route paste from non-editable areas to the prompt. Scroll a page with Shift+ArrowDown or Shift+ArrowUp when the diff viewport itself has focus and no text is selected.
+
+- [#14348](https://github.com/Kilo-Org/kilocode/pull/14348) [`24898d5`](https://github.com/Kilo-Org/kilocode/commit/24898d57bf80ab940a4538056fff5d158f1ef383) - Stop session progress spinners when sessions finish in a background project, and recover their status after reconnecting.
+
+- [#14333](https://github.com/Kilo-Org/kilocode/pull/14333) [`74717ee`](https://github.com/Kilo-Org/kilocode/commit/74717eeb0cc9dc1d3002ccc13929540b4af27609) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Fix the chat prompt sending the wrong text after a collapsed paste chip is deleted.
+
+- [#14324](https://github.com/Kilo-Org/kilocode/pull/14324) [`238aff2`](https://github.com/Kilo-Org/kilocode/commit/238aff2ce90a0d128b6b9a2c05494a16eade5571) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Anchor review comments to the right list item when a markdown file separates its list items with blank lines.
+
+- [#14322](https://github.com/Kilo-Org/kilocode/pull/14322) [`f47c29d`](https://github.com/Kilo-Org/kilocode/commit/f47c29dfe9ef1e8c760ed1fb4db17ec522120ea5) Thanks [@BambinoSK](https://github.com/BambinoSK)! - Remember the unified/split choice in Kilo diff viewers. Toggling the style once persists it for future diff viewers.
+
+- [#14286](https://github.com/Kilo-Org/kilocode/pull/14286) [`5bbad4c`](https://github.com/Kilo-Org/kilocode/commit/5bbad4c2d65110cfe1abeb21ce282dce2663de3c) - Retry transient backend connection drops instead of surfacing a "terminated" error.
+
+- [#14343](https://github.com/Kilo-Org/kilocode/pull/14343) [`9d81d4a`](https://github.com/Kilo-Org/kilocode/commit/9d81d4a22daebd1dd669cb9ae8fbfce4d2d440a0) - Translate session cleanup progress and error messages in all supported languages.
+
 ## 7.7.5
 
 ### Minor Changes

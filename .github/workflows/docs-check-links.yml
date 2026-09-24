@@ -22,7 +22,11 @@ jobs:
       - name: Link Checker
         uses: Kilo-Org/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411
         with:
-          args: "**/*.md"
+          # kilocode_change start - avoid deployment races; scheduled and manual runs check the live URL
+          args: >-
+            "**/*.md"
+            ${{ (github.event_name == 'pull_request' || github.event_name == 'push') && format('--remap ''kilo-docs/docs kilo-docs/pages'' --remap ''^https://kilo\.ai/docs/oauth/kilo/client\.json$ file://{0}/packages/kilo-docs/public/oauth/kilo/client.json''', github.workspace) || '' }}
+          # kilocode_change end
           workingDirectory: packages/kilo-docs
           fail: true
         env:

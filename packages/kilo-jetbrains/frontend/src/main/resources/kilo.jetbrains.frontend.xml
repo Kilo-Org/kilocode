@@ -29,6 +29,7 @@
         <fileEditorProvider id="KiloVfsSourceEditor"
                             order="after KiloVfsEditor"
                             implementation="ai.kilocode.client.vfs.KiloSourceEditorProvider"/>
+        <fileIconProvider implementation="ai.kilocode.client.vfs.KiloFileIconProvider"/>
         <fileType name="KILO_WORKTREE_SESSION"
                   implementationClass="ai.kilocode.client.agentManager.worktree.WorktreeSessionFileType"
                   fieldName="INSTANCE"/>

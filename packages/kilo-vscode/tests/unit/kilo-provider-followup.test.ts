@@ -4,6 +4,7 @@ import type { Event, Session } from "@kilocode/sdk/v2/client"
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
 const { ProjectRouteService } = await import("../../src/agent-manager/project/route")
+const { resolveEventSessionId } = await import("../../src/services/cli-backend/connection-utils")
 
 type Internals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
@@ -105,6 +106,7 @@ function connection() {
     resolveEventSessionId: (event: Event) => (event.type === "session.created" ? event.properties.info.id : undefined),
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
+    clearPermissionSession: () => undefined,
     pruneSession: () => undefined,
   }
 }
@@ -116,7 +118,22 @@ function git() {
 }
 
 describe("KiloProvider follow-up sessions", () => {
-  it("accepts terminal status for a released child from an inactive project", async () => {
+  it.each([
+    ["released child", "idle"],
+    ["released child", "offline"],
+    ["directory", "idle"],
+    ["directory", "offline"],
+    ["directory", "deleted"],
+    ["route", "idle"],
+    ["route", "offline"],
+    ["route", "deleted"],
+    ["synced child", "idle"],
+    ["synced child", "offline"],
+    ["synced child", "deleted"],
+    ["collision", "idle"],
+    ["collision", "offline"],
+    ["collision", "deleted"],
+  ])("routes inactive-project %s status event: %s", async (scope, status) => {
     const service = connection()
     let root = "/repo/project-a"
     const routes = new ProjectRouteService()
@@ -147,36 +164,167 @@ describe("KiloProvider follow-up sessions", () => {
     internal.startStatsPolling = () => {}
     await internal.initializeConnection()
 
-    internal.sessionDirectories.set(child, root)
-    internal.owners.set(child, { dir: root, project: root })
-    internal.syncedChildSessions.add(child)
+    if (scope === "route" || scope === "collision") {
+      routes.registerProject(root, root, 1)
+      routes.registerSession({ projectId: root, sessionId: child }, root, 1)
+    }
+    if (scope !== "route") internal.sessionDirectories.set(child, root)
+    if (scope.includes("child")) {
+      internal.owners.set(child, { dir: root, project: root })
+      internal.syncedChildSessions.add(child)
+    }
     internal.trackedSessionIds.add(child)
     service.emit({ type: "session.status", properties: { sessionID: child, status: { type: "busy" } } } as Event, root)
-    internal.releaseChildSession(child)
-    expect(internal.trackedSessionIds.has(child)).toBe(false)
-    expect(internal.sessionDirectories.has(child)).toBe(false)
-    expect(internal.owners.get(child)).toEqual({ dir: "/repo/project-a", project: "/repo/project-a" })
+    if (scope === "released child") {
+      internal.releaseChildSession(child)
+      expect(internal.trackedSessionIds.has(child)).toBe(false)
+      expect(internal.sessionDirectories.has(child)).toBe(false)
+      expect(internal.owners.get(child)).toEqual({ dir: "/repo/project-a", project: "/repo/project-a" })
+    }
+    if (!scope.includes("child")) expect(internal.owners.has(child)).toBe(false)
 
     root = "/repo/project-b"
-    service.emit(
-      { type: "session.status", properties: { sessionID: child, status: { type: "idle" } } } as Event,
-      "/repo/project-c",
-    )
-    expect(internal.sessionStatusMap.get(child)).toBe("busy")
+    if (scope === "collision") {
+      routes.registerProject(root, root, 1)
+      routes.registerSession({ projectId: root, sessionId: child }, root, 1)
+      internal.sessionDirectories.set(child, root)
+      internal.currentSession = info({ id: child, projectID: root, directory: root })
+    }
+    const event = (
+      status === "deleted"
+        ? { type: "session.deleted", properties: { sessionID: child } }
+        : { type: "session.status", properties: { sessionID: child, status: { type: status } } }
+    ) as Event
     const count = sent.length
+    service.emit(event, "/repo/project-c")
+    expect(internal.sessionStatusMap.get(child)).toBe("busy")
+    expect(sent).toHaveLength(count)
     service.emit(
       { type: "session.status", properties: { sessionID: child, status: { type: "retry", attempt: 1 } } } as Event,
       "/repo/project-a",
     )
-    expect(sent).toHaveLength(count)
+    if (scope === "collision") expect(sent).toHaveLength(count)
+    if (scope !== "collision") {
+      expect(sent).toContainEqual(expect.objectContaining({ type: "sessionStatus", sessionID: child, status: "retry" }))
+    }
+    service.emit(event, "/repo/project-a")
+
+    if (scope === "collision") {
+      expect(sent).toHaveLength(count)
+      expect(internal.sessionStatusMap.get(child)).toBe("busy")
+      expect(internal.trackedSessionIds.has(child)).toBe(true)
+      expect(internal.sessionDirectories.get(child)).toBe(root)
+      expect(internal.currentSession?.directory).toBe(root)
+      service.emit(event, root)
+    }
+
+    if (status === "deleted") {
+      expect(internal.trackedSessionIds.has(child)).toBe(false)
+      expect(internal.sessionDirectories.has(child)).toBe(false)
+      expect(sent).toContainEqual({ type: "sessionDeleted", sessionID: child })
+      return
+    }
+    expect(internal.sessionStatusMap.get(child)).toBe(status)
+    expect(sent).toContainEqual({ type: "sessionStatus", sessionID: child, status })
+    if (scope === "released child") expect(internal.owners.has(child)).toBe(status === "offline")
+    if (scope === "synced child") expect(internal.syncedChildSessions.has(child)).toBe(true)
+    if (status !== "offline" || scope === "collision") return
+    // A reconnected session must replace the offline status, or the row keeps its error icon.
     service.emit(
-      { type: "session.status", properties: { sessionID: child, status: { type: "idle" } } } as Event,
+      { type: "session.status", properties: { sessionID: child, status: { type: "busy" } } } as Event,
       "/repo/project-a",
     )
+    expect(internal.sessionStatusMap.get(child)).toBe("busy")
+    expect(sent.at(-1)).toEqual({ type: "sessionStatus", sessionID: child, status: "busy" })
+  })
 
-    expect(internal.sessionStatusMap.get(child)).toBe("idle")
-    expect(internal.owners.has(child)).toBe(false)
-    expect(sent).toContainEqual({ type: "sessionStatus", sessionID: child, status: "idle" })
+  it("forwards every activity event of an inactive-project session", async () => {
+    const base = connection()
+    const service = { ...base, resolveEventSessionId: (event: Event) => resolveEventSessionId(event, () => undefined) }
+    const routes = new ProjectRouteService()
+    const provider = new KiloProvider({} as never, service as never, undefined, {
+      rootDirectory: () => "/repo/project-b",
+      projectQualifier: () => ({ projectId: "/repo/project-b" }),
+      routeService: routes,
+    })
+    const internal = provider as unknown as Internals
+    const sent: { type: string }[] = []
+    internal.webview = {
+      postMessage: async (message: unknown) => {
+        sent.push(message as { type: string })
+        return true
+      },
+    }
+    internal.syncWebviewState = async () => {}
+    internal.flushPendingSessionRefresh = async () => {}
+    internal.fetchAndSendProviders = async () => {}
+    internal.fetchAndSendAgents = async () => {}
+    internal.fetchAndSendSkills = async () => {}
+    internal.fetchAndSendCommands = async () => {}
+    internal.fetchAndSendConfig = async () => {}
+    internal.fetchAndSendNotifications = async () => {}
+    internal.seedSessionStatusMap = async () => {}
+    internal.sendNotificationSettings = () => {}
+    internal.startStatsPolling = () => {}
+    await internal.initializeConnection()
+
+    const dir = "/repo/project-a"
+    const sid = "ses-background"
+    routes.registerProject(dir, dir, 1)
+    routes.registerSession({ projectId: dir, sessionId: sid }, dir, 1)
+    internal.sessionDirectories.set(sid, dir)
+    internal.trackedSessionIds.add(sid)
+    const events = [
+      { type: "session.turn.close", id: "evt-1", properties: { sessionID: sid, reason: "error" } },
+      { type: "session.error", id: "evt-2", properties: { sessionID: sid, error: { name: "APIError", data: {} } } },
+      {
+        type: "permission.asked",
+        properties: { id: "per-1", sessionID: sid, permission: "bash", patterns: [], always: [], metadata: {} },
+      },
+      { type: "permission.replied", properties: { sessionID: sid, requestID: "per-1", reply: "once" } },
+      { type: "question.asked", properties: { id: "que-1", sessionID: sid, questions: [] } },
+      { type: "question.replied", properties: { sessionID: sid, requestID: "que-1", answers: [] } },
+      { type: "question.rejected", properties: { sessionID: sid, requestID: "que-1" } },
+      { type: "suggestion.shown", properties: { id: "sug-1", sessionID: sid, text: "Next", actions: [] } },
+      { type: "suggestion.accepted", properties: { sessionID: sid, requestID: "sug-1" } },
+      { type: "suggestion.dismissed", properties: { sessionID: sid, requestID: "sug-1" } },
+      { type: "session.wakeup", properties: { sessionID: sid, pending: 1 } },
+      ...["busy", "retry", "offline", "idle"].map((type) => ({
+        type: "session.status",
+        properties: { sessionID: sid, status: { type, attempt: 1, message: "", next: 0 } },
+      })),
+    ]
+    sent.length = 0
+    for (const event of events) service.emit(event as Event, dir)
+    expect(sent.map((message) => message.type)).toEqual([
+      "sessionTurnClosed",
+      "sessionError",
+      "permissionRequest",
+      "permissionResolved",
+      "questionRequest",
+      "questionResolved",
+      "questionResolved",
+      "suggestionRequest",
+      "suggestionResolved",
+      "suggestionResolved",
+      "sessionWakeup",
+      "sessionStatus",
+      "sessionStatus",
+      "sessionStatus",
+      "sessionStatus",
+    ])
+
+    // Transcript content and sessions this project does not own stay filtered.
+    const count = sent.length
+    service.emit(
+      { type: "message.part.delta", properties: { sessionID: sid, messageID: "msg-1", partID: "prt-1" } } as Event,
+      dir,
+    )
+    service.emit(
+      { type: "session.status", properties: { sessionID: "ses-other", status: { type: "busy" } } } as Event,
+      dir,
+    )
+    expect(sent).toHaveLength(count)
   })
 
   it("scopes shared session events to the active project directory", () => {

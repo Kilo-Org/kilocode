@@ -60,7 +60,7 @@
 - <https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://git-scm.com>
-  <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
+  <!-- packages/kilo-vscode/src/agent-manager/git-errors.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
 - <https://github.com/anthropics/claude-code/issues/31375>
@@ -139,6 +139,8 @@
 - <https://kilo.ai/docs/getting-started/settings>
   <!-- packages/opencode/src/kilocode/config/claude-migration.ts -->
   <!-- packages/opencode/src/kilocode/config/config.ts -->
+- <https://kilo.ai/docs/oauth/kilo/client.json>
+  <!-- packages/opencode/src/kilocode/mcp/client-metadata.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
 - <https://kilo.ai/pricing/kilo-pass>

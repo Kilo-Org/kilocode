@@ -70,6 +70,7 @@ export const dict = {
   "session.activity.error": "Error or connection lost.",
   "session.activity.retry": "Retrying automatically.",
   "session.activity.busy": "In progress.",
+  "session.activity.scheduled": "Waiting for a scheduled wakeup.",
   "session.activity.done": "Turn completed.",
   "session.activity.idle": "Not running.",
 
@@ -85,6 +86,8 @@ export const dict = {
     "Conversation reverted. File changes were not restored because snapshots are disabled.",
   "revert.banner.workspace.unavailable":
     "Conversation reverted. No file checkpoint was available, so workspace changes were not restored.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversation reverted. File checkpoints require a Git repository, so workspace changes were not restored.",
   "revert.banner.workspace.legacy":
     "Conversation reverted. Workspace restoration status is unavailable for this earlier revert.",
   "revert.banner.workspace.enableSnapshots": "Enable snapshots",
@@ -305,7 +308,7 @@ export const dict = {
   "ui.approval.source.agent.default": "by the agent",
   "ui.approval.source.global": "by your global config",
   "ui.approval.source.project": "by the project config",
-  "ui.approval.source.yolo": "by auto-approve (YOLO) mode",
+  "ui.approval.source.yolo": "by auto-approve mode",
   "ui.approval.source.session": "by a session auto-approve rule",
   "ui.approval.source.default": "by default",
   "ui.approval.outsideWorkspace": "(outside your workspace: {{file}})",
@@ -505,6 +508,7 @@ export const dict = {
   "session.tabs.switcher.current": "Current",
   "session.tabs.switcher.pending": "New",
   "session.tabs.switcher.busy": "Working",
+  "session.tabs.switcher.scheduled": "Scheduled",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -528,13 +532,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo pauses and shows you its plan as it works.",
   "workStyle.choice.human-in-the-loop.permissions": "Asks before editing files or running commands.",
   "workStyle.choice.human-in-the-loop.bash": "Asks for permission when running all terminal commands.",
-  "workStyle.choice.human-in-the-loop.visibility": "Shows full conversation details, including reasoning.",
+  "workStyle.choice.human-in-the-loop.visibility": "Expands reasoning, commands, and edits for review.",
   "workStyle.choice.autonomous.eyebrow": "Fewer interruptions",
   "workStyle.choice.autonomous.title": "High autonomy",
   "workStyle.choice.autonomous.description": "Fewer interruptions, streamlined interface.",
   "workStyle.choice.autonomous.permissions": "Edits files and runs commands in the workspace without asking.",
   "workStyle.choice.autonomous.bash": "Can run terminal commands in the workspace without approval.",
-  "workStyle.choice.autonomous.visibility": "Details stay collapsed until you expand them.",
+  "workStyle.choice.autonomous.visibility": "Collapses tool details, with a compact reasoning preview.",
   "session.cloud.import.title": "Import session",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",
@@ -1101,6 +1105,28 @@ export const dict = {
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
+  "settings.autoCleanup.enable.title": "Enable automatic session cleanup",
+  "settings.autoCleanup.enable.description":
+    "Automatically delete old session history after a fixed number of days across all projects and every Kilo client on this machine, not just this window. Running sessions and sessions with a recent fork are never deleted. Deletion is permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Keep sessions for (days)",
+  "settings.autoCleanup.defaultRetention.description":
+    "How long session history is kept before automatic cleanup deletes it.",
+  "settings.autoCleanup.lastRun.title": "Last cleanup",
+  "settings.autoCleanup.lastRun.never": "Never run",
+  "settings.autoCleanup.result":
+    "{{date}}: deleted {{deleted}} of {{scanned}} sessions ({{active}} active skipped, {{failed}} failed) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Starting session cleanup...",
+  "settings.autoCleanup.error.status": "Session cleanup status is temporarily unavailable. Retrying...",
+  "settings.autoCleanup.error.timeout": "Waiting for cleanup status. The backend is taking longer than expected.",
+  "settings.autoCleanup.error.run":
+    "Could not confirm session cleanup completed. Check the last cleanup result before trying again.",
+  "settings.autoCleanup.progress.scanning": "Scanning sessions: {{processed}}/{{total}} processed",
+  "settings.autoCleanup.progress.deleting":
+    "Deleting sessions: {{processed}}/{{total}} processed ({{deleted}} deleted, {{failed}} failed)",
+  "settings.autoCleanup.runNow": "Run Cleanup Now",
+  "settings.autoCleanup.runNow.confirm":
+    "Permanently delete expired sessions across all projects and every Kilo client on this machine?",
+
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
   "settings.context.compaction.title": "Compaction",
@@ -1147,6 +1173,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sync with UI language",
   "settings.commitMessage.language.description": "Choose which language to use for AI-generated commit messages:",
 
+  "settings.display.preview.title": "Preview",
+  "settings.display.presets.title": "Display presets",
+  "settings.display.presets.description": "Changes the display options below, not permissions. Save to apply.",
+  "settings.display.preview.model": "Sample model",
+  "settings.display.preview.prompt": "Trim extra spaces from the greeting and check the tests.",
+  "settings.display.preview.reasoning":
+    "**Check the greeting.** The function should produce the same greeting for a plain name and a name with extra spaces at either end. I will keep the existing function signature and greeting format, and change only how the name enters the returned string.\n\nFor an input such as `  Ada  `, the unwanted spaces belong to the input, not to the greeting template. Trimming the completed greeting would leave spaces beside the name. The trim operation therefore needs to happen before the name is inserted.\n\nI will check the string documentation to confirm that `trim()` removes whitespace from both ends and returns a new string. It should leave the original input unchanged. There is no need for a regular expression, another dependency, or a separate helper for this change.\n\nSpaces inside a name must remain intact. A name such as `Ada Lovelace` should not become `AdaLovelace`, and its letter case should not change. An empty or whitespace-only input does not require a new fallback greeting as part of this focused fix.\n\nThe edit can stay in the return expression by using `name.trim()` where the template currently uses `name`. I will preserve the surrounding punctuation and the intentional space after the greeting. This keeps the diff small and makes the behavior easy to review.\n\nFinally, I will run `bun test greeting.test.ts` and check both results. The padded-name case should confirm that extra spaces are removed, while the plain-name case protects the existing output. I will report the change and test results only after the command completes.",
+  "settings.display.preview.shell": "Check the greeting test",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] trims extra spaces\n[pass] preserves a plain name\n\n2 tests passed",
+  "settings.display.preview.query": "String trimming",
+  "settings.display.preview.result": "trim() removes spaces from both ends of a string.",
+  "settings.display.preview.answer": "Updated the greeting to trim extra spaces. Both tests pass.",
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
@@ -1177,7 +1216,7 @@ export const dict = {
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
   "settings.display.autoApprovalReason.description":
-    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
+    "Show why a tool call was auto-approved, such as a matching permission rule or an agent default.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1308,8 +1347,6 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
-  "diffViewer.comment.saveLocal": "Save local",
-  "diffViewer.comment.sendToAgent": "Send to agent",
   "diffViewer.comment.postToGithub": "Post to GitHub",
   "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
   "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",

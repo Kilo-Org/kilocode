@@ -56,16 +56,19 @@ export namespace KiloCompactionPayloadRecovery {
     agent: Agent.Info
     sessionID: SessionID
     model: Provider.Model
-    messages: LLM.StreamInput["messages"]
-    prompt: string
+    prompt: (context: string[]) => string
+    messages: MessageV2.WithParts[]
+    serialize: (message: MessageV2.WithParts) => string
     recovery: MessageV2.WithParts[]
     updateMessage: UpdateMessage
     updatePart: Update
   }) {
-    const run = Effect.fn("KiloCompactionPayloadRecovery.process")(function* (
-      messages: LLM.StreamInput["messages"],
-      text: string,
-    ) {
+    const build = (items: MessageV2.WithParts[]) => {
+      const conversation = items.map(input.serialize).filter(Boolean).join("\n\n")
+      return input.prompt(conversation ? [conversation] : [])
+    }
+
+    const run = Effect.fn("KiloCompactionPayloadRecovery.process")(function* (text: string) {
       return yield* input.processor.process({
         user: input.user,
         agent: input.agent,
@@ -73,7 +76,6 @@ export namespace KiloCompactionPayloadRecovery {
         tools: {},
         system: [],
         messages: [
-          ...messages,
           {
             role: "user",
             content: [{ type: "text", text }],
@@ -83,7 +85,7 @@ export namespace KiloCompactionPayloadRecovery {
       })
     })
 
-    return run(input.messages, input.prompt).pipe(
+    return run(build(input.messages)).pipe(
       Effect.flatMap((result) => {
         if (result !== "compact" && (result !== "stop" || !matches(input.processor.message.error))) {
           return Effect.succeed(result)
@@ -96,11 +98,7 @@ export namespace KiloCompactionPayloadRecovery {
           input.processor.message.finish = undefined
           yield* input.updateMessage(input.processor.message)
           yield* strip({ messages: input.recovery, update: input.updatePart })
-          const stripped = yield* MessageV2.toModelMessagesEffect(input.recovery, input.model, {
-            stripMedia: true,
-            toolOutputMaxChars: 0,
-          })
-          return yield* run(stripped, prompt(input.prompt))
+          return yield* run(prompt(build(input.recovery)))
         })
       }),
     )

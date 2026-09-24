@@ -58,6 +58,7 @@
      their own clipped or hidden-scrollbar boxes, so shrinking them would cut text
      off instead of letting the scroll area scroll. */
   [data-slot="permission-command"],
+  [data-slot="permission-input"],
   [data-slot="permission-patterns"] {
     flex: 0 0 auto;
     overflow: visible;
@@ -109,6 +110,37 @@
 
   [data-slot="permission-command"]:hover [data-slot="permission-command-copy"] {
     opacity: 0.5;
+  }
+
+  [data-slot="permission-input"] {
+    min-width: 0;
+    margin: 4px 0;
+  }
+
+  [data-slot="permission-input-label"] {
+    font-size: var(--kilo-font-size-12);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    margin-bottom: 4px;
+  }
+
+  [data-slot="permission-input-code"] {
+    margin: 0;
+    padding: 8px 10px;
+    max-height: 150px;
+    overflow: auto;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border, transparent));
+    border-radius: 4px;
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+
+    code {
+      font-size: var(--kilo-font-size-12);
+      font-family: var(--vscode-editor-font-family, monospace);
+      color: var(--vscode-editor-foreground, var(--vscode-foreground));
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      background: transparent;
+    }
   }
 
   [data-slot="permission-hint"] {

@@ -174,6 +174,69 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertSame(panel.rightPanel(), panel.compactButton().parent)
     }
 
+    fun `test agents strip stays hidden for a session with no background agents`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        // Never had a background agent, so the model fires no BackgroundAgentsUpdated event at all —
+        // the strip must still be hidden rather than showing an empty row.
+        assertTrue(panel.isVisible)
+        assertTrue(panel.todoVisible())
+        assertFalse(panel.agentStripPanel().isVisible)
+    }
+
+    fun `test agents strip hides again once the last agent is cleared`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        edt {
+            c.model.setBackgroundAgents(
+                listOf(
+                    ai.kilocode.client.session.background.BackgroundAgent(
+                        job = "job1",
+                        session = "ses_child1",
+                        title = "Explore",
+                        status = ai.kilocode.client.session.background.BackgroundAgentStatus.RUNNING,
+                    ),
+                ),
+            )
+        }
+        assertTrue(panel.agentStripPanel().isVisible)
+
+        edt { c.model.setBackgroundAgents(emptyList()) }
+
+        assertFalse(panel.agentStripPanel().isVisible)
+    }
+
+    fun `test stats body opens directly below the title row and above the strips`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val layout = panel.layout as java.awt.BorderLayout
+
+        click(panel.expandButton())
+        assertTrue(panel.isExpanded())
+
+        val south = layout.getLayoutComponent(java.awt.BorderLayout.SOUTH)
+
+        // Title row, then the expandable stats body, then the always-visible strips.
+        assertSame(panel.expandButton().parent, layout.getLayoutComponent(java.awt.BorderLayout.NORTH))
+        assertSame(panel.bodyComponents().first().parent, layout.getLayoutComponent(java.awt.BorderLayout.CENTER))
+        assertTrue(javax.swing.SwingUtilities.isDescendingFrom(panel.todoRowPanel(), south))
+        assertTrue(javax.swing.SwingUtilities.isDescendingFrom(panel.agentStripPanel(), south))
+    }
+
+    fun `test strips stay attached below the title row while the stats body is collapsed`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val layout = panel.layout as java.awt.BorderLayout
+        val south = layout.getLayoutComponent(java.awt.BorderLayout.SOUTH)
+
+        assertFalse(panel.isExpanded())
+        assertNull(layout.getLayoutComponent(java.awt.BorderLayout.CENTER))
+        assertTrue(javax.swing.SwingUtilities.isDescendingFrom(panel.todoRowPanel(), south))
+        assertTrue(panel.todoVisible())
+    }
+
     fun `test todo list starts collapsed and toggles independently`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)

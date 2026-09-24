@@ -7,15 +7,10 @@ export type {
   AgentContent,
   AgentMarketplaceItem,
   SkillMarketplaceItem,
+  PluginMarketplaceItem,
   MarketplaceItem,
   InstallMarketplaceItemOptions,
   MarketplaceInstalledMetadata,
   MarketplaceRelevance,
   MarketplaceRelevanceMetadata,
 } from "../../../src/services/marketplace/types"
-
-export interface MarketplaceFilters {
-  type?: string
-  search?: string
-  categories?: string[]
-}

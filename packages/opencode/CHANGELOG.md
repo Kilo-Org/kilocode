@@ -1,5 +1,74 @@
 # @kilocode/cli
 
+## 7.7.9
+
+### Minor Changes
+
+- [#14445](https://github.com/Kilo-Org/kilocode/pull/14445) [`1ac7cc1`](https://github.com/Kilo-Org/kilocode/commit/1ac7cc17003f4c4ecf2a19c5932f7cdd2af7f08e) - Let the agent start or resume a session goal itself with the `goal` tool. The agent's call arms the goal without cancelling the current turn, then the goal loop continues after that turn. The tool uses the `goal` permission, which is allowed by default and can be set to `ask` or `deny`.
+
+- [#14312](https://github.com/Kilo-Org/kilocode/pull/14312) [`dfeeb48`](https://github.com/Kilo-Org/kilocode/commit/dfeeb48bd8f4e15fabb7c7c2deade0b199687be6) - Add a `monitor` action to the `background_process` tool that streams a long command's output back as it arrives, bounded by a line cap (default 200) and a wall-time cap (default 120000 ms) so a waiting agent reads progress instead of polling `logs`. Existing `background_process` actions are unchanged. Add session cron scheduling through `cron_create`, `cron_list`, and `cron_delete`: a recurring 5-field expression or a one-shot time/delay fires the session between turns after it goes idle, missed windows are not replayed, fire times carry deterministic jitter, each task expires seven days after creation, and tasks survive `--resume`.
+
+- [#14268](https://github.com/Kilo-Org/kilocode/pull/14268) [`f330846`](https://github.com/Kilo-Org/kilocode/commit/f3308468990769a6f8303b6b49c833f1b44fae82) - Add experimental `get_context_info` and `compact` tools that let an agent inspect and compact its own context. Reach them with `KILO_EXPERIMENTAL=1`, or `KILO_EXPERIMENTAL_CONTEXT_TOOLS=true`.
+
+- [#14485](https://github.com/Kilo-Org/kilocode/pull/14485) [`9088b7d`](https://github.com/Kilo-Org/kilocode/commit/9088b7d0b261f725505cdb6a3da906ab885d0680) - Install Marketplace plugins from a git repository. Plugin catalog entries can now use a git source such as `git:github.com/owner/repo@v1.2.3#subdir`, so a plugin can be distributed from a public repository without publishing to npm. The client clones the repository at the pinned ref into the plugin cache and loads the plugin from there.
+
+- [#14281](https://github.com/Kilo-Org/kilocode/pull/14281) [`7c59855`](https://github.com/Kilo-Org/kilocode/commit/7c59855ff37416ff40e9ef2b47b851d1ed01634e) - Install plugins from the Kilo Marketplace. The Marketplace now lists plugin items alongside agents, skills, and MCP servers, and installing one adds the npm package to Kilo's plugin configuration for the chosen project or global scope. Removing a plugin item cleans the configuration entry again.
+
+### Patch Changes
+
+- [#14318](https://github.com/Kilo-Org/kilocode/pull/14318) [`5edf432`](https://github.com/Kilo-Org/kilocode/commit/5edf432c2f4a34f333ff4e498e111d6f854cbe95) - An empty compaction response no longer replaces the conversation; the CLI reports that compaction did not run and lets you retry with /compact.
+
+- [#14315](https://github.com/Kilo-Org/kilocode/pull/14315) [`3fbb454`](https://github.com/Kilo-Org/kilocode/commit/3fbb454a4c3efdbf613a54212520c7a1990c970b) - Link a session to its pull request reliably, on GitHub, GitLab and Bitbucket. An explicit link (`link_pr`, `kilo pr link`, or the app's set-PR-link action) always wins, and a check every 5 minutes asks the session's own git host whether an open pull request exists for its branch. A stale link is cleared when that check finds the pull request no longer open, so the app row updates when the pull request closes.
+
+- [#14492](https://github.com/Kilo-Org/kilocode/pull/14492) [`43f5d55`](https://github.com/Kilo-Org/kilocode/commit/43f5d5551a77ccb1140388bd62f08c74510da2c0) - Fix git-hosted Marketplace plugins so `~/` repository paths resolve, a failed clone leaves no staging directory, and POSIX paths that contain a backslash are preserved. The plugin install dialog no longer describes every plugin as an npm plugin.
+
+- [#14196](https://github.com/Kilo-Org/kilocode/pull/14196) [`49df20f`](https://github.com/Kilo-Org/kilocode/commit/49df20fc74661e237df91f4a83d2b22560663e86) - Fix `kilo mcp auth` failing at the last step when another Kilo process touches the same MCP server while the browser tab is open: the OAuth flow now keeps its own state and PKCE verifier instead of reading them back from the process-shared `mcp-auth.json`, and every remaining failure names the step that failed (the token exchange, the browser authorization, a timeout, or a superseded authorization attempt). Running `kilo mcp auth` for the same server at the same time in two terminals now works too: the newer attempt takes the local callback listener over, the later browser tab completes, and the earlier command reports that it was replaced.
+
+- [#13513](https://github.com/Kilo-Org/kilocode/pull/13513) [`3add597`](https://github.com/Kilo-Org/kilocode/commit/3add59707346f6f14f33c3dd6e7c4132d578e301) - Adopt OpenCode v1.18.19 through v1.18.20 improvements, including subagent error and permission handling in non-interactive runs, network and stream error retry coverage, Cerebras completion limit handling, Cloudflare AI Gateway support, and TUI reasoning status updates.
+
+- [#14448](https://github.com/Kilo-Org/kilocode/pull/14448) [`9340d34`](https://github.com/Kilo-Org/kilocode/commit/9340d34f5297919a436e22e0ff87d6f1c8a816cf) - Fix provider initialization failing with an HTTP 500 when `enabled_providers` excludes Kilo while a Kilo login is stored. Excluded providers are now skipped before their auth loader runs.
+
+- [#14464](https://github.com/Kilo-Org/kilocode/pull/14464) [`b9dc741`](https://github.com/Kilo-Org/kilocode/commit/b9dc741b11a5e86db1832e60cac1de1fc9c326b9) - Explain that file checkpoints require Git when a revert cannot restore files. Reverting in a folder that is not a Git repository now shows "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+
+- [#14484](https://github.com/Kilo-Org/kilocode/pull/14484) [`065bc5c`](https://github.com/Kilo-Org/kilocode/commit/065bc5c2e7a0779853f6231a215f2a1990c5fdd3) - Keep session costs complete after reopening paginated conversations, including nested subagents without counting their parents or siblings.
+
+- Updated dependencies [[`065bc5c`](https://github.com/Kilo-Org/kilocode/commit/065bc5c2e7a0779853f6231a215f2a1990c5fdd3)]:
+  - @kilocode/sdk@7.7.8
+  - @kilocode/plugin@7.7.8
+  - @opencode-ai/tui@7.7.8
+  - @opencode-ai/ui@7.7.8
+  - @kilocode/kilo-gateway@7.7.8
+  - @kilocode/kilo-indexing@7.7.8
+  - @kilocode/plugin-atomic-chat@7.7.8
+  - @opencode-ai/server@7.7.8
+  - @kilocode/kilo-telemetry@7.7.8
+
+## 7.7.7
+
+### Patch Changes
+
+- Adopt OpenCode v1.18.14 through v1.18.15 improvements, including message ordering fixes, compaction serialization, locale coverage, and TUI enhancements.
+
+- Adopt OpenCode v1.18.16 through v1.18.18 improvements, including conversation-aware compaction, expanded reasoning effort support, provider compatibility fixes, and retry handling.
+
+## 7.7.6
+
+### Patch Changes
+
+- [#13340](https://github.com/Kilo-Org/kilocode/pull/13340) [`f3d6d09`](https://github.com/Kilo-Org/kilocode/commit/f3d6d0947a30216fade139615205bfe1a093f0f4) Thanks [@rakshith1928](https://github.com/rakshith1928)! - Fix auto-compaction triggering far below the configured context threshold. The threshold now applies to the context window shown in the UI and is anchored to provider-reported token usage plus newly added content, instead of an inflated estimate of the whole payload on models with separate input limits. New system prompts and tool schemas are counted even when a provider report is available, and cancelled responses or reports that omit input usage no longer leave later content uncounted. On models whose input limit is smaller than their context window, the reserved input safety buffer can still trigger compaction before a high configured percentage is reached.
+
+- [#14351](https://github.com/Kilo-Org/kilocode/pull/14351) [`a7d1596`](https://github.com/Kilo-Org/kilocode/commit/a7d1596339f236654898762a8db0b6adaeabfc50) Thanks [@jezdez](https://github.com/jezdez)! - Support encrypted reasoning from OpenAI models accessed through Amazon Bedrock.
+
+- [#14282](https://github.com/Kilo-Org/kilocode/pull/14282) [`d0475a6`](https://github.com/Kilo-Org/kilocode/commit/d0475a6f5ca7081a0fbc117b73d79e6adf913d95) - Label prompts that Kilo sends on your behalf, such as worktree updates from base, expanded slash commands, and editor or terminal code actions, with a "Sent by Kilo" header. Long prompts collapse to their first paragraph with a "Show prompt" toggle to inspect the full text, and reverting or editing a turn restores the command instead of the full template.
+
+- [#14216](https://github.com/Kilo-Org/kilocode/pull/14216) [`5c366fa`](https://github.com/Kilo-Org/kilocode/commit/5c366fa5097a8e87db744ffc580ace3c551d1f46) Thanks [@grandmaster451](https://github.com/grandmaster451)! - Stop MCP server requests from repeating once per second when the server answers the optional GET stream probe with a body that is not an event stream. The response is now reported as "no stream on this endpoint", which the MCP client treats as supported.
+
+- [#14345](https://github.com/Kilo-Org/kilocode/pull/14345) [`02353b0`](https://github.com/Kilo-Org/kilocode/commit/02353b0c959c5596db0576c3227f47cb7d1a8209) - Project skills, agents, commands, and instruction files that contain `${env:...}` or `${file:...}` placeholders now load instead of failing with an environment reference error. The placeholders stay literal there, while project JSON config still rejects them.
+
+- [#14283](https://github.com/Kilo-Org/kilocode/pull/14283) [`18c0384`](https://github.com/Kilo-Org/kilocode/commit/18c03848a5f7d6231626b76b1ed86525faa82d51) - Always include the saved plan file hint when switching from Plan to Code, and remove the vestigial `KILO_EXPERIMENTAL_PLAN_MODE` flag.
+
+- [#14335](https://github.com/Kilo-Org/kilocode/pull/14335) [`be871f3`](https://github.com/Kilo-Org/kilocode/commit/be871f3867da8a4f85ce3b473312ede389edafa3) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Report what `semantic_search` actually covered. It names the indexed root it searched, and an empty result now says whether the index was complete, still building, disabled, or failed, so a miss is no longer mistaken for code that does not exist.
+
 ## 7.7.5
 
 ### Patch Changes

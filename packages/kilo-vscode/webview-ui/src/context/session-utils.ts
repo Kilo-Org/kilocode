@@ -1,5 +1,13 @@
 import { reconcile } from "solid-js/store"
-import type { FileAttachment, Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+import type {
+  FileAttachment,
+  Message,
+  MessageLoadMode,
+  Part,
+  SessionInfo,
+  SessionModelUsage,
+  ToolPart,
+} from "../types/messages"
 import { Identifier } from "../utils/id"
 import {
   feedbackMetadata,
@@ -8,6 +16,10 @@ import {
   type BrowserReference,
 } from "../../../src/shared/browser-feedback"
 import type { ReviewCommentEntry, ReviewMessageData } from "../../../src/shared/review-comments"
+import { partInjected } from "../../../src/shared/injected-prompt"
+import { childID } from "../../../src/kilo-provider/task-session"
+
+export { childID }
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -99,6 +111,8 @@ export function revertPromptState(parts: readonly Part[]): RevertPromptState {
       .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
       .map((p) => {
         if (p.type !== "text") return ""
+        const injected = partInjected(p.metadata)
+        if (injected) return injected.title.startsWith("/") ? injected.title : ""
         return partFeedback(p.metadata, p.text)?.body ?? p.text
       })
       .join(""),
@@ -160,11 +174,6 @@ type TaskPart = {
   tool?: string
   metadata?: { sessionId?: string }
   state?: ToolState
-}
-
-export function childID(part: TaskPart): string | undefined {
-  if (part.type !== "tool" || part.tool !== "task") return undefined
-  return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
 }
 
 export function inUse(
@@ -315,6 +324,23 @@ export function computeStatus(
  */
 export function calcTotalCost(messages: Array<{ role: string; cost?: number }>): number {
   return messages.reduce((sum, m) => sum + (m.role === "assistant" ? (m.cost ?? 0) : 0), 0)
+}
+
+export function sessionCost(
+  items: readonly { cost: number }[],
+  session: Pick<SessionInfo, "id" | "parentID"> | undefined,
+  usage: Pick<SessionModelUsage, "sessionIDs" | "sessionCost" | "totals"> | undefined,
+) {
+  const loaded = items.reduce((sum, item) => sum + item.cost, 0)
+  // Older backends report only the whole tree. Never use that for a child view.
+  const reported =
+    session && usage?.sessionIDs.includes(session.id)
+      ? (usage.sessionCost ?? (session.parentID == null ? usage.totals.cost : undefined))
+      : undefined
+  return {
+    total: Math.max(loaded, reported ?? 0),
+    partial: reported !== undefined && Math.abs(loaded - reported) > 0.000001,
+  }
 }
 
 /**

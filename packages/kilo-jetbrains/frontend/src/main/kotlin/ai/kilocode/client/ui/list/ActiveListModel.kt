@@ -66,11 +66,14 @@ internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
 internal enum class ActiveListWeight { PLAIN, BOLD }
 
+internal enum class ActiveListIconAlignment { CENTER, TOP }
+
 internal data class ActiveListConfig(
     val height: ActiveListRowHeight = ActiveListRowHeight.EQUAL,
     val description: Boolean = true,
     val descriptionIndent: Boolean = true,
     val tooltip: Boolean = true,
+    val iconAlignment: ActiveListIconAlignment = ActiveListIconAlignment.CENTER,
     val selection: Int = ListSelectionModel.SINGLE_SELECTION,
     val hoverActions: Boolean = false,
     /** Weight used for the primary row title. */
@@ -86,6 +89,12 @@ internal data class ActiveListConfig(
      * title ("builtin", "env"), which read as part of it and would be covered by the hover actions.
      */
     val badgesRight: Boolean = false,
+    /**
+     * Wrap the description line to its full height instead of clipping/fading it to one line.
+     * Only meaningful together with [ActiveListRowHeight.PREFERRED]: a wrapped body under
+     * [ActiveListRowHeight.EQUAL] would still be capped to the shared row height.
+     */
+    val wrapDescription: Boolean = false,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)

@@ -109,6 +109,37 @@ export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 export const AgentManagerReplyPayload = Schema.Struct({ result: AgentManagerResult })
 export const AgentManagerRejectPayload = Schema.Struct({ error: AgentManagerFailure })
 
+export const RetentionRunPayload = Schema.Struct({
+  force: Schema.optional(Schema.Boolean),
+})
+
+export const RetentionState = Schema.Struct({
+  at: Schema.Number,
+  scanned: Schema.Number,
+  deleted: Schema.Number,
+  skippedActive: Schema.Number,
+  failed: Schema.Number,
+  durationMs: Schema.Number,
+})
+
+export const RetentionStatus = Schema.Struct({
+  policy: Schema.Struct({
+    enabled: Schema.Boolean,
+    maxAgeDays: Schema.Number,
+  }),
+  last: Schema.optional(RetentionState),
+  progress: Schema.optional(
+    Schema.Struct({
+      phase: Schema.Literals(["scanning", "deleting"]),
+      total: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      processed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      deleted: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      failed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      skippedActive: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    }),
+  ),
+})
+
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
   commandFiles: `${root}/command/files`,
@@ -137,6 +168,8 @@ export const KilocodePaths = {
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
   backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
+  retentionStatus: `${root}/retention`,
+  retentionRun: `${root}/retention/run`,
   wakeups: `${root}/wakeups`,
 } as const
 
@@ -273,7 +306,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           OpenApi.annotations({
             identifier: "kilocode.marketplace.install",
             summary: "Install a marketplace item",
-            description: "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+            description: "Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.",
           }),
         ),
         HttpApiEndpoint.post("marketplaceRemove", KilocodePaths.marketplaceRemove, {
@@ -284,7 +317,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           OpenApi.annotations({
             identifier: "kilocode.marketplace.remove",
             summary: "Remove a marketplace item",
-            description: "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
+            description: "Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.",
           }),
         ),
         HttpApiEndpoint.post("removeSnapshot", KilocodePaths.removeSnapshot, {
@@ -475,6 +508,29 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "List pending wakeups",
             description:
               "List the sessions that hold scheduled wakeups in the routed directory, with each session's pending count.",
+          }),
+        ),
+        HttpApiEndpoint.get("retentionStatus", KilocodePaths.retentionStatus, {
+          query: WorkspaceRoutingQuery,
+          success: described(RetentionStatus, "Session retention policy and last run"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.retention.status",
+            summary: "Get session retention status",
+            description:
+              "Read the machine-wide session retention policy and the state of the most recent cleanup pass.",
+          }),
+        ),
+        HttpApiEndpoint.post("retentionRun", KilocodePaths.retentionRun, {
+          query: WorkspaceRoutingQuery,
+          payload: RetentionRunPayload,
+          success: described(RetentionStatus, "Retention pass outcome"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.retention.run",
+            summary: "Run session retention",
+            description:
+              "Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.",
           }),
         ),
       )

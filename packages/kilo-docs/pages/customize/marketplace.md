@@ -1,13 +1,13 @@
 ---
 title: "Marketplace"
-description: "Install agents, skills, and MCP servers from the Kilo Marketplace"
+description: "Install agents, skills, MCP servers, and plugins from the Kilo Marketplace"
 ---
 
 # Marketplace
 
 The Kilo Marketplace provides reusable extensions for Kilo. Open **Marketplace** from the Kilo sidebar to browse, install, and remove items.
 
-Marketplace items are configuration and instruction files, not VS Code extensions. Installing an item adds files to either the current project or your user configuration. Kilo then discovers those files through its normal configuration system.
+Marketplace items are configuration, instruction, and plugin files, not VS Code extensions. Installing an item adds files or configuration entries to either the current project or your user configuration. Kilo then discovers those files through its normal configuration system.
 
 ## What you can install
 
@@ -16,6 +16,7 @@ Marketplace items are configuration and instruction files, not VS Code extension
 | **Agent** | A reusable role with its own prompt, behavior, and permissions. | The agent becomes available in Kilo's agent selector. |
 | **Skill** | Task-specific instructions and resources that Kilo can load when relevant. | Kilo can discover and load the skill during a session. |
 | **MCP server** | Tools supplied by an external service or a program running on your machine. | Kilo starts or connects to the configured server when it loads the MCP configuration. |
+| **Plugin** | Custom hooks, tools, auth providers, model providers, and runtime behavior. | Kilo adds the plugin to the `plugin` array in the relevant config file and loads it at startup. |
 
 MCP stands for **Model Context Protocol**, a standard that lets AI applications use external tools. For example, an MCP server might let Kilo query a database, work with GitHub, or interact with a browser. See [What is MCP?](/docs/automate/mcp/what-is-mcp) for a fuller explanation.
 
@@ -41,8 +42,9 @@ The install dialog shows the destination before it changes anything.
 | Agent | `.kilo/agents/<name>.md` | `~/.config/kilo/agents/<name>.md` |
 | Skill | `.kilo/skills/<name>/` | `~/.kilo/skills/<name>/` |
 | MCP server | `.kilo/kilo.json` | `~/.config/kilo/kilo.json` |
+| Plugin | `.kilo/opencode.json`, `.kilo/tui.json` | `~/.config/kilo/opencode.json`, `~/.config/kilo/tui.json` |
 
-Installing an MCP server adds an entry under the `mcp` key without replacing your other Kilo settings. Installing an agent or skill creates its own file or directory. Removing an item deletes its marketplace-managed entry from the selected scope.
+Installing an MCP server adds an entry under the `mcp` key without replacing your other Kilo settings. Installing an agent or skill creates its own file or directory. Installing a plugin adds its specifier to the `plugin` array in the relevant config file. A server plugin updates the server config (`opencode.json`) and a TUI plugin updates `tui.json`, so a plugin that supports both targets changes both files. Removing an item deletes its marketplace-managed entry from the selected scope.
 
 {% callout type="warning" title="Keep credentials out of version control" %}
 Some MCP servers require API keys, access tokens, or connection strings. Project configuration may be committed to your repository. Prefer environment-variable references for secrets, and review `.kilo/kilo.json` before committing it.
@@ -58,6 +60,10 @@ An MCP server can expose tools that read data, modify external systems, or run l
 - MCP tools follow Kilo's `allow`, `ask`, and `deny` permission rules. The default experience may prompt you before a tool runs, depending on your configuration.
 
 Review the item's author, source link, prerequisites, requested parameters, and available tools before installing it. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for configuration, transport, authentication, and permission details.
+
+## Plugin security
+
+Plugins run code with full permissions. A plugin can read and change your files, run commands, and access your credentials and network. Install only plugins that you trust, and review the plugin source and its dependencies before you install it. Marketplace validation is not a security review.
 
 ## Removing an item
 

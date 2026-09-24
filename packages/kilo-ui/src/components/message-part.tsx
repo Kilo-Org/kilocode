@@ -14,6 +14,7 @@ import {
 } from "solid-js"
 import stripAnsi from "strip-ansi"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
+import { getSharedHighlighter } from "@pierre/diffs"
 import { createStore } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
 import {
@@ -59,7 +60,7 @@ import { ToolApprovalProvider, resolveToolApproval, useToolApproval } from "./to
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
-import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
+import { bashLineUpdate, busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
 export { useGrowIn } from "./tool-utils"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
@@ -70,6 +71,7 @@ export type { ReasoningDisplay } from "./reasoning-open"
 import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
+import { createAutoScroll } from "../hooks/create-auto-scroll"
 import { escapeHtml } from "../util/escape-html"
 import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 
@@ -2659,13 +2661,131 @@ function BashCopyButton(props: { value: () => string; label: string }) {
   )
 }
 
-function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
+// Streaming bash output is highlighted incrementally. Only the trailing lines
+// that changed since the previous chunk are tokenized and patched into the
+// existing highlighted block. Rebuilding the whole block on every chunk forced a
+// full transcript re-layout per chunk, which dominated streaming cost.
+const BASH_OUTPUT_LANG = "log"
+
+let bashHighlighter: ReturnType<typeof getSharedHighlighter> | undefined
+
+const loadBashHighlighter = () => {
+  // Drop a rejected promise so a later chunk can retry instead of caching the failure.
+  bashHighlighter ??= getSharedHighlighter({ themes: ["Kilo"], langs: [] }).catch((err) => {
+    bashHighlighter = undefined
+    throw err
+  })
+  return bashHighlighter
+}
+
+async function highlightBashFragment(text: string): Promise<string | undefined> {
+  try {
+    const highlighter = await loadBashHighlighter()
+    if (!highlighter.getLoadedLanguages().includes(BASH_OUTPUT_LANG)) {
+      await highlighter.loadLanguage(BASH_OUTPUT_LANG)
+    }
+    const html = highlighter.codeToHtml(text, { lang: BASH_OUTPUT_LANG, theme: "Kilo", tabindex: false })
+    const probe = document.createElement("div")
+    probe.innerHTML = html
+    return probe.querySelector("code")?.innerHTML
+  } catch (err) {
+    console.warn("Bash output highlight failed", err)
+    return undefined
+  }
+}
+
+// A processed block is identified by the absence of `code[data-lang]`, the same
+// way deferredHighlight's replacement drops it. This block is highlighted in
+// place, so drop the marker once its spans are in.
+function markBashHighlighted(container: HTMLElement) {
+  container.querySelector("code")?.removeAttribute("data-lang")
+}
+
+function BashHighlightedOutput(props: {
+  cmd: string
+  output: string
+  outputPath?: string
+  active?: boolean
+  running?: boolean
+}) {
   const data = useData()
   const i18n = useI18n()
   const cmdState = { signal: { aborted: false } }
-  const outState = { signal: { aborted: false } }
   let cmdRef: HTMLDivElement | undefined
   let outRef: HTMLDivElement | undefined
+  let renderedLines: string[] = []
+  let version = 0
+
+  // Follow new output inside the box while the command runs. The box scrolls
+  // independently of the transcript, so pinning it does not move the transcript.
+  const autoScroll = createAutoScroll({ working: () => !!props.running })
+
+  const bindOutput = (el: HTMLDivElement) => {
+    outRef = el
+    autoScroll.scrollRef(el)
+    autoScroll.contentRef(el)
+  }
+
+  // Drop the first `count` line nodes with their trailing separators.
+  const dropLeading = (code: Element, count: number) => {
+    const first = code.children.item(count)
+    const range = document.createRange()
+    range.setStart(code, 0)
+    if (first) range.setEndBefore(first)
+    else if (code.lastChild) range.setEndAfter(code.lastChild)
+    range.deleteContents()
+  }
+
+  // Drop line nodes from `start` to the end, each with its trailing separator.
+  const dropTail = (code: Element, start: number) => {
+    const first = code.children.item(start)
+    if (!first || !code.lastChild) return
+    const range = document.createRange()
+    range.setStartBefore(first)
+    range.setEndAfter(code.lastChild)
+    range.deleteContents()
+  }
+
+  const paintOutput = async (container: HTMLDivElement, out: string, id: number) => {
+    const lines = out.split("\n")
+    // Without an existing block there is nothing to patch into, so highlight the
+    // whole output instead of a tail fragment. `renderedLines` may still hold
+    // lines from a block that was unmounted, and diffing against them would drop
+    // the prefix.
+    const plan = container.querySelector("code")
+      ? bashLineUpdate(renderedLines, lines)
+      : { start: 0, skip: false, shift: 0 }
+    if (plan.skip) return
+    const inner = await highlightBashFragment(lines.slice(plan.start).join("\n"))
+    if (id !== version || !container.isConnected) return
+    if (inner === undefined) {
+      renderedLines = []
+      container.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
+      markBashHighlighted(container)
+      return
+    }
+    const code = container.querySelector("code")
+    if (!code) {
+      container.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${inner}</code></pre>`
+      markBashHighlighted(container)
+      // Record only what was actually rendered. A later chunk then rebuilds the
+      // missing prefix instead of patching lines that are not in the DOM.
+      renderedLines = lines.slice(plan.start)
+      return
+    }
+    if (plan.start === 0) {
+      // Full render: drop everything, including a plain-text fallback block.
+      code.textContent = ""
+    } else {
+      // A sliding tail window drops whole leading lines in one DOM operation.
+      if (plan.shift > 0) dropLeading(code, plan.shift)
+      if (code.children.length > plan.start) dropTail(code, plan.start)
+    }
+    const tail = code.lastChild
+    const separator = code.childNodes.length > 0 && !(tail?.nodeType === Node.TEXT_NODE && tail.textContent === "\n") ? "\n" : ""
+    code.insertAdjacentHTML("beforeend", separator + inner)
+    renderedLines = lines
+  }
 
   createEffect(() => {
     cmdState.signal.aborted = true
@@ -2679,19 +2799,22 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
   })
 
   createEffect(() => {
-    outState.signal.aborted = true
-    if (!props.active) return
+    const active = props.active
     const out = props.output
-    if (!outRef || !out) return
-    const signal = { aborted: false }
-    outState.signal = signal
-    outRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
-    void deferredHighlight(outRef, undefined, signal)
+    const container = outRef
+    if (!container) return
+    if (!active || !out) {
+      version++
+      renderedLines = []
+      if (!out) container.innerHTML = ""
+      return
+    }
+    void paintOutput(container, out, ++version)
   })
 
   onCleanup(() => {
     cmdState.signal.aborted = true
-    outState.signal.aborted = true
+    version++
   })
 
   const openInEditor = () => {
@@ -2722,7 +2845,7 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
       <Show when={props.output}>
         <div data-slot="bash-terminal" data-kind="output">
           <div data-slot="bash-section" data-kind="output">
-            <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+            <div data-slot="bash-section-code" data-scrollable ref={bindOutput} />
             <div data-slot="bash-section-actions">
               <Show when={data.openContent || (props.outputPath && data.openFile)}>
                 <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
@@ -2804,6 +2927,7 @@ ToolRegistry.register({
             output={out()}
             outputPath={props.metadata.outputPath}
             active={open() || !!props.forceOpen}
+            running={pending()}
           />
         </Show>
       </BasicTool>

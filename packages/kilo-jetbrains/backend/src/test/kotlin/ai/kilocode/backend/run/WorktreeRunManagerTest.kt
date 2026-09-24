@@ -12,10 +12,12 @@ import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.Executor
 import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
+import com.intellij.execution.configuration.EnvironmentVariablesData
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationPerRunnerSettings
 import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.execution.configurations.ConfigurationTypeBase
+import com.intellij.execution.configurations.LogFileOptions
 import com.intellij.execution.configurations.ModuleBasedConfiguration
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunConfigurationBase
@@ -173,6 +175,122 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         // Cloning an external-system config must not mutate the user's own configuration.
         assertEquals("$repo/packages/kilo-jetbrains", source.settings.externalProjectPath)
         assertTrue(source.settings.env.isEmpty())
+    }
+
+    fun testGradleLogFileTabsAreRebasedOntoWorktree() = runBlocking {
+        val type = register(esType("kilo.test.es.logs"))
+        val settings = add(type, "runIdeSplitMode")
+        val source = settings.configuration as ExternalSystemRunConfiguration
+        val repo = requireNotNull(project.basePath)
+        val sandbox = "packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains"
+        source.addLogFile("$repo/$sandbox/kilo-backend/kilo.log", "Backend Kilo", true, false, false)
+        source.addLogFile("/var/log/shared/audit.log", "Audit", true, true, false)
+        val wt = "$repo/.kilo/worktrees/logs-wt"
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as ExternalSystemRunConfiguration
+        val logs = logs(cfg)
+        assertEquals(2, logs.size)
+        // Without this the Run tool window tails the main checkout's stale file and never fills in.
+        assertEquals(Path.of("$wt/$sandbox/kilo-backend/kilo.log").toString(), logs.first().pathPattern)
+        assertEquals("Backend Kilo", logs.first().name)
+        assertFalse(logs.first().isSkipContent)
+        assertTrue(logs.first().isEnabled)
+        // Outside the repository, so not part of the transplanted tree.
+        assertEquals("/var/log/shared/audit.log", logs.last().pathPattern)
+        assertTrue(logs.last().isSkipContent)
+        // The user's own configuration must stay untouched.
+        assertEquals("$repo/$sandbox/kilo-backend/kilo.log", logs(source).first().pathPattern)
+    }
+
+    fun testParamsLogFileTabsAreRebasedWithoutMutatingTheSource() = runBlocking {
+        // RunConfigurationBase.clone() copies the logFiles list shallowly, so a rebase that mutated
+        // entries in place would rewrite the shared .run.xml this configuration came from.
+        val type = register(paramsType("kilo.test.params.logs"))
+        val settings = add(type, "dev")
+        val source = settings.configuration as ParamsConfig
+        val repo = requireNotNull(project.basePath)
+        source.addLogFile("$repo/build/app.log", "App", true, false, false)
+        val wt = "$repo/.kilo/worktrees/params-logs-wt"
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as ParamsConfig
+        assertEquals(Path.of("$wt/build/app.log").toString(), logs(cfg).single().pathPattern)
+        assertEquals("$repo/build/app.log", logs(source).single().pathPattern)
+    }
+
+    fun testNpmStylePackagePathIsRebasedOntoWorktree() = runBlocking {
+        // npm's <package-json> path *is* its working directory: NpmRunProfileState takes its parent and
+        // passes it to GeneralCommandLine.withWorkingDirectory. Rebasing it is what moves the run.
+        val settings = add(register(npmType()), "VSCode")
+        val source = settings.configuration as PkgConfig
+        val repo = requireNotNull(project.basePath)
+        source.pkg = "$repo/package.json"
+        source.envs = mapOf("KILO" to "keep")
+        val wt = "$repo/.kilo/worktrees/npm-wt"
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as PkgConfig
+        assertEquals(Path.of("$wt/package.json").toString(), cfg.pkg)
+        // Same contract as the VS Code Agent Manager run scripts, and the config's own vars survive.
+        assertEquals(wt, cfg.envs[WorktreeRunAdapter.WORKTREE_ENV])
+        assertEquals(repo, cfg.envs[WorktreeRunAdapter.REPO_ENV])
+        assertEquals("keep", cfg.envs["KILO"])
+        // A block we create must not turn off inheriting the IDE environment.
+        assertTrue(cfg.parent)
+        // The user's own configuration must stay untouched.
+        assertEquals("$repo/package.json", source.pkg)
+        assertEquals(mapOf("KILO" to "keep"), source.envs)
+    }
+
+    fun testNpmStyleNestedPackagePathAndListingAreSupported() = runBlocking {
+        val settings = add(register(npmType()), "VSCode - watch:tsc")
+        val source = settings.configuration as PkgConfig
+        val repo = requireNotNull(project.basePath)
+        source.pkg = "$repo/packages/kilo-vscode/package.json"
+        val wt = "$repo/.kilo/worktrees/npm-nested-wt"
+
+        // Listed as a direct transplant, so no "via" build system.
+        val listed = manager().configs()
+        assertEquals(1, listed.configs.size)
+        assertNull(listed.configs.single().via)
+        assertTrue(listed.skipped.isEmpty())
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as PkgConfig
+        assertEquals(Path.of("$wt/packages/kilo-vscode/package.json").toString(), cfg.pkg)
+    }
+
+    fun testNpmStyleConfigWithoutItsPathElementIsRefused() = runBlocking {
+        // If the serialized location stops matching, the clone would keep the main checkout's path
+        // while supports() has already advertised the type as runnable. Refusing beats running there.
+        val settings = add(register(npmType()), "VSCode")
+        (settings.configuration as PkgConfig).pkg = null
+        val repo = requireNotNull(project.basePath)
+
+        val result = manager().run(settings.uniqueID, "$repo/.kilo/worktrees/npm-nopath-wt")
+        assertFalse(result.ok)
+        assertTrue(launched.isEmpty())
+    }
+
+    fun testModuleBasedConfigIsNeverDirectlyTransplantedEvenWhenItsTypeHasSerializedPaths() {
+        // The module-based exclusion has to hold unconditionally: such a config takes its classpath
+        // from the main checkout's module, so no amount of location rewriting makes a transplant safe.
+        val type = paramsType("js.build_tools.npm")
+        val module = ModuleParamsConfig(project, type.configurationFactories.single(), "app")
+
+        assertFalse(WorktreeRunAdapter.supports(module))
+    }
+
+    fun testSkippedConfigsAreReportedWithTheirReason() = runBlocking {
+        // The popup renders these, so "my run configuration is missing" stops being a silent omission.
+        add(register(plainType("kilo.test.plain.skipreason")), "app")
+
+        val skipped = manager().configs().skipped
+        assertEquals(1, skipped.size)
+        assertEquals("app", skipped.single().name)
+        assertEquals("not module-based (PlainConfig)", skipped.single().reason)
+        assertEquals("Kilo Params kilo.test.plain.skipreason", skipped.single().type)
     }
 
     fun testRunRejectsUnknownAndUnsupported() = runBlocking {
@@ -667,6 +785,9 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
     private fun manager() = WorktreeRunManager(project, cs) { launched += it }
 
+    /** `ExternalSystemRunConfiguration` erases its base type argument, so `logFiles` arrives raw. */
+    private fun logs(config: RunConfiguration): List<LogFileOptions> = (config as RunConfigurationBase<*>).logFiles
+
     /** Publishes the platform's `processStarted` for [clone], as a real launch would. */
     private fun <T : ProcessHandler> start(clone: RunnerAndConfigurationSettings, handler: T): T {
         val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
@@ -713,6 +834,12 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     }
 
     private fun paramsType(id: String) = TestType(id) { project, factory, name -> ParamsConfig(project, factory, name) }
+
+    /**
+     * Registered under npm's real type id, which is what puts it on the adapter's serialized-path
+     * list. The IDE used for these tests does not load the JavaScript plugin, so nothing else claims it.
+     */
+    private fun npmType() = TestType("js.build_tools.npm") { project, factory, name -> PkgConfig(project, factory, name) }
 
     private fun plainType(id: String) = TestType(id) { project, factory, name -> PlainConfig(project, factory, name) }
 
@@ -788,6 +915,32 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
             val copy = super.clone() as ParamsConfig
             copy.env = HashMap(env)
             return copy
+        }
+    }
+
+    /**
+     * Mirrors `NpmRunConfiguration`'s shape: the only location is a `<package-json>` path — no working
+     * directory, no [CommonProgramRunConfigurationParameters] — and environment variables round-trip
+     * through the platform's own `<envs>` block. Reachable only via serialized state, like the real one.
+     */
+    private class PkgConfig(project: Project, factory: ConfigurationFactory, name: String) :
+        PlainConfig(project, factory, name) {
+        var pkg: String? = null
+        var envs: Map<String, String> = emptyMap()
+        var parent = true
+
+        override fun writeExternal(element: Element) {
+            super.writeExternal(element)
+            pkg?.let { element.addContent(Element("package-json").setAttribute("value", it)) }
+            EnvironmentVariablesData.create(envs, parent).writeExternal(element)
+        }
+
+        override fun readExternal(element: Element) {
+            super.readExternal(element)
+            pkg = element.getChild("package-json")?.getAttributeValue("value")
+            val data = EnvironmentVariablesData.readExternal(element)
+            envs = data.envs
+            parent = data.isPassParentEnvs
         }
     }
 

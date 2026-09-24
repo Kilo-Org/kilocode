@@ -286,6 +286,10 @@ export const TaskTool = Tool.define(
           if (result.info.role === "assistant" && result.info.error) {
             return yield* Effect.fail(new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`))
           }
+          const failed = result.parts.findLast((item) => item.type === "tool" && item.state.status === "error")
+          if (failed?.type === "tool" && failed.state.status === "error") {
+            return yield* Effect.fail(new Error(`${failed.state.error}\n${resumeHint(nextSession.id)}`))
+          }
           // kilocode_change end
           // kilocode_change start - ignore synthetic/ignored/empty text parts (e.g. the memory marker) when picking the task result (#13469)
           return (
