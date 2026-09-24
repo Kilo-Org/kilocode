@@ -1,6 +1,5 @@
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
-import { ConfigProtection } from "@/kilocode/permission/config-paths"
 
 interface PendingEntry {
   info: Permission.Request
@@ -16,23 +15,36 @@ type PublishReply = (data: {
   reply: Permission.Reply
 }) => Effect.Effect<void>
 
+// Resolves the protection policy for one pending entry. Entries differ by target path, so the
+// caller decides per entry rather than once per drain.
+type DrainPolicy = (entry: PendingEntry) => { protect: boolean; skill?: string }
+
 /**
  * Auto-resolve pending permissions now fully covered by approved or denied rules.
  * When the user approves/denies a rule on subagent A, sibling subagent B's
  * pending permission for the same pattern resolves or rejects automatically.
+ *
+ * `policy` is required: config-protection decisions differ per entry path, and a default would
+ * silently mis-scope entries instead of forcing callers to resolve the global or project policy.
  */
 export function drainCovered(
   pending: Map<string, PendingEntry>,
   approved: Permission.Ruleset,
   publishReply: PublishReply,
+  policy: DrainPolicy,
   exclude?: string,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
     for (const [id, entry] of pending) {
       if (id === exclude) continue
-      // Never auto-resolve config file edit permissions
-      const skill = ConfigProtection.globalSkillPattern(entry.info)
-      if (ConfigProtection.isRequest(entry.info) && !skill) continue
+      // Never auto-resolve config file edit permissions while config protection is active for
+      // this entry. The caller resolves the global or project policy per entry and hands back an
+      // already-narrowed skill: protection uses the canonical global skill, a file-tool read keeps
+      // it despite being ungated, and a disabled config edit keeps its requested rule.
+      const verdict = policy(entry)
+      const skill = verdict.skill
+      if (verdict.protect && !skill) continue
+
       // Never auto-resolve a skill shell batch; it must get an explicit reply.
       if (entry.info.metadata?.["skillShell"] === true) continue
       if (entry.info.metadata?.["sandboxEscalation"] === true) continue

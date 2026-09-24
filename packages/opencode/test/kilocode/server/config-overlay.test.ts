@@ -25,8 +25,18 @@ const original = Global.Path.config
 const terminal = process.platform === "win32" ? test.skip : test.serial
 
 type Target = { path: string; revision: string; exists: boolean; writable: boolean; raw: Record<string, unknown> }
+type Field = {
+  source: string
+  inherited: boolean
+  overridden: boolean
+  value?: unknown
+  global?: unknown
+  local?: unknown
+  editable?: boolean
+  reason?: string
+}
 type Overlay = {
-  fields: Record<string, { source: string; inherited: boolean; overridden: boolean; value?: unknown }>
+  fields: Record<string, Field>
   collections: Record<string, Array<{ key: string; source: string; inherited: boolean; local?: unknown }>>
   targets: { project: Target; global: Target; active: Target }
   effective?: Config.Info
@@ -76,6 +86,21 @@ async function request(target: ReturnType<typeof app>, dir: string | undefined, 
 async function json<T>(response: Response) {
   if (response.status !== 200) throw new Error(`HTTP ${response.status}: ${await response.text()}`)
   return (await response.json()) as T
+}
+
+// Point both the loader's home (KILO_TEST_HOME) and the overlay's home (HOME) at one directory so
+// legacy global config resolves consistently, and restore them even when an assertion fails.
+function withHome<T>(home: string, run: () => Promise<T>) {
+  const prevHome = process.env["HOME"]
+  const prevTestHome = process.env["KILO_TEST_HOME"]
+  process.env["HOME"] = home
+  process.env["KILO_TEST_HOME"] = home
+  return run().finally(() => {
+    if (prevHome === undefined) delete process.env["HOME"]
+    else process.env["HOME"] = prevHome
+    if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+    else process.env["KILO_TEST_HOME"] = prevTestHome
+  })
 }
 
 async function config(dir: string, value: unknown) {
@@ -452,6 +477,7 @@ describe("config overlay routes", () => {
       effective: {},
       global: {},
       sources: [],
+      legacy: undefined,
     })
 
     expect(body.project.username).toBe("kilo")
@@ -480,6 +506,7 @@ describe("config overlay routes", () => {
       effective: {},
       global: {},
       sources: [],
+      legacy: undefined,
     })
 
     expect(body.project.username ?? "").not.toContain("root:")
@@ -610,6 +637,7 @@ describe("config overlay routes", () => {
       effective: local,
       global,
       sources: [],
+      legacy: undefined,
     })
 
     expect(body.fields["indexing.enabled"]).toMatchObject({ source: "global", value: true })
@@ -1033,5 +1061,263 @@ describe("config overlay routes", () => {
 
     const overlay2 = await json<Overlay>(await req(project.path, "/config/overlay"))
     expect(overlay2.effective?.privacy_mode).toBe(false)
+  })
+
+  test.serial("resolves the project-scoped config-edit approval setting with normal precedence", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ config: { require_approval_for_config_edits: false } })
+    await using fallback = await tmpdir()
+    await setGlobal(global.path, { require_approval_for_config_edits: true })
+
+    const overridden = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(overridden.fields.require_approval_for_config_edits).toMatchObject({
+      source: "project",
+      value: false,
+      inherited: false,
+      overridden: true,
+      editable: true,
+    })
+
+    const inherited = await json<Overlay>(await req(fallback.path, "/config/overlay?scope=project"))
+    expect(inherited.fields.require_approval_for_config_edits).toMatchObject({
+      source: "global",
+      value: true,
+      inherited: true,
+      overridden: false,
+      editable: true,
+    })
+  })
+
+  test.serial("edits the project-scoped config-edit approval setting at project scope", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { require_approval_for_config_edits: true })
+
+    const saved = await json<Overlay>(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { require_approval_for_config_edits: false } }),
+      }),
+    )
+    expect(saved.effective?.require_approval_for_config_edits).toBe(false)
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(body.fields.require_approval_for_config_edits).toMatchObject({
+      source: "project",
+      value: false,
+      inherited: false,
+      overridden: true,
+      editable: true,
+    })
+  })
+
+  test.serial("reports a legacy-only global value as read-only and rejects a masked global toggle", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const legacy = path.join(home.path, ".kilo", "kilo.json")
+    await Bun.write(legacy, JSON.stringify({ require_approval_for_config_edits: false }))
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      const globalBody = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(globalBody.fields.require_approval_for_config_edits).toMatchObject({
+        source: "global",
+        editable: false,
+        value: false,
+        global: false,
+      })
+      expect(globalBody.fields.require_approval_for_config_edits?.reason).toContain(legacy)
+
+      const projectBody = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+      expect(projectBody.fields.require_approval_for_config_edits).toMatchObject({
+        source: "global",
+        inherited: true,
+        editable: true,
+        value: false,
+      })
+
+      const response = await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { require_approval_for_config_edits: true } }),
+      })
+      expect(response.status).toBe(400)
+      const raw = await Bun.file(globalBody.targets.global.path)
+        .text()
+        .catch(() => "")
+      expect(raw).not.toContain("require_approval_for_config_edits")
+    })
+  })
+
+  test.serial("reports the winning legacy file when legacy global files conflict", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const winner = path.join(home.path, ".kilo", "kilo.json")
+    await Bun.write(
+      path.join(home.path, ".kilocode", "kilo.json"),
+      JSON.stringify({ require_approval_for_config_edits: false }),
+    )
+    await Bun.write(winner, JSON.stringify({ require_approval_for_config_edits: true }))
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(body.fields.require_approval_for_config_edits).toMatchObject({
+        source: "global",
+        editable: false,
+        value: true,
+      })
+      expect(body.fields.require_approval_for_config_edits?.reason).toContain(winner)
+    })
+  })
+
+  test.serial("keeps the global toggle read-only when a legacy file repeats the primary value", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const legacy = path.join(home.path, ".kilo", "kilo.json")
+    await Bun.write(path.join(global.path, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: true }))
+    await Bun.write(legacy, JSON.stringify({ require_approval_for_config_edits: true }))
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(body.fields.require_approval_for_config_edits).toMatchObject({
+        source: "global",
+        editable: false,
+        value: true,
+      })
+      expect(body.fields.require_approval_for_config_edits?.reason).toContain(legacy)
+    })
+  })
+
+  test.serial("ignores a malformed legacy global file", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    await Bun.write(path.join(home.path, ".kilo", "kilo.json"), "{ not json")
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(body.fields.require_approval_for_config_edits).toMatchObject({
+        source: "default",
+        editable: true,
+      })
+
+      const saved = await json<Overlay>(
+        await req(project.path, "/config/overlay", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ scope: "global", set: { require_approval_for_config_edits: true } }),
+        }),
+      )
+      expect(saved.effective?.require_approval_for_config_edits).toBe(true)
+    })
+  })
+
+  test.serial("does not lock the global toggle for a legacy file without the field", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    await Bun.write(path.join(home.path, ".kilocode", "kilo.json"), JSON.stringify({ username: "legacy" }))
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(body.fields.require_approval_for_config_edits).toMatchObject({
+        source: "default",
+        editable: true,
+      })
+    })
+  })
+
+  test.serial("lets a project value override a legacy global value without weakening global protection", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const legacy = path.join(home.path, ".kilo", "kilo.json")
+    await Bun.write(legacy, JSON.stringify({ require_approval_for_config_edits: true }))
+    await Bun.write(path.join(project.path, "kilo.json"), JSON.stringify({ require_approval_for_config_edits: false }))
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      const projectBody = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+      expect(projectBody.effective?.require_approval_for_config_edits).toBe(false)
+      expect(projectBody.fields.require_approval_for_config_edits).toMatchObject({
+        source: "project",
+        value: false,
+        editable: true,
+      })
+
+      // The legacy global value still protects global targets; only the project's own files opted out.
+      const globalBody = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(globalBody.fields.require_approval_for_config_edits).toMatchObject({
+        source: "global",
+        editable: false,
+        value: true,
+      })
+      expect(globalBody.fields.require_approval_for_config_edits?.reason).toContain(legacy)
+
+      // Project scope stays editable even while the global field is masked by the legacy file.
+      const saved = await json<Overlay>(
+        await req(project.path, "/config/overlay", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ scope: "project", set: { require_approval_for_config_edits: true } }),
+        }),
+      )
+      expect(saved.effective?.require_approval_for_config_edits).toBe(true)
+    })
+  })
+
+  test.serial("leaves the legacy global file byte-for-byte on overlay reads", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      // Boot the instance config before the legacy file exists: the overlay's config.get() loads the
+      // home legacy dirs on first use, so writing the fixture afterwards isolates the provenance
+      // accessor's own read instead of the loader's existing directory pass.
+      await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      const legacy = path.join(home.path, ".kilo", "kilo.json")
+      await Bun.write(legacy, JSON.stringify({ require_approval_for_config_edits: true }))
+      const before = await Bun.file(legacy).text()
+
+      const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      expect(body.fields.require_approval_for_config_edits).toMatchObject({
+        source: "global",
+        editable: false,
+        value: true,
+      })
+      expect(await Bun.file(legacy).text()).toBe(before)
+    })
+  })
+
+  test.serial("leaves the legacy global file byte-for-byte when a masked global PATCH is rejected", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+
+    await withHome(home.path, async () => {
+      await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+      const legacy = path.join(home.path, ".kilo", "kilo.json")
+      await Bun.write(legacy, JSON.stringify({ require_approval_for_config_edits: true }))
+      const before = await Bun.file(legacy).text()
+
+      const response = await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { require_approval_for_config_edits: false } }),
+      })
+      expect(response.status).toBe(400)
+      expect(await Bun.file(legacy).text()).toBe(before)
+    })
   })
 })

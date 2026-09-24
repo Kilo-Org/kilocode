@@ -23,6 +23,9 @@ export namespace KilocodeConfigOverlay {
   export const Scope = z.enum(["global", "project"])
   export type Scope = z.infer<typeof Scope>
 
+  /** The setting whose project/global precedence this module resolves specially. */
+  export const protectionField = KilocodeConfig.protectionField
+
   export const Origin = z.enum(["project", "global", "system", "default"])
   export type Origin = z.infer<typeof Origin>
 
@@ -80,7 +83,14 @@ export namespace KilocodeConfigOverlay {
     effective: Config.Info
     global: Config.Info
     sources: KilocodeConfigSources.Source[]
+    // kilocode_change start - explicit value from the legacy home global config, if any. Required so a
+    // caller cannot silently omit the legacy input and mis-report the global value as editable.
+    legacy: LegacyField | undefined
+    // kilocode_change end
   }
+
+  /** The explicit legacy home global value for the config-edit protection field, and the file that set it. */
+  export type LegacyField = KilocodeConfig.LegacyField
 
   const files = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
   const dirs = [".kilocode", ".kilo"] as const
@@ -127,9 +137,11 @@ export namespace KilocodeConfigOverlay {
     ["indexing", "embeddingBatchSize"],
     ["indexing", "scannerMaxBatchRetries"],
     ["indexing", "fileExtensions"],
+    ["require_approval_for_config_edits"],
   ] as const
 
   const collectionPaths = ["provider", "mcp", "permission", "agent", "formatter", "lsp"] as const
+
   const blocked = new Set(["__proto__", "constructor", "prototype"])
 
   export async function project(input: { directory: string; worktree?: string }): Promise<Config.Info> {
@@ -193,6 +205,7 @@ export namespace KilocodeConfigOverlay {
     const root = input.worktree && input.worktree !== "/" ? input.worktree : input.directory
     const local = await withAgents(await project(input), await projectDirs(input), false, root)
     const global = await withAgents(input.global, globalDirs(), true)
+    const legacy = input.legacy
     // kilocode_change end
     const [globalTarget, projectTarget] = await Promise.all([
       target({ ...input, scope: "global" }),
@@ -211,7 +224,10 @@ export namespace KilocodeConfigOverlay {
       sources: input.sources,
       targets,
       fields: Object.fromEntries(
-        fieldPaths.map((parts) => [parts.join("."), field(input.scope, input.effective, global, local, [...parts])]),
+        fieldPaths.map((parts) => [
+          parts.join("."),
+          field(input.scope, input.effective, global, local, [...parts], legacy),
+        ]),
       ),
       collections: Object.fromEntries(
         collectionPaths.map((key) => [key, collection(input.scope, input.effective, global, local, key)]),
@@ -270,20 +286,20 @@ export namespace KilocodeConfigOverlay {
     // kilocode_change end
     const text = await Bun.file(file).text()
     // kilocode_change start - remove variable-bearing MCP headers before resolving other project file references
-    const sanitized = sanitizeProjectMcpHeaders(ConfigParse.jsonc(text, file), file)
+    const parsed = ConfigParse.jsonc(text, file)
+    const sanitized = sanitizeProjectMcpHeaders(parsed, file)
     const content = JSON.stringify(sanitized.config) ?? text
     const expanded = await ConfigVariable.substitute({
       text: content,
       type: "path",
       path: file,
-      trusted: false,
       fileScope,
     })
-    const parsed = ConfigParse.jsonc(expanded, file)
-    if (!isRecord(parsed)) return {}
+    const next = ConfigParse.jsonc(expanded, file)
+    if (!isRecord(next)) return {}
     for (const warning of sanitized.warnings) log.warn(warning.message, { path: warning.path })
     // kilocode_change end
-    return ConfigParse.schema(Config.Info, parsed, file) as Config.Info
+    return ConfigParse.schema(Config.Info, next, file) as Config.Info
   }
 
   function field(
@@ -292,8 +308,10 @@ export namespace KilocodeConfigOverlay {
     global: Config.Info,
     local: Config.Info,
     parts: string[],
+    legacy?: LegacyField,
   ): Resolved {
     const key = parts.join(".")
+    if (key === KilocodeConfig.protectionField) return resolveProtection(scope, effective, global, local, legacy)
     const value = fieldValue(scope, effective, global, local, parts)
     const hasValue = hasFieldValue(scope, effective, global, local, parts)
     return resolved({
@@ -308,6 +326,117 @@ export namespace KilocodeConfigOverlay {
       hasLocal: has(local, parts),
     })
   }
+
+  /**
+   * Resolve the config-edit protection field across the primary global, legacy home global, project,
+   * and higher-precedence sources. A legacy home value is a global value that the primary global
+   * toggle cannot override, so at global scope the field is reported read-only with a reason naming
+   * the winning legacy file instead of as an editable value that silently ignores the write.
+   */
+  function resolveProtection(
+    scope: Scope,
+    effective: Config.Info,
+    global: Config.Info,
+    local: Config.Info,
+    legacy?: LegacyField,
+  ): Resolved {
+    const parts = [KilocodeConfig.protectionField]
+    const key = KilocodeConfig.protectionField
+    const localValue = get(local, parts)
+    const hasLocal = typeof localValue === "boolean"
+    const effectiveValue = get(effective, parts)
+    const hasEffective = typeof effectiveValue === "boolean"
+    const primaryValue = get(global, parts)
+    const hasGlobal = legacy !== undefined || typeof primaryValue === "boolean"
+    const globalValue = legacy ? legacy.value : primaryValue
+    // A higher-precedence source (env, cloud, managed) wins over both project and global config.
+    const managed = hasEffective && effectiveValue !== globalValue && !(hasLocal && effectiveValue === localValue)
+
+    if (scope === "project") {
+      if (hasLocal && effectiveValue === localValue) {
+        return {
+          key,
+          path: parts,
+          value: localValue,
+          global: globalValue,
+          local: localValue,
+          source: "project",
+          inherited: false,
+          overridden: true,
+          editable: true,
+        }
+      }
+      if (hasGlobal && effectiveValue === globalValue) {
+        return {
+          key,
+          path: parts,
+          value: globalValue,
+          global: globalValue,
+          local: undefined,
+          source: "global",
+          inherited: true,
+          overridden: false,
+          editable: true,
+        }
+      }
+      return {
+        key,
+        path: parts,
+        value: effectiveValue,
+        global: globalValue,
+        local: localValue,
+        source: hasEffective ? "system" : "default",
+        inherited: false,
+        overridden: false,
+        editable: !hasEffective,
+        reason: hasEffective ? SYSTEM_REASON : undefined,
+      }
+    }
+
+    if (hasGlobal && !managed) {
+      return {
+        key,
+        path: parts,
+        value: globalValue,
+        global: globalValue,
+        local: undefined,
+        source: "global",
+        inherited: false,
+        overridden: true,
+        editable: legacy === undefined,
+        reason: legacy
+          ? `Overridden by legacy global config at ${legacy.file}. Edit or remove that value to change it here.`
+          : undefined,
+      }
+    }
+    if (hasEffective) {
+      return {
+        key,
+        path: parts,
+        value: effectiveValue,
+        global: globalValue,
+        local: localValue,
+        source: "system",
+        inherited: false,
+        overridden: false,
+        editable: false,
+        reason: SYSTEM_REASON,
+      }
+    }
+    return {
+      key,
+      path: parts,
+      value: undefined,
+      global: undefined,
+      local: undefined,
+      source: "default",
+      inherited: false,
+      overridden: false,
+      editable: true,
+    }
+  }
+
+  const SYSTEM_REASON = "Resolved from runtime, cloud, environment, or managed config."
 
   function isIndexing(parts: string[]) {
     return parts[0] === "indexing"

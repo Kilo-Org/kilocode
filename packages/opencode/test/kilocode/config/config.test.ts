@@ -5,6 +5,7 @@ import { Effect, Fiber, Layer, Logger, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
@@ -14,6 +15,7 @@ import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { GlobalBus } from "../../../src/bus/global"
 import { Config } from "../../../src/config/config"
+import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { ConfigMarkdown } from "../../../src/config/markdown"
 import { ConfigParse } from "../../../src/config/parse"
 import { Env } from "../../../src/env"
@@ -1739,6 +1741,424 @@ describe("bash permission migration", () => {
       expect(text).toContain(`"read": "allow"`)
     } finally {
       ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
+describe("require_approval_for_config_edits source scope", () => {
+  const read = () =>
+    Effect.runPromise(Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)))
+
+  test("KILO_CONFIG_CONTENT false disables the effective project policy but not the global policy", async () => {
+    await using dir = await tmpdir()
+    await using project = await tmpdir()
+    const previous = process.env["KILO_CONFIG_CONTENT"]
+    const prev = Global.Path.config
+    process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ require_approval_for_config_edits: false })
+    ;(Global.Path as { config: string }).config = dir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          const merged = await load()
+          const global = await read()
+          expect(merged.require_approval_for_config_edits).toBe(false)
+          expect(global.require_approval_for_config_edits).toBeUndefined()
+          // The env-provided value is project-scoped: it disables the effective project policy, while
+          // the global policy that governs global config files stays enabled.
+          expect(ConfigProtection.enabled(merged)).toBe(false)
+          expect(ConfigProtection.enabled(global)).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (previous === undefined) delete process.env["KILO_CONFIG_CONTENT"]
+      else process.env["KILO_CONFIG_CONTENT"] = previous
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("KILO_CONFIG and KILO_CONFIG_DIR outside the project do not weaken the global policy", async () => {
+    const prev = Global.Path.config
+    const prevFile = Flag.KILO_CONFIG
+    const prevDir = process.env["KILO_CONFIG_DIR"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      for (const kind of ["file", "dir"] as const) {
+        await using globalDir = await tmpdir()
+        await using project = await tmpdir({ git: true })
+        await using outside = await tmpdir()
+        ;(Global.Path as { config: string }).config = globalDir.path
+        await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+        await writeConfig(outside.path, { require_approval_for_config_edits: false })
+        Flag.KILO_CONFIG = kind === "file" ? path.join(outside.path, "kilo.json") : undefined
+        if (kind === "dir") process.env["KILO_CONFIG_DIR"] = outside.path
+        else delete process.env["KILO_CONFIG_DIR"]
+        await clear()
+        await disposeAllInstances()
+
+        await provideTestInstance({
+          directory: project.path,
+          fn: async () => {
+            const merged = await load()
+            const global = await effectiveGlobal()
+            // The env value still disables the effective project policy...
+            expect(merged.require_approval_for_config_edits).toBe(false)
+            // ...but never the global policy that governs global and sibling config paths.
+            expect(global.require_approval_for_config_edits).toBe(true)
+            for (const file of [
+              path.join(globalDir.path, "kilo.json"),
+              path.join(path.dirname(project.path), "sibling", ".kilo", "kilo.json"),
+            ]) {
+              const level = ConfigProtection.classify(
+                { permission: "edit", patterns: [file], metadata: { filepath: file } },
+                project.path,
+              )
+              expect(level.external).toBe(true)
+              expect(ConfigProtection.verdict(level, { global, project: merged }).protect).toBe(true)
+            }
+          },
+        })
+      }
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      Flag.KILO_CONFIG = prevFile
+      if (prevDir === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = prevDir
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("KILO_CONFIG_DIR pointing at a legacy home root stays in the global policy", async () => {
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    const prevDir = process.env["KILO_CONFIG_DIR"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      await using globalDir = await tmpdir()
+      await using project = await tmpdir()
+      await using home = await tmpdir()
+      const legacy = path.join(home.path, ".kilo")
+      ;(Global.Path as { config: string }).config = globalDir.path
+      process.env["KILO_TEST_HOME"] = home.path
+      process.env["HOME"] = home.path
+      process.env["KILO_CONFIG_DIR"] = legacy
+      await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+      await writeConfig(legacy, { require_approval_for_config_edits: false })
+      await clear()
+      await disposeAllInstances()
+
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          // A legacy home file is real global config, even when KILO_CONFIG_DIR also names it.
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(false)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      if (prevDir === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = prevDir
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("project updates change the effective project policy while the global policy stays", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalDir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          await saveGlobal({ require_approval_for_config_edits: true })
+          expect(ConfigProtection.enabled(await load())).toBe(true)
+
+          await saveProject({ require_approval_for_config_edits: false })
+          expect(ConfigProtection.enabled(await load())).toBe(false)
+          // A project value never changes the global policy that governs global config files.
+          expect(ConfigProtection.enabled(await read())).toBe(true)
+
+          await saveProject({ require_approval_for_config_edits: true })
+          expect(ConfigProtection.enabled(await load())).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("invalidateInstance reloads the project config without dropping the cached global config", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalDir.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+      await writeConfig(project.path, { username: "before" })
+
+      await provideTestInstance({
+        directory: project.path,
+        fn: () =>
+          Effect.runPromise(
+            Effect.gen(function* () {
+              const svc = yield* Config.Service
+              const globalBefore = yield* svc.getGlobal()
+              expect((yield* svc.get()).username).toBe("before")
+
+              // A direct project edit changes only project-owned sources.
+              yield* Effect.promise(() => writeConfig(project.path, { username: "after" }))
+              yield* svc.invalidateInstance()
+              expect((yield* svc.get()).username).toBe("after")
+              // Instance-only invalidation preserves the cached global object.
+              expect(yield* svc.getGlobal()).toBe(globalBefore)
+
+              // Repeated instance invalidations (an unknown project digest reloads every time) also
+              // keep the global object warm and still reload the project config each time.
+              yield* svc.invalidateInstance()
+              yield* svc.invalidateInstance()
+              expect(yield* svc.get()).toMatchObject({ username: "after" })
+              expect(yield* svc.getGlobal()).toBe(globalBefore)
+
+              // A real global edit still propagates through the global stamp.
+              yield* Effect.promise(() => writeConfig(globalDir.path, { require_approval_for_config_edits: false }))
+              const globalFresh = yield* svc.getGlobal()
+              expect(globalFresh).not.toBe(globalBefore)
+              expect(globalFresh.require_approval_for_config_edits).toBe(false)
+            }).pipe(Effect.scoped, Effect.provide(layer)),
+          ),
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("an explicit project value overrides legacy home globals in the effective config", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    ;(Global.Path as { config: string }).config = globalDir.path
+    process.env["KILO_TEST_HOME"] = home.path
+    process.env["HOME"] = home.path
+    await writeConfig(path.join(home.path, ".kilo"), { require_approval_for_config_edits: true })
+    await clear()
+    await disposeAllInstances()
+
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          // Without a project value the legacy home global is the effective fallback.
+          expect((await load()).require_approval_for_config_edits).toBe(true)
+          expect((await read()).require_approval_for_config_edits).toBeUndefined()
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+
+          // An explicit project value overrides the legacy home global for the effective project
+          // config that the permission policy and settings overlay read...
+          await saveProject({ require_approval_for_config_edits: false })
+          expect((await load()).require_approval_for_config_edits).toBe(false)
+          // ...while the effective global policy still reports the legacy value.
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("reports the winning legacy home file with the same interpretation as the effective global", async () => {
+    await using globalDir = await tmpdir()
+    await using project = await tmpdir()
+    await using home = await tmpdir()
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    ;(Global.Path as { config: string }).config = globalDir.path
+    process.env["KILO_TEST_HOME"] = home.path
+    process.env["HOME"] = home.path
+    // `.kilocode` is read first; `.kilo` wins. The malformed later file must be skipped without
+    // erasing the valid `.kilo` value. Both surfaces share one interpretation, not one scan: each
+    // call reads legacy fresh, so the compared outcomes come from separate reads of the same source.
+    const primary = path.join(globalDir.path, "kilo.json")
+    const winner = path.join(home.path, ".kilo", "kilo.json")
+    await writeConfig(path.join(home.path, ".kilocode"), { require_approval_for_config_edits: true }, "kilo.jsonc")
+    await writeConfig(path.join(home.path, ".kilo"), { require_approval_for_config_edits: false })
+    await Filesystem.write(path.join(home.path, ".kilo", "opencode.json"), "{ not json")
+    await writeConfig(globalDir.path, { require_approval_for_config_edits: true })
+    await clear()
+    await disposeAllInstances()
+
+    const read = <A>(fn: (svc: Config.Interface) => Effect.Effect<A>) =>
+      Effect.runPromise(Config.Service.use(fn).pipe(Effect.scoped, Effect.provide(layer)))
+    const primaryBefore = await Bun.file(primary).text()
+    const legacyBefore = await Bun.file(winner).text()
+
+    try {
+      await provideTestInstance({
+        directory: project.path,
+        fn: async () => {
+          // Reading provenance must not rewrite the legacy file or load the primary global config.
+          expect(await read((svc) => svc.getLegacyGlobalField())).toEqual({ value: false, file: winner })
+          expect(await Bun.file(winner).text()).toBe(legacyBefore)
+          expect(await Bun.file(primary).text()).toBe(primaryBefore)
+
+          // getEffectiveGlobal keeps the loader's normal parse for the effective global: same legacy
+          // interpretation, and the pre-existing $schema stamp is preserved. Only the provenance
+          // accessor is pure.
+          expect((await read((svc) => svc.getEffectiveGlobal())).require_approval_for_config_edits).toBe(false)
+          expect(await Bun.file(winner).text()).toContain("$schema")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("keeps a legacy home root in the global policy when home is the project", async () => {
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    const prevContent = process.env["KILO_CONFIG_CONTENT"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      for (const c of [
+        { id: "legacy-off", primary: true, legacy: false },
+        { id: "legacy-on", primary: false, legacy: true },
+      ]) {
+        await using home = await tmpdir({ git: true })
+        const nested = path.join(home.path, "xdg", "kilo")
+        ;(Global.Path as { config: string }).config = nested
+        process.env["KILO_TEST_HOME"] = home.path
+        process.env["HOME"] = home.path
+        // Opposite inline value must not leak into the global policy.
+        process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ require_approval_for_config_edits: !c.legacy })
+        await writeConfig(nested, { require_approval_for_config_edits: c.primary })
+        await writeConfig(path.join(home.path, ".kilo"), { require_approval_for_config_edits: c.legacy })
+        await clear()
+        await disposeAllInstances()
+
+        await provideTestInstance({
+          directory: home.path,
+          fn: async () => {
+            const global = await effectiveGlobal()
+            expect(global.require_approval_for_config_edits).toBe(c.legacy)
+            const file = path.join(nested, "kilo.json")
+            const level = ConfigProtection.classify(
+              { permission: "edit", patterns: [file], metadata: { filepath: file } },
+              home.path,
+            )
+            expect(level.external).toBe(true)
+            expect(level.inside).toBe(false)
+            expect(
+              ConfigProtection.verdict(level, { global, project: { require_approval_for_config_edits: !c.legacy } })
+                .protect,
+            ).toBe(c.legacy)
+          },
+        })
+      }
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
+      if (prevContent === undefined) delete process.env["KILO_CONFIG_CONTENT"]
+      else process.env["KILO_CONFIG_CONTENT"] = prevContent
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("a project nested under a legacy home dir does not enter the global policy", async () => {
+    const prev = Global.Path.config
+    const prevTestHome = process.env["KILO_TEST_HOME"]
+    const prevHome = process.env["HOME"]
+    const effectiveGlobal = () =>
+      Effect.runPromise(
+        Config.Service.use((svc) => svc.getEffectiveGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+
+    try {
+      await using home = await tmpdir()
+      const primary = path.join(home.path, "xdg", "kilo")
+      const project = path.join(home.path, ".kilo", "work", "repo")
+      ;(Global.Path as { config: string }).config = primary
+      process.env["KILO_TEST_HOME"] = home.path
+      process.env["HOME"] = home.path
+      await writeConfig(primary, { require_approval_for_config_edits: true })
+      await writeConfig(project, { require_approval_for_config_edits: false })
+      await writeConfig(path.join(project, ".kilo"), { require_approval_for_config_edits: false })
+      await clear()
+      await disposeAllInstances()
+
+      await provideTestInstance({
+        directory: project,
+        fn: async () => {
+          expect((await effectiveGlobal()).require_approval_for_config_edits).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      if (prevTestHome === undefined) delete process.env["KILO_TEST_HOME"]
+      else process.env["KILO_TEST_HOME"] = prevTestHome
+      if (prevHome === undefined) delete process.env["HOME"]
+      else process.env["HOME"] = prevHome
       await clear()
       await disposeAllInstances()
     }
