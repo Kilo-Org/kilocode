@@ -627,4 +627,33 @@ describe("RemoteProtocol", () => {
       })
     }
   })
+
+  // scheduled wakeups: a scheduled row carries its due time on the wire
+
+  test("session info round-trips scheduledAt with scheduled status", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "scheduled", title: "t", scheduledAt: "2026-08-28T12:34:56.789Z" }],
+    }
+    const json = JSON.parse(JSON.stringify(msg))
+    const result = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].status).toBe("scheduled")
+      expect(result.data.sessions[0].scheduledAt).toBe("2026-08-28T12:34:56.789Z")
+    }
+  })
+
+  test("session info omits scheduledAt when not set (legacy)", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "idle", title: "t" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].scheduledAt).toBeUndefined()
+      expect(result.data.sessions[0]).not.toHaveProperty("scheduledAt")
+    }
+  })
 })

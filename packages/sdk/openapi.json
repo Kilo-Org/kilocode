@@ -30654,6 +30654,20 @@
             },
             "required": ["type", "requestID", "message"],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["scheduled"]
+              },
+              "scheduledAt": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "scheduledAt"],
+            "additionalProperties": false
           }
         ]
       },
