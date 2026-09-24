@@ -1385,6 +1385,21 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - snapshot values preserve default resolution`() {
+            assertEquals(true, KiloCliDataParser.parseConfig("""{"snapshot":true}""").snapshot)
+            assertEquals(false, KiloCliDataParser.parseConfig("""{"snapshot":false}""").snapshot)
+            assertNull(KiloCliDataParser.parseConfig("""{"model":"openai/gpt"}""").snapshot)
+        }
+
+        @Test
+        fun `parseConfig - malformed snapshot does not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","snapshot":{}}""")
+
+            assertEquals("openai/gpt", cfg.model)
+            assertNull(cfg.snapshot)
+        }
+
+        @Test
         fun `parseConfig - agent overrides and permissions`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""
@@ -2616,6 +2631,18 @@ class KiloCliDataParserTest {
         @Test
         fun `buildConfigPatch - shared_agent_board omitted when null`() {
             assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
+        }
+
+        @Test
+        fun `buildConfigPatch - snapshot writes explicit booleans`() {
+            assertEquals(
+                "{\"snapshot\":true}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = true)),
+            )
+            assertEquals(
+                "{\"snapshot\":false}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = false)),
+            )
         }
 
         @Test

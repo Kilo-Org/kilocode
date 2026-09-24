@@ -75,8 +75,16 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
-                id="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.checkpoints"
                 groupWeight="1"
+                instance="ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.checkpoints.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.agentBehavior"
+                groupWeight="0"
                 instance="ai.kilocode.client.settings.agents.AgentBehaviorConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.displayName"/>
@@ -84,7 +92,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.context"
-                groupWeight="-1"
+                groupWeight="-2"
                 instance="ai.kilocode.client.settings.context.ContextConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.context.displayName"/>
@@ -92,7 +100,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.autoApprove"
-                groupWeight="0"
+                groupWeight="-1"
                 instance="ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.autoApprove.displayName"/>
@@ -100,7 +108,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.integrations"
-                groupWeight="-2"
+                groupWeight="-3"
                 instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.integrations.displayName"/>
@@ -108,7 +116,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.advanced"
-                groupWeight="-3"
+                groupWeight="-4"
                 instance="ai.kilocode.client.settings.AdvancedConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.advanced.displayName"/>

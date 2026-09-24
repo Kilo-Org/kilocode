@@ -634,6 +634,7 @@ object KiloCliDataParser {
             agent = parseAgentConfig(obj["agent"].obj()),
             permission = parsePermissionConfig(obj["permission"].obj()),
             shared_agent_board = runCatching { obj.flagOrNull("shared_agent_board") }.getOrNull(),
+            snapshot = runCatching { obj.flagOrNull("snapshot") }.getOrNull(),
         )
     }.getOrDefault(ConfigDto())
 
@@ -1064,6 +1065,7 @@ object KiloCliDataParser {
             if (permission != null) put("permission", buildPermission(permission))
 
             if (patch.shared_agent_board != null) put("shared_agent_board", patch.shared_agent_board)
+            if (patch.snapshot != null) put("snapshot", patch.snapshot)
 
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {

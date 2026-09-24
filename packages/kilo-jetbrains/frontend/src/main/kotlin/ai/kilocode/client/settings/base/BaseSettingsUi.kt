@@ -18,6 +18,7 @@ import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.options.ex.Settings
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.platform.project.ProjectId
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +57,8 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
         private set
     protected var projectDirectory: String? = null
         private set
-    protected val hasProjectDirectory get() = projectDirectory != null || hint != null
+    private var projectLoading = false
+    protected val hasProjectDirectory get() = projectDirectory != null || hint != null || projectLoading
     protected var workspaceLoading = false
         private set
     protected var workspaceLoaded = false
@@ -85,6 +87,24 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
             val dir = workspaces.resolveProjectDirectory(null, path)
             withContext(edt) {
                 projectDirectory = dir
+                workspaceLoaded = false
+                syncContent()
+                load()
+            }
+        }
+    }
+
+    /** Resolve an exact frontend project before loading its workspace-backed settings. */
+    @RequiresEdt
+    protected fun loadProject(projectId: ProjectId?, hint: String) {
+        if (hint.isBlank() || projectLoading || projectDirectory != null) return
+        projectLoading = true
+        syncContent()
+        jobs += scope.launch {
+            val dir = workspaces.resolveProjectDirectory(projectId, hint)
+            withContext(edt) {
+                projectDirectory = dir
+                projectLoading = false
                 workspaceLoaded = false
                 syncContent()
                 load()

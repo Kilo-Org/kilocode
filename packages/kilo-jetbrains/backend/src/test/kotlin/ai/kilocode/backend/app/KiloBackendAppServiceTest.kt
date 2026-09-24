@@ -331,6 +331,20 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `update config patches snapshot and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(snapshot = false))
+
+        assertEquals("{\"snapshot\":false}", mock.lastConfigPatchBody)
+        val cfg = appStateDto(state).config
+        assertEquals(false, cfg?.snapshot)
+        assertEquals(false, svc.config?.snapshot)
+    }
+
+    @Test
     fun `ready dto maps model config`() = runBlocking {
         mock.config = """{"model":"openai/gpt","agent":{"plan":{"model":"anthropic/claude","variant":"high"}}}"""
         val svc = create()

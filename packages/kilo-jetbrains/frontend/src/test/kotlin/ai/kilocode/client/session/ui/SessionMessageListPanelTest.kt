@@ -1399,7 +1399,8 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertNotNull(find<DialogView>(banner))
         assertNotNull(components(banner).filterIsInstance<PartHeader>().singleOrNull())
 
-        val buttons = components(banner).filterIsInstance<JButton>().filter { it.text.isNotEmpty() }
+        val buttons = components(banner).filterIsInstance<JButton>()
+            .filter { it !is ActionLink && it.text.isNotEmpty() }
         assertEquals(
             listOf(KiloBundle.message("revert.banner.redo"), KiloBundle.message("revert.banner.redo.all")),
             buttons.map { it.text },
@@ -1662,6 +1663,31 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             .first { it.text == KiloBundle.message("revert.banner.workspace.snapshotsDisabled") }
 
         assertTrue(notice.isVisible)
+    }
+
+    fun `test rollback banner opens checkpoints settings only when snapshots are disabled`() {
+        var opened = false
+        val banner = RevertBanner(model, {}, {}, {}, openSettingsAction = { opened = true })
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", workspace = "snapshots-disabled"))
+        banner.update()
+
+        val link = components(banner).filterIsInstance<ActionLink>()
+            .first { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") }
+        assertTrue(link.isVisible)
+        link.doClick()
+        assertTrue(opened)
+
+        model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
+        banner.update()
+
+        assertFalse(link.isVisible)
+        assertTrue(link.parent.isVisible)
+
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1", workspace = "restored"))
+        banner.update()
+
+        assertFalse(link.parent.isVisible)
     }
 
     fun `test rollback banner explains missing checkpoint`() {
