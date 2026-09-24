@@ -1,17 +1,23 @@
 /**
  * Structural and policy validation for Kilo SBOM documents.
  *
- * This is deliberately stricter than the CycloneDX JSON Schema in the places
- * that matter for CRA evidence: an SBOM that validates against the schema but
- * does not name the artifact it describes, or whose dependency graph points at
- * components that were filtered out, is useless to a market surveillance
- * authority. Schema-shaped checks and Kilo policy checks are reported together
- * so a release either has usable evidence or a precise list of what is wrong.
+ * Schema-shaped correctness -- required properties, type/enum/pattern
+ * conformance, hash and licence object shapes, and everything else the
+ * official CycloneDX 1.6 JSON Schema already expresses -- is delegated to
+ * `@cyclonedx/cyclonedx-library`'s ajv-backed validator instead of being
+ * re-implemented by hand.
+ *
+ * What remains here is Kilo policy the schema cannot express: an SBOM that is
+ * schema-valid but does not name the artifact it describes, or whose
+ * dependency graph points at components that were filtered out, is still
+ * useless to a market surveillance authority. Schema issues and policy issues
+ * are reported together so a release either has usable evidence or a precise
+ * list of what is wrong.
  */
 
-import { PROPERTY_NAMESPACE, SPEC_VERSION, serial } from "./model"
+import { createRequire } from "node:module"
+import { PROPERTY_NAMESPACE, serial } from "./model"
 
-const SERIAL = /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SHA256 = /^[0-9a-f]{64}$/
 const SCOPES = new Set(["required", "optional", "excluded"])
 const DELIVERIES = new Set(["contained", "provided", "runtime"])
@@ -19,47 +25,72 @@ const VERSIONED = new Set(["library", "framework", "application", "container", "
 
 type Record_ = Record<string, any>
 
+type SchemaIssue = { instancePath?: string; message?: string }
+type CycloneDxLibrary = {
+  Validation: {
+    JsonValidator: new (version: string) => { validate(data: string): Promise<null | SchemaIssue | SchemaIssue[]> }
+    MissingOptionalDependencyError: new (...args: unknown[]) => Error
+  }
+  Spec: { Version: { v1dot6: string } }
+}
+
+// `@cyclonedx/cyclonedx-library` ships a dual node/browser conditional
+// `types` export, and `packages/opencode`'s shared tsconfig sets
+// `customConditions: ["browser"]` project-wide (an upstream opencode
+// setting, applied to the whole program rather than per-file). That makes a
+// typed `import` of this package resolve the browser variant everywhere that
+// tsconfig applies -- including this Node-only script, whose browser variant
+// does not implement `JsonValidator` at all. Loading it through `require()`
+// with an explicit local type for the handful of members actually used
+// sidesteps that conditional type resolution instead of overriding a shared,
+// non-Kilo tsconfig setting.
+const cdx = createRequire(import.meta.url)("@cyclonedx/cyclonedx-library") as CycloneDxLibrary
+
+const schema = new cdx.Validation.JsonValidator(cdx.Spec.Version.v1dot6)
+
+/**
+ * Run the document through the official CycloneDX 1.6 JSON Schema.
+ *
+ * A missing `ajv`/`ajv-formats`/`ajv-formats-draft2019` install degrades to a
+ * single reported issue rather than throwing, matching how `scan.ts` degrades
+ * when Syft is unavailable: schema coverage can be temporarily lost without
+ * making the whole validator unusable.
+ */
+async function schemaIssues(input: unknown) {
+  const result = await schema.validate(JSON.stringify(input)).catch((err: unknown) => {
+    if (err instanceof cdx.Validation.MissingOptionalDependencyError) {
+      return [{ message: `schema validator unavailable: ${err.message}` }]
+    }
+    throw err
+  })
+  if (!result) return []
+  const errors = Array.isArray(result) ? result : [result]
+  return errors.map((issue: SchemaIssue) => {
+    const path = issue.instancePath || "<root>"
+    return `schema: ${path} ${issue.message ?? JSON.stringify(issue)}`
+  })
+}
+
 function property(bom: Record_, name: string) {
   const list: Record_[] = bom.metadata?.properties ?? []
   return list.find((item) => item?.name === `${PROPERTY_NAMESPACE}:${name}`)?.value
 }
 
-export function validate(input: unknown) {
-  const issues: string[] = []
+export async function validate(input: unknown) {
   const bom = input as Record_
   if (typeof bom !== "object" || bom === null) return ["SBOM is not an object"]
 
-  if (bom.bomFormat !== "CycloneDX") issues.push(`bomFormat must be "CycloneDX", got ${JSON.stringify(bom.bomFormat)}`)
-  if (bom.specVersion !== SPEC_VERSION) {
-    issues.push(`specVersion must be "${SPEC_VERSION}", got ${JSON.stringify(bom.specVersion)}`)
-  }
-  if (typeof bom.serialNumber !== "string" || !SERIAL.test(bom.serialNumber)) {
-    issues.push(`serialNumber must be a urn:uuid, got ${JSON.stringify(bom.serialNumber)}`)
-  }
-  if (!Number.isInteger(bom.version) || bom.version < 1) issues.push("version must be an integer >= 1")
+  const issues = await schemaIssues(input)
 
   const meta = bom.metadata
-  if (typeof meta !== "object" || meta === null) {
-    issues.push("metadata is required")
-    return issues
-  }
-  if (typeof meta.timestamp !== "string" || Number.isNaN(Date.parse(meta.timestamp))) {
-    issues.push("metadata.timestamp must be an ISO-8601 instant")
-  }
+  if (typeof meta !== "object" || meta === null) return [...issues, "metadata is required"]
   const tools: Record_[] = meta.tools?.components ?? []
   if (!tools.some((tool) => tool?.name === "kilo-sbom")) {
     issues.push("metadata.tools.components must record the generating tool")
   }
 
   const root = meta.component
-  if (typeof root !== "object" || root === null) {
-    issues.push("metadata.component is required")
-    return issues
-  }
-  if (!root.name) issues.push("metadata.component.name is required")
-  if (!root.version) issues.push("metadata.component.version is required")
-  if (!root.type) issues.push("metadata.component.type is required")
-  if (!root["bom-ref"]) issues.push("metadata.component.bom-ref is required")
+  if (typeof root !== "object" || root === null) return [...issues, "metadata.component is required"]
 
   const subject = property(bom, "subject:name")
   const digest = property(bom, "subject:sha256")
@@ -80,17 +111,11 @@ export function validate(input: unknown) {
     issues.push("serialNumber is not derived from the subject digest, so the document is not reproducible")
   }
 
-  if (!Array.isArray(bom.components)) {
-    issues.push("components must be an array")
-    return issues
-  }
+  if (!Array.isArray(bom.components)) return [...issues, "components must be an array"]
 
   const refs = new Set<string>([root["bom-ref"]])
   for (const item of bom.components as Record_[]) {
     const name = item?.name ?? "<unnamed>"
-    if (!item?.name) issues.push("every component requires a name")
-    if (!item?.type) issues.push(`component ${name} requires a type`)
-    if (!item?.["bom-ref"]) issues.push(`component ${name} requires a bom-ref`)
     if (item?.["bom-ref"]) {
       if (refs.has(item["bom-ref"])) issues.push(`duplicate bom-ref ${item["bom-ref"]}`)
       refs.add(item["bom-ref"])
@@ -111,10 +136,8 @@ export function validate(input: unknown) {
     }
   }
 
-  if (!Array.isArray(bom.dependencies)) {
-    issues.push("dependencies must be an array")
-    return issues
-  }
+  if (!Array.isArray(bom.dependencies)) return [...issues, "dependencies must be an array"]
+
   const declared = new Set<string>()
   for (const edge of bom.dependencies as Record_[]) {
     if (!edge?.ref) {
@@ -136,7 +159,7 @@ export function validate(input: unknown) {
   return issues
 }
 
-export function assertValid(bom: unknown, label: string) {
-  const issues = validate(bom)
+export async function assertValid(bom: unknown, label: string) {
+  const issues = await validate(bom)
   if (issues.length) throw new Error(`${label} is not a valid Kilo SBOM:\n- ${issues.join("\n- ")}`)
 }

@@ -20,11 +20,11 @@ async function scratch() {
 }
 
 describe("compose", () => {
-  test("produces a valid CycloneDX 1.6 document for an artifact with no dependencies", () => {
+  test("produces a valid CycloneDX 1.6 document for an artifact with no dependencies", async () => {
     const document = bom()
     expect(document.bomFormat).toBe("CycloneDX")
     expect(document.specVersion).toBe("1.6")
-    expect(validate(document)).toEqual([])
+    expect(await validate(document)).toEqual([])
   })
 
   test("binds the document to the exact artifact digest", () => {
@@ -64,7 +64,7 @@ describe("compose", () => {
     expect(properties).toContainEqual({ name: "kilocode:build:tag", value: "jetbrains/v1.2.3" })
   })
 
-  test("maps delivery onto CycloneDX scope so host-provided code is not claimed as shipped", () => {
+  test("maps delivery onto CycloneDX scope so host-provided code is not claimed as shipped", async () => {
     const document = bom({
       components: [
         { type: "library", name: "okhttp", version: "4.12.0", purl: "pkg:maven/okhttp@4.12.0", delivery: "contained" },
@@ -74,7 +74,7 @@ describe("compose", () => {
     })
     const scopes = Object.fromEntries(document.components.map((item: any) => [item.name, item.scope]))
     expect(scopes).toEqual({ okhttp: "required", intellij: "excluded", ripgrep: "optional" })
-    expect(validate(document)).toEqual([])
+    expect(await validate(document)).toEqual([])
   })
 
   test("records coverage gaps instead of silently omitting unknown data", () => {
@@ -145,7 +145,7 @@ describe("compose", () => {
     })
   })
 
-  test("attaches unparented components to the artifact root", () => {
+  test("attaches unparented components to the artifact root", async () => {
     const document = bom({
       components: [
         { type: "library", name: "a", version: "1", purl: "pkg:npm/a@1" },
@@ -156,17 +156,17 @@ describe("compose", () => {
     const root = document.dependencies.find((item) => item.ref.startsWith("kilocode:artifact:"))
     expect(root?.dependsOn).toEqual(["pkg:npm/a@1"])
     expect(document.dependencies.find((item) => item.ref === "pkg:npm/a@1")?.dependsOn).toEqual(["pkg:npm/b@1"])
-    expect(validate(document)).toEqual([])
+    expect(await validate(document)).toEqual([])
   })
 
-  test("drops dependency edges whose endpoints were filtered out", () => {
+  test("drops dependency edges whose endpoints were filtered out", async () => {
     const document = bom({
       components: [{ type: "library", name: "a", version: "1", purl: "pkg:npm/a@1" }],
       dependencies: { "pkg:npm/a@1": ["pkg:npm/removed@1"], "pkg:npm/ghost@1": ["pkg:npm/a@1"] },
     })
     expect(document.dependencies.map((item) => item.ref)).not.toContain("pkg:npm/ghost@1")
     expect(document.dependencies.flatMap((item) => item.dependsOn)).not.toContain("pkg:npm/removed@1")
-    expect(validate(document)).toEqual([])
+    expect(await validate(document)).toEqual([])
   })
 })
 
@@ -223,7 +223,7 @@ describe("dedupe", () => {
     ])
   })
 
-  test("keeps delivery out of the ref so dependency edges stay resolvable", () => {
+  test("keeps delivery out of the ref so dependency edges stay resolvable", async () => {
     const document = bom({
       components: [
         { type: "application", name: "cli", version: "1", ref: "cli", delivery: "runtime" },
@@ -231,7 +231,7 @@ describe("dedupe", () => {
       ],
       dependencies: { cli: ["pkg:npm/dep@1"] },
     })
-    expect(validate(document)).toEqual([])
+    expect(await validate(document)).toEqual([])
     const root = document.dependencies.find((item) => item.ref.startsWith("kilocode:artifact:"))
     expect(root?.dependsOn).toEqual(["cli"])
     expect(document.dependencies.find((item) => item.ref === "cli")?.dependsOn).toEqual(["pkg:npm/dep@1"])
@@ -239,52 +239,65 @@ describe("dedupe", () => {
 })
 
 describe("validate", () => {
-  test("rejects a document that does not identify its artifact", () => {
+  test("rejects a document that does not identify its artifact", async () => {
     const document = bom()
     document.metadata.properties = []
-    expect(validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("kilocode:subject:name")]))
+    expect(await validate(document)).toEqual(
+      expect.arrayContaining([expect.stringContaining("kilocode:subject:name")]),
+    )
   })
 
-  test("rejects a digest that disagrees with the root component hash", () => {
+  test("rejects a digest that disagrees with the root component hash", async () => {
     const document = bom()
     ;(document.metadata.component as any).hashes = [{ alg: "SHA-256", content: "b".repeat(64) }]
-    expect(validate(document)).toEqual(
+    expect(await validate(document)).toEqual(
       expect.arrayContaining([expect.stringContaining("does not match subject digest")]),
     )
   })
 
-  test("rejects a non-reproducible serial number", () => {
+  test("rejects a non-reproducible serial number", async () => {
     const document = bom()
     document.serialNumber = "urn:uuid:00000000-0000-5000-8000-000000000000"
-    expect(validate(document)).toEqual(
+    expect(await validate(document)).toEqual(
       expect.arrayContaining([expect.stringContaining("not derived from the subject digest")]),
     )
   })
 
-  test("rejects dangling dependency references", () => {
+  test("rejects dangling dependency references", async () => {
     const document = bom({ components: [{ type: "library", name: "a", version: "1", purl: "pkg:npm/a@1" }] })
     document.dependencies.push({ ref: "pkg:npm/a@1", dependsOn: ["pkg:npm/missing@1"] })
-    expect(validate(document)).toEqual(
+    expect(await validate(document)).toEqual(
       expect.arrayContaining([expect.stringContaining("does not resolve to a component")]),
     )
   })
 
-  test("rejects a library without a version", () => {
+  test("rejects a library without a version", async () => {
     const document = bom({ components: [{ type: "library", name: "mystery" }] })
-    expect(validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("requires a version")]))
+    expect(await validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("requires a version")]))
   })
 
-  test("rejects a provided component that claims to be shipped", () => {
+  test("rejects a provided component that claims to be shipped", async () => {
     const document = bom({
       components: [{ type: "framework", name: "intellij", version: "2026.1", delivery: "provided" }],
     })
     ;(document.components[0] as any).scope = "required"
-    expect(validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("host-provided")]))
+    expect(await validate(document)).toEqual(expect.arrayContaining([expect.stringContaining("host-provided")]))
   })
 
-  test("rejects malformed input rather than throwing", () => {
-    expect(validate(null)).toEqual(["SBOM is not an object"])
-    expect(validate({ bomFormat: "SPDX" })).toEqual(expect.arrayContaining([expect.stringContaining("bomFormat")]))
+  test("rejects malformed input rather than throwing", async () => {
+    expect(await validate(null)).toEqual(["SBOM is not an object"])
+    expect(await validate({ bomFormat: "SPDX", specVersion: "1.6" })).toEqual(
+      expect.arrayContaining([expect.stringContaining("bomFormat")]),
+    )
+  })
+
+  test("delegates schema-shape checks to the CycloneDX JSON Schema", async () => {
+    // Structural correctness (required properties, enums, hash/licence
+    // shapes) is no longer hand-rolled; a document missing a required
+    // top-level property is caught by the schema validator instead.
+    expect(await validate({ bomFormat: "CycloneDX" })).toEqual(
+      expect.arrayContaining([expect.stringContaining("schema:")]),
+    )
   })
 })
 
@@ -414,10 +427,10 @@ describe("deps", () => {
     expect(result.gaps).toEqual([{ component: "ghost", reason: "not resolvable from <root> in bun.lock" }])
   })
 
-  test("composes into a valid document", () => {
+  test("composes into a valid document", async () => {
     const result = Deps.closure({ lock, workspace: "packages/app", platform: { os: "linux", arch: "x64" } })
     const document = bom({ components: result.components, dependencies: result.dependencies, gaps: result.gaps })
-    expect(validate(document)).toEqual([])
+    expect(await validate(document)).toEqual([])
   })
 
   test("reads the repository lockfile and resolves the CLI workspace", async () => {
@@ -430,7 +443,7 @@ describe("deps", () => {
     expect(result.components.length).toBeGreaterThan(50)
     expect(result.components.every((item) => item.version)).toBe(true)
     const document = bom({ components: result.components, dependencies: result.dependencies, gaps: result.gaps })
-    expect(validate(document)).toEqual([])
+    expect(await validate(document)).toEqual([])
   })
 
   test("enriches licences from the installed tree and reports unknown ones", async () => {

@@ -123,7 +123,7 @@ export async function verify(input: { manifest: Manifest; dir: string }): Promis
       continue
     }
 
-    const problems = validate(bom)
+    const problems = await validate(bom)
     if (problems.length) {
       issues.push(...problems.map((problem) => `${entry.sbom}: ${problem}`))
       missing++

@@ -8,6 +8,8 @@
  */
 
 import { createHash } from "node:crypto"
+import { Contrib, Models } from "@cyclonedx/cyclonedx-library"
+import spdxExpressionParse from "spdx-expression-parse"
 
 export const SPEC_VERSION = "1.6"
 export const PROPERTY_NAMESPACE = "kilocode"
@@ -157,11 +159,33 @@ function properties(entries: Record<string, string | undefined>) {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+const licenseFactory = new Contrib.License.Factories.LicenseFactory(spdxExpressionParse)
+
+function disjunctive(license: InstanceType<typeof Models.SpdxLicense> | InstanceType<typeof Models.NamedLicense>) {
+  return license instanceof Models.SpdxLicense ? { license: { id: license.id } } : { license: { name: license.name } }
+}
+
+/**
+ * Build a CycloneDX `licenseChoice` array.
+ *
+ * The schema is EITHER a list of `{license: ...}` entries OR a single-item
+ * tuple of exactly one `{expression: ...}`; the two shapes cannot mix. A
+ * single value is classified with the full SPDX-id / expression / named
+ * fallback chain (`LicenseFactory.makeFromString`, case-normalising known
+ * SPDX ids via `fixupSpdxId` and falling back to a named licence for anything
+ * else, e.g. the real "BSD" and "MIT/X11" values some installed packages
+ * declare). Several values are always coerced to SPDX-id-or-named licenses
+ * (`makeDisjunctive`, which never returns an expression), so unioning
+ * licences reported by independent generators (`dedupe()`) can never produce
+ * the invalid mixed array a plain string value would otherwise risk.
+ */
 function licenses(values?: string[]) {
   if (!values?.length) return undefined
-  return values.map((value) =>
-    /[\s()]|(?: OR )|(?: AND )|(?: WITH )/.test(value) ? { expression: value } : { license: { id: value } },
-  )
+  if (values.length === 1) {
+    const license = licenseFactory.makeFromString(values[0]!)
+    return license instanceof Models.LicenseExpression ? [{ expression: license.expression }] : [disjunctive(license)]
+  }
+  return values.map((value) => disjunctive(licenseFactory.makeDisjunctive(value)))
 }
 
 const SCOPE: Record<Delivery, "required" | "optional" | "excluded"> = {

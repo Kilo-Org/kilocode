@@ -69,7 +69,7 @@ describe("jetbrains plugin", () => {
       const result = await JetBrains.plugin({ file, variant: "lean", version: "1.2.3", cli: "9.9.9" })
       const bom = await Bun.file(result.sidecar).json()
 
-      expect(validate(bom)).toEqual([])
+      expect(await validate(bom)).toEqual([])
       for (const platform of JetBrains.PLATFORMS) {
         expect(scope(bom, `kilo-cli-${platform}`)).toBe("optional")
       }
@@ -131,7 +131,7 @@ describe("jetbrains plugin", () => {
       const result = await JetBrains.plugin({ file, variant: "bundled", version: "1.2.3", cli: "9.9.9" })
       const bom = await Bun.file(result.sidecar).json()
 
-      expect(validate(bom)).toEqual([])
+      expect(await validate(bom)).toEqual([])
       for (const platform of JetBrains.PLATFORMS) {
         expect(scope(bom, `kilo-cli-${platform}`)).toBe("required")
       }
@@ -233,7 +233,7 @@ describe("vscode vsix", () => {
       const result = await VsCode.vsix({ file, target: "linux-x64", release })
       const bom = await Bun.file(result.sidecar).json()
 
-      expect(validate(bom)).toEqual([])
+      expect(await validate(bom)).toEqual([])
       expect(bom.metadata.properties).toContainEqual({ name: "kilocode:embedded:cli", value: "linux-x64" })
       expect(names(bom)).toContain("@ffmpeg-installer/linux-x64")
       expect(names(bom)).toContain("bubblewrap")
@@ -250,7 +250,7 @@ describe("vscode vsix", () => {
       const result = await VsCode.vsix({ file, target: "win32-arm64", release })
       const bom = await Bun.file(result.sidecar).json()
 
-      expect(validate(bom)).toEqual([])
+      expect(await validate(bom)).toEqual([])
       expect(names(bom).filter((name: string) => name.startsWith("@ffmpeg-installer/"))).toEqual([])
       expect(names(bom)).not.toContain("bubblewrap")
     } finally {

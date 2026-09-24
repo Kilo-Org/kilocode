@@ -37,7 +37,7 @@ async function main() {
           return undefined
         })
       if (!bom) continue
-      issues.push(...validate(bom).map((issue: string) => `${path.basename(file)}: ${issue}`))
+      issues.push(...(await validate(bom)).map((issue: string) => `${path.basename(file)}: ${issue}`))
     }
     Policy.gate({ label: `validate ${files.length} sidecar(s)`, issues })
     return

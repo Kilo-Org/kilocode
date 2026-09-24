@@ -55,7 +55,7 @@ describe("archive", () => {
       const result = await Sbom.archive({ file, target: Sbom.target("linux-x64"), release })
       const bom = await Bun.file(result.sidecar).json()
 
-      expect(validate(bom)).toEqual([])
+      expect(await validate(bom)).toEqual([])
       expect(bom.components.length).toBeGreaterThan(100)
       expect(result.entry).toMatchObject({ artifact: "kilo-linux-x64.tar.gz", target: "linux-x64" })
       expect(bom.metadata.component.hashes[0].content).toBe(result.entry.sha256)
@@ -153,7 +153,7 @@ describe("npm package", () => {
       await Bun.write(file, "a")
       const result = await Sbom.npmPackage({ file, name: "@kilocode/cli", release })
       const bom = await Bun.file(result.sidecar).json()
-      expect(validate(bom)).toEqual([])
+      expect(await validate(bom)).toEqual([])
       const root = bom.dependencies.find((item: any) => item.ref.startsWith("kilocode:artifact:"))
       expect(root.dependsOn).toHaveLength(12)
       expect(result.entry).toMatchObject({ distribution: "npm" })
