@@ -1,3 +1,4 @@
+# kilocode_change - new file
 name: Dependabot auto-merge
 
 # Runs on a schedule, not `pull_request`: GitHub gives workflow runs

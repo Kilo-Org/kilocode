@@ -1,3 +1,4 @@
+# kilocode_change - new file
 name: Security findings notify
 
 # Posts open Dependabot security alerts (critical/high) to Slack, and pings

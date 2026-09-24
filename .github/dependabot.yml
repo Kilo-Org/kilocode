@@ -1,3 +1,4 @@
+# kilocode_change - new file
 version: 2
 updates:
   # Bun workspace root (packages/*). Known overlap: packages/kilo-docs also
@@ -57,36 +58,11 @@ updates:
           - "minor"
           - "patch"
 
-  - package-ecosystem: "docker"
-    directory: "/packages/opencode"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-    commit-message:
-      prefix: "chore(opencode)"
-    groups:
-      opencode-docker-minor-patch:
-        update-types:
-          - "minor"
-          - "patch"
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-    commit-message:
-      prefix: "chore(ci)"
-    groups:
-      actions-minor-patch:
-        update-types:
-          - "minor"
-          - "patch"
+# Deliberately not covered: docker (packages/opencode/Dockerfile) and
+# github-actions (.github/workflows/**). Both paths are shared/upstream code
+# with no "kilo" in their path, so dependabot-auto-merge.yml would never
+# auto-merge them anyway, and .github/workflows/** changes routinely fail
+# the repo's kilocode_change annotation check unless they happen to land
+# inside an existing marker block. Watch these via Dependabot's native
+# security alerts (already repo-wide) and security-findings-notify.yml
+# instead of proposing PRs that need manual handling either way.
